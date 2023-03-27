@@ -133,3 +133,7 @@ dmypy.json
 
 # Test results
 /results/
+
+# Direnv
+/.envrc
+/.direnv
