@@ -1,5 +1,5 @@
 [project]
-name = "starcraft"
+name = "craft-application"
 version = "0.0.1"
 readme = "README.rst"
 dependencies = [
@@ -14,7 +14,6 @@ classifiers = [
 requires-python = ">=3.8"
 
 [project.scripts]
-starcraft-hello = "starcraft:hello"
 
 [project.optional-dependencies]
 dev = [

@@ -13,13 +13,4 @@
 #
 # You should have received a copy of the GNU General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
-"""Starcraft package demo."""
-from typing import List, Optional, Any
-
-
-def hello(people: Optional[List[Any]] = None) -> None:
-    """Says hello."""
-    print("Hello *craft team!")
-    if people:
-        for person in people:
-            print(f"Hello {person}!")
+"""Craft Application Package."""
