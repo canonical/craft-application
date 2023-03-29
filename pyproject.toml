@@ -3,7 +3,8 @@ name = "craft-application"
 version = "0.0.1"
 readme = "README.rst"
 dependencies = [
-
+    "craft-cli",
+    "overrides",
 ]
 classifiers = [
     "Development Status :: 1 - Planning",
