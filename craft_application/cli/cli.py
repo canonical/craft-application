@@ -106,5 +106,5 @@ def run(
         emit.ended_ok()
         sys.exit(1)
     except Exception as err:  # pylint: disable=broad-except
-        _emit_error(CraftError(f"rockcraft internal error: {err!r}"))
+        _emit_error(CraftError(f"{appname} internal error: {err!r}"))
         sys.exit(1)

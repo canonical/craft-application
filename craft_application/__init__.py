@@ -21,6 +21,7 @@ This package should provide everything needed to comply with what a Craft Applic
 is to provide at its base.
 """
 
-from . import cli
+from .parts import PartsLifecycle
+from .app import Application
 
-__all__ = ["cli"]
+__all__ = ["Application", "PartsLifecycle"]
