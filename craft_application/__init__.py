@@ -1,4 +1,4 @@
-# This file is part of starcraft.
+# This file is part of craft_application.
 #
 # Copyright 2023 Canonical Ltd.
 #
@@ -11,15 +11,6 @@
 # SATISFACTORY QUALITY, or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # General Public License for more details.
 #
-# You should have received a copy of the GNU General Public License along
+# You should have received a copy of the GNU Lesser General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
-"""Basic Starcraft package demo integration tests."""
-import subprocess
-
-
-def test_cli():
-    expected = "Hello *craft team!\n"
-
-    actual = subprocess.check_output(["starcraft-hello"], text=True)
-
-    assert expected == actual
+"""craft_application init."""
