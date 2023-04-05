@@ -1,7 +1,8 @@
-.. starcraft documentation root file
+.. craft-application documentation root file
 
-StarCraft
-=========
+=================
+Craft-Application
+=================
 
 .. toctree::
    :maxdepth: 1
@@ -16,7 +17,7 @@ StarCraft
 
    .. grid-item-card:: :ref:`Tutorial <tutorial>`
 
-      **Get started** with a hands-on introduction to Starcraft
+      **Get started** with a hands-on introduction to Craft-Application
 
    .. grid-item-card:: :ref:`How-to guides <howto>`
 
@@ -27,7 +28,7 @@ StarCraft
 
    .. grid-item-card:: :ref:`Reference <reference>`
 
-      **Technical information** about Starcraft
+      **Technical information** about Craft-Application
 
    .. grid-item-card:: :ref:`Explanation <explanation>`
 
@@ -36,13 +37,12 @@ StarCraft
 Project and community
 =====================
 
-Starcraft is a member of the Canonical family. It's an open source project
+Craft-Application is a member of the Canonical family. It's an open source project
 that warmly welcomes community projects, contributions, suggestions, fixes
 and constructive feedback.
 
 * `Ubuntu Code of Conduct <https://ubuntu.com/community/code-of-conduct>`_.
-* `Canonical contributor licenses agreement
-  <https://ubuntu.com/legal/contributors>`_.
+* `Canonical contributor licence agreement <https://ubuntu.com/legal/contributors>`_.
 
 Indices and tables
 ==================

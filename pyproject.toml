@@ -9,7 +9,7 @@ dependencies = [
 ]
 classifiers = [
     "Development Status :: 1 - Planning",
-    "License :: OSI Approved :: GNU General Public License (GPL)",
+    "License :: OSI Approved :: GNU Lesser General Public License (LGPL)",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.8",
 ]
@@ -117,7 +117,7 @@ strict = false
 [tool.ruff]
 line-length = 88
 target-version = "py38"
-src = ["starcraft", "tests"]
+src = ["craft-application", "tests"]
 extend-exclude = [
     "docs",
     "__pycache__",
