@@ -4,6 +4,7 @@ version = "0.0.1"
 readme = "README.rst"
 dependencies = [
     "craft-cli",
+    "craft-parts",
     "overrides",
 ]
 classifiers = [
@@ -82,7 +83,7 @@ skip_empty = true
 fail_under = 80
 
 [tool.pyright]
-strict = ["starcraft"]
+strict = ["craft_application"]
 pythonVersion = "3.8"
 pythonPlatform = "Linux"
 venvPath = ".tox"

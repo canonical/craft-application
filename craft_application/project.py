@@ -1,11 +1,13 @@
-import pydantic
-from typing import Optional, Union, TYPE_CHECKING, List, Dict, Any, Tuple
-import re
-import craft_parts
-from . import errors
 import pathlib
+import re
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
+
+import craft_parts
+import pydantic
 import yaml
 from pydantic import PrivateAttr, conlist, constr
+
+from . import errors
 
 
 class ProjectModel(pydantic.BaseModel):
@@ -38,7 +40,7 @@ class Project(ProjectModel):
     title: Optional[constr(max_length=40)]  # type: ignore
     base: Optional[str]
     build_base: Optional[str]
-    version: Optional[constr(max_length=32, strict=True)]  # type: ignore
+    version: constr(max_length=32, strict=True)  # type: ignore
     contact: Optional[Union[str, UniqueStrList]]
     donation: Optional[Union[str, UniqueStrList]]
     issues: Optional[Union[str, UniqueStrList]]

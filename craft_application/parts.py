@@ -1,11 +1,13 @@
-from craft_parts.features import Features
-from craft_parts import ActionType, Step
-import craft_parts
-from . import errors
-from pathlib import Path
-from craft_cli import emit
-from typing import Dict, Optional, List
 from functools import cached_property
+from pathlib import Path
+from typing import Dict, List, Optional
+
+import craft_parts
+from craft_cli import emit
+from craft_parts import ActionType, Step
+from craft_parts.features import Features
+
+from . import errors
 
 
 def _get_lifecycle_steps() -> Dict[str, Step]:
@@ -47,6 +49,11 @@ class PartsLifecycle:
     @property
     def _all_part_names(self):
         return [*self._all_parts]
+
+    @property
+    def prime_dir(self) -> Path:
+        """The path to the prime directory."""
+        return self._lcm.project_info.prime_dir
 
     @cached_property
     def _lcm(self) -> craft_parts.LifecycleManager:
@@ -96,6 +103,20 @@ class PartsLifecycle:
             raise errors.PartsLifecycleError(msg) from err
         except Exception as err:
             raise errors.PartsLifecycleError(str(err)) from err
+
+    def clean(self, part_names: Optional[List[str]]) -> None:
+        """Remove lifecycle artifacts.
+
+        :param part_names: The names of the parts to clean. If not
+            specified, all parts will be cleaned.
+        """
+        if part_names:
+            message = "Cleaning parts: " + ", ".join(part_names)
+        else:
+            message = "Cleaning all parts"
+
+        emit.progress(message)
+        self._lcm.clean(part_names=part_names)
 
 
 def _action_message(action: craft_parts.Action) -> str:

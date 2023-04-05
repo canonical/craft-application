@@ -1,31 +1,34 @@
-from typing import Dict, List, Optional, Type
-from pathlib import Path
-import sys
-from .parts import PartsLifecycle
-from .lifecycle_commands import get_lifecycle_command_group
-from functools import cached_property
-from . import errors
 import abc
-from .project import Project
-from xdg import BaseDirectory
+import functools
+import sys
+from functools import cached_property
+from pathlib import Path
+from typing import Callable, Dict, List, Optional, Type
+
 from craft_cli import (
-    CraftError,
-    CommandGroup,
-    BaseCommand,
-    GlobalArgument,
-    emit,
-    EmitterMode,
-    Dispatcher,
-    ProvideHelpException,
     ArgumentParsingError,
+    BaseCommand,
+    CommandGroup,
+    CraftError,
+    Dispatcher,
+    EmitterMode,
+    GlobalArgument,
+    ProvideHelpException,
+    emit,
 )
+from xdg import BaseDirectory
+
+from . import errors
+from .lifecycle_commands import get_lifecycle_command_group
+from .parts import PartsLifecycle
+from .project import Project
 
 GLOBAL_VERSION = GlobalArgument(
     "version", "flag", "-V", "--version", "Show the application version and exit"
 )
 
 
-class Application(abc.ABC):
+class Application(metaclass=abc.ABCMeta):
     """Craft Application Builder.
 
     :ivar name: application name
@@ -79,24 +82,37 @@ class Application(abc.ABC):
     def cache_dir(self) -> str:
         return BaseDirectory.save_cache_path(self.name)
 
-    def get_parts_lifecycle(self, *, project: Project) -> PartsLifecycle:
+    @functools.cached_property
+    def parts_lifecycle(self) -> PartsLifecycle:
         return PartsLifecycle(
-            project.parts,
+            self.project.parts,
             cache_dir=self.cache_dir,
             work_dir=Path.cwd(),
             base=project.get_effective_base(),
         )
 
-    def get_project(self) -> Project:
+    @functools.cached_property
+    def project(self) -> Project:
         project_file = Path(f"{self.name}.yaml")
         return Project.from_file(project_file)
 
-    def run_part_step(
-        self, project: Project, step_name: str, part_names: List[str]
-    ) -> None:
+    def run_part_step(self, step_name: str, part_names: List[str]) -> None:
         """Run the parts lifecycle."""
-        lifecycle = self.get_parts_lifecycle(project=project)
-        lifecycle.run(step_name, part_names=part_names)
+        self.parts_lifecycle.run(step_name, part_names=part_names)
+
+    def clean(self, *, part_names: List[str]) -> None:
+        self.parts_lifecycle.clean(part_names=part_names)
+
+    @abc.abstractmethod
+    def generate_metadata(self) -> None:
+        """Generate the metadata in the prime directory for the Application."""
+
+    @abc.abstractmethod
+    def create_package(self) -> Path:
+        """Create the final package from the prime directory.
+
+        :returns: Path to created package.
+        """
 
     def run(self) -> int:
         """Bootstrap and run the application."""
@@ -123,7 +139,9 @@ class Application(abc.ABC):
                 dispatcher.load_command(
                     {
                         "run_part_step": self.run_part_step,
-                        "get_project": self.get_project,
+                        "generate_metadata": self.generate_metadata,
+                        "create_package": self.create_package,
+                        "clean": self.clean,
                     }
                 )
                 dispatcher.run()

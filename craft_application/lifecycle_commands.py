@@ -16,13 +16,12 @@
 
 import abc
 import textwrap
-from typing import TYPE_CHECKING, Optional, Dict, Any, cast, Callable
-
-from craft_cli import BaseCommand, CommandGroup, emit
-from overrides import overrides
-from craft_parts.features import Features
+from typing import TYPE_CHECKING, Any, Callable, Dict, Optional, cast
 
 import craft_parts
+from craft_cli import BaseCommand, CommandGroup, emit
+from craft_parts.features import Features
+from overrides import overrides
 
 if TYPE_CHECKING:
     import argparse
@@ -57,10 +56,13 @@ def get_lifecycle_command_group():
 class _LifecycleCommand(BaseCommand, abc.ABC):
     """Lifecycle-related commands."""
 
+    @overrides
+    def run(self, parsed_args: "argparse.Namespace") -> None:
+        emit.trace(f"lifecycle command: {self.name!r}, arguments: {parsed_args!r}")
+        self._callbacks = cast(Dict[str, Callable], self.config)
 
-class _LifecycleStepCommand(_LifecycleCommand):
-    """Lifecycle step commands."""
 
+class _LifecyclePartsCommand(_LifecycleCommand):
     @overrides
     def fill_parser(self, parser: "argparse.ArgumentParser") -> None:
         super().fill_parser(parser)  # type: ignore
@@ -71,6 +73,12 @@ class _LifecycleStepCommand(_LifecycleCommand):
             nargs="*",
             help="Optional list of parts to process",
         )
+
+
+class _LifecycleStepCommand(_LifecyclePartsCommand):
+    @overrides
+    def fill_parser(self, parser: "argparse.ArgumentParser") -> None:
+        super().fill_parser(parser)  # type: ignore
 
         group = parser.add_mutually_exclusive_group()
         group.add_argument(
@@ -85,35 +93,17 @@ class _LifecycleStepCommand(_LifecycleCommand):
         )
 
     @overrides
-    def run(self, parsed_args: "argparse.Namespace") -> None:
-        """Run the command."""
-        if not self.name:
-            raise RuntimeError("command name not specified")
+    def run(
+        self, parsed_args: "argparse.Namespace", step_name: Optional[str] = None
+    ) -> None:
+        super().run(parsed_args)
 
-        emit.trace(f"lifecycle command: {self.name!r}, arguments: {parsed_args!r}")
+        if step_name is None:
+            step_name = self.name
 
-        config = cast(Dict[str, Callable], self.config)
-        get_project = config["get_project"]
-        run_part_step = config["run_part_step"]
+        run_part_step = self._callbacks["run_part_step"]
 
-        project = get_project()
-
-        run_part_step(
-            project=project, step_name=self.name, part_names=parsed_args.parts
-        )
-
-
-class CleanCommand(_LifecycleStepCommand):
-    """Command to remove part assets."""
-
-    name = "clean"
-    help_msg = "Remove a part's assets"
-    overview = textwrap.dedent(
-        """
-        Clean up artifacts belonging to parts. If no parts are specified,
-        remove the ROCK packing environment.
-        """
-    )
+        run_part_step(step_name=step_name, part_names=parsed_args.parts)
 
 
 class PullCommand(_LifecycleStepCommand):
@@ -177,21 +167,58 @@ class PrimeCommand(_LifecycleStepCommand):
     help_msg = "Prime artifacts defined for a part"
     overview = textwrap.dedent(
         """
-        Prepare the final payload to be packed as a ROCK, performing additional
+        Prepare the final payload to be packed, performing additional
         processing and adding metadata files. If part names are specified only
         those parts will be primed. The default is to prime all parts.
         """
     )
 
+    @overrides
+    def run(
+        self, parsed_args: "argparse.Namespace", step_name: Optional[str] = None
+    ) -> None:
+        super().run(parsed_args, step_name=step_name)
 
-class PackCommand(_LifecycleCommand):
+        generate_metadata = self._callbacks["generate_metadata"]
+        generate_metadata()
+
+
+class PackCommand(PrimeCommand):
     """Command to pack the final artifact."""
 
     name = "pack"
-    help_msg = "Create the ROCK"
+    help_msg = "Create the final artifact"
     overview = textwrap.dedent(
         """
-        Process parts and create the ROCK as an OCI archive file containing
-        the project payload with the provided metadata.
+        Process parts and create the final artifact.
         """
     )
+
+    @overrides
+    def run(self, parsed_args: "argparse.Namespace") -> None:
+        super().run(parsed_args, step_name="prime")
+
+        create_package = self._callbacks["create_package"]
+        package_name = create_package()
+
+        emit.message(f"Packed {str(package_name)!r}")
+
+
+class CleanCommand(_LifecyclePartsCommand):
+    """Command to remove part assets."""
+
+    name = "clean"
+    help_msg = "Remove a part's assets"
+    overview = textwrap.dedent(
+        """
+        Clean up artifacts belonging to parts. If no parts are specified,
+        remove the packing environment.
+        """
+    )
+
+    @overrides
+    def run(self, parsed_args: "argparse.Namespace") -> None:
+        super().run(parsed_args)
+
+        clean = self._callbacks["clean"]
+        clean(part_names=parsed_args.parts)

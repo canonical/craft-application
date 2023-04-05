@@ -21,7 +21,9 @@ This package should provide everything needed to comply with what a Craft Applic
 is to provide at its base.
 """
 
-from .parts import PartsLifecycle
 from .app import Application
+from .metadata import MetadataModel
+from .parts import PartsLifecycle
+from .project import Project
 
-__all__ = ["Application", "PartsLifecycle"]
+__all__ = ["Application", "PartsLifecycle", "Project", "MetadataModel"]
