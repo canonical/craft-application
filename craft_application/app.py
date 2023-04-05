@@ -88,13 +88,13 @@ class Application(metaclass=abc.ABCMeta):
             self.project.parts,
             cache_dir=self.cache_dir,
             work_dir=Path.cwd(),
-            base=project.get_effective_base(),
+            base=self.project.get_effective_base(),
         )
 
     @functools.cached_property
     def project(self) -> Project:
         project_file = Path(f"{self.name}.yaml")
-        return Project.from_file(project_file)
+        return self._project_class.from_file(project_file)
 
     def run_part_step(self, step_name: str, part_names: List[str]) -> None:
         """Run the parts lifecycle."""

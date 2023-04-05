@@ -106,7 +106,7 @@ class Project(ProjectModel):
             raise TypeError("Project data is not a dictionary")
 
         try:
-            project = Project(**data)
+            project = cls(**data)
         except pydantic.ValidationError as err:
             raise errors.ProjectValidationError(
                 _format_pydantic_errors(err.errors())
