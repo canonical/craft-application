@@ -1,13 +1,21 @@
 import pathlib
 import re
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, Iterable, Optional, Tuple, Union
 
 import craft_parts
 import pydantic
 import yaml
-from pydantic import PrivateAttr, conlist, constr
+from pydantic import AnyHttpUrl, AnyUrl
 
 from . import errors
+from .types import (
+    ProjectBaseStr,
+    ProjectName,
+    ProjectTitle,
+    SummaryStr,
+    UniqueStrList,
+    VersionStr,
+)
 
 
 class ProjectModel(pydantic.BaseModel):
@@ -23,30 +31,20 @@ class ProjectModel(pydantic.BaseModel):
         alias_generator = lambda s: s.replace("_", "-")  # noqa: E731
 
 
-# A workaround for mypy false positives
-# see https://github.com/samuelcolvin/pydantic/issues/975#issuecomment-551147305
-# fmt: off
-if TYPE_CHECKING:
-    UniqueStrList = List[str]
-else:
-    UniqueStrList = conlist(str, unique_items=True)
-# fmt: on
-
-
 class Project(ProjectModel):
     """Craft Application project definition."""
 
-    name: constr(max_length=40)  # type: ignore
-    title: Optional[constr(max_length=40)]  # type: ignore
-    base: Optional[str]
-    build_base: Optional[str]
-    version: constr(max_length=32, strict=True)  # type: ignore
+    name: ProjectName
+    title: Optional[ProjectTitle]
+    base: Optional[ProjectBaseStr]
+    build_base: Optional[ProjectBaseStr]
+    version: VersionStr
     contact: Optional[Union[str, UniqueStrList]]
     donation: Optional[Union[str, UniqueStrList]]
     issues: Optional[Union[str, UniqueStrList]]
-    source_code: Optional[str]
-    website: Optional[str]
-    summary: Optional[constr(max_length=78)]  # type: ignore
+    source_code: Optional[AnyUrl]
+    website: Optional[AnyHttpUrl]
+    summary: Optional[SummaryStr]
     description: Optional[str]
     license: Optional[str]
     parts: Dict[str, Any]  # parts are handled by craft-parts
@@ -182,7 +180,7 @@ def _format_pydantic_errors(errors, *, file_name: str = "snapcraft.yaml"):
     return "\n".join(combined)
 
 
-def _format_pydantic_error_location(loc):
+def _format_pydantic_error_location(loc: Iterable[Union[str, int]]) -> str:
     """Format location."""
     loc_parts = []
     for loc_part in loc:
@@ -204,15 +202,15 @@ def _format_pydantic_error_location(loc):
     return loc
 
 
-def _format_pydantic_error_message(msg):
+def _format_pydantic_error_message(msg: str) -> str:
     """Format pydantic's error message field."""
     # Replace shorthand "str" with "string".
-    msg = msg.replace("str type expected", "string type expected")
-    return msg
+    return msg.replace("str type expected", "string type expected")
 
 
 def _printable_field_location_split(location: str) -> Tuple[str, str]:
     """Return split field location.
+
     If top-level, location is returned as unquoted "top-level".
     If not top-level, location is returned as quoted location, e.g.
     (1) field1[idx].foo => 'foo', 'field1[idx]'

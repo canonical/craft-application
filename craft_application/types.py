@@ -1,0 +1,67 @@
+#  This file is part of craft_application.
+#
+#  Copyright 2023 Canonical Ltd.
+#
+#  This program is free software: you can redistribute it and/or modify it
+#  under the terms of the GNU Lesser General Public License version 3, as
+#  published by the Free Software Foundation.
+#
+#  This program is distributed in the hope that it will be useful, but WITHOUT
+#  ANY WARRANTY; without even the implied warranties of MERCHANTABILITY,
+#  SATISFACTORY QUALITY, or FITNESS FOR A PARTICULAR PURPOSE.
+#  See the GNU General Public License for more details.
+#
+#  You should have received a copy of the GNU General Public License along
+#  with this program.  If not, see <http://www.gnu.org/licenses/>.
+"""Types used in craft_application projects."""
+
+from pydantic import ConstrainedList, ConstrainedStr
+
+
+class ProjectBaseStr(ConstrainedStr):
+    """A constrained string to describe a project base."""
+
+    min_length = 2
+    strip_whitespace = True
+    to_lower = True
+
+
+class ProjectName(ConstrainedStr):
+    """A constrained string for describing a project name."""
+
+    strip_whitespace = True
+    to_lower = True
+    min_length = 2
+    max_length = 40
+    regex = "^[a-z0-9][a-z0-9-]*[a-z0-9]$"
+
+
+class ProjectTitle(ConstrainedStr):
+    """A constrained string for describing a project title."""
+
+    min_length = 2
+    max_length = 40
+    strip_whitespace = True
+
+
+class SummaryStr(ConstrainedStr):
+    """A constrained string for a short summary of a project."""
+
+    strip_whitespace = True
+    max_length = 78
+
+
+class UniqueStrList(ConstrainedList):
+    """A list of strings, each of which must be unique."""
+
+    item_type = str
+    unique_items = True
+
+
+class VersionStr(ConstrainedStr):
+    """A valid version string."""
+
+    max_length = 32
+    strict = True
+    strip_whitespace = True
+    regex = "[0-9.]+[A-z0-9_-]*"
