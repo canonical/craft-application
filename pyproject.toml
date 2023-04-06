@@ -25,6 +25,10 @@ dev = [
     "pytest-mock==3.10.0",
 ]
 types = [
+    "mypy[reports]==1.1.1",
+    "pyright==1.1.302",
+    "types-PyYAML",
+    "types-setuptools",
 ]
 docs = [
     "furo==2022.12.07",
@@ -40,16 +44,21 @@ docs = [
 [build-system]
 requires = [
     "setuptools==67.6.0",
+    "setuptools-scm"
 ]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
+include = ["craft_*", "*craft"]
 exclude = [
     "dist",
     "docs",
     "results",
     "tests",
 ]
+
+[tool.setuptools.package-data]
+"*" = ["py.typed"]
 
 [tool.black]
 target-version = ["py38"]
@@ -88,6 +97,7 @@ pythonVersion = "3.8"
 pythonPlatform = "Linux"
 venvPath = ".tox"
 venv = "py38"
+reportUnnecessaryTypeIgnoreComment = true
 
 [tool.mypy]
 python_version = "3.8"
@@ -104,6 +114,13 @@ warn_return_any = true
 disallow_subclassing_any = true
 disallow_untyped_decorators = true
 disallow_any_generics = true
+plugins = ["pydantic.mypy"]
+
+[tool.pydantic-mypy]
+init_forbid_extra = true
+init_typed = true
+warn_required_dynamic_aliases = true
+warn_untyped_fields = true
 
 [[tool.mypy.overrides]]
 module = ["starcraft"]
