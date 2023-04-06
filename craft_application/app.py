@@ -88,7 +88,7 @@ class Application(metaclass=abc.ABCMeta):
             self.project.parts,
             cache_dir=self.cache_dir,
             work_dir=Path.cwd(),
-            base=project.get_effective_base(),
+            base=self.project.get_effective_base(),
         )
 
     @functools.cached_property
