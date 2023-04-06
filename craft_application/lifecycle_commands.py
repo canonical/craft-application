@@ -16,12 +16,11 @@
 
 import abc
 import textwrap
-from typing import TYPE_CHECKING, Any, Callable, Dict, Optional, cast
+from typing import TYPE_CHECKING, Callable, Dict, Optional, cast, Type, List
 
-import craft_parts
 from craft_cli import BaseCommand, CommandGroup, emit
 from craft_parts.features import Features
-from overrides import overrides
+from overrides import overrides  # pyright: ignore[reportUnknownVariableType]
 
 if TYPE_CHECKING:
     import argparse
@@ -31,7 +30,7 @@ def get_lifecycle_command_group():
     """Return the lifecycle related command group."""
     # Craft CLI mangles the order, but we keep it this way for when it won't
     # anymore.
-    commands = [
+    commands: List[Type[_LifecycleCommand]] = [
         CleanCommand,
         PullCommand,
     ]
@@ -78,7 +77,7 @@ class _LifecyclePartsCommand(_LifecycleCommand):
 class _LifecycleStepCommand(_LifecyclePartsCommand):
     @overrides
     def fill_parser(self, parser: "argparse.ArgumentParser") -> None:
-        super().fill_parser(parser)  # type: ignore
+        super().fill_parser(parser)
 
         group = parser.add_mutually_exclusive_group()
         group.add_argument(
