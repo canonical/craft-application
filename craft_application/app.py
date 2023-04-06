@@ -1,9 +1,8 @@
 import abc
 import functools
 import sys
-from functools import cached_property
 from pathlib import Path
-from typing import Callable, Dict, List, Optional, Type
+from typing import List, Optional, Type, cast
 
 from craft_cli import (
     ArgumentParsingError,
@@ -16,9 +15,8 @@ from craft_cli import (
     ProvideHelpException,
     emit,
 )
-from xdg import BaseDirectory
+from xdg import BaseDirectory  # type: ignore[import]
 
-from . import errors
 from .lifecycle_commands import get_lifecycle_command_group
 from .parts import PartsLifecycle
 from .project import Project
@@ -80,7 +78,7 @@ class Application(metaclass=abc.ABCMeta):
 
     @property
     def cache_dir(self) -> str:
-        return BaseDirectory.save_cache_path(self.name)
+        return cast(str, BaseDirectory.save_cache_path(self.name))
 
     @functools.cached_property
     def parts_lifecycle(self) -> PartsLifecycle:
