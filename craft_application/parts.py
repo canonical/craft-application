@@ -1,6 +1,6 @@
 from functools import cached_property
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, cast
 
 import craft_parts
 from craft_cli import emit
@@ -53,7 +53,7 @@ class PartsLifecycle:
     @property
     def prime_dir(self) -> Path:
         """The path to the prime directory."""
-        return self._lcm.project_info.prime_dir
+        return cast(Path, self._lcm.project_info.prime_dir)
 
     @cached_property
     def _lcm(self) -> craft_parts.LifecycleManager:
