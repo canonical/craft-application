@@ -31,9 +31,16 @@ class ProjectName(ConstrainedStr):
 
     strip_whitespace = True
     to_lower = True
-    min_length = 2
+    min_length = 1
     max_length = 40
-    regex = "^[a-z0-9][a-z0-9-]*[a-z0-9]$"
+    # Project name rules:
+    # * Valid characters are lower-case ASCII letters, numerals and hyphens.
+    # * Must contain at least one letter
+    # * May not start or end with a hyphen
+    # * May not have two hyphens in a row
+    # The following regular expression has been lovingly crafted and
+    # thoroughly tested to meet these rules.
+    regex = r"^([a-z0-9][a-z0-9-]?)?[a-z]+([a-z0-9-]?[a-z0-9])*$"
 
 
 class ProjectTitle(ConstrainedStr):
@@ -53,7 +60,7 @@ class SummaryStr(ConstrainedStr):
 
 class UniqueStrList(ConstrainedList):
     """A list of strings, each of which must be unique."""
-
+    __args__ = [str]
     item_type = str
     unique_items = True
 
@@ -64,4 +71,4 @@ class VersionStr(ConstrainedStr):
     max_length = 32
     strict = True
     strip_whitespace = True
-    regex = "[0-9.]+[A-z0-9_-]*"
+    regex = r"^[a-zA-Z0-9](?:[a-zA-Z0-9:.+~-]*[a-zA-Z0-9+~])?$"
