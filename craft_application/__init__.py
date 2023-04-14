@@ -25,5 +25,6 @@ from .app import Application
 from .metadata import MetadataModel
 from .parts import PartsLifecycle
 from .project import Project
+from .provider import ProviderManager
 
-__all__ = ["Application", "PartsLifecycle", "Project", "MetadataModel"]
+__all__ = ["Application", "PartsLifecycle", "Project", "MetadataModel", "ProviderManager"]

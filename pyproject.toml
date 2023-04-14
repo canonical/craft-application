@@ -5,6 +5,7 @@ readme = "README.rst"
 dependencies = [
     "craft-cli",
     "craft-parts",
+    "craft-providers",
     "overrides",
 ]
 classifiers = [

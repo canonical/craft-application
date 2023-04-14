@@ -1,8 +1,12 @@
 import abc
+import contextlib
 import functools
+import os
+import pathlib
+import subprocess
 import sys
 from pathlib import Path
-from typing import List, Optional, Type, cast
+from typing import List, Optional, Type, cast, TYPE_CHECKING, Any, Dict, ContextManager
 
 from craft_cli import (
     ArgumentParsingError,
@@ -15,15 +19,21 @@ from craft_cli import (
     ProvideHelpException,
     emit,
 )
+from craft_providers import Executor, ProviderError
 from xdg import BaseDirectory  # type: ignore[import]
 
-from .lifecycle_commands import get_lifecycle_command_group
+from .commands.base import AppCommand
+from .provider import ProviderManager
+from .commands.lifecycle import get_lifecycle_command_group
 from .parts import PartsLifecycle
 from .project import Project
 
 GLOBAL_VERSION = GlobalArgument(
     "version", "flag", "-V", "--version", "Show the application version and exit"
 )
+
+if TYPE_CHECKING:
+    pass
 
 
 class Application(metaclass=abc.ABCMeta):
@@ -38,8 +48,8 @@ class Application(metaclass=abc.ABCMeta):
         name: str,
         version: str,
         summary: str,
+        manager: ProviderManager,
         project_class: Type[Project] = Project,
-        is_managed: bool = False,
     ) -> None:
         """Initialize an Application.
 
@@ -52,9 +62,9 @@ class Application(metaclass=abc.ABCMeta):
         self.version = version
         self._summary = summary
         self._project_class = project_class
-        self._is_managed = is_managed
         self._command_groups: List[CommandGroup] = []
         self._global_arguments: List[GlobalArgument] = [GLOBAL_VERSION]
+        self._manager = manager
 
     def _get_command_groups(self) -> List[CommandGroup]:
         """Return command groups."""
@@ -64,9 +74,13 @@ class Application(metaclass=abc.ABCMeta):
 
     @property
     def log_path(self) -> Optional[Path]:
-        if self._is_managed:
-            return Path(f"/tmp/{self.name}.log")
+        if self._manager.is_managed:
+            return self.managed_log_path
         return None
+
+    @property
+    def managed_log_path(self) -> Path:
+        return Path(f"/tmp/{self.name}.log")
 
     def add_global_argument(self, argument: GlobalArgument) -> None:
         """Add a global argument to the Application."""
@@ -86,12 +100,12 @@ class Application(metaclass=abc.ABCMeta):
             self.project.parts,
             cache_dir=self.cache_dir,
             work_dir=Path.cwd(),
-            base=self.project.get_effective_base(),
+            base=self.project.effective_base,
         )
 
     @functools.cached_property
     def project(self) -> Project:
-        project_file = Path(f"{self.name}.yaml")
+        project_file = Path(f"{self.name}.yaml").resolve()
         return self._project_class.from_file(project_file)
 
     def run_part_step(self, step_name: str, part_names: List[str]) -> None:
@@ -111,6 +125,58 @@ class Application(metaclass=abc.ABCMeta):
 
         :returns: Path to created package.
         """
+
+    @contextlib.contextmanager
+    def managed_instance(self, instance_path: pathlib.PosixPath) -> ContextManager[Executor]:
+        """Run the application in managed mode."""
+        provider = self._manager.get_provider()
+        project_path = Path().resolve()
+        inode_number = project_path.stat().st_ino
+        instance_name = f"{self.name}-{self.project.name}-{inode_number}"
+        base_configuration = self._manager.get_configuration(
+            base=self.project.effective_base,
+            instance_name=instance_name,
+        )
+
+        managed_command = [self.name, *sys.argv[1:]]
+
+        emit.progress("Launching managed instance...")
+        with provider.launched_environment(
+            project_name=self.project.name,
+            project_path=project_path,
+            base_configuration=base_configuration,
+            instance_name=instance_name,
+            build_base=base_configuration.alias.value,
+            allow_unstable=True,
+        ) as instance:
+            with emit.pause():
+                instance.mount(
+                    host_source=project_path,
+                    target=Path("/root")
+                )
+            try:
+                yield instance
+            finally:
+                with instance.temporarily_pull_file(
+                    source=self.managed_log_path, missing_ok=True
+                ) as log_path:
+                    if not log_path:
+                        emit.debug("Could not find log file in instance.")
+                        return
+                    emit.debug("Logs retrieved from managed instance:")
+                    with log_path.open() as log_file:
+                        for line in log_file:
+                            emit.debug(":: " + line.rstrip())
+
+    def run_managed(self, command: AppCommand, global_args: Dict[str, Any]) -> int:
+        """Run the application in a managed instance."""
+        instance_path = pathlib.PosixPath("/root")
+        with self.managed_instance(instance_path) as instance:
+            try:
+                instance.execute_run([self.name, *sys.argv[1:]], check=True)
+            except subprocess.CalledProcessError as exc:
+                raise ProviderError(f"Failed to execute {self.name} in instance.") from exc
+
 
     def run(self) -> int:
         """Bootstrap and run the application."""
@@ -133,18 +199,23 @@ class Application(metaclass=abc.ABCMeta):
             global_args = dispatcher.pre_parse_args(sys.argv[1:])
             if global_args.get("version"):
                 emit.message(f"{self.name} {self.version}")
+                emit.ended_ok()
+                return 0
+
+            command = cast(AppCommand, dispatcher.load_command(
+                {
+                    "name": self.name,
+                    "manager": self._manager,
+                    "run_part_step": self.run_part_step,
+                    "generate_metadata": self.generate_metadata,
+                    "create_package": self.create_package,
+                    "clean": self.clean,
+                }
+            ))
+            if self._manager.is_managed or not getattr(command, "is_managed"):
+                retcode = dispatcher.run() or 0
             else:
-                dispatcher.load_command(
-                    {
-                        "run_part_step": self.run_part_step,
-                        "generate_metadata": self.generate_metadata,
-                        "create_package": self.create_package,
-                        "clean": self.clean,
-                    }
-                )
-                dispatcher.run()
-            emit.ended_ok()
-            retcode = 0
+                retcode = self.run_managed(command, global_args)
         except ProvideHelpException as err:
             print(err, file=sys.stderr)  # to stderr, as argparse normally does
             emit.ended_ok()
@@ -153,11 +224,15 @@ class Application(metaclass=abc.ABCMeta):
             emit.ended_ok()
         except KeyboardInterrupt as err:
             self._emit_error(CraftError("Interrupted."), cause=err)
-            retcode = 1
+            retcode = 2
         except CraftError as err:
             self._emit_error(err)
         except Exception as err:  # pylint: disable=broad-except
             self._emit_error(CraftError(f"{self.name} internal error: {err!r}"))
+            if os.getenv("CRAFT_DEBUG") == "1":
+                raise
+        else:
+            emit.ended_ok()
 
         return retcode
 
@@ -168,7 +243,7 @@ class Application(metaclass=abc.ABCMeta):
             error.__cause__ = cause
 
         # Do not report the internal logpath if running inside instance
-        if self._is_managed:
+        if self._manager.is_managed:
             error.logpath_report = False
 
         emit.error(error)

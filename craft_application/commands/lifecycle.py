@@ -22,6 +22,8 @@ from craft_cli import BaseCommand, CommandGroup, emit
 from craft_parts.features import Features
 from overrides import overrides  # pyright: ignore[reportUnknownVariableType]
 
+from craft_application.commands.base import AppCommand
+
 if TYPE_CHECKING:
     import argparse
 
@@ -52,7 +54,7 @@ def get_lifecycle_command_group():
     )
 
 
-class _LifecycleCommand(BaseCommand, abc.ABC):
+class _LifecycleCommand(AppCommand, abc.ABC):
     """Lifecycle-related commands."""
 
     @overrides
@@ -75,6 +77,9 @@ class _LifecyclePartsCommand(_LifecycleCommand):
 
 
 class _LifecycleStepCommand(_LifecyclePartsCommand):
+
+    is_managed = True
+
     @overrides
     def fill_parser(self, parser: "argparse.ArgumentParser") -> None:
         super().fill_parser(parser)

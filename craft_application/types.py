@@ -14,6 +14,8 @@
 #  You should have received a copy of the GNU General Public License along
 #  with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Types used in craft_application projects."""
+import re
+from typing import Dict, Literal, Union, List
 
 from pydantic import ConstrainedList, ConstrainedStr
 
@@ -40,7 +42,7 @@ class ProjectName(ConstrainedStr):
     # * May not have two hyphens in a row
     # The following regular expression has been lovingly crafted and
     # thoroughly tested to meet these rules.
-    regex = r"^([a-z0-9][a-z0-9-]?)?[a-z]+([a-z0-9-]?[a-z0-9])*$"
+    regex = re.compile(r"^([a-z0-9][a-z0-9-]?)?[a-z]+([a-z0-9-]?[a-z0-9])*$")
 
 
 class ProjectTitle(ConstrainedStr):
@@ -71,4 +73,7 @@ class VersionStr(ConstrainedStr):
     max_length = 32
     strict = True
     strip_whitespace = True
-    regex = r"^[a-zA-Z0-9](?:[a-zA-Z0-9:.+~-]*[a-zA-Z0-9+~])?$"
+    regex = re.compile(r"^[a-zA-Z0-9](?:[a-zA-Z0-9:.+~-]*[a-zA-Z0-9+~])?$")
+
+
+PlatformDict = Dict[Literal["build-on", "build-for"], Union[str, List[str]]]

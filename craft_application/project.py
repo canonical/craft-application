@@ -19,7 +19,7 @@ from .types import (
 
 
 class ProjectModel(pydantic.BaseModel):
-    """Base model for snapcraft project classes."""
+    """Base model for craft-application project classes."""
 
     class Config:  # pylint: disable=too-few-public-methods
         """Pydantic model configuration."""
@@ -124,19 +124,14 @@ class Project(ProjectModel):
 
         return cls.unmarshal(project_data)
 
-    def get_effective_base(self) -> str:
-        """Return the base to use to create the snap."""
-        effective_base = None
-
+    @property
+    def effective_base(self) -> str:
+        """Return the base used for creating the output."""
         if self.build_base is not None:
-            effective_base = self.build_base
-        elif self.base is not None:
-            effective_base = self.base
-
-        if effective_base is None:
-            raise RuntimeError("Could not determine effective base")
-
-        return effective_base
+            return self.build_base
+        if self.base is not None:
+            return self.base
+        raise RuntimeError("Could not determine effective base")
 
 
 def _format_pydantic_errors(errors, *, file_name: str = "snapcraft.yaml"):
