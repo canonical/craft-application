@@ -152,7 +152,7 @@ class Application(metaclass=abc.ABCMeta):
             with emit.pause():
                 instance.mount(
                     host_source=project_path,
-                    target=Path("/root/project")
+                    target=instance_path
                 )
             try:
                 yield instance
@@ -168,12 +168,16 @@ class Application(metaclass=abc.ABCMeta):
                         for line in log_file:
                             emit.debug(":: " + line.rstrip())
 
-    def run_managed(self, command: AppCommand, global_args: Dict[str, Any]) -> int:
+    def run_managed(self) -> None:
         """Run the application in a managed instance."""
         instance_path = pathlib.PosixPath("/root/project")
         with self.managed_instance(instance_path) as instance:
             try:
-                instance.execute_run([self.name, *sys.argv[1:]], check=True)
+                instance.execute_run(
+                    [self.name, *sys.argv[1:]],
+                    cwd=instance_path,
+                    check=True
+                )
             except subprocess.CalledProcessError as exc:
                 raise ProviderError(f"Failed to execute {self.name} in instance.") from exc
 
@@ -215,7 +219,8 @@ class Application(metaclass=abc.ABCMeta):
             if self._manager.is_managed or not getattr(command, "is_managed"):
                 retcode = dispatcher.run() or 0
             else:
-                retcode = self.run_managed(command, global_args)
+                self.run_managed()
+                retcode = 0
         except ProvideHelpException as err:
             print(err, file=sys.stderr)  # to stderr, as argparse normally does
             emit.ended_ok()
