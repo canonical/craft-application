@@ -60,6 +60,7 @@ class ProviderManager(metaclass=abc.ABCMeta):
         :returns: An instance of the default Provider class.
         """
         if sys.platform == "linux":
+            lxd.configure_buildd_image_remote()
             return lxd.LXDProvider(lxd_project=self.app_name)
         return multipass.MultipassProvider()
 

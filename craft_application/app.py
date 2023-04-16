@@ -152,7 +152,7 @@ class Application(metaclass=abc.ABCMeta):
             with emit.pause():
                 instance.mount(
                     host_source=project_path,
-                    target=Path("/root")
+                    target=Path("/root/project")
                 )
             try:
                 yield instance
@@ -170,7 +170,7 @@ class Application(metaclass=abc.ABCMeta):
 
     def run_managed(self, command: AppCommand, global_args: Dict[str, Any]) -> int:
         """Run the application in a managed instance."""
-        instance_path = pathlib.PosixPath("/root")
+        instance_path = pathlib.PosixPath("/root/project")
         with self.managed_instance(instance_path) as instance:
             try:
                 instance.execute_run([self.name, *sys.argv[1:]], check=True)
