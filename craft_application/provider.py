@@ -65,7 +65,7 @@ class ProviderManager(metaclass=abc.ABCMeta):
         return multipass.MultipassProvider()
 
     @functools.cached_property
-    def is_managed(self):
+    def is_managed(self) -> bool:
         """Determine whether we're running in managed mode."""
         return utils.get_env_bool(self.managed_mode_env)
 

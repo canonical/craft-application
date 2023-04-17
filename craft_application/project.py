@@ -1,3 +1,23 @@
+#  This file is part of craft-application.
+#
+#  2023 Canonical Ltd.
+#
+#  This program is free software: you can redistribute it and/or modify it
+#  under the terms of the GNU Lesser General Public License version 3, as
+#  published by the Free Software Foundation.
+#
+#  This program is distributed in the hope that it will be useful, but WITHOUT
+#  ANY WARRANTY; without even the implied warranties of MERCHANTABILITY,
+#  SATISFACTORY QUALITY, or FITNESS FOR A PARTICULAR PURPOSE.
+#  See the GNU Lesser General Public License for more details.
+#
+#  You should have received a copy of the GNU Lesser General Public License
+#  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+"""Basic project model for a craft-application.
+
+This defines the structure of the input file (e.g. snapcraft.yaml)
+"""
+import io
 import pathlib
 import re
 from typing import Any, Dict, Iterable, Optional, Tuple, Union
@@ -51,7 +71,7 @@ class Project(ProjectModel):
 
     @pydantic.validator("name")
     @classmethod
-    def _validate_name(cls, name):
+    def _validate_name(cls, name: str) -> str:
         if not re.match(r"^[a-z0-9-]*[a-z][a-z0-9-]*$", name):
             raise ValueError(
                 "names can only use ASCII lowercase letters, numbers, and hyphens, "
@@ -71,7 +91,7 @@ class Project(ProjectModel):
 
     @pydantic.validator("version")
     @classmethod
-    def _validate_version(cls, version, values):
+    def _validate_version(cls, version: str) -> str:
         if version and not re.match(
             r"^[a-zA-Z0-9](?:[a-zA-Z0-9:.+~-]*[a-zA-Z0-9+~])?$", version
         ):
@@ -86,7 +106,7 @@ class Project(ProjectModel):
 
     @pydantic.validator("parts", each_item=True)
     @classmethod
-    def _validate_parts(cls, item):
+    def _validate_parts(cls, item: Dict[str, Any]) -> Dict[str, Any]:
         """Verify each part (craft-parts will re-validate this)."""
         craft_parts.validate_part(item)
         return item
@@ -94,6 +114,7 @@ class Project(ProjectModel):
     @classmethod
     def unmarshal(cls, data: Dict[str, Any]) -> "Project":
         """Create and populate a new ``Project`` object from dictionary data.
+
         The unmarshal method validates entries in the input dictionary, populating
         the corresponding fields in the data object.
         :param data: The dictionary data to unmarshal.
@@ -103,26 +124,26 @@ class Project(ProjectModel):
         if not isinstance(data, dict):
             raise TypeError("Project data is not a dictionary")
 
-        try:
-            project = cls(**data)
-        except pydantic.ValidationError as err:
-            raise errors.ProjectValidationError(
-                _format_pydantic_errors(err.errors())
-            ) from err
-
-        return project
+        return cls(**data)
 
     @classmethod
     def from_file(cls, project_file: pathlib.Path) -> "Project":
         """Create and populate a new ``Project`` object from ``project_file``."""
         if not project_file.exists():
-            raise errors.ProjectFileMissing(
+            raise errors.ProjectFileMissingError(
                 f"Could not find project file {str(project_file)!r}"
             )
         with project_file.open() as project_stream:
-            project_data = yaml.load(project_stream, Loader=_SafeLoader)
+            # Ruff is detecting this as a potentially-unsafe load, which can be
+            # overridden.
+            project_data = yaml.load(project_stream, Loader=_SafeLoader)  # noqa: S506
 
-        return cls.unmarshal(project_data)
+        try:
+            cls.unmarshal(project_data)
+        except pydantic.ValidationError as err:
+            raise errors.ProjectValidationError(
+                _format_pydantic_errors(err.errors(), file_name=project_file.name)
+            )
 
     @property
     def effective_base(self) -> str:
@@ -134,8 +155,11 @@ class Project(ProjectModel):
         raise RuntimeError("Could not determine effective base")
 
 
-def _format_pydantic_errors(errors, *, file_name: str = "snapcraft.yaml"):
+def _format_pydantic_errors(
+    errors: Iterable[Dict[str, Union[str, int]]], *, file_name: str = "yaml file"
+) -> str:
     """Format errors.
+
     Example 1: Single error.
     Bad snapcraft.yaml content:
     - field: <some field>
@@ -221,7 +245,7 @@ def _printable_field_location_split(location: str) -> Tuple[str, str]:
     return field_name, "top-level"
 
 
-def _check_duplicate_keys(node):
+def _check_duplicate_keys(node: yaml.Node) -> None:
     mappings = set()
 
     for key_node, _ in node.value:
@@ -239,7 +263,7 @@ def _check_duplicate_keys(node):
             pass
 
 
-def _dict_constructor(loader, node):
+def _dict_constructor(loader: yaml.Loader, node: yaml.MappingNode) -> Dict[str, Any]:
     _check_duplicate_keys(node)
 
     # Necessary in order to make yaml merge tags work
@@ -258,8 +282,8 @@ def _dict_constructor(loader, node):
 
 
 class _SafeLoader(yaml.SafeLoader):  # pylint: disable=too-many-ancestors
-    def __init__(self, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
+    def __init__(self, stream: io.TextIOBase) -> None:
+        super().__init__(stream)
 
         self.add_constructor(
             yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, _dict_constructor

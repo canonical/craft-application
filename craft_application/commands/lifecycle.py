@@ -28,7 +28,7 @@ if TYPE_CHECKING:
     import argparse
 
 
-def get_lifecycle_command_group():
+def get_lifecycle_command_group() -> CommandGroup:
     """Return the lifecycle related command group."""
     # Craft CLI mangles the order, but we keep it this way for when it won't
     # anymore.
@@ -99,6 +99,7 @@ class _LifecycleStepCommand(_LifecyclePartsCommand):
     def run(
         self, parsed_args: "argparse.Namespace", step_name: Optional[str] = None
     ) -> None:
+        """Run a lifecycle step command."""
         super().run(parsed_args)
 
         if step_name is None:
@@ -180,6 +181,7 @@ class PrimeCommand(_LifecycleStepCommand):
     def run(
         self, parsed_args: "argparse.Namespace", step_name: Optional[str] = None
     ) -> None:
+        """Run the prime command."""
         super().run(parsed_args, step_name=step_name)
 
         generate_metadata = self._callbacks["generate_metadata"]
@@ -199,6 +201,7 @@ class PackCommand(PrimeCommand):
 
     @overrides
     def run(self, parsed_args: "argparse.Namespace") -> None:
+        """Run the pack command."""
         super().run(parsed_args, step_name="prime")
 
         create_package = self._callbacks["create_package"]
@@ -221,6 +224,7 @@ class CleanCommand(_LifecyclePartsCommand):
 
     @overrides
     def run(self, parsed_args: "argparse.Namespace") -> None:
+        """Run the clean command."""
         super().run(parsed_args)
 
         clean = self._callbacks["clean"]

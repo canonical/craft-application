@@ -59,7 +59,7 @@ class Application(metaclass=abc.ABCMeta):
     :ivar version: application version
     """
 
-    def __init__(
+    def __init__(  # noqa PLR0913 - Can't determine how to reduce arguments.
         self,
         name: str,
         version: str,
@@ -72,7 +72,8 @@ class Application(metaclass=abc.ABCMeta):
         :param name: application name
         :param version: application version
         :param summary: application summary
-        :param is_managed: run in managed mode or not
+        :param manager: a ProviderManager for handling managed mode.
+        :param project_class: The class to cuse for creating a Project instance.
         """
         self.name = name
         self.version = version
@@ -90,13 +91,17 @@ class Application(metaclass=abc.ABCMeta):
 
     @property
     def log_path(self) -> Optional[Path]:
+        """Get the path to the managed log file if managed, None otherwise."""
         if self._manager.is_managed:
             return self.managed_log_path
         return None
 
     @property
     def managed_log_path(self) -> Path:
-        return Path(f"/tmp/{self.name}.log")
+        """Get the location of the managed instance's log file."""
+        return Path(
+            f"/tmp/{self.name}.log"  # noqa S108 - only applies inside managed instance.
+        )
 
     def add_global_argument(self, argument: GlobalArgument) -> None:
         """Add a global argument to the Application."""
@@ -108,10 +113,12 @@ class Application(metaclass=abc.ABCMeta):
 
     @property
     def cache_dir(self) -> str:
+        """Get the directory for caching any data."""
         return cast(str, BaseDirectory.save_cache_path(self.name))
 
     @functools.cached_property
     def parts_lifecycle(self) -> PartsLifecycle:
+        """Get the parts lifecycle for this application."""
         return PartsLifecycle(
             self.project.parts,
             cache_dir=self.cache_dir,
@@ -121,6 +128,7 @@ class Application(metaclass=abc.ABCMeta):
 
     @functools.cached_property
     def project(self) -> Project:
+        """Get this application's Project metadata."""
         project_file = Path(f"{self.name}.yaml").resolve()
         return self._project_class.from_file(project_file)
 
@@ -129,6 +137,7 @@ class Application(metaclass=abc.ABCMeta):
         self.parts_lifecycle.run(step_name, part_names=part_names)
 
     def clean(self, *, part_names: List[str]) -> None:
+        """Run the cleaner for the parts lifecycle."""
         self.parts_lifecycle.clean(part_names=part_names)
 
     @abc.abstractmethod
@@ -173,13 +182,13 @@ class Application(metaclass=abc.ABCMeta):
                 with instance.temporarily_pull_file(
                     source=self.managed_log_path, missing_ok=True
                 ) as log_path:
-                    if not log_path:
+                    if log_path:
+                        emit.debug("Logs retrieved from managed instance:")
+                        with log_path.open() as log_file:
+                            for line in log_file:
+                                emit.debug(":: " + line.rstrip())
+                    else:
                         emit.debug("Could not find log file in instance.")
-                        return
-                    emit.debug("Logs retrieved from managed instance:")
-                    with log_path.open() as log_file:
-                        for line in log_file:
-                            emit.debug(":: " + line.rstrip())
 
     def run_managed(self) -> None:
         """Run the application in a managed instance."""
@@ -247,7 +256,7 @@ class Application(metaclass=abc.ABCMeta):
             retcode = 2
         except CraftError as err:
             self._emit_error(err)
-        except Exception as err:  # pylint: disable=broad-except
+        except Exception as err:  # noqa: BLE001 pylint: disable=broad-except
             self._emit_error(CraftError(f"{self.name} internal error: {err!r}"))
             if os.getenv("CRAFT_DEBUG") == "1":
                 raise
@@ -256,7 +265,9 @@ class Application(metaclass=abc.ABCMeta):
 
         return retcode
 
-    def _emit_error(self, error, *, cause=None):
+    def _emit_error(
+        self, error: Exception, *, cause: Optional[Exception] = None
+    ) -> None:
         """Emit the error in a centralized way so we can alter it consistently."""
         # set the cause, if any
         if cause is not None:
