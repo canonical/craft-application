@@ -30,7 +30,9 @@ types = [
     "mypy[reports]==1.1.1",
     "pyright==1.1.302",
     "types-PyYAML",
+    "types-requests",
     "types-setuptools",
+    "types-urllib3",
 ]
 docs = [
     "furo==2022.12.07",
@@ -116,7 +118,7 @@ warn_return_any = true
 disallow_subclassing_any = true
 disallow_untyped_decorators = true
 disallow_any_generics = true
-plugins = ["pydantic.mypy"]
+#plugins = ["pydantic.mypy"]
 
 [tool.pydantic-mypy]
 init_forbid_extra = true
