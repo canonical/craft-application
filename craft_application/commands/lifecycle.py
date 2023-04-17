@@ -11,8 +11,12 @@
 #
 # You should have received a copy of the GNU General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
-
 """Basic lifecycle commands for a Craft Application."""
+
+# Tell pyright to ignore unnecessary type:ignore comments.
+# This is because _LifestyleCommand.run currently does things that mypy needs
+# an ignore on but pyright does not.
+# pyright: reportUnnecessaryTypeIgnoreComment=false
 
 import abc
 import textwrap
@@ -21,9 +25,9 @@ from typing import TYPE_CHECKING, Callable, Dict, List, Optional, Type, cast, An
 
 from craft_cli import CommandGroup, emit
 from craft_parts.features import Features
-from overrides import overrides  # pyright: ignore[reportUnknownVariableType]
+from overrides import overrides
 
-from craft_application.commands.base import AppCommand
+from .base import AppCommand
 
 if TYPE_CHECKING:
     import argparse
@@ -61,7 +65,9 @@ class _LifecycleCommand(AppCommand, abc.ABC):
     @overrides
     def run(self, parsed_args: "argparse.Namespace") -> None:
         emit.trace(f"lifecycle command: {self.name!r}, arguments: {parsed_args!r}")
-        #  The callbacks are very generic and need to be general for now.
+        # The callbacks are very generic and need to be general for now.
+        # This is the reason for telling pyright to ignore unnecessary type: ignore
+        # comments at the top of the file.
         self._callbacks = cast(Dict[str, Callable], self.config)  # type: ignore[type-arg]
 
 

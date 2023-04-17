@@ -50,12 +50,12 @@ def valid_project_name_strategy(draw):
 
 @given(valid_project_name_strategy())
 def test_project_name_regex_valid_hypothesis(project_name):
-    assert re.match(ProjectName.regex, project_name)
+    assert ProjectName.regex.match(project_name)  # pyright: ignore[reportOptionalMemberAccess]
 
 
 @pytest.mark.parametrize("name", ["", "1", "-", "-abc", "abc123-", "double--hyphen"])
 def test_invalid_project_name(name):
-    assert not re.match(ProjectName.regex, name)
+    assert not ProjectName.regex.match(name)  # pyright: ignore[reportOptionalMemberAccess]
 
 
 # endregion

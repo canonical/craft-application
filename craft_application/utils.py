@@ -18,7 +18,7 @@ import os
 import sys
 from typing import Optional
 
-from craft_application.errors import CraftEnvironmentError
+from .errors import CraftEnvironmentError
 
 TRUTHY_STRINGS = frozenset({"y", "yes", "true", "on", "1"})
 FALSEY_STRINGS = frozenset({"", "n", "no", "false", "off", "0"})

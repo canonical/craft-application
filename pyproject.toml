@@ -96,12 +96,34 @@ skip_empty = true
 fail_under = 80
 
 [tool.pyright]
-strict = ["craft_application"]
+# Strict mode fails right now  due to some external libraries (e.g. pyxdg)
+# strict = ["craft_application"]
 pythonVersion = "3.8"
 pythonPlatform = "Linux"
 venvPath = ".tox"
-venv = "py38"
+venv = "typing"
 reportUnnecessaryTypeIgnoreComment = true
+include = ["craft_application", "tests"]
+# Include as much of strict mode as possible.
+strictListInference = true
+strictDictionaryInference = true
+strictSetInference = true
+reportDeprecated = true
+reportDuplicateImport = true
+reportFunctionMemberAccess = true
+reportIncompatibleMethodOverride = true
+reportIncompatibleVariableOverride = true
+reportInconsistentConstructor = true
+reportMatchNotExhaustive = true
+reportMissingTypeArgument = true
+reportUntypedBaseClass = true
+reportUntypedClassDecorator = true
+reportUntypedFunctionDecorator = true
+reportUntypedNamedTuple = true
+
+executionEnvironments = [
+    { root = "craft_application", reportMissingParameterType = true, reportPrivateUsage = true }
+]
 
 [tool.mypy]
 python_version = "3.8"
@@ -118,7 +140,7 @@ warn_return_any = true
 disallow_subclassing_any = true
 disallow_untyped_decorators = true
 disallow_any_generics = true
-#plugins = ["pydantic.mypy"]
+# plugins = ["pydantic.mypy"]  TODO: Re-enable this once we have pydantic>=1.10
 
 [tool.pydantic-mypy]
 init_forbid_extra = true
@@ -134,6 +156,11 @@ no_implicit_optional = true
 [[tool.mypy.overrides]]
 module = ["tests.*"]
 strict = false
+
+# Tell mypy to ignore typing on pyxdg until we have a typeshed entry.
+[[tool.mypy.overrides]]
+module = ["xdg.*"]
+ignore_missing_imports = true
 
 [tool.ruff]
 line-length = 88

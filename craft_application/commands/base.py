@@ -15,7 +15,8 @@
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Base command for craft-application commands."""
 import argparse
-from typing import List, Any, Dict
+import sys
+from typing import List, Any, Dict, cast
 
 from craft_cli import BaseCommand, emit
 
@@ -35,9 +36,11 @@ class AppCommand(BaseCommand):
         """
         if not self.is_managed:
             raise RuntimeError("Unmanaged commands should not be run managed.")
-        assert self.config is not None
+        cmd_name = sys.argv[0]
+        if self.config is not None and "name" in self.config:
+            cmd_name = cast(str, self.config["name"])
         verbosity = emit.get_mode().name.lower()
-        cmd = [self.config["name"], f"--verbosity={verbosity}", self.name]
+        cmd = [cmd_name, f"--verbosity={verbosity}", cast(str, self.name)]
 
         if getattr(parsed_args, "shell", False):
             cmd.append("--shell")

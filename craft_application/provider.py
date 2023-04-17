@@ -24,8 +24,8 @@ import craft_providers
 from craft_cli import CraftError, emit
 from craft_providers import Provider, lxd, multipass
 
-from craft_application import project, utils
-from craft_application.errors import CraftEnvironmentError
+from . import project, utils
+from .errors import CraftEnvironmentError
 
 
 class ProviderManager(metaclass=abc.ABCMeta):

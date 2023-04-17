@@ -36,7 +36,7 @@ from craft_cli import (
     emit,
 )
 from craft_providers import Executor, ProviderError
-from xdg import BaseDirectory  # type: ignore[import]
+from xdg import BaseDirectory
 
 from .commands.base import AppCommand
 from .commands.lifecycle import get_lifecycle_command_group
@@ -114,6 +114,7 @@ class Application(metaclass=abc.ABCMeta):
     @property
     def cache_dir(self) -> str:
         """Get the directory for caching any data."""
+        # Ignoring output from xdg module until we get a typeshed item.
         return cast(str, BaseDirectory.save_cache_path(self.name))
 
     @functools.cached_property
