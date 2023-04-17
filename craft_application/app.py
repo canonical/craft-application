@@ -22,7 +22,7 @@ import pathlib
 import subprocess
 import sys
 from pathlib import Path
-from typing import TYPE_CHECKING, ContextManager, List, Optional, Type, cast
+from typing import TYPE_CHECKING, ContextManager, List, Optional, Type, cast, Generator
 
 from craft_cli import (
     ArgumentParsingError,
@@ -154,7 +154,7 @@ class Application(metaclass=abc.ABCMeta):
     @contextlib.contextmanager
     def managed_instance(
         self, instance_path: pathlib.PosixPath
-    ) -> ContextManager[Executor]:
+    ) -> Generator[Executor, None, None]:
         """Run the application in managed mode."""
         provider = self._manager.get_provider()
         project_path = Path().resolve()
@@ -171,7 +171,8 @@ class Application(metaclass=abc.ABCMeta):
             project_path=project_path,
             base_configuration=base_configuration,
             instance_name=instance_name,
-            build_base=base_configuration.alias.value,
+            # craft_parts.Base doesn't currently define an alias, but it's always there.
+            build_base=base_configuration.alias.value,  # type: ignore[attr-defined]
             allow_unstable=True,
         ) as instance:
             with emit.pause():
@@ -266,7 +267,7 @@ class Application(metaclass=abc.ABCMeta):
         return retcode
 
     def _emit_error(
-        self, error: Exception, *, cause: Optional[Exception] = None
+        self, error: CraftError, *, cause: Optional[BaseException] = None
     ) -> None:
         """Emit the error in a centralized way so we can alter it consistently."""
         # set the cause, if any

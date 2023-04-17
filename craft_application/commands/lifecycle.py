@@ -16,7 +16,8 @@
 
 import abc
 import textwrap
-from typing import TYPE_CHECKING, Callable, Dict, List, Optional, Type, cast
+from typing import TYPE_CHECKING, Callable, Dict, List, Optional, Type, cast, Any, \
+    Literal
 
 from craft_cli import CommandGroup, emit
 from craft_parts.features import Features
@@ -60,7 +61,8 @@ class _LifecycleCommand(AppCommand, abc.ABC):
     @overrides
     def run(self, parsed_args: "argparse.Namespace") -> None:
         emit.trace(f"lifecycle command: {self.name!r}, arguments: {parsed_args!r}")
-        self._callbacks = cast(Dict[str, Callable], self.config)
+        #  The callbacks are very generic and need to be general for now.
+        self._callbacks = cast(Dict[str, Callable], self.config)  # type: ignore[type-arg]
 
 
 class _LifecyclePartsCommand(_LifecycleCommand):
@@ -200,8 +202,12 @@ class PackCommand(PrimeCommand):
     )
 
     @overrides
-    def run(self, parsed_args: "argparse.Namespace") -> None:
+    def run(
+        self, parsed_args: "argparse.Namespace", step_name: Optional[str] = None
+    ) -> None:
         """Run the pack command."""
+        if step_name not in ("pack", None):
+            raise RuntimeError(f"Step name {step_name} passed to pack command.")
         super().run(parsed_args, step_name="prime")
 
         create_package = self._callbacks["create_package"]

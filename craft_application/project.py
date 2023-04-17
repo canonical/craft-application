@@ -26,6 +26,7 @@ import craft_parts
 import pydantic
 import yaml
 from pydantic import AnyHttpUrl, AnyUrl
+from pydantic.error_wrappers import ErrorDict
 
 from . import errors
 from .types import (
@@ -137,9 +138,8 @@ class Project(ProjectModel):
             # Ruff is detecting this as a potentially-unsafe load, which can be
             # overridden.
             project_data = yaml.load(project_stream, Loader=_SafeLoader)  # noqa: S506
-
         try:
-            cls.unmarshal(project_data)
+            return cls.unmarshal(project_data)
         except pydantic.ValidationError as err:
             raise errors.ProjectValidationError(
                 _format_pydantic_errors(err.errors(), file_name=project_file.name)
@@ -156,7 +156,7 @@ class Project(ProjectModel):
 
 
 def _format_pydantic_errors(
-    errors: Iterable[Dict[str, Union[str, int]]], *, file_name: str = "yaml file"
+    errors: Iterable[ErrorDict], *, file_name: str = "yaml file"
 ) -> str:
     """Format errors.
 

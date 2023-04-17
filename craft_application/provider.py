@@ -67,7 +67,7 @@ class ProviderManager(metaclass=abc.ABCMeta):
     @functools.cached_property
     def is_managed(self) -> bool:
         """Determine whether we're running in managed mode."""
-        return utils.get_env_bool(self.managed_mode_env)
+        return bool(utils.get_env_bool(self.managed_mode_env))
 
     def get_provider(self) -> Provider:
         """Get the provider to use."""

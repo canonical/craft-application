@@ -63,7 +63,7 @@ class SummaryStr(ConstrainedStr):
 class UniqueStrList(ConstrainedList):
     """A list of strings, each of which must be unique."""
 
-    __args__ = [str]
+    __args__ = (str,)
     item_type = str
     unique_items = True
 

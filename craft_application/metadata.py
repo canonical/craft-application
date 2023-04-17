@@ -12,6 +12,8 @@
 # You should have received a copy of the GNU General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Base project metadata model."""
+from typing import Any, Dict
+
 from overrides import overrides
 from pydantic_yaml import YamlModel
 
@@ -30,12 +32,14 @@ class MetadataModel(YamlModel):
         alias_generator = lambda s: s.replace("_", "-")  # noqa: E731
 
     @overrides
-    def yaml(self) -> str:
+    def yaml(self, **kwargs) -> str:
         """Generate a YAML representation of the model."""
-        return super().yaml(
-            by_alias=True,
-            exclude_none=True,
-            allow_unicode=True,
-            sort_keys=False,
-            width=1000,
-        )
+        default_kwargs: Dict[str, Any] = {
+            "by_alias": True,
+            "exclude_none": True,
+            "allow_unicode": True,
+            "sort_keys": False,
+            "width": 1000
+        }
+        default_kwargs.update(kwargs)
+        return super().yaml(**default_kwargs)
