@@ -16,7 +16,7 @@
 """Base command for craft-application commands."""
 import argparse
 import sys
-from typing import List, Any, Dict, cast
+from typing import List, cast
 
 from craft_cli import BaseCommand, emit
 

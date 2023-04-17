@@ -22,7 +22,7 @@ import pathlib
 import subprocess
 import sys
 from pathlib import Path
-from typing import TYPE_CHECKING, ContextManager, List, Optional, Type, cast, Generator
+from typing import TYPE_CHECKING, Generator, List, Optional, Type, cast
 
 from craft_cli import (
     ArgumentParsingError,

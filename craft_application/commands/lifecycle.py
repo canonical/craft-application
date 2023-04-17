@@ -20,8 +20,15 @@
 
 import abc
 import textwrap
-from typing import TYPE_CHECKING, Callable, Dict, List, Optional, Type, cast, Any, \
-    Literal
+from typing import (
+    TYPE_CHECKING,
+    Callable,
+    Dict,
+    List,
+    Optional,
+    Type,
+    cast,
+)
 
 from craft_cli import CommandGroup, emit
 from craft_parts.features import Features
