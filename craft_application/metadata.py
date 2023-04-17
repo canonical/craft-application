@@ -32,14 +32,14 @@ class MetadataModel(YamlModel):
         alias_generator = lambda s: s.replace("_", "-")  # noqa: E731
 
     @overrides
-    def yaml(self, **kwargs) -> str:
+    def yaml(self, **kwargs) -> str:  # noqa: ANN003 - Forget the type annotations here
         """Generate a YAML representation of the model."""
         default_kwargs: Dict[str, Any] = {
             "by_alias": True,
             "exclude_none": True,
             "allow_unicode": True,
             "sort_keys": False,
-            "width": 1000
+            "width": 1000,
         }
         default_kwargs.update(kwargs)
         return super().yaml(**default_kwargs)
