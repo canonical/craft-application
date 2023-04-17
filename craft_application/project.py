@@ -20,7 +20,7 @@ This defines the structure of the input file (e.g. snapcraft.yaml)
 import io
 import pathlib
 import re
-from typing import Any, Dict, Iterable, Optional, Tuple, TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Any, Dict, Iterable, Optional, Tuple, Union
 
 import craft_parts
 import pydantic
