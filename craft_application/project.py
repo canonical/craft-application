@@ -20,13 +20,15 @@ This defines the structure of the input file (e.g. snapcraft.yaml)
 import io
 import pathlib
 import re
-from typing import Any, Dict, Iterable, Optional, Tuple, Union
+from typing import Any, Dict, Iterable, Optional, Tuple, TYPE_CHECKING, Union
 
 import craft_parts
 import pydantic
 import yaml
 from pydantic import AnyHttpUrl, AnyUrl
-from pydantic.error_wrappers import ErrorDict
+
+if TYPE_CHECKING:
+    from pydantic.error_wrappers import ErrorDict
 
 from . import errors
 from .types import (
@@ -156,7 +158,7 @@ class Project(ProjectModel):
 
 
 def _format_pydantic_errors(
-    errors: Iterable[ErrorDict], *, file_name: str = "yaml file"
+    errors: "Iterable[ErrorDict]", *, file_name: str = "yaml file"
 ) -> str:
     """Format errors.
 
