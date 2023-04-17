@@ -16,9 +16,9 @@
 
 import abc
 import textwrap
-from typing import TYPE_CHECKING, Callable, Dict, Optional, cast, Type, List
+from typing import TYPE_CHECKING, Callable, Dict, List, Optional, Type, cast
 
-from craft_cli import BaseCommand, CommandGroup, emit
+from craft_cli import CommandGroup, emit
 from craft_parts.features import Features
 from overrides import overrides  # pyright: ignore[reportUnknownVariableType]
 
@@ -77,7 +77,6 @@ class _LifecyclePartsCommand(_LifecycleCommand):
 
 
 class _LifecycleStepCommand(_LifecyclePartsCommand):
-
     is_managed = True
 
     @overrides

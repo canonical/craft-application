@@ -18,10 +18,9 @@ import re
 from string import ascii_lowercase, digits
 
 import pytest
+from craft_application.types import ProjectName
 from hypothesis import given
 from hypothesis.strategies import composite, sampled_from, text
-
-from craft_application.types import ProjectName
 
 LOWER_ALPHA_NUMERIC = [*ascii_lowercase, *digits]
 
@@ -57,4 +56,6 @@ def test_project_name_regex_valid_hypothesis(project_name):
 @pytest.mark.parametrize("name", ["", "1", "-", "-abc", "abc123-", "double--hyphen"])
 def test_invalid_project_name(name):
     assert not re.match(ProjectName.regex, name)
+
+
 # endregion

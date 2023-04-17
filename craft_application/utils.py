@@ -19,8 +19,8 @@ from typing import Optional
 
 from craft_application.errors import CraftEnvironmentError
 
-TRUTHY_STRINGS = frozenset({'y', 'yes', 'true', 'on', '1'})
-FALSEY_STRINGS = frozenset({'', 'n', 'no', 'false', 'off', '0'})
+TRUTHY_STRINGS = frozenset({"y", "yes", "true", "on", "1"})
+FALSEY_STRINGS = frozenset({"", "n", "no", "false", "off", "0"})
 
 
 def get_env_bool(var: str) -> Optional[bool]:

@@ -15,10 +15,9 @@
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Base command for craft-application commands."""
 import argparse
-from typing import List, Optional, final
+from typing import List
 
 from craft_cli import BaseCommand, emit
-from overrides import overrides
 
 
 class AppCommand(BaseCommand):

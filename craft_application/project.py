@@ -145,7 +145,7 @@ def _format_pydantic_errors(errors, *, file_name: str = "snapcraft.yaml"):
     - field: <some field>
       reason: <some reason>
     - field: <some field 2>
-      reason: <some reason 2>
+      reason: <some reason 2>.
     """
     combined = [f"Bad {file_name} content:"]
     for error in errors:
@@ -258,7 +258,7 @@ def _dict_constructor(loader, node):
 
 
 class _SafeLoader(yaml.SafeLoader):  # pylint: disable=too-many-ancestors
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
 
         self.add_constructor(

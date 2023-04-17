@@ -15,7 +15,7 @@
 #  with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Types used in craft_application projects."""
 import re
-from typing import Dict, Literal, Union, List
+from typing import Dict, List, Literal, Union
 
 from pydantic import ConstrainedList, ConstrainedStr
 
@@ -62,6 +62,7 @@ class SummaryStr(ConstrainedStr):
 
 class UniqueStrList(ConstrainedList):
     """A list of strings, each of which must be unique."""
+
     __args__ = [str]
     item_type = str
     unique_items = True

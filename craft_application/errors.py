@@ -1,4 +1,4 @@
-from typing import Optional, Iterable
+from typing import Iterable, Optional
 
 from craft_cli import CraftError
 from craft_parts import PartsError
@@ -33,7 +33,7 @@ class CraftEnvironmentError(CraftError):
         *,
         docs_url: Optional[str] = None,
         valid_values: Optional[Iterable[str]] = None,
-    ):
+    ) -> None:
         details = f"Value could not be parsed: {value}"
         if valid_values is not None:
             details += "\nValid values: "
@@ -41,9 +41,9 @@ class CraftEnvironmentError(CraftError):
         super().__init__(
             message=f"Invalid value in environment variable {variable}",
             details=details,
-            resolution=f"Unset variable or fix value.",
+            resolution="Unset variable or fix value.",
             docs_url=docs_url,
             logpath_report=False,
             reportable=False,
-            retcode=2
+            retcode=2,
         )

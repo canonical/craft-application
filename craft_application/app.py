@@ -1,3 +1,19 @@
+#  This file is part of craft-application.
+#
+#  2023 Canonical Ltd.
+#
+#  This program is free software: you can redistribute it and/or modify it
+#  under the terms of the GNU Lesser General Public License version 3, as
+#  published by the Free Software Foundation.
+#
+#  This program is distributed in the hope that it will be useful, but WITHOUT
+#  ANY WARRANTY; without even the implied warranties of MERCHANTABILITY,
+#  SATISFACTORY QUALITY, or FITNESS FOR A PARTICULAR PURPOSE.
+#  See the GNU Lesser General Public License for more details.
+#
+#  You should have received a copy of the GNU Lesser General Public License
+#  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+"""Main application class for a craft application."""
 import abc
 import contextlib
 import functools
@@ -6,7 +22,7 @@ import pathlib
 import subprocess
 import sys
 from pathlib import Path
-from typing import List, Optional, Type, cast, TYPE_CHECKING, Any, Dict, ContextManager
+from typing import TYPE_CHECKING, ContextManager, List, Optional, Type, cast
 
 from craft_cli import (
     ArgumentParsingError,
@@ -23,10 +39,10 @@ from craft_providers import Executor, ProviderError
 from xdg import BaseDirectory  # type: ignore[import]
 
 from .commands.base import AppCommand
-from .provider import ProviderManager
 from .commands.lifecycle import get_lifecycle_command_group
 from .parts import PartsLifecycle
 from .project import Project
+from .provider import ProviderManager
 
 GLOBAL_VERSION = GlobalArgument(
     "version", "flag", "-V", "--version", "Show the application version and exit"
@@ -54,7 +70,7 @@ class Application(metaclass=abc.ABCMeta):
         """Initialize an Application.
 
         :param name: application name
-        :param version: applcation version
+        :param version: application version
         :param summary: application summary
         :param is_managed: run in managed mode or not
         """
@@ -70,7 +86,7 @@ class Application(metaclass=abc.ABCMeta):
         """Return command groups."""
         lifecycle_commands = get_lifecycle_command_group()
 
-        return [lifecycle_commands] + self._command_groups
+        return [lifecycle_commands, *self._command_groups]
 
     @property
     def log_path(self) -> Optional[Path]:
@@ -127,7 +143,9 @@ class Application(metaclass=abc.ABCMeta):
         """
 
     @contextlib.contextmanager
-    def managed_instance(self, instance_path: pathlib.PosixPath) -> ContextManager[Executor]:
+    def managed_instance(
+        self, instance_path: pathlib.PosixPath
+    ) -> ContextManager[Executor]:
         """Run the application in managed mode."""
         provider = self._manager.get_provider()
         project_path = Path().resolve()
@@ -137,8 +155,6 @@ class Application(metaclass=abc.ABCMeta):
             base=self.project.effective_base,
             instance_name=instance_name,
         )
-
-        managed_command = [self.name, *sys.argv[1:]]
 
         emit.progress("Launching managed instance...")
         with provider.launched_environment(
@@ -150,10 +166,7 @@ class Application(metaclass=abc.ABCMeta):
             allow_unstable=True,
         ) as instance:
             with emit.pause():
-                instance.mount(
-                    host_source=project_path,
-                    target=instance_path
-                )
+                instance.mount(host_source=project_path, target=instance_path)
             try:
                 yield instance
             finally:
@@ -174,13 +187,12 @@ class Application(metaclass=abc.ABCMeta):
         with self.managed_instance(instance_path) as instance:
             try:
                 instance.execute_run(
-                    [self.name, *sys.argv[1:]],
-                    cwd=instance_path,
-                    check=True
+                    [self.name, *sys.argv[1:]], cwd=instance_path, check=True
                 )
             except subprocess.CalledProcessError as exc:
-                raise ProviderError(f"Failed to execute {self.name} in instance.") from exc
-
+                raise ProviderError(
+                    f"Failed to execute {self.name} in instance."
+                ) from exc
 
     def run(self) -> int:
         """Bootstrap and run the application."""
@@ -206,17 +218,20 @@ class Application(metaclass=abc.ABCMeta):
                 emit.ended_ok()
                 return 0
 
-            command = cast(AppCommand, dispatcher.load_command(
-                {
-                    "name": self.name,
-                    "manager": self._manager,
-                    "run_part_step": self.run_part_step,
-                    "generate_metadata": self.generate_metadata,
-                    "create_package": self.create_package,
-                    "clean": self.clean,
-                }
-            ))
-            if self._manager.is_managed or not getattr(command, "is_managed"):
+            command = cast(
+                AppCommand,
+                dispatcher.load_command(
+                    {
+                        "name": self.name,
+                        "manager": self._manager,
+                        "run_part_step": self.run_part_step,
+                        "generate_metadata": self.generate_metadata,
+                        "create_package": self.create_package,
+                        "clean": self.clean,
+                    }
+                ),
+            )
+            if self._manager.is_managed or not command.is_managed:
                 retcode = dispatcher.run() or 0
             else:
                 self.run_managed()

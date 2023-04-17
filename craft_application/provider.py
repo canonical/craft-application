@@ -18,15 +18,13 @@ import abc
 import functools
 import os
 import sys
-from pathlib import Path
-from typing import Optional, Mapping, Type, Callable, Literal, List
+from typing import Callable, Mapping, Optional
 
 import craft_providers
-from craft_cli import emit, CraftError
-from craft_providers import Provider, multipass
-from craft_providers import lxd
+from craft_cli import CraftError, emit
+from craft_providers import Provider, lxd, multipass
 
-from craft_application import utils, project
+from craft_application import project, utils
 from craft_application.errors import CraftEnvironmentError
 
 
@@ -47,11 +45,13 @@ class ProviderManager(metaclass=abc.ABCMeta):
         provider_map: Mapping[str, Callable[[], Provider]],
         managed_mode_env: Optional[str] = None,
         provider_env: Optional[str] = None,
-    ):
+    ) -> None:
         self.app_name = app_name
         self.project = project
         self.provider_map = provider_map
-        self.managed_mode_env = managed_mode_env or f"{self.app_name.upper()}_MANAGED_MODE"
+        self.managed_mode_env = (
+            managed_mode_env or f"{self.app_name.upper()}_MANAGED_MODE"
+        )
         self.provider_env = provider_env or f"{self.app_name.upper()}_PROVIDER"
 
     def _get_default_provider(self) -> Provider:
@@ -63,7 +63,6 @@ class ProviderManager(metaclass=abc.ABCMeta):
             lxd.configure_buildd_image_remote()
             return lxd.LXDProvider(lxd_project=self.app_name)
         return multipass.MultipassProvider()
-
 
     @functools.cached_property
     def is_managed(self):
@@ -81,7 +80,7 @@ class ProviderManager(metaclass=abc.ABCMeta):
             raise CraftEnvironmentError(
                 variable=self.provider_env,
                 value=provider_name,
-                valid_values=self.provider_map.keys()
+                valid_values=self.provider_map.keys(),
             )
         emit.debug(
             f"Using provider {provider_name!r} from environment variable {self.provider_env}"
@@ -97,13 +96,16 @@ class ProviderManager(metaclass=abc.ABCMeta):
             else:
                 raise CraftError(
                     f"Cannot proceed without {provider_name} installed.",
-                    resolution=f"Install {provider_name} and run again."
+                    resolution=f"Install {provider_name} and run again.",
                 )
         return provider
 
     @abc.abstractmethod
     def get_configuration(
-        self, *, base: str, instance_name: str,
+        self,
+        *,
+        base: str,
+        instance_name: str,
     ) -> craft_providers.Base:
         """Get the base configuration from a base name.
 
