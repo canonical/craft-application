@@ -4,7 +4,7 @@ version = "0.0.1"
 readme = "README.rst"
 dependencies = [
     "craft-cli",
-    "craft-parts",
+    "craft-parts>=1.19.1",
     "craft-providers",
     "overrides",
 ]
