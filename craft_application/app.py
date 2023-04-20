@@ -19,6 +19,7 @@ import contextlib
 import functools
 import os
 import pathlib
+import signal
 import subprocess
 import sys
 from pathlib import Path
@@ -73,7 +74,7 @@ class Application(metaclass=abc.ABCMeta):
         :param version: application version
         :param summary: application summary
         :param manager: a ProviderManager for handling managed mode.
-        :param project_class: The class to cuse for creating a Project instance.
+        :param project_class: The class to use for creating a Project instance.
         """
         self.name = name
         self.version = version
@@ -176,10 +177,10 @@ class Application(metaclass=abc.ABCMeta):
             build_base=base_configuration.alias.value,  # type: ignore[attr-defined]
             allow_unstable=True,
         ) as instance:
-            with emit.pause():
-                instance.mount(host_source=project_path, target=instance_path)
             try:
-                yield instance
+                with emit.pause():
+                    instance.mount(host_source=project_path, target=instance_path)
+                    yield instance
             finally:
                 with instance.temporarily_pull_file(
                     source=self.managed_log_path, missing_ok=True
@@ -255,7 +256,7 @@ class Application(metaclass=abc.ABCMeta):
             emit.ended_ok()
         except KeyboardInterrupt as err:
             self._emit_error(CraftError("Interrupted."), cause=err)
-            retcode = 2
+            retcode = 128 + signal.SIGINT
         except CraftError as err:
             self._emit_error(err)
         except Exception as err:  # noqa: BLE001 pylint: disable=broad-except
