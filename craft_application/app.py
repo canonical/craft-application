@@ -49,9 +49,6 @@ GLOBAL_VERSION = GlobalArgument(
     "version", "flag", "-V", "--version", "Show the application version and exit"
 )
 
-if TYPE_CHECKING:
-    pass
-
 
 class Application(metaclass=abc.ABCMeta):
     """Craft Application Builder.
