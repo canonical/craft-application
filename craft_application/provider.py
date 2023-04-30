@@ -23,12 +23,14 @@ from typing import Callable, Mapping, Optional
 import craft_providers
 from craft_cli import CraftError, emit
 from craft_providers import Provider, lxd, multipass
+from craft_providers.actions.snap_installer import Snap
+from craft_providers.bases import get_base_alias, get_base_from_alias
 
 from . import project, utils
 from .errors import CraftEnvironmentError
 
 
-class ProviderManager(metaclass=abc.ABCMeta):
+class ProviderManager:
     """Manager for craft_providers in an application.
 
     :param app_name: the application name.
@@ -100,7 +102,6 @@ class ProviderManager(metaclass=abc.ABCMeta):
                 )
         return provider
 
-    @abc.abstractmethod
     def get_configuration(
         self,
         *,
@@ -111,4 +112,16 @@ class ProviderManager(metaclass=abc.ABCMeta):
 
         :param base: The base to lookup.
         :param instance_name: A name to assign to the instance.
+
+        This method should be overridden by a specific application if it intends to
+        use base names that don't align to a "distro:version" naming convention.
         """
+        distro, version = base.split(":", maxsplit=2)[:2]
+        alias = get_base_alias((distro, version))
+        base_class = get_base_from_alias(alias)
+        return base_class(
+            alias=alias,
+            hostname=instance_name,
+            snaps=[Snap(name=self.app_name, channel=None, classic=True)],
+            environment={self.managed_mode_env: "1"},
+        )
