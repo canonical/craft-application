@@ -14,17 +14,18 @@
 #  You should have received a copy of the GNU Lesser General Public License
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Provider manager for craft-application."""
-import abc
 import functools
 import os
 import sys
-from typing import Callable, Mapping, Optional
+from typing import Optional
 
 import craft_providers
 from craft_cli import CraftError, emit
-from craft_providers import Provider, lxd, multipass
+from craft_providers import Provider
 from craft_providers.actions.snap_installer import Snap
 from craft_providers.bases import get_base_alias, get_base_from_alias
+from craft_providers.lxd import LXDProvider, configure_buildd_image_remote
+from craft_providers.multipass import MultipassProvider
 
 from . import project, utils
 from .errors import CraftEnvironmentError
@@ -44,17 +45,14 @@ class ProviderManager:
         self,
         app_name: str,
         *,
-        provider_map: Mapping[str, Callable[[], Provider]],
         managed_mode_env: Optional[str] = None,
         provider_env: Optional[str] = None,
     ) -> None:
         self.app_name = app_name
+        self._app_upper = app_name.upper()
         self.project = project
-        self.provider_map = provider_map
-        self.managed_mode_env = (
-            managed_mode_env or f"{self.app_name.upper()}_MANAGED_MODE"
-        )
-        self.provider_env = provider_env or f"{self.app_name.upper()}_PROVIDER"
+        self.managed_mode_env = managed_mode_env or f"{self._app_upper}_MANAGED_MODE"
+        self.provider_env = provider_env or f"{self._app_upper}_PROVIDER"
 
     def _get_default_provider(self) -> Provider:
         """Get the default provider class to use for this application.
@@ -62,9 +60,8 @@ class ProviderManager:
         :returns: An instance of the default Provider class.
         """
         if sys.platform == "linux":
-            lxd.configure_buildd_image_remote()
-            return lxd.LXDProvider(lxd_project=self.app_name)
-        return multipass.MultipassProvider()
+            return self._lxd_provider
+        return self._multipass_provider
 
     @functools.cached_property
     def is_managed(self) -> bool:
@@ -78,16 +75,19 @@ class ProviderManager:
         if self.provider_env not in os.environ:
             return self._get_default_provider()
         provider_name = os.environ[self.provider_env]
-        if provider_name not in self.provider_map:
+        if not hasattr(self, f"_{provider_name}_provider"):
+            valid_providers = [
+                k[1:-9] for k in self.__dict__.keys() if k.endswith("_provider")
+            ]
             raise CraftEnvironmentError(
                 variable=self.provider_env,
                 value=provider_name,
-                valid_values=self.provider_map.keys(),
+                valid_values=valid_providers,
             )
         emit.debug(
             f"Using provider {provider_name!r} from environment variable {self.provider_env}"
         )
-        provider = self.provider_map[provider_name]()
+        provider = getattr(self, f"_{provider_name}_provider")
         if not provider.is_provider_installed():
             auto_install = utils.confirm_with_user(
                 f"Provider {provider_name} is not installed. Install now?",
@@ -125,3 +125,17 @@ class ProviderManager:
             snaps=[Snap(name=self.app_name, channel=None, classic=True)],
             environment={self.managed_mode_env: "1"},
         )
+
+    @functools.cached_property
+    def _lxd_provider(self) -> LXDProvider:
+        """Get the LXD provider for this manager."""
+        # TODO: Replace this deprecated function.
+        # https://github.com/canonical/craft-providers/issues/260
+        configure_buildd_image_remote()
+        lxd_remote = os.getenv(f"{self._app_upper}_LXD_REMOTE", "local")
+        return LXDProvider(lxd_project=self.app_name, lxd_remote=lxd_remote)
+
+    @functools.cached_property
+    def _multipass_provider(self) -> MultipassProvider:
+        """Get the Multipass provider for this manager."""
+        return MultipassProvider()
