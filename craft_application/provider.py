@@ -50,7 +50,6 @@ class ProviderManager:
     ) -> None:
         self.app_name = app_name
         self._app_upper = app_name.upper()
-        self.project = project
         self.managed_mode_env = managed_mode_env or f"{self._app_upper}_MANAGED_MODE"
         self.provider_env = provider_env or f"{self._app_upper}_PROVIDER"
 
@@ -60,8 +59,8 @@ class ProviderManager:
         :returns: An instance of the default Provider class.
         """
         if sys.platform == "linux":
-            return self._lxd_provider
-        return self._multipass_provider
+            return self._provider_lxd
+        return self._provider_multipass
 
     @functools.cached_property
     def is_managed(self) -> bool:
@@ -75,9 +74,9 @@ class ProviderManager:
         if self.provider_env not in os.environ:
             return self._get_default_provider()
         provider_name = os.environ[self.provider_env]
-        if not hasattr(self, f"_{provider_name}_provider"):
+        if not hasattr(self, f"_provider_{provider_name}"):
             valid_providers = [
-                k[1:-9] for k in self.__dict__.keys() if k.endswith("_provider")
+                k[10:] for k in dir(self) if k.startswith("_provider_")
             ]
             raise CraftEnvironmentError(
                 variable=self.provider_env,
@@ -87,7 +86,7 @@ class ProviderManager:
         emit.debug(
             f"Using provider {provider_name!r} from environment variable {self.provider_env}"
         )
-        provider = getattr(self, f"_{provider_name}_provider")
+        provider = getattr(self, f"_provider_{provider_name}")
         if not provider.is_provider_installed():
             auto_install = utils.confirm_with_user(
                 f"Provider {provider_name} is not installed. Install now?",
@@ -127,7 +126,7 @@ class ProviderManager:
         )
 
     @functools.cached_property
-    def _lxd_provider(self) -> LXDProvider:
+    def _provider_lxd(self) -> LXDProvider:
         """Get the LXD provider for this manager."""
         # TODO: Replace this deprecated function.
         # https://github.com/canonical/craft-providers/issues/260
@@ -136,6 +135,6 @@ class ProviderManager:
         return LXDProvider(lxd_project=self.app_name, lxd_remote=lxd_remote)
 
     @functools.cached_property
-    def _multipass_provider(self) -> MultipassProvider:
+    def _provider_multipass(self) -> MultipassProvider:
         """Get the Multipass provider for this manager."""
         return MultipassProvider()
