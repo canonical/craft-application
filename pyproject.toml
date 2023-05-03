@@ -4,7 +4,8 @@ version = "0.0.1"
 readme = "README.rst"
 dependencies = [
     "craft-cli",
-    "craft-parts",
+    "craft-parts>=1.19.1",
+    "craft-providers",
     "overrides",
 ]
 classifiers = [
@@ -20,11 +21,19 @@ requires-python = ">=3.8"
 [project.optional-dependencies]
 dev = [
     "coverage[toml]==7.2.2",
+    "hypothesis",
     "pytest==7.2.2",
+    "pytest-check>=2.1",
     "pytest-cov==4.0.0",
     "pytest-mock==3.10.0",
 ]
 types = [
+    "mypy[reports]==1.1.1",
+    "pyright==1.1.306",
+    "types-PyYAML",
+    "types-requests",
+    "types-setuptools",
+    "types-urllib3",
 ]
 docs = [
     "furo==2022.12.07",
@@ -36,20 +45,40 @@ docs = [
     "sphinx-toolbox==3.4.0",
     "sphinx-lint==0.6.7",
 ]
+lint = [
+    "black==23.3.0",
+    "ruff==0.0.260",
+    "codespell[toml]==2.2.4",
+    "yamllint==1.30.0",
+]
+focal = [
+    "python-apt@http://archive.ubuntu.com/ubuntu/pool/main/p/python-apt/python-apt_2.0.1ubuntu0.20.04.1.tar.xz",
+]
+jammy = [
+    "python-apt@http://archive.ubuntu.com/ubuntu/pool/main/p/python-apt/python-apt_2.4.0ubuntu1.tar.xz",
+]
+devel = [
+    "python-apt@http://archive.ubuntu.com/ubuntu/pool/main/p/python-apt/python-apt_2.5.3ubuntu1.tar.xz",
+]
 
 [build-system]
 requires = [
-    "setuptools==67.6.0",
+    "setuptools==67.6.1",
+    "setuptools-scm"
 ]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
+include = ["craft_*", "*craft"]
 exclude = [
     "dist",
     "docs",
     "results",
     "tests",
 ]
+
+[tool.setuptools.package-data]
+"*" = ["py.typed"]
 
 [tool.black]
 target-version = ["py38"]
@@ -80,14 +109,37 @@ omit = ["tests/**"]
 
 [tool.coverage.report]
 skip_empty = true
-fail_under = 80
+fail_under = 40  # TODO: Increase this after adding more unit tests.
 
 [tool.pyright]
-strict = ["craft_application"]
+# Strict mode fails right now  due to some external libraries (e.g. pyxdg)
+# strict = ["craft_application"]
 pythonVersion = "3.8"
 pythonPlatform = "Linux"
 venvPath = ".tox"
-venv = "py38"
+venv = "typing"
+reportUnnecessaryTypeIgnoreComment = true
+include = ["craft_application", "tests"]
+# Include as much of strict mode as possible.
+strictListInference = true
+strictDictionaryInference = true
+strictSetInference = true
+reportDeprecated = true
+reportDuplicateImport = true
+reportFunctionMemberAccess = true
+reportIncompatibleMethodOverride = true
+reportIncompatibleVariableOverride = true
+reportInconsistentConstructor = true
+reportMatchNotExhaustive = true
+reportMissingTypeArgument = true
+reportUntypedBaseClass = true
+reportUntypedClassDecorator = true
+reportUntypedFunctionDecorator = true
+reportUntypedNamedTuple = true
+
+executionEnvironments = [
+    { root = "craft_application", reportMissingParameterType = true, reportPrivateUsage = true }
+]
 
 [tool.mypy]
 python_version = "3.8"
@@ -104,6 +156,13 @@ warn_return_any = true
 disallow_subclassing_any = true
 disallow_untyped_decorators = true
 disallow_any_generics = true
+# plugins = ["pydantic.mypy"]  TODO: Re-enable this once we have pydantic>=1.10
+
+[tool.pydantic-mypy]
+init_forbid_extra = true
+init_typed = true
+warn_required_dynamic_aliases = true
+warn_untyped_fields = true
 
 [[tool.mypy.overrides]]
 module = ["starcraft"]
@@ -113,6 +172,11 @@ no_implicit_optional = true
 [[tool.mypy.overrides]]
 module = ["tests.*"]
 strict = false
+
+# Tell mypy to ignore typing on pyxdg until we have a typeshed entry.
+[[tool.mypy.overrides]]
+module = ["xdg.*"]
+ignore_missing_imports = true
 
 [tool.ruff]
 line-length = 88

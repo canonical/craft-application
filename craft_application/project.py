@@ -1,17 +1,48 @@
+#  This file is part of craft-application.
+#
+#  Copyright 2023 Canonical Ltd.
+#
+#  This program is free software: you can redistribute it and/or modify it
+#  under the terms of the GNU Lesser General Public License version 3, as
+#  published by the Free Software Foundation.
+#
+#  This program is distributed in the hope that it will be useful, but WITHOUT
+#  ANY WARRANTY; without even the implied warranties of MERCHANTABILITY,
+#  SATISFACTORY QUALITY, or FITNESS FOR A PARTICULAR PURPOSE.
+#  See the GNU Lesser General Public License for more details.
+#
+#  You should have received a copy of the GNU Lesser General Public License
+#  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+"""Basic project model for a craft-application.
+
+This defines the structure of the input file (e.g. snapcraft.yaml)
+"""
+import io
 import pathlib
 import re
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Any, Dict, Iterable, Optional, Tuple, Union
 
 import craft_parts
 import pydantic
 import yaml
-from pydantic import PrivateAttr, conlist, constr
+from pydantic import AnyHttpUrl, AnyUrl
+
+if TYPE_CHECKING:
+    from pydantic.error_wrappers import ErrorDict
 
 from . import errors
+from .types import (
+    ProjectBaseStr,
+    ProjectName,
+    ProjectTitle,
+    SummaryStr,
+    UniqueStrList,
+    VersionStr,
+)
 
 
 class ProjectModel(pydantic.BaseModel):
-    """Base model for snapcraft project classes."""
+    """Base model for craft-application project classes."""
 
     class Config:  # pylint: disable=too-few-public-methods
         """Pydantic model configuration."""
@@ -23,37 +54,27 @@ class ProjectModel(pydantic.BaseModel):
         alias_generator = lambda s: s.replace("_", "-")  # noqa: E731
 
 
-# A workaround for mypy false positives
-# see https://github.com/samuelcolvin/pydantic/issues/975#issuecomment-551147305
-# fmt: off
-if TYPE_CHECKING:
-    UniqueStrList = List[str]
-else:
-    UniqueStrList = conlist(str, unique_items=True)
-# fmt: on
-
-
 class Project(ProjectModel):
     """Craft Application project definition."""
 
-    name: constr(max_length=40)  # type: ignore
-    title: Optional[constr(max_length=40)]  # type: ignore
-    base: Optional[str]
-    build_base: Optional[str]
-    version: constr(max_length=32, strict=True)  # type: ignore
+    name: ProjectName
+    title: Optional[ProjectTitle]
+    base: Optional[ProjectBaseStr]
+    build_base: Optional[ProjectBaseStr]
+    version: VersionStr
     contact: Optional[Union[str, UniqueStrList]]
     donation: Optional[Union[str, UniqueStrList]]
     issues: Optional[Union[str, UniqueStrList]]
-    source_code: Optional[str]
-    website: Optional[str]
-    summary: Optional[constr(max_length=78)]  # type: ignore
+    source_code: Optional[AnyUrl]
+    website: Optional[AnyHttpUrl]
+    summary: Optional[SummaryStr]
     description: Optional[str]
     license: Optional[str]
     parts: Dict[str, Any]  # parts are handled by craft-parts
 
     @pydantic.validator("name")
     @classmethod
-    def _validate_name(cls, name):
+    def _validate_name(cls, name: str) -> str:
         if not re.match(r"^[a-z0-9-]*[a-z][a-z0-9-]*$", name):
             raise ValueError(
                 "names can only use ASCII lowercase letters, numbers, and hyphens, "
@@ -73,7 +94,7 @@ class Project(ProjectModel):
 
     @pydantic.validator("version")
     @classmethod
-    def _validate_version(cls, version, values):
+    def _validate_version(cls, version: str) -> str:
         if version and not re.match(
             r"^[a-zA-Z0-9](?:[a-zA-Z0-9:.+~-]*[a-zA-Z0-9+~])?$", version
         ):
@@ -88,7 +109,7 @@ class Project(ProjectModel):
 
     @pydantic.validator("parts", each_item=True)
     @classmethod
-    def _validate_parts(cls, item):
+    def _validate_parts(cls, item: Dict[str, Any]) -> Dict[str, Any]:
         """Verify each part (craft-parts will re-validate this)."""
         craft_parts.validate_part(item)
         return item
@@ -96,6 +117,7 @@ class Project(ProjectModel):
     @classmethod
     def unmarshal(cls, data: Dict[str, Any]) -> "Project":
         """Create and populate a new ``Project`` object from dictionary data.
+
         The unmarshal method validates entries in the input dictionary, populating
         the corresponding fields in the data object.
         :param data: The dictionary data to unmarshal.
@@ -105,44 +127,41 @@ class Project(ProjectModel):
         if not isinstance(data, dict):
             raise TypeError("Project data is not a dictionary")
 
-        try:
-            project = Project(**data)
-        except pydantic.ValidationError as err:
-            raise errors.ProjectValidationError(
-                _format_pydantic_errors(err.errors())
-            ) from err
-
-        return project
+        return cls(**data)
 
     @classmethod
     def from_file(cls, project_file: pathlib.Path) -> "Project":
         """Create and populate a new ``Project`` object from ``project_file``."""
         if not project_file.exists():
-            raise errors.ProjectFileMissing(
+            raise errors.ProjectFileMissingError(
                 f"Could not find project file {str(project_file)!r}"
             )
         with project_file.open() as project_stream:
-            project_data = yaml.load(project_stream, Loader=_SafeLoader)
+            # Ruff is detecting this as a potentially-unsafe load, which can be
+            # overridden.
+            project_data = yaml.load(project_stream, Loader=_SafeLoader)  # noqa: S506
+        try:
+            return cls.unmarshal(project_data)
+        except pydantic.ValidationError as err:
+            raise errors.ProjectValidationError(
+                _format_pydantic_errors(err.errors(), file_name=project_file.name)
+            )
 
-        return cls.unmarshal(project_data)
-
-    def get_effective_base(self) -> str:
-        """Return the base to use to create the snap."""
-        effective_base = None
-
+    @property
+    def effective_base(self) -> str:
+        """Return the base used for creating the output."""
         if self.build_base is not None:
-            effective_base = self.build_base
-        elif self.base is not None:
-            effective_base = self.base
-
-        if effective_base is None:
-            raise RuntimeError("Could not determine effective base")
-
-        return effective_base
+            return self.build_base
+        if self.base is not None:
+            return self.base
+        raise RuntimeError("Could not determine effective base")
 
 
-def _format_pydantic_errors(errors, *, file_name: str = "snapcraft.yaml"):
+def _format_pydantic_errors(
+    errors: "Iterable[ErrorDict]", *, file_name: str = "yaml file"
+) -> str:
     """Format errors.
+
     Example 1: Single error.
     Bad snapcraft.yaml content:
     - field: <some field>
@@ -152,7 +171,7 @@ def _format_pydantic_errors(errors, *, file_name: str = "snapcraft.yaml"):
     - field: <some field>
       reason: <some reason>
     - field: <some field 2>
-      reason: <some reason 2>
+      reason: <some reason 2>.
     """
     combined = [f"Bad {file_name} content:"]
     for error in errors:
@@ -182,7 +201,7 @@ def _format_pydantic_errors(errors, *, file_name: str = "snapcraft.yaml"):
     return "\n".join(combined)
 
 
-def _format_pydantic_error_location(loc):
+def _format_pydantic_error_location(loc: Iterable[Union[str, int]]) -> str:
     """Format location."""
     loc_parts = []
     for loc_part in loc:
@@ -204,15 +223,15 @@ def _format_pydantic_error_location(loc):
     return loc
 
 
-def _format_pydantic_error_message(msg):
+def _format_pydantic_error_message(msg: str) -> str:
     """Format pydantic's error message field."""
     # Replace shorthand "str" with "string".
-    msg = msg.replace("str type expected", "string type expected")
-    return msg
+    return msg.replace("str type expected", "string type expected")
 
 
 def _printable_field_location_split(location: str) -> Tuple[str, str]:
     """Return split field location.
+
     If top-level, location is returned as unquoted "top-level".
     If not top-level, location is returned as quoted location, e.g.
     (1) field1[idx].foo => 'foo', 'field1[idx]'
@@ -228,7 +247,7 @@ def _printable_field_location_split(location: str) -> Tuple[str, str]:
     return field_name, "top-level"
 
 
-def _check_duplicate_keys(node):
+def _check_duplicate_keys(node: yaml.Node) -> None:
     mappings = set()
 
     for key_node, _ in node.value:
@@ -246,7 +265,7 @@ def _check_duplicate_keys(node):
             pass
 
 
-def _dict_constructor(loader, node):
+def _dict_constructor(loader: yaml.Loader, node: yaml.MappingNode) -> Dict[str, Any]:
     _check_duplicate_keys(node)
 
     # Necessary in order to make yaml merge tags work
@@ -265,8 +284,8 @@ def _dict_constructor(loader, node):
 
 
 class _SafeLoader(yaml.SafeLoader):  # pylint: disable=too-many-ancestors
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, stream: io.TextIOBase) -> None:
+        super().__init__(stream)
 
         self.add_constructor(
             yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, _dict_constructor

@@ -1,6 +1,20 @@
+# Copyright 2023 Canonical Ltd.
+#
+# This program is free software: you can redistribute it and/or modify it
+# under the terms of the GNU General Public License version 3, as published
+# by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranties of MERCHANTABILITY,
+# SATISFACTORY QUALITY, or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along
+# with this program.  If not, see <http://www.gnu.org/licenses/>.
+"""Base parts lifecycle."""
 from functools import cached_property
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional, cast
 
 import craft_parts
 from craft_cli import emit
@@ -27,6 +41,7 @@ def _get_lifecycle_steps() -> Dict[str, Step]:
 
 class PartsLifecycle:
     """Create and manage the parts lifecycle.
+
     :param all_parts: A dictionary containing the parts defined in the project.
     :param work_dir: The working directory for parts processing.
     :raises PartsLifecycleError: On error initializing the parts lifecycle.
@@ -34,12 +49,14 @@ class PartsLifecycle:
 
     def __init__(
         self,
-        all_parts,
+        app_name: str,
+        all_parts: Dict[str, Any],  # TODO: Tighten this restriction.
         *,
         cache_dir: str,
         work_dir: Path,
         base: str,
     ) -> None:
+        self.app_name = app_name
         self._lifecycle_steps = _get_lifecycle_steps()
         self._cache_dir = cache_dir
         self._all_parts = all_parts
@@ -47,13 +64,13 @@ class PartsLifecycle:
         self._base = base
 
     @property
-    def _all_part_names(self):
+    def _all_part_names(self) -> List[str]:
         return [*self._all_parts]
 
     @property
     def prime_dir(self) -> Path:
         """The path to the prime directory."""
-        return self._lcm.project_info.prime_dir
+        return cast(Path, self._lcm.project_info.prime_dir)
 
     @cached_property
     def _lcm(self) -> craft_parts.LifecycleManager:
@@ -64,7 +81,7 @@ class PartsLifecycle:
         try:
             return craft_parts.LifecycleManager(
                 {"parts": self._all_parts},
-                application_name="snapcraft",
+                application_name=self.app_name,
                 work_dir=self._work_dir,
                 cache_dir=self._cache_dir,
                 base=self._base,
@@ -74,6 +91,7 @@ class PartsLifecycle:
             raise errors.PartsLifecycleError(str(err)) from err
 
     def run(self, step_name: str, part_names: Optional[List[str]]) -> None:
+        """Run the lifecycle manager for the parts."""
         try:
             target_step = self._lifecycle_steps[step_name]
         except KeyError as key_error:
@@ -101,7 +119,7 @@ class PartsLifecycle:
             if err.filename:
                 msg = f"{err.filename}: {msg}"
             raise errors.PartsLifecycleError(msg) from err
-        except Exception as err:
+        except Exception as err:  # noqa BLE001: Converting general error.
             raise errors.PartsLifecycleError(str(err)) from err
 
     def clean(self, part_names: Optional[List[str]]) -> None:

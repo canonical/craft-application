@@ -14,8 +14,7 @@
 # You should have received a copy of the GNU General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-"""
-Craft Application Package.
+"""Craft Application Package.
 
 This package should provide everything needed to comply with what a Craft Application
 is to provide at its base.
@@ -25,5 +24,12 @@ from .app import Application
 from .metadata import MetadataModel
 from .parts import PartsLifecycle
 from .project import Project
+from .provider import ProviderManager
 
-__all__ = ["Application", "PartsLifecycle", "Project", "MetadataModel"]
+__all__ = [
+    "Application",
+    "PartsLifecycle",
+    "Project",
+    "MetadataModel",
+    "ProviderManager",
+]

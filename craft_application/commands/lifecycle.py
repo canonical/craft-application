@@ -11,27 +11,40 @@
 #
 # You should have received a copy of the GNU General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
-
 """Basic lifecycle commands for a Craft Application."""
+
+# Tell pyright to ignore unnecessary type:ignore comments.
+# This is because _LifestyleCommand.run currently does things that mypy needs
+# an ignore on but pyright does not.
+# pyright: reportUnnecessaryTypeIgnoreComment=false
 
 import abc
 import textwrap
-from typing import TYPE_CHECKING, Any, Callable, Dict, Optional, cast
+from typing import (
+    TYPE_CHECKING,
+    Callable,
+    Dict,
+    List,
+    Optional,
+    Type,
+    cast,
+)
 
-import craft_parts
-from craft_cli import BaseCommand, CommandGroup, emit
+from craft_cli import CommandGroup, emit
 from craft_parts.features import Features
 from overrides import overrides
+
+from .base import AppCommand
 
 if TYPE_CHECKING:
     import argparse
 
 
-def get_lifecycle_command_group():
+def get_lifecycle_command_group() -> CommandGroup:
     """Return the lifecycle related command group."""
     # Craft CLI mangles the order, but we keep it this way for when it won't
     # anymore.
-    commands = [
+    commands: List[Type[_LifecycleCommand]] = [
         CleanCommand,
         PullCommand,
     ]
@@ -53,13 +66,16 @@ def get_lifecycle_command_group():
     )
 
 
-class _LifecycleCommand(BaseCommand, abc.ABC):
+class _LifecycleCommand(AppCommand, abc.ABC):
     """Lifecycle-related commands."""
 
     @overrides
     def run(self, parsed_args: "argparse.Namespace") -> None:
         emit.trace(f"lifecycle command: {self.name!r}, arguments: {parsed_args!r}")
-        self._callbacks = cast(Dict[str, Callable], self.config)
+        # The callbacks are very generic and need to be general for now.
+        # This is the reason for telling pyright to ignore unnecessary type: ignore
+        # comments at the top of the file.
+        self._callbacks = cast(Dict[str, Callable], self.config)  # type: ignore[type-arg]
 
 
 class _LifecyclePartsCommand(_LifecycleCommand):
@@ -76,9 +92,11 @@ class _LifecyclePartsCommand(_LifecycleCommand):
 
 
 class _LifecycleStepCommand(_LifecyclePartsCommand):
+    is_managed = True
+
     @overrides
     def fill_parser(self, parser: "argparse.ArgumentParser") -> None:
-        super().fill_parser(parser)  # type: ignore
+        super().fill_parser(parser)
 
         group = parser.add_mutually_exclusive_group()
         group.add_argument(
@@ -96,6 +114,7 @@ class _LifecycleStepCommand(_LifecyclePartsCommand):
     def run(
         self, parsed_args: "argparse.Namespace", step_name: Optional[str] = None
     ) -> None:
+        """Run a lifecycle step command."""
         super().run(parsed_args)
 
         if step_name is None:
@@ -177,6 +196,7 @@ class PrimeCommand(_LifecycleStepCommand):
     def run(
         self, parsed_args: "argparse.Namespace", step_name: Optional[str] = None
     ) -> None:
+        """Run the prime command."""
         super().run(parsed_args, step_name=step_name)
 
         generate_metadata = self._callbacks["generate_metadata"]
@@ -195,7 +215,12 @@ class PackCommand(PrimeCommand):
     )
 
     @overrides
-    def run(self, parsed_args: "argparse.Namespace") -> None:
+    def run(
+        self, parsed_args: "argparse.Namespace", step_name: Optional[str] = None
+    ) -> None:
+        """Run the pack command."""
+        if step_name not in ("pack", None):
+            raise RuntimeError(f"Step name {step_name} passed to pack command.")
         super().run(parsed_args, step_name="prime")
 
         create_package = self._callbacks["create_package"]
@@ -218,6 +243,7 @@ class CleanCommand(_LifecyclePartsCommand):
 
     @overrides
     def run(self, parsed_args: "argparse.Namespace") -> None:
+        """Run the clean command."""
         super().run(parsed_args)
 
         clean = self._callbacks["clean"]
