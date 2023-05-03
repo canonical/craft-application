@@ -27,7 +27,7 @@ from craft_providers.bases import get_base_alias, get_base_from_alias
 from craft_providers.lxd import LXDProvider, configure_buildd_image_remote
 from craft_providers.multipass import MultipassProvider
 
-from . import project, utils
+from . import utils
 from .errors import CraftEnvironmentError
 
 
@@ -75,9 +75,7 @@ class ProviderManager:
             return self._get_default_provider()
         provider_name = os.environ[self.provider_env]
         if not hasattr(self, f"_provider_{provider_name}"):
-            valid_providers = [
-                k[10:] for k in dir(self) if k.startswith("_provider_")
-            ]
+            valid_providers = [k[10:] for k in dir(self) if k.startswith("_provider_")]
             raise CraftEnvironmentError(
                 variable=self.provider_env,
                 value=provider_name,

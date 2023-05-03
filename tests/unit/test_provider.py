@@ -19,12 +19,11 @@ import sys
 from unittest import mock
 
 import pytest
+from craft_application import ProviderManager, utils
+from craft_application.errors import CraftEnvironmentError
 from craft_cli import CraftError
 from craft_providers.lxd import LXDProvider
 from craft_providers.multipass import MultipassProvider
-
-from craft_application import ProviderManager, utils
-from craft_application.errors import CraftEnvironmentError
 
 
 @pytest.fixture
@@ -33,13 +32,32 @@ def provider_manager():
 
 
 @pytest.mark.parametrize(
-    ["app_name", "managed_mode_env", "expected_managed_mode_env", "provider_env", "expected_provider_env"],
+    [
+        "app_name",
+        "managed_mode_env",
+        "expected_managed_mode_env",
+        "provider_env",
+        "expected_provider_env",
+    ],
     [
         ("test_app", "ABCXYZ", "ABCXYZ", "ZYXCBA", "ZYXCBA"),
-        ("test_app", None, "TEST_APP_MANAGED_MODE", None, "TEST_APP_PROVIDER",)
-    ]
+        (
+            "test_app",
+            None,
+            "TEST_APP_MANAGED_MODE",
+            None,
+            "TEST_APP_PROVIDER",
+        ),
+    ],
 )
-def test_init_params(check, app_name, managed_mode_env, expected_managed_mode_env, provider_env, expected_provider_env):
+def test_init_params(
+    check,
+    app_name,
+    managed_mode_env,
+    expected_managed_mode_env,
+    provider_env,
+    expected_provider_env,
+):
     manager = ProviderManager(
         app_name, managed_mode_env=managed_mode_env, provider_env=provider_env
     )
@@ -59,7 +77,9 @@ def test_get_provider_managed(monkeypatch, provider_manager):
 
 
 @pytest.mark.parametrize("provider", ["invalid", ""])
-def test_get_provider_invalid_provider_env(check, monkeypatch, provider_manager, provider):
+def test_get_provider_invalid_provider_env(
+    check, monkeypatch, provider_manager, provider
+):
     monkeypatch.setenv(provider_manager.provider_env, provider)
 
     with pytest.raises(CraftEnvironmentError) as exc_info:
@@ -76,9 +96,11 @@ def test_get_provider_invalid_provider_env(check, monkeypatch, provider_manager,
         pytest.param("darwin", MultipassProvider, id="macos"),
         pytest.param("win32", MultipassProvider, id="windows"),
         pytest.param("unknown", MultipassProvider, id="platform_unkown"),
-    ]
+    ],
 )
-def test_get_provider_default_correct_class(monkeypatch, provider_manager, platform, provider_class):
+def test_get_provider_default_correct_class(
+    monkeypatch, provider_manager, platform, provider_class
+):
     monkeypatch.delenv(provider_manager.provider_env, raising=False)
     monkeypatch.setattr(sys, "platform", platform)
 
@@ -92,9 +114,11 @@ def test_get_provider_default_correct_class(monkeypatch, provider_manager, platf
     [
         ("lxd", LXDProvider),
         ("multipass", MultipassProvider),
-    ]
+    ],
 )
-def test_get_provider_not_installed(check, monkeypatch, provider_manager, provider_name, provider_class):
+def test_get_provider_not_installed(
+    check, monkeypatch, provider_manager, provider_name, provider_class
+):
     monkeypatch.setenv(provider_manager.provider_env, provider_name)
     mock_returns_false = mock.Mock(return_value=False)
     monkeypatch.setattr(provider_class, "is_provider_installed", mock_returns_false)
@@ -105,7 +129,9 @@ def test_get_provider_not_installed(check, monkeypatch, provider_manager, provid
 
     check.is_true(re.match(r"Install [a-z]+ and run again.", exc_info.value.resolution))
     check.is_in(provider_name, exc_info.value.resolution)
-    check.is_true(re.match(r"Cannot proceed without [a-z]+ installed", exc_info.value.args[0]))
+    check.is_true(
+        re.match(r"Cannot proceed without [a-z]+ installed", exc_info.value.args[0])
+    )
     check.is_in(provider_name, exc_info.value.args[0])
 
 
@@ -114,18 +140,26 @@ def test_get_provider_not_installed(check, monkeypatch, provider_manager, provid
     [
         ("lxd", LXDProvider),
         ("multipass", MultipassProvider),
-    ]
+    ],
 )
-def test_get_provider_auto_install(check, monkeypatch, provider_manager, provider_name, provider_class):
+def test_get_provider_auto_install(
+    check, monkeypatch, provider_manager, provider_name, provider_class
+):
     monkeypatch.setenv(provider_manager.provider_env, provider_name)
     mock_provider_installed = mock.Mock(return_value=False)
     mock_ensure_available = mock.Mock()
     mock_confirm = mock.Mock(return_value=True)
-    monkeypatch.setattr(provider_class, "is_provider_installed", mock_provider_installed)
-    monkeypatch.setattr(provider_class, "ensure_provider_is_available", mock_ensure_available)
+    monkeypatch.setattr(
+        provider_class, "is_provider_installed", mock_provider_installed
+    )
+    monkeypatch.setattr(
+        provider_class, "ensure_provider_is_available", mock_ensure_available
+    )
     monkeypatch.setattr(utils, "confirm_with_user", mock_confirm)
 
     provider = provider_manager.get_provider()
 
     assert isinstance(provider, provider_class)
+
+
 # endregion
