@@ -25,6 +25,7 @@ from craft_providers import Provider
 from craft_providers.bases import get_base_alias, get_base_from_alias
 from craft_providers.lxd import LXDProvider, configure_buildd_image_remote
 from craft_providers.multipass import MultipassProvider
+
 # This import fails if moved higher up.
 from craft_providers.actions.snap_installer import Snap
 
