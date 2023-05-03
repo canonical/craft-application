@@ -48,7 +48,7 @@ docs = [
 lint = [
     "black==23.3.0",
     "ruff==0.0.260",
-    "codespell[tomli]==2.2.4",
+    "codespell[toml]==2.2.4",
     "yamllint==1.30.0",
 ]
 focal = [
