@@ -49,12 +49,14 @@ class PartsLifecycle:
 
     def __init__(
         self,
+        app_name: str,
         all_parts: Dict[str, Any],  # TODO: Tighten this restriction.
         *,
         cache_dir: str,
         work_dir: Path,
         base: str,
     ) -> None:
+        self.app_name = app_name
         self._lifecycle_steps = _get_lifecycle_steps()
         self._cache_dir = cache_dir
         self._all_parts = all_parts
@@ -79,7 +81,7 @@ class PartsLifecycle:
         try:
             return craft_parts.LifecycleManager(
                 {"parts": self._all_parts},
-                application_name="snapcraft",
+                application_name=self.app_name,
                 work_dir=self._work_dir,
                 cache_dir=self._cache_dir,
                 base=self._base,
