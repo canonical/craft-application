@@ -27,6 +27,9 @@ jobs:
           sudo snap install --no-wait --classic pyright
           sudo snap install --no-wait shellcheck
           echo "::endgroup::"
+          echo "::group::Install python-apt build-deps"
+          sudo apt-get install -y python3-pip python3-setuptools python3-wheel python3-venv libapt-pkg-dev
+          echo "::endgroup::"
           echo "::group::pip install"
           python -m pip install 'tox>=4' tox-gh
           echo "::endgroup::"
