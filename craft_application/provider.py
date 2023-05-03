@@ -14,7 +14,7 @@
 #  You should have received a copy of the GNU Lesser General Public License
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Provider manager for craft-application."""
-import functools
+import functools  # noqa: I001
 import os
 import sys
 from typing import Optional
@@ -22,10 +22,11 @@ from typing import Optional
 import craft_providers
 from craft_cli import CraftError, emit
 from craft_providers import Provider
-from craft_providers.actions.snap_installer import Snap
 from craft_providers.bases import get_base_alias, get_base_from_alias
 from craft_providers.lxd import LXDProvider, configure_buildd_image_remote
 from craft_providers.multipass import MultipassProvider
+# This import fails if moved higher up.
+from craft_providers.actions.snap_installer import Snap
 
 from . import utils
 from .errors import CraftEnvironmentError
