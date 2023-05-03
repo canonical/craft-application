@@ -119,6 +119,7 @@ class Application(metaclass=abc.ABCMeta):
     def parts_lifecycle(self) -> PartsLifecycle:
         """Get the parts lifecycle for this application."""
         return PartsLifecycle(
+            self.name,
             self.project.parts,
             cache_dir=self.cache_dir,
             work_dir=Path.cwd(),
@@ -170,8 +171,7 @@ class Application(metaclass=abc.ABCMeta):
             project_path=project_path,
             base_configuration=base_configuration,
             instance_name=instance_name,
-            # craft_parts.Base doesn't currently define an alias, but it's always there.
-            build_base=base_configuration.alias.value,  # type: ignore[attr-defined]
+            build_base=base_configuration.alias.value,
             allow_unstable=True,
         ) as instance:
             try:

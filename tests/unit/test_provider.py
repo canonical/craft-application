@@ -16,6 +16,7 @@
 """Provider manager tests."""
 import re
 import sys
+from typing import cast
 from unittest import mock
 
 import pytest
@@ -127,11 +128,11 @@ def test_get_provider_not_installed(
     with pytest.raises(CraftError) as exc_info:
         provider_manager.get_provider()
 
-    check.is_true(re.match(r"Install [a-z]+ and run again.", exc_info.value.resolution))
+    resolution = cast(str, exc_info.value.resolution)
+    check.is_true(re.match(r"Install [a-z]+ and run again.", resolution))
     check.is_in(provider_name, exc_info.value.resolution)
-    check.is_true(
-        re.match(r"Cannot proceed without [a-z]+ installed", exc_info.value.args[0])
-    )
+    message = cast(str, exc_info.value.args[0])
+    check.is_true(re.match(r"Cannot proceed without [a-z]+ installed", message))
     check.is_in(provider_name, exc_info.value.args[0])
 
 

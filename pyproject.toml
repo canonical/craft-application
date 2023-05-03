@@ -29,7 +29,7 @@ dev = [
 ]
 types = [
     "mypy[reports]==1.1.1",
-    "pyright==1.1.302",
+    "pyright==1.1.306",
     "types-PyYAML",
     "types-requests",
     "types-setuptools",
@@ -44,6 +44,12 @@ docs = [
     "sphinx-pydantic==0.1.1",
     "sphinx-toolbox==3.4.0",
     "sphinx-lint==0.6.7",
+]
+lint = [
+    "black==23.3.0",
+    "ruff==0.0.260",
+    "codespell[tomli]==2.2.4",
+    "yamllint==1.30.0",
 ]
 focal = [
     "python-apt@http://archive.ubuntu.com/ubuntu/pool/main/p/python-apt/python-apt_2.0.1ubuntu0.20.04.1.tar.xz",

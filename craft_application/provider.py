@@ -84,7 +84,7 @@ class ProviderManager:
         emit.debug(
             f"Using provider {provider_name!r} from environment variable {self.provider_env}"
         )
-        provider = getattr(self, f"_provider_{provider_name}")
+        provider: Provider = getattr(self, f"_provider_{provider_name}")
         if not provider.is_provider_installed():
             auto_install = utils.confirm_with_user(
                 f"Provider {provider_name} is not installed. Install now?",
