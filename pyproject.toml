@@ -45,6 +45,15 @@ docs = [
     "sphinx-toolbox==3.4.0",
     "sphinx-lint==0.6.7",
 ]
+focal = [
+    "python-apt@http://archive.ubuntu.com/ubuntu/pool/main/p/python-apt/python-apt_2.0.1ubuntu0.20.04.1.tar.xz",
+]
+jammy = [
+    "python-apt@http://archive.ubuntu.com/ubuntu/pool/main/p/python-apt/python-apt_2.4.0ubuntu1.tar.xz",
+]
+devel = [
+    "python-apt@http://archive.ubuntu.com/ubuntu/pool/main/p/python-apt/python-apt_2.5.3ubuntu1.tar.xz",
+]
 
 [build-system]
 requires = [
