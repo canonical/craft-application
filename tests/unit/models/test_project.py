@@ -22,9 +22,11 @@ from craft_application.models import Project
 
 PROJECTS_DIR = pathlib.Path(__file__).parent / "project_models"
 PARTS_DICT = {"my-part": {"plugin": "nil"}}
+# pyright doesn't like these types and doesn't have a pydantic plugin like mypy.
+# Because of this, we need to silence several errors in these constants.
 BASIC_PROJECT = Project(
-    name="project-name",
-    version="1.0",
+    name="project-name",  # pyright: ignore[reportGeneralTypeIssues]
+    version="1.0",  # pyright: ignore[reportGeneralTypeIssues]
     parts=PARTS_DICT,
 )
 BASIC_PROJECT_DICT = {
@@ -33,14 +35,14 @@ BASIC_PROJECT_DICT = {
     "parts": PARTS_DICT,
 }
 FULL_PROJECT = Project(
-    name="full-project",
-    title="A fully-defined project",
+    name="full-project",  # pyright: ignore[reportGeneralTypeIssues]
+    title="A fully-defined project",  # pyright: ignore[reportGeneralTypeIssues]
     base="core24",
-    version="1.0.0.post64+git12345678",
+    version="1.0.0.post64+git12345678",  # pyright: ignore[reportGeneralTypeIssues]
     contact="author@project.org",
     issues="https://github.com/canonical/craft-application/issues",
-    source_code="https://github.com/canonical/craft-application",
-    summary="A fully-defined craft-application project.",
+    source_code="https://github.com/canonical/craft-application",  # pyright: ignore[reportGeneralTypeIssues]
+    summary="A fully-defined craft-application project.",  # pyright: ignore[reportGeneralTypeIssues]
     description="A fully-defined craft-application project. (description)",
     license="LGPLv3",
     parts=PARTS_DICT,
@@ -127,8 +129,13 @@ class FakeBuildBaseProject(Project):
     build_base: str
 
 
+# As above, we need to tell pyright to ignore several typing issues.
 BUILD_BASE_PROJECT = FakeBuildBaseProject(
-    name="project-name", version="1.0", parts={}, base="incorrect", build_base="correct"
+    name="project-name",  # pyright: ignore[reportGeneralTypeIssues]
+    version="1.0",  # pyright: ignore[reportGeneralTypeIssues]
+    parts={},
+    base="incorrect",
+    build_base="correct",
 )
 
 
