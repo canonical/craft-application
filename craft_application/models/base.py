@@ -13,25 +13,23 @@
 #
 # You should have received a copy of the GNU Lesser General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
-"""General-purpose models for *craft applications."""
+"""Base pydantic model for *craft applications."""
 
-from craft_application.models.base import CraftBaseModel
-from craft_application.models.constraints import (
-    ProjectName,
-    ProjectTitle,
-    SummaryStr,
-    UniqueStrList,
-    VersionStr,
-)
-from craft_application.models.project import Project
+import pydantic
 
 
-__all__ = [
-    "CraftBaseModel",
-    "Project",
-    "ProjectName",
-    "ProjectTitle",
-    "SummaryStr",
-    "UniqueStrList",
-    "VersionStr",
-]
+def _alias_generator(s: str) -> str:
+    return s.replace("_", "-")
+
+
+class CraftBaseModel(pydantic.BaseModel):
+    """Base model for craft-application project classes."""
+
+    class Config:  # pylint: disable=too-few-public-methods
+        """Pydantic model configuration."""
+
+        validate_assignment = True
+        extra = "forbid"
+        allow_mutation = True
+        allow_population_by_field_name = True
+        alias_generator = _alias_generator

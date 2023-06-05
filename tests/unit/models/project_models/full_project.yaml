@@ -1,0 +1,13 @@
+name: full-project
+title: A fully-defined project
+summary: A fully-defined craft-application project.
+description: A fully-defined craft-application project. (description)
+base: core24
+version: 1.0.0.post64+git12345678
+contact: author@project.org
+issues: https://github.com/canonical/craft-application/issues
+source-code: https://github.com/canonical/craft-application
+license: LGPLv3
+parts:
+  my-part:
+    plugin: nil

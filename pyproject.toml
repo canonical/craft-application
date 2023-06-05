@@ -1,5 +1,5 @@
 [project]
-name = "starcraft"
+name = "craft-application"
 dynamic = ["version", "readme"]
 dependencies = [
     "craft-cli",
