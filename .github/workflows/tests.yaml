@@ -27,8 +27,11 @@ jobs:
           sudo snap install --no-wait --classic pyright
           sudo snap install --no-wait shellcheck
           echo "::endgroup::"
+          echo "::group::apt-get"
+          sudo apt-get install -y libapt-pkg-dev
+          echo "::endgroup::"
           echo "::group::pip install"
-          python -m pip install 'tox>=4' tox-gh
+          python -m pip install 'tox>=4'
           echo "::endgroup::"
           echo "::group::Create virtual environments for linting processes."
           tox run -m lint --notest
@@ -37,7 +40,7 @@ jobs:
           snap watch --last=install
           echo "::endgroup::"
       - name: Run Linters
-        run: tox run -m lint
+        run: .tox/.tox/bin/tox run -m lint
   tests:
     strategy:
       matrix:
