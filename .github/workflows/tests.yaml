@@ -44,7 +44,7 @@ jobs:
   tests:
     strategy:
       matrix:
-        platform: [ubuntu-20.04, ubuntu-22.04]
+        platform: [ubuntu-20.04, ubuntu-22.04, macos-latest, windows-latest]
     runs-on: ${{ matrix.platform }}
     steps:
       - uses: actions/checkout@v3
@@ -55,7 +55,6 @@ jobs:
         with:
           python-version: |
             3.8
-            3.9
             3.10
             3.11
             3.12-dev
@@ -68,7 +67,7 @@ jobs:
       - name: Setup Tox environments
         run: tox run -m tests --notest
       - name: Test with tox
-        run: tox run-parallel --parallel all --parallel-no-spinner --skip-pkg-install --result-json results/tox-${{ matrix.platform }}.json -m tests -- --no-header --quiet -rN
+        run: .tox/.tox/bin/tox run --skip-pkg-install --result-json results/tox-${{ matrix.platform }}.json -m tests -- --no-header --quiet -rN
       - name: Upload code coverage
         uses: codecov/codecov-action@v3
         with:
