@@ -13,7 +13,6 @@ classifiers = [
 requires-python = ">=3.8"
 
 [project.scripts]
-starcraft-hello = "starcraft:hello"
 
 [project.optional-dependencies]
 dev = [
@@ -41,6 +40,16 @@ docs = [
     "sphinx-pydantic==0.1.1",
     "sphinx-toolbox==3.4.0",
     "sphinx-lint==0.6.7",
+]
+# Python-apt bindings for specific Ubuntu versions.
+# Up to date package links can be found at https://launchpad.net/ubuntu/+source/python-apt
+# Note: These extras can break requirements from other packages, so
+# do not use them in dependencies unless you know what you're doing.
+jammy-dev = [
+    "python-apt@https://launchpad.net/ubuntu/+archive/primary/+sourcefiles/python-apt/2.4.0ubuntu1/python-apt_2.4.0ubuntu1.tar.xz"
+]
+lunar-dev = [
+    "python-apt@https://launchpad.net/ubuntu/+archive/primary/+sourcefiles/python-apt/2.5.3ubuntu1/python-apt_2.5.3ubuntu1.tar.xz"
 ]
 
 [build-system]
