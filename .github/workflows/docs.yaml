@@ -24,8 +24,10 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: '3.11'
-      - name: Install Tox
-        run: pip install tox
+      - name: Install prerequisites
+        run: |
+          sudo apt-get install -y libapt-pkg-dev
+          pip install tox
       - name: Lint documentation
         run: tox run -e lint-docs
       - name: Build documentation
