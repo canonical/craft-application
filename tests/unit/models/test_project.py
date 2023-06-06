@@ -17,7 +17,7 @@
 import pathlib
 
 import pytest
-from craft_application.errors import CraftValidationError, ProjectFileMissingError
+from craft_application.errors import CraftValidationError
 from craft_application.models import Project
 
 PROJECTS_DIR = pathlib.Path(__file__).parent / "project_models"
@@ -101,9 +101,9 @@ def test_unmarshal_then_marshal(project_dict):
         (PROJECTS_DIR / "full_project.yaml", FULL_PROJECT),
     ],
 )
-def test_from_file_success(project_file, expected):
+def test_from_yaml_file_success(project_file, expected):
     with project_file.open():
-        actual = Project.from_file(project_file)
+        actual = Project.from_yaml_file(project_file)
 
     assert expected == actual
 
@@ -111,13 +111,28 @@ def test_from_file_success(project_file, expected):
 @pytest.mark.parametrize(
     ["project_file", "error_class"],
     [
-        (PROJECTS_DIR / "nonexistent.yaml", ProjectFileMissingError),
+        (PROJECTS_DIR / "nonexistent.yaml", FileNotFoundError),
         (PROJECTS_DIR / "invalid_project.yaml", CraftValidationError),
     ],
 )
-def test_from_file_failure(project_file, error_class):
+def test_from_yaml_file_failure(project_file, error_class):
     with pytest.raises(error_class):
-        Project.from_file(project_file)
+        Project.from_yaml_file(project_file)
+
+
+@pytest.mark.parametrize(
+    ["project", "expected_file"],
+    [
+        (BASIC_PROJECT, PROJECTS_DIR / "basic_project.yaml"),
+        (FULL_PROJECT, PROJECTS_DIR / "full_project.yaml"),
+    ],
+)
+def test_to_yaml_file(project, expected_file, tmp_path):
+    actual_file = tmp_path / "out.yaml"
+
+    project.to_yaml_file(actual_file)
+
+    assert actual_file.read_text() == expected_file.read_text()
 
 
 @pytest.mark.parametrize("project", [FULL_PROJECT])

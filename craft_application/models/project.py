@@ -17,25 +17,12 @@
 
 This defines the structure of the input file (e.g. snapcraft.yaml)
 """
-import pathlib
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Dict,
-    List,
-    Optional,
-    Union,
-    cast,
-)
+from typing import Any, Dict, Optional, Union, cast
 
 import craft_parts
 import pydantic
 from pydantic import AnyUrl
 
-if TYPE_CHECKING:
-    pass
-
-from craft_application import errors
 from craft_application.models.base import CraftBaseModel
 from craft_application.models.constraints import (
     ProjectName,
@@ -44,7 +31,6 @@ from craft_application.models.constraints import (
     UniqueStrList,
     VersionStr,
 )
-from craft_application.util import safe_yaml_load
 
 
 class Project(CraftBaseModel):
@@ -68,43 +54,6 @@ class Project(CraftBaseModel):
         """Verify each part (craft-parts will re-validate this)."""
         craft_parts.validate_part(item)
         return item
-
-    @classmethod
-    def unmarshal(cls, data: Dict[str, Any]) -> "Project":
-        """Create and populate a new ``Project`` object from dictionary data.
-
-        The unmarshal method validates entries in the input dictionary, populating
-        the corresponding fields in the data object.
-        :param data: The dictionary data to unmarshal.
-        :return: The newly created object.
-        :raise TypeError: If data is not a dictionary.
-        """
-        if not isinstance(data, dict):
-            raise TypeError("Project data is not a dictionary")
-
-        return cls(**data)
-
-    @classmethod
-    def from_file(cls, project_file: pathlib.Path) -> "Project":
-        """Create and populate a new ``Project`` object from ``project_file``."""
-        if not project_file.exists():
-            raise errors.ProjectFileMissingError(
-                f"Could not find project file {str(project_file)!r}"
-            )
-        with project_file.open() as project_stream:
-            # Ruff is detecting this as a potentially-unsafe load, which can be
-            # overridden.
-            project_data = safe_yaml_load(project_stream)
-        try:
-            return cls.unmarshal(project_data)
-        except pydantic.ValidationError as err:
-            raise errors.CraftValidationError.from_pydantic(
-                err, file_name=project_file.name
-            )
-
-    def marshal(self) -> Dict[str, Union[str, List[str], Dict[str, Any]]]:
-        """Convert to a dictionary."""
-        return self.dict(by_alias=True, exclude_unset=True)
 
     @property
     def effective_base(self) -> str:
