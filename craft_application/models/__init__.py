@@ -15,7 +15,7 @@
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 """General-purpose models for *craft applications."""
 
-from craft_application.models.base import CraftBaseModel
+from craft_application.models.base import CraftBaseConfig, CraftBaseModel
 from craft_application.models.constraints import (
     ProjectName,
     ProjectTitle,
@@ -23,10 +23,13 @@ from craft_application.models.constraints import (
     UniqueStrList,
     VersionStr,
 )
+from craft_application.models.metadata import BaseMetadata
 from craft_application.models.project import Project
 
 
 __all__ = [
+    "BaseMetadata",
+    "CraftBaseConfig",
     "CraftBaseModel",
     "Project",
     "ProjectName",
