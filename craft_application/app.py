@@ -16,7 +16,7 @@
 """Main application classes for a craft-application."""
 from dataclasses import dataclass, field
 from importlib import metadata
-from typing import Type, final
+from typing import Optional, Type, final
 
 from craft_application import models
 
@@ -27,7 +27,7 @@ class AppMetadata:
     """Metadata about a *craft application."""
 
     name: str
-    summary: str = None
+    summary: Optional[str] = None
     version: str = field(init=False)
     Project: Type[models.Project] = models.Project
 
