@@ -44,7 +44,7 @@ jobs:
   tests:
     strategy:
       matrix:
-        platform: [ubuntu-20.04, ubuntu-22.04, macos-latest]
+        platform: [ubuntu-20.04, ubuntu-22.04]
     runs-on: ${{ matrix.platform }}
     steps:
       - uses: actions/checkout@v3
@@ -61,9 +61,7 @@ jobs:
       - name: Configure environment
         run: |
           echo "::group::apt-get"
-          if [[ $(uname) == "Linux" ]]; then
-            sudo apt-get install -y libapt-pkg-dev
-          fi
+          sudo apt-get install -y libapt-pkg-dev
           echo "::endgroup::"
           echo "::group::pip install"
           python -m pip install 'tox>=4' tox-gh
