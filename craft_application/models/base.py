@@ -32,17 +32,20 @@ def _alias_generator(s: str) -> str:
     return s.replace("_", "-")
 
 
+class CraftBaseConfig(pydantic.BaseConfig):  # pylint: disable=too-few-public-methods
+    """Pydantic model configuration."""
+
+    validate_assignment = True
+    extra = "forbid"
+    allow_mutation = True
+    allow_population_by_field_name = True
+    alias_generator = _alias_generator
+
+
 class CraftBaseModel(pydantic.BaseModel):
-    """Base model for craft-application project classes."""
+    """Base model for craft-application classes."""
 
-    class Config:  # pylint: disable=too-few-public-methods
-        """Pydantic model configuration."""
-
-        validate_assignment = True
-        extra = "forbid"
-        allow_mutation = True
-        allow_population_by_field_name = True
-        alias_generator = _alias_generator
+    Config = CraftBaseConfig
 
     def marshal(self) -> dict[str, str | list[str] | dict[str, Any]]:
         """Convert to a dictionary."""
