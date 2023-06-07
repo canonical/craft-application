@@ -34,7 +34,7 @@ def _check_duplicate_keys(node: yaml.Node) -> None:
                     node.start_mark,
                 )
             mappings.add(key_node.value)
-        except TypeError:
+        except TypeError:  # pragma: no cover
             # Ignore errors for malformed inputs that will be caught later.
             pass
 

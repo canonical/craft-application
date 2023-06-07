@@ -15,6 +15,7 @@
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Tests for BaseProject"""
 import pathlib
+from typing import Optional
 
 import pytest
 from craft_application.errors import CraftValidationError
@@ -141,7 +142,7 @@ def test_effective_base_is_base(project):
 
 
 class FakeBuildBaseProject(Project):
-    build_base: str
+    build_base: Optional[str]
 
 
 # As above, we need to tell pyright to ignore several typing issues.
@@ -157,3 +158,18 @@ BUILD_BASE_PROJECT = FakeBuildBaseProject(
 @pytest.mark.parametrize("project", [BUILD_BASE_PROJECT])
 def test_effective_base_is_build_base(project):
     assert project.effective_base == project.build_base
+
+
+def test_effective_base_unknown():
+    project = FakeBuildBaseProject(
+        name="project-name",  # pyright: ignore[reportGeneralTypeIssues]
+        version="1.0",  # pyright: ignore[reportGeneralTypeIssues]
+        parts={},
+        base=None,
+        build_base=None,
+    )
+
+    with pytest.raises(RuntimeError) as exc_info:
+        _ = project.effective_base
+
+    assert exc_info.match("Could not determine effective base")
