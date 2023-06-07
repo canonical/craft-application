@@ -36,7 +36,7 @@ class CraftBaseConfig(pydantic.BaseConfig):  # pylint: disable=too-few-public-me
     """Pydantic model configuration."""
 
     validate_assignment = True
-    extra = "forbid"
+    extra = pydantic.Extra.forbid
     allow_mutation = True
     allow_population_by_field_name = True
     alias_generator = _alias_generator
