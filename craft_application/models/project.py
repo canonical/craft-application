@@ -58,11 +58,9 @@ class Project(CraftBaseModel):
     @property
     def effective_base(self) -> str:
         """Return the base used for creating the output."""
-        if hasattr(self, "build_base"):
-            if self.build_base is not None:  # pyright: ignore[reportGeneralTypeIssues]
-                return cast(
-                    str, self.build_base  # pyright: ignore[reportGeneralTypeIssues]
-                )
+        build_base = getattr(self, "build_base", None)
+        if build_base is not None:
+            return cast(str, build_base)
         if self.base is not None:
             return cast(str, self.base)
         raise RuntimeError("Could not determine effective base")

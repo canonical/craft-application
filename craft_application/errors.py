@@ -15,7 +15,7 @@
 
 All errors should inherit from CraftError.
 """
-from typing import TYPE_CHECKING, Iterable, Tuple, Union
+from typing import TYPE_CHECKING, Iterable, List, Tuple, Union
 
 import pydantic
 from craft_cli import CraftError
@@ -90,18 +90,13 @@ def _format_pydantic_errors(
 
 def _format_pydantic_error_location(loc: Iterable[Union[str, int]]) -> str:
     """Format location."""
-    loc_parts = []
+    loc_parts: List[str] = []
     for loc_part in loc:
         if isinstance(loc_part, str):
             loc_parts.append(loc_part)
-        elif isinstance(loc_part, int):
-            # Integer indicates an index. Go
-            # back and fix up previous part.
-            previous_part = loc_parts.pop()
-            previous_part += f"[{loc_part}]"
-            loc_parts.append(previous_part)
         else:
-            raise RuntimeError(f"unhandled loc: {loc_part}")
+            # Integer indicates an index. Append as an index of the previous part.
+            loc_parts.append(f"{loc_parts.pop()}[{loc_part}]")
 
     loc = ".".join(loc_parts)
 

@@ -14,8 +14,10 @@
 # You should have received a copy of the GNU Lesser General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Base pydantic model for *craft applications."""
+from __future__ import annotations
+
 import pathlib
-from typing import Any, Dict, List, Type, TypeVar, Union
+from typing import Any, TypeVar
 
 import pydantic
 import yaml
@@ -42,12 +44,12 @@ class CraftBaseModel(pydantic.BaseModel):
         allow_population_by_field_name = True
         alias_generator = _alias_generator
 
-    def marshal(self) -> Dict[str, Union[str, List[str], Dict[str, Any]]]:
+    def marshal(self) -> dict[str, str | list[str] | dict[str, Any]]:
         """Convert to a dictionary."""
         return self.dict(by_alias=True, exclude_unset=True)
 
     @classmethod
-    def unmarshal(cls: Type[_ModelType], data: Dict[str, Any]) -> _ModelType:
+    def unmarshal(cls: type[_ModelType], data: dict[str, Any] | Any) -> _ModelType:
         """Create and populate a new model object from dictionary data.
 
         The unmarshal method validates entries in the input dictionary, populating
@@ -62,7 +64,7 @@ class CraftBaseModel(pydantic.BaseModel):
         return cls(**data)
 
     @classmethod
-    def from_yaml_file(cls: Type[_ModelType], path: pathlib.Path) -> _ModelType:
+    def from_yaml_file(cls: type[_ModelType], path: pathlib.Path) -> _ModelType:
         """Instantiate this model from a YAML file."""
         with path.open() as file:
             data = safe_yaml_load(file)

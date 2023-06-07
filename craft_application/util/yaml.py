@@ -14,14 +14,15 @@
 # You should have received a copy of the GNU Lesser General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 """YAML helpers for craft applications."""
-from typing import Any, Dict, TextIO
+from collections.abc import Hashable
+from typing import Any, Dict, Set, TextIO
 
 import yaml
 
 
 def _check_duplicate_keys(node: yaml.Node) -> None:
     """Ensure that the keys in a YAML node are not duplicates."""
-    mappings = set()
+    mappings: Set[yaml.Node] = set()
 
     for key_node, _ in node.value:
         try:
@@ -38,12 +39,14 @@ def _check_duplicate_keys(node: yaml.Node) -> None:
             pass
 
 
-def _dict_constructor(loader: yaml.Loader, node: yaml.MappingNode) -> Dict[str, Any]:
+def _dict_constructor(
+    loader: yaml.Loader, node: yaml.MappingNode
+) -> Dict[Hashable, Any]:
     _check_duplicate_keys(node)
 
     # Necessary in order to make yaml merge tags work
     loader.flatten_mapping(node)
-    value = loader.construct_pairs(node)
+    value = loader.construct_mapping(node)
 
     try:
         return dict(value)
