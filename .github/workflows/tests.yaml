@@ -60,6 +60,9 @@ jobs:
             3.12-dev
       - name: Configure environment
         run: |
+          echo "::group::apt-get"
+          sudo apt-get install -y libapt-pkg-dev
+          echo "::endgroup::"
           echo "::group::pip install"
           python -m pip install 'tox>=4' tox-gh
           echo "::endgroup::"
