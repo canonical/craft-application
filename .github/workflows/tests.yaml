@@ -61,7 +61,9 @@ jobs:
       - name: Configure environment
         run: |
           echo "::group::apt-get"
-          sudo apt-get install -y libapt-pkg-dev
+          if [[ $(uname) == "Linux" ]]; then
+            sudo apt-get install -y libapt-pkg-dev
+          fi
           echo "::endgroup::"
           echo "::group::pip install"
           python -m pip install 'tox>=4' tox-gh
