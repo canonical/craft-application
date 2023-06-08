@@ -29,7 +29,13 @@ def test_safe_yaml_loader_valid(file):
         yaml.safe_yaml_load(f)
 
 
-@pytest.mark.parametrize("file", (TEST_DIR / "invalid_yaml").glob("*.yaml-invalid"))
+@pytest.mark.parametrize(
+    "file",
+    [
+        pytest.param(file, id=file.name)
+        for file in (TEST_DIR / "invalid_yaml").glob("*.yaml-invalid")
+    ],
+)
 def test_safe_yaml_loader_invalid(file):
     with pytest.raises(YAMLError):
         with file.open() as f:
