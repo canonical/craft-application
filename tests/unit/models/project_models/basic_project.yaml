@@ -1,0 +1,5 @@
+name: project-name
+parts:
+  my-part:
+    plugin: nil
+version: '1.0'

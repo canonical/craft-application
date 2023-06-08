@@ -1,0 +1,3 @@
+top_level:
+  some_key: true
+  some_key: false

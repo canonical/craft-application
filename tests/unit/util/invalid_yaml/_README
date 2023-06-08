@@ -1,0 +1,4 @@
+NOTE: do not end any files in this directory with ".yaml", ".yml", etc.
+or the pre-commit hook for yamllint will fail.
+
+use .yaml-invalid as the extension.
