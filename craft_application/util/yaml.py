@@ -50,7 +50,13 @@ def _dict_constructor(
 
     try:
         return dict(value)
-    except TypeError as type_error:
+    # This `except` clause may be unnecessary as an earlier constructor appears
+    # to raise this issue before the dict constructor gets to it, but I'm not
+    # comfortable enough with the internals of PyYAML to say for sure.
+    # As such, I'm marking it with no cover for right now and have created
+    # https://github.com/canonical/craft-application/issues/24
+    # to see if someone else knows better. (This code came from snapcraft initially.)
+    except TypeError as type_error:  # pragma: no cover
         raise yaml.constructor.ConstructorError(
             "while constructing a mapping",
             node.start_mark,
