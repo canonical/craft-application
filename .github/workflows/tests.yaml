@@ -64,7 +64,7 @@ jobs:
           sudo apt-get install -y libapt-pkg-dev
           echo "::endgroup::"
           echo "::group::pip install"
-          python -m pip install 'tox>=4' tox-gh
+          python -m pip install 'tox>=4'
           echo "::endgroup::"
           mkdir -p results
       - name: Setup Tox environments

@@ -1,5 +1,6 @@
 [project]
 name = "craft-application"
+description = "A framework for *craft applications."
 dynamic = ["version", "readme"]
 dependencies = [
     "craft-cli",
@@ -114,14 +115,13 @@ omit = ["tests/**"]
 
 [tool.coverage.report]
 skip_empty = true
-#fail_under = 80
 
 [tool.pyright]
 strict = ["craft_application"]
 pythonVersion = "3.8"
 pythonPlatform = "Linux"
 venvPath = ".tox"
-venv = "test-py38"
+venv = "typing"
 
 [tool.mypy]
 python_version = "3.8"
