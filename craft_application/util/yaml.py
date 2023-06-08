@@ -9,7 +9,7 @@
 # This program is distributed in the hope that it will be useful, but WITHOUT
 # ANY WARRANTY; without even the implied warranties of MERCHANTABILITY,
 # SATISFACTORY QUALITY, or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-# General Public License for more details.
+# Lesser General Public License for more details.
 #
 # You should have received a copy of the GNU Lesser General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
@@ -50,7 +50,13 @@ def _dict_constructor(
 
     try:
         return dict(value)
-    except TypeError as type_error:
+    # This `except` clause may be unnecessary as an earlier constructor appears
+    # to raise this issue before the dict constructor gets to it, but I'm not
+    # comfortable enough with the internals of PyYAML to say for sure.
+    # As such, I'm marking it with no cover for right now and have created
+    # https://github.com/canonical/craft-application/issues/24
+    # to see if someone else knows better. (This code came from snapcraft initially.)
+    except TypeError as type_error:  # pragma: no cover
         raise yaml.constructor.ConstructorError(
             "while constructing a mapping",
             node.start_mark,
