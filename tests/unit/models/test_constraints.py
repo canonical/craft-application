@@ -149,12 +149,7 @@ def test_valid_version_str(version):
     assert version_str == str(version)
 
 
-@pytest.mark.parametrize(
-    "version",
-    [
-        "",
-    ],
-)
+@pytest.mark.parametrize("version", [""])
 def test_invalid_version_str(version):
     with pytest.raises(pydantic.PydanticValueError):
         version_str = VersionStr(version)
