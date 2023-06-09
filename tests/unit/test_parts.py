@@ -17,12 +17,13 @@
 from __future__ import annotations
 
 import re
-import tempfile
 from pathlib import Path
 from unittest import mock
 
+import craft_parts.errors
 import pytest
 import pytest_check
+from craft_application import parts
 from craft_application.errors import PartsLifecycleError
 from craft_application.parts import PartsLifecycle, _get_parts_action_message, _get_step
 from craft_parts import Action, ActionType, LifecycleManager, Step
@@ -41,14 +42,21 @@ class FakePartsLifecycle(PartsLifecycle):
 
 
 @pytest.fixture
-def fake_parts_lifecycle(app_metadata, fake_project):
-    with tempfile.TemporaryDirectory(prefix="craft-application-test-") as temp_dir:
-        temp_path = Path(temp_dir)
-        work_dir = temp_path / "work"
-        cache_dir = temp_path / "cache"
-        yield FakePartsLifecycle(
-            app_metadata, fake_project, work_dir=work_dir, cache_dir=cache_dir
-        )
+def fake_parts_lifecycle(app_metadata, fake_project, tmp_path):
+    work_dir = tmp_path / "work"
+    cache_dir = tmp_path / "cache"
+    return FakePartsLifecycle(
+        app_metadata, fake_project, work_dir=work_dir, cache_dir=cache_dir
+    )
+
+
+@pytest.fixture
+def real_parts_lifecycle(app_metadata, fake_project, tmp_path):
+    work_dir = tmp_path / "work"
+    cache_dir = tmp_path / "cache"
+    return PartsLifecycle(
+        app_metadata, fake_project, work_dir=work_dir, cache_dir=cache_dir
+    )
 
 
 # endregion
@@ -99,6 +107,40 @@ def test_get_step_failure(step_name):
 # region PartsLifecycle tests
 def test_init_success(app_metadata, fake_project, tmp_path):
     PartsLifecycle(app_metadata, fake_project, work_dir=tmp_path, cache_dir=tmp_path)
+
+
+@pytest.mark.parametrize(
+    ["error", "expected"],
+    [
+        (
+            craft_parts.errors.InvalidApplicationName("craft-application"),
+            PartsLifecycleError("Application name 'craft-application' is invalid."),
+        ),
+        (
+            TypeError("parts definition must be a dictionary"),
+            TypeError("parts definition must be a dictionary"),
+        ),
+    ],
+)
+def test_init_parts_error(
+    monkeypatch, app_metadata, fake_project, tmp_path, error, expected
+):
+    mock_lifecycle = mock.Mock(side_effect=error)
+    monkeypatch.setattr(parts, "LifecycleManager", mock_lifecycle)
+
+    with pytest.raises(type(expected)) as exc_info:
+        PartsLifecycle(
+            app_metadata, fake_project, work_dir=tmp_path, cache_dir=tmp_path
+        )
+
+    assert exc_info.value.args == expected.args
+
+
+def test_prime_dir(real_parts_lifecycle, tmp_path):
+    prime_dir = real_parts_lifecycle.prime_dir
+
+    pytest_check.is_instance(prime_dir, Path)
+    pytest_check.equal(prime_dir, tmp_path / "work/prime")
 
 
 @pytest.mark.parametrize(

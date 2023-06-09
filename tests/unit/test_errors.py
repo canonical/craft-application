@@ -14,8 +14,25 @@
 # You should have received a copy of the GNU Lesser General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Tests for error classes."""
+import craft_parts
 import pytest
+import pytest_check
 from craft_application.errors import PartsLifecycleError
+
+
+@pytest.mark.parametrize(
+    "err",
+    [
+        craft_parts.PartsError("Yo"),
+        craft_parts.PartsError(brief="yo", details="sup", resolution="IDK fix it"),
+    ],
+)
+def test_parts_lifecycle_error_from_parts_error(err):
+    actual = PartsLifecycleError.from_parts_error(err)
+
+    pytest_check.equal(err.brief, actual.args[0])
+    pytest_check.equal(err.details, actual.details),
+    pytest_check.equal(err.resolution, actual.resolution)
 
 
 @pytest.mark.parametrize(
