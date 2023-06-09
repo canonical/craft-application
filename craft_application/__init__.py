@@ -15,6 +15,10 @@
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Framework for *craft applications."""
 
+from craft_application.app import AppMetadata
+from craft_application import models
+from craft_application.parts import PartsLifecycle
+
 try:
     from ._version import __version__
 except ImportError:  # pragma: no cover
@@ -27,4 +31,7 @@ except ImportError:  # pragma: no cover
 
 __all__ = [
     "__version__",
+    "AppMetadata",
+    "models",
+    "PartsLifecycle",
 ]

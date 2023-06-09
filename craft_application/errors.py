@@ -15,14 +15,19 @@
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Error classes for craft-application.
 
-All errors should inherit from CraftError.
+All errors inherit from craft_cli.CraftError.
 """
 from __future__ import annotations
 
+from typing import TypeVar
+
+import craft_parts
 import pydantic
 from craft_cli import CraftError
 
 from craft_application.util.error_formatting import format_pydantic_errors
+
+_ErrType = TypeVar("_ErrType", bound=CraftError)
 
 
 class ProjectFileMissingError(CraftError, FileNotFoundError):
@@ -34,12 +39,12 @@ class CraftValidationError(CraftError):
 
     @classmethod
     def from_pydantic(
-        cls,
+        cls: type[_ErrType],
         error: pydantic.ValidationError,
         *,
         file_name: str = "yaml file",
         **kwargs: str | bool | int,
-    ) -> "CraftValidationError":
+    ) -> _ErrType:
         """Convert this error from a pydantic ValidationError.
 
         :param error: The pydantic error to convert
@@ -48,3 +53,26 @@ class CraftValidationError(CraftError):
         """
         message = format_pydantic_errors(error.errors(), file_name=file_name)
         return cls(message, **kwargs)  # type: ignore[arg-type]
+
+
+class PartsLifecycleError(CraftError):
+    """Error during parts processing."""
+
+    @classmethod
+    def from_parts_error(cls: type[_ErrType], err: craft_parts.PartsError) -> _ErrType:
+        """Shortcut to create a PartsLifecycleError from a PartsError."""
+        return cls(message=err.brief, details=err.details, resolution=err.resolution)
+
+    @classmethod
+    def from_os_error(cls: type[_ErrType], err: OSError) -> _ErrType:
+        """Create a PartsLifecycleError from an OSError."""
+        if err.filename:
+            message = f"{err.filename}: {err.strerror}"
+        else:
+            message = err.strerror
+        details = err.__class__.__name__
+        if err.filename:
+            details += f": filename: {err.filename!r}"
+        if err.filename2:
+            details += f", filename2: {err.filename2!r}"
+        return cls(message, details=details)
