@@ -14,9 +14,11 @@
 # You should have received a copy of the GNU General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Main application classes for a craft-application."""
+from __future__ import annotations
+
 from dataclasses import dataclass, field
 from importlib import metadata
-from typing import Optional, Type, final
+from typing import final
 
 from craft_application import models
 
@@ -27,14 +29,15 @@ class AppMetadata:
     """Metadata about a *craft application."""
 
     name: str
-    summary: Optional[str] = None
+    summary: str | None = None
     version: str = field(init=False)
-    Project: Type[models.Project] = models.Project
+    source_ignore_patterns: list[str] = field(default_factory=lambda: [])
+
+    ProjectClass: type[models.Project] = models.Project
 
     def __post_init__(self) -> None:
         setter = super().__setattr__
         setter("version", metadata.version(self.name))
-        md = metadata.metadata(self.name)
-        print(md)
         if self.summary is None:
+            md = metadata.metadata(self.name)
             setter("summary", md["summary"])
