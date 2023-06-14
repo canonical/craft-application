@@ -1,0 +1,249 @@
+# This file is part of craft-application.
+#
+# Copyright 2023 Canonical Ltd.
+#
+# This program is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Lesser General Public License version 3, as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranties of MERCHANTABILITY,
+# SATISFACTORY QUALITY, or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License along
+# with this program.  If not, see <http://www.gnu.org/licenses/>.
+"""Tests for lifecycle commands."""
+import argparse
+import pathlib
+from unittest import mock
+
+import craft_parts
+import pytest
+from craft_application.commands.lifecycle import (
+    BuildCommand,
+    CleanCommand,
+    OverlayCommand,
+    PackCommand,
+    PrimeCommand,
+    PullCommand,
+    StageCommand,
+    _LifecyclePartsCommand,
+    _LifecycleStepCommand,
+    get_lifecycle_command_group,
+)
+from craft_cli import EmitterMode, emit
+from craft_parts import Features
+
+PARTS_LISTS = [[], ["my-part"], ["my-part", "your-part"]]
+SHELL_PARAMS = [
+    ({"shell": False, "shell_after": False}, []),
+    ({"shell": False, "shell_after": True}, ["--shell-after"]),
+    ({"shell": True, "shell_after": False}, ["--shell"]),
+]
+STEP_NAMES = [step.name.lower() for step in craft_parts.Step]
+MANAGED_LIFECYCLE_COMMANDS = [
+    PullCommand,
+    OverlayCommand,
+    BuildCommand,
+    StageCommand,
+    PrimeCommand,
+]
+UNMANAGED_LIFECYCLE_COMMANDS = [CleanCommand, PackCommand]
+ALL_LIFECYCLE_COMMANDS = MANAGED_LIFECYCLE_COMMANDS + UNMANAGED_LIFECYCLE_COMMANDS
+
+
+@pytest.mark.parametrize(
+    ["enable_overlay", "commands"],
+    [
+        (True, ALL_LIFECYCLE_COMMANDS),
+        (
+            False,
+            [
+                CleanCommand,
+                PullCommand,
+                BuildCommand,
+                StageCommand,
+                PrimeCommand,
+                PackCommand,
+            ],
+        ),
+    ],
+)
+def test_get_lifecycle_command_group(enable_overlay, commands):
+    Features.reset()
+    Features(enable_overlay=enable_overlay)
+
+    actual = get_lifecycle_command_group()
+
+    assert set(actual.commands) == set(commands)
+
+    Features.reset()
+
+
+@pytest.mark.parametrize("parts", PARTS_LISTS)
+@pytest.mark.parametrize("verbosity", list(EmitterMode))
+def test_parts_command_get_managed_cmd(app_metadata, parts, verbosity):
+    class FakeLifecyclePartsCommand(_LifecyclePartsCommand):
+        run_managed = True
+        name = "fake"
+        help_msg = "help"
+        overview = "overview"
+
+    expected = [
+        app_metadata.name,
+        f"--verbosity={verbosity.name.lower()}",
+        "fake",
+        *parts,
+    ]
+
+    emit.set_mode(verbosity)
+    parsed_args = argparse.Namespace(parts=parts)
+    command = FakeLifecyclePartsCommand({"app": app_metadata})
+
+    actual = command.get_managed_cmd(parsed_args)
+
+    assert actual == expected
+
+
+@pytest.mark.parametrize(["shell_params", "shell_opts"], SHELL_PARAMS)
+@pytest.mark.parametrize("parts", PARTS_LISTS)
+@pytest.mark.parametrize("verbosity", list(EmitterMode))
+def test_step_command_get_managed_cmd(
+    app_metadata, parts, verbosity, shell_params, shell_opts
+):
+    class FakeLifecycleStepCommand(_LifecycleStepCommand):
+        run_managed = True
+        name = "fake"
+        help_msg = "help"
+        overview = "overview"
+
+    expected = [
+        app_metadata.name,
+        f"--verbosity={verbosity.name.lower()}",
+        "fake",
+        *parts,
+        *shell_opts,
+    ]
+
+    emit.set_mode(verbosity)
+    parsed_args = argparse.Namespace(parts=parts, **shell_params)
+    command = FakeLifecycleStepCommand({"app": app_metadata})
+
+    actual = command.get_managed_cmd(parsed_args)
+
+    assert actual == expected
+
+
+@pytest.mark.parametrize("step_name", STEP_NAMES)
+@pytest.mark.parametrize("parts", PARTS_LISTS)
+def test_step_command_run_explicit_step(app_metadata, parts, step_name):
+    class FakeLifecycleStepCommand(_LifecycleStepCommand):
+        run_managed = True
+        name = "fake"
+        help_msg = "help"
+        overview = "overview"
+
+    mock_parts_lifecycle = mock.Mock()
+    parsed_args = argparse.Namespace(parts=parts)
+    command = FakeLifecycleStepCommand(
+        {"app": app_metadata, "lifecycle_service": mock_parts_lifecycle}
+    )
+
+    command.run(parsed_args=parsed_args, step_name=step_name)
+
+    mock_parts_lifecycle.run.assert_called_once_with(
+        step_name=step_name, part_names=parts
+    )
+
+
+@pytest.mark.parametrize("command_cls", MANAGED_LIFECYCLE_COMMANDS)
+@pytest.mark.parametrize(["shell_params", "shell_opts"], SHELL_PARAMS)
+@pytest.mark.parametrize("parts", PARTS_LISTS)
+def test_concrete_commands_get_managed_cmd(
+    app_metadata, command_cls, shell_params, shell_opts, parts, emitter_verbosity
+):
+    expected = [
+        app_metadata.name,
+        f"--verbosity={emitter_verbosity.name.lower()}",
+        command_cls.name,
+        *parts,
+        *shell_opts,
+    ]
+
+    parsed_args = argparse.Namespace(parts=parts, **shell_params)
+    command = command_cls({"app": app_metadata})
+
+    actual = command.get_managed_cmd(parsed_args)
+
+    assert actual == expected
+
+
+@pytest.mark.parametrize("command_cls", MANAGED_LIFECYCLE_COMMANDS)
+@pytest.mark.parametrize("parts", PARTS_LISTS)
+def test_managed_concrete_commands_run(app_metadata, command_cls, parts):
+    mock_lifecycle_service = mock.Mock()
+    mock_package_service = mock.Mock()
+    parsed_args = argparse.Namespace(parts=parts)
+    command = command_cls(
+        {
+            "app": app_metadata,
+            "lifecycle_service": mock_lifecycle_service,
+            "package_service": mock_package_service,
+        }
+    )
+
+    command.run(parsed_args)
+
+    mock_lifecycle_service.run.assert_called_once_with(
+        step_name=command.name, part_names=parts
+    )
+
+
+@pytest.mark.parametrize("parts", PARTS_LISTS)
+def test_clean_run(app_metadata, parts, tmp_path):
+    mock_lifecycle_service = mock.Mock()
+    mock_package_service = mock.Mock()
+    parsed_args = argparse.Namespace(parts=parts, output=tmp_path)
+    command = CleanCommand(
+        {
+            "app": app_metadata,
+            "lifecycle_service": mock_lifecycle_service,
+            "package_service": mock_package_service,
+        }
+    )
+
+    command.run(parsed_args)
+
+    mock_lifecycle_service.clean.assert_called_once_with(parts)
+
+
+@pytest.mark.parametrize(
+    ["packages", "message"],
+    [
+        ([], "No packages created."),
+        ([pathlib.Path("package.zip")], "Packed package.zip"),
+        (
+            [pathlib.Path("package.zip"), pathlib.Path("package.tar.zst")],
+            "Packed: package.zip, package.tar.zst",
+        ),
+    ],
+)
+@pytest.mark.parametrize("parts", PARTS_LISTS)
+def test_pack_run(emitter, app_metadata, parts, tmp_path, packages, message):
+    mock_lifecycle_service = mock.Mock()
+    mock_package_service = mock.Mock()
+    mock_package_service.pack.return_value = packages
+    parsed_args = argparse.Namespace(parts=parts, output=tmp_path)
+    command = PackCommand(
+        {
+            "app": app_metadata,
+            "lifecycle_service": mock_lifecycle_service,
+            "package_service": mock_package_service,
+        }
+    )
+
+    command.run(parsed_args)
+
+    mock_package_service.pack.assert_called_once_with(tmp_path)
+    emitter.assert_message(message)
