@@ -17,7 +17,7 @@
 
 import pytest
 import pytest_check
-from craft_application.parts import PartsLifecycle
+from craft_application.services.lifecycle import LifecycleService
 
 
 @pytest.fixture(
@@ -32,7 +32,7 @@ from craft_application.parts import PartsLifecycle
 def parts_lifecycle(app_metadata, fake_project, tmp_path, request):
     fake_project.parts = request.param
 
-    return PartsLifecycle(
+    return LifecycleService(
         app_metadata,
         fake_project,
         work_dir=tmp_path / "work",

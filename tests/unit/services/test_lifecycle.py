@@ -23,9 +23,8 @@ from unittest import mock
 import craft_parts.errors
 import pytest
 import pytest_check
-from craft_application import parts
 from craft_application.errors import PartsLifecycleError
-from craft_application.parts import PartsLifecycle, _get_parts_action_message, _get_step
+from craft_application.services import lifecycle
 from craft_parts import Action, ActionType, LifecycleManager, Step
 from craft_parts.executor import (
     ExecutionContext,  # pyright: ignore[reportPrivateImportUsage]
@@ -33,7 +32,7 @@ from craft_parts.executor import (
 
 
 # region Local fixtures
-class FakePartsLifecycle(PartsLifecycle):
+class FakePartsLifecycle(lifecycle.LifecycleService):
     def _init_lifecycle_manager(self) -> LifecycleManager:
         mock_lcm = mock.Mock(spec=LifecycleManager)
         mock_aex = mock.MagicMock(spec=ExecutionContext)
@@ -54,7 +53,7 @@ def fake_parts_lifecycle(app_metadata, fake_project, tmp_path):
 def real_parts_lifecycle(app_metadata, fake_project, tmp_path):
     work_dir = tmp_path / "work"
     cache_dir = tmp_path / "cache"
-    return PartsLifecycle(
+    return lifecycle.LifecycleService(
         app_metadata, fake_project, work_dir=work_dir, cache_dir=cache_dir
     )
 
@@ -71,7 +70,7 @@ def test_get_parts_action_message_run(step: Step, reason: str | None):
         reason=reason,
     )
 
-    actual = _get_parts_action_message(action)
+    actual = lifecycle._get_parts_action_message(action)
 
     pytest_check.is_true(actual.startswith(f"{step.name.lower()} my-part"))
     if reason:
@@ -92,7 +91,7 @@ def test_get_parts_action_message_run(step: Step, reason: str | None):
     ],
 )
 def test_get_step_success(step_name, step):
-    actual = _get_step(step_name)
+    actual = lifecycle._get_step(step_name)
 
     assert actual == step
 
@@ -100,13 +99,15 @@ def test_get_step_success(step_name, step):
 @pytest.mark.parametrize("step_name", ["overlay", "fake step"])
 def test_get_step_failure(step_name):
     with pytest.raises(RuntimeError, match=f"Invalid target step {step_name!r}"):
-        _get_step(step_name)
+        lifecycle._get_step(step_name)
 
 
 # endregion
 # region PartsLifecycle tests
 def test_init_success(app_metadata, fake_project, tmp_path):
-    PartsLifecycle(app_metadata, fake_project, work_dir=tmp_path, cache_dir=tmp_path)
+    lifecycle.LifecycleService(
+        app_metadata, fake_project, work_dir=tmp_path, cache_dir=tmp_path
+    )
 
 
 @pytest.mark.parametrize(
@@ -126,10 +127,10 @@ def test_init_parts_error(
     monkeypatch, app_metadata, fake_project, tmp_path, error, expected
 ):
     mock_lifecycle = mock.Mock(side_effect=error)
-    monkeypatch.setattr(parts, "LifecycleManager", mock_lifecycle)
+    monkeypatch.setattr(lifecycle, "LifecycleManager", mock_lifecycle)
 
     with pytest.raises(type(expected)) as exc_info:
-        PartsLifecycle(
+        lifecycle.LifecycleService(
             app_metadata, fake_project, work_dir=tmp_path, cache_dir=tmp_path
         )
 

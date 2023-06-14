@@ -26,6 +26,7 @@ from craft_parts import Action, ActionType, Features, LifecycleManager, PartsErr
 from craft_application import errors
 from craft_application.app import AppMetadata
 from craft_application.models import Project
+from craft_application.services import base
 
 ACTION_MESSAGES = types.MappingProxyType(
     {
@@ -91,7 +92,7 @@ def _get_step(step_name: str) -> Step:
         raise RuntimeError(f"Invalid target step {step_name!r}") from None
 
 
-class PartsLifecycle:
+class LifecycleService(base.BaseService):
     """Create and manage the parts lifecycle.
 
     :param app: An AppMetadata object containing metadata about the application.
@@ -110,6 +111,7 @@ class PartsLifecycle:
         cache_dir: Path | str,
         **lifecycle_kwargs: Any,
     ) -> None:
+        super().__init__(app, project)
         self._app = app
         self._project = project
         self._work_dir = work_dir
