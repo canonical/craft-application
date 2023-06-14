@@ -93,22 +93,16 @@ def test_get_lifecycle_command_group(enable_overlay, commands):
     Features.reset()
 
 
-@pytest.mark.parametrize(
-    ["args", "expected"],
-    [
-        pytest.param([], {"parts": []}, id="empty"),
-        pytest.param(["my-part"], {"parts": ["my-part"]}, id="one-part"),
-    ],
-)
-def test_parts_command_fill_parser(app_metadata, args, expected):
+@pytest.mark.parametrize("parts_args", PARTS_LISTS)
+def test_parts_command_fill_parser(app_metadata, parts_args):
     cls = get_fake_command_class(_LifecyclePartsCommand, managed=True)
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser("parts_command")
     command = cls({"app": app_metadata})
 
     command.fill_parser(parser)
 
-    args_dict = vars(parser.parse_args(args))
-    assert args_dict == expected
+    args_dict = vars(parser.parse_args(parts_args))
+    assert args_dict == {"parts": parts_args}
 
 
 @pytest.mark.parametrize("parts", PARTS_LISTS)
@@ -128,6 +122,20 @@ def test_parts_command_get_managed_cmd(app_metadata, parts, emitter_verbosity):
     actual = command.get_managed_cmd(parsed_args)
 
     assert actual == expected
+
+
+@pytest.mark.parametrize(["shell_dict", "shell_args"], SHELL_PARAMS)
+@pytest.mark.parametrize("parts_args", PARTS_LISTS)
+def test_step_command_fill_parser(app_metadata, parts_args, shell_args, shell_dict):
+    cls = get_fake_command_class(_LifecycleStepCommand, managed=True)
+    parser = argparse.ArgumentParser("step_command")
+    expected = {"parts": parts_args, **shell_dict}
+    command = cls({"app": app_metadata})
+
+    command.fill_parser(parser)
+
+    args_dict = vars(parser.parse_args([*shell_args, *parts_args]))
+    assert args_dict == expected
 
 
 @pytest.mark.parametrize(["shell_params", "shell_opts"], SHELL_PARAMS)
@@ -229,6 +237,30 @@ def test_clean_run(app_metadata, parts, tmp_path):
     command.run(parsed_args)
 
     mock_lifecycle_service.clean.assert_called_once_with(parts)
+
+
+@pytest.mark.parametrize(["shell_dict", "shell_args"], SHELL_PARAMS)
+@pytest.mark.parametrize("parts_args", PARTS_LISTS)
+@pytest.mark.parametrize("output_arg", [".", "/"])
+def test_pack_fill_parser(app_metadata, parts_args, shell_args, shell_dict, output_arg):
+    mock_lifecycle_service = mock.Mock()
+    mock_package_service = mock.Mock()
+    parser = argparse.ArgumentParser("step_command")
+    expected = {"parts": parts_args, "output": pathlib.Path(output_arg), **shell_dict}
+    command = PackCommand(
+        {
+            "app": app_metadata,
+            "lifecycle_service": mock_lifecycle_service,
+            "package_service": mock_package_service,
+        }
+    )
+
+    command.fill_parser(parser)
+
+    args_dict = vars(
+        parser.parse_args([*shell_args, *parts_args, f"--output={output_arg}"])
+    )
+    assert args_dict == expected
 
 
 @pytest.mark.parametrize(
