@@ -17,8 +17,10 @@
 
 from craft_application.services.base import BaseService
 from craft_application.services.lifecycle import LifecycleService
+from craft_application.services.package import PackageService
 
 __all__ = [
     "BaseService",
     "LifecycleService",
+    "PackageService",
 ]
