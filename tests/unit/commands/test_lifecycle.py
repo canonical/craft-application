@@ -32,7 +32,7 @@ from craft_application.commands.lifecycle import (
     _LifecycleStepCommand,
     get_lifecycle_command_group,
 )
-from craft_cli import EmitterMode, emit
+from craft_cli import emit
 from craft_parts import Features
 
 PARTS_LISTS = [[], ["my-part"], ["my-part", "your-part"]]
@@ -42,15 +42,27 @@ SHELL_PARAMS = [
     ({"shell": True, "shell_after": False}, ["--shell"]),
 ]
 STEP_NAMES = [step.name.lower() for step in craft_parts.Step]
-MANAGED_LIFECYCLE_COMMANDS = [
+MANAGED_LIFECYCLE_COMMANDS = {
     PullCommand,
     OverlayCommand,
     BuildCommand,
     StageCommand,
     PrimeCommand,
-]
-UNMANAGED_LIFECYCLE_COMMANDS = [CleanCommand, PackCommand]
-ALL_LIFECYCLE_COMMANDS = MANAGED_LIFECYCLE_COMMANDS + UNMANAGED_LIFECYCLE_COMMANDS
+}
+UNMANAGED_LIFECYCLE_COMMANDS = {CleanCommand, PackCommand}
+ALL_LIFECYCLE_COMMANDS = MANAGED_LIFECYCLE_COMMANDS | UNMANAGED_LIFECYCLE_COMMANDS
+
+
+def get_fake_command_class(parent_cls, managed):
+    """Create a fully described fake command based on a partial class."""
+
+    class FakeCommand(parent_cls):
+        run_managed = managed
+        name = "fake"
+        help_msg = "help"
+        overview = "overview"
+
+    return FakeCommand
 
 
 @pytest.mark.parametrize(
@@ -59,14 +71,14 @@ ALL_LIFECYCLE_COMMANDS = MANAGED_LIFECYCLE_COMMANDS + UNMANAGED_LIFECYCLE_COMMAN
         (True, ALL_LIFECYCLE_COMMANDS),
         (
             False,
-            [
+            {
                 CleanCommand,
                 PullCommand,
                 BuildCommand,
                 StageCommand,
                 PrimeCommand,
                 PackCommand,
-            ],
+            },
         ),
     ],
 )
@@ -76,30 +88,42 @@ def test_get_lifecycle_command_group(enable_overlay, commands):
 
     actual = get_lifecycle_command_group()
 
-    assert set(actual.commands) == set(commands)
+    assert set(actual.commands) == commands
 
     Features.reset()
 
 
+@pytest.mark.parametrize(
+    ["args", "expected"],
+    [
+        pytest.param([], {"parts": []}, id="empty"),
+        pytest.param(["my-part"], {"parts": ["my-part"]}, id="one-part"),
+    ],
+)
+def test_parts_command_fill_parser(app_metadata, args, expected):
+    cls = get_fake_command_class(_LifecyclePartsCommand, managed=True)
+    parser = argparse.ArgumentParser()
+    command = cls({"app": app_metadata})
+
+    command.fill_parser(parser)
+
+    args_dict = vars(parser.parse_args(args))
+    assert args_dict == expected
+
+
 @pytest.mark.parametrize("parts", PARTS_LISTS)
-@pytest.mark.parametrize("verbosity", list(EmitterMode))
-def test_parts_command_get_managed_cmd(app_metadata, parts, verbosity):
-    class FakeLifecyclePartsCommand(_LifecyclePartsCommand):
-        run_managed = True
-        name = "fake"
-        help_msg = "help"
-        overview = "overview"
+def test_parts_command_get_managed_cmd(app_metadata, parts, emitter_verbosity):
+    cls = get_fake_command_class(_LifecyclePartsCommand, managed=True)
 
     expected = [
         app_metadata.name,
-        f"--verbosity={verbosity.name.lower()}",
+        f"--verbosity={emitter_verbosity.name.lower()}",
         "fake",
         *parts,
     ]
 
-    emit.set_mode(verbosity)
     parsed_args = argparse.Namespace(parts=parts)
-    command = FakeLifecyclePartsCommand({"app": app_metadata})
+    command = cls({"app": app_metadata})
 
     actual = command.get_managed_cmd(parsed_args)
 
@@ -108,27 +132,22 @@ def test_parts_command_get_managed_cmd(app_metadata, parts, verbosity):
 
 @pytest.mark.parametrize(["shell_params", "shell_opts"], SHELL_PARAMS)
 @pytest.mark.parametrize("parts", PARTS_LISTS)
-@pytest.mark.parametrize("verbosity", list(EmitterMode))
 def test_step_command_get_managed_cmd(
-    app_metadata, parts, verbosity, shell_params, shell_opts
+    app_metadata, parts, emitter_verbosity, shell_params, shell_opts
 ):
-    class FakeLifecycleStepCommand(_LifecycleStepCommand):
-        run_managed = True
-        name = "fake"
-        help_msg = "help"
-        overview = "overview"
+    cls = get_fake_command_class(_LifecycleStepCommand, managed=True)
 
     expected = [
         app_metadata.name,
-        f"--verbosity={verbosity.name.lower()}",
+        f"--verbosity={emitter_verbosity.name.lower()}",
         "fake",
         *parts,
         *shell_opts,
     ]
 
-    emit.set_mode(verbosity)
+    emit.set_mode(emitter_verbosity)
     parsed_args = argparse.Namespace(parts=parts, **shell_params)
-    command = FakeLifecycleStepCommand({"app": app_metadata})
+    command = cls({"app": app_metadata})
 
     actual = command.get_managed_cmd(parsed_args)
 
@@ -138,17 +157,11 @@ def test_step_command_get_managed_cmd(
 @pytest.mark.parametrize("step_name", STEP_NAMES)
 @pytest.mark.parametrize("parts", PARTS_LISTS)
 def test_step_command_run_explicit_step(app_metadata, parts, step_name):
-    class FakeLifecycleStepCommand(_LifecycleStepCommand):
-        run_managed = True
-        name = "fake"
-        help_msg = "help"
-        overview = "overview"
+    cls = get_fake_command_class(_LifecycleStepCommand, managed=True)
 
     mock_parts_lifecycle = mock.Mock()
     parsed_args = argparse.Namespace(parts=parts)
-    command = FakeLifecycleStepCommand(
-        {"app": app_metadata, "lifecycle_service": mock_parts_lifecycle}
-    )
+    command = cls({"app": app_metadata, "lifecycle_service": mock_parts_lifecycle})
 
     command.run(parsed_args=parsed_args, step_name=step_name)
 

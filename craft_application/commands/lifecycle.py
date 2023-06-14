@@ -26,7 +26,7 @@ from typing_extensions import override
 from craft_application import LifecycleService, services
 from craft_application.commands import base
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     import argparse
 
 
