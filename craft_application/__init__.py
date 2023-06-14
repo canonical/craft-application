@@ -17,7 +17,7 @@
 
 from craft_application.app import AppMetadata
 from craft_application import models
-from craft_application.parts import PartsLifecycle
+from craft_application.services.lifecycle import LifecycleService
 
 try:
     from ._version import __version__
@@ -33,5 +33,5 @@ __all__ = [
     "__version__",
     "AppMetadata",
     "models",
-    "PartsLifecycle",
+    "LifecycleService",
 ]

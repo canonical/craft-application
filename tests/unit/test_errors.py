@@ -31,7 +31,7 @@ def test_parts_lifecycle_error_from_parts_error(err):
     actual = PartsLifecycleError.from_parts_error(err)
 
     pytest_check.equal(err.brief, actual.args[0])
-    pytest_check.equal(err.details, actual.details),
+    pytest_check.equal(err.details, actual.details)
     pytest_check.equal(err.resolution, actual.resolution)
 
 
