@@ -112,8 +112,6 @@ class LifecycleService(base.BaseService):
         **lifecycle_kwargs: Any,
     ) -> None:
         super().__init__(app, project)
-        self._app = app
-        self._project = project
         self._work_dir = work_dir
         self._cache_dir = cache_dir
         self._manager_kwargs = lifecycle_kwargs
