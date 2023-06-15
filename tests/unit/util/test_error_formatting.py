@@ -24,7 +24,7 @@ from craft_application.util.error_formatting import (
 
 
 @pytest.mark.parametrize(
-    ["loc_str", "location", "field"],
+    ("loc_str", "location", "field"),
     [
         ("abc", "top-level", "abc"),
         ("abc.def", "abc", "def"),
@@ -40,7 +40,7 @@ def test_field_location_tuple_from_str(loc_str, location, field):
 
 
 @pytest.mark.parametrize(
-    ["field_path", "message", "expected"],
+    ("field_path", "message", "expected"),
     [
         (["foo"], "field required", "- field foo required in top-level configuration"),
         (
@@ -83,7 +83,7 @@ def test_format_pydantic_error(field_path, message, expected):
 
 
 @pytest.mark.parametrize(
-    ["errors", "file_name", "expected"],
+    ("errors", "file_name", "expected"),
     [
         (
             [{"loc": ["__root__"], "msg": "something's wrong"}],

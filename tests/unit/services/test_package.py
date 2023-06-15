@@ -16,16 +16,19 @@
 """Tests for PackageService."""
 from __future__ import annotations
 
-import pathlib
+from typing import TYPE_CHECKING
 
 from craft_application import models
 from craft_application.services import package
+
+if TYPE_CHECKING:
+    import pathlib
 
 
 class FakePackageService(package.PackageService):
     def pack(self, dest: pathlib.Path) -> list[pathlib.Path]:
         """Create a fake package."""
-        raise NotImplementedError()
+        raise NotImplementedError
 
     @property
     def metadata(self) -> models.BaseMetadata:

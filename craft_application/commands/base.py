@@ -16,12 +16,14 @@
 """Base command for craft-application commands."""
 from __future__ import annotations
 
-import argparse
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from craft_cli import BaseCommand, emit
 
-from craft_application import app
+if TYPE_CHECKING:
+    import argparse
+
+    from craft_application import app
 
 
 class AppCommand(BaseCommand):
@@ -34,7 +36,10 @@ class AppCommand(BaseCommand):
         super().__init__(config)
         self._app: app.AppMetadata = config["app"]
 
-    def get_managed_cmd(self, parsed_args: argparse.Namespace) -> list[str]:
+    def get_managed_cmd(
+        self,
+        parsed_args: argparse.Namespace,  # noqa: ARG002 - Used by subclasses
+    ) -> list[str]:
         """Get the command to run in managed mode.
 
         :param parsed_args: The parsed arguments used.

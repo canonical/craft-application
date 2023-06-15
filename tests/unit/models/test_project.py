@@ -64,7 +64,7 @@ FULL_PROJECT_DICT = {
 
 
 @pytest.mark.parametrize(
-    ["project", "project_dict"],
+    ("project", "project_dict"),
     [(BASIC_PROJECT, BASIC_PROJECT_DICT), (FULL_PROJECT, FULL_PROJECT_DICT)],
 )
 def test_marshal(project, project_dict):
@@ -72,7 +72,7 @@ def test_marshal(project, project_dict):
 
 
 @pytest.mark.parametrize(
-    ["project", "project_dict"],
+    ("project", "project_dict"),
     [(BASIC_PROJECT, BASIC_PROJECT_DICT), (FULL_PROJECT, FULL_PROJECT_DICT)],
 )
 def test_unmarshal_success(project, project_dict):
@@ -96,7 +96,7 @@ def test_unmarshal_then_marshal(project_dict):
 
 
 @pytest.mark.parametrize(
-    ["project_file", "expected"],
+    ("project_file", "expected"),
     [
         (PROJECTS_DIR / "basic_project.yaml", BASIC_PROJECT),
         (PROJECTS_DIR / "full_project.yaml", FULL_PROJECT),
@@ -110,7 +110,7 @@ def test_from_yaml_file_success(project_file, expected):
 
 
 @pytest.mark.parametrize(
-    ["project_file", "error_class"],
+    ("project_file", "error_class"),
     [
         (PROJECTS_DIR / "nonexistent.yaml", FileNotFoundError),
         (PROJECTS_DIR / "invalid_project.yaml", CraftValidationError),
@@ -122,7 +122,7 @@ def test_from_yaml_file_failure(project_file, error_class):
 
 
 @pytest.mark.parametrize(
-    ["project", "expected_file"],
+    ("project", "expected_file"),
     [
         (BASIC_PROJECT, PROJECTS_DIR / "basic_project.yaml"),
         (FULL_PROJECT, PROJECTS_DIR / "full_project.yaml"),

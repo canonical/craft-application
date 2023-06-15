@@ -14,34 +14,43 @@
 # You should have received a copy of the GNU Lesser General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 """YAML helpers for craft applications."""
-from collections.abc import Hashable
-from typing import Any, Dict, Set, TextIO
+from __future__ import annotations
+
+import contextlib
+from typing import TYPE_CHECKING, Any, TextIO
 
 import yaml
+
+if TYPE_CHECKING:
+    from collections.abc import Hashable
+
+
+def _check_duplicate_key_node(
+    mappings: set[yaml.Node], key: yaml.Node, node: yaml.Node
+) -> None:
+    """Check for duplicate key nodes within a mapping."""
+    if key in mappings:
+        raise yaml.constructor.ConstructorError(
+            "while constructing a mapping",
+            node.start_mark,
+            f"found duplicate key {key!r}",
+            node.start_mark,
+        )
+    mappings.add(key)
 
 
 def _check_duplicate_keys(node: yaml.Node) -> None:
     """Ensure that the keys in a YAML node are not duplicates."""
-    mappings: Set[yaml.Node] = set()
+    mappings: set[yaml.Node] = set()
 
     for key_node, _ in node.value:
-        try:
-            if key_node.value in mappings:
-                raise yaml.constructor.ConstructorError(
-                    "while constructing a mapping",
-                    node.start_mark,
-                    f"found duplicate key {key_node.value!r}",
-                    node.start_mark,
-                )
-            mappings.add(key_node.value)
-        except TypeError:  # pragma: no cover
-            # Ignore errors for malformed inputs that will be caught later.
-            pass
+        with contextlib.suppress(TypeError):
+            _check_duplicate_key_node(mappings, key_node.value, node)
 
 
 def _dict_constructor(
     loader: yaml.Loader, node: yaml.MappingNode
-) -> Dict[Hashable, Any]:
+) -> dict[Hashable, Any]:
     _check_duplicate_keys(node)
 
     # Necessary in order to make yaml merge tags work
@@ -74,7 +83,7 @@ class _SafeYamlLoader(yaml.SafeLoader):
         )
 
 
-def safe_yaml_load(stream: TextIO) -> Any:
+def safe_yaml_load(stream: TextIO) -> Any:  # noqa: ANN401 - The YAML could be anything
     """Equivalent to pyyaml's safe_load function, but constraining duplicate keys.
 
     :param stream: Any text-like IO object.

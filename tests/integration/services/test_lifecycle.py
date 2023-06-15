@@ -58,7 +58,7 @@ def test_run_and_clean_all_parts(parts_lifecycle, emitter, check, tmp_path):
     pytest_check.is_false([*(tmp_path / "work").iterdir()])
 
 
-def test_run_and_clean_my_part(parts_lifecycle, emitter, check, tmp_path):
+def test_run_and_clean_my_part(parts_lifecycle, emitter, check):
     parts_lifecycle.run("prime", ["my-part"])
 
     with check:
