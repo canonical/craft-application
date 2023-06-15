@@ -292,3 +292,19 @@ def test_pack_run(emitter, app_metadata, parts, tmp_path, packages, message):
 
     mock_package_service.pack.assert_called_once_with(tmp_path)
     emitter.assert_message(message)
+
+
+def test_pack_run_wrong_step(app_metadata):
+    parsed_args = argparse.Namespace(parts=None, output=pathlib.Path())
+    command = PackCommand(
+        {
+            "app": app_metadata,
+            "lifecycle_service": None,
+            "package_service": None,
+        }
+    )
+
+    with pytest.raises(RuntimeError) as exc_info:
+        command.run(parsed_args, "wrong-command")
+
+    assert exc_info.value.args[0] == "Step name wrong-command passed to pack command."
