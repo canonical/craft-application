@@ -49,15 +49,6 @@ def fake_parts_lifecycle(app_metadata, fake_project, tmp_path):
     )
 
 
-@pytest.fixture
-def real_parts_lifecycle(app_metadata, fake_project, tmp_path):
-    work_dir = tmp_path / "work"
-    cache_dir = tmp_path / "cache"
-    return lifecycle.LifecycleService(
-        app_metadata, fake_project, work_dir=work_dir, cache_dir=cache_dir
-    )
-
-
 # endregion
 # region Helper function tests
 @pytest.mark.parametrize("step", Step)
@@ -137,8 +128,8 @@ def test_init_parts_error(
     assert exc_info.value.args == expected.args
 
 
-def test_prime_dir(real_parts_lifecycle, tmp_path):
-    prime_dir = real_parts_lifecycle.prime_dir
+def test_prime_dir(lifecycle_service, tmp_path):
+    prime_dir = lifecycle_service.prime_dir
 
     pytest_check.is_instance(prime_dir, Path)
     pytest_check.equal(prime_dir, tmp_path / "work/prime")

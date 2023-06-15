@@ -22,6 +22,8 @@ from importlib import metadata
 import craft_application
 import craft_parts
 import pytest
+from craft_application import LifecycleService
+from craft_cli import EmitterMode, emit
 
 
 @pytest.fixture
@@ -58,3 +60,24 @@ def enable_overlay() -> Iterator[craft_parts.Features]:
     craft_parts.Features.reset()
     yield craft_parts.Features(enable_overlay=True)
     craft_parts.Features.reset()
+
+
+@pytest.fixture
+def lifecycle_service(app_metadata, fake_project, tmp_path) -> LifecycleService:
+    work_dir = tmp_path / "work"
+    cache_dir = tmp_path / "cache"
+
+    return LifecycleService(
+        app_metadata,
+        fake_project,
+        work_dir=work_dir,
+        cache_dir=cache_dir,
+    )
+
+
+@pytest.fixture(params=list(EmitterMode))
+def emitter_verbosity(request):
+    reset_verbosity = emit.get_mode()
+    emit.set_mode(request.param)
+    yield request.param
+    emit.set_mode(reset_verbosity)
