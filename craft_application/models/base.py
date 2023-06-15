@@ -24,7 +24,7 @@ import yaml
 from craft_application import errors
 from craft_application.util import safe_yaml_load
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     import pathlib
 
 _ModelType = TypeVar("_ModelType", bound="CraftBaseModel")

@@ -25,7 +25,7 @@ import pytest
 from craft_application import LifecycleService
 from craft_cli import EmitterMode, emit
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from collections.abc import Iterator
 
 

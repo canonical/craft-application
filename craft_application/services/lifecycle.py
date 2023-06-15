@@ -25,7 +25,7 @@ from craft_parts import Action, ActionType, Features, LifecycleManager, PartsErr
 from craft_application import errors
 from craft_application.services import base
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from pathlib import Path
 
     from craft_application.app import AppMetadata

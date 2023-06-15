@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING, Any, cast
 
 from craft_cli import BaseCommand, emit
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     import argparse
 
     from craft_application import app

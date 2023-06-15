@@ -21,7 +21,7 @@ from typing import TYPE_CHECKING
 from craft_application import models
 from craft_application.services import package
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     import pathlib
 
 

@@ -25,7 +25,7 @@ from craft_cli import CraftError
 
 from craft_application.util.error_formatting import format_pydantic_errors
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     import craft_parts
     import pydantic
 
