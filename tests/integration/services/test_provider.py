@@ -35,6 +35,11 @@ import pytest
         pytest.param("multipass", marks=pytest.mark.multipass),
     ],
 )
+# The LXD tests can be flaky, erroring out with a BaseCompatibilityError:
+# "Clean incompatible instance and retry the requested operation."
+# This is due to an upstream LXD bug that appears to still be present in LXD 5.14:
+# https://github.com/lxc/lxd/issues/11422
+@pytest.mark.flaky(reruns=3, reruns_delay=2)
 def test_provider_lifecycle(
     snap_safe_tmp_path, app_metadata, provider_service, name, base_name
 ):

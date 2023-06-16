@@ -126,8 +126,6 @@ jobs:
           done
       - name: Run integration tests on MacOS
         env:
-          CRAFT_PROVIDERS_TESTS_ENABLE_MULTIPASS_INSTALL: 1
-          CRAFT_PROVIDERS_TESTS_ENABLE_MULTIPASS_UNINSTALL: 1
           PYTEST_ADDOPTS: "--no-header -vv -rN"
         run: |
           .tox/.tox/bin/tox run --skip-pkg-install --no-list-dependencies -e integration-${{ matrix.python.tox-version }}
