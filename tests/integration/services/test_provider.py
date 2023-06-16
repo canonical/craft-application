@@ -16,6 +16,7 @@
 """Integration tests for provider service."""
 import contextlib
 
+import craft_providers
 import pytest
 
 
@@ -42,13 +43,15 @@ def test_provider_lifecycle(
     provider_service.get_provider(name)
 
     instance = provider_service.instance(base_name, work_dir=snap_safe_tmp_path)
+    executor = None
     try:
-        with instance:
-            instance.execute_run(
+        with instance as executor:
+            executor.execute_run(
                 ["touch", str(app_metadata.managed_instance_project_path / "test")]
             )
     finally:
-        with contextlib.suppress(Exception):
-            instance.delete()
+        if executor is not None:
+            with contextlib.suppress(craft_providers.ProviderError):
+                executor.delete()
 
     assert (snap_safe_tmp_path / "test").exists()
