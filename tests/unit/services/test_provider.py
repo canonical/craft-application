@@ -53,16 +53,12 @@ def test_is_managed(provider_service, managed_value, expected, monkeypatch):
 @pytest.mark.parametrize("lxd_remote", ["local", "something-else"])
 def test_get_lxd_provider(monkeypatch, provider_service, lxd_remote, check):
     monkeypatch.setenv("CRAFT_LXD_REMOTE", lxd_remote)
-    mock_configure = mock.Mock()
-    monkeypatch.setattr(provider, "configure_buildd_image_remote", mock_configure)
     mock_provider = mock.Mock()
     monkeypatch.setattr(provider, "LXDProvider", mock_provider)
 
     actual = provider_service.get_provider("lxd")
 
     check.equal(actual, mock_provider.return_value)
-    with check:
-        mock_configure.assert_called_once_with()
     with check:
         mock_provider.assert_called_once_with(
             lxd_project="testcraft", lxd_remote=lxd_remote

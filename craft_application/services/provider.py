@@ -25,7 +25,7 @@ from typing import TYPE_CHECKING
 from craft_cli import CraftError, emit
 from craft_providers import bases
 from craft_providers.actions.snap_installer import Snap
-from craft_providers.lxd import LXDProvider, configure_buildd_image_remote
+from craft_providers.lxd import LXDProvider
 from craft_providers.multipass import MultipassProvider
 
 from craft_application.services import base
@@ -173,9 +173,6 @@ class ProviderService(base.BaseService):
 
     def _get_lxd_provider(self) -> LXDProvider:
         """Get the LXD provider for this manager."""
-        # TODO: Replace this deprecated function.
-        # https://github.com/canonical/craft-providers/issues/260
-        configure_buildd_image_remote()
         lxd_remote = os.getenv("CRAFT_LXD_REMOTE", "local")
         return LXDProvider(lxd_project=self._app.name, lxd_remote=lxd_remote)
 

@@ -16,7 +16,6 @@
 """Integration tests for provider service."""
 import contextlib
 
-import craft_providers.errors
 import pytest
 
 
@@ -36,19 +35,20 @@ import pytest
     ],
 )
 def test_provider_lifecycle(
-    provider_tmp_path, app_metadata, provider_service, name, base_name
+    snap_safe_tmp_path, app_metadata, provider_service, name, base_name
 ):
     if name == "multipass" and base_name[0] != "ubuntu":
         pytest.skip("multipass only provides ubuntu images")
     provider_service.get_provider(name)
 
-    with provider_service.instance(base_name, work_dir=provider_tmp_path) as instance:
-        try:
+    instance = provider_service.instance(base_name, work_dir=snap_safe_tmp_path)
+    try:
+        with instance:
             instance.execute_run(
                 ["touch", str(app_metadata.managed_instance_project_path / "test")]
             )
-        finally:
-            with contextlib.suppress(craft_providers.errors.ProviderError):
-                instance.delete()
+    finally:
+        with contextlib.suppress(Exception):
+            instance.delete()
 
-    assert (provider_tmp_path / "test").exists()
+    assert (snap_safe_tmp_path / "test").exists()

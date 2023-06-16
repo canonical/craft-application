@@ -31,15 +31,13 @@ def pytest_configure(config: pytest.Config):
 
 def pytest_runtest_setup(item: pytest.Item):
     if sys.platform != "linux":
-        for _ in item.iter_markers("lxd"):
+        if any(item.iter_markers("lxd")):
             pytest.skip("lxd tests only run on Linux")
-    elif not lxd.is_installed():
-        for _ in item.iter_markers("lxd"):
-            pytest.skip("lxd not installed")
+    elif not lxd.is_installed() and any(item.iter_markers("lxd")):
+        pytest.skip("lxd not installed")
 
-    if not multipass.is_installed():
-        for _ in item.iter_markers("multipass"):
-            pytest.skip("multipass not installed")
+    if not multipass.is_installed() and any(item.iter_markers("multipass")):
+        pytest.skip("multipass not installed")
 
 
 @pytest.fixture()
@@ -49,8 +47,20 @@ def provider_service(app_metadata, fake_project):
 
 
 @pytest.fixture()
-def provider_tmp_path():
-    """A temporary path accessible to craft providers."""
+def snap_safe_tmp_path():
+    """A temporary path accessible to snap-confined craft providers.
+
+    Some providers (notably Multipass) don't have access to /tmp  on Linux. This
+    provides a temporary path that the provider can use, preferring $XDG_RUNTIME_DIR
+    if it exists.
+
+    On Non-Linux platforms providers aren't confined, so we can use the default
+    temporary directory.
+    """
+    if sys.platform != "linux":
+        with tempfile.TemporaryDirectory() as temp_dir:
+            yield pathlib.Path(temp_dir)
+        return
     directory = os.getenv("XDG_RUNTIME_DIR")
     with tempfile.TemporaryDirectory(
         prefix="craft-application-test-",
