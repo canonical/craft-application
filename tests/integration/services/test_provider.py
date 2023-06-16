@@ -1,0 +1,54 @@
+#  This file is part of craft-application.
+#
+#  Copyright 2023 Canonical Ltd.
+#
+#  This program is free software: you can redistribute it and/or modify it
+#  under the terms of the GNU Lesser General Public License version 3, as
+#  published by the Free Software Foundation.
+#
+#  This program is distributed in the hope that it will be useful, but WITHOUT
+#  ANY WARRANTY; without even the implied warranties of MERCHANTABILITY,
+#  SATISFACTORY QUALITY, or FITNESS FOR A PARTICULAR PURPOSE.
+#  See the GNU Lesser General Public License for more details.
+#
+#  You should have received a copy of the GNU Lesser General Public License
+#  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+"""Integration tests for provider service."""
+import contextlib
+
+import craft_providers.errors
+import pytest
+
+
+@pytest.mark.parametrize(
+    "base_name",
+    [
+        pytest.param(("ubuntu", "devel"), id="ubuntu_devel"),
+        pytest.param(("ubuntu", "22.04"), id="ubuntu_22.04"),
+        pytest.param(("almalinux", "9"), id="almalinux_9"),
+    ],
+)
+@pytest.mark.parametrize(
+    "name",
+    [
+        pytest.param("lxd", marks=pytest.mark.lxd),
+        pytest.param("multipass", marks=pytest.mark.multipass),
+    ],
+)
+def test_provider_lifecycle(
+    provider_tmp_path, app_metadata, provider_service, name, base_name
+):
+    if name == "multipass" and base_name[0] != "ubuntu":
+        pytest.skip("multipass only provides ubuntu images")
+    provider_service.get_provider(name)
+
+    with provider_service.instance(base_name, work_dir=provider_tmp_path) as instance:
+        try:
+            instance.execute_run(
+                ["touch", str(app_metadata.managed_instance_project_path / "test")]
+            )
+        finally:
+            with contextlib.suppress(craft_providers.errors.ProviderError):
+                instance.delete()
+
+    assert (provider_tmp_path / "test").exists()

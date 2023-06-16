@@ -17,7 +17,7 @@
 
 This defines the structure of the input file (e.g. snapcraft.yaml)
 """
-from typing import Any, Dict, Optional, Union, cast
+from typing import Any, Dict, Optional, Union
 
 import craft_parts
 import pydantic
@@ -56,11 +56,11 @@ class Project(CraftBaseModel):
         return item
 
     @property
-    def effective_base(self) -> str:
+    def effective_base(self) -> Any:  # noqa: ANN401 app specific classes can improve
         """Return the base used for creating the output."""
         build_base = getattr(self, "build_base", None)
         if build_base is not None:
-            return cast(str, build_base)
+            return build_base
         if self.base is not None:
-            return cast(str, self.base)
+            return self.base
         raise RuntimeError("Could not determine effective base")

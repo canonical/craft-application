@@ -16,6 +16,7 @@
 """Main application classes for a craft-application."""
 from __future__ import annotations
 
+import pathlib
 from dataclasses import dataclass, field
 from importlib import metadata
 from typing import final
@@ -32,6 +33,7 @@ class AppMetadata:
     summary: str | None = None
     version: str = field(init=False)
     source_ignore_patterns: list[str] = field(default_factory=lambda: [])
+    managed_instance_project_path = pathlib.PurePosixPath("/root/project")
 
     ProjectClass: type[models.Project] = models.Project
 
