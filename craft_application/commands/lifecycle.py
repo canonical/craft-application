@@ -46,7 +46,7 @@ def get_lifecycle_command_group() -> CommandGroup:
 
     return CommandGroup(
         "Lifecycle",
-        commands,
+        commands,  # type: ignore[arg-type] # https://github.com/canonical/craft-cli/pull/157
     )
 
 
@@ -131,7 +131,7 @@ class _LifecycleStepCommand(_LifecyclePartsCommand):
         """Run a lifecycle step command."""
         super().run(parsed_args)
 
-        step_name = cast(str, step_name or self.name)
+        step_name = step_name or self.name
 
         self._lifecycle_service.run(step_name=step_name, part_names=parsed_args.parts)
 

@@ -17,7 +17,7 @@
 from __future__ import annotations
 
 import argparse
-from typing import Any, cast
+from typing import Any
 
 from craft_cli import BaseCommand, emit
 
@@ -48,4 +48,4 @@ class AppCommand(BaseCommand):
             raise RuntimeError("Unmanaged commands should not be run in managed mode.")
         cmd_name = self._app.name
         verbosity = emit.get_mode().name.lower()
-        return [cmd_name, f"--verbosity={verbosity}", cast(str, self.name)]
+        return [cmd_name, f"--verbosity={verbosity}", self.name]
