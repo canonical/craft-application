@@ -27,7 +27,7 @@ import pytest
         pytest.param(
             ("ubuntu", "devel"),
             marks=pytest.mark.skipif(
-                sys.platform != "linux", reason="Only availoble on Linux."
+                sys.platform != "linux", reason="Only available on Linux."
             ),
             id="ubuntu_devel",
         ),
