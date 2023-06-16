@@ -3,7 +3,7 @@ name = "craft-application"
 description = "A framework for *craft applications."
 dynamic = ["version", "readme"]
 dependencies = [
-    "craft-cli>=1.2.0",
+    "craft-cli>=2.0.0",
     "craft-parts>=1.21.1",
     "craft-providers>=1.13.0",
     "pydantic>=1.10,<2.0",
@@ -132,6 +132,7 @@ omit = ["tests/**"]
 skip_empty = true
 
 [tool.pyright]
+include = ["craft_application/**", "tests/**"]
 strict = ["craft_application"]
 pythonVersion = "3.8"
 pythonPlatform = "Linux"
