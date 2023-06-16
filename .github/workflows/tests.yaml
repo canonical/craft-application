@@ -60,6 +60,10 @@ jobs:
             3.11
             3.12-dev
           cache: 'pip'
+      - name: Setup LXD
+        uses: canonical/setup-lxd@v0.1.1
+        with:
+          channel: latest/stable
       - name: Configure environment
         run: |
           echo "::group::apt-get"
