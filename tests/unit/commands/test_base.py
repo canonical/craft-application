@@ -21,7 +21,7 @@ from craft_application.commands import base
 from craft_cli import EmitterMode, emit
 
 
-@pytest.fixture
+@pytest.fixture()
 def fake_command(app_metadata):
     class FakeCommand(base.AppCommand):
         run_managed = True

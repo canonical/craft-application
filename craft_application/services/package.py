@@ -17,10 +17,14 @@
 from __future__ import annotations
 
 import abc
-import pathlib
+from typing import TYPE_CHECKING
 
-from craft_application import models
 from craft_application.services import base
+
+if TYPE_CHECKING:  # pragma: no cover
+    import pathlib
+
+    from craft_application import models
 
 
 class PackageService(base.BaseService):

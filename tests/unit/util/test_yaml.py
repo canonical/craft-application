@@ -37,6 +37,6 @@ def test_safe_yaml_loader_valid(file):
     ],
 )
 def test_safe_yaml_loader_invalid(file):
-    with pytest.raises(YAMLError):
-        with file.open() as f:
+    with file.open() as f:
+        with pytest.raises(YAMLError):
             yaml.safe_yaml_load(f)

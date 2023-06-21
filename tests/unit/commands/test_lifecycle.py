@@ -66,7 +66,7 @@ def get_fake_command_class(parent_cls, managed):
 
 
 @pytest.mark.parametrize(
-    ["enable_overlay", "commands"],
+    ("enable_overlay", "commands"),
     [
         (True, ALL_LIFECYCLE_COMMANDS),
         (
@@ -124,7 +124,7 @@ def test_parts_command_get_managed_cmd(app_metadata, parts, emitter_verbosity):
     assert actual == expected
 
 
-@pytest.mark.parametrize(["shell_dict", "shell_args"], SHELL_PARAMS)
+@pytest.mark.parametrize(("shell_dict", "shell_args"), SHELL_PARAMS)
 @pytest.mark.parametrize("parts_args", PARTS_LISTS)
 def test_step_command_fill_parser(app_metadata, parts_args, shell_args, shell_dict):
     cls = get_fake_command_class(_LifecycleStepCommand, managed=True)
@@ -138,7 +138,7 @@ def test_step_command_fill_parser(app_metadata, parts_args, shell_args, shell_di
     assert args_dict == expected
 
 
-@pytest.mark.parametrize(["shell_params", "shell_opts"], SHELL_PARAMS)
+@pytest.mark.parametrize(("shell_params", "shell_opts"), SHELL_PARAMS)
 @pytest.mark.parametrize("parts", PARTS_LISTS)
 def test_step_command_get_managed_cmd(
     app_metadata, parts, emitter_verbosity, shell_params, shell_opts
@@ -179,7 +179,7 @@ def test_step_command_run_explicit_step(app_metadata, parts, step_name):
 
 
 @pytest.mark.parametrize("command_cls", MANAGED_LIFECYCLE_COMMANDS)
-@pytest.mark.parametrize(["shell_params", "shell_opts"], SHELL_PARAMS)
+@pytest.mark.parametrize(("shell_params", "shell_opts"), SHELL_PARAMS)
 @pytest.mark.parametrize("parts", PARTS_LISTS)
 def test_concrete_commands_get_managed_cmd(
     app_metadata, command_cls, shell_params, shell_opts, parts, emitter_verbosity
@@ -239,7 +239,7 @@ def test_clean_run(app_metadata, parts, tmp_path):
     mock_lifecycle_service.clean.assert_called_once_with(parts)
 
 
-@pytest.mark.parametrize(["shell_dict", "shell_args"], SHELL_PARAMS)
+@pytest.mark.parametrize(("shell_dict", "shell_args"), SHELL_PARAMS)
 @pytest.mark.parametrize("parts_args", PARTS_LISTS)
 @pytest.mark.parametrize("output_arg", [".", "/"])
 def test_pack_fill_parser(app_metadata, parts_args, shell_args, shell_dict, output_arg):
@@ -264,7 +264,7 @@ def test_pack_fill_parser(app_metadata, parts_args, shell_args, shell_dict, outp
 
 
 @pytest.mark.parametrize(
-    ["packages", "message"],
+    ("packages", "message"),
     [
         ([], "No packages created."),
         ([pathlib.Path("package.zip")], "Packed package.zip"),

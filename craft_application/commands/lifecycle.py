@@ -63,14 +63,14 @@ class _LifecycleCommand(base.AppCommand, metaclass=abc.ABCMeta):
         )
 
     @override
-    def run(self, parsed_args: "argparse.Namespace") -> None:
+    def run(self, parsed_args: argparse.Namespace) -> None:
         emit.trace(f"lifecycle command: {self.name!r}, arguments: {parsed_args!r}")
 
 
 class _LifecyclePartsCommand(_LifecycleCommand):
     @override
-    def fill_parser(self, parser: "argparse.ArgumentParser") -> None:
-        super().fill_parser(parser)  # type: ignore
+    def fill_parser(self, parser: argparse.ArgumentParser) -> None:
+        super().fill_parser(parser)  # type: ignore[arg-type]
         parser.add_argument(
             "parts",
             metavar="part-name",
@@ -92,7 +92,7 @@ class _LifecycleStepCommand(_LifecyclePartsCommand):
     run_managed = True
 
     @override
-    def fill_parser(self, parser: "argparse.ArgumentParser") -> None:
+    def fill_parser(self, parser: argparse.ArgumentParser) -> None:
         super().fill_parser(parser)
 
         group = parser.add_mutually_exclusive_group()
@@ -126,7 +126,7 @@ class _LifecycleStepCommand(_LifecyclePartsCommand):
 
     @override
     def run(
-        self, parsed_args: "argparse.Namespace", step_name: str | None = None
+        self, parsed_args: argparse.Namespace, step_name: str | None = None
     ) -> None:
         """Run a lifecycle step command."""
         super().run(parsed_args)
@@ -213,7 +213,7 @@ class PrimeCommand(_LifecycleStepCommand):
 
     @override
     def run(
-        self, parsed_args: "argparse.Namespace", step_name: str | None = None
+        self, parsed_args: argparse.Namespace, step_name: str | None = None
     ) -> None:
         """Run the prime command."""
         super().run(parsed_args, step_name=step_name)
@@ -235,7 +235,7 @@ class PackCommand(PrimeCommand):
     )
 
     @override
-    def fill_parser(self, parser: "argparse.ArgumentParser") -> None:
+    def fill_parser(self, parser: argparse.ArgumentParser) -> None:
         super().fill_parser(parser)
 
         parser.add_argument(
@@ -248,7 +248,7 @@ class PackCommand(PrimeCommand):
 
     @override
     def run(
-        self, parsed_args: "argparse.Namespace", step_name: str | None = None
+        self, parsed_args: argparse.Namespace, step_name: str | None = None
     ) -> None:
         """Run the pack command."""
         if step_name not in ("pack", None):
@@ -279,7 +279,7 @@ class CleanCommand(_LifecyclePartsCommand):
     )
 
     @override
-    def run(self, parsed_args: "argparse.Namespace") -> None:
+    def run(self, parsed_args: argparse.Namespace) -> None:
         """Run the clean command."""
         super().run(parsed_args)
 
