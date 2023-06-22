@@ -16,14 +16,16 @@
 """Base pydantic model for *craft applications."""
 from __future__ import annotations
 
-import pathlib
-from typing import Any, TypeVar
+from typing import TYPE_CHECKING, Any, TypeVar
 
 import pydantic
 import yaml
 
 from craft_application import errors
 from craft_application.util import safe_yaml_load
+
+if TYPE_CHECKING:  # pragma: no cover
+    import pathlib
 
 _ModelType = TypeVar("_ModelType", bound="CraftBaseModel")
 
@@ -74,7 +76,9 @@ class CraftBaseModel(pydantic.BaseModel):
         try:
             return cls.unmarshal(data)
         except pydantic.ValidationError as err:
-            raise errors.CraftValidationError.from_pydantic(err, file_name=path.name)
+            raise errors.CraftValidationError.from_pydantic(
+                err, file_name=path.name
+            ) from None
 
     def to_yaml_file(self, path: pathlib.Path) -> None:
         """Write this model to a YAML file."""

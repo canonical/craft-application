@@ -16,8 +16,8 @@
 """Shared data for all craft-application tests."""
 from __future__ import annotations
 
-from collections.abc import Iterator
 from importlib import metadata
+from typing import TYPE_CHECKING
 
 import craft_application
 import craft_parts
@@ -25,8 +25,11 @@ import pytest
 from craft_application import LifecycleService
 from craft_cli import EmitterMode, emit
 
+if TYPE_CHECKING:  # pragma: no cover
+    from collections.abc import Iterator
 
-@pytest.fixture
+
+@pytest.fixture()
 def app_metadata() -> craft_application.AppMetadata:
     with pytest.MonkeyPatch.context() as m:
         m.setattr(metadata, "version", lambda _: "3.14159")
@@ -37,7 +40,7 @@ def app_metadata() -> craft_application.AppMetadata:
         )
 
 
-@pytest.fixture
+@pytest.fixture()
 def fake_project() -> craft_application.models.Project:
     return craft_application.models.Project(
         name="full-project",  # pyright: ignore[reportGeneralTypeIssues]
@@ -54,7 +57,7 @@ def fake_project() -> craft_application.models.Project:
     )
 
 
-@pytest.fixture
+@pytest.fixture()
 def enable_overlay() -> Iterator[craft_parts.Features]:
     """Enable the overlay feature in craft_parts for the relevant test."""
     craft_parts.Features.reset()
@@ -62,7 +65,7 @@ def enable_overlay() -> Iterator[craft_parts.Features]:
     craft_parts.Features.reset()
 
 
-@pytest.fixture
+@pytest.fixture()
 def lifecycle_service(app_metadata, fake_project, tmp_path) -> LifecycleService:
     work_dir = tmp_path / "work"
     cache_dir = tmp_path / "cache"

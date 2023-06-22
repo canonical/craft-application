@@ -40,7 +40,7 @@ class FakePartsLifecycle(lifecycle.LifecycleService):
         return mock_lcm
 
 
-@pytest.fixture
+@pytest.fixture()
 def fake_parts_lifecycle(app_metadata, fake_project, tmp_path):
     work_dir = tmp_path / "work"
     cache_dir = tmp_path / "cache"
@@ -72,7 +72,7 @@ def test_get_parts_action_message_run(step: Step, reason: str | None):
 
 @pytest.mark.usefixtures("enable_overlay")
 @pytest.mark.parametrize(
-    ["step_name", "step"],
+    ("step_name", "step"),
     [
         ("pull", Step.PULL),
         ("overlay", Step.OVERLAY),
@@ -102,7 +102,7 @@ def test_init_success(app_metadata, fake_project, tmp_path):
 
 
 @pytest.mark.parametrize(
-    ["error", "expected"],
+    ("error", "expected"),
     [
         (
             craft_parts.errors.InvalidApplicationName("craft-application"),
@@ -160,7 +160,7 @@ def test_run_success(fake_parts_lifecycle, actions, check):
 
 
 @pytest.mark.parametrize(
-    ["err", "exc_class", "message_regex"],
+    ("err", "exc_class", "message_regex"),
     [
         (RuntimeError("yolo"), RuntimeError, "^Parts processing internal error: yolo$"),
         (OSError(0, "Hi"), PartsLifecycleError, "^Hi$"),
@@ -175,7 +175,7 @@ def test_run_failure(fake_parts_lifecycle, err, exc_class, message_regex):
 
 
 @pytest.mark.parametrize(
-    ["part_names", "message"],
+    ("part_names", "message"),
     [
         (["my-part", "your-part"], "Cleaning parts: my-part, your-part"),
         ([], "Cleaning all parts"),

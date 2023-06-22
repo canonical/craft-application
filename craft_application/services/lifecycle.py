@@ -17,16 +17,20 @@
 from __future__ import annotations
 
 import types
-from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from craft_cli import emit
 from craft_parts import Action, ActionType, Features, LifecycleManager, PartsError, Step
 
 from craft_application import errors
-from craft_application.app import AppMetadata
-from craft_application.models import Project
 from craft_application.services import base
+
+if TYPE_CHECKING:  # pragma: no cover
+    from pathlib import Path
+
+    from craft_application.app import AppMetadata
+    from craft_application.models import Project
+
 
 ACTION_MESSAGES = types.MappingProxyType(
     {
@@ -109,7 +113,7 @@ class LifecycleService(base.BaseService):
         *,
         work_dir: Path | str,
         cache_dir: Path | str,
-        **lifecycle_kwargs: Any,
+        **lifecycle_kwargs: Any,  # noqa: ANN401 - eventually used in an Any
     ) -> None:
         super().__init__(app, project)
         self._work_dir = work_dir

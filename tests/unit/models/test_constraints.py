@@ -152,8 +152,7 @@ def test_valid_version_str(version):
 @pytest.mark.parametrize("version", [""])
 def test_invalid_version_str(version):
     with pytest.raises(pydantic.PydanticValueError):
-        version_str = VersionStr(version)
-        VersionStr.validate(version_str)
+        VersionStr.validate(VersionStr(version))
 
 
 # endregion

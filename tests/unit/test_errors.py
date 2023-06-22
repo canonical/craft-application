@@ -36,7 +36,7 @@ def test_parts_lifecycle_error_from_parts_error(err):
 
 
 @pytest.mark.parametrize(
-    ["err", "expected"],
+    ("err", "expected"),
     [
         (OSError(0, "strerror"), PartsLifecycleError("strerror", details="OSError")),
         (
