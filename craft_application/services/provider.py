@@ -85,7 +85,7 @@ class ProviderService(base.BaseService):
         :param allow_unstable: Whether to allow the use of unstable images.
         :returns: a context manager of the provider instance.
         """
-        emit.trace("Preparing managed instance")
+        emit.debug("Preparing managed instance")
         work_dir_inode = work_dir.stat().st_ino
         instance_name = f"{self._app.name}-{self._project.name}-{work_dir_inode}"
         base = self.get_base(base_name, instance_name=instance_name, **kwargs)
@@ -105,7 +105,7 @@ class ProviderService(base.BaseService):
                 # https://github.com/canonical/craft-providers/issues/315
                 target=self._app.managed_instance_project_path,  # type: ignore[arg-type]
             )
-            emit.trace("Instance launched and working directory mounted")
+            emit.debug("Instance launched and working directory mounted")
             yield instance
 
     def get_base(
