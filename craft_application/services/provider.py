@@ -30,7 +30,7 @@ from craft_providers.multipass import MultipassProvider
 
 from craft_application.services import base
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     import pathlib
     from collections.abc import Generator
 

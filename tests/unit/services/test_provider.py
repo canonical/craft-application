@@ -108,6 +108,12 @@ def test_get_provider_managed(monkeypatch, provider_service):
         provider_service.get_provider()
 
 
+def test_get_existing_provider(provider_service):
+    provider_service._provider = expected = "This is totally a provider."
+
+    assert provider_service.get_provider() == expected
+
+
 @pytest.mark.parametrize("environment", [{}, {"a": "b"}])
 @pytest.mark.parametrize(
     ("base_name", "base_class", "alias"),
