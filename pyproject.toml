@@ -4,7 +4,8 @@ description = "A framework for *craft applications."
 dynamic = ["version", "readme"]
 dependencies = [
     "craft-cli>=2.0.0",
-    "craft-parts",
+    "craft-parts>=1.21.1",
+    "craft-providers>=1.13.0",
     "pydantic>=1.10,<2.0",
     "PyYaml>=6.0",
     "typing_extensions>=4.4.0",
@@ -31,6 +32,7 @@ dev = [
     "pytest-check==2.1.5",
     "pytest-cov==4.1.0",
     "pytest-mock==3.10.0",
+    "pytest-rerunfailures==11.1.2",
 ]
 lint = [
     "black==23.3.0",
@@ -59,10 +61,10 @@ docs = [
 # Note: These extras can break requirements from other packages, so
 # do not use them in dependencies unless you know what you're doing.
 jammy-dev = [
-    "python-apt@https://launchpad.net/ubuntu/+archive/primary/+sourcefiles/python-apt/2.4.0ubuntu1/python-apt_2.4.0ubuntu1.tar.xz"
+    "python-apt@https://launchpad.net/ubuntu/+archive/primary/+sourcefiles/python-apt/2.4.0ubuntu1/python-apt_2.4.0ubuntu1.tar.xz;sys_platform=='linux'"
 ]
 lunar-dev = [
-    "python-apt@https://launchpad.net/ubuntu/+archive/primary/+sourcefiles/python-apt/2.5.3ubuntu1/python-apt_2.5.3ubuntu1.tar.xz"
+    "python-apt@https://launchpad.net/ubuntu/+archive/primary/+sourcefiles/python-apt/2.5.3ubuntu1/python-apt_2.5.3ubuntu1.tar.xz;sys_platform=='linux'"
 ]
 
 [build-system]

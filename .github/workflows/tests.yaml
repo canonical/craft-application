@@ -60,6 +60,10 @@ jobs:
             3.11
             3.12-dev
           cache: 'pip'
+      - name: Setup LXD
+        uses: canonical/setup-lxd@v0.1.1
+        with:
+          channel: latest/stable
       - name: Configure environment
         run: |
           echo "::group::apt-get"
@@ -86,3 +90,42 @@ jobs:
         with:
           name: test-results-${{ matrix.platform }}
           path: results/
+  integration-tests-macos:
+    strategy:
+      matrix:
+        python: [
+          {system-version: "3.11", tox-version: "py311"},
+        ]
+    runs-on: macos-latest
+    steps:
+      - name: Install Multipass early
+        run: |
+          brew update
+          brew install multipass
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python.system-version }}
+          cache: 'pip'
+      - name: Install Tox
+        run: |
+          echo "::group::pip install"
+          python -m pip install 'tox>=4.6'
+          echo "::endgroup::"
+      - name: Setup Tox environments
+        run: tox run -e integration-${{ matrix.python.tox-version }} --notest
+      - name: Wait for multipass
+        run: |
+          while ! multipass version
+          do
+            sleep 2
+          done
+      - name: Run integration tests on MacOS
+        env:
+          PYTEST_ADDOPTS: "--no-header -vv -rN"
+        run: |
+          .tox/.tox/bin/tox run --skip-pkg-install --no-list-dependencies -e integration-${{ matrix.python.tox-version }}

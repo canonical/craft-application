@@ -135,7 +135,6 @@ class LifecycleService(base.BaseService):
                 application_name=self._app.name,
                 cache_dir=self._cache_dir,
                 work_dir=self._work_dir,
-                base=self._project.effective_base,
                 ignore_local_sources=self._app.source_ignore_patterns,
                 **self._manager_kwargs,
             )
