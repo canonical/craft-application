@@ -1,0 +1,76 @@
+# Copyright 2023 Canonical Ltd.
+#
+# This program is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Lesser General Public License version 3, as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranties of MERCHANTABILITY,
+# SATISFACTORY QUALITY, or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License along
+# with this program.  If not, see <http://www.gnu.org/licenses/>.
+"""Factory class for lazy-loading service classes."""
+from __future__ import annotations
+
+import dataclasses
+from typing import TYPE_CHECKING, Any
+
+from craft_application import models, services
+
+if TYPE_CHECKING:
+    from craft_application.application import AppMetadata
+
+
+@dataclasses.dataclass
+class ServiceFactory:
+    """Factory class for lazy-loading service classes.
+
+    This class and its subclasses allow a craft application to only load the
+    relevant services for the command that is being run.
+
+    This factory is intended to be extended with various additional service classes
+    and possibly have its existing service classes overridden.
+    """
+
+    app: AppMetadata
+    project: models.Project
+
+    PackageClass: type[services.PackageService]
+    LifecycleClass: type[services.LifecycleService] = services.LifecycleService
+    ProviderClass: type[services.ProviderService] = services.ProviderService
+
+    if TYPE_CHECKING:
+        # Cheeky hack that lets static type checkers report the correct types.
+        # Any apps that add their own services should do this too.
+        package: services.PackageService = None  # type: ignore[assignment]
+        lifecycle: services.LifecycleService = None  # type: ignore[assignment]
+        provider: services.ProviderService = None  # type: ignore[assignment]
+
+    def __post_init__(self) -> None:
+        self._service_kwargs: dict[str, dict[str, Any]] = {}
+        self._services: dict[str, services.BaseService] = {}
+
+    def set_kwargs(
+        self,
+        service: str,
+        **kwargs: Any,  # noqa: ANN401 this is intentionally duck-typed.
+    ) -> None:
+        """Set up the keyword arguments to pass to a particular service class."""
+        self._service_kwargs[service] = kwargs
+
+    def __getattr__(self, service: str) -> services.BaseService:
+        if service in self._services:
+            return self._services[service]
+        service_cls_name = "".join(word.title() for word in service.split("_"))
+        service_cls_name += "Class"
+        classes = dataclasses.asdict(self)
+        if service_cls_name not in classes:
+            raise AttributeError(service)
+        cls = getattr(self, service_cls_name)
+        if issubclass(cls, services.BaseService):
+            kwargs = self._service_kwargs.get(service, {})
+            self._services[service] = cls(self.app, self.project, **kwargs)
+            return self._services[service]
+        raise TypeError(f"{cls.__name__} is not a service class")

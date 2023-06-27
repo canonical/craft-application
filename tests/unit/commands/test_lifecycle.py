@@ -16,7 +16,6 @@
 """Tests for lifecycle commands."""
 import argparse
 import pathlib
-from unittest import mock
 
 import craft_parts
 import pytest
@@ -94,10 +93,10 @@ def test_get_lifecycle_command_group(enable_overlay, commands):
 
 
 @pytest.mark.parametrize("parts_args", PARTS_LISTS)
-def test_parts_command_fill_parser(app_metadata, parts_args):
+def test_parts_command_fill_parser(app_metadata, fake_services, parts_args):
     cls = get_fake_command_class(_LifecyclePartsCommand, managed=True)
     parser = argparse.ArgumentParser("parts_command")
-    command = cls({"app": app_metadata})
+    command = cls({"app": app_metadata, "services": fake_services})
 
     command.fill_parser(parser)
 
@@ -106,7 +105,9 @@ def test_parts_command_fill_parser(app_metadata, parts_args):
 
 
 @pytest.mark.parametrize("parts", PARTS_LISTS)
-def test_parts_command_get_managed_cmd(app_metadata, parts, emitter_verbosity):
+def test_parts_command_get_managed_cmd(
+    app_metadata, fake_services, parts, emitter_verbosity
+):
     cls = get_fake_command_class(_LifecyclePartsCommand, managed=True)
 
     expected = [
@@ -117,7 +118,7 @@ def test_parts_command_get_managed_cmd(app_metadata, parts, emitter_verbosity):
     ]
 
     parsed_args = argparse.Namespace(parts=parts)
-    command = cls({"app": app_metadata})
+    command = cls({"app": app_metadata, "services": fake_services})
 
     actual = command.get_managed_cmd(parsed_args)
 
@@ -126,11 +127,13 @@ def test_parts_command_get_managed_cmd(app_metadata, parts, emitter_verbosity):
 
 @pytest.mark.parametrize(("shell_dict", "shell_args"), SHELL_PARAMS)
 @pytest.mark.parametrize("parts_args", PARTS_LISTS)
-def test_step_command_fill_parser(app_metadata, parts_args, shell_args, shell_dict):
+def test_step_command_fill_parser(
+    app_metadata, fake_services, parts_args, shell_args, shell_dict
+):
     cls = get_fake_command_class(_LifecycleStepCommand, managed=True)
     parser = argparse.ArgumentParser("step_command")
     expected = {"parts": parts_args, **shell_dict}
-    command = cls({"app": app_metadata})
+    command = cls({"app": app_metadata, "services": fake_services})
 
     command.fill_parser(parser)
 
@@ -141,7 +144,7 @@ def test_step_command_fill_parser(app_metadata, parts_args, shell_args, shell_di
 @pytest.mark.parametrize(("shell_params", "shell_opts"), SHELL_PARAMS)
 @pytest.mark.parametrize("parts", PARTS_LISTS)
 def test_step_command_get_managed_cmd(
-    app_metadata, parts, emitter_verbosity, shell_params, shell_opts
+    app_metadata, fake_services, parts, emitter_verbosity, shell_params, shell_opts
 ):
     cls = get_fake_command_class(_LifecycleStepCommand, managed=True)
 
@@ -155,7 +158,7 @@ def test_step_command_get_managed_cmd(
 
     emit.set_mode(emitter_verbosity)
     parsed_args = argparse.Namespace(parts=parts, **shell_params)
-    command = cls({"app": app_metadata})
+    command = cls({"app": app_metadata, "services": fake_services})
 
     actual = command.get_managed_cmd(parsed_args)
 
@@ -164,16 +167,15 @@ def test_step_command_get_managed_cmd(
 
 @pytest.mark.parametrize("step_name", STEP_NAMES)
 @pytest.mark.parametrize("parts", PARTS_LISTS)
-def test_step_command_run_explicit_step(app_metadata, parts, step_name):
+def test_step_command_run_explicit_step(app_metadata, mock_services, parts, step_name):
     cls = get_fake_command_class(_LifecycleStepCommand, managed=True)
 
-    mock_parts_lifecycle = mock.Mock()
     parsed_args = argparse.Namespace(parts=parts)
-    command = cls({"app": app_metadata, "lifecycle_service": mock_parts_lifecycle})
+    command = cls({"app": app_metadata, "services": mock_services})
 
     command.run(parsed_args=parsed_args, step_name=step_name)
 
-    mock_parts_lifecycle.run.assert_called_once_with(
+    mock_services.lifecycle.run.assert_called_once_with(
         step_name=step_name, part_names=parts
     )
 
@@ -182,7 +184,13 @@ def test_step_command_run_explicit_step(app_metadata, parts, step_name):
 @pytest.mark.parametrize(("shell_params", "shell_opts"), SHELL_PARAMS)
 @pytest.mark.parametrize("parts", PARTS_LISTS)
 def test_concrete_commands_get_managed_cmd(
-    app_metadata, command_cls, shell_params, shell_opts, parts, emitter_verbosity
+    app_metadata,
+    fake_services,
+    command_cls,
+    shell_params,
+    shell_opts,
+    parts,
+    emitter_verbosity,
 ):
     expected = [
         app_metadata.name,
@@ -193,7 +201,7 @@ def test_concrete_commands_get_managed_cmd(
     ]
 
     parsed_args = argparse.Namespace(parts=parts, **shell_params)
-    command = command_cls({"app": app_metadata})
+    command = command_cls({"app": app_metadata, "services": fake_services})
 
     actual = command.get_managed_cmd(parsed_args)
 
@@ -202,58 +210,36 @@ def test_concrete_commands_get_managed_cmd(
 
 @pytest.mark.parametrize("command_cls", MANAGED_LIFECYCLE_COMMANDS)
 @pytest.mark.parametrize("parts", PARTS_LISTS)
-def test_managed_concrete_commands_run(app_metadata, command_cls, parts):
-    mock_lifecycle_service = mock.Mock()
-    mock_package_service = mock.Mock()
+def test_managed_concrete_commands_run(app_metadata, mock_services, command_cls, parts):
     parsed_args = argparse.Namespace(parts=parts)
-    command = command_cls(
-        {
-            "app": app_metadata,
-            "lifecycle_service": mock_lifecycle_service,
-            "package_service": mock_package_service,
-        }
-    )
+    command = command_cls({"app": app_metadata, "services": mock_services})
 
     command.run(parsed_args)
 
-    mock_lifecycle_service.run.assert_called_once_with(
+    mock_services.lifecycle.run.assert_called_once_with(
         step_name=command.name, part_names=parts
     )
 
 
 @pytest.mark.parametrize("parts", PARTS_LISTS)
-def test_clean_run(app_metadata, parts, tmp_path):
-    mock_lifecycle_service = mock.Mock()
-    mock_package_service = mock.Mock()
+def test_clean_run(app_metadata, parts, tmp_path, mock_services):
     parsed_args = argparse.Namespace(parts=parts, output=tmp_path)
-    command = CleanCommand(
-        {
-            "app": app_metadata,
-            "lifecycle_service": mock_lifecycle_service,
-            "package_service": mock_package_service,
-        }
-    )
+    command = CleanCommand({"app": app_metadata, "services": mock_services})
 
     command.run(parsed_args)
 
-    mock_lifecycle_service.clean.assert_called_once_with(parts)
+    mock_services.lifecycle.clean.assert_called_once_with(parts)
 
 
 @pytest.mark.parametrize(("shell_dict", "shell_args"), SHELL_PARAMS)
 @pytest.mark.parametrize("parts_args", PARTS_LISTS)
 @pytest.mark.parametrize("output_arg", [".", "/"])
-def test_pack_fill_parser(app_metadata, parts_args, shell_args, shell_dict, output_arg):
-    mock_lifecycle_service = mock.Mock()
-    mock_package_service = mock.Mock()
+def test_pack_fill_parser(
+    app_metadata, mock_services, parts_args, shell_args, shell_dict, output_arg
+):
     parser = argparse.ArgumentParser("step_command")
     expected = {"parts": parts_args, "output": pathlib.Path(output_arg), **shell_dict}
-    command = PackCommand(
-        {
-            "app": app_metadata,
-            "lifecycle_service": mock_lifecycle_service,
-            "package_service": mock_package_service,
-        }
-    )
+    command = PackCommand({"app": app_metadata, "services": mock_services})
 
     command.fill_parser(parser)
 
@@ -275,32 +261,30 @@ def test_pack_fill_parser(app_metadata, parts_args, shell_args, shell_dict, outp
     ],
 )
 @pytest.mark.parametrize("parts", PARTS_LISTS)
-def test_pack_run(emitter, app_metadata, parts, tmp_path, packages, message):
-    mock_lifecycle_service = mock.Mock()
-    mock_package_service = mock.Mock()
-    mock_package_service.pack.return_value = packages
+def test_pack_run(
+    emitter, mock_services, app_metadata, parts, tmp_path, packages, message
+):
+    mock_services.package.pack.return_value = packages
     parsed_args = argparse.Namespace(parts=parts, output=tmp_path)
     command = PackCommand(
         {
             "app": app_metadata,
-            "lifecycle_service": mock_lifecycle_service,
-            "package_service": mock_package_service,
+            "services": mock_services,
         }
     )
 
     command.run(parsed_args)
 
-    mock_package_service.pack.assert_called_once_with(tmp_path)
+    mock_services.package.pack.assert_called_once_with(tmp_path)
     emitter.assert_message(message)
 
 
-def test_pack_run_wrong_step(app_metadata):
+def test_pack_run_wrong_step(app_metadata, fake_services):
     parsed_args = argparse.Namespace(parts=None, output=pathlib.Path())
     command = PackCommand(
         {
             "app": app_metadata,
-            "lifecycle_service": None,
-            "package_service": None,
+            "services": fake_services,
         }
     )
 

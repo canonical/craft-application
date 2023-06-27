@@ -23,7 +23,8 @@ from craft_cli import BaseCommand, emit
 if TYPE_CHECKING:  # pragma: no cover
     import argparse
 
-    from craft_application import app
+    from craft_application import application
+    from craft_application.services import service_factory
 
 
 class AppCommand(BaseCommand):
@@ -34,7 +35,8 @@ class AppCommand(BaseCommand):
 
     def __init__(self, config: dict[str, Any]) -> None:
         super().__init__(config)
-        self._app: app.AppMetadata = config["app"]
+        self._app: application.AppMetadata = config["app"]
+        self._services: service_factory.ServiceFactory = config["services"]
 
     def get_managed_cmd(
         self,

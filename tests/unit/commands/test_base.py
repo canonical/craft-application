@@ -22,14 +22,19 @@ from craft_cli import EmitterMode, emit
 
 
 @pytest.fixture()
-def fake_command(app_metadata):
+def fake_command(app_metadata, fake_services):
     class FakeCommand(base.AppCommand):
         run_managed = True
         name = "fake"
         help_msg = "Help!"
         overview = "It's an overview."
 
-    return FakeCommand({"app": app_metadata})
+    return FakeCommand(
+        {
+            "app": app_metadata,
+            "services": fake_services,
+        }
+    )
 
 
 def test_get_managed_cmd_unmanaged(fake_command):
