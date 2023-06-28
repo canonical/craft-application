@@ -80,5 +80,7 @@ class ServiceFactory:
             kwargs = self._service_kwargs.get(service, {})
             instance = cls(self.app, self.project, **kwargs)
             setattr(self, service, instance)
-            return instance
+            # Mypy and pyright interpret this differently.
+            # Pyright
+            return instance  # type: ignore[no-any-return]
         raise TypeError(f"{cls.__name__} is not a service class")
