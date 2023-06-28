@@ -77,11 +77,16 @@ def test_set_kwargs(
         )
 
 
-def test_getattr_cached_service(factory):
+def test_getattr_cached_service(monkeypatch, check, factory):
+    mock_getattr = mock.Mock(wraps=factory.__getattr__)
+    monkeypatch.setattr(services.ServiceFactory, "__getattr__", mock_getattr)
     first = factory.package
     second = factory.package
 
-    assert first is second
+    check.is_(first, second)
+    # Only gets called once because the second time `package` is an instance attribute.
+    with check:
+        mock_getattr.assert_called_once_with("package")
 
 
 def test_getattr_not_a_class(factory):

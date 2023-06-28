@@ -50,7 +50,6 @@ class ServiceFactory:
 
     def __post_init__(self) -> None:
         self._service_kwargs: dict[str, dict[str, Any]] = {}
-        self._services: dict[str, services.BaseService] = {}
 
     def set_kwargs(
         self,
@@ -61,8 +60,16 @@ class ServiceFactory:
         self._service_kwargs[service] = kwargs
 
     def __getattr__(self, service: str) -> services.BaseService:
-        if service in self._services:
-            return self._services[service]
+        """Instantiate a service class.
+
+        This allows us to lazy-load only the necessary services whilst still
+        treating them as attributes of our factory in a dynamic manner.
+        For a service (e.g. ``package``, the PackageService instance) that has not
+        been instantiated, this method finds the corresponding class, instantiates
+        it with defaults and any values set using ``set_kwargs``, and stores the
+        instantiated service as an instance attribute, allowing the same service
+        instance to be reused for the entire run of the application.
+        """
         service_cls_name = "".join(word.title() for word in service.split("_"))
         service_cls_name += "Class"
         classes = dataclasses.asdict(self)
@@ -71,6 +78,7 @@ class ServiceFactory:
         cls = getattr(self, service_cls_name)
         if issubclass(cls, services.BaseService):
             kwargs = self._service_kwargs.get(service, {})
-            self._services[service] = cls(self.app, self.project, **kwargs)
-            return self._services[service]
+            instance = cls(self.app, self.project, **kwargs)
+            setattr(self, service, instance)
+            return instance
         raise TypeError(f"{cls.__name__} is not a service class")
