@@ -32,7 +32,7 @@ def mock_services(app_metadata, fake_project, fake_package_service_class):
     factory = services.ServiceFactory(
         app_metadata, fake_project, PackageClass=fake_package_service_class
     )
-    factory._services["lifecycle"] = mock.Mock(spec=services.LifecycleService)
-    factory._services["package"] = mock.Mock(spec=services.PackageService)
-    factory._services["provider"] = mock.Mock(spec=services.ProviderService)
+    factory.lifecycle = mock.Mock(spec=services.LifecycleService)
+    factory.package = mock.Mock(spec=services.PackageService)
+    factory.provider = mock.Mock(spec=services.ProviderService)
     return factory
