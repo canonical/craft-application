@@ -1,0 +1,2 @@
+base: core22
+entry: {{value}}

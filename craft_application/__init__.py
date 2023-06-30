@@ -1,4 +1,4 @@
-# This file is part of craft_application.
+# This file is part of craft-application.
 #
 # Copyright 2023 Canonical Ltd.
 #
@@ -8,9 +8,41 @@
 #
 # This program is distributed in the hope that it will be useful, but WITHOUT
 # ANY WARRANTY; without even the implied warranties of MERCHANTABILITY,
-# SATISFACTORY QUALITY, or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-# General Public License for more details.
+# SATISFACTORY QUALITY, or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU Lesser General Public License for more details.
 #
 # You should have received a copy of the GNU Lesser General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
-"""craft_application init."""
+"""Framework for *craft applications."""
+
+from craft_application.application import Application, AppMetadata
+from craft_application import models
+from craft_application.services import (
+    BaseService,
+    LifecycleService,
+    PackageService,
+    ProviderService,
+    ServiceFactory,
+)
+
+try:
+    from ._version import __version__
+except ImportError:  # pragma: no cover
+    from importlib.metadata import version, PackageNotFoundError
+
+    try:
+        __version__ = version("craft-archives")
+    except PackageNotFoundError:
+        __version__ = "dev"
+
+__all__ = [
+    "__version__",
+    "Application",
+    "AppMetadata",
+    "models",
+    "BaseService",
+    "LifecycleService",
+    "PackageService",
+    "ProviderService",
+    "ServiceFactory",
+]
