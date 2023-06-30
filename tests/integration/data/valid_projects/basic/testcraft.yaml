@@ -1,0 +1,8 @@
+name: empty
+title: A most basic project
+version: git
+base: ["ubuntu", "22.04"]
+
+parts:
+  my-part:
+    plugin: nil

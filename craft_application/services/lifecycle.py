@@ -28,7 +28,7 @@ from craft_application.services import base
 if TYPE_CHECKING:  # pragma: no cover
     from pathlib import Path
 
-    from craft_application.app import AppMetadata
+    from craft_application.application import AppMetadata
     from craft_application.models import Project
 
 

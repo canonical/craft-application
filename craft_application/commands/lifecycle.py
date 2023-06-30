@@ -14,16 +14,14 @@
 """Basic lifecycle commands for a Craft Application."""
 from __future__ import annotations
 
-import abc
 import pathlib
 import textwrap
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING
 
 from craft_cli import CommandGroup, emit
 from craft_parts.features import Features
 from typing_extensions import override
 
-from craft_application import LifecycleService, services
 from craft_application.commands import base
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -50,17 +48,8 @@ def get_lifecycle_command_group() -> CommandGroup:
     )
 
 
-class _LifecycleCommand(base.AppCommand, metaclass=abc.ABCMeta):
+class _LifecycleCommand(base.AppCommand):
     """Lifecycle-related commands."""
-
-    _lifecycle_service: LifecycleService
-
-    def __init__(self, config: dict[str, Any]) -> None:
-        super().__init__(config)
-
-        self._lifecycle_service = cast(
-            LifecycleService, config.get("lifecycle_service")
-        )
 
     @override
     def run(self, parsed_args: argparse.Namespace) -> None:
@@ -133,7 +122,7 @@ class _LifecycleStepCommand(_LifecyclePartsCommand):
 
         step_name = step_name or self.name
 
-        self._lifecycle_service.run(step_name=step_name, part_names=parsed_args.parts)
+        self._services.lifecycle.run(step_name=step_name, part_names=parsed_args.parts)
 
 
 class PullCommand(_LifecycleStepCommand):
@@ -203,14 +192,6 @@ class PrimeCommand(_LifecycleStepCommand):
         """
     )
 
-    _package_service: services.PackageService
-
-    def __init__(self, config: dict[str, Any]) -> None:
-        super().__init__(config)
-        self._package_service = cast(
-            services.PackageService, config.get("package_service")
-        )
-
     @override
     def run(
         self, parsed_args: argparse.Namespace, step_name: str | None = None
@@ -218,13 +199,11 @@ class PrimeCommand(_LifecycleStepCommand):
         """Run the prime command."""
         super().run(parsed_args, step_name=step_name)
 
-        self._package_service.write_metadata(self._lifecycle_service.prime_dir)
+        self._services.package.write_metadata(self._services.lifecycle.prime_dir)
 
 
 class PackCommand(PrimeCommand):
     """Command to pack the final artifact."""
-
-    run_managed = False
 
     name = "pack"
     help_msg = "Create the final artifact"
@@ -255,7 +234,7 @@ class PackCommand(PrimeCommand):
             raise RuntimeError(f"Step name {step_name} passed to pack command.")
         super().run(parsed_args, step_name="prime")
 
-        packages = self._package_service.pack(parsed_args.output)
+        packages = self._services.package.pack(parsed_args.output)
 
         if not packages:
             emit.message("No packages created.")
@@ -283,4 +262,4 @@ class CleanCommand(_LifecyclePartsCommand):
         """Run the clean command."""
         super().run(parsed_args)
 
-        self._lifecycle_service.clean(parsed_args.parts)
+        self._services.lifecycle.clean(parsed_args.parts)

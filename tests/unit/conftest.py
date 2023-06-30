@@ -14,10 +14,25 @@
 # You should have received a copy of the GNU Lesser General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Configuration for craft-application unit tests."""
+from __future__ import annotations
+
+from unittest import mock
+
 import pytest
-from craft_application.services import provider
+from craft_application import services
 
 
 @pytest.fixture()
 def provider_service(app_metadata, fake_project):
-    return provider.ProviderService(app_metadata, fake_project)
+    return services.ProviderService(app_metadata, fake_project)
+
+
+@pytest.fixture()
+def mock_services(app_metadata, fake_project, fake_package_service_class):
+    factory = services.ServiceFactory(
+        app_metadata, fake_project, PackageClass=fake_package_service_class
+    )
+    factory.lifecycle = mock.Mock(spec=services.LifecycleService)
+    factory.package = mock.Mock(spec=services.PackageService)
+    factory.provider = mock.Mock(spec=services.ProviderService)
+    return factory

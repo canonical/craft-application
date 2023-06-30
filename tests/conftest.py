@@ -16,13 +16,14 @@
 """Shared data for all craft-application tests."""
 from __future__ import annotations
 
+import pathlib
 from importlib import metadata
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import craft_application
 import craft_parts
 import pytest
-from craft_application import LifecycleService
+from craft_application import application, models, services
 from craft_cli import EmitterMode, emit
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -66,11 +67,13 @@ def enable_overlay() -> Iterator[craft_parts.Features]:
 
 
 @pytest.fixture()
-def lifecycle_service(app_metadata, fake_project, tmp_path) -> LifecycleService:
+def lifecycle_service(
+    app_metadata, fake_project, tmp_path
+) -> services.LifecycleService:
     work_dir = tmp_path / "work"
     cache_dir = tmp_path / "cache"
 
-    return LifecycleService(
+    return services.LifecycleService(
         app_metadata,
         fake_project,
         work_dir=work_dir,
@@ -84,3 +87,50 @@ def emitter_verbosity(request):
     emit.set_mode(request.param)
     yield request.param
     emit.set_mode(reset_verbosity)
+
+
+@pytest.fixture()
+def fake_package_service_class():
+    class FakePackageService(services.PackageService):
+        def pack(self, dest: pathlib.Path) -> list[pathlib.Path]:
+            pkg = dest / "package.tar.zst"
+            pkg.touch()
+            return [pkg]
+
+        @property
+        def metadata(self) -> models.BaseMetadata:
+            return models.BaseMetadata()
+
+    return FakePackageService
+
+
+@pytest.fixture()
+def fake_lifecycle_service_class(tmp_path):
+    class FakeLifecycleService(services.LifecycleService):
+        def __init__(
+            self,
+            app: application.AppMetadata,
+            project: models.Project,
+            **lifecycle_kwargs: Any,
+        ):
+            super().__init__(
+                app,
+                project,
+                work_dir=tmp_path / "work",
+                cache_dir=tmp_path / "cache",
+                **lifecycle_kwargs,
+            )
+
+    return FakeLifecycleService
+
+
+@pytest.fixture()
+def fake_services(
+    app_metadata, fake_project, fake_lifecycle_service_class, fake_package_service_class
+):
+    return services.ServiceFactory(
+        app_metadata,
+        fake_project,
+        PackageClass=fake_package_service_class,
+        LifecycleClass=fake_lifecycle_service_class,
+    )

@@ -14,9 +14,14 @@
 #  You should have received a copy of the GNU Lesser General Public License
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Abstract base service class."""
-import abc
+from __future__ import annotations
 
-from craft_application import AppMetadata, models
+import abc
+import typing
+
+if typing.TYPE_CHECKING:
+    from craft_application import models
+    from craft_application.application import AppMetadata
 
 
 # ignoring the fact that this abstract class has no abstract methods.

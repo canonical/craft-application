@@ -44,10 +44,10 @@ def test_install_snap(app_metadata, fake_project, install_snap, snaps):
         (None, False),
     ],
 )
-def test_is_managed(provider_service, managed_value, expected, monkeypatch):
-    monkeypatch.setenv(provider_service.managed_mode_env_var, managed_value)
+def test_is_managed(managed_value, expected, monkeypatch):
+    monkeypatch.setenv(provider.ProviderService.managed_mode_env_var, managed_value)
 
-    assert provider_service.is_managed == expected
+    assert provider.ProviderService.is_managed() == expected
 
 
 @pytest.mark.parametrize("lxd_remote", ["local", "something-else"])
@@ -75,7 +75,7 @@ def test_get_lxd_provider(monkeypatch, provider_service, lxd_remote, check):
 def test_get_default_provider(monkeypatch, provider_service, platform, provider_cls):
     monkeypatch.setattr("sys.platform", platform)
     provider_service._provider = None
-    provider_service.is_managed = False
+    provider_service.is_managed = lambda: False
 
     result = provider_service.get_provider()
 
@@ -88,7 +88,7 @@ def test_get_default_provider(monkeypatch, provider_service, platform, provider_
 )
 def test_get_provider_by_name_success(provider_service, name, provider_cls):
     provider_service._provider = None
-    provider_service.is_managed = False
+    provider_service.is_managed = lambda: False
 
     result = provider_service.get_provider(name)
 

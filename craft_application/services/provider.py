@@ -17,7 +17,6 @@
 from __future__ import annotations
 
 import contextlib
-import functools
 import os
 import sys
 from typing import TYPE_CHECKING
@@ -37,7 +36,7 @@ if TYPE_CHECKING:  # pragma: no cover
     import craft_providers
 
     from craft_application import models
-    from craft_application.app import AppMetadata
+    from craft_application.application import AppMetadata
 
 
 class ProviderService(base.BaseService):
@@ -64,10 +63,10 @@ class ProviderService(base.BaseService):
             self.snaps.append(Snap(name=app.name, channel=None, classic=True))
         self.environment: dict[str, str | None] = {self.managed_mode_env_var: "1"}
 
-    @functools.cached_property
-    def is_managed(self) -> bool:
+    @classmethod
+    def is_managed(cls) -> bool:
         """Determine whether we're running in managed mode."""
-        return os.getenv(self.managed_mode_env_var) == "1"
+        return os.getenv(cls.managed_mode_env_var) == "1"
 
     @contextlib.contextmanager
     def instance(
@@ -142,7 +141,7 @@ class ProviderService(base.BaseService):
         """
         if self._provider is not None:
             return self._provider
-        if self.is_managed:
+        if self.is_managed():
             raise CraftError("Cannot nest managed environments.")
         if name is None:
             emit.debug("Using default provider")
