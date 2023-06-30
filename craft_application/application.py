@@ -236,7 +236,7 @@ class Application:
             if not command.run_managed:
                 craft_cli.emit.debug(f"Running {self.app.name} {command.name} on host")
                 return_code = dispatcher.run() or 0
-            elif self.services.ProviderClass.is_managed():
+            elif not self.services.ProviderClass.is_managed():
                 self.run_managed()
                 return_code = 0
             else:

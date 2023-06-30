@@ -205,8 +205,6 @@ class PrimeCommand(_LifecycleStepCommand):
 class PackCommand(PrimeCommand):
     """Command to pack the final artifact."""
 
-    run_managed = False
-
     name = "pack"
     help_msg = "Create the final artifact"
     overview = textwrap.dedent(
