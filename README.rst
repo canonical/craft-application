@@ -6,7 +6,9 @@ A basis for future \*Craft applications.
 
 Description
 -----------
-This project will provide a basis for future projects similar to Snapcraft_, Charmcraft_ and Rockcraft_, with the eventual goal of rebasing those applications on this.
+This project will provide a basis for future projects similar to Snapcraft_,
+Charmcraft_ and Rockcraft_, with the eventual goal of rebasing those
+applications on this.
 
 Structure
 ---------
