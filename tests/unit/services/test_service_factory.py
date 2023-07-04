@@ -27,7 +27,7 @@ def factory(
 ):
     return services.ServiceFactory(
         app_metadata,
-        fake_project,
+        project=fake_project,
         PackageClass=fake_package_service_class,
         LifecycleClass=fake_lifecycle_service_class,
     )
@@ -38,7 +38,7 @@ def test_correct_init(
 ):
     factory = services.ServiceFactory(
         app_metadata,
-        fake_project,
+        project=fake_project,
         PackageClass=fake_package_service_class,
         LifecycleClass=fake_lifecycle_service_class,
     )
@@ -65,7 +65,7 @@ def test_set_kwargs(
             return cls.mock_class(*args, **kwargs)
 
     factory = services.ServiceFactory(
-        app_metadata, fake_project, PackageClass=MockPackageService
+        app_metadata, project=fake_project, PackageClass=MockPackageService
     )
 
     factory.set_kwargs("package", **kwargs)
@@ -100,7 +100,7 @@ def test_getattr_not_a_service_class(app_metadata, fake_project):
 
     factory = services.ServiceFactory(
         app_metadata,
-        fake_project,
+        project=fake_project,
         # This incorrect type is intentional
         PackageClass=InvalidClass,  # pyright: ignore[reportGeneralTypeIssues]
     )

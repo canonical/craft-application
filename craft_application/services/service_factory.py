@@ -35,11 +35,12 @@ class ServiceFactory:
     """
 
     app: AppMetadata
-    project: models.Project
 
     PackageClass: type[services.PackageService]
     LifecycleClass: type[services.LifecycleService] = services.LifecycleService
     ProviderClass: type[services.ProviderService] = services.ProviderService
+
+    project: models.Project = None  # type: ignore[assignment]
 
     if TYPE_CHECKING:
         # Cheeky hack that lets static type checkers report the correct types.
@@ -70,6 +71,10 @@ class ServiceFactory:
         instantiated service as an instance attribute, allowing the same service
         instance to be reused for the entire run of the application.
         """
+        if self.project is None:  # pyright: ignore[reportUnnecessaryComparison]
+            raise RuntimeError(
+                "Provide a project to the ServiceFactory before starting services."
+            )
         service_cls_name = "".join(word.title() for word in service.split("_"))
         service_cls_name += "Class"
         classes = dataclasses.asdict(self)

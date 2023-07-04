@@ -120,6 +120,7 @@ class Application:
 
     def _configure_services(self) -> None:
         """Configure additional keyword arguments for any service classes."""
+        self.services.project = self.project
         self.services.set_kwargs(
             "lifecycle",
             cache_dir=self.cache_dir,
