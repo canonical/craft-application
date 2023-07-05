@@ -23,7 +23,7 @@ import pytest_check
 @pytest.fixture()
 def app(app_metadata, fake_project, fake_package_service_class):
     services = craft_application.ServiceFactory(
-        app_metadata, fake_project, PackageClass=fake_package_service_class
+        app_metadata, project=fake_project, PackageClass=fake_package_service_class
     )
     return craft_application.Application(app_metadata, services)
 

@@ -27,7 +27,7 @@ def test_gets_real_services(
 ):
     factory = services.ServiceFactory(
         app_metadata,
-        fake_project,
+        project=fake_project,
         PackageClass=fake_package_service_class,
         LifecycleClass=fake_lifecycle_service_class,
     )
@@ -40,7 +40,7 @@ def test_gets_real_services(
 def test_real_service_error(app_metadata, fake_project):
     factory = services.ServiceFactory(
         app_metadata,
-        fake_project,
+        project=fake_project,
         PackageClass=services.PackageService,
     )
 
