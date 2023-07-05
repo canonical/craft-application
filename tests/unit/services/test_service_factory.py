@@ -18,7 +18,7 @@ from unittest import mock
 
 import pytest
 import pytest_check
-from craft_application import services
+from craft_application import errors, services
 
 
 @pytest.fixture()
@@ -114,5 +114,5 @@ def test_getattr_project_none(app_metadata, fake_package_service_class):
         app_metadata, PackageClass=fake_package_service_class
     )
 
-    with pytest.raises(RuntimeError):
+    with pytest.raises(errors.ApplicationError):
         _ = factory.package

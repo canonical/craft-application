@@ -48,4 +48,5 @@ class PackageService(base.BaseService):
 
         :param path: The path to the prime directory.
         """
+        path.mkdir(parents=True, exist_ok=True)
         self.metadata.to_yaml_file(path / "metadata.yaml")

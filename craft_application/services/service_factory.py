@@ -17,7 +17,7 @@ from __future__ import annotations
 import dataclasses
 from typing import TYPE_CHECKING, Any
 
-from craft_application import models, services
+from craft_application import errors, models, services
 
 if TYPE_CHECKING:
     from craft_application.application import AppMetadata
@@ -72,8 +72,10 @@ class ServiceFactory:
         instance to be reused for the entire run of the application.
         """
         if self.project is None:  # pyright: ignore[reportUnnecessaryComparison]
-            raise RuntimeError(
-                "Provide a project to the ServiceFactory before starting services."
+            raise errors.ApplicationError(
+                "ServiceFactory requires a project to be set before getting a service.",
+                app_name=self.app.name,
+                docs_url="https://github.com/canonical/craft-application/pull/40#discussion_r1253593262",
             )
         service_cls_name = "".join(word.title() for word in service.split("_"))
         service_cls_name += "Class"
