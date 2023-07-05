@@ -130,7 +130,7 @@ def fake_services(
 ):
     return services.ServiceFactory(
         app_metadata,
-        fake_project,
+        project=fake_project,
         PackageClass=fake_package_service_class,
         LifecycleClass=fake_lifecycle_service_class,
     )

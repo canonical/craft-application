@@ -119,7 +119,12 @@ class Application:
         return save_cache_path(self.app.name)  # type: ignore[no-any-return]
 
     def _configure_services(self) -> None:
-        """Configure additional keyword arguments for any service classes."""
+        """Configure additional keyword arguments for any service classes.
+
+        Any child classes that override this must either call this directly or must
+        provide a valid ``project`` to ``self.services``.
+        """
+        self.services.project = self.project
         self.services.set_kwargs(
             "lifecycle",
             cache_dir=self.cache_dir,
