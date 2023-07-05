@@ -30,7 +30,7 @@ def provider_service(app_metadata, fake_project):
 @pytest.fixture()
 def mock_services(app_metadata, fake_project, fake_package_service_class):
     factory = services.ServiceFactory(
-        app_metadata, fake_project, PackageClass=fake_package_service_class
+        app_metadata, project=fake_project, PackageClass=fake_package_service_class
     )
     factory.lifecycle = mock.Mock(spec=services.LifecycleService)
     factory.package = mock.Mock(spec=services.PackageService)
