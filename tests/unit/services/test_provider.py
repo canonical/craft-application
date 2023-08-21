@@ -158,9 +158,11 @@ def test_instance(
     provider_service,
     base_name,
     allow_unstable,
+    mocker,
 ):
     mock_provider = mock.MagicMock(spec=craft_providers.Provider)
     monkeypatch.setattr(provider_service, "get_provider", lambda: mock_provider)
+    spy_pause = mocker.spy(provider.emit, "pause")
 
     with provider_service.instance(
         base_name, work_dir=tmp_path, allow_unstable=allow_unstable
@@ -181,3 +183,5 @@ def test_instance(
         )
     with check:
         emitter.assert_progress("Launching managed .+ instance...", regex=True)
+    with check:
+        assert spy_pause.call_count == 1
