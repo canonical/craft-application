@@ -105,7 +105,8 @@ class ProviderService(base.BaseService):
                 target=self._app.managed_instance_project_path,  # type: ignore[arg-type]
             )
             emit.debug("Instance launched and working directory mounted")
-            yield instance
+            with emit.pause():
+                yield instance
 
     def get_base(
         self,
