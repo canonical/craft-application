@@ -92,7 +92,10 @@ def emitter_verbosity(request):
 @pytest.fixture()
 def fake_package_service_class():
     class FakePackageService(services.PackageService):
-        def pack(self, dest: pathlib.Path) -> list[pathlib.Path]:
+        def pack(
+            self, prime_dir: pathlib.Path, dest: pathlib.Path
+        ) -> list[pathlib.Path]:
+            assert prime_dir.exists()
             pkg = dest / "package.tar.zst"
             pkg.touch()
             return [pkg]

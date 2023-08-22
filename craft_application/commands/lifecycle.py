@@ -235,7 +235,9 @@ class PackCommand(PrimeCommand):
         super().run(parsed_args, step_name="prime")
 
         emit.progress("Packing...")
-        packages = self._services.package.pack(parsed_args.output)
+        packages = self._services.package.pack(
+            self._services.lifecycle.prime_dir, parsed_args.output
+        )
 
         if not packages:
             emit.message("No packages created.")
