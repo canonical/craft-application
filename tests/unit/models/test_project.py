@@ -15,6 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Tests for BaseProject"""
 import pathlib
+from textwrap import dedent
 from typing import Optional
 
 import pytest
@@ -44,14 +45,19 @@ FULL_PROJECT = Project(
     issues="https://github.com/canonical/craft-application/issues",
     source_code="https://github.com/canonical/craft-application",  # pyright: ignore[reportGeneralTypeIssues]
     summary="A fully-defined craft-application project.",  # pyright: ignore[reportGeneralTypeIssues]
-    description="A fully-defined craft-application project. (description)",
+    description="A fully-defined craft-application project.\nWith more than one line.\n",
     license="LGPLv3",
     parts=PARTS_DICT,
 )
 FULL_PROJECT_DICT = {
     "base": "core24",
     "contact": "author@project.org",
-    "description": "A fully-defined craft-application project. (description)",
+    "description": dedent(
+        """\
+        A fully-defined craft-application project.
+        With more than one line.
+    """
+    ),
     "issues": "https://github.com/canonical/craft-application/issues",
     "license": "LGPLv3",
     "name": "full-project",

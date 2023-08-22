@@ -16,7 +16,7 @@
 """Base pydantic model for *craft applications."""
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Type, cast
 
 import pydantic
 import yaml
@@ -32,6 +32,17 @@ if TYPE_CHECKING:  # pragma: no cover
 
 def _alias_generator(s: str) -> str:
     return s.replace("_", "-")
+
+
+# pyright: reportUnknownMemberType=false
+# Type of "represent_scalar" is "(tag: str, value: Unknown, style: str | None = None)
+# ->
+# ScalarNode" (reportUnknownMemberType)
+def _repr_str(dumper: yaml.Dumper, data: str) -> yaml.ScalarNode:
+    """Multi-line string representer for the YAML dumper."""
+    if "\n" in data:
+        return dumper.represent_scalar("tag:yaml.org,2002:str", data, style="|")
+    return dumper.represent_scalar("tag:yaml.org,2002:str", data)
 
 
 class CraftBaseConfig(pydantic.BaseConfig):  # pylint: disable=too-few-public-methods
@@ -83,4 +94,7 @@ class CraftBaseModel(pydantic.BaseModel):
     def to_yaml_file(self, path: pathlib.Path) -> None:
         """Write this model to a YAML file."""
         with path.open("wt") as file:
+            yaml.add_representer(
+                str, _repr_str, Dumper=cast(Type[yaml.Dumper], yaml.SafeDumper)
+            )
             yaml.safe_dump(self.marshal(), file)
