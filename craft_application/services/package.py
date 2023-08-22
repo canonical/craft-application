@@ -31,9 +31,10 @@ class PackageService(base.BaseService):
     """Business logic for creating packages."""
 
     @abc.abstractmethod
-    def pack(self, dest: pathlib.Path) -> list[pathlib.Path]:
+    def pack(self, prime_dir: pathlib.Path, dest: pathlib.Path) -> list[pathlib.Path]:
         """Create one or more packages as appropriate.
 
+        :param prime_dir: Directory path to the prime directory.
         :param dest: Directory into which to write the package(s).
         :returns: A list of paths to created packages.
         """
