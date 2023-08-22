@@ -234,6 +234,7 @@ class PackCommand(PrimeCommand):
             raise RuntimeError(f"Step name {step_name} passed to pack command.")
         super().run(parsed_args, step_name="prime")
 
+        emit.progress("Packing...")
         packages = self._services.package.pack(parsed_args.output)
 
         if not packages:

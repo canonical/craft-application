@@ -276,6 +276,7 @@ def test_pack_run(
     command.run(parsed_args)
 
     mock_services.package.pack.assert_called_once_with(tmp_path)
+    emitter.assert_progress("Packing...")
     emitter.assert_message(message)
 
 
