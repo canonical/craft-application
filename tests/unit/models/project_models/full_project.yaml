@@ -1,6 +1,8 @@
 base: core24
 contact: author@project.org
-description: A fully-defined craft-application project. (description)
+description: |
+  A fully-defined craft-application project.
+  With more than one line.
 issues: https://github.com/canonical/craft-application/issues
 license: LGPLv3
 name: full-project
