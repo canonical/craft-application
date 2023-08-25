@@ -45,8 +45,6 @@ def test_run_and_clean_all_parts(parts_lifecycle, emitter, check, tmp_path):
 
     with check:
         emitter.assert_trace("Planning prime for all parts")
-    with check:
-        emitter.assert_progress("Executed parts lifecycle", permanent=True)
 
     emitter.interactions = []
 
@@ -63,8 +61,6 @@ def test_run_and_clean_my_part(parts_lifecycle, emitter, check):
 
     with check:
         emitter.assert_trace("Planning prime for ['my-part']")
-    with check:
-        emitter.assert_progress("Executed parts lifecycle", permanent=True)
 
     emitter.interactions = []
 

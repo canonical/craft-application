@@ -36,41 +36,41 @@ ACTION_MESSAGES = types.MappingProxyType(
     {
         Step.PULL: types.MappingProxyType(
             {
-                ActionType.RUN: "pull",
-                ActionType.RERUN: "repull",
-                ActionType.SKIP: "skip pull",
-                ActionType.UPDATE: "update sources for",
+                ActionType.RUN: "Pulling",
+                ActionType.RERUN: "Repulling",
+                ActionType.SKIP: "Skipping pull for",
+                ActionType.UPDATE: "Updating sources for",
             }
         ),
         Step.OVERLAY: types.MappingProxyType(
             {
-                ActionType.RUN: "overlay",
-                ActionType.RERUN: "re-overlay",
-                ActionType.SKIP: "skip overlay",
-                ActionType.UPDATE: "update overlay for",
-                ActionType.REAPPLY: "reapply",
+                ActionType.RUN: "Overlaying",
+                ActionType.RERUN: "Re-overlaying",
+                ActionType.SKIP: "Skipping overlay for",
+                ActionType.UPDATE: "Updating overlay for",
+                ActionType.REAPPLY: "Reapplying",
             }
         ),
         Step.BUILD: types.MappingProxyType(
             {
-                ActionType.RUN: "build",
-                ActionType.RERUN: "rebuild",
-                ActionType.SKIP: "skip build",
-                ActionType.UPDATE: "update build for",
+                ActionType.RUN: "Building",
+                ActionType.RERUN: "Rebuilding",
+                ActionType.SKIP: "Skipping build for",
+                ActionType.UPDATE: "Updating build for",
             }
         ),
         Step.STAGE: types.MappingProxyType(
             {
-                ActionType.RUN: "stage",
-                ActionType.RERUN: "restage",
-                ActionType.SKIP: "skip stage",
+                ActionType.RUN: "Staging",
+                ActionType.RERUN: "Restaging",
+                ActionType.SKIP: "Skipping stage for",
             }
         ),
         Step.PRIME: types.MappingProxyType(
             {
-                ActionType.RUN: "prime",
-                ActionType.RERUN: "re-prime",
-                ActionType.SKIP: "skip prime",
+                ActionType.RUN: "Priming",
+                ActionType.RERUN: "Repriming",
+                ActionType.SKIP: "Skipping prime for",
             }
         ),
     }
@@ -156,12 +156,9 @@ class LifecycleService(base.BaseService):
             with self._lcm.action_executor() as aex:
                 for action in actions:
                     message = _get_parts_action_message(action)
-                    emit.progress(f"Executing parts lifecycle: {message}")
-                    with emit.open_stream("Executing action") as stream:
+                    emit.progress(message)
+                    with emit.open_stream(message) as stream:
                         aex.execute(action, stdout=stream, stderr=stream)
-                    emit.progress(f"Executed: {message}", permanent=True)
-
-                emit.progress("Executed parts lifecycle", permanent=True)
         except RuntimeError as err:
             raise RuntimeError(f"Parts processing internal error: {err}") from err
         except OSError as err:
