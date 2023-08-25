@@ -51,23 +51,129 @@ def fake_parts_lifecycle(app_metadata, fake_project, tmp_path):
 
 # endregion
 # region Helper function tests
-@pytest.mark.parametrize("step", Step)
-@pytest.mark.parametrize("reason", [None, "Because I said so!"])
-def test_get_parts_action_message_run(step: Step, reason: str | None):
+@pytest.mark.parametrize(
+    ("step", "message"),
+    [
+        (Step.PULL, "Pulling my-part"),
+        (Step.BUILD, "Building my-part"),
+        (Step.OVERLAY, "Overlaying my-part"),
+        (Step.STAGE, "Staging my-part"),
+        (Step.PRIME, "Priming my-part"),
+    ],
+)
+def test_get_parts_action_message_run(step: Step, message: str):
     action = Action(
         "my-part",
         step,
         action_type=ActionType.RUN,
-        reason=reason,
     )
 
     actual = lifecycle._get_parts_action_message(action)
 
-    pytest_check.is_true(actual.startswith(f"{step.name.lower()} my-part"))
-    if reason:
-        pytest_check.is_true(actual.endswith(f"({reason})"))
-    else:
-        pytest_check.is_false(actual.endswith(")"))
+    assert actual == message, "Unexpected %r" % actual
+
+
+@pytest.mark.parametrize(
+    ("step", "message"),
+    [
+        (Step.PULL, "Repulling my-part"),
+        (Step.BUILD, "Rebuilding my-part"),
+        (Step.OVERLAY, "Re-overlaying my-part"),
+        (Step.STAGE, "Restaging my-part"),
+        (Step.PRIME, "Repriming my-part"),
+    ],
+)
+def test_get_parts_re_action_message_run(step: Step, message: str):
+    action = Action(
+        "my-part",
+        step,
+        action_type=ActionType.RERUN,
+    )
+
+    actual = lifecycle._get_parts_action_message(action)
+
+    assert actual == message, "Unexpected %r" % actual
+
+
+@pytest.mark.parametrize(
+    ("step", "message"),
+    [
+        (Step.PULL, "Skipping pull for my-part"),
+        (Step.BUILD, "Skipping build for my-part"),
+        (Step.OVERLAY, "Skipping overlay for my-part"),
+        (Step.STAGE, "Skipping stage for my-part"),
+        (Step.PRIME, "Skipping prime for my-part"),
+    ],
+)
+def test_get_parts_skip_action_message_run(step: Step, message: str):
+    action = Action(
+        "my-part",
+        step,
+        action_type=ActionType.SKIP,
+    )
+
+    actual = lifecycle._get_parts_action_message(action)
+
+    assert actual == message, "Unexpected %r" % actual
+
+
+@pytest.mark.parametrize(
+    ("step", "message"),
+    [
+        (Step.PULL, "Updating sources for my-part"),
+        (Step.BUILD, "Updating build for my-part"),
+        (Step.OVERLAY, "Updating overlay for my-part"),
+    ],
+)
+def test_get_parts_update_action_message_run(step: Step, message: str):
+    action = Action(
+        "my-part",
+        step,
+        action_type=ActionType.UPDATE,
+    )
+
+    actual = lifecycle._get_parts_action_message(action)
+
+    assert actual == message, "Unexpected %r" % actual
+
+
+@pytest.mark.parametrize(
+    ("step", "message"),
+    [
+        (Step.PULL, "Pulling my-part (dirty)"),
+        (Step.BUILD, "Building my-part (dirty)"),
+        (Step.OVERLAY, "Overlaying my-part (dirty)"),
+        (Step.STAGE, "Staging my-part (dirty)"),
+        (Step.PRIME, "Priming my-part (dirty)"),
+    ],
+)
+def get_parts_action_message_with_reason(step: Step, message: str):
+    action = Action("my-part", step, action_type=ActionType.RUN, reason="dirty")
+
+    actual = lifecycle._get_parts_action_message(action)
+
+    assert actual == message, "Unexpected %r" % actual
+
+
+def test_progress_messages(fake_parts_lifecycle, emitter):
+    actions = [
+        Action("my-part", Step.PULL),
+        Action("my-part", Step.BUILD),
+        Action("my-part", Step.OVERLAY),
+        Action("my-part", Step.STAGE),
+        Action("my-part", Step.PRIME),
+    ]
+
+    lcm = fake_parts_lifecycle._lcm
+    lcm.plan.return_value = actions
+
+    fake_parts_lifecycle.run("prime")
+
+    emitter.assert_progress("Pulling my-part")
+    emitter.assert_progress("Building my-part")
+    emitter.assert_progress("Overlaying my-part")
+    emitter.assert_progress("Staging my-part")
+    emitter.assert_progress("Priming my-part")
 
 
 @pytest.mark.usefixtures("enable_overlay")
