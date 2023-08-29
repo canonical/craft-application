@@ -12,12 +12,15 @@
 # You should have received a copy of the GNU Lesser General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Integration tests for the Application."""
+import argparse
 import pathlib
 import shutil
 
 import craft_application
+import craft_cli
 import pytest
 import pytest_check
+from overrides import override
 
 
 @pytest.fixture()
@@ -106,3 +109,20 @@ def test_project_managed(capsys, monkeypatch, tmp_path, project, app):
     assert (tmp_path / "package.tar.zst").exists()
     captured = capsys.readouterr()
     assert captured.out == (VALID_PROJECTS_DIR / project / "stdout").read_text()
+
+
+def test_non_lifecycle_command_does_not_require_project(monkeypatch, app):
+    """Run a command without having a project instance shall not fail."""
+    monkeypatch.setattr("sys.argv", ["testcraft", "nothing"])
+
+    class NothingCommand(craft_cli.BaseCommand):
+        name = "nothing"
+        help_msg = "none"
+        overview = "nothing to see here"
+
+        @override
+        def run(self, parsed_args: argparse.Namespace) -> None:
+            craft_cli.emit.message(f"Nothing {parsed_args!r}")
+
+    app.add_command_group("Nothing", [NothingCommand])
+    app.run()
