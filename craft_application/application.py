@@ -16,6 +16,7 @@
 """Main application classes for a craft-application."""
 from __future__ import annotations
 
+import contextlib
 import functools
 import os
 import pathlib
@@ -124,12 +125,14 @@ class Application:
         Any child classes that override this must either call this directly or must
         provide a valid ``project`` to ``self.services``.
         """
-        self.services.project = self.project
+        # Workaround for canonical/craft-application#63
+        with contextlib.suppress(FileNotFoundError):
+            self.services.project = self.project
+
         self.services.set_kwargs(
             "lifecycle",
             cache_dir=self.cache_dir,
             work_dir=self._work_dir,
-            base=self.project.effective_base,
         )
 
     @functools.cached_property
