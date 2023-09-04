@@ -86,6 +86,7 @@ class ServiceFactory:
         if issubclass(cls, services.BaseService):
             kwargs = self._service_kwargs.get(service, {})
             instance = cls(self.app, self.project, **kwargs)
+            instance.setup()
             setattr(self, service, instance)
             # Mypy and pyright interpret this differently.
             # Pyright

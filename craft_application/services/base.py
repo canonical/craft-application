@@ -31,3 +31,6 @@ class BaseService(metaclass=abc.ABCMeta):  # noqa: B024
     def __init__(self, app: AppMetadata, project: models.Project) -> None:
         self._app = app
         self._project = project
+
+    def setup(self) -> None:
+        """Application-specific service preparation."""
