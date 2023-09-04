@@ -16,7 +16,6 @@
 """Main application classes for a craft-application."""
 from __future__ import annotations
 
-import contextlib
 import functools
 import os
 import pathlib
@@ -84,8 +83,9 @@ class Application:
     def command_groups(self) -> list[craft_cli.CommandGroup]:
         """Return command groups."""
         lifecycle_commands = commands.get_lifecycle_command_group()
+        other_commands = commands.get_other_command_group()
 
-        return [lifecycle_commands, *self._command_groups]
+        return [lifecycle_commands, other_commands, *self._command_groups]
 
     @property
     def log_path(self) -> pathlib.Path | None:
@@ -125,10 +125,6 @@ class Application:
         Any child classes that override this must either call this directly or must
         provide a valid ``project`` to ``self.services``.
         """
-        # Workaround for canonical/craft-application#63
-        with contextlib.suppress(FileNotFoundError):
-            self.services.project = self.project
-
         self.services.set_kwargs(
             "lifecycle",
             cache_dir=self.cache_dir,
@@ -242,12 +238,17 @@ class Application:
                 ),
             )
             if not command.run_managed:
+                # command runs in the outer instance
                 craft_cli.emit.debug(f"Running {self.app.name} {command.name} on host")
                 return_code = dispatcher.run() or 0
             elif not self.services.ProviderClass.is_managed():
+                # command runs in inner instance, but this is the outer instance
+                self.services.project = self.project
                 self.run_managed()
                 return_code = 0
             else:
+                # command runs in inner instance
+                self.services.project = self.project
                 return_code = dispatcher.run() or 0
         except KeyboardInterrupt as err:
             self._emit_error(craft_cli.CraftError("Interrupted."), cause=err)
