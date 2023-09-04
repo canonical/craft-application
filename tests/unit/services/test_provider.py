@@ -18,7 +18,7 @@ from unittest import mock
 
 import craft_providers
 import pytest
-from craft_application import errors
+from craft_application import errors, models, util
 from craft_application.services import provider
 from craft_providers import bases, lxd, multipass
 from craft_providers.actions.snap_installer import Snap
@@ -163,9 +163,11 @@ def test_instance(
     mock_provider = mock.MagicMock(spec=craft_providers.Provider)
     monkeypatch.setattr(provider_service, "get_provider", lambda: mock_provider)
     spy_pause = mocker.spy(provider.emit, "pause")
+    arch = util.get_host_architecture()
+    build_info = models.BuildInfo(arch, arch, base_name)
 
     with provider_service.instance(
-        base_name, work_dir=tmp_path, allow_unstable=allow_unstable
+        build_info, work_dir=tmp_path, allow_unstable=allow_unstable
     ) as instance:
         pass
 

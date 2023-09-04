@@ -23,11 +23,18 @@ from typing import TYPE_CHECKING, Any
 import craft_application
 import craft_parts
 import pytest
-from craft_application import application, models, services
+from craft_application import application, models, services, util
 from craft_cli import EmitterMode, emit
+from craft_providers import bases
 
 if TYPE_CHECKING:  # pragma: no cover
     from collections.abc import Iterator
+
+
+class MyProject(craft_application.models.Project):
+    def get_build_plan(self) -> List[models.BuildInfo]:
+        arch = craft_application.util.get_host_architecture()
+        return [models.BuildInfo(arch, arch, bases.BaseName("ubuntu", "22.04"))]
 
 
 @pytest.fixture()
@@ -37,13 +44,14 @@ def app_metadata() -> craft_application.AppMetadata:
         return craft_application.AppMetadata(
             "testcraft",
             "A fake app for testing craft-application",
+            ProjectClass=MyProject,
             source_ignore_patterns=["*.snap", "*.charm", "*.starcraft"],
         )
 
 
 @pytest.fixture()
-def fake_project() -> craft_application.models.Project:
-    return craft_application.models.Project(
+def fake_project() -> MyProject:
+    return MyProject(
         name="full-project",  # pyright: ignore[reportGeneralTypeIssues]
         title="A fully-defined project",  # pyright: ignore[reportGeneralTypeIssues]
         base="core24",
@@ -72,12 +80,14 @@ def lifecycle_service(
 ) -> services.LifecycleService:
     work_dir = tmp_path / "work"
     cache_dir = tmp_path / "cache"
+    build_for = util.get_host_architecture()
 
     return services.LifecycleService(
         app_metadata,
         fake_project,
         work_dir=work_dir,
         cache_dir=cache_dir,
+        build_for=build_for,
     )
 
 
@@ -121,6 +131,7 @@ def fake_lifecycle_service_class(tmp_path):
                 project,
                 work_dir=tmp_path / "work",
                 cache_dir=tmp_path / "cache",
+                build_for=util.get_host_architecture(),
                 **lifecycle_kwargs,
             )
 

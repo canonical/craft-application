@@ -16,17 +16,22 @@
 """Tests for BaseProject"""
 import pathlib
 from textwrap import dedent
-from typing import Optional
+from typing import List, Optional
 
 import pytest
 from craft_application.errors import CraftValidationError
-from craft_application.models import Project
+from craft_application.models import BuildInfo, Project
+
+
+class MyProject(Project):
+    def get_build_plan(self) -> List[BuildInfo]:
+        return []
 
 PROJECTS_DIR = pathlib.Path(__file__).parent / "project_models"
 PARTS_DICT = {"my-part": {"plugin": "nil"}}
 # pyright doesn't like these types and doesn't have a pydantic plugin like mypy.
 # Because of this, we need to silence several errors in these constants.
-BASIC_PROJECT = Project(
+BASIC_PROJECT = MyProject(
     name="project-name",  # pyright: ignore[reportGeneralTypeIssues]
     version="1.0",  # pyright: ignore[reportGeneralTypeIssues]
     parts=PARTS_DICT,
@@ -36,7 +41,7 @@ BASIC_PROJECT_DICT = {
     "version": "1.0",
     "parts": PARTS_DICT,
 }
-FULL_PROJECT = Project(
+FULL_PROJECT = MyProject(
     name="full-project",  # pyright: ignore[reportGeneralTypeIssues]
     title="A fully-defined project",  # pyright: ignore[reportGeneralTypeIssues]
     base="core24",
@@ -82,23 +87,23 @@ def test_marshal(project, project_dict):
     [(BASIC_PROJECT, BASIC_PROJECT_DICT), (FULL_PROJECT, FULL_PROJECT_DICT)],
 )
 def test_unmarshal_success(project, project_dict):
-    assert Project.unmarshal(project_dict) == project
+    assert MyProject.unmarshal(project_dict) == project
 
 
 @pytest.mark.parametrize("data", [None, [], (), 0, ""])
 def test_unmarshal_error(data):
     with pytest.raises(TypeError):
-        Project.unmarshal(data)
+        MyProject.unmarshal(data)
 
 
 @pytest.mark.parametrize("project", [BASIC_PROJECT, FULL_PROJECT])
 def test_marshal_then_unmarshal(project):
-    assert Project.unmarshal(project.marshal()) == project
+    assert MyProject.unmarshal(project.marshal()) == project
 
 
 @pytest.mark.parametrize("project_dict", [BASIC_PROJECT_DICT, FULL_PROJECT_DICT])
 def test_unmarshal_then_marshal(project_dict):
-    assert Project.unmarshal(project_dict).marshal() == project_dict
+    assert MyProject.unmarshal(project_dict).marshal() == project_dict
 
 
 @pytest.mark.parametrize(
@@ -110,7 +115,7 @@ def test_unmarshal_then_marshal(project_dict):
 )
 def test_from_yaml_file_success(project_file, expected):
     with project_file.open():
-        actual = Project.from_yaml_file(project_file)
+        actual = MyProject.from_yaml_file(project_file)
 
     assert expected == actual
 
@@ -124,7 +129,7 @@ def test_from_yaml_file_success(project_file, expected):
 )
 def test_from_yaml_file_failure(project_file, error_class):
     with pytest.raises(error_class):
-        Project.from_yaml_file(project_file)
+        MyProject.from_yaml_file(project_file)
 
 
 @pytest.mark.parametrize(
@@ -147,7 +152,7 @@ def test_effective_base_is_base(project):
     assert project.effective_base == project.base
 
 
-class FakeBuildBaseProject(Project):
+class FakeBuildBaseProject(MyProject):
     build_base: Optional[str]
 
 

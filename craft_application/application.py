@@ -16,6 +16,7 @@
 """Main application classes for a craft-application."""
 from __future__ import annotations
 
+import argparse
 import functools
 import os
 import pathlib
@@ -38,6 +39,15 @@ if TYPE_CHECKING:
 GLOBAL_VERSION = craft_cli.GlobalArgument(
     "version", "flag", "-V", "--version", "Show the application version and exit"
 )
+
+
+class _Dispatcher(craft_cli.Dispatcher):
+    """Application command dispatcher."""
+
+    @property
+    def parsed_args(self) -> argparse.Namespace:
+        """The map of parsed command-line arguments."""
+        return self._parsed_command_args
 
 
 @final
@@ -119,7 +129,7 @@ class Application:
         # xdg types: https://github.com/python/typeshed/pull/10163
         return save_cache_path(self.app.name)  # type: ignore[no-any-return]
 
-    def _configure_services(self) -> None:
+    def _configure_services(self, build_for: str) -> None:
         """Configure additional keyword arguments for any service classes.
 
         Any child classes that override this must either call this directly or must
@@ -129,6 +139,7 @@ class Application:
             "lifecycle",
             cache_dir=self.cache_dir,
             work_dir=self._work_dir,
+            build_for=build_for,
         )
 
     @functools.cached_property
@@ -137,27 +148,42 @@ class Application:
         project_file = (self._work_dir / f"{self.app.name}.yaml").resolve()
         return self.app.ProjectClass.from_yaml_file(project_file)
 
-    def run_managed(self) -> None:
+    def run_managed(self, build_for: str | None) -> None:
         """Run the application in a managed instance."""
-        craft_cli.emit.debug(f"Running {self.app.name} in a managed instance...")
-        instance_path = pathlib.PosixPath("/root/project")
-        with self.services.provider.instance(
-            self.project.effective_base, work_dir=self._work_dir
-        ) as instance:
-            try:
-                # Pyright doesn't fully understand craft_providers's CompletedProcess.
-                instance.execute_run(  # pyright: ignore[reportUnknownMemberType,reportUnknownVariableType]
-                    [self.app.name, *sys.argv[1:]], cwd=instance_path, check=True
-                )
-            except subprocess.CalledProcessError as exc:
-                raise craft_providers.ProviderError(
-                    f"Failed to execute {self.app.name} in instance."
-                ) from exc
+        build_plan = self.project.get_build_plan()
+        extra_args: dict[str, Any] = {}
+
+        # filter out builds not matching argument `--build_for` or env `CRAFT_BUILD_FOR`
+        if build_for:
+            build_plan = [b for b in build_plan if b.build_for == build_for]
+            extra_args["env"] = {"CRAFT_BUILD_FOR": build_for}
+
+        for build_info in build_plan:
+            craft_cli.emit.debug(
+                f"Running {self.app.name} in {build_info.build_for} instance..."
+            )
+            instance_path = pathlib.PosixPath("/root/project")
+
+            with self.services.provider.instance(
+                build_info, work_dir=self._work_dir
+            ) as instance:
+                try:
+                    # Pyright doesn't fully understand craft_providers's CompletedProcess.
+                    instance.execute_run(  # pyright: ignore[reportUnknownMemberType,reportUnknownVariableType]
+                        [self.app.name, *sys.argv[1:]],
+                        cwd=instance_path,
+                        check=True,
+                        **extra_args,
+                    )
+                except subprocess.CalledProcessError as exc:
+                    raise craft_providers.ProviderError(
+                        f"Failed to execute {self.app.name} in instance."
+                    ) from exc
 
     def configure(self, global_args: dict[str, Any]) -> None:
         """Configure the application using any global arguments."""
 
-    def _get_dispatcher(self) -> craft_cli.Dispatcher:
+    def _get_dispatcher(self) -> _Dispatcher:
         """Configure this application. Should be called by the run method.
 
         Side-effect: This method may exit the process.
@@ -171,7 +197,7 @@ class Application:
             log_filepath=self.log_path,
         )
 
-        dispatcher = craft_cli.Dispatcher(
+        dispatcher = _Dispatcher(
             self.app.name,
             self.command_groups,
             summary=str(self.app.summary),
@@ -223,7 +249,6 @@ class Application:
     def run(self) -> int:
         """Bootstrap and run the application."""
         dispatcher = self._get_dispatcher()
-        self._configure_services()
         craft_cli.emit.trace("Preparing application...")
 
         return_code = 1  # General error
@@ -237,6 +262,9 @@ class Application:
                     }
                 ),
             )
+            build_for = getattr(dispatcher.parsed_args, "build_for", None)
+            self._configure_services(build_for)
+
             if not command.run_managed:
                 # command runs in the outer instance
                 craft_cli.emit.debug(f"Running {self.app.name} {command.name} on host")
@@ -244,7 +272,7 @@ class Application:
             elif not self.services.ProviderClass.is_managed():
                 # command runs in inner instance, but this is the outer instance
                 self.services.project = self.project
-                self.run_managed()
+                self.run_managed(build_for)
                 return_code = 0
             else:
                 # command runs in inner instance

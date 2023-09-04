@@ -71,7 +71,7 @@ class ProviderService(base.BaseService):
     @contextlib.contextmanager
     def instance(
         self,
-        base_name: bases.BaseName | tuple[str, str],
+        build_info: models.BuildInfo,
         *,
         work_dir: pathlib.Path,
         allow_unstable: bool = True,
@@ -87,6 +87,7 @@ class ProviderService(base.BaseService):
         emit.debug("Preparing managed instance")
         work_dir_inode = work_dir.stat().st_ino
         instance_name = f"{self._app.name}-{self._project.name}-{work_dir_inode}"
+        base_name = build_info.base
         base = self.get_base(base_name, instance_name=instance_name, **kwargs)
         provider = self.get_provider()
 

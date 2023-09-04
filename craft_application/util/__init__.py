@@ -16,7 +16,13 @@
 """Utilities for craft-application."""
 
 from craft_application.util.yaml import safe_yaml_load
+from craft_application.util.platforms import (
+    get_host_architecture,
+    convert_architecture_deb_to_platform,
+)
 
 __all__ = [
     "safe_yaml_load",
+    "get_host_architecture",
+    "convert_architecture_deb_to_platform",
 ]
