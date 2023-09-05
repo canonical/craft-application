@@ -101,8 +101,7 @@ def _format_pydantic_error_location(loc: Iterable[Union[str, int]]) -> str:
     loc = ".".join(loc_parts)
 
     # Filter out internal __root__ detail.
-    loc = loc.replace(".__root__", "")
-    return loc
+    return loc.replace(".__root__", "")
 
 
 def _format_pydantic_error_message(msg: str) -> str:
