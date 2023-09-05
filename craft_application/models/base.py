@@ -16,7 +16,7 @@
 """Base pydantic model for *craft applications."""
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, TypeVar
+from typing import TYPE_CHECKING, Any, Self, TypeVar
 
 import pydantic
 import yaml
@@ -54,7 +54,7 @@ class CraftBaseModel(pydantic.BaseModel):
         return self.dict(by_alias=True, exclude_unset=True)
 
     @classmethod
-    def unmarshal(cls: type[_ModelType], data: dict[str, Any] | Any) -> _ModelType:
+    def unmarshal(cls: type[_ModelType], data: dict[str, Any]) -> Self:
         """Create and populate a new model object from dictionary data.
 
         The unmarshal method validates entries in the input dictionary, populating
@@ -69,7 +69,7 @@ class CraftBaseModel(pydantic.BaseModel):
         return cls(**data)
 
     @classmethod
-    def from_yaml_file(cls: type[_ModelType], path: pathlib.Path) -> _ModelType:
+    def from_yaml_file(cls: type[_ModelType], path: pathlib.Path) -> Self:
         """Instantiate this model from a YAML file."""
         with path.open() as file:
             data = safe_yaml_load(file)
