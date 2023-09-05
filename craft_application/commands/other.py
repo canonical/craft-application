@@ -35,6 +35,7 @@ def get_other_command_group() -> CommandGroup:
         commands,
     )
 
+
 class VersionCommand(base.AppCommand):
     """Show the snapcraft version."""
 
@@ -43,6 +44,8 @@ class VersionCommand(base.AppCommand):
     overview = "Show the application version and exit"
     common = True
 
-    def run(self, parsed_args: argparse.Namespace) -> None:  # noqa:ARG002 (Unused method argument)
+    def run(
+        self, parsed_args: argparse.Namespace  # noqa:ARG002 (Unused method argument)
+    ) -> None:
         """Run the command."""
         emit.message(f"{self._app.name} {self._app.version}")
