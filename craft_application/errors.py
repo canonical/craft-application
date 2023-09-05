@@ -19,7 +19,7 @@ All errors inherit from craft_cli.CraftError.
 """
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Self, TypeVar
+from typing import TYPE_CHECKING
 
 from craft_cli import CraftError
 
@@ -28,8 +28,7 @@ from craft_application.util.error_formatting import format_pydantic_errors
 if TYPE_CHECKING:  # pragma: no cover
     import craft_parts
     import pydantic
-
-_ErrType = TypeVar("_ErrType", bound=CraftError)
+    from typing_extensions import Self
 
 
 class ApplicationError(CraftError):
@@ -71,7 +70,7 @@ class CraftValidationError(CraftError):
 
     @classmethod
     def from_pydantic(
-        cls: type[_ErrType],
+        cls,
         error: pydantic.ValidationError,
         *,
         file_name: str = "yaml file",
@@ -91,12 +90,12 @@ class PartsLifecycleError(CraftError):
     """Error during parts processing."""
 
     @classmethod
-    def from_parts_error(cls: type[_ErrType], err: craft_parts.PartsError) -> Self:
+    def from_parts_error(cls, err: craft_parts.PartsError) -> Self:
         """Shortcut to create a PartsLifecycleError from a PartsError."""
         return cls(message=err.brief, details=err.details, resolution=err.resolution)
 
     @classmethod
-    def from_os_error(cls: type[_ErrType], err: OSError) -> Self:
+    def from_os_error(cls, err: OSError) -> Self:
         """Create a PartsLifecycleError from an OSError."""
         message = f"{err.filename}: {err.strerror}" if err.filename else err.strerror
         details = err.__class__.__name__
