@@ -16,7 +16,7 @@
 """Base pydantic model for *craft applications."""
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Self, TypeVar
+from typing import TYPE_CHECKING, Any
 
 import pydantic
 import yaml
@@ -27,7 +27,7 @@ from craft_application.util import safe_yaml_load
 if TYPE_CHECKING:  # pragma: no cover
     import pathlib
 
-_ModelType = TypeVar("_ModelType", bound="CraftBaseModel")
+    from typing_extensions import Self
 
 
 def _alias_generator(s: str) -> str:
@@ -54,7 +54,7 @@ class CraftBaseModel(pydantic.BaseModel):
         return self.dict(by_alias=True, exclude_unset=True)
 
     @classmethod
-    def unmarshal(cls: type[_ModelType], data: dict[str, Any]) -> Self:
+    def unmarshal(cls, data: dict[str, Any]) -> Self:
         """Create and populate a new model object from dictionary data.
 
         The unmarshal method validates entries in the input dictionary, populating
@@ -63,13 +63,13 @@ class CraftBaseModel(pydantic.BaseModel):
         :return: The newly created object.
         :raise TypeError: If data is not a dictionary.
         """
-        if not isinstance(data, dict):
+        if not isinstance(data, dict):  # pyright: ignore[reportUnnecessaryIsInstance]
             raise TypeError("Project data is not a dictionary")
 
         return cls(**data)
 
     @classmethod
-    def from_yaml_file(cls: type[_ModelType], path: pathlib.Path) -> Self:
+    def from_yaml_file(cls, path: pathlib.Path) -> Self:
         """Instantiate this model from a YAML file."""
         with path.open() as file:
             data = safe_yaml_load(file)
