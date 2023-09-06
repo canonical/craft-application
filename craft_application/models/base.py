@@ -20,6 +20,7 @@ from typing import TYPE_CHECKING, Any, Type, cast
 
 import pydantic
 import yaml
+from yaml.dumper import SafeDumper
 
 from craft_application import errors
 from craft_application.util import safe_yaml_load
@@ -97,4 +98,6 @@ class CraftBaseModel(pydantic.BaseModel):
             yaml.add_representer(
                 str, _repr_str, Dumper=cast(Type[yaml.Dumper], yaml.SafeDumper)
             )
-            yaml.safe_dump(self.marshal(), file)
+            yaml.dump(
+                data=self.marshal(), stream=file, Dumper=SafeDumper, sort_keys=False
+            )
