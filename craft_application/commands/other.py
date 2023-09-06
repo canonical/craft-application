@@ -45,7 +45,7 @@ class VersionCommand(base.AppCommand):
     common = True
 
     def run(
-        self, parsed_args: argparse.Namespace  # noqa:ARG002 (Unused method argument)
+        self, parsed_args: argparse.Namespace  # noqa: ARG002 (Unused method argument)
     ) -> None:
         """Run the command."""
         emit.message(f"{self._app.name} {self._app.version}")
