@@ -38,14 +38,17 @@ class Project(CraftBaseModel):
 
     name: ProjectName
     title: Optional[ProjectTitle]
-    base: Optional[Any]
     version: VersionStr
+    summary: Optional[SummaryStr]
+    description: Optional[str]
+
+    base: Optional[Any]
+
     contact: Optional[Union[str, UniqueStrList]]
     issues: Optional[Union[str, UniqueStrList]]
     source_code: Optional[AnyUrl]
-    summary: Optional[SummaryStr]
-    description: Optional[str]
     license: Optional[str]
+
     parts: Dict[str, Dict[str, Any]]  # parts are handled by craft-parts
 
     @pydantic.validator("parts", each_item=True)
