@@ -54,8 +54,21 @@ def mock_dispatcher(monkeypatch):
 @pytest.mark.parametrize(
     ("added_groups", "expected"),
     [
-        ([], [commands.get_lifecycle_command_group()]),
-        ([[]], [commands.get_lifecycle_command_group(), EMPTY_COMMAND_GROUP]),
+        (
+            [],
+            [
+                commands.get_lifecycle_command_group(),
+                commands.get_other_command_group(),
+            ],
+        ),
+        (
+            [[]],
+            [
+                commands.get_lifecycle_command_group(),
+                commands.get_other_command_group(),
+                EMPTY_COMMAND_GROUP,
+            ],
+        ),
     ],
 )
 def test_add_get_command_groups(app, added_groups, expected):
