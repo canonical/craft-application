@@ -114,8 +114,6 @@ def test_project_managed(capsys, monkeypatch, tmp_path, project, app):
 
 
 def test_version(capsys, monkeypatch, app):
-    monkeypatch.setenv("CRAFT_DEBUG", "1")
-    monkeypatch.setenv("CRAFT_MANAGED_MODE", "1")
     monkeypatch.setattr("sys.argv", ["testcraft", "version"])
 
     app.run()
