@@ -19,6 +19,7 @@ from unittest import mock
 import pytest
 import pytest_check
 from craft_application import errors, services
+from craft_cli import emit
 
 
 @pytest.fixture()
@@ -116,3 +117,16 @@ def test_getattr_project_none(app_metadata, fake_package_service_class):
 
     with pytest.raises(errors.ApplicationError):
         _ = factory.package
+
+
+def test_service_setup(app_metadata, fake_project, fake_package_service_class, emitter):
+    class FakePackageService(fake_package_service_class):
+        def setup(self) -> None:
+            emit.debug("setting up package service")
+
+    factory = services.ServiceFactory(
+        app_metadata, project=fake_project, PackageClass=FakePackageService
+    )
+    _ = factory.package
+
+    assert emitter.assert_debug("setting up package service")
