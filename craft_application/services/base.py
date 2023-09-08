@@ -34,3 +34,4 @@ class BaseService(metaclass=abc.ABCMeta):  # noqa: B024
 
     def setup(self) -> None:
         """Application-specific service preparation."""
+        pass
