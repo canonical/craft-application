@@ -46,9 +46,11 @@ Global options:
     -V, --version:  Show the application version and exit
 
 Starter commands:
+          version:  Show the application version and exit
 
 Commands can be classified as follows:
         Lifecycle:  build, clean, pack, prime, pull, stage
+            Other:  version
 
 For more information about a command, run 'testcraft help <command>'.
 For a summary of all commands, run 'testcraft help --all'.
@@ -109,6 +111,15 @@ def test_project_managed(capsys, monkeypatch, tmp_path, project, app):
     assert (tmp_path / "package.tar.zst").exists()
     captured = capsys.readouterr()
     assert captured.out == (VALID_PROJECTS_DIR / project / "stdout").read_text()
+
+
+def test_version(capsys, monkeypatch, app):
+    monkeypatch.setattr("sys.argv", ["testcraft", "version"])
+
+    app.run()
+
+    captured = capsys.readouterr()
+    assert captured.out == "testcraft 3.14159\n"
 
 
 def test_non_lifecycle_command_does_not_require_project(monkeypatch, app):

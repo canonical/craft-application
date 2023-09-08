@@ -18,9 +18,11 @@
 from craft_application.commands.base import AppCommand
 from craft_application.commands import lifecycle
 from craft_application.commands.lifecycle import get_lifecycle_command_group
+from craft_application.commands.other import get_other_command_group
 
 __all__ = [
     "AppCommand",
     "lifecycle",
     "get_lifecycle_command_group",
+    "get_other_command_group",
 ]
