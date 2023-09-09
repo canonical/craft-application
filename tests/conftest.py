@@ -32,7 +32,7 @@ if TYPE_CHECKING:  # pragma: no cover
 
 
 class MyProject(craft_application.models.Project):
-    def get_build_plan(self) -> List[models.BuildInfo]:
+    def get_build_plan(self) -> list[models.BuildInfo]:
         arch = craft_application.util.get_host_architecture()
         return [models.BuildInfo(arch, arch, bases.BaseName("ubuntu", "22.04"))]
 
