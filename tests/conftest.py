@@ -31,9 +31,9 @@ if TYPE_CHECKING:  # pragma: no cover
     from collections.abc import Iterator
 
 
-class MyProject(craft_application.models.Project):
+class MyProject(models.Project):
     def get_build_plan(self) -> list[models.BuildInfo]:
-        arch = craft_application.util.get_host_architecture()
+        arch = util.get_host_architecture()
         return [models.BuildInfo(arch, arch, bases.BaseName("ubuntu", "22.04"))]
 
 
@@ -50,7 +50,7 @@ def app_metadata() -> craft_application.AppMetadata:
 
 
 @pytest.fixture()
-def fake_project() -> MyProject:
+def fake_project() -> models.Project:
     return MyProject(
         name="full-project",  # pyright: ignore[reportGeneralTypeIssues]
         title="A fully-defined project",  # pyright: ignore[reportGeneralTypeIssues]

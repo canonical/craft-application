@@ -28,6 +28,9 @@ import pytest
 import pytest_check
 from craft_application import application, commands, services
 from craft_application.models import BuildInfo
+from craft_application.util import (
+    get_host_architecture,  # pyright: ignore[reportGeneralTypeIssues]
+)
 from craft_providers import bases
 
 EMPTY_COMMAND_GROUP = craft_cli.CommandGroup("FakeCommands", [])
@@ -48,7 +51,7 @@ def app(app_metadata, fake_services):
 
 @pytest.fixture()
 def mock_dispatcher(monkeypatch):
-    dispatcher = mock.Mock(spec_set=craft_application.application._Dispatcher)
+    dispatcher = mock.Mock(spec_set=application._Dispatcher)
     monkeypatch.setattr(
         "craft_application.application._Dispatcher", mock.Mock(return_value=dispatcher)
     )
@@ -101,7 +104,7 @@ def test_run_managed_success(app, fake_project, emitter):
     app.services.provider = mock_provider
     app.project = fake_project
 
-    arch = craft_application.util.get_host_architecture()
+    arch = get_host_architecture()
     app.run_managed(arch)
 
     emitter.assert_debug(f"Running testcraft in {arch} instance...")
@@ -115,7 +118,7 @@ def test_run_managed_failure(app, fake_project):
     app.project = fake_project
 
     with pytest.raises(craft_providers.ProviderError) as exc_info:
-        app.run_managed(craft_application.util.get_host_architecture())
+        app.run_managed(get_host_architecture())
 
     assert exc_info.value.brief == "Failed to execute testcraft in instance."
 
@@ -125,7 +128,7 @@ def test_run_managed_multiple(app, fake_project, emitter, monkeypatch):
     app.services.provider = mock_provider
     app.project = fake_project
 
-    arch = craft_application.util.get_host_architecture()
+    arch = get_host_architecture()
     monkeypatch.setattr(
         app.project.__class__,
         "get_build_plan",
@@ -145,7 +148,7 @@ def test_run_managed_specified(app, fake_project, emitter, monkeypatch):
     app.services.provider = mock_provider
     app.project = fake_project
 
-    arch = craft_application.util.get_host_architecture()
+    arch = get_host_architecture()
     monkeypatch.setattr(
         app.project.__class__,
         "get_build_plan",
@@ -242,7 +245,7 @@ def test_run_success_managed(monkeypatch, app, fake_project):
 def test_run_success_managed_with_arch(monkeypatch, app, fake_project):
     app.project = fake_project
     app.run_managed = mock.Mock()
-    arch = craft_application.util.get_host_architecture()
+    arch = get_host_architecture()
     monkeypatch.setattr(sys, "argv", ["testcraft", "pull", f"--build-for={arch}"])
 
     pytest_check.equal(app.run(), 0)

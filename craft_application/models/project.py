@@ -17,7 +17,6 @@
 
 This defines the structure of the input file (e.g. snapcraft.yaml)
 """
-import abc
 import dataclasses
 from typing import Any, Dict, List, Optional, Union
 
@@ -80,6 +79,6 @@ class Project(CraftBaseModel):
             return self.base
         raise RuntimeError("Could not determine effective base")
 
-    @abc.abstractmethod
     def get_build_plan(self) -> List[BuildInfo]:
         """Obtain the list of architectures and bases from the project file."""
+        raise NotImplementedError

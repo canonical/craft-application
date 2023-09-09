@@ -21,6 +21,7 @@ import craft_providers
 import pytest
 from craft_application.models import BuildInfo
 from craft_application.util import get_host_architecture
+from craft_providers import bases
 
 
 @pytest.mark.parametrize(
@@ -57,7 +58,7 @@ def test_provider_lifecycle(
     provider_service.get_provider(name)
 
     arch = get_host_architecture()
-    build_info = BuildInfo(arch, arch, craft_providers.bases.BaseName(*base_name))
+    build_info = BuildInfo(arch, arch, bases.BaseName(*base_name))
     instance = provider_service.instance(build_info, work_dir=snap_safe_tmp_path)
     executor = None
     try:

@@ -47,7 +47,7 @@ class _Dispatcher(craft_cli.Dispatcher):
     @property
     def parsed_args(self) -> argparse.Namespace:
         """The map of parsed command-line arguments."""
-        return self._parsed_command_args
+        return self._parsed_command_args or argparse.Namespace()
 
 
 @final
@@ -129,7 +129,7 @@ class Application:
         # xdg types: https://github.com/python/typeshed/pull/10163
         return save_cache_path(self.app.name)  # type: ignore[no-any-return]
 
-    def _configure_services(self, build_for: str) -> None:
+    def _configure_services(self, build_for: str | None) -> None:
         """Configure additional keyword arguments for any service classes.
 
         Any child classes that override this must either call this directly or must
