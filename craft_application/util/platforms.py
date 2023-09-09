@@ -62,4 +62,3 @@ _ARCH_TRANSLATIONS_DEB_TO_PLATFORM = {
     "s390x": "s390x",
     "riscv64": "riscv64",
 }
-

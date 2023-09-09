@@ -27,6 +27,7 @@ class MyProject(Project):
     def get_build_plan(self) -> List[BuildInfo]:
         return []
 
+
 PROJECTS_DIR = pathlib.Path(__file__).parent / "project_models"
 PARTS_DICT = {"my-part": {"plugin": "nil"}}
 # pyright doesn't like these types and doesn't have a pydantic plugin like mypy.

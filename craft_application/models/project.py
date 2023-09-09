@@ -17,8 +17,6 @@
 
 This defines the structure of the input file (e.g. snapcraft.yaml)
 """
-from __future__ import annotations
-
 import abc
 import dataclasses
 from typing import Any, Dict, List, Optional, Union
