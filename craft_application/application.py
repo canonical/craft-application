@@ -146,6 +146,7 @@ class Application:
     def project(self) -> models.Project:
         """Get this application's Project metadata."""
         project_file = (self._work_dir / f"{self.app.name}.yaml").resolve()
+        craft_cli.emit.debug(f"Loading project file '{project_file!s}'")
         return self.app.ProjectClass.from_yaml_file(project_file)
 
     def run_managed(self, build_for: str | None) -> None:
@@ -268,6 +269,8 @@ class Application:
             if not command.run_managed:
                 # command runs in the outer instance
                 craft_cli.emit.debug(f"Running {self.app.name} {command.name} on host")
+                if command.always_load_project:
+                    self.services.project = self.project
                 return_code = dispatcher.run() or 0
             elif not self.services.ProviderClass.is_managed():
                 # command runs in inner instance, but this is the outer instance

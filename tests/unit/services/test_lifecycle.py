@@ -315,7 +315,6 @@ def test_repr(fake_parts_lifecycle, app_metadata, fake_project):
     start = f"FakePartsLifecycle({app_metadata!r}, {fake_project!r}, "
 
     actual = repr(fake_parts_lifecycle)
-    print("=====", actual)
 
     pytest_check.is_true(actual.startswith(start))
     pytest_check.is_true(

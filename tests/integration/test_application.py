@@ -137,3 +137,14 @@ def test_non_lifecycle_command_does_not_require_project(monkeypatch, app):
 
     app.add_command_group("Nothing", [NothingCommand])
     app.run()
+
+
+def test_run_always_load_project(monkeypatch, app):
+    """Run a command without having a project instance shall not fail."""
+    monkeypatch.setenv("CRAFT_DEBUG", "1")
+    monkeypatch.setattr("sys.argv", ["testcraft", "clean"])
+
+    with pytest.raises(FileNotFoundError) as raised:
+        app.run()
+
+    assert str(raised.value).endswith("/testcraft.yaml'") is True

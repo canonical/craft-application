@@ -127,11 +127,7 @@ class _LifecycleStepCommand(_LifecyclePartsCommand):
     ) -> None:
         """Run a lifecycle step command."""
         super().run(parsed_args)
-
         step_name = step_name or self.name
-
-        # resolve build matrix, depending on the environment (managed/manager)
-
         self._services.lifecycle.run(
             step_name=step_name,
             part_names=parsed_args.parts,
@@ -272,6 +268,7 @@ class CleanCommand(_LifecyclePartsCommand):
         remove the packing environment.
         """
     )
+    always_load_project = True
 
     @override
     def run(self, parsed_args: argparse.Namespace) -> None:
