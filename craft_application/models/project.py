@@ -81,4 +81,4 @@ class Project(CraftBaseModel):
 
     def get_build_plan(self) -> List[BuildInfo]:
         """Obtain the list of architectures and bases from the project file."""
-        raise NotImplementedError
+        raise NotImplementedError(f"{self.__class__.__name__!s} must implement get_build_plan")
