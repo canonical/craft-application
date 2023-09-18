@@ -103,6 +103,8 @@ class LifecycleService(base.BaseService):
     :param app: An AppMetadata object containing metadata about the application.
     :param project: The Project object that describes this project.
     :param work_dir: The working directory for parts processing.
+    :param cache_dir: The cache directory for parts processing.
+    :param build_for: The architecture or platform we are building for.
     :param lifecycle_kwargs: Additional keyword arguments are passed through to the
         LifecycleManager on initialisation.
     """
