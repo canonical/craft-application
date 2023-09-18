@@ -96,7 +96,8 @@ class _LifecycleStepCommand(_LifecyclePartsCommand):
             action="store_true",
             help="Shell into the environment after the step has run.",
         )
-        group.add_argument(
+
+        parser.add_argument(
             "--build-for",
             type=str,
             metavar="arch",
