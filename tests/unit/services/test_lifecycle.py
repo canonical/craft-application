@@ -41,11 +41,15 @@ class FakePartsLifecycle(lifecycle.LifecycleService):
 
 
 @pytest.fixture()
-def fake_parts_lifecycle(app_metadata, fake_project, tmp_path):
+def fake_parts_lifecycle(app_metadata, fake_project, fake_services, tmp_path):
     work_dir = tmp_path / "work"
     cache_dir = tmp_path / "cache"
     return FakePartsLifecycle(
-        app_metadata, fake_project, work_dir=work_dir, cache_dir=cache_dir
+        app_metadata,
+        fake_project,
+        fake_services,
+        work_dir=work_dir,
+        cache_dir=cache_dir,
     )
 
 
@@ -201,9 +205,9 @@ def test_get_step_failure(step_name):
 
 # endregion
 # region PartsLifecycle tests
-def test_init_success(app_metadata, fake_project, tmp_path):
+def test_init_success(app_metadata, fake_project, fake_services, tmp_path):
     lifecycle.LifecycleService(
-        app_metadata, fake_project, work_dir=tmp_path, cache_dir=tmp_path
+        app_metadata, fake_project, fake_services, work_dir=tmp_path, cache_dir=tmp_path
     )
 
 
@@ -221,14 +225,18 @@ def test_init_success(app_metadata, fake_project, tmp_path):
     ],
 )
 def test_init_parts_error(
-    monkeypatch, app_metadata, fake_project, tmp_path, error, expected
+    monkeypatch, app_metadata, fake_project, fake_services, tmp_path, error, expected
 ):
     mock_lifecycle = mock.Mock(side_effect=error)
     monkeypatch.setattr(lifecycle, "LifecycleManager", mock_lifecycle)
 
     with pytest.raises(type(expected)) as exc_info:
         lifecycle.LifecycleService(
-            app_metadata, fake_project, work_dir=tmp_path, cache_dir=tmp_path
+            app_metadata,
+            fake_project,
+            fake_services,
+            work_dir=tmp_path,
+            cache_dir=tmp_path,
         )
 
     assert exc_info.value.args == expected.args

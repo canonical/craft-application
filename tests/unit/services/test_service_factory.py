@@ -74,7 +74,7 @@ def test_set_kwargs(
     check.equal(factory.package, MockPackageService.mock_class.return_value)
     with check:
         MockPackageService.mock_class.assert_called_once_with(
-            app_metadata, fake_project, **kwargs
+            app_metadata, fake_project, factory, **kwargs
         )
 
 

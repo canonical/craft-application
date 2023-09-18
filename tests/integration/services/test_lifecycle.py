@@ -29,12 +29,13 @@ from craft_application.services.lifecycle import LifecycleService
         ),
     ]
 )
-def parts_lifecycle(app_metadata, fake_project, tmp_path, request):
+def parts_lifecycle(app_metadata, fake_project, fake_services, tmp_path, request):
     fake_project.parts = request.param
 
     return LifecycleService(
         app_metadata,
         fake_project,
+        fake_services,
         work_dir=tmp_path / "work",
         cache_dir=tmp_path / "cache",
     )
