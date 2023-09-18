@@ -309,3 +309,26 @@ def test_run_error_debug(monkeypatch, mock_dispatcher, app, fake_project, error)
 
     with pytest.raises(error.__class__):
         app.run()
+
+
+_base = bases.BaseName("", "")
+_on_a_for_a = BuildInfo("a", "a", _base)
+_on_a_for_b = BuildInfo("a", "b", _base)
+
+
+@pytest.mark.parametrize(
+    ("plan", "build_for", "host_arch", "result"),
+    [
+        ([_on_a_for_a], None, "a", [_on_a_for_a]),
+        ([_on_a_for_a], "a", "a", [_on_a_for_a]),
+        ([_on_a_for_a], "b", "a", []),
+        ([_on_a_for_a], "a", "b", []),
+        ([_on_a_for_a, _on_a_for_b], "b", "a", [_on_a_for_b]),
+        ([_on_a_for_a, _on_a_for_b], "b", "b", []),
+        ([_on_a_for_a, _on_a_for_b], None, "b", []),
+        ([_on_a_for_a, _on_a_for_b], None, "a", [_on_a_for_a, _on_a_for_b]),
+    ],
+)
+def test_filter_plan(mocker, plan, build_for, host_arch, result):
+    mocker.patch("craft_application.util.get_host_architecture", return_value=host_arch)
+    assert application._filter_plan(plan, build_for) == result

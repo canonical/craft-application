@@ -31,7 +31,8 @@ import craft_cli
 import craft_providers
 from xdg.BaseDirectory import save_cache_path  # type: ignore[import]
 
-from craft_application import commands, models
+from craft_application import commands, models, util
+from craft_application.models import BuildInfo
 
 if TYPE_CHECKING:
     from craft_application.services import service_factory
@@ -151,12 +152,12 @@ class Application:
 
     def run_managed(self, build_for: str | None) -> None:
         """Run the application in a managed instance."""
-        build_plan = self.project.get_build_plan()
         extra_args: dict[str, Any] = {}
 
-        # filter out builds not matching argument `--build_for` or env `CRAFT_BUILD_FOR`
+        build_plan = self.project.get_build_plan()
+        build_plan = _filter_plan(build_plan, build_for)
+
         if build_for:
-            build_plan = [b for b in build_plan if b.build_for == build_for]
             extra_args["env"] = {"CRAFT_BUILD_FOR": build_for}
 
         for build_info in build_plan:
@@ -311,3 +312,18 @@ class Application:
             error.logpath_report = False
 
         craft_cli.emit.error(error)
+
+
+def _filter_plan(build_plan: list[BuildInfo], build_for: str | None) -> list[BuildInfo]:
+    """Filter out builds not matching build-on and build-for."""
+    host_arch = util.get_host_architecture()
+
+    plan: list[BuildInfo] = []
+    for build_info in build_plan:
+        build_on_matches = build_info.build_on == host_arch
+        build_for_matches = not build_for or build_info.build_for == build_for
+
+        if build_on_matches and build_for_matches:
+            plan.append(build_info)
+
+    return plan

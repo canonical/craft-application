@@ -86,7 +86,7 @@ class ProviderService(base.BaseService):
         """
         work_dir_inode = work_dir.stat().st_ino
         instance_name = (
-	    f"{self._app.name}-{self._project.name}-on-{build_info.build_on}-"
+            f"{self._app.name}-{self._project.name}-on-{build_info.build_on}-"
             f"for-{build_info.build_for}-{work_dir_inode}"
         )
         emit.debug("Preparing managed instance {instance_name!r}")
