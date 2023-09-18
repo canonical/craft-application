@@ -77,7 +77,11 @@ class Application:
         self.services = services
         self._command_groups: list[craft_cli.CommandGroup] = []
         self._global_arguments: list[craft_cli.GlobalArgument] = [GLOBAL_VERSION]
-        self._work_dir = pathlib.Path.cwd()
+
+        if self.services.ProviderClass.is_managed():
+            self._work_dir = pathlib.Path("/root")
+        else:
+            self._work_dir = pathlib.Path.cwd()
 
     @property
     def command_groups(self) -> list[craft_cli.CommandGroup]:
@@ -134,7 +138,7 @@ class Application:
     @functools.cached_property
     def project(self) -> models.Project:
         """Get this application's Project metadata."""
-        project_file = (self._work_dir / f"{self.app.name}.yaml").resolve()
+        project_file = (pathlib.Path.cwd() / f"{self.app.name}.yaml").resolve()
         return self.app.ProjectClass.from_yaml_file(project_file)
 
     def run_managed(self) -> None:
