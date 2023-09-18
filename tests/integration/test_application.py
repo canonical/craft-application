@@ -139,9 +139,7 @@ def test_non_lifecycle_command_does_not_require_project(monkeypatch, app):
     app.run()
 
 
-@pytest.mark.parametrize(
-    "cmd", ["clean", "pull", "build", "stage", "prime", "pack"]
-)
+@pytest.mark.parametrize("cmd", ["clean", "pull", "build", "stage", "prime", "pack"])
 def test_run_always_load_project(monkeypatch, app, cmd):
     """Run a lifecycle command without having a project shall fail."""
     monkeypatch.setenv("CRAFT_DEBUG", "1")
