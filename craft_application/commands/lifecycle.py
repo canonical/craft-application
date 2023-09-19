@@ -14,6 +14,7 @@
 """Basic lifecycle commands for a Craft Application."""
 from __future__ import annotations
 
+import os
 import pathlib
 import textwrap
 from typing import TYPE_CHECKING
@@ -96,6 +97,14 @@ class _LifecycleStepCommand(_LifecyclePartsCommand):
             help="Shell into the environment after the step has run.",
         )
 
+        parser.add_argument(
+            "--build-for",
+            type=str,
+            metavar="arch",
+            default=os.getenv("CRAFT_BUILD_FOR"),
+            help="Set architecture to build for",
+        )
+
     @override
     def get_managed_cmd(self, parsed_args: argparse.Namespace) -> list[str]:
         """Get the command to run in managed mode.
@@ -119,10 +128,11 @@ class _LifecycleStepCommand(_LifecyclePartsCommand):
     ) -> None:
         """Run a lifecycle step command."""
         super().run(parsed_args)
-
         step_name = step_name or self.name
-
-        self._services.lifecycle.run(step_name=step_name, part_names=parsed_args.parts)
+        self._services.lifecycle.run(
+            step_name=step_name,
+            part_names=parsed_args.parts,
+        )
 
 
 class PullCommand(_LifecycleStepCommand):
@@ -259,6 +269,7 @@ class CleanCommand(_LifecyclePartsCommand):
         remove the packing environment.
         """
     )
+    always_load_project = True
 
     @override
     def run(self, parsed_args: argparse.Namespace) -> None:

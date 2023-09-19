@@ -28,6 +28,11 @@ import craft_providers
 import pytest
 import pytest_check
 from craft_application import application, commands, services
+from craft_application.models import BuildInfo
+from craft_application.util import (
+    get_host_architecture,  # pyright: ignore[reportGeneralTypeIssues]
+)
+from craft_providers import bases
 
 EMPTY_COMMAND_GROUP = craft_cli.CommandGroup("FakeCommands", [])
 
@@ -47,8 +52,10 @@ def app(app_metadata, fake_services):
 
 @pytest.fixture()
 def mock_dispatcher(monkeypatch):
-    dispatcher = mock.Mock(spec_set=craft_cli.Dispatcher)
-    monkeypatch.setattr("craft_cli.Dispatcher", mock.Mock(return_value=dispatcher))
+    dispatcher = mock.Mock(spec_set=application._Dispatcher)
+    monkeypatch.setattr(
+        "craft_application.application._Dispatcher", mock.Mock(return_value=dispatcher)
+    )
     return dispatcher
 
 
@@ -98,9 +105,10 @@ def test_run_managed_success(app, fake_project, emitter):
     app.services.provider = mock_provider
     app.project = fake_project
 
-    app.run_managed()
+    arch = get_host_architecture()
+    app.run_managed(arch)
 
-    emitter.assert_debug("Running testcraft in a managed instance...")
+    emitter.assert_debug(f"Running testcraft in {arch} instance...")
 
 
 def test_run_managed_failure(app, fake_project):
@@ -111,9 +119,52 @@ def test_run_managed_failure(app, fake_project):
     app.project = fake_project
 
     with pytest.raises(craft_providers.ProviderError) as exc_info:
-        app.run_managed()
+        app.run_managed(get_host_architecture())
 
     assert exc_info.value.brief == "Failed to execute testcraft in instance."
+
+
+def test_run_managed_multiple(app, fake_project, emitter, monkeypatch):
+    mock_provider = mock.MagicMock(spec_set=services.ProviderService)
+    app.services.provider = mock_provider
+    app.project = fake_project
+
+    arch = get_host_architecture()
+    monkeypatch.setattr(
+        app.project.__class__,
+        "get_build_plan",
+        lambda _: [
+            BuildInfo(arch, "arch1", bases.BaseName("base", "1")),
+            BuildInfo(arch, "arch2", bases.BaseName("base", "2")),
+        ],
+    )
+    app.run_managed(None)
+
+    emitter.assert_debug("Running testcraft in arch1 instance...")
+    emitter.assert_debug("Running testcraft in arch2 instance...")
+
+
+def test_run_managed_specified(app, fake_project, emitter, monkeypatch):
+    mock_provider = mock.MagicMock(spec_set=services.ProviderService)
+    app.services.provider = mock_provider
+    app.project = fake_project
+
+    arch = get_host_architecture()
+    monkeypatch.setattr(
+        app.project.__class__,
+        "get_build_plan",
+        lambda _: [
+            BuildInfo(arch, "arch1", bases.BaseName("base", "1")),
+            BuildInfo(arch, "arch2", bases.BaseName("base", "2")),
+        ],
+    )
+    app.run_managed("arch2")
+
+    emitter.assert_debug("Running testcraft in arch2 instance...")
+    assert (
+        mock.call("debug", "Running testcraft in arch1 instance...")
+        not in emitter.interactions
+    )
 
 
 @pytest.mark.parametrize(
@@ -189,7 +240,18 @@ def test_run_success_managed(monkeypatch, app, fake_project):
 
     pytest_check.equal(app.run(), 0)
 
-    app.run_managed.assert_called_once_with()
+    app.run_managed.assert_called_once_with(None)  # --build-for not used
+
+
+def test_run_success_managed_with_arch(monkeypatch, app, fake_project):
+    app.project = fake_project
+    app.run_managed = mock.Mock()
+    arch = get_host_architecture()
+    monkeypatch.setattr(sys, "argv", ["testcraft", "pull", f"--build-for={arch}"])
+
+    pytest_check.equal(app.run(), 0)
+
+    app.run_managed.assert_called_once_with(arch)
 
 
 @pytest.mark.parametrize("return_code", [None, 0, 1])
@@ -248,6 +310,29 @@ def test_run_error_debug(monkeypatch, mock_dispatcher, app, fake_project, error)
 
     with pytest.raises(error.__class__):
         app.run()
+
+
+_base = bases.BaseName("", "")
+_on_a_for_a = BuildInfo("a", "a", _base)
+_on_a_for_b = BuildInfo("a", "b", _base)
+
+
+@pytest.mark.parametrize(
+    ("plan", "build_for", "host_arch", "result"),
+    [
+        ([_on_a_for_a], None, "a", [_on_a_for_a]),
+        ([_on_a_for_a], "a", "a", [_on_a_for_a]),
+        ([_on_a_for_a], "b", "a", []),
+        ([_on_a_for_a], "a", "b", []),
+        ([_on_a_for_a, _on_a_for_b], "b", "a", [_on_a_for_b]),
+        ([_on_a_for_a, _on_a_for_b], "b", "b", []),
+        ([_on_a_for_a, _on_a_for_b], None, "b", []),
+        ([_on_a_for_a, _on_a_for_b], None, "a", [_on_a_for_a, _on_a_for_b]),
+    ],
+)
+def test_filter_plan(mocker, plan, build_for, host_arch, result):
+    mocker.patch("craft_application.util.get_host_architecture", return_value=host_arch)
+    assert application._filter_plan(plan, build_for) == result
 
 
 @pytest.fixture()

@@ -71,7 +71,7 @@ class ProviderService(base.BaseService):
     @contextlib.contextmanager
     def instance(
         self,
-        base_name: bases.BaseName | tuple[str, str],
+        build_info: models.BuildInfo,
         *,
         work_dir: pathlib.Path,
         allow_unstable: bool = True,
@@ -84,9 +84,13 @@ class ProviderService(base.BaseService):
         :param allow_unstable: Whether to allow the use of unstable images.
         :returns: a context manager of the provider instance.
         """
-        emit.debug("Preparing managed instance")
         work_dir_inode = work_dir.stat().st_ino
-        instance_name = f"{self._app.name}-{self._project.name}-{work_dir_inode}"
+        instance_name = (
+            f"{self._app.name}-{self._project.name}-on-{build_info.build_on}-"
+            f"for-{build_info.build_for}-{work_dir_inode}"
+        )
+        emit.debug("Preparing managed instance {instance_name!r}")
+        base_name = build_info.base
         base = self.get_base(base_name, instance_name=instance_name, **kwargs)
         provider = self.get_provider()
 

@@ -33,6 +33,9 @@ class AppCommand(BaseCommand):
     run_managed: bool = False
     """Whether this command should run in managed mode."""
 
+    always_load_project: bool = False
+    """The project is also loaded in non-managed mode."""
+
     def __init__(self, config: dict[str, Any]) -> None:
         super().__init__(config)
         self._app: application.AppMetadata = config["app"]
