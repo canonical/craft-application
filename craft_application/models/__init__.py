@@ -24,11 +24,12 @@ from craft_application.models.constraints import (
     VersionStr,
 )
 from craft_application.models.metadata import BaseMetadata
-from craft_application.models.project import Project
+from craft_application.models.project import BuildInfo, Project
 
 
 __all__ = [
     "BaseMetadata",
+    "BuildInfo",
     "CraftBaseConfig",
     "CraftBaseModel",
     "Project",
