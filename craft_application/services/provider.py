@@ -64,6 +64,7 @@ class ProviderService(base.BaseService):
         if install_snap:
             self.snaps.append(Snap(name=app.name, channel=None, classic=True))
         self.environment: dict[str, str | None] = {self.managed_mode_env_var: "1"}
+        self.packages: list[str] = []
 
     @classmethod
     def is_managed(cls) -> bool:
@@ -137,6 +138,7 @@ class ProviderService(base.BaseService):
             hostname=instance_name,
             snaps=self.snaps,
             environment=self.environment,
+            packages=self.packages,
             **kwargs,  # type: ignore[arg-type]
         )
 
