@@ -150,7 +150,8 @@ class Application:
     @functools.cached_property
     def project(self) -> models.Project:
         """Get this application's Project metadata."""
-        project_file = (pathlib.Path.cwd() / f"{self.app.name}.yaml").resolve()
+        # Current working directory contains the project file
+        project_file = pathlib.Path(f"{self.app.name}.yaml").resolve()
         craft_cli.emit.debug(f"Loading project file '{project_file!s}'")
         return self.app.ProjectClass.from_yaml_file(project_file)
 
