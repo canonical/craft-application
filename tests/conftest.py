@@ -76,7 +76,7 @@ def enable_overlay() -> Iterator[craft_parts.Features]:
 
 @pytest.fixture()
 def lifecycle_service(
-    app_metadata, fake_project, tmp_path
+    app_metadata, fake_project, fake_services, tmp_path
 ) -> services.LifecycleService:
     work_dir = tmp_path / "work"
     cache_dir = tmp_path / "cache"
@@ -85,6 +85,7 @@ def lifecycle_service(
     return services.LifecycleService(
         app_metadata,
         fake_project,
+        fake_services,
         work_dir=work_dir,
         cache_dir=cache_dir,
         build_for=build_for,
@@ -124,11 +125,13 @@ def fake_lifecycle_service_class(tmp_path):
             self,
             app: application.AppMetadata,
             project: models.Project,
+            services: services.ServiceFactory,
             **lifecycle_kwargs: Any,
         ):
             super().__init__(
                 app,
                 project,
+                services,
                 work_dir=tmp_path / "work",
                 cache_dir=tmp_path / "cache",
                 build_for=util.get_host_architecture(),

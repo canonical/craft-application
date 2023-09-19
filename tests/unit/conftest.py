@@ -23,8 +23,8 @@ from craft_application import services
 
 
 @pytest.fixture()
-def provider_service(app_metadata, fake_project):
-    return services.ProviderService(app_metadata, fake_project)
+def provider_service(app_metadata, fake_project, fake_services):
+    return services.ProviderService(app_metadata, fake_project, fake_services)
 
 
 @pytest.fixture()

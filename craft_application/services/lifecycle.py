@@ -31,6 +31,7 @@ if TYPE_CHECKING:  # pragma: no cover
 
     from craft_application.application import AppMetadata
     from craft_application.models import Project
+    from craft_application.services import ServiceFactory
 
 
 ACTION_MESSAGES = types.MappingProxyType(
@@ -113,13 +114,14 @@ class LifecycleService(base.BaseService):
         self,
         app: AppMetadata,
         project: Project,
+        services: ServiceFactory,
         *,
         work_dir: Path | str,
         cache_dir: Path | str,
         build_for: str,
         **lifecycle_kwargs: Any,  # noqa: ANN401 - eventually used in an Any
     ) -> None:
-        super().__init__(app, project)
+        super().__init__(app, project, services)
         self._work_dir = work_dir
         self._cache_dir = cache_dir
         self._build_for = build_for

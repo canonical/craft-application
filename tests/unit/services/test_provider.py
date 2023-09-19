@@ -28,9 +28,9 @@ from craft_providers.actions.snap_installer import Snap
     ("install_snap", "snaps"),
     [(True, [Snap(name="testcraft", channel=None, classic=True)]), (False, [])],
 )
-def test_install_snap(app_metadata, fake_project, install_snap, snaps):
+def test_install_snap(app_metadata, fake_project, fake_services, install_snap, snaps):
     service = provider.ProviderService(
-        app_metadata, fake_project, install_snap=install_snap
+        app_metadata, fake_project, fake_services, install_snap=install_snap
     )
 
     assert service.snaps == snaps

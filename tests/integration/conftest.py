@@ -41,9 +41,11 @@ def pytest_runtest_setup(item: pytest.Item):
 
 
 @pytest.fixture()
-def provider_service(app_metadata, fake_project):
+def provider_service(app_metadata, fake_project, fake_services):
     """Provider service with install snap disabled for integration tests"""
-    return provider.ProviderService(app_metadata, fake_project, install_snap=False)
+    return provider.ProviderService(
+        app_metadata, fake_project, fake_services, install_snap=False
+    )
 
 
 @pytest.fixture()
