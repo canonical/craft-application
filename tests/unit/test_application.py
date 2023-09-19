@@ -19,6 +19,7 @@ import pathlib
 import re
 import subprocess
 import sys
+from textwrap import dedent
 from unittest import mock
 
 import craft_application
@@ -332,3 +333,48 @@ _on_a_for_b = BuildInfo("a", "b", _base)
 def test_filter_plan(mocker, plan, build_for, host_arch, result):
     mocker.patch("craft_application.util.get_host_architecture", return_value=host_arch)
     assert application._filter_plan(plan, build_for) == result
+
+
+@pytest.fixture()
+def fake_project_file(monkeypatch, tmp_path):
+    project_dir = tmp_path / "project"
+    project_dir.mkdir()
+    project_path = project_dir / "testcraft.yaml"
+    project_path.write_text(
+        dedent(
+            """
+        name: myproject
+        version: 1.0
+        parts:
+          mypart:
+            plugin: nil
+        """
+        )
+    )
+    monkeypatch.chdir(project_dir)
+
+    return project_path
+
+
+@pytest.mark.usefixtures("fake_project_file")
+def test_work_dir_project_non_managed(monkeypatch, app_metadata, fake_services):
+    monkeypatch.setenv(fake_services.ProviderClass.managed_mode_env_var, "0")
+
+    app = application.Application(app_metadata, fake_services)
+    assert app._work_dir == pathlib.Path.cwd()
+
+    # Make sure the project is loaded correctly (from the cwd)
+    assert app.project.name == "myproject"
+    assert app.project.version == "1.0"
+
+
+@pytest.mark.usefixtures("fake_project_file")
+def test_work_dir_project_managed(monkeypatch, app_metadata, fake_services):
+    monkeypatch.setenv(fake_services.ProviderClass.managed_mode_env_var, "1")
+
+    app = application.Application(app_metadata, fake_services)
+    assert app._work_dir == pathlib.PosixPath("/root")
+
+    # Make sure the project is loaded correctly (from the cwd)
+    assert app.project.name == "myproject"
+    assert app.project.version == "1.0"
