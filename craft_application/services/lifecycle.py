@@ -21,6 +21,7 @@ from typing import TYPE_CHECKING, Any
 
 from craft_cli import emit
 from craft_parts import Action, ActionType, Features, LifecycleManager, PartsError, Step
+from typing_extensions import override
 
 from craft_application import errors
 from craft_application.services import base
@@ -126,6 +127,11 @@ class LifecycleService(base.BaseService):
         self._cache_dir = cache_dir
         self._build_for = build_for
         self._manager_kwargs = lifecycle_kwargs
+        self._lcm: LifecycleManager = None  # type: ignore[assignment]
+
+    @override
+    def setup(self) -> None:
+        """Initialize the LifecycleManager with previously-set arguments."""
         self._lcm = self._init_lifecycle_manager()
 
     def _init_lifecycle_manager(self) -> LifecycleManager:

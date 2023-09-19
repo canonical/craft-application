@@ -82,7 +82,7 @@ def lifecycle_service(
     cache_dir = tmp_path / "cache"
     build_for = util.get_host_architecture()
 
-    return services.LifecycleService(
+    service = services.LifecycleService(
         app_metadata,
         fake_project,
         fake_services,
@@ -90,6 +90,8 @@ def lifecycle_service(
         cache_dir=cache_dir,
         build_for=build_for,
     )
+    service.setup()
+    return service
 
 
 @pytest.fixture(params=list(EmitterMode))

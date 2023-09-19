@@ -33,7 +33,7 @@ from craft_application.util import get_host_architecture
 def parts_lifecycle(app_metadata, fake_project, fake_services, tmp_path, request):
     fake_project.parts = request.param
 
-    return LifecycleService(
+    service = LifecycleService(
         app_metadata,
         fake_project,
         fake_services,
@@ -41,6 +41,8 @@ def parts_lifecycle(app_metadata, fake_project, fake_services, tmp_path, request
         cache_dir=tmp_path / "cache",
         build_for=get_host_architecture(),
     )
+    service.setup()
+    return service
 
 
 def test_run_and_clean_all_parts(parts_lifecycle, emitter, check, tmp_path):
