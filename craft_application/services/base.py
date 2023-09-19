@@ -24,15 +24,19 @@ from craft_cli import emit
 if typing.TYPE_CHECKING:
     from craft_application import models
     from craft_application.application import AppMetadata
+    from craft_application.services import ServiceFactory
 
 
 # ignoring the fact that this abstract class has no abstract methods.
 class BaseService(metaclass=abc.ABCMeta):  # noqa: B024
     """A service containing the actual business logic of one or more commands."""
 
-    def __init__(self, app: AppMetadata, project: models.Project) -> None:
+    def __init__(
+        self, app: AppMetadata, project: models.Project, services: ServiceFactory
+    ) -> None:
         self._app = app
         self._project = project
+        self._services = services
 
     def setup(self) -> None:
         """Application-specific service preparation."""

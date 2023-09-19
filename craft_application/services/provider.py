@@ -37,6 +37,7 @@ if TYPE_CHECKING:  # pragma: no cover
 
     from craft_application import models
     from craft_application.application import AppMetadata
+    from craft_application.services import ServiceFactory
 
 
 class ProviderService(base.BaseService):
@@ -53,10 +54,11 @@ class ProviderService(base.BaseService):
         self,
         app: AppMetadata,
         project: models.Project,
+        services: ServiceFactory,
         *,
         install_snap: bool = True,
     ) -> None:
-        super().__init__(app, project)
+        super().__init__(app, project, services)
         self._provider: craft_providers.Provider | None = None
         self.snaps: list[Snap] = []
         if install_snap:

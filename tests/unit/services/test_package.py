@@ -26,7 +26,7 @@ if TYPE_CHECKING:  # pragma: no cover
 
 
 class FakePackageService(package.PackageService):
-    def pack(self, dest: pathlib.Path) -> list[pathlib.Path]:
+    def pack(self, prime_dir: pathlib.Path, dest: pathlib.Path) -> list[pathlib.Path]:
         """Create a fake package."""
         raise NotImplementedError
 
@@ -35,8 +35,8 @@ class FakePackageService(package.PackageService):
         return models.BaseMetadata()
 
 
-def test_write_metadata(tmp_path, app_metadata, fake_project):
-    service = FakePackageService(app_metadata, fake_project)
+def test_write_metadata(tmp_path, app_metadata, fake_project, fake_services):
+    service = FakePackageService(app_metadata, fake_project, fake_services)
     metadata_file = tmp_path / "metadata.yaml"
     assert not metadata_file.exists()
 
