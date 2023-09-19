@@ -18,6 +18,7 @@
 import pytest
 import pytest_check
 from craft_application.services.lifecycle import LifecycleService
+from craft_application.util import get_host_architecture
 
 
 @pytest.fixture(
@@ -38,6 +39,7 @@ def parts_lifecycle(app_metadata, fake_project, fake_services, tmp_path, request
         fake_services,
         work_dir=tmp_path / "work",
         cache_dir=tmp_path / "cache",
+        build_for=get_host_architecture(),
     )
 
 

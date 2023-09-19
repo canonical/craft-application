@@ -101,6 +101,12 @@ def test_unmarshal_then_marshal(project_dict):
     assert Project.unmarshal(project_dict).marshal() == project_dict
 
 
+@pytest.mark.parametrize("project", [BASIC_PROJECT, FULL_PROJECT])
+def test_build_plan_not_implemented(project):
+    with pytest.raises(NotImplementedError):
+        project.get_build_plan()
+
+
 @pytest.mark.parametrize(
     ("project_file", "expected"),
     [

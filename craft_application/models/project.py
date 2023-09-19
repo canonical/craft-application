@@ -17,9 +17,11 @@
 
 This defines the structure of the input file (e.g. snapcraft.yaml)
 """
-from typing import Any, Dict, Optional, Union
+import dataclasses
+from typing import Any, Dict, List, Optional, Union
 
 import craft_parts
+import craft_providers.bases
 import pydantic
 from pydantic import AnyUrl
 
@@ -31,6 +33,15 @@ from craft_application.models.constraints import (
     UniqueStrList,
     VersionStr,
 )
+
+
+@dataclasses.dataclass
+class BuildInfo:
+    """Platform build information."""
+
+    build_on: str
+    build_for: str
+    base: craft_providers.bases.BaseName
 
 
 class Project(CraftBaseModel):
@@ -67,3 +78,9 @@ class Project(CraftBaseModel):
         if self.base is not None:
             return self.base
         raise RuntimeError("Could not determine effective base")
+
+    def get_build_plan(self) -> List[BuildInfo]:
+        """Obtain the list of architectures and bases from the project file."""
+        raise NotImplementedError(
+            f"{self.__class__.__name__!s} must implement get_build_plan"
+        )

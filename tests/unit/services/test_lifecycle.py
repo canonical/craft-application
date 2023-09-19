@@ -23,6 +23,7 @@ from unittest import mock
 import craft_parts.errors
 import pytest
 import pytest_check
+from craft_application import util
 from craft_application.errors import PartsLifecycleError
 from craft_application.services import lifecycle
 from craft_parts import Action, ActionType, LifecycleManager, Step
@@ -44,12 +45,14 @@ class FakePartsLifecycle(lifecycle.LifecycleService):
 def fake_parts_lifecycle(app_metadata, fake_project, fake_services, tmp_path):
     work_dir = tmp_path / "work"
     cache_dir = tmp_path / "cache"
+    build_for = util.get_host_architecture()
     return FakePartsLifecycle(
         app_metadata,
         fake_project,
         fake_services,
         work_dir=work_dir,
         cache_dir=cache_dir,
+        build_for=build_for,
     )
 
 
@@ -171,7 +174,7 @@ def test_progress_messages(fake_parts_lifecycle, emitter):
     lcm = fake_parts_lifecycle._lcm
     lcm.plan.return_value = actions
 
-    fake_parts_lifecycle.run("prime")
+    fake_parts_lifecycle.run("prime", "arch")
 
     emitter.assert_progress("Pulling my-part")
     emitter.assert_progress("Building my-part")
@@ -207,7 +210,12 @@ def test_get_step_failure(step_name):
 # region PartsLifecycle tests
 def test_init_success(app_metadata, fake_project, fake_services, tmp_path):
     lifecycle.LifecycleService(
-        app_metadata, fake_project, fake_services, work_dir=tmp_path, cache_dir=tmp_path
+        app_metadata,
+        fake_project,
+        fake_services,
+        work_dir=tmp_path,
+        cache_dir=tmp_path,
+        build_for=util.get_host_architecture(),
     )
 
 
@@ -237,6 +245,7 @@ def test_init_parts_error(
             fake_services,
             work_dir=tmp_path,
             cache_dir=tmp_path,
+            build_for=util.get_host_architecture(),
         )
 
     assert exc_info.value.args == expected.args
@@ -314,7 +323,8 @@ def test_repr(fake_parts_lifecycle, app_metadata, fake_project):
     pytest_check.is_true(
         re.fullmatch(
             r"FakePartsLifecycle\(.+, work_dir=(Posix|Windows)Path\('.+'\), "
-            r"cache_dir=(Posix|Windows)Path\('.+'\), \*\*{}\)",
+            r"cache_dir=(Posix|Windows)Path\('.+'\), "
+            r"build_for='.+', \*\*{}\)",
             actual,
         )
     )

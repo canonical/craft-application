@@ -24,6 +24,7 @@ from craft_parts import Action, ActionType, Features, LifecycleManager, PartsErr
 
 from craft_application import errors
 from craft_application.services import base
+from craft_application.util import convert_architecture_deb_to_platform
 
 if TYPE_CHECKING:  # pragma: no cover
     from pathlib import Path
@@ -103,6 +104,8 @@ class LifecycleService(base.BaseService):
     :param app: An AppMetadata object containing metadata about the application.
     :param project: The Project object that describes this project.
     :param work_dir: The working directory for parts processing.
+    :param cache_dir: The cache directory for parts processing.
+    :param build_for: The architecture or platform we are building for.
     :param lifecycle_kwargs: Additional keyword arguments are passed through to the
         LifecycleManager on initialisation.
     """
@@ -115,11 +118,13 @@ class LifecycleService(base.BaseService):
         *,
         work_dir: Path | str,
         cache_dir: Path | str,
+        build_for: str,
         **lifecycle_kwargs: Any,  # noqa: ANN401 - eventually used in an Any
     ) -> None:
         super().__init__(app, project, services)
         self._work_dir = work_dir
         self._cache_dir = cache_dir
+        self._build_for = build_for
         self._manager_kwargs = lifecycle_kwargs
         self._lcm = self._init_lifecycle_manager()
 
@@ -135,6 +140,7 @@ class LifecycleService(base.BaseService):
             return LifecycleManager(
                 {"parts": self._project.parts},
                 application_name=self._app.name,
+                arch=convert_architecture_deb_to_platform(self._build_for),
                 cache_dir=self._cache_dir,
                 work_dir=self._work_dir,
                 ignore_local_sources=self._app.source_ignore_patterns,
@@ -185,7 +191,8 @@ class LifecycleService(base.BaseService):
     def __repr__(self) -> str:
         work_dir = self._work_dir
         cache_dir = self._cache_dir
+        build_for = self._build_for
         return (
             f"{self.__class__.__name__}({self._app!r}, {self._project!r}, "
-            f"{work_dir=}, {cache_dir=}, **{self._manager_kwargs!r})"
+            f"{work_dir=}, {cache_dir=}, {build_for=}, **{self._manager_kwargs!r})"
         )
