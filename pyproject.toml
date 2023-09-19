@@ -261,7 +261,6 @@ ignore = [
 "tests/**.py" = [  # Some things we want for the moin project are unnecessary in tests.
     "D",  # Ignore docstring rules in tests
     "ANN", # Ignore type annotations in tests
-    "ARG001", # Ignore unused function arguments in tests (typically fixtures)
     "S101",  # Allow assertions in tests
     "S103", # Allow `os.chmod` setting a permissive mask `0o555` on file or directory
     "S108", # Allow Probable insecure usage of temporary file or directory

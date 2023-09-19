@@ -356,9 +356,8 @@ def fake_project_file(monkeypatch, tmp_path):
     return project_path
 
 
-def test_work_dir_project_non_managed(
-    monkeypatch, fake_project_file, app_metadata, fake_services
-):
+@pytest.mark.usefixtures("fake_project_file")
+def test_work_dir_project_non_managed(monkeypatch, app_metadata, fake_services):
     monkeypatch.setenv(fake_services.ProviderClass.managed_mode_env_var, "0")
 
     app = application.Application(app_metadata, fake_services)
@@ -369,9 +368,8 @@ def test_work_dir_project_non_managed(
     assert app.project.version == "1.0"
 
 
-def test_work_dir_project_managed(
-    monkeypatch, fake_project_file, app_metadata, fake_services
-):
+@pytest.mark.usefixtures("fake_project_file")
+def test_work_dir_project_managed(monkeypatch, app_metadata, fake_services):
     monkeypatch.setenv(fake_services.ProviderClass.managed_mode_env_var, "1")
 
     app = application.Application(app_metadata, fake_services)
