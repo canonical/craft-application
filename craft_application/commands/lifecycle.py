@@ -86,16 +86,18 @@ class _LifecycleStepCommand(_LifecyclePartsCommand):
         super().fill_parser(parser)
 
         group = parser.add_mutually_exclusive_group()
-        group.add_argument(
-            "--shell",
-            action="store_true",
-            help="Shell into the environment in lieu of the step to run.",
-        )
-        group.add_argument(
-            "--shell-after",
-            action="store_true",
-            help="Shell into the environment after the step has run.",
-        )
+
+        if self._should_add_shell_args():
+            group.add_argument(
+                "--shell",
+                action="store_true",
+                help="Shell into the environment in lieu of the step to run.",
+            )
+            group.add_argument(
+                "--shell-after",
+                action="store_true",
+                help="Shell into the environment after the step has run.",
+            )
 
         parser.add_argument(
             "--build-for",
@@ -133,6 +135,10 @@ class _LifecycleStepCommand(_LifecyclePartsCommand):
             step_name=step_name,
             part_names=parsed_args.parts,
         )
+
+    @staticmethod
+    def _should_add_shell_args() -> bool:
+        return True
 
 
 class PullCommand(_LifecycleStepCommand):
@@ -256,6 +262,11 @@ class PackCommand(PrimeCommand):
         else:
             package_names = ", ".join(pkg.name for pkg in packages)
             emit.message(f"Packed: {package_names}")
+
+    @staticmethod
+    @override
+    def _should_add_shell_args() -> bool:
+        return False
 
 
 class CleanCommand(_LifecyclePartsCommand):

@@ -231,26 +231,20 @@ def test_clean_run(app_metadata, parts, tmp_path, mock_services):
     mock_services.lifecycle.clean.assert_called_once_with(parts)
 
 
-@pytest.mark.parametrize(("shell_dict", "shell_args"), SHELL_PARAMS)
 @pytest.mark.parametrize("parts_args", PARTS_LISTS)
 @pytest.mark.parametrize("output_arg", [".", "/"])
-def test_pack_fill_parser(
-    app_metadata, mock_services, parts_args, shell_args, shell_dict, output_arg
-):
+def test_pack_fill_parser(app_metadata, mock_services, parts_args, output_arg):
     parser = argparse.ArgumentParser("step_command")
     expected = {
         "parts": parts_args,
         "build_for": None,
         "output": pathlib.Path(output_arg),
-        **shell_dict,
     }
     command = PackCommand({"app": app_metadata, "services": mock_services})
 
     command.fill_parser(parser)
 
-    args_dict = vars(
-        parser.parse_args([*shell_args, *parts_args, f"--output={output_arg}"])
-    )
+    args_dict = vars(parser.parse_args([*parts_args, f"--output={output_arg}"]))
     assert args_dict == expected
 
 
