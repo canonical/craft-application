@@ -160,13 +160,17 @@ class LifecycleService(base.BaseService):
         """The path to the prime directory."""
         return self._lcm.project_info.dirs.prime_dir
 
-    def run(self, step_name: str, part_names: list[str] | None = None) -> None:
+    def run(self, step_name: str | None, part_names: list[str] | None = None) -> None:
         """Run the lifecycle manager for the parts."""
-        target_step = _get_step(step_name)
+        target_step = _get_step(step_name) if step_name else None
 
         try:
-            emit.trace(f"Planning {step_name} for {part_names or 'all parts'}")
-            actions = self._lcm.plan(target_step, part_names=part_names)
+            if target_step:
+                emit.trace(f"Planning {step_name} for {part_names or 'all parts'}")
+                actions = self._lcm.plan(target_step, part_names=part_names)
+            else:
+                actions = []
+
             with self._lcm.action_executor() as aex:
                 for action in actions:
                     message = _get_parts_action_message(action)
@@ -193,6 +197,16 @@ class LifecycleService(base.BaseService):
 
         emit.progress(message)
         self._lcm.clean(part_names=part_names)
+
+    @staticmethod
+    def previous_step_name(step_name: str) -> str | None:
+        """Get the name of the step immediately previous to `step_name`.
+
+        Returns None if `step_name` is the first one (pull).
+        """
+        step = _get_step(step_name)
+        previous_steps = step.previous_steps()
+        return previous_steps[-1].name.lower() if previous_steps else None
 
     def __repr__(self) -> str:
         work_dir = self._work_dir

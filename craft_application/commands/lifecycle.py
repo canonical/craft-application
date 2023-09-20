@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import os
 import pathlib
+import subprocess
 import textwrap
 from typing import TYPE_CHECKING
 
@@ -100,6 +101,12 @@ class _LifecycleStepCommand(_LifecyclePartsCommand):
             )
 
         parser.add_argument(
+            "--debug",
+            action="store_true",
+            help="Shell into the environment if the build fails.",
+        )
+
+        parser.add_argument(
             "--build-for",
             type=str,
             metavar="arch",
@@ -130,11 +137,31 @@ class _LifecycleStepCommand(_LifecyclePartsCommand):
     ) -> None:
         """Run a lifecycle step command."""
         super().run(parsed_args)
+
+        shell = getattr(parsed_args, "shell", False)
+        shell_after = getattr(parsed_args, "shell_after", False)
+        debug = getattr(parsed_args, "debug", False)
+
         step_name = step_name or self.name
-        self._services.lifecycle.run(
-            step_name=step_name,
-            part_names=parsed_args.parts,
-        )
+
+        if shell:
+            previous_step = self._services.lifecycle.previous_step_name(step_name)
+            step_name = previous_step
+            shell_after = True
+
+        try:
+            self._services.lifecycle.run(
+                step_name=step_name,
+                part_names=parsed_args.parts,
+            )
+        except Exception as err:
+            if debug:
+                emit.progress(str(err), permanent=True)
+                _launch_shell()
+            raise
+
+        if shell_after:
+            _launch_shell()
 
     @staticmethod
     def _should_add_shell_args() -> bool:
@@ -288,3 +315,10 @@ class CleanCommand(_LifecyclePartsCommand):
         super().run(parsed_args)
 
         self._services.lifecycle.clean(parsed_args.parts)
+
+
+def _launch_shell() -> None:
+    """Launch a user shell for debugging environment."""
+    emit.progress("Launching shell on build environment...", permanent=True)
+    with emit.pause():
+        subprocess.run(["bash"], check=False)
