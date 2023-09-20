@@ -138,6 +138,16 @@ def test_get_base(check, provider_service, base_name, base_class, alias, environ
     check.equal(base._environment, environment)
 
 
+def test_get_base_packages(provider_service):
+    provider_service.packages.append("fake-package")
+    provider_service.packages.append("another-package")
+
+    base = provider_service.get_base(("ubuntu", "22.04"), instance_name="test")
+
+    assert "fake-package" in base._packages
+    assert "another-package" in base._packages
+
+
 @pytest.mark.parametrize("allow_unstable", [True, False])
 @pytest.mark.parametrize(
     "base_name",
