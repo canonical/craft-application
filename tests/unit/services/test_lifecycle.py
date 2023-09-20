@@ -289,6 +289,16 @@ def test_run_success(fake_parts_lifecycle, actions, check):
         assert executor.method_calls == executor_calls
 
 
+def test_run_no_step(fake_parts_lifecycle):
+    lcm = fake_parts_lifecycle._lcm
+    executor = lcm.action_executor.return_value.__enter__.return_value
+
+    fake_parts_lifecycle.run(None)
+
+    # No calls to execute actions
+    assert executor.method_calls == []
+
+
 @pytest.mark.parametrize(
     ("err", "exc_class", "message_regex"),
     [
