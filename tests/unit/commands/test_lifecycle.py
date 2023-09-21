@@ -193,6 +193,29 @@ def test_step_command_run_explicit_step(app_metadata, mock_services, parts, step
 
 
 @pytest.mark.parametrize("command_cls", MANAGED_LIFECYCLE_COMMANDS)
+def test_step_command_failure(app_metadata, mock_services, command_cls):
+    parsed_args = argparse.Namespace(parts=None)
+    error_message = "Lifecycle run failed!"
+
+    # Make lifecycle.run() raise an error.
+    mock_services.lifecycle.run.side_effect = RuntimeError(error_message)
+    command = command_cls(
+        {
+            "app": app_metadata,
+            "services": mock_services,
+        }
+    )
+
+    # Check that the error is propagated out
+    with pytest.raises(RuntimeError, match=error_message):
+        command.run(parsed_args)
+
+    mock_services.lifecycle.run.assert_called_once_with(
+        step_name=command_cls.name, part_names=None
+    )
+
+
+@pytest.mark.parametrize("command_cls", MANAGED_LIFECYCLE_COMMANDS)
 @pytest.mark.parametrize(("shell_params", "shell_opts"), SHELL_PARAMS)
 @pytest.mark.parametrize("parts", PARTS_LISTS)
 def test_concrete_commands_get_managed_cmd(
