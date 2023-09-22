@@ -36,8 +36,15 @@ class AppCommand(BaseCommand):
     always_load_project: bool = False
     """The project is also loaded in non-managed mode."""
 
-    def __init__(self, config: dict[str, Any]) -> None:
+    def __init__(self, config: dict[str, Any] | None) -> None:
+        if config is None:
+            # This should only be the case when the command is not going to be run.
+            # For example, when requesting help on the command.
+            emit.trace("Not completing command configuration")
+            return
+
         super().__init__(config)
+
         self._app: application.AppMetadata = config["app"]
         self._services: service_factory.ServiceFactory = config["services"]
 

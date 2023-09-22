@@ -55,3 +55,16 @@ def test_get_managed_cmd(fake_command, verbosity, app_metadata):
         f"--verbosity={verbosity.name.lower()}",
         "fake",
     ]
+
+
+def test_without_config(emitter):
+    """Test that a command can be initialised without a config.
+
+    This is necessary for providing per-command help.
+    """
+
+    command = base.AppCommand(None)
+
+    emitter.assert_trace("Not completing command configuration")
+    assert not hasattr(command, "_app")
+    assert not hasattr(command, "_services")
