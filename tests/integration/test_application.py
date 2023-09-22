@@ -149,3 +149,23 @@ def test_run_always_load_project(monkeypatch, app, cmd):
         app.run()
 
     assert str(raised.value).endswith("/testcraft.yaml'") is True
+
+
+@pytest.mark.parametrize("help_param", ["-h", "--help"])
+@pytest.mark.parametrize(
+    "cmd", ["clean", "pull", "build", "stage", "prime", "pack", "version"]
+)
+def test_get_command_help(monkeypatch, emitter, capsys, app, cmd, help_param):
+    monkeypatch.setattr("sys.argv", ["testcraft", cmd, help_param])
+
+    with pytest.raises(SystemExit) as exit_info:
+        app.run()
+
+    assert exit_info.value.code == 0
+
+    # Ensure the command got help set to true.
+    emitter.assert_trace(".+'help': True.+", regex=True)
+
+    stdout, stderr = capsys.readouterr()
+
+    assert f"testcraft {cmd} [options]" in stderr
