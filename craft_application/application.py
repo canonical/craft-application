@@ -202,6 +202,7 @@ class Application:
             appname=self.app.name,
             greeting=f"Starting {self.app.name}",
             log_filepath=self.log_path,
+            streaming_brief=True,
         )
 
         dispatcher = _Dispatcher(
