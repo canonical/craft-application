@@ -144,7 +144,13 @@ def test_step_command_fill_parser(
 ):
     cls = get_fake_command_class(_LifecycleStepCommand, managed=True)
     parser = argparse.ArgumentParser("step_command")
-    expected = {"parts": parts_args, "build_for": None, **shell_dict, **debug_dict}
+    expected = {
+        "parts": parts_args,
+        "platform": None,
+        "build_for": None,
+        **shell_dict,
+        **debug_dict,
+    }
     command = cls({"app": app_metadata, "services": fake_services})
 
     command.fill_parser(parser)
@@ -275,6 +281,7 @@ def test_pack_fill_parser(
     parser = argparse.ArgumentParser("step_command")
     expected = {
         "parts": parts_args,
+        "platform": None,
         "build_for": None,
         "output": pathlib.Path(output_arg),
         **debug_dict,

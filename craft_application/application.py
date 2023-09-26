@@ -155,12 +155,12 @@ class Application:
         craft_cli.emit.debug(f"Loading project file '{project_file!s}'")
         return self.app.ProjectClass.from_yaml_file(project_file)
 
-    def run_managed(self, build_for: str | None) -> None:
+    def run_managed(self, platform: str | None, build_for: str | None) -> None:
         """Run the application in a managed instance."""
         extra_args: dict[str, Any] = {}
 
         build_plan = self.project.get_build_plan()
-        build_plan = _filter_plan(build_plan, build_for)
+        build_plan = _filter_plan(build_plan, platform, build_for)
 
         if build_for:
             extra_args["env"] = {"CRAFT_BUILD_FOR": build_for}
@@ -270,6 +270,7 @@ class Application:
                     }
                 ),
             )
+            platform = getattr(dispatcher.parsed_args, "platform", None)
             build_for = getattr(dispatcher.parsed_args, "build_for", None)
             self._configure_services(build_for)
 
@@ -282,7 +283,7 @@ class Application:
             elif not self.services.ProviderClass.is_managed():
                 # command runs in inner instance, but this is the outer instance
                 self.services.project = self.project
-                self.run_managed(build_for)
+                self.run_managed(platform, build_for)
                 return_code = 0
             else:
                 # command runs in inner instance
@@ -320,16 +321,19 @@ class Application:
         craft_cli.emit.error(error)
 
 
-def _filter_plan(build_plan: list[BuildInfo], build_for: str | None) -> list[BuildInfo]:
+def _filter_plan(
+    build_plan: list[BuildInfo], platform: str | None, build_for: str | None
+) -> list[BuildInfo]:
     """Filter out builds not matching build-on and build-for."""
     host_arch = util.get_host_architecture()
 
     plan: list[BuildInfo] = []
     for build_info in build_plan:
+        platform_matches = not platform or build_info.platform == platform
         build_on_matches = build_info.build_on == host_arch
         build_for_matches = not build_for or build_info.build_for == build_for
 
-        if build_on_matches and build_for_matches:
+        if platform_matches and build_on_matches and build_for_matches:
             plan.append(build_info)
 
     return plan

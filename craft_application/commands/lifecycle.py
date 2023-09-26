@@ -107,6 +107,13 @@ class _LifecycleStepCommand(_LifecyclePartsCommand):
         )
 
         parser.add_argument(
+            "--platform",
+            type=str,
+            metavar="name",
+            help="Set platform to build for",
+        )
+
+        parser.add_argument(
             "--build-for",
             type=str,
             metavar="arch",

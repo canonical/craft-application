@@ -34,7 +34,7 @@ if TYPE_CHECKING:  # pragma: no cover
 class MyProject(models.Project):
     def get_build_plan(self) -> list[models.BuildInfo]:
         arch = util.get_host_architecture()
-        return [models.BuildInfo(arch, arch, bases.BaseName("ubuntu", "22.04"))]
+        return [models.BuildInfo("foo", arch, arch, bases.BaseName("ubuntu", "22.04"))]
 
 
 @pytest.fixture()
