@@ -167,8 +167,10 @@ class Application:
             extra_args["env"] = {"CRAFT_BUILD_FOR": build_for}
 
         for build_info in build_plan:
+            extra_args["env"] = {"CRAFT_PLATFORM": build_info.platform}
+
             craft_cli.emit.debug(
-                f"Running {self.app.name} in {build_info.build_for} instance..."
+                f"Running {self.app.name}:{build_info.platform} in {build_info.build_for} instance..."
             )
             instance_path = pathlib.PosixPath("/root/project")
 

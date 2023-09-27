@@ -110,6 +110,7 @@ class _LifecycleStepCommand(_LifecyclePartsCommand):
             "--platform",
             type=str,
             metavar="name",
+            default=os.getenv("CRAFT_PLATFORM"),
             help="Set platform to build for",
         )
         group.add_argument(
