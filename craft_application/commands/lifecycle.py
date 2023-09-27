@@ -86,9 +86,8 @@ class _LifecycleStepCommand(_LifecyclePartsCommand):
     def fill_parser(self, parser: argparse.ArgumentParser) -> None:
         super().fill_parser(parser)
 
-        group = parser.add_mutually_exclusive_group()
-
         if self._should_add_shell_args():
+            group = parser.add_mutually_exclusive_group()
             group.add_argument(
                 "--shell",
                 action="store_true",
@@ -106,14 +105,14 @@ class _LifecycleStepCommand(_LifecyclePartsCommand):
             help="Shell into the environment if the build fails.",
         )
 
-        parser.add_argument(
+        group = parser.add_mutually_exclusive_group()
+        group.add_argument(
             "--platform",
             type=str,
             metavar="name",
             help="Set platform to build for",
         )
-
-        parser.add_argument(
+        group.add_argument(
             "--build-for",
             type=str,
             metavar="arch",
