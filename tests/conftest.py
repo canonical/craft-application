@@ -88,6 +88,7 @@ def lifecycle_service(
         fake_services,
         work_dir=work_dir,
         cache_dir=cache_dir,
+        platform=None,
         build_for=build_for,
     )
     service.setup()
@@ -136,6 +137,7 @@ def fake_lifecycle_service_class(tmp_path):
                 services,
                 work_dir=tmp_path / "work",
                 cache_dir=tmp_path / "cache",
+                platform=None,
                 build_for=util.get_host_architecture(),
                 **lifecycle_kwargs,
             )

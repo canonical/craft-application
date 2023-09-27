@@ -39,6 +39,7 @@ def parts_lifecycle(app_metadata, fake_project, fake_services, tmp_path, request
         fake_services,
         work_dir=tmp_path / "work",
         cache_dir=tmp_path / "cache",
+        platform=None,
         build_for=get_host_architecture(),
     )
     service.setup()
