@@ -100,7 +100,7 @@ def test_log_path(monkeypatch, app, provider_managed, expected):
     assert actual == expected
 
 
-def test_run_managed_success(app, fake_project, emitter):
+def test_run_managed_success(app, fake_project):
     mock_provider = mock.MagicMock(spec_set=services.ProviderService)
     app.services.provider = mock_provider
     app.project = fake_project
@@ -108,7 +108,13 @@ def test_run_managed_success(app, fake_project, emitter):
     arch = get_host_architecture()
     app.run_managed(None, arch)
 
-    emitter.assert_debug(f"Running testcraft:foo in {arch} instance...")
+    assert (
+        mock.call(
+            BuildInfo("foo", "amd64", "amd64", bases.BaseName("ubuntu", "22.04")),
+            work_dir=mock.ANY,
+        )
+        in mock_provider.instance.mock_calls
+    )
 
 
 def test_run_managed_failure(app, fake_project):
@@ -124,70 +130,64 @@ def test_run_managed_failure(app, fake_project):
     assert exc_info.value.brief == "Failed to execute testcraft in instance."
 
 
-def test_run_managed_multiple(app, fake_project, emitter, monkeypatch):
+def test_run_managed_multiple(app, fake_project, monkeypatch):
     mock_provider = mock.MagicMock(spec_set=services.ProviderService)
     app.services.provider = mock_provider
     app.project = fake_project
 
     arch = get_host_architecture()
+    info1 = BuildInfo("a1", arch, "arch1", bases.BaseName("base", "1"))
+    info2 = BuildInfo("a2", arch, "arch2", bases.BaseName("base", "2"))
+
     monkeypatch.setattr(
         app.project.__class__,
         "get_build_plan",
-        lambda _: [
-            BuildInfo("a1", arch, "arch1", bases.BaseName("base", "1")),
-            BuildInfo("a2", arch, "arch2", bases.BaseName("base", "2")),
-        ],
+        lambda _: [ info1, info2 ],
     )
     app.run_managed(None, None)
 
-    emitter.assert_debug("Running testcraft:a1 in arch1 instance...")
-    emitter.assert_debug("Running testcraft:a2 in arch2 instance...")
+    assert mock.call(info2, work_dir=mock.ANY) in mock_provider.instance.mock_calls
+    assert mock.call(info1, work_dir=mock.ANY) in mock_provider.instance.mock_calls
 
 
-def test_run_managed_specified_arch(app, fake_project, emitter, monkeypatch):
+def test_run_managed_specified_arch(app, fake_project, monkeypatch):
     mock_provider = mock.MagicMock(spec_set=services.ProviderService)
     app.services.provider = mock_provider
     app.project = fake_project
 
     arch = get_host_architecture()
+    info1 = BuildInfo("a1", arch, "arch1", bases.BaseName("base", "1"))
+    info2 = BuildInfo("a2", arch, "arch2", bases.BaseName("base", "2"))
+
     monkeypatch.setattr(
         app.project.__class__,
         "get_build_plan",
-        lambda _: [
-            BuildInfo("a1", arch, "arch1", bases.BaseName("base", "1")),
-            BuildInfo("a2", arch, "arch2", bases.BaseName("base", "2")),
-        ],
+        lambda _: [ info1, info2 ],
     )
     app.run_managed(None, "arch2")
 
-    emitter.assert_debug("Running testcraft:a2 in arch2 instance...")
-    assert (
-        mock.call("debug", "Running testcraft:a1 in arch1 instance...")
-        not in emitter.interactions
-    )
+    assert mock.call(info2, work_dir=mock.ANY) in mock_provider.instance.mock_calls
+    assert mock.call(info1, work_dir=mock.ANY) not in mock_provider.instance.mock_calls
 
 
-def test_run_managed_specified_platform(app, fake_project, emitter, monkeypatch):
+def test_run_managed_specified_platform(app, fake_project, monkeypatch):
     mock_provider = mock.MagicMock(spec_set=services.ProviderService)
     app.services.provider = mock_provider
     app.project = fake_project
 
     arch = get_host_architecture()
+    info1 = BuildInfo("a1", arch, "arch1", bases.BaseName("base", "1"))
+    info2 = BuildInfo("a2", arch, "arch2", bases.BaseName("base", "2"))
+
     monkeypatch.setattr(
         app.project.__class__,
         "get_build_plan",
-        lambda _: [
-            BuildInfo("a1", arch, "arch1", bases.BaseName("base", "1")),
-            BuildInfo("a2", arch, "arch2", bases.BaseName("base", "2")),
-        ],
+        lambda _: [ info1, info2 ],
     )
     app.run_managed("a2", None)
 
-    emitter.assert_debug("Running testcraft:a2 in arch2 instance...")
-    assert (
-        mock.call("debug", "Running testcraft:a1 in arch1 instance...")
-        not in emitter.interactions
-    )
+    assert mock.call(info2, work_dir=mock.ANY) in mock_provider.instance.mock_calls
+    assert mock.call(info1, work_dir=mock.ANY) not in mock_provider.instance.mock_calls
 
 
 @pytest.mark.parametrize(
