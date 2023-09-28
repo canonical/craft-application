@@ -47,6 +47,6 @@ def test_real_service_error(app_metadata, fake_project):
     with pytest.raises(
         TypeError,
         # Python 3.8 doesn't specify the LifecycleService, 3.10 does.
-        match=r"(LifecycleService.)?__init__\(\) missing 3 required keyword-only arguments: 'work_dir', 'cache_dir', and 'build_for'",
+        match=r"(LifecycleService.)?__init__\(\) missing 4 required keyword-only arguments: 'work_dir', 'cache_dir', 'platform', and 'build_for'",
     ):
         _ = factory.lifecycle

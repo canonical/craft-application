@@ -108,7 +108,7 @@ def test_run_managed_success(app, fake_project, emitter):
     arch = get_host_architecture()
     app.run_managed(None, arch)
 
-    emitter.assert_debug(f"Running testcraft in {arch} instance...")
+    emitter.assert_debug(f"Running testcraft:foo in {arch} instance...")
 
 
 def test_run_managed_failure(app, fake_project):
@@ -140,8 +140,8 @@ def test_run_managed_multiple(app, fake_project, emitter, monkeypatch):
     )
     app.run_managed(None, None)
 
-    emitter.assert_debug("Running testcraft in arch1 instance...")
-    emitter.assert_debug("Running testcraft in arch2 instance...")
+    emitter.assert_debug("Running testcraft:a1 in arch1 instance...")
+    emitter.assert_debug("Running testcraft:a2 in arch2 instance...")
 
 
 def test_run_managed_specified_arch(app, fake_project, emitter, monkeypatch):
@@ -160,9 +160,9 @@ def test_run_managed_specified_arch(app, fake_project, emitter, monkeypatch):
     )
     app.run_managed(None, "arch2")
 
-    emitter.assert_debug("Running testcraft in arch2 instance...")
+    emitter.assert_debug("Running testcraft:a2 in arch2 instance...")
     assert (
-        mock.call("debug", "Running testcraft in arch1 instance...")
+        mock.call("debug", "Running testcraft:a1 in arch1 instance...")
         not in emitter.interactions
     )
 
@@ -183,9 +183,9 @@ def test_run_managed_specified_platform(app, fake_project, emitter, monkeypatch)
     )
     app.run_managed("a2", None)
 
-    emitter.assert_debug("Running testcraft in arch2 instance...")
+    emitter.assert_debug("Running testcraft:a2 in arch2 instance...")
     assert (
-        mock.call("debug", "Running testcraft in arch1 instance...")
+        mock.call("debug", "Running testcraft:a1 in arch1 instance...")
         not in emitter.interactions
     )
 
