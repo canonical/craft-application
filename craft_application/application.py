@@ -134,7 +134,9 @@ class Application:
         # xdg types: https://github.com/python/typeshed/pull/10163
         return save_cache_path(self.app.name)  # type: ignore[no-any-return]
 
-    def _configure_services(self, platform: str | None, build_for: str | None) -> None:
+    def _configure_services(
+        self, platform: str | None, build_for: str | None
+    ) -> None:  # noqa: ARG002 (Unused method argument)
         """Configure additional keyword arguments for any service classes.
 
         Any child classes that override this must either call this directly or must
