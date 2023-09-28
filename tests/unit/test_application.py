@@ -142,7 +142,7 @@ def test_run_managed_multiple(app, fake_project, monkeypatch):
     monkeypatch.setattr(
         app.project.__class__,
         "get_build_plan",
-        lambda _: [ info1, info2 ],
+        lambda _: [info1, info2],
     )
     app.run_managed(None, None)
 
@@ -162,7 +162,7 @@ def test_run_managed_specified_arch(app, fake_project, monkeypatch):
     monkeypatch.setattr(
         app.project.__class__,
         "get_build_plan",
-        lambda _: [ info1, info2 ],
+        lambda _: [info1, info2],
     )
     app.run_managed(None, "arch2")
 
@@ -182,7 +182,7 @@ def test_run_managed_specified_platform(app, fake_project, monkeypatch):
     monkeypatch.setattr(
         app.project.__class__,
         "get_build_plan",
-        lambda _: [ info1, info2 ],
+        lambda _: [info1, info2],
     )
     app.run_managed("a2", None)
 
