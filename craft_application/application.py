@@ -162,9 +162,6 @@ class Application:
         build_plan = self.project.get_build_plan()
         build_plan = _filter_plan(build_plan, platform, build_for)
 
-        if build_for:
-            extra_args["env"] = {"CRAFT_BUILD_FOR": build_for}
-
         for build_info in build_plan:
             extra_args["env"] = {"CRAFT_PLATFORM": build_info.platform}
 
