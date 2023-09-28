@@ -134,7 +134,7 @@ class Application:
         # xdg types: https://github.com/python/typeshed/pull/10163
         return save_cache_path(self.app.name)  # type: ignore[no-any-return]
 
-    def _configure_services(self, platform: str | None, build_for: str | None) -> None:
+    def _configure_services(self, build_for: str | None) -> None:
         """Configure additional keyword arguments for any service classes.
 
         Any child classes that override this must either call this directly or must
@@ -144,7 +144,6 @@ class Application:
             "lifecycle",
             cache_dir=self.cache_dir,
             work_dir=self._work_dir,
-            platform=platform,
             build_for=build_for,
         )
 
@@ -275,7 +274,7 @@ class Application:
             )
             platform = getattr(dispatcher.parsed_args, "platform", None)
             build_for = getattr(dispatcher.parsed_args, "build_for", None)
-            self._configure_services(platform, build_for)
+            self._configure_services(build_for)
 
             if not command.run_managed:
                 # command runs in the outer instance

@@ -52,7 +52,6 @@ def fake_parts_lifecycle(app_metadata, fake_project, fake_services, tmp_path):
         fake_services,
         work_dir=work_dir,
         cache_dir=cache_dir,
-        platform=None,
         build_for=build_for,
     )
     fake_service.setup()

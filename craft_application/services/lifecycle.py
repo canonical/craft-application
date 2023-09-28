@@ -119,14 +119,12 @@ class LifecycleService(base.BaseService):
         *,
         work_dir: Path | str,
         cache_dir: Path | str,
-        platform: str | None,
         build_for: str,
         **lifecycle_kwargs: Any,  # noqa: ANN401 - eventually used in an Any
     ) -> None:
         super().__init__(app, project, services)
         self._work_dir = work_dir
         self._cache_dir = cache_dir
-        self._platform = platform
         self._build_for = build_for
         self._manager_kwargs = lifecycle_kwargs
         self._lcm: LifecycleManager = None  # type: ignore[assignment]
@@ -152,7 +150,6 @@ class LifecycleService(base.BaseService):
                 cache_dir=self._cache_dir,
                 work_dir=self._work_dir,
                 ignore_local_sources=self._app.source_ignore_patterns,
-                platform=self._platform,
                 **self._manager_kwargs,
             )
         except PartsError as err:
