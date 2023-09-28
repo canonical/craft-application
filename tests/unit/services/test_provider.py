@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Unit tests for provider service"""
+import pathlib
 from unittest import mock
 
 import craft_providers
@@ -197,3 +198,128 @@ def test_instance(
         emitter.assert_progress("Launching managed .+ instance...", regex=True)
     with check:
         assert spy_pause.call_count == 1
+
+
+@pytest.fixture()
+def setup_fetch_logs_provider(monkeypatch, provider_service, tmp_path):
+    """Return a function that, when called, mocks the provider_service's instance()."""
+
+    def _setup(*, should_have_logfile: bool):
+        """
+        param should_have_logfile: Whether the logfile in the fake "build instance"
+          should exist (True) or not (False).
+        """
+        mock_provider = mock.MagicMock(spec=craft_providers.Provider)
+        monkeypatch.setattr(provider_service, "get_provider", lambda: mock_provider)
+
+        # This ugly call is to mock the "instance" returned by the "launched_environment"
+        # context manager.
+        mock_instance = (
+            mock_provider.launched_environment.return_value.__enter__.return_value
+        )
+        mock_instance.temporarily_pull_file = mock.MagicMock()
+
+        if should_have_logfile:
+            fake_log = tmp_path / "fake.file"
+            fake_log_data = "some\nlog data\nhere"
+            fake_log.write_text(fake_log_data, encoding="utf-8")
+            mock_instance.temporarily_pull_file.return_value.__enter__.return_value = (
+                fake_log
+            )
+        else:
+            mock_instance.temporarily_pull_file.return_value.__enter__.return_value = (
+                None
+            )
+
+        return provider_service
+
+    return _setup
+
+
+def test_instance_fetch_logs(
+    provider_service, setup_fetch_logs_provider, check, emitter
+):
+    """Test that logs from the build instance are fetched in case of success."""
+
+    # Setup the build instance and pretend the command inside it finished successfully.
+    arch = util.get_host_architecture()
+    provider_service = setup_fetch_logs_provider(should_have_logfile=True)
+    with provider_service.instance(
+        build_info=models.BuildInfo(arch, arch, bases.BaseName("ubuntu", "22.04")),
+        work_dir=pathlib.Path(),
+    ) as mock_instance:
+        pass
+
+    # Now check that the logs from the build instance were collected.
+    with check:
+        mock_instance.temporarily_pull_file.assert_called_once_with(
+            source=pathlib.PosixPath("/root/testcraft.log"), missing_ok=True
+        )
+
+    expected = [
+        mock.call("debug", "Logs retrieved from managed instance:"),
+        mock.call("debug", ":: some"),
+        mock.call("debug", ":: log data"),
+        mock.call("debug", ":: here"),
+    ]
+
+    with check:
+        emitter.assert_interactions(expected)
+
+
+def test_instance_fetch_logs_error(
+    provider_service, setup_fetch_logs_provider, check, emitter
+):
+    """Test that logs from the build instance are fetched in case of errors."""
+
+    # Setup the build instance and pretend the command inside it finished with error.
+    arch = util.get_host_architecture()
+    provider_service = setup_fetch_logs_provider(should_have_logfile=True)
+    with pytest.raises(RuntimeError), provider_service.instance(
+        build_info=models.BuildInfo(arch, arch, bases.BaseName("ubuntu", "22.04")),
+        work_dir=pathlib.Path(),
+    ) as mock_instance:
+        raise RuntimeError("Faking an error in the build instance!")
+
+    # Now check that the logs from the build instance were collected.
+    with check:
+        mock_instance.temporarily_pull_file.assert_called_once_with(
+            source=pathlib.PosixPath("/root/testcraft.log"), missing_ok=True
+        )
+
+    expected = [
+        mock.call("debug", "Logs retrieved from managed instance:"),
+        mock.call("debug", ":: some"),
+        mock.call("debug", ":: log data"),
+        mock.call("debug", ":: here"),
+    ]
+
+    with check:
+        emitter.assert_interactions(expected)
+
+
+def test_instance_fetch_logs_missing_file(
+    provider_service, setup_fetch_logs_provider, check, emitter
+):
+    """Test that we handle the case where the logfile is missing."""
+
+    # Setup the build instance and pretend the command inside it finished successfully.
+    arch = util.get_host_architecture()
+    provider_service = setup_fetch_logs_provider(should_have_logfile=False)
+    with provider_service.instance(
+        build_info=models.BuildInfo(arch, arch, bases.BaseName("ubuntu", "22.04")),
+        work_dir=pathlib.Path(),
+    ) as mock_instance:
+        pass
+
+    # Now check that the logs from the build instance were *attempted* to be collected.
+    with check:
+        mock_instance.temporarily_pull_file.assert_called_once_with(
+            source=pathlib.PosixPath("/root/testcraft.log"), missing_ok=True
+        )
+    expected = [
+        mock.call("debug", "Could not find log file /root/testcraft.log in instance."),
+    ]
+
+    with check:
+        emitter.assert_interactions(expected)
