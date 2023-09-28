@@ -135,8 +135,10 @@ class Application:
         return save_cache_path(self.app.name)  # type: ignore[no-any-return]
 
     def _configure_services(
-        self, platform: str | None, build_for: str | None
-    ) -> None:  # noqa: ARG002 (Unused method argument)
+        self,
+        platform: str | None,  # noqa: ARG002 (Unused method argument)
+        build_for: str | None,
+    ) -> None:
         """Configure additional keyword arguments for any service classes.
 
         Any child classes that override this must either call this directly or must
