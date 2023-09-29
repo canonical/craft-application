@@ -236,16 +236,25 @@ def setup_fetch_logs_provider(monkeypatch, provider_service, tmp_path):
     return _setup
 
 
+def _get_build_info() -> models.BuildInfo:
+    arch = util.get_host_architecture()
+    return models.BuildInfo(
+        platform=arch,
+        build_on=arch,
+        build_for=arch,
+        base=bases.BaseName("ubuntu", "22.04"),
+    )
+
+
 def test_instance_fetch_logs(
     provider_service, setup_fetch_logs_provider, check, emitter
 ):
     """Test that logs from the build instance are fetched in case of success."""
 
     # Setup the build instance and pretend the command inside it finished successfully.
-    arch = util.get_host_architecture()
     provider_service = setup_fetch_logs_provider(should_have_logfile=True)
     with provider_service.instance(
-        build_info=models.BuildInfo(arch, arch, bases.BaseName("ubuntu", "22.04")),
+        build_info=_get_build_info(),
         work_dir=pathlib.Path(),
     ) as mock_instance:
         pass
@@ -273,10 +282,9 @@ def test_instance_fetch_logs_error(
     """Test that logs from the build instance are fetched in case of errors."""
 
     # Setup the build instance and pretend the command inside it finished with error.
-    arch = util.get_host_architecture()
     provider_service = setup_fetch_logs_provider(should_have_logfile=True)
     with pytest.raises(RuntimeError), provider_service.instance(
-        build_info=models.BuildInfo(arch, arch, bases.BaseName("ubuntu", "22.04")),
+        build_info=_get_build_info(),
         work_dir=pathlib.Path(),
     ) as mock_instance:
         raise RuntimeError("Faking an error in the build instance!")
@@ -304,10 +312,9 @@ def test_instance_fetch_logs_missing_file(
     """Test that we handle the case where the logfile is missing."""
 
     # Setup the build instance and pretend the command inside it finished successfully.
-    arch = util.get_host_architecture()
     provider_service = setup_fetch_logs_provider(should_have_logfile=False)
     with provider_service.instance(
-        build_info=models.BuildInfo(arch, arch, bases.BaseName("ubuntu", "22.04")),
+        build_info=_get_build_info(),
         work_dir=pathlib.Path(),
     ) as mock_instance:
         pass
