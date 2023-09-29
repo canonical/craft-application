@@ -217,6 +217,7 @@ def test_init_success(app_metadata, fake_project, fake_services, tmp_path):
         fake_services,
         work_dir=tmp_path,
         cache_dir=tmp_path,
+        platform=None,
         build_for=util.get_host_architecture(),
     )
     assert service._lcm is None
@@ -249,6 +250,7 @@ def test_init_parts_error(
         fake_services,
         work_dir=tmp_path,
         cache_dir=tmp_path,
+        platform=None,
         build_for=util.get_host_architecture(),
     )
 

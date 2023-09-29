@@ -127,7 +127,11 @@ class Application:
         # xdg types: https://github.com/python/typeshed/pull/10163
         return save_cache_path(self.app.name)  # type: ignore[no-any-return]
 
-    def _configure_services(self, build_for: str | None) -> None:
+    def _configure_services(
+        self,
+        platform: str | None,  # noqa: ARG002 (Unused method argument)
+        build_for: str | None,
+    ) -> None:
         """Configure additional keyword arguments for any service classes.
 
         Any child classes that override this must either call this directly or must
@@ -148,19 +152,18 @@ class Application:
         craft_cli.emit.debug(f"Loading project file '{project_file!s}'")
         return self.app.ProjectClass.from_yaml_file(project_file)
 
-    def run_managed(self, build_for: str | None) -> None:
+    def run_managed(self, platform: str | None, build_for: str | None) -> None:
         """Run the application in a managed instance."""
         extra_args: dict[str, Any] = {}
 
         build_plan = self.project.get_build_plan()
-        build_plan = _filter_plan(build_plan, build_for)
-
-        if build_for:
-            extra_args["env"] = {"CRAFT_BUILD_FOR": build_for}
+        build_plan = _filter_plan(build_plan, platform, build_for)
 
         for build_info in build_plan:
+            extra_args["env"] = {"CRAFT_PLATFORM": build_info.platform}
+
             craft_cli.emit.debug(
-                f"Running {self.app.name} in {build_info.build_for} instance..."
+                f"Running {self.app.name}:{build_info.platform} in {build_info.build_for} instance..."
             )
             instance_path = pathlib.PosixPath("/root/project")
 
@@ -263,8 +266,9 @@ class Application:
                     }
                 ),
             )
+            platform = getattr(dispatcher.parsed_args, "platform", None)
             build_for = getattr(dispatcher.parsed_args, "build_for", None)
-            self._configure_services(build_for)
+            self._configure_services(platform, build_for)
 
             if not command.run_managed:
                 # command runs in the outer instance
@@ -275,7 +279,7 @@ class Application:
             elif not self.services.ProviderClass.is_managed():
                 # command runs in inner instance, but this is the outer instance
                 self.services.project = self.project
-                self.run_managed(build_for)
+                self.run_managed(platform, build_for)
                 return_code = 0
             else:
                 # command runs in inner instance
@@ -313,16 +317,19 @@ class Application:
         craft_cli.emit.error(error)
 
 
-def _filter_plan(build_plan: list[BuildInfo], build_for: str | None) -> list[BuildInfo]:
+def _filter_plan(
+    build_plan: list[BuildInfo], platform: str | None, build_for: str | None
+) -> list[BuildInfo]:
     """Filter out builds not matching build-on and build-for."""
     host_arch = util.get_host_architecture()
 
     plan: list[BuildInfo] = []
     for build_info in build_plan:
+        platform_matches = not platform or build_info.platform == platform
         build_on_matches = build_info.build_on == host_arch
         build_for_matches = not build_for or build_info.build_for == build_for
 
-        if build_on_matches and build_for_matches:
+        if platform_matches and build_on_matches and build_for_matches:
             plan.append(build_info)
 
     return plan
