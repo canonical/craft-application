@@ -24,12 +24,14 @@ def test_gets_real_services(
     fake_project,
     fake_package_service_class,
     fake_lifecycle_service_class,
+    fake_provider_service_class,
 ):
     factory = services.ServiceFactory(
         app_metadata,
         project=fake_project,
         PackageClass=fake_package_service_class,
         LifecycleClass=fake_lifecycle_service_class,
+        ProviderClass=fake_provider_service_class,
     )
 
     check.is_instance(factory.package, services.PackageService)

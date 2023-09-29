@@ -143,6 +143,10 @@ class Application:
             work_dir=self._work_dir,
             build_for=build_for,
         )
+        self.services.set_kwargs(
+            "provider",
+            work_dir=self._work_dir,
+        )
 
     @functools.cached_property
     def project(self) -> models.Project:
