@@ -80,7 +80,9 @@ class _LifecyclePartsCommand(_LifecycleCommand):
 
 
 class _LifecycleStepCommand(_LifecyclePartsCommand):
-    run_managed = True
+    @override
+    def run_managed(self, parsed_args: argparse.Namespace) -> bool:
+        return True
 
     @override
     def fill_parser(self, parser: argparse.ArgumentParser) -> None:

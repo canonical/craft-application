@@ -19,15 +19,20 @@ import argparse
 import pytest
 from craft_application.commands import base
 from craft_cli import EmitterMode, emit
+from typing_extensions import override
 
 
 @pytest.fixture()
 def fake_command(app_metadata, fake_services):
     class FakeCommand(base.AppCommand):
-        run_managed = True
+        _run_managed = True
         name = "fake"
         help_msg = "Help!"
         overview = "It's an overview."
+
+        @override
+        def run_managed(self, parsed_args: argparse.Namespace) -> bool:
+            return self._run_managed
 
     return FakeCommand(
         {
@@ -38,7 +43,7 @@ def fake_command(app_metadata, fake_services):
 
 
 def test_get_managed_cmd_unmanaged(fake_command):
-    fake_command.run_managed = False
+    fake_command._run_managed = False
 
     with pytest.raises(RuntimeError):
         fake_command.get_managed_cmd(argparse.Namespace())

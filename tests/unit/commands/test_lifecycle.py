@@ -61,10 +61,13 @@ def get_fake_command_class(parent_cls, managed):
     """Create a fully described fake command based on a partial class."""
 
     class FakeCommand(parent_cls):
-        run_managed = managed
+        _run_managed = managed
         name = "fake"
         help_msg = "help"
         overview = "overview"
+
+        def run_managed(self, parsed_args: argparse.Namespace) -> bool:  # noqa: ARG002
+            return self._run_managed
 
     return FakeCommand
 
