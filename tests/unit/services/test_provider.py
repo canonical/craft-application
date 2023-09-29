@@ -253,7 +253,7 @@ def test_instance_fetch_logs(
     # Now check that the logs from the build instance were collected.
     with check:
         mock_instance.temporarily_pull_file.assert_called_once_with(
-            source=pathlib.PosixPath("/root/testcraft.log"), missing_ok=True
+            source=pathlib.PosixPath("/tmp/testcraft.log"), missing_ok=True
         )
 
     expected = [
@@ -284,7 +284,7 @@ def test_instance_fetch_logs_error(
     # Now check that the logs from the build instance were collected.
     with check:
         mock_instance.temporarily_pull_file.assert_called_once_with(
-            source=pathlib.PosixPath("/root/testcraft.log"), missing_ok=True
+            source=pathlib.PosixPath("/tmp/testcraft.log"), missing_ok=True
         )
 
     expected = [
@@ -315,10 +315,10 @@ def test_instance_fetch_logs_missing_file(
     # Now check that the logs from the build instance were *attempted* to be collected.
     with check:
         mock_instance.temporarily_pull_file.assert_called_once_with(
-            source=pathlib.PosixPath("/root/testcraft.log"), missing_ok=True
+            source=pathlib.PosixPath("/tmp/testcraft.log"), missing_ok=True
         )
     expected = [
-        mock.call("debug", "Could not find log file /root/testcraft.log in instance."),
+        mock.call("debug", "Could not find log file /tmp/testcraft.log in instance."),
     ]
 
     with check:

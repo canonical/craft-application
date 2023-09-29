@@ -13,18 +13,22 @@
 #
 # You should have received a copy of the GNU Lesser General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
-"""Utilities for craft-application."""
+"""Utility functions and helpers related to path handling."""
+from __future__ import annotations
 
-from craft_application.util.yaml import safe_yaml_load
-from craft_application.util.paths import get_managed_logpath
-from craft_application.util.platforms import (
-    get_host_architecture,
-    convert_architecture_deb_to_platform,
-)
+import pathlib
+from typing import TYPE_CHECKING
 
-__all__ = [
-    "safe_yaml_load",
-    "get_host_architecture",
-    "convert_architecture_deb_to_platform",
-    "get_managed_logpath",
-]
+if TYPE_CHECKING:
+    from craft_application import AppMetadata
+
+
+def get_managed_logpath(app: AppMetadata) -> pathlib.PosixPath:
+    """Get the path to the logfile inside a build instance.
+
+    Note that this always returns a PosixPath, as it refers to a path inside of
+    a Linux-based build instance.
+    """
+    return pathlib.PosixPath(
+        f"/tmp/{app.name}.log"  # noqa: S108 - only applies inside managed instance.
+    )

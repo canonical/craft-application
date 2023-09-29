@@ -28,6 +28,7 @@ from craft_providers.actions.snap_installer import Snap
 from craft_providers.lxd import LXDProvider
 from craft_providers.multipass import MultipassProvider
 
+from craft_application import util
 from craft_application.services import base
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -193,7 +194,7 @@ class ProviderService(base.BaseService):
 
     def _capture_logs_from_instance(self, instance: craft_providers.Executor) -> None:
         """Fetch the logfile from inside `instance` and emit its contents."""
-        source_log_path = pathlib.PosixPath(f"/root/{self._app.name}.log")
+        source_log_path = util.get_managed_logpath(self._app)
         with instance.temporarily_pull_file(
             source=source_log_path, missing_ok=True
         ) as log_path:
