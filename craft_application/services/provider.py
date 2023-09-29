@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import contextlib
 import os
+import pathlib
 import sys
 from typing import TYPE_CHECKING
 
@@ -27,10 +28,10 @@ from craft_providers.actions.snap_installer import Snap
 from craft_providers.lxd import LXDProvider
 from craft_providers.multipass import MultipassProvider
 
+from craft_application import util
 from craft_application.services import base
 
 if TYPE_CHECKING:  # pragma: no cover
-    import pathlib
     from collections.abc import Generator
 
     import craft_providers
@@ -112,8 +113,11 @@ class ProviderService(base.BaseService):
                 target=self._app.managed_instance_project_path,  # type: ignore[arg-type]
             )
             emit.debug("Instance launched and working directory mounted")
-            with emit.pause():
-                yield instance
+            try:
+                with emit.pause():
+                    yield instance
+            finally:
+                self._capture_logs_from_instance(instance)
 
     def get_base(
         self,
@@ -187,3 +191,19 @@ class ProviderService(base.BaseService):
     def _get_multipass_provider(self) -> MultipassProvider:
         """Get the Multipass provider for this manager."""
         return MultipassProvider()
+
+    def _capture_logs_from_instance(self, instance: craft_providers.Executor) -> None:
+        """Fetch the logfile from inside `instance` and emit its contents."""
+        source_log_path = util.get_managed_logpath(self._app)
+        with instance.temporarily_pull_file(
+            source=source_log_path, missing_ok=True
+        ) as log_path:
+            if log_path:
+                emit.debug("Logs retrieved from managed instance:")
+                with log_path.open() as log_file:
+                    for line in log_file:
+                        emit.debug(":: " + line.rstrip())
+            else:
+                emit.debug(
+                    f"Could not find log file {source_log_path.as_posix()} in instance."
+                )

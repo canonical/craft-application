@@ -106,15 +106,8 @@ class Application:
     def log_path(self) -> pathlib.Path | None:
         """Get the path to this process's log file, if any."""
         if self.services.ProviderClass.is_managed():
-            return self._managed_log_path
+            return util.get_managed_logpath(self.app)
         return None
-
-    @property
-    def _managed_log_path(self) -> pathlib.Path:
-        """Get the location of the managed instance's log file."""
-        return pathlib.Path(
-            f"/tmp/{self.app.name}.log"  # noqa: S108 - only applies inside managed instance.
-        )
 
     def add_global_argument(self, argument: craft_cli.GlobalArgument) -> None:
         """Add a global argument to the Application."""
