@@ -39,9 +39,17 @@ from craft_application.models.constraints import (
 class BuildInfo:
     """Platform build information."""
 
+    platform: str
+    """The platform name."""
+
     build_on: str
+    """The architecture to build on."""
+
     build_for: str
+    """The architecture to build for."""
+
     base: craft_providers.bases.BaseName
+    """The base to build on."""
 
 
 class Project(CraftBaseModel):

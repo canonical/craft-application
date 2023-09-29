@@ -58,7 +58,7 @@ def test_provider_lifecycle(
     provider_service.get_provider(name)
 
     arch = get_host_architecture()
-    build_info = BuildInfo(arch, arch, bases.BaseName(*base_name))
+    build_info = BuildInfo("foo", arch, arch, bases.BaseName(*base_name))
     instance = provider_service.instance(build_info, work_dir=snap_safe_tmp_path)
     executor = None
     try:

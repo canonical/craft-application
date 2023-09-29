@@ -174,7 +174,7 @@ def test_instance(
     monkeypatch.setattr(provider_service, "get_provider", lambda: mock_provider)
     spy_pause = mocker.spy(provider.emit, "pause")
     arch = util.get_host_architecture()
-    build_info = models.BuildInfo(arch, arch, base_name)
+    build_info = models.BuildInfo("foo", arch, arch, base_name)
 
     with provider_service.instance(
         build_info, work_dir=tmp_path, allow_unstable=allow_unstable

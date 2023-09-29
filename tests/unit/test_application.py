@@ -100,15 +100,21 @@ def test_log_path(monkeypatch, app, provider_managed, expected):
     assert actual == expected
 
 
-def test_run_managed_success(app, fake_project, emitter):
+def test_run_managed_success(app, fake_project):
     mock_provider = mock.MagicMock(spec_set=services.ProviderService)
     app.services.provider = mock_provider
     app.project = fake_project
 
     arch = get_host_architecture()
-    app.run_managed(arch)
+    app.run_managed(None, arch)
 
-    emitter.assert_debug(f"Running testcraft in {arch} instance...")
+    assert (
+        mock.call(
+            BuildInfo("foo", "amd64", "amd64", bases.BaseName("ubuntu", "22.04")),
+            work_dir=mock.ANY,
+        )
+        in mock_provider.instance.mock_calls
+    )
 
 
 def test_run_managed_failure(app, fake_project):
@@ -119,52 +125,69 @@ def test_run_managed_failure(app, fake_project):
     app.project = fake_project
 
     with pytest.raises(craft_providers.ProviderError) as exc_info:
-        app.run_managed(get_host_architecture())
+        app.run_managed(None, get_host_architecture())
 
     assert exc_info.value.brief == "Failed to execute testcraft in instance."
 
 
-def test_run_managed_multiple(app, fake_project, emitter, monkeypatch):
+def test_run_managed_multiple(app, fake_project, monkeypatch):
     mock_provider = mock.MagicMock(spec_set=services.ProviderService)
     app.services.provider = mock_provider
     app.project = fake_project
 
     arch = get_host_architecture()
+    info1 = BuildInfo("a1", arch, "arch1", bases.BaseName("base", "1"))
+    info2 = BuildInfo("a2", arch, "arch2", bases.BaseName("base", "2"))
+
     monkeypatch.setattr(
         app.project.__class__,
         "get_build_plan",
-        lambda _: [
-            BuildInfo(arch, "arch1", bases.BaseName("base", "1")),
-            BuildInfo(arch, "arch2", bases.BaseName("base", "2")),
-        ],
+        lambda _: [info1, info2],
     )
-    app.run_managed(None)
+    app.run_managed(None, None)
 
-    emitter.assert_debug("Running testcraft in arch1 instance...")
-    emitter.assert_debug("Running testcraft in arch2 instance...")
+    assert mock.call(info2, work_dir=mock.ANY) in mock_provider.instance.mock_calls
+    assert mock.call(info1, work_dir=mock.ANY) in mock_provider.instance.mock_calls
 
 
-def test_run_managed_specified(app, fake_project, emitter, monkeypatch):
+def test_run_managed_specified_arch(app, fake_project, monkeypatch):
     mock_provider = mock.MagicMock(spec_set=services.ProviderService)
     app.services.provider = mock_provider
     app.project = fake_project
 
     arch = get_host_architecture()
+    info1 = BuildInfo("a1", arch, "arch1", bases.BaseName("base", "1"))
+    info2 = BuildInfo("a2", arch, "arch2", bases.BaseName("base", "2"))
+
     monkeypatch.setattr(
         app.project.__class__,
         "get_build_plan",
-        lambda _: [
-            BuildInfo(arch, "arch1", bases.BaseName("base", "1")),
-            BuildInfo(arch, "arch2", bases.BaseName("base", "2")),
-        ],
+        lambda _: [info1, info2],
     )
-    app.run_managed("arch2")
+    app.run_managed(None, "arch2")
 
-    emitter.assert_debug("Running testcraft in arch2 instance...")
-    assert (
-        mock.call("debug", "Running testcraft in arch1 instance...")
-        not in emitter.interactions
+    assert mock.call(info2, work_dir=mock.ANY) in mock_provider.instance.mock_calls
+    assert mock.call(info1, work_dir=mock.ANY) not in mock_provider.instance.mock_calls
+
+
+def test_run_managed_specified_platform(app, fake_project, monkeypatch):
+    mock_provider = mock.MagicMock(spec_set=services.ProviderService)
+    app.services.provider = mock_provider
+    app.project = fake_project
+
+    arch = get_host_architecture()
+    info1 = BuildInfo("a1", arch, "arch1", bases.BaseName("base", "1"))
+    info2 = BuildInfo("a2", arch, "arch2", bases.BaseName("base", "2"))
+
+    monkeypatch.setattr(
+        app.project.__class__,
+        "get_build_plan",
+        lambda _: [info1, info2],
     )
+    app.run_managed("a2", None)
+
+    assert mock.call(info2, work_dir=mock.ANY) in mock_provider.instance.mock_calls
+    assert mock.call(info1, work_dir=mock.ANY) not in mock_provider.instance.mock_calls
 
 
 @pytest.mark.parametrize(
@@ -240,7 +263,7 @@ def test_run_success_managed(monkeypatch, app, fake_project):
 
     pytest_check.equal(app.run(), 0)
 
-    app.run_managed.assert_called_once_with(None)  # --build-for not used
+    app.run_managed.assert_called_once_with(None, None)  # --build-for not used
 
 
 def test_run_success_managed_with_arch(monkeypatch, app, fake_project):
@@ -251,7 +274,17 @@ def test_run_success_managed_with_arch(monkeypatch, app, fake_project):
 
     pytest_check.equal(app.run(), 0)
 
-    app.run_managed.assert_called_once_with(arch)
+    app.run_managed.assert_called_once_with(None, arch)
+
+
+def test_run_success_managed_with_platform(monkeypatch, app, fake_project):
+    app.project = fake_project
+    app.run_managed = mock.Mock()
+    monkeypatch.setattr(sys, "argv", ["testcraft", "pull", "--platform=foo"])
+
+    pytest_check.equal(app.run(), 0)
+
+    app.run_managed.assert_called_once_with("foo", None)
 
 
 @pytest.mark.parametrize("return_code", [None, 0, 1])
@@ -313,26 +346,34 @@ def test_run_error_debug(monkeypatch, mock_dispatcher, app, fake_project, error)
 
 
 _base = bases.BaseName("", "")
-_on_a_for_a = BuildInfo("a", "a", _base)
-_on_a_for_b = BuildInfo("a", "b", _base)
+_on_a_for_a = BuildInfo("p1", "a", "a", _base)
+_on_a_for_b = BuildInfo("p2", "a", "b", _base)
 
 
 @pytest.mark.parametrize(
-    ("plan", "build_for", "host_arch", "result"),
+    ("plan", "platform", "build_for", "host_arch", "result"),
     [
-        ([_on_a_for_a], None, "a", [_on_a_for_a]),
-        ([_on_a_for_a], "a", "a", [_on_a_for_a]),
-        ([_on_a_for_a], "b", "a", []),
-        ([_on_a_for_a], "a", "b", []),
-        ([_on_a_for_a, _on_a_for_b], "b", "a", [_on_a_for_b]),
-        ([_on_a_for_a, _on_a_for_b], "b", "b", []),
-        ([_on_a_for_a, _on_a_for_b], None, "b", []),
-        ([_on_a_for_a, _on_a_for_b], None, "a", [_on_a_for_a, _on_a_for_b]),
+        ([_on_a_for_a], None, None, "a", [_on_a_for_a]),
+        ([_on_a_for_a], "p1", None, "a", [_on_a_for_a]),
+        ([_on_a_for_a], "p2", None, "a", []),
+        ([_on_a_for_a], None, "a", "a", [_on_a_for_a]),
+        ([_on_a_for_a], "p1", "a", "a", [_on_a_for_a]),
+        ([_on_a_for_a], "p2", "a", "a", []),
+        ([_on_a_for_a], None, "b", "a", []),
+        ([_on_a_for_a], None, "a", "b", []),
+        ([_on_a_for_a, _on_a_for_b], None, "b", "a", [_on_a_for_b]),
+        ([_on_a_for_a, _on_a_for_b], "p1", "b", "a", []),
+        ([_on_a_for_a, _on_a_for_b], "p2", "b", "a", [_on_a_for_b]),
+        ([_on_a_for_a, _on_a_for_b], None, "b", "b", []),
+        ([_on_a_for_a, _on_a_for_b], None, None, "b", []),
+        ([_on_a_for_a, _on_a_for_b], "p2", None, "b", []),
+        ([_on_a_for_a, _on_a_for_b], None, None, "a", [_on_a_for_a, _on_a_for_b]),
+        ([_on_a_for_a, _on_a_for_b], "p2", None, "a", [_on_a_for_b]),
     ],
 )
-def test_filter_plan(mocker, plan, build_for, host_arch, result):
+def test_filter_plan(mocker, plan, platform, build_for, host_arch, result):
     mocker.patch("craft_application.util.get_host_architecture", return_value=host_arch)
-    assert application._filter_plan(plan, build_for) == result
+    assert application._filter_plan(plan, platform, build_for) == result
 
 
 @pytest.fixture()
