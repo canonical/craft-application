@@ -323,7 +323,21 @@ class CleanCommand(_LifecyclePartsCommand):
         """Run the clean command."""
         super().run(parsed_args)
 
-        self._services.lifecycle.clean(parsed_args.parts)
+        if self._should_clean_instances(parsed_args):
+            self._services.provider.clean_instances()
+        else:
+            self._services.lifecycle.clean(parsed_args.parts)
+
+    @override
+    def run_managed(self, parsed_args: argparse.Namespace) -> bool:
+        # "clean" should run managed if cleaning specific parts.
+        # otherwise, should run on the host to clean the build provider.
+        return not self._should_clean_instances(parsed_args)
+
+    @staticmethod
+    def _should_clean_instances(parsed_args: argparse.Namespace) -> bool:
+        # Note: in the future this will also take into account destructive mode.
+        return not bool(parsed_args.parts)
 
 
 def _launch_shell() -> None:
