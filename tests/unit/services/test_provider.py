@@ -21,6 +21,7 @@ import craft_providers
 import pytest
 from craft_application import errors, models, util
 from craft_application.services import provider
+from craft_application.util import platforms
 from craft_providers import bases, lxd, multipass
 from craft_providers.actions.snap_installer import Snap
 
@@ -31,7 +32,11 @@ from craft_providers.actions.snap_installer import Snap
 )
 def test_install_snap(app_metadata, fake_project, fake_services, install_snap, snaps):
     service = provider.ProviderService(
-        app_metadata, fake_project, fake_services, install_snap=install_snap
+        app_metadata,
+        fake_project,
+        fake_services,
+        work_dir=pathlib.Path(),
+        install_snap=install_snap,
     )
 
     assert service.snaps == snaps
@@ -330,3 +335,63 @@ def test_instance_fetch_logs_missing_file(
 
     with check:
         emitter.assert_interactions(expected)
+
+
+_test_base = bases.BaseName("ubuntu", "22.04")
+
+
+@pytest.mark.parametrize(
+    ("build_infos", "expected_on_fors"),
+    [
+        # A single build info, matching the current architecture
+        (
+            [models.BuildInfo("foo", "current", "current", _test_base)],
+            ["on-current-for-current"],
+        ),
+        # Two build infos, both matching the current architecture
+        (
+            [
+                models.BuildInfo("foo", "current", "current", _test_base),
+                models.BuildInfo("foo2", "current", "other", _test_base),
+            ],
+            ["on-current-for-current", "on-current-for-other"],
+        ),
+        # Three build infos, only one matches current architecture
+        (
+            [
+                models.BuildInfo("foo", "current", "current", _test_base),
+                models.BuildInfo("foo2", "other", "other", _test_base),
+                models.BuildInfo("foo3", "other", "other2", _test_base),
+            ],
+            ["on-current-for-current"],
+        ),
+        # Two build infos, none matches current architecture
+        (
+            [
+                models.BuildInfo("foo2", "other", "other", _test_base),
+                models.BuildInfo("foo3", "other", "other2", _test_base),
+            ],
+            [],
+        ),
+    ],
+)
+def test_clean_instances(
+    provider_service, fake_project, tmp_path, mocker, build_infos, expected_on_fors
+):
+    mocker.patch.object(platforms, "get_host_architecture", return_value="current")
+    mocker.patch.object(
+        fake_project.__class__, "get_build_plan", return_value=build_infos
+    )
+
+    current_provider = provider_service.get_provider()
+    mock_clean = mocker.patch.object(current_provider, "clean_project_environments")
+
+    provider_service.clean_instances()
+
+    work_dir_inode = tmp_path.stat().st_ino
+
+    expected_mock_calls = [
+        mock.call(instance_name=f"testcraft-full-project-{on_for}-{work_dir_inode}")
+        for on_for in expected_on_fors
+    ]
+    assert mock_clean.mock_calls == expected_mock_calls

@@ -104,6 +104,20 @@ def emitter_verbosity(request):
 
 
 @pytest.fixture()
+def fake_provider_service_class():
+    class FakeProviderService(services.ProviderService):
+        def __init__(
+            self,
+            app: application.AppMetadata,
+            project: models.Project,
+            services: services.ServiceFactory,
+        ):
+            super().__init__(app, project, services, work_dir=pathlib.Path())
+
+    return FakeProviderService
+
+
+@pytest.fixture()
 def fake_package_service_class():
     class FakePackageService(services.PackageService):
         def pack(

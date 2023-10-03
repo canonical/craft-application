@@ -30,6 +30,7 @@ from craft_providers.multipass import MultipassProvider
 
 from craft_application import util
 from craft_application.services import base
+from craft_application.util import platforms
 
 if TYPE_CHECKING:  # pragma: no cover
     from collections.abc import Generator
@@ -51,16 +52,18 @@ class ProviderService(base.BaseService):
 
     managed_mode_env_var = "CRAFT_MANAGED_MODE"
 
-    def __init__(
+    def __init__(  # noqa: PLR0913 (too many arguments)
         self,
         app: AppMetadata,
         project: models.Project,
         services: ServiceFactory,
         *,
+        work_dir: pathlib.Path,
         install_snap: bool = True,
     ) -> None:
         super().__init__(app, project, services)
         self._provider: craft_providers.Provider | None = None
+        self._work_dir = work_dir
         self.snaps: list[Snap] = []
         if install_snap:
             self.snaps.append(Snap(name=app.name, channel=None, classic=True))
@@ -88,11 +91,7 @@ class ProviderService(base.BaseService):
         :param allow_unstable: Whether to allow the use of unstable images.
         :returns: a context manager of the provider instance.
         """
-        work_dir_inode = work_dir.stat().st_ino
-        instance_name = (
-            f"{self._app.name}-{self._project.name}-on-{build_info.build_on}-"
-            f"for-{build_info.build_for}-{work_dir_inode}"
-        )
+        instance_name = self._get_instance_name(work_dir, build_info)
         emit.debug(f"Preparing managed instance {instance_name!r}")
         base_name = build_info.base
         base = self.get_base(base_name, instance_name=instance_name, **kwargs)
@@ -163,6 +162,32 @@ class ProviderService(base.BaseService):
         emit.debug(f"Using provider {name!r}")
         self._provider = self._get_provider_by_name(name)
         return self._provider
+
+    def clean_instances(self) -> None:
+        """Clean all existing managed instances related to the project."""
+        provider = self.get_provider()
+
+        current_arch = platforms.get_host_architecture()
+        build_plan = self._project.get_build_plan()
+        build_plan = [info for info in build_plan if info.build_on == current_arch]
+
+        if build_plan:
+            target = "environments" if len(build_plan) > 1 else "environment"
+            emit.progress(f"Cleaning build {target}")
+
+        for info in build_plan:
+            instance_name = self._get_instance_name(self._work_dir, info)
+            emit.debug(f"Cleaning instance {instance_name}")
+            provider.clean_project_environments(instance_name=instance_name)
+
+    def _get_instance_name(
+        self, work_dir: pathlib.Path, build_info: models.BuildInfo
+    ) -> str:
+        work_dir_inode = work_dir.stat().st_ino
+        return (
+            f"{self._app.name}-{self._project.name}-on-{build_info.build_on}-"
+            f"for-{build_info.build_for}-{work_dir_inode}"
+        )
 
     def _get_default_provider(self) -> craft_providers.Provider:
         """Get the default provider class to use for this application.

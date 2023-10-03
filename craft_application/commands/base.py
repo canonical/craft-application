@@ -30,9 +30,6 @@ if TYPE_CHECKING:  # pragma: no cover
 class AppCommand(BaseCommand):
     """Command for use with craft-application."""
 
-    run_managed: bool = False
-    """Whether this command should run in managed mode."""
-
     always_load_project: bool = False
     """The project is also loaded in non-managed mode."""
 
@@ -48,9 +45,20 @@ class AppCommand(BaseCommand):
         self._app: application.AppMetadata = config["app"]
         self._services: service_factory.ServiceFactory = config["services"]
 
+    def run_managed(
+        self,
+        parsed_args: argparse.Namespace,  # noqa: ARG002 (the unused argument is for subclasses)
+    ) -> bool:
+        """Whether this command should run in managed mode.
+
+        By default returns `False`. Subclasses can override this method to change this,
+        including by inspecting the arguments in `parsed_args`.
+        """
+        return False
+
     def get_managed_cmd(
         self,
-        parsed_args: argparse.Namespace,  # noqa: ARG002 - Used by subclasses
+        parsed_args: argparse.Namespace,  # - Used by subclasses
     ) -> list[str]:
         """Get the command to run in managed mode.
 
@@ -61,7 +69,7 @@ class AppCommand(BaseCommand):
         Commands that have additional parameters to pass in managed mode should
         override this method to include those parameters.
         """
-        if not self.run_managed:
+        if not self.run_managed(parsed_args):
             raise RuntimeError("Unmanaged commands should not be run in managed mode.")
         cmd_name = self._app.name
         verbosity = emit.get_mode().name.lower()

@@ -35,13 +35,18 @@ def factory(
 
 
 def test_correct_init(
-    app_metadata, fake_project, fake_package_service_class, fake_lifecycle_service_class
+    app_metadata,
+    fake_project,
+    fake_package_service_class,
+    fake_lifecycle_service_class,
+    fake_provider_service_class,
 ):
     factory = services.ServiceFactory(
         app_metadata,
         project=fake_project,
         PackageClass=fake_package_service_class,
         LifecycleClass=fake_lifecycle_service_class,
+        ProviderClass=fake_provider_service_class,
     )
 
     pytest_check.is_instance(factory.package, services.PackageService)

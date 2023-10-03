@@ -143,6 +143,10 @@ class Application:
             work_dir=self._work_dir,
             build_for=build_for,
         )
+        self.services.set_kwargs(
+            "provider",
+            work_dir=self._work_dir,
+        )
 
     @functools.cached_property
     def project(self) -> models.Project:
@@ -270,7 +274,7 @@ class Application:
             build_for = getattr(dispatcher.parsed_args, "build_for", None)
             self._configure_services(platform, build_for)
 
-            if not command.run_managed:
+            if not command.run_managed(dispatcher.parsed_args):
                 # command runs in the outer instance
                 craft_cli.emit.debug(f"Running {self.app.name} {command.name} on host")
                 if command.always_load_project:

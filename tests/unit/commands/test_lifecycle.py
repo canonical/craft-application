@@ -61,10 +61,13 @@ def get_fake_command_class(parent_cls, managed):
     """Create a fully described fake command based on a partial class."""
 
     class FakeCommand(parent_cls):
-        run_managed = managed
+        _run_managed = managed
         name = "fake"
         help_msg = "help"
         overview = "overview"
+
+        def run_managed(self, parsed_args: argparse.Namespace) -> bool:  # noqa: ARG002
+            return self._run_managed
 
     return FakeCommand
 
@@ -262,14 +265,43 @@ def test_managed_concrete_commands_run(app_metadata, mock_services, command_cls,
     )
 
 
-@pytest.mark.parametrize("parts", PARTS_LISTS)
-def test_clean_run(app_metadata, parts, tmp_path, mock_services):
+@pytest.mark.parametrize("parts", [("my-part",), ("my-part", "your-part")])
+def test_clean_run_with_parts(app_metadata, parts, tmp_path, mock_services):
     parsed_args = argparse.Namespace(parts=parts, output=tmp_path)
     command = CleanCommand({"app": app_metadata, "services": mock_services})
 
     command.run(parsed_args)
 
     mock_services.lifecycle.clean.assert_called_once_with(parts)
+    assert not mock_services.provider.clean_instances.called
+
+
+def test_clean_run_without_parts(app_metadata, tmp_path, mock_services):
+    parts = []
+    parsed_args = argparse.Namespace(parts=parts, output=tmp_path)
+    command = CleanCommand({"app": app_metadata, "services": mock_services})
+
+    command.run(parsed_args)
+
+    assert not mock_services.lifecycle.clean.called
+    mock_services.provider.clean_instances.assert_called_once_with()
+
+
+@pytest.mark.parametrize(
+    ("parts", "expected_run_managed"),
+    [
+        # Clean specific parts: should run managed
+        (["part1"], True),
+        (["part1", "part2"], True),
+        # "part-less" clean: shouldn't run managed
+        ([], False),
+    ],
+)
+def test_clean_run_managed(app_metadata, mock_services, parts, expected_run_managed):
+    parsed_args = argparse.Namespace(parts=parts)
+    command = CleanCommand({"app": app_metadata, "services": mock_services})
+
+    assert command.run_managed(parsed_args) == expected_run_managed
 
 
 @pytest.mark.parametrize(("debug_dict", "debug_args"), DEBUG_PARAMS)
