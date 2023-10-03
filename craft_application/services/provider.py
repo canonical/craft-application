@@ -172,7 +172,7 @@ class ProviderService(base.BaseService):
         build_plan = [info for info in build_plan if info.build_on == current_arch]
 
         if build_plan:
-            target = "providers" if len(build_plan) > 1 else "provider"
+            target = "environments" if len(build_plan) > 1 else "environment"
             emit.progress(f"Cleaning build {target}")
 
         for info in build_plan:
