@@ -69,6 +69,11 @@ class _LifecyclePartsCommand(_LifecycleCommand):
             nargs="*",
             help="Optional list of parts to process",
         )
+        parser.add_argument(
+            "--destructive-mode",
+            action="store_true",
+            help="Build in the current host",
+        )
 
     @override
     def get_managed_cmd(self, parsed_args: argparse.Namespace) -> list[str]:
@@ -82,7 +87,7 @@ class _LifecyclePartsCommand(_LifecycleCommand):
 class _LifecycleStepCommand(_LifecyclePartsCommand):
     @override
     def run_managed(self, parsed_args: argparse.Namespace) -> bool:
-        return True
+        return not parsed_args.destructive_mode
 
     @override
     def fill_parser(self, parser: argparse.ArgumentParser) -> None:
@@ -323,20 +328,25 @@ class CleanCommand(_LifecyclePartsCommand):
         """Run the clean command."""
         super().run(parsed_args)
 
-        if self._should_clean_instances(parsed_args):
-            self._services.provider.clean_instances()
-        else:
+        if parsed_args.destructive_mode or not self._should_clean_instances(
+            parsed_args
+        ):
             self._services.lifecycle.clean(parsed_args.parts)
+        else:
+            self._services.provider.clean_instances()
 
     @override
     def run_managed(self, parsed_args: argparse.Namespace) -> bool:
+        if parsed_args.destructive_mode:
+            # In destructive mode, always run on the host.
+            return False
+
         # "clean" should run managed if cleaning specific parts.
         # otherwise, should run on the host to clean the build provider.
         return not self._should_clean_instances(parsed_args)
 
     @staticmethod
     def _should_clean_instances(parsed_args: argparse.Namespace) -> bool:
-        # Note: in the future this will also take into account destructive mode.
         return not bool(parsed_args.parts)
 
 

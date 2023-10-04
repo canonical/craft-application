@@ -45,6 +45,10 @@ DEBUG_PARAMS = [
     ({"debug": False}, []),
     ({"debug": True}, ["--debug"]),
 ]
+DESTRUCTIVE_PARAMS = [
+    ({"destructive_mode": False}, []),
+    ({"destructive_mode": True}, ["--destructive-mode"]),
+]
 STEP_NAMES = [step.name.lower() for step in craft_parts.Step]
 MANAGED_LIFECYCLE_COMMANDS = {
     PullCommand,
@@ -100,16 +104,26 @@ def test_get_lifecycle_command_group(enable_overlay, commands):
     Features.reset()
 
 
+@pytest.mark.parametrize("destructive_arg", [True, False])
 @pytest.mark.parametrize("parts_args", PARTS_LISTS)
-def test_parts_command_fill_parser(app_metadata, fake_services, parts_args):
+def test_parts_command_fill_parser(
+    app_metadata, fake_services, destructive_arg, parts_args
+):
     cls = get_fake_command_class(_LifecyclePartsCommand, managed=True)
     parser = argparse.ArgumentParser("parts_command")
     command = cls({"app": app_metadata, "services": fake_services})
 
     command.fill_parser(parser)
 
-    args_dict = vars(parser.parse_args(parts_args))
-    assert args_dict == {"parts": parts_args}
+    args = []
+
+    if destructive_arg:
+        args.append("--destructive-mode")
+
+    args.extend(parts_args)
+
+    args_dict = vars(parser.parse_args(args))
+    assert args_dict == {"parts": parts_args, "destructive_mode": destructive_arg}
 
 
 @pytest.mark.parametrize("parts", PARTS_LISTS)
@@ -133,6 +147,7 @@ def test_parts_command_get_managed_cmd(
     assert actual == expected
 
 
+@pytest.mark.parametrize(("destructive_dict", "destructive_args"), DESTRUCTIVE_PARAMS)
 @pytest.mark.parametrize(("debug_dict", "debug_args"), DEBUG_PARAMS)
 @pytest.mark.parametrize(("shell_dict", "shell_args"), SHELL_PARAMS)
 @pytest.mark.parametrize("parts_args", PARTS_LISTS)
@@ -140,6 +155,8 @@ def test_step_command_fill_parser(
     app_metadata,
     fake_services,
     parts_args,
+    destructive_dict,
+    destructive_args,
     debug_dict,
     debug_args,
     shell_args,
@@ -153,12 +170,15 @@ def test_step_command_fill_parser(
         "build_for": None,
         **shell_dict,
         **debug_dict,
+        **destructive_dict,
     }
     command = cls({"app": app_metadata, "services": fake_services})
 
     command.fill_parser(parser)
 
-    args_dict = vars(parser.parse_args([*shell_args, *debug_args, *parts_args]))
+    args_dict = vars(
+        parser.parse_args([*destructive_args, *shell_args, *debug_args, *parts_args])
+    )
     assert args_dict == expected
 
 
@@ -244,7 +264,9 @@ def test_concrete_commands_get_managed_cmd(
         *shell_opts,
     ]
 
-    parsed_args = argparse.Namespace(parts=parts, **shell_params)
+    parsed_args = argparse.Namespace(
+        destructive_mode=False, parts=parts, **shell_params
+    )
     command = command_cls({"app": app_metadata, "services": fake_services})
 
     actual = command.get_managed_cmd(parsed_args)
@@ -267,7 +289,9 @@ def test_managed_concrete_commands_run(app_metadata, mock_services, command_cls,
 
 @pytest.mark.parametrize("parts", [("my-part",), ("my-part", "your-part")])
 def test_clean_run_with_parts(app_metadata, parts, tmp_path, mock_services):
-    parsed_args = argparse.Namespace(parts=parts, output=tmp_path)
+    parsed_args = argparse.Namespace(
+        parts=parts, output=tmp_path, destructive_mode=False
+    )
     command = CleanCommand({"app": app_metadata, "services": mock_services})
 
     command.run(parsed_args)
@@ -276,39 +300,70 @@ def test_clean_run_with_parts(app_metadata, parts, tmp_path, mock_services):
     assert not mock_services.provider.clean_instances.called
 
 
-def test_clean_run_without_parts(app_metadata, tmp_path, mock_services):
+@pytest.mark.parametrize(
+    ("destructive_mode", "expected_lifecycle", "expected_provider"),
+    [
+        (True, True, False),
+        (False, False, True),
+    ],
+)
+def test_clean_run_without_parts(
+    app_metadata,
+    tmp_path,
+    mock_services,
+    destructive_mode,
+    expected_lifecycle,
+    expected_provider,
+):
     parts = []
-    parsed_args = argparse.Namespace(parts=parts, output=tmp_path)
+    parsed_args = argparse.Namespace(
+        parts=parts, output=tmp_path, destructive_mode=destructive_mode
+    )
     command = CleanCommand({"app": app_metadata, "services": mock_services})
 
     command.run(parsed_args)
 
-    assert not mock_services.lifecycle.clean.called
-    mock_services.provider.clean_instances.assert_called_once_with()
+    assert mock_services.lifecycle.clean.called == expected_lifecycle
+    assert mock_services.provider.clean_instances.called == expected_provider
 
 
 @pytest.mark.parametrize(
-    ("parts", "expected_run_managed"),
+    ("destructive", "parts", "expected_run_managed"),
     [
+        # Destructive mode, shouldn't run managed
+        (True, ["part1"], False),
+        (True, ["part1", "part2"], False),
+        (True, [], False),
+        # Non-destructive mode: depends on "parts"
         # Clean specific parts: should run managed
-        (["part1"], True),
-        (["part1", "part2"], True),
+        (False, ["part1"], True),
+        (False, ["part1", "part2"], True),
         # "part-less" clean: shouldn't run managed
-        ([], False),
+        (False, [], False),
     ],
 )
-def test_clean_run_managed(app_metadata, mock_services, parts, expected_run_managed):
-    parsed_args = argparse.Namespace(parts=parts)
+def test_clean_run_managed(
+    app_metadata, mock_services, destructive, parts, expected_run_managed
+):
+    parsed_args = argparse.Namespace(parts=parts, destructive_mode=destructive)
     command = CleanCommand({"app": app_metadata, "services": mock_services})
 
     assert command.run_managed(parsed_args) == expected_run_managed
 
 
+@pytest.mark.parametrize(("destructive_dict", "destructive_args"), DESTRUCTIVE_PARAMS)
 @pytest.mark.parametrize(("debug_dict", "debug_args"), DEBUG_PARAMS)
 @pytest.mark.parametrize("parts_args", PARTS_LISTS)
 @pytest.mark.parametrize("output_arg", [".", "/"])
 def test_pack_fill_parser(
-    app_metadata, mock_services, debug_dict, debug_args, parts_args, output_arg
+    app_metadata,
+    mock_services,
+    destructive_dict,
+    destructive_args,
+    debug_dict,
+    debug_args,
+    parts_args,
+    output_arg,
 ):
     parser = argparse.ArgumentParser("step_command")
     expected = {
@@ -317,13 +372,16 @@ def test_pack_fill_parser(
         "build_for": None,
         "output": pathlib.Path(output_arg),
         **debug_dict,
+        **destructive_dict,
     }
     command = PackCommand({"app": app_metadata, "services": mock_services})
 
     command.fill_parser(parser)
 
     args_dict = vars(
-        parser.parse_args([*parts_args, *debug_args, f"--output={output_arg}"])
+        parser.parse_args(
+            [*destructive_args, *parts_args, *debug_args, f"--output={output_arg}"]
+        )
     )
     assert args_dict == expected
 
