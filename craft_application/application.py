@@ -28,6 +28,7 @@ from importlib import metadata
 from typing import TYPE_CHECKING, Any, cast, final
 
 import craft_cli
+import craft_parts
 import craft_providers
 from xdg.BaseDirectory import save_cache_path  # type: ignore[import]
 
@@ -294,6 +295,20 @@ class Application:
             return_code = 128 + signal.SIGINT
         except craft_cli.CraftError as err:
             self._emit_error(err)
+        except craft_parts.PartsError as err:
+            self._emit_error(
+                craft_cli.CraftError(
+                    err.brief, details=err.details, resolution=err.resolution
+                )
+            )
+            return_code = 1
+        except craft_providers.ProviderError as err:
+            self._emit_error(
+                craft_cli.CraftError(
+                    err.brief, details=err.details, resolution=err.resolution
+                )
+            )
+            return_code = 1
         except Exception as err:  # noqa: BLE001 pylint: disable=broad-except
             self._emit_error(
                 craft_cli.CraftError(f"{self.app.name} internal error: {err!r}")

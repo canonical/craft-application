@@ -24,6 +24,7 @@ from unittest import mock
 
 import craft_application
 import craft_cli
+import craft_parts
 import craft_providers
 import pytest
 import pytest_check
@@ -310,6 +311,8 @@ def test_run_success_managed_inside_managed(
     [
         (KeyboardInterrupt(), 130, "Interrupted.\n"),
         (craft_cli.CraftError("msg"), 1, "msg\n"),
+        (craft_parts.PartsError("unable to pull"), 1, "unable to pull\n"),
+        (craft_providers.ProviderError("fail to launch"), 1, "fail to launch\n"),
         (Exception(), 70, "testcraft internal error: Exception()\n"),
     ],
 )
