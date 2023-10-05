@@ -20,14 +20,16 @@ import craft_application
 import craft_cli
 import pytest
 import pytest_check
-from overrides import override
+from typing_extensions import override
 
 
 @pytest.fixture()
-def create_app(app_metadata, fake_project, fake_package_service_class):
+def create_app(app_metadata, fake_package_service_class):
     def _inner():
+        # Create a factory without a project, to simulate a real application use
+        # and force loading from disk.
         services = craft_application.ServiceFactory(
-            app_metadata, project=fake_project, PackageClass=fake_package_service_class
+            app_metadata, PackageClass=fake_package_service_class
         )
         return craft_application.Application(app_metadata, services)
 

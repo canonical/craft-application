@@ -59,6 +59,9 @@ class _LifecycleCommand(base.AppCommand):
 
 
 class _LifecyclePartsCommand(_LifecycleCommand):
+    # All lifecycle-related commands need a project to work
+    always_load_project = True
+
     @override
     def fill_parser(self, parser: argparse.ArgumentParser) -> None:
         super().fill_parser(parser)  # type: ignore[arg-type]
@@ -321,7 +324,6 @@ class CleanCommand(_LifecyclePartsCommand):
         remove the packing environment.
         """
     )
-    always_load_project = True
 
     @override
     def run(self, parsed_args: argparse.Namespace) -> None:
