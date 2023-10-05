@@ -314,6 +314,11 @@ def test_run_success_managed_inside_managed(
         (craft_parts.PartsError("unable to pull"), 1, "unable to pull\n"),
         (craft_providers.ProviderError("fail to launch"), 1, "fail to launch\n"),
         (Exception(), 70, "testcraft internal error: Exception()\n"),
+        (
+            craft_cli.ArgumentParsingError("Argument parsing error"),
+            64,
+            "Argument parsing error\n",
+        ),
     ],
 )
 def test_run_error(
