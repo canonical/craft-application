@@ -114,6 +114,35 @@ def test_add_get_command_groups(app, added_groups, expected):
     assert app.command_groups == expected
 
 
+def _create_command(command_name):
+    class _FakeCommand(commands.AppCommand):
+        name = command_name
+
+    return _FakeCommand
+
+
+def test_merge_command_groups(app):
+    app.add_command_group(
+        "Lifecycle", [_create_command("wash"), _create_command("fold")]
+    )
+    app.add_command_group("Other", [_create_command("list")])
+    app.add_command_group("Specific", [_create_command("reticulate")])
+
+    lifecycle = commands.get_lifecycle_command_group()
+    other = commands.get_other_command_group()
+
+    command_groups = app.command_groups
+    group_name_to_command_name = {
+        group.name: [c.name for c in group.commands] for group in command_groups
+    }
+
+    assert group_name_to_command_name == {
+        "Lifecycle": [c.name for c in lifecycle.commands] + ["wash", "fold"],
+        "Other": [c.name for c in other.commands] + ["list"],
+        "Specific": ["reticulate"],
+    }
+
+
 @pytest.mark.parametrize(
     ("provider_managed", "expected"),
     [(True, pathlib.PurePosixPath("/tmp/testcraft.log")), (False, None)],
