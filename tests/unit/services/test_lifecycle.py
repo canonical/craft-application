@@ -267,6 +267,12 @@ def test_prime_dir(lifecycle_service, tmp_path):
     pytest_check.equal(prime_dir, tmp_path / "work/prime")
 
 
+def test_project_info(lifecycle_service):
+    info = lifecycle_service.project_info
+
+    assert info.application_name == "testcraft"
+
+
 @pytest.mark.parametrize(
     "actions",
     [
