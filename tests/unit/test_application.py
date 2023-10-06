@@ -133,12 +133,12 @@ def test_merge_command_groups(app):
 
     command_groups = app.command_groups
     group_name_to_command_name = {
-        group.name: sorted(c.name for c in group.commands) for group in command_groups
+        group.name: [c.name for c in group.commands] for group in command_groups
     }
 
     assert group_name_to_command_name == {
-        "Lifecycle": sorted([c.name for c in lifecycle.commands] + ["wash", "fold"]),
-        "Other": sorted([c.name for c in other.commands] + ["list"]),
+        "Lifecycle": [c.name for c in lifecycle.commands] + ["wash", "fold"],
+        "Other": [c.name for c in other.commands] + ["list"],
         "Specific": ["reticulate"],
     }
 
