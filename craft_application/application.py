@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import argparse
 import functools
+import importlib
 import os
 import pathlib
 import signal
@@ -67,7 +68,20 @@ class AppMetadata:
 
     def __post_init__(self) -> None:
         setter = super().__setattr__
-        setter("version", metadata.version(self.name))
+
+        # Try to determine the app version.
+        try:
+            # First, via the __version__ attribute on the app's main package.
+            version = importlib.import_module(self.name).__version__
+        except (AttributeError, ModuleNotFoundError):
+            try:
+                # If that fails, try via the installed metadata.
+                version = metadata.version(self.name)
+            except metadata.PackageNotFoundError:
+                # If that fails too, default to "dev".
+                version = "dev"
+
+        setter("version", version)
         if self.summary is None:
             md = metadata.metadata(self.name)
             setter("summary", md["summary"])

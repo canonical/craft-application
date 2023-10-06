@@ -21,15 +21,25 @@ import craft_application
 import craft_cli
 import pytest
 import pytest_check
-from overrides import override
+from typing_extensions import override
 
 
 @pytest.fixture()
-def app(app_metadata, fake_project, fake_package_service_class):
-    services = craft_application.ServiceFactory(
-        app_metadata, project=fake_project, PackageClass=fake_package_service_class
-    )
-    return craft_application.Application(app_metadata, services)
+def create_app(app_metadata, fake_package_service_class):
+    def _inner():
+        # Create a factory without a project, to simulate a real application use
+        # and force loading from disk.
+        services = craft_application.ServiceFactory(
+            app_metadata, PackageClass=fake_package_service_class
+        )
+        return craft_application.Application(app_metadata, services)
+
+    return _inner
+
+
+@pytest.fixture()
+def app(create_app):
+    return create_app()
 
 
 BASIC_USAGE = """\
@@ -99,12 +109,14 @@ def test_special_inputs(capsys, monkeypatch, app, argv, stdout, stderr, exit_cod
 
 
 @pytest.mark.parametrize("project", (d.name for d in VALID_PROJECTS_DIR.iterdir()))
-def test_project_managed(capsys, monkeypatch, tmp_path, project, app):
+def test_project_managed(capsys, monkeypatch, tmp_path, project, create_app):
     monkeypatch.setenv("CRAFT_DEBUG", "1")
     monkeypatch.setenv("CRAFT_MANAGED_MODE", "1")
     monkeypatch.setattr("sys.argv", ["testcraft", "pack"])
     monkeypatch.chdir(tmp_path)
     shutil.copytree(VALID_PROJECTS_DIR / project, tmp_path, dirs_exist_ok=True)
+
+    app = create_app()
     app._work_dir = tmp_path
 
     app.run()
@@ -112,6 +124,32 @@ def test_project_managed(capsys, monkeypatch, tmp_path, project, app):
     assert (tmp_path / "package.tar.zst").exists()
     captured = capsys.readouterr()
     assert captured.out == (VALID_PROJECTS_DIR / project / "stdout").read_text()
+
+
+@pytest.mark.parametrize("project", (d.name for d in VALID_PROJECTS_DIR.iterdir()))
+def test_project_destructive(capsys, monkeypatch, tmp_path, project, create_app):
+    monkeypatch.chdir(tmp_path)
+    shutil.copytree(VALID_PROJECTS_DIR / project, tmp_path, dirs_exist_ok=True)
+
+    # Run pack in destructive mode
+    monkeypatch.setattr("sys.argv", ["testcraft", "pack", "--destructive-mode"])
+    app = create_app()
+    app.run()
+
+    assert (tmp_path / "package.tar.zst").exists()
+    captured = capsys.readouterr()
+    assert captured.out == (VALID_PROJECTS_DIR / project / "stdout").read_text()
+
+    for dirname in ("parts", "stage", "prime"):
+        assert (tmp_path / dirname).is_dir()
+
+    # Now run clean in destructive mode
+    monkeypatch.setattr("sys.argv", ["testcraft", "clean", "--destructive-mode"])
+    app = create_app()
+    app.run()
+
+    for dirname in ("parts", "stage", "prime"):
+        assert not (tmp_path / dirname).is_dir()
 
 
 def test_version(capsys, monkeypatch, app):
