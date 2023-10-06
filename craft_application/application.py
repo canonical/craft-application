@@ -280,7 +280,7 @@ class Application:
 
         return dispatcher
 
-    def run(self) -> int:
+    def run(self) -> int:  # noqa: PLR0912 (too many branches due to error handling)
         """Bootstrap and run the application."""
         dispatcher = self._get_dispatcher()
         craft_cli.emit.trace("Preparing application...")
@@ -315,6 +315,10 @@ class Application:
                 # command runs in inner instance
                 self.services.project = self.project
                 return_code = dispatcher.run() or 0
+        except craft_cli.ArgumentParsingError as err:
+            print(err, file=sys.stderr)  # to stderr, as argparse normally does
+            craft_cli.emit.ended_ok()
+            return_code = 64  # Command line usage error from sysexits.h
         except KeyboardInterrupt as err:
             self._emit_error(craft_cli.CraftError("Interrupted."), cause=err)
             return_code = 128 + signal.SIGINT

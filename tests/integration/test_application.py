@@ -15,6 +15,7 @@
 import argparse
 import pathlib
 import shutil
+import textwrap
 
 import craft_application
 import craft_cli
@@ -207,3 +208,25 @@ def test_get_command_help(monkeypatch, emitter, capsys, app, cmd, help_param):
     stdout, stderr = capsys.readouterr()
 
     assert f"testcraft {cmd} [options]" in stderr
+
+
+def test_invalid_command_argument(monkeypatch, capsys, app):
+    """Test help output when passing an invalid argument to a command."""
+    monkeypatch.setattr("sys.argv", ["testcraft", "pack", "--invalid-argument"])
+
+    return_code = app.run()
+
+    assert return_code == 64  # noqa: PLR2004 (Magic number used in comparison)
+
+    expected_stderr = textwrap.dedent(
+        """\
+        Usage: testcraft [options] command [args]...
+        Try 'testcraft pack -h' for help.
+
+        Error: unrecognized arguments: --invalid-argument
+
+    """
+    )
+
+    stdout, stderr = capsys.readouterr()
+    assert stderr == expected_stderr
