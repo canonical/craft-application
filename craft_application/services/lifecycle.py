@@ -30,6 +30,8 @@ from craft_application.util import convert_architecture_deb_to_platform
 if TYPE_CHECKING:  # pragma: no cover
     from pathlib import Path
 
+    import craft_parts
+
     from craft_application.application import AppMetadata
     from craft_application.models import Project
     from craft_application.services import ServiceFactory
@@ -159,6 +161,11 @@ class LifecycleService(base.BaseService):
     def prime_dir(self) -> Path:
         """The path to the prime directory."""
         return self._lcm.project_info.dirs.prime_dir
+
+    @property
+    def project_info(self) -> craft_parts.ProjectInfo:
+        """The lifecycle's ProjectInfo."""
+        return self._lcm.project_info
 
     def run(self, step_name: str | None, part_names: list[str] | None = None) -> None:
         """Run the lifecycle manager for the parts."""
