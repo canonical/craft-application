@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import argparse
 import functools
+import importlib
 import os
 import pathlib
 import signal
@@ -28,6 +29,7 @@ from importlib import metadata
 from typing import TYPE_CHECKING, Any, cast, final
 
 import craft_cli
+import craft_parts
 import craft_providers
 from xdg.BaseDirectory import save_cache_path  # type: ignore[import]
 
@@ -66,7 +68,20 @@ class AppMetadata:
 
     def __post_init__(self) -> None:
         setter = super().__setattr__
-        setter("version", metadata.version(self.name))
+
+        # Try to determine the app version.
+        try:
+            # First, via the __version__ attribute on the app's main package.
+            version = importlib.import_module(self.name).__version__
+        except (AttributeError, ModuleNotFoundError):
+            try:
+                # If that fails, try via the installed metadata.
+                version = metadata.version(self.name)
+            except metadata.PackageNotFoundError:
+                # If that fails too, default to "dev".
+                version = "dev"
+
+        setter("version", version)
         if self.summary is None:
             md = metadata.metadata(self.name)
             setter("summary", md["summary"])
@@ -294,6 +309,20 @@ class Application:
             return_code = 128 + signal.SIGINT
         except craft_cli.CraftError as err:
             self._emit_error(err)
+        except craft_parts.PartsError as err:
+            self._emit_error(
+                craft_cli.CraftError(
+                    err.brief, details=err.details, resolution=err.resolution
+                )
+            )
+            return_code = 1
+        except craft_providers.ProviderError as err:
+            self._emit_error(
+                craft_cli.CraftError(
+                    err.brief, details=err.details, resolution=err.resolution
+                )
+            )
+            return_code = 1
         except Exception as err:  # noqa: BLE001 pylint: disable=broad-except
             self._emit_error(
                 craft_cli.CraftError(f"{self.app.name} internal error: {err!r}")

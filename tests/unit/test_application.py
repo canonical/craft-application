@@ -15,6 +15,8 @@
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Unit tests for craft-application app classes."""
 import argparse
+import importlib
+import importlib.metadata
 import pathlib
 import re
 import subprocess
@@ -24,6 +26,7 @@ from unittest import mock
 
 import craft_application
 import craft_cli
+import craft_parts
 import craft_providers
 import pytest
 import pytest_check
@@ -43,6 +46,31 @@ def test_app_metadata_post_init_correct(summary):
 
     pytest_check.equal(app.version, craft_application.__version__)
     pytest_check.is_not_none(app.summary)
+
+
+def test_app_metadata_version_attribute(tmp_path, monkeypatch):
+    """Set the AppMetadata version from the main app package."""
+    monkeypatch.syspath_prepend(tmp_path)
+    (tmp_path / "dummycraft_version.py").write_text("__version__ = '1.2.3'")
+
+    app = application.AppMetadata(name="dummycraft_version", summary="dummy craft")
+    assert app.version == "1.2.3"
+
+
+def test_app_metadata_importlib(tmp_path, monkeypatch, mocker):
+    """Set the AppMetadata version via importlib."""
+    monkeypatch.syspath_prepend(tmp_path)
+    (tmp_path / "dummycraft_importlib.py").write_text("print('hi')")
+
+    mocker.patch.object(importlib.metadata, "version", return_value="4.5.6")
+
+    app = application.AppMetadata(name="dummycraft_importlib", summary="dummy craft")
+    assert app.version == "4.5.6"
+
+
+def test_app_metadata_dev():
+    app = application.AppMetadata(name="dummycraft_dev", summary="dummy craft")
+    assert app.version == "dev"
 
 
 @pytest.fixture()
@@ -310,6 +338,8 @@ def test_run_success_managed_inside_managed(
     [
         (KeyboardInterrupt(), 130, "Interrupted.\n"),
         (craft_cli.CraftError("msg"), 1, "msg\n"),
+        (craft_parts.PartsError("unable to pull"), 1, "unable to pull\n"),
+        (craft_providers.ProviderError("fail to launch"), 1, "fail to launch\n"),
         (Exception(), 70, "testcraft internal error: Exception()\n"),
     ],
 )
