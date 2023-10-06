@@ -171,6 +171,7 @@ class LifecycleService(base.BaseService):
             else:
                 actions = []
 
+            emit.progress("Initialising lifecycle")
             with self._lcm.action_executor() as aex:
                 for action in actions:
                     message = _get_parts_action_message(action)
