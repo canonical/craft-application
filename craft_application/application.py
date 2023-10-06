@@ -115,7 +115,18 @@ class Application:
         lifecycle_commands = commands.get_lifecycle_command_group()
         other_commands = commands.get_other_command_group()
 
-        return [lifecycle_commands, other_commands, *self._command_groups]
+        merged: dict[str, list[type[craft_cli.BaseCommand]]] = {}
+        all_groups = [lifecycle_commands, other_commands, *self._command_groups]
+
+        # Merge the default command groups with those provided by the application,
+        # so that we don't get multiple groups with the same name.
+        for group in all_groups:
+            merged.setdefault(group.name, []).extend(group.commands)
+
+        return [
+            craft_cli.CommandGroup(name, commands_)
+            for name, commands_ in merged.items()
+        ]
 
     @property
     def log_path(self) -> pathlib.Path | None:
