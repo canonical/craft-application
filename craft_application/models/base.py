@@ -85,11 +85,20 @@ class CraftBaseModel(pydantic.BaseModel):
         """Instantiate this model from a YAML file."""
         with path.open() as file:
             data = safe_yaml_load(file)
+        return cls.from_yaml_data(data, path)
+
+    @classmethod
+    def from_yaml_data(cls, data: dict[str, Any], filepath: pathlib.Path) -> Self:
+        """Instantiate this model from already-loaded YAML data.
+
+        :param data: The dict of model properties.
+        :param filepath: The filepath corresponding to ``data``, for error reporting.
+        """
         try:
             return cls.unmarshal(data)
         except pydantic.ValidationError as err:
             raise errors.CraftValidationError.from_pydantic(
-                err, file_name=path.name
+                err, file_name=filepath.name
             ) from None
 
     def to_yaml_file(self, path: pathlib.Path) -> None:

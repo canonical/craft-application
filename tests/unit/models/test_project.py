@@ -19,6 +19,7 @@ from textwrap import dedent
 from typing import Optional
 
 import pytest
+from craft_application import util
 from craft_application.errors import CraftValidationError
 from craft_application.models import Project
 
@@ -131,6 +132,36 @@ def test_from_yaml_file_success(project_file, expected):
 def test_from_yaml_file_failure(project_file, error_class):
     with pytest.raises(error_class):
         Project.from_yaml_file(project_file)
+
+
+@pytest.mark.parametrize(
+    ("project_file", "expected"),
+    [
+        (PROJECTS_DIR / "basic_project.yaml", BASIC_PROJECT),
+        (PROJECTS_DIR / "full_project.yaml", FULL_PROJECT),
+    ],
+)
+def test_from_yaml_data_success(project_file, expected):
+    with project_file.open() as file:
+        data = util.safe_yaml_load(file)
+
+    actual = Project.from_yaml_data(data, project_file)
+
+    assert expected == actual
+
+
+@pytest.mark.parametrize(
+    ("project_file", "error_class"),
+    [
+        (PROJECTS_DIR / "invalid_project.yaml", CraftValidationError),
+    ],
+)
+def test_from_yaml_data_failure(project_file, error_class):
+    with project_file.open() as file:
+        data = util.safe_yaml_load(file)
+
+    with pytest.raises(error_class):
+        Project.from_yaml_data(data, project_file)
 
 
 @pytest.mark.parametrize(

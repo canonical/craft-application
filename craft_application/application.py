@@ -180,7 +180,11 @@ class Application:
         # Current working directory contains the project file
         project_file = pathlib.Path(f"{self.app.name}.yaml").resolve()
         craft_cli.emit.debug(f"Loading project file '{project_file!s}'")
-        return self.app.ProjectClass.from_yaml_file(project_file)
+
+        with project_file.open() as file:
+            yaml_data = util.safe_yaml_load(file)
+
+        return self.app.ProjectClass.from_yaml_data(yaml_data, project_file)
 
     def run_managed(self, platform: str | None, build_for: str | None) -> None:
         """Run the application in a managed instance."""
