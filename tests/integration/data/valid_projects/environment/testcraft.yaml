@@ -1,0 +1,14 @@
+name: environment-project
+summary: A project with environment variables
+version: 1.2.3
+base: ["ubuntu", "22.04"]
+
+parts:
+  my-part:
+    plugin: nil
+    override-build: |
+        target_file=${CRAFT_PART_INSTALL}/variables.yaml
+        touch $target_file
+        echo "project_name:    \"${CRAFT_PROJECT_NAME}\""    >> $target_file
+        echo "project_dir:     \"${CRAFT_PROJECT_DIR}\""     >> $target_file
+        echo "project_version: \"${CRAFT_PROJECT_VERSION}\"" >> $target_file

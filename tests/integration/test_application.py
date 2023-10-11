@@ -21,6 +21,7 @@ import craft_application
 import craft_cli
 import pytest
 import pytest_check
+from craft_application.util import yaml
 from typing_extensions import override
 
 
@@ -230,3 +231,29 @@ def test_invalid_command_argument(monkeypatch, capsys, app):
 
     stdout, stderr = capsys.readouterr()
     assert stderr == expected_stderr
+
+
+def test_global_environment(
+    create_app,
+    monkeypatch,
+    tmp_path,
+):
+    """Test that the global environment is correctly populated during the build process."""
+    monkeypatch.chdir(tmp_path)
+    shutil.copytree(VALID_PROJECTS_DIR / "environment", tmp_path, dirs_exist_ok=True)
+
+    # Run in destructive mode
+    monkeypatch.setattr("sys.argv", ["testcraft", "prime", "--destructive-mode"])
+    app = create_app()
+    app.run()
+
+    # The project's build step stages a "variables.yaml" file containing the values of
+    # variables taken from the global environment.
+    variables_yaml = tmp_path / "stage/variables.yaml"
+    assert variables_yaml.is_file()
+    with variables_yaml.open() as file:
+        variables = yaml.safe_yaml_load(file)
+
+    assert variables["project_name"] == "environment-project"
+    assert variables["project_dir"] == str(tmp_path)
+    assert variables["project_version"] == "1.2.3"
