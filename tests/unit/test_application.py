@@ -483,3 +483,33 @@ def test_work_dir_project_managed(monkeypatch, app_metadata, fake_services):
     # Make sure the project is loaded correctly (from the cwd)
     assert app.project.name == "myproject"
     assert app.project.version == "1.0"
+
+
+@pytest.fixture()
+def environment_project(monkeypatch, tmp_path):
+    project_dir = tmp_path / "project"
+    project_dir.mkdir()
+    project_path = project_dir / "testcraft.yaml"
+    project_path.write_text(
+        dedent(
+            """
+        name: myproject
+        version: 1.2.3
+        parts:
+          mypart:
+            plugin: nil
+            source-tag: v$CRAFT_PROJECT_VERSION
+        """
+        )
+    )
+    monkeypatch.chdir(project_dir)
+
+    return project_path
+
+
+@pytest.mark.usefixtures("environment_project")
+def test_application_expand_environment(app_metadata, fake_services):
+    app = application.Application(app_metadata, fake_services)
+    project = app.project
+
+    assert project.parts["mypart"]["source-tag"] == "v1.2.3"

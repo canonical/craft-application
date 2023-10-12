@@ -180,7 +180,13 @@ class Application:
         # Current working directory contains the project file
         project_file = pathlib.Path(f"{self.app.name}.yaml").resolve()
         craft_cli.emit.debug(f"Loading project file '{project_file!s}'")
-        return self.app.ProjectClass.from_yaml_file(project_file)
+
+        with project_file.open() as file:
+            yaml_data = util.safe_yaml_load(file)
+
+        yaml_data = self._transform_project_yaml(yaml_data)
+
+        return self.app.ProjectClass.from_yaml_data(yaml_data, project_file)
 
     def run_managed(self, platform: str | None, build_for: str | None) -> None:
         """Run the application in a managed instance."""
@@ -363,6 +369,55 @@ class Application:
             error.logpath_report = False
 
         craft_cli.emit.error(error)
+
+    def _transform_project_yaml(self, yaml_data: dict[str, Any]) -> dict[str, Any]:
+        """Update the project's yaml data with runtime properties.
+
+        Performs task such as environment expansion. Note that this transforms
+        ``yaml_data`` in-place.
+        """
+        # Perform variable expansion.
+        self._expand_environment(yaml_data)
+
+        # Perform extra, application-specific transformations.
+        yaml_data = self._extra_yaml_transform(yaml_data)
+
+        return yaml_data
+
+    def _expand_environment(self, yaml_data: dict[str, Any]) -> None:
+        """Perform expansion of project environment variables."""
+        project_vars = self._project_vars(yaml_data)
+
+        info = craft_parts.ProjectInfo(
+            application_name=self.app.name,  # not used in environment expansion
+            cache_dir=pathlib.Path(),  # not used in environment expansion
+            project_name=yaml_data.get("name", ""),
+            project_dirs=craft_parts.ProjectDirs(work_dir=self._work_dir),
+            project_vars=project_vars,
+        )
+
+        self._set_global_environment(info)
+
+        craft_parts.expand_environment(yaml_data, info=info)
+
+    def _project_vars(self, yaml_data: dict[str, Any]) -> dict[str, str]:
+        """Return a dict with project-specific variables, for a craft_part.ProjectInfo."""
+        return {"version": cast(str, yaml_data["version"])}
+
+    def _set_global_environment(self, info: craft_parts.ProjectInfo) -> None:
+        """Populate the ProjectInfo's global environment."""
+        info.global_environment.update(
+            {
+                "CRAFT_PROJECT_VERSION": info.get_project_var("version", raw_read=True),
+            }
+        )
+
+    def _extra_yaml_transform(self, yaml_data: dict[str, Any]) -> dict[str, Any]:
+        """Perform additional transformations on a project's yaml data.
+
+        Note: subclasses should return a new dict and keep the parameter unmodified.
+        """
+        return yaml_data
 
 
 def _filter_plan(
