@@ -104,3 +104,20 @@ class PartsLifecycleError(CraftError):
         if err.filename2:
             details += f", filename2: {err.filename2!r}"
         return cls(message, details=details)
+
+
+class SecretsCommandError(CraftError):
+    """Error when rendering a build-secret."""
+
+    def __init__(self, host_secret: str, error_message: str) -> None:
+        message = f'Error when processing secret "{host_secret}"'
+        details = f"Command output: {error_message}"
+        super().__init__(message=message, details=details)
+
+
+class SecretsFieldError(CraftError):
+    """Error when using a build-secret in a disallowed field."""
+
+    def __init__(self, host_secret: str, field_name: str) -> None:
+        message = f'Build secret "{host_secret}" is not allowed on field "{field_name}"'
+        super().__init__(message=message)
