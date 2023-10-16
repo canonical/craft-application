@@ -513,3 +513,44 @@ def test_application_expand_environment(app_metadata, fake_services):
     project = app.project
 
     assert project.parts["mypart"]["source-tag"] == "v1.2.3"
+
+
+@pytest.fixture()
+def build_secrets_project(monkeypatch, tmp_path):
+    project_dir = tmp_path / "project"
+    project_dir.mkdir()
+    project_path = project_dir / "testcraft.yaml"
+    project_path.write_text(
+        dedent(
+            """
+        name: myproject
+        version: 1.2.3
+        parts:
+          mypart:
+            plugin: nil
+            source: $(HOST_SECRET:echo ${SECRET_VAR_1})/project
+            build-environment:
+              - MY_VAR: $(HOST_SECRET:echo ${SECRET_VAR_2})
+        """
+        )
+    )
+    monkeypatch.chdir(project_dir)
+
+    return project_path
+
+
+@pytest.mark.usefixtures("build_secrets_project")
+def test_application_build_secrets(app_metadata, fake_services, monkeypatch, mocker):
+    monkeypatch.setenv("SECRET_VAR_1", "source-folder")
+    monkeypatch.setenv("SECRET_VAR_2", "secret-value")
+    spied_set_secrets = mocker.spy(craft_cli.emit, "set_secrets")
+
+    app = application.Application(app_metadata, fake_services)
+    app.enable_build_secrets = True
+    project = app.project
+
+    mypart = project.parts["mypart"]
+    assert mypart["source"] == "source-folder/project"
+    assert mypart["build-environment"][0]["MY_VAR"] == "secret-value"
+
+    spied_set_secrets.assert_called_once_with(list({"source-folder", "secret-value"}))
