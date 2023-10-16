@@ -257,3 +257,33 @@ def test_global_environment(
     assert variables["project_name"] == "environment-project"
     assert variables["project_dir"] == str(tmp_path)
     assert variables["project_version"] == "1.2.3"
+
+
+def test_build_secrets_destructive(create_app, monkeypatch, tmp_path, capsys):
+    """Test the use of build secrets in destructive mode."""
+    monkeypatch.setenv("CRAFT_DEBUG", "1")
+    monkeypatch.chdir(tmp_path)
+    shutil.copytree(TEST_DATA_DIR / "build-secrets", tmp_path, dirs_exist_ok=True)
+
+    # Run in destructive mode
+    monkeypatch.setattr("sys.argv", ["testcraft", "prime", "-v", "--destructive-mode"])
+
+    app = create_app()
+    app.enable_build_secrets = True
+
+    # Set the environment variables that the project needs
+    monkeypatch.setenv("HOST_SOURCE_FOLDER", "secret-source")
+    monkeypatch.setenv("HOST_SECRET_VAR", "my-secret")
+    app.run()
+
+    prime_dir = tmp_path / "prime"
+    assert (prime_dir / "source-file.txt").read_text().strip() == "A source file"
+    assert (prime_dir / "build-file.txt").read_text().strip() == "my-secret"
+
+    # Check that the "secrets" were masked in console output and the logfile
+    _, stderr = capsys.readouterr()
+    log_contents = craft_cli.emit._log_filepath.read_text()
+
+    for target in (stderr, log_contents):
+        assert "Dumping SECRET_VAR: my-secret" not in target
+        assert "Dumping SECRET_VAR: *****" in target

@@ -1,0 +1,15 @@
+name: build-secrets
+description: A project with build-time secrets
+version: git
+base: ["ubuntu", "22.04"]
+
+parts:
+  my-part:
+    plugin: dump
+    source: $(HOST_SECRET:echo ${HOST_SOURCE_FOLDER})-folder
+    build-environment:
+      - SECRET_VAR: $(HOST_SECRET:echo ${HOST_SECRET_VAR})
+    override-build: |
+      craftctl default
+      echo "Dumping SECRET_VAR: ${SECRET_VAR}"
+      echo ${SECRET_VAR} >> ${CRAFT_PART_INSTALL}/build-file.txt

@@ -33,7 +33,7 @@ import craft_parts
 import craft_providers
 from xdg.BaseDirectory import save_cache_path  # type: ignore[import]
 
-from craft_application import commands, models, util
+from craft_application import commands, models, secrets, util
 from craft_application.models import BuildInfo
 
 if TYPE_CHECKING:
@@ -93,6 +93,10 @@ class Application:
     :ivar app: Metadata about this application
     :ivar services: A ServiceFactory for this application
     """
+
+    # Feature flag for build-time secrets. Applications that want to use the feature
+    # must set this to True.
+    enable_build_secrets = False
 
     def __init__(
         self,
@@ -379,6 +383,10 @@ class Application:
         # Perform variable expansion.
         self._expand_environment(yaml_data)
 
+        # Handle build secrets.
+        if self.enable_build_secrets:
+            self._render_secrets(yaml_data)
+
         # Perform extra, application-specific transformations.
         yaml_data = self._extra_yaml_transform(yaml_data)
 
@@ -411,6 +419,12 @@ class Application:
                 "CRAFT_PROJECT_VERSION": info.get_project_var("version", raw_read=True),
             }
         )
+
+    def _render_secrets(self, yaml_data: dict[str, Any]) -> None:
+        """Render build-secrets, in-place."""
+        secret_values = secrets.render_secrets(yaml_data)
+
+        craft_cli.emit.set_secrets(list(secret_values))
 
     def _extra_yaml_transform(self, yaml_data: dict[str, Any]) -> dict[str, Any]:
         """Perform additional transformations on a project's yaml data.
