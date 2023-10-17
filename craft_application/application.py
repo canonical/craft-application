@@ -113,7 +113,11 @@ class Application:
         self._command_groups: list[craft_cli.CommandGroup] = []
         self._global_arguments: list[craft_cli.GlobalArgument] = [GLOBAL_VERSION]
 
-        if self.services.ProviderClass.is_managed():
+        # When build_secrets are enabled, this contains the secret info to pass to
+        # managed instances.
+        self._secrets: secrets.BuildSecrets | None = None
+
+        if self.is_managed:
             self._work_dir = pathlib.Path("/root")
         else:
             self._work_dir = pathlib.Path.cwd()
@@ -140,7 +144,7 @@ class Application:
     @property
     def log_path(self) -> pathlib.Path | None:
         """Get the path to this process's log file, if any."""
-        if self.services.ProviderClass.is_managed():
+        if self.is_managed:
             return util.get_managed_logpath(self.app)
         return None
 
@@ -197,6 +201,11 @@ class Application:
 
         return self.app.ProjectClass.from_yaml_data(yaml_data, project_file)
 
+    @property
+    def is_managed(self) -> bool:
+        """Shortcut to tell whether we're running in managed mode."""
+        return self.services.ProviderClass.is_managed()
+
     def run_managed(self, platform: str | None, build_for: str | None) -> None:
         """Run the application in a managed instance."""
         extra_args: dict[str, Any] = {}
@@ -205,7 +214,15 @@ class Application:
         build_plan = _filter_plan(build_plan, platform, build_for)
 
         for build_info in build_plan:
-            extra_args["env"] = {"CRAFT_PLATFORM": build_info.platform}
+            env = {"CRAFT_PLATFORM": build_info.platform}
+
+            if self.app.features.build_secrets:
+                # If using build secrets, put them in the environment of the managed
+                # instance.
+                secret_values = cast(secrets.BuildSecrets, self._secrets)
+                env.update(secret_values.environment)
+
+            extra_args["env"] = env
 
             craft_cli.emit.debug(
                 f"Running {self.app.name}:{build_info.platform} in {build_info.build_for} instance..."
@@ -321,7 +338,7 @@ class Application:
                 if command.always_load_project:
                     self.services.project = self.project
                 return_code = dispatcher.run() or 0
-            elif not self.services.ProviderClass.is_managed():
+            elif not self.is_managed:
                 # command runs in inner instance, but this is the outer instance
                 self.services.project = self.project
                 self.run_managed(platform, build_for)
@@ -374,7 +391,7 @@ class Application:
             error.__cause__ = cause
 
         # Do not report the internal logpath if running inside an instance
-        if self.services.ProviderClass.is_managed():
+        if self.is_managed:
             error.logpath_report = False
 
         craft_cli.emit.error(error)
@@ -427,9 +444,15 @@ class Application:
 
     def _render_secrets(self, yaml_data: dict[str, Any]) -> None:
         """Render build-secrets, in-place."""
-        secret_values = secrets.render_secrets(yaml_data)
+        managed_mode = self.is_managed
+        secret_values = secrets.render_secrets(yaml_data, managed_mode=managed_mode)
 
-        craft_cli.emit.set_secrets(list(secret_values))
+        num_secrets = len(secret_values.secret_strings)
+        craft_cli.emit.debug(f"Project has {num_secrets} build-secret(s).")
+
+        craft_cli.emit.set_secrets(list(secret_values.secret_strings))
+
+        self._secrets = secret_values
 
     def _extra_yaml_transform(self, yaml_data: dict[str, Any]) -> dict[str, Any]:
         """Perform additional transformations on a project's yaml data.
