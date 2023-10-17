@@ -300,12 +300,12 @@ class PackCommand(PrimeCommand):
         )
 
         if not packages:
-            emit.message("No packages created.")
+            emit.progress("No packages created.", permanent=True)
         elif len(packages) == 1:
-            emit.message(f"Packed {packages[0].name}")
+            emit.progress(f"Packed {packages[0].name}", permanent=True)
         else:
             package_names = ", ".join(pkg.name for pkg in packages)
-            emit.message(f"Packed: {package_names}")
+            emit.progress(f"Packed: {package_names}", permanent=True)
 
     @staticmethod
     @override

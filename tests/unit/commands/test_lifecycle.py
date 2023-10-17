@@ -417,7 +417,7 @@ def test_pack_run(
         tmp_path,
     )
     emitter.assert_progress("Packing...")
-    emitter.assert_message(message)
+    emitter.assert_progress(message, permanent=True)
 
 
 def test_pack_run_wrong_step(app_metadata, fake_services):

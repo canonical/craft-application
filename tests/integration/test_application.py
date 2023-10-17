@@ -124,7 +124,10 @@ def test_project_managed(capsys, monkeypatch, tmp_path, project, create_app):
 
     assert (tmp_path / "package.tar.zst").exists()
     captured = capsys.readouterr()
-    assert captured.out == (VALID_PROJECTS_DIR / project / "stdout").read_text()
+    assert (
+        captured.err.splitlines()[-1]
+        == (VALID_PROJECTS_DIR / project / "stderr").read_text()
+    )
 
 
 @pytest.mark.parametrize("project", (d.name for d in VALID_PROJECTS_DIR.iterdir()))
@@ -139,7 +142,10 @@ def test_project_destructive(capsys, monkeypatch, tmp_path, project, create_app)
 
     assert (tmp_path / "package.tar.zst").exists()
     captured = capsys.readouterr()
-    assert captured.out == (VALID_PROJECTS_DIR / project / "stdout").read_text()
+    assert (
+        captured.err.splitlines()[-1]
+        == (VALID_PROJECTS_DIR / project / "stderr").read_text()
+    )
 
     for dirname in ("parts", "stage", "prime"):
         assert (tmp_path / dirname).is_dir()
