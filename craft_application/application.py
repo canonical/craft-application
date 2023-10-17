@@ -53,6 +53,14 @@ class _Dispatcher(craft_cli.Dispatcher):
         return self._parsed_command_args or argparse.Namespace()
 
 
+@dataclass(frozen=True)
+class AppFeatures:
+    """Specific features that can be enabled/disabled per-application."""
+
+    build_secrets: bool = False
+    """Support for build-time secrets."""
+
+
 @final
 @dataclass(frozen=True)
 class AppMetadata:
@@ -63,6 +71,7 @@ class AppMetadata:
     version: str = field(init=False)
     source_ignore_patterns: list[str] = field(default_factory=lambda: [])
     managed_instance_project_path = pathlib.PurePosixPath("/root/project")
+    features: AppFeatures = AppFeatures()
 
     ProjectClass: type[models.Project] = models.Project
 
@@ -93,10 +102,6 @@ class Application:
     :ivar app: Metadata about this application
     :ivar services: A ServiceFactory for this application
     """
-
-    # Feature flag for build-time secrets. Applications that want to use the feature
-    # must set this to True.
-    enable_build_secrets = False
 
     def __init__(
         self,
@@ -384,7 +389,7 @@ class Application:
         self._expand_environment(yaml_data)
 
         # Handle build secrets.
-        if self.enable_build_secrets:
+        if self.app.features.build_secrets:
             self._render_secrets(yaml_data)
 
         # Perform extra, application-specific transformations.

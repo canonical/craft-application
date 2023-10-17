@@ -540,13 +540,13 @@ def build_secrets_project(monkeypatch, tmp_path):
 
 
 @pytest.mark.usefixtures("build_secrets_project")
+@pytest.mark.enable_features("build_secrets")
 def test_application_build_secrets(app_metadata, fake_services, monkeypatch, mocker):
     monkeypatch.setenv("SECRET_VAR_1", "source-folder")
     monkeypatch.setenv("SECRET_VAR_2", "secret-value")
     spied_set_secrets = mocker.spy(craft_cli.emit, "set_secrets")
 
     app = application.Application(app_metadata, fake_services)
-    app.enable_build_secrets = True
     project = app.project
 
     mypart = project.parts["mypart"]

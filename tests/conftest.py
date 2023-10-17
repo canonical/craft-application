@@ -38,7 +38,25 @@ class MyProject(models.Project):
 
 
 @pytest.fixture()
-def app_metadata() -> craft_application.AppMetadata:
+def features(request) -> dict[str, bool]:
+    """Fixture that controls the enabled features.
+
+    To use it, mark the test with the features that should be enabled. For example:
+
+    @pytest.mark.enable_features("build_secrets")
+    def test_with_build_secrets(...)
+    """
+    features = {}
+
+    for feature_marker in request.node.iter_markers("enable_features"):
+        for feature_name in feature_marker.args:
+            features[feature_name] = True
+
+    return features
+
+
+@pytest.fixture()
+def app_metadata(features) -> craft_application.AppMetadata:
     with pytest.MonkeyPatch.context() as m:
         m.setattr(metadata, "version", lambda _: "3.14159")
         return craft_application.AppMetadata(
@@ -46,6 +64,7 @@ def app_metadata() -> craft_application.AppMetadata:
             "A fake app for testing craft-application",
             ProjectClass=MyProject,
             source_ignore_patterns=["*.snap", "*.charm", "*.starcraft"],
+            features=craft_application.AppFeatures(**features),
         )
 
 

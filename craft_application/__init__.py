@@ -15,7 +15,7 @@
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Framework for *craft applications."""
 
-from craft_application.application import Application, AppMetadata
+from craft_application.application import Application, AppFeatures, AppMetadata
 from craft_application import models
 from craft_application.services import (
     BaseService,
@@ -38,6 +38,7 @@ except ImportError:  # pragma: no cover
 __all__ = [
     "__version__",
     "Application",
+    "AppFeatures",
     "AppMetadata",
     "models",
     "BaseService",
