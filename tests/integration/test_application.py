@@ -259,6 +259,7 @@ def test_global_environment(
     assert variables["project_version"] == "1.2.3"
 
 
+@pytest.mark.enable_features("build_secrets")
 def test_build_secrets_destructive(create_app, monkeypatch, tmp_path, capsys):
     """Test the use of build secrets in destructive mode."""
     monkeypatch.setenv("CRAFT_DEBUG", "1")
@@ -269,7 +270,6 @@ def test_build_secrets_destructive(create_app, monkeypatch, tmp_path, capsys):
     monkeypatch.setattr("sys.argv", ["testcraft", "prime", "-v", "--destructive-mode"])
 
     app = create_app()
-    app.enable_build_secrets = True
 
     # Set the environment variables that the project needs
     monkeypatch.setenv("HOST_SOURCE_FOLDER", "secret-source")
