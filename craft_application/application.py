@@ -117,7 +117,7 @@ class Application:
         # managed instances.
         self._secrets: secrets.BuildSecrets | None = None
 
-        if self.is_managed:
+        if self.is_managed():
             self._work_dir = pathlib.Path("/root")
         else:
             self._work_dir = pathlib.Path.cwd()
@@ -144,7 +144,7 @@ class Application:
     @property
     def log_path(self) -> pathlib.Path | None:
         """Get the path to this process's log file, if any."""
-        if self.is_managed:
+        if self.is_managed():
             return util.get_managed_logpath(self.app)
         return None
 
@@ -201,7 +201,6 @@ class Application:
 
         return self.app.ProjectClass.from_yaml_data(yaml_data, project_file)
 
-    @property
     def is_managed(self) -> bool:
         """Shortcut to tell whether we're running in managed mode."""
         return self.services.ProviderClass.is_managed()
@@ -338,7 +337,7 @@ class Application:
                 if command.always_load_project:
                     self.services.project = self.project
                 return_code = dispatcher.run() or 0
-            elif not self.is_managed:
+            elif not self.is_managed():
                 # command runs in inner instance, but this is the outer instance
                 self.services.project = self.project
                 self.run_managed(platform, build_for)
@@ -391,7 +390,7 @@ class Application:
             error.__cause__ = cause
 
         # Do not report the internal logpath if running inside an instance
-        if self.is_managed:
+        if self.is_managed():
             error.logpath_report = False
 
         craft_cli.emit.error(error)
@@ -444,8 +443,9 @@ class Application:
 
     def _render_secrets(self, yaml_data: dict[str, Any]) -> None:
         """Render build-secrets, in-place."""
-        managed_mode = self.is_managed
-        secret_values = secrets.render_secrets(yaml_data, managed_mode=managed_mode)
+        secret_values = secrets.render_secrets(
+            yaml_data, managed_mode=self.is_managed()
+        )
 
         num_secrets = len(secret_values.secret_strings)
         craft_cli.emit.debug(f"Project has {num_secrets} build-secret(s).")
