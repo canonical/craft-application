@@ -30,7 +30,7 @@ import craft_parts
 import craft_providers
 import pytest
 import pytest_check
-from craft_application import application, commands, services
+from craft_application import application, commands, secrets, services
 from craft_application.models import BuildInfo
 from craft_application.util import (
     get_host_architecture,  # pyright: ignore[reportGeneralTypeIssues]
@@ -185,6 +185,31 @@ def test_run_managed_failure(app, fake_project):
         app.run_managed(None, get_host_architecture())
 
     assert exc_info.value.brief == "Failed to execute testcraft in instance."
+
+
+@pytest.mark.enable_features("build_secrets")
+def test_run_managed_secrets(app, fake_project):
+    mock_provider = mock.MagicMock(spec_set=services.ProviderService)
+    instance = mock_provider.instance.return_value.__enter__.return_value
+    mock_execute = instance.execute_run
+    app.services.provider = mock_provider
+    app.project = fake_project
+
+    fake_encoded_environment = {
+        "CRAFT_TEST": "banana",
+    }
+    app._secrets = secrets.BuildSecrets(
+        environment=fake_encoded_environment,
+        secret_strings=set(),
+    )
+
+    app.run_managed(None, get_host_architecture())
+
+    # Check that the encoded secrets were propagated to the managed instance.
+    assert len(mock_execute.mock_calls) == 1
+    call = mock_execute.mock_calls[0]
+    execute_env = call.kwargs["env"]
+    assert execute_env["CRAFT_TEST"] == "banana"
 
 
 def test_run_managed_multiple(app, fake_project, monkeypatch):

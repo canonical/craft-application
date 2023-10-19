@@ -16,48 +16,75 @@
 """Handling of build-time secrets."""
 from __future__ import annotations
 
+import base64
+import dataclasses
+import json
+import os
 import re
 import subprocess
-from typing import Any
+from typing import Any, Mapping, cast
 
 from craft_application import errors
 
 SECRET_REGEX = re.compile(r"\$\(HOST_SECRET:(?P<command>.*)\)")
 
 
-def render_secrets(yaml_data: dict[str, Any]) -> set[str]:
+@dataclasses.dataclass(frozen=True)
+class BuildSecrets:
+    """The data needed to correctly handle build-time secrets in the application."""
+
+    environment: dict[str, str]
+    """The encoded information that can be passed to a managed instance's environment."""
+
+    secret_strings: set[str]
+    """The actual secret text strings, to be passed to craft_cli."""
+
+
+def render_secrets(yaml_data: dict[str, Any], *, managed_mode: bool) -> BuildSecrets:
     """Render/expand the build secrets in a project's yaml data (in-place).
 
     This function will process directives of the form $(HOST_SECRET:<cmd>) in string
     values in ``yaml_data``. For each such directive, the <cmd> part is executed (with
-    bash) and the resulting output replaces the whole directive. The returned set
-    contains the outputs of all HOST_SECRET processing (for masking with craft-cli).
+    bash) and the resulting output replaces the whole directive. The returned object
+    contains the result of HOST_SECRET processing (for masking with craft-cli and
+    forwarding to managed instances).
 
     Note that only a few fields are currently supported:
 
     - "source" and "build-environment" for parts.
 
     Using HOST_SECRET directives in any other field is an error.
+
+    :param yaml_data: The project's loaded data
+    :param managed_mode: Whether the current application is running in managed mode.
     """
     command_cache: dict[str, str] = {}
+
+    if managed_mode:
+        command_cache = _decode_commands(os.environ)
 
     # Process the fields where we allow build secrets
     parts = yaml_data.get("parts", {})
     for part in parts.values():
-        _render_part_secrets(part, command_cache)
+        _render_part_secrets(part, command_cache, managed_mode)
 
     # Now loop over all the data to check for build secrets in disallowed fields
     _check_for_secrets(yaml_data)
 
-    return set(command_cache.values())
+    return BuildSecrets(
+        environment=_encode_commands(command_cache),
+        secret_strings=set(command_cache.values()),
+    )
 
 
 def _render_part_secrets(
-    part_data: dict[str, Any], command_cache: dict[str, Any]
+    part_data: dict[str, Any],
+    command_cache: dict[str, Any],
+    managed_mode: bool,  # noqa: FBT001 (boolean positional arg)
 ) -> None:
     # Render "source"
     source = part_data.get("source", "")
-    if (rendered := _render_secret(source, command_cache)) is not None:
+    if (rendered := _render_secret(source, command_cache, managed_mode)) is not None:
         part_data["source"] = rendered
 
     # Render "build-environment"
@@ -65,18 +92,27 @@ def _render_part_secrets(
     # "build-environment" is a list of dicts with a single item each
     for single_entry_dict in build_env:
         for var_name, var_value in single_entry_dict.items():
-            if (rendered := _render_secret(var_value, command_cache)) is not None:
+            rendered = _render_secret(var_value, command_cache, managed_mode)
+            if rendered is not None:
                 single_entry_dict[var_name] = rendered
 
 
-def _render_secret(text: str, command_cache: dict[str, str]) -> str | None:
-    if match := SECRET_REGEX.search(text):
+def _render_secret(
+    yaml_string: str,
+    command_cache: dict[str, str],
+    managed_mode: bool,  # noqa: FBT001 (boolean positional arg)
+) -> str | None:
+    if match := SECRET_REGEX.search(yaml_string):
         command = match.group("command")
         host_directive = match.group(0)
 
         if command in command_cache:
             output = command_cache[command]
         else:
+            if managed_mode:
+                # In managed mode the command *must* be in the cache; this is an error.
+                raise errors.SecretsManagedError(host_directive)
+
             try:
                 output = _run_command(command)
             except subprocess.CalledProcessError as err:
@@ -85,7 +121,7 @@ def _render_secret(text: str, command_cache: dict[str, str]) -> str | None:
                 ) from err
             command_cache[command] = output
 
-        return text.replace(host_directive, output)
+        return yaml_string.replace(host_directive, output)
     return None
 
 
@@ -115,4 +151,40 @@ def _check_str(
     value: Any, field_name: str  # noqa: ANN401 (using Any on purpose)
 ) -> None:
     if isinstance(value, str) and (match := SECRET_REGEX.search(value)):
-        raise errors.SecretsFieldError(host_secret=match.group(), field_name=field_name)
+        raise errors.SecretsFieldError(
+            host_directive=match.group(), field_name=field_name
+        )
+
+
+def _encode_commands(commands: dict[str, str]) -> dict[str, str]:
+    """Encode a dict of (command, command-output) pairs for env serialization.
+
+    The resulting dict can be passed to the environment of managed instances (via
+    subprocess.run() or equivalents).
+    """
+    if not commands:
+        # Empty dict: don't spend time encoding anything.
+        return {}
+
+    # The current encoding scheme is to dump the entire dict to base64-encoded json
+    # string, then put this resulting string in a dict under the "CRAFT_SECRETS" key.
+    as_json = json.dumps(commands)
+    as_bytes = as_json.encode("utf-8")
+    as_b64 = base64.b64encode(as_bytes)
+    as_str = as_b64.decode("ascii")
+
+    return {"CRAFT_SECRETS": as_str}
+
+
+def _decode_commands(environment: Mapping[str, Any]) -> dict[str, str]:
+    as_str = environment.get("CRAFT_SECRETS")
+
+    if as_str is None:
+        # Not necessarily an error: it means the project has no secrets.
+        return {}
+
+    as_b64 = as_str.encode("ascii")
+    as_bytes = base64.b64decode(as_b64)
+    as_json = as_bytes.decode("utf-8")
+
+    return cast("dict[str, str]", json.loads(as_json))
