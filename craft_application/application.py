@@ -16,7 +16,6 @@
 """Main application classes for a craft-application."""
 from __future__ import annotations
 
-import argparse
 import functools
 import importlib
 import os
@@ -42,15 +41,6 @@ if TYPE_CHECKING:
 GLOBAL_VERSION = craft_cli.GlobalArgument(
     "version", "flag", "-V", "--version", "Show the application version and exit"
 )
-
-
-class _Dispatcher(craft_cli.Dispatcher):
-    """Application command dispatcher."""
-
-    @property
-    def parsed_args(self) -> argparse.Namespace:
-        """The map of parsed command-line arguments."""
-        return self._parsed_command_args or argparse.Namespace()
 
 
 @dataclass(frozen=True)
@@ -247,7 +237,7 @@ class Application:
     def configure(self, global_args: dict[str, Any]) -> None:
         """Configure the application using any global arguments."""
 
-    def _get_dispatcher(self) -> _Dispatcher:
+    def _get_dispatcher(self) -> craft_cli.Dispatcher:
         """Configure this application. Should be called by the run method.
 
         Side-effect: This method may exit the process.
@@ -262,7 +252,7 @@ class Application:
             streaming_brief=True,
         )
 
-        dispatcher = _Dispatcher(
+        dispatcher = craft_cli.Dispatcher(
             self.app.name,
             self.command_groups,
             summary=str(self.app.summary),
@@ -327,11 +317,11 @@ class Application:
                     }
                 ),
             )
-            platform = getattr(dispatcher.parsed_args, "platform", None)
-            build_for = getattr(dispatcher.parsed_args, "build_for", None)
+            platform = getattr(dispatcher.parsed_args(), "platform", None)
+            build_for = getattr(dispatcher.parsed_args(), "build_for", None)
             self._configure_services(platform, build_for)
 
-            if not command.run_managed(dispatcher.parsed_args):
+            if not command.run_managed(dispatcher.parsed_args()):
                 # command runs in the outer instance
                 craft_cli.emit.debug(f"Running {self.app.name} {command.name} on host")
                 if command.always_load_project:
