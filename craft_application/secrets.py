@@ -98,11 +98,11 @@ def _render_part_secrets(
 
 
 def _render_secret(
-    text: str,
+    yaml_string: str,
     command_cache: dict[str, str],
     managed_mode: bool,  # noqa: FBT001 (boolean positional arg)
 ) -> str | None:
-    if match := SECRET_REGEX.search(text):
+    if match := SECRET_REGEX.search(yaml_string):
         command = match.group("command")
         host_directive = match.group(0)
 
@@ -121,7 +121,7 @@ def _render_secret(
                 ) from err
             command_cache[command] = output
 
-        return text.replace(host_directive, output)
+        return yaml_string.replace(host_directive, output)
     return None
 
 
