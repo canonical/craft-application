@@ -17,6 +17,7 @@
 import argparse
 import importlib
 import importlib.metadata
+import logging
 import pathlib
 import re
 import subprocess
@@ -296,6 +297,23 @@ def test_get_dispatcher_error(
     check.equal(exc_info.value.code, exit_code)
     captured = capsys.readouterr()
     check.is_true(re.fullmatch(message, captured.err), captured.err)
+
+
+def test_craft_lib_log_level(app):
+    craft_libs = ["craft_archives", "craft_parts", "craft_providers", "craft_store"]
+
+    # The logging module is stateful and global, so first lets clear the logging level
+    # that another test might have already set.
+    for craft_lib in craft_libs:
+        logger = logging.getLogger(craft_lib)
+        logger.setLevel(logging.NOTSET)
+
+    with pytest.raises(SystemExit):
+        app._get_dispatcher()
+
+    for craft_lib in craft_libs:
+        logger = logging.getLogger(craft_lib)
+        assert logger.level == logging.DEBUG
 
 
 @pytest.mark.parametrize(
