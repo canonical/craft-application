@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import functools
 import importlib
+import logging
 import os
 import pathlib
 import signal
@@ -244,6 +245,14 @@ class Application:
 
         :returns: A ready-to-run Dispatcher object
         """
+        # Set the logging level to DEBUG for all craft-libraries. This is OK even if
+        # the specific application doesn't use a specific library, the call does not
+        # import the package.
+        craft_libs = ["craft_archives", "craft_parts", "craft_providers", "craft_store"]
+        for craft_lib in craft_libs:
+            logger = logging.getLogger(craft_lib)
+            logger.setLevel(logging.DEBUG)
+
         craft_cli.emit.init(
             mode=craft_cli.EmitterMode.BRIEF,
             appname=self.app.name,
