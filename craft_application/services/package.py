@@ -27,7 +27,7 @@ if TYPE_CHECKING:  # pragma: no cover
     from craft_application import models
 
 
-class PackageService(base.BaseService):
+class PackageService(base.EagerService):
     """Business logic for creating packages."""
 
     @abc.abstractmethod

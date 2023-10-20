@@ -101,7 +101,7 @@ def _get_step(step_name: str) -> Step:
         raise RuntimeError(f"Invalid target step {step_name!r}") from None
 
 
-class LifecycleService(base.BaseService):
+class LifecycleService(base.EagerService):
     """Create and manage the parts lifecycle.
 
     :param app: An AppMetadata object containing metadata about the application.
@@ -116,15 +116,15 @@ class LifecycleService(base.BaseService):
     def __init__(  # noqa: PLR0913 (too many arguments)
         self,
         app: AppMetadata,
-        project: Project,
         services: ServiceFactory,
         *,
+        project: Project,
         work_dir: Path | str,
         cache_dir: Path | str,
         build_for: str,
         **lifecycle_kwargs: Any,  # noqa: ANN401 - eventually used in an Any
     ) -> None:
-        super().__init__(app, project, services)
+        super().__init__(app, services, project=project)
         self._work_dir = work_dir
         self._cache_dir = cache_dir
         self._build_for = build_for

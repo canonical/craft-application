@@ -42,7 +42,7 @@ if TYPE_CHECKING:  # pragma: no cover
     from craft_application.services import ServiceFactory
 
 
-class ProviderService(base.BaseService):
+class ProviderService(base.EagerService):
     """Manager for craft_providers in an application.
 
     :param app: Metadata about this application.
@@ -55,13 +55,13 @@ class ProviderService(base.BaseService):
     def __init__(  # noqa: PLR0913 (too many arguments)
         self,
         app: AppMetadata,
-        project: models.Project,
         services: ServiceFactory,
         *,
+        project: models.Project,
         work_dir: pathlib.Path,
         install_snap: bool = True,
     ) -> None:
-        super().__init__(app, project, services)
+        super().__init__(app, services, project=project)
         self._provider: craft_providers.Provider | None = None
         self._work_dir = work_dir
         self.snaps: list[Snap] = []
