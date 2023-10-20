@@ -22,7 +22,7 @@ class FakeLazyService(services.BaseService):
     pass
 
 
-def test_lazy_service_load_success(app_metadata, fake_services, fake_project):
+def test_service_load_success(app_metadata, fake_services, fake_project):
     def project_getter():
         return fake_project
 
@@ -35,7 +35,7 @@ def test_lazy_service_load_success(app_metadata, fake_services, fake_project):
     assert service._project == fake_project
 
 
-def test_lazy_service_load_failure(app_metadata, fake_services):
+def test_service_load_failure(app_metadata, fake_services):
     def project_getter():
         raise ValueError("No service for you!")
 

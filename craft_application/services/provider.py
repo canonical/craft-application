@@ -42,7 +42,7 @@ if TYPE_CHECKING:  # pragma: no cover
     from craft_application.services import ServiceFactory
 
 
-class ProviderService(base.EagerService):
+class ProviderService(base.ProjectService):
     """Manager for craft_providers in an application.
 
     :param app: Metadata about this application.

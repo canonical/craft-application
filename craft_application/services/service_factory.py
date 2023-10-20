@@ -82,7 +82,7 @@ class ServiceFactory:
 
         kwargs = self._service_kwargs.get(service, {})
 
-        if issubclass(cls, services.EagerService):
+        if issubclass(cls, services.ProjectService):
             # Eager services require the project on load.
             if self.project is None:  # pyright: ignore[reportUnnecessaryComparison]
                 raise errors.ApplicationError(

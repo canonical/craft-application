@@ -72,7 +72,7 @@ class BaseService(metaclass=abc.ABCMeta):  # noqa: B024
 
 
 # ignoring the fact that this abstract class has no abstract methods.
-class EagerService(BaseService, metaclass=abc.ABCMeta):
+class ProjectService(BaseService, metaclass=abc.ABCMeta):
     """A service that requires the project from startup."""
 
     _project: models.Project
