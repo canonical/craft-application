@@ -80,10 +80,8 @@ def app(app_metadata, fake_services):
 
 @pytest.fixture()
 def mock_dispatcher(monkeypatch):
-    dispatcher = mock.Mock(spec_set=application._Dispatcher)
-    monkeypatch.setattr(
-        "craft_application.application._Dispatcher", mock.Mock(return_value=dispatcher)
-    )
+    dispatcher = mock.Mock(spec_set=craft_cli.Dispatcher)
+    monkeypatch.setattr("craft_cli.Dispatcher", mock.Mock(return_value=dispatcher))
     return dispatcher
 
 
