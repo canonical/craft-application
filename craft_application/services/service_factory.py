@@ -52,6 +52,18 @@ class ServiceFactory:
     def __post_init__(self) -> None:
         self._service_kwargs: dict[str, dict[str, Any]] = {}
 
+    def _get_project(self) -> models.Project:
+        """Get the project that has been set for services or raise an error.
+
+        raises: ApplicationError if the project is not set.
+        """
+        if self.project is not None:
+            return self.project
+        raise errors.ApplicationError(
+            "Project has not been provided to the service factory yet.",
+            docs_url="https://github.com/canonical/craft-application/pull/108"
+        )
+
     def set_kwargs(
         self,
         service: str,
@@ -92,7 +104,7 @@ class ServiceFactory:
                 )
             kwargs.setdefault("project", self.project)
         else:
-            kwargs.setdefault("project_getter", lambda: self.project)
+            kwargs.setdefault("project_getter", self._get_project)
 
         instance = cls(self.app, self, **kwargs)
         instance.setup()

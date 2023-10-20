@@ -115,13 +115,28 @@ def test_getattr_not_a_service_class(app_metadata, fake_project):
         _ = factory.package
 
 
-def test_getattr_project_none(app_metadata, fake_package_service_class):
+def test_getattr_failure_no_project(app_metadata, fake_package_service_class):
     factory = services.ServiceFactory(
         app_metadata, PackageClass=fake_package_service_class
     )
 
     with pytest.raises(errors.ApplicationError):
         _ = factory.package
+
+
+def test_getattr_succeeds_no_project_lazy(app_metadata):
+    class LazyService(services.BaseService):
+        pass
+
+    factory = services.ServiceFactory(
+        app_metadata,
+        PackageClass=LazyService,  # pyright: ignore[reportGeneralTypeIssues]
+    )
+
+    package_service = factory.package
+
+    with pytest.raises(errors.CraftError):
+        package_service._get_project()
 
 
 def test_service_setup(app_metadata, fake_project, fake_package_service_class, emitter):
