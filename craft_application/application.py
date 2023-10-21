@@ -408,9 +408,7 @@ class Application:
             self._render_secrets(yaml_data)
 
         # Perform extra, application-specific transformations.
-        yaml_data = self._extra_yaml_transform(yaml_data)
-
-        return yaml_data
+        return self._extra_yaml_transform(yaml_data)
 
     def _expand_environment(self, yaml_data: dict[str, Any]) -> None:
         """Perform expansion of project environment variables."""
