@@ -31,36 +31,6 @@ if TYPE_CHECKING:  # pragma: no cover
     from typing_extensions import Self
 
 
-class ApplicationError(CraftError):
-    """An error that is always a problem with the application.
-
-    This should only be used in cases where the existence of the error indicates
-    a bug in the application. It must always be accompanied by a ``docs_url`` that
-    explains why this is an application bug so the author has guidance to fix their
-    app.
-    """
-
-    def __init__(  # noqa: PLR0913: Unfortunate, but necessary argument count.
-        self,
-        message: str,
-        *,
-        docs_url: str,
-        details: str = "This is a bug.",
-        app_name: str = "the application",
-        resolution: str = "Please file a bug report.",
-    ) -> None:
-        message = f"Bug in {app_name}: {message}"
-        super().__init__(
-            message,
-            details=details,
-            resolution=resolution,
-            docs_url=docs_url,
-            logpath_report=True,
-            reportable=True,
-            retcode=70,  # EX_SOFTWARE from sysexits.h
-        )
-
-
 class ProjectFileMissingError(CraftError, FileNotFoundError):
     """Error finding project file."""
 
