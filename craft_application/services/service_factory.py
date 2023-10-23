@@ -17,7 +17,7 @@ from __future__ import annotations
 import dataclasses
 from typing import TYPE_CHECKING, Any
 
-from craft_application import errors, models, services
+from craft_application import models, services
 
 if TYPE_CHECKING:
     from craft_application.application import AppMetadata
@@ -82,10 +82,8 @@ class ServiceFactory:
         kwargs = self._service_kwargs.get(service, {})
         if issubclass(cls, services.ProjectService):
             if not self.project:
-                raise errors.ApplicationError(
-                    "ProjectService requires a project to be available before creation.",
-                    app_name=self.app.name,
-                    docs_url="https://github.com/canonical/craft-application/pull/40#discussion_r1253593262",
+                raise ValueError(
+                    f"{cls.__name__} requires a project to be available before creation."
                 )
             kwargs.setdefault("project", self.project)
 

@@ -18,7 +18,6 @@ from __future__ import annotations
 
 import abc
 import typing
-import warnings
 
 from craft_cli import emit
 
