@@ -58,17 +58,3 @@ class ProjectService(AppService, metaclass=abc.ABCMeta):
     ) -> None:
         super().__init__(app=app, services=services)
         self._project = project
-
-
-class BaseService(ProjectService):
-    """(DEPRECATED) alias for ProjectService."""
-
-    def __init__(
-        self, app: AppMetadata, project: models.Project, services: ServiceFactory
-    ) -> None:
-        warnings.warn(
-            "BaseService is deprecated and will be removed in 1.0. Use ProjectService.",
-            DeprecationWarning,
-            stacklevel=2,  # Warning takes place in the subclass
-        )
-        super().__init__(app=app, services=services, project=project)
