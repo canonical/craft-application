@@ -33,8 +33,8 @@ from craft_providers.actions.snap_installer import Snap
 def test_install_snap(app_metadata, fake_project, fake_services, install_snap, snaps):
     service = provider.ProviderService(
         app_metadata,
-        fake_project,
         fake_services,
+        project=fake_project,
         work_dir=pathlib.Path(),
         install_snap=install_snap,
     )

@@ -18,7 +18,8 @@
 from craft_application.application import Application, AppFeatures, AppMetadata
 from craft_application import models
 from craft_application.services import (
-    BaseService,
+    AppService,
+    ProjectService,
     LifecycleService,
     PackageService,
     ProviderService,
@@ -40,8 +41,9 @@ __all__ = [
     "Application",
     "AppFeatures",
     "AppMetadata",
+    "AppService",
     "models",
-    "BaseService",
+    "ProjectService",
     "LifecycleService",
     "PackageService",
     "ProviderService",
