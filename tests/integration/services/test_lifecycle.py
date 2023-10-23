@@ -35,8 +35,8 @@ def parts_lifecycle(app_metadata, fake_project, fake_services, tmp_path, request
 
     service = LifecycleService(
         app_metadata,
-        fake_project,
         fake_services,
+        project=fake_project,
         work_dir=tmp_path / "work",
         cache_dir=tmp_path / "cache",
         platform=None,

@@ -15,14 +15,15 @@
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Service classes for the business logic of various categories of command."""
 
-from craft_application.services.base import BaseService
+from craft_application.services.base import AppService, ProjectService
 from craft_application.services.lifecycle import LifecycleService
 from craft_application.services.package import PackageService
 from craft_application.services.provider import ProviderService
 from craft_application.services.service_factory import ServiceFactory
 
 __all__ = [
-    "BaseService",
+    "AppService",
+    "ProjectService",
     "LifecycleService",
     "PackageService",
     "ProviderService",

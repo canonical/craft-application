@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import abc
 import typing
+import warnings
 
 from craft_cli import emit
 
@@ -27,17 +28,47 @@ if typing.TYPE_CHECKING:
     from craft_application.services import ServiceFactory
 
 
-# ignoring the fact that this abstract class has no abstract methods.
-class BaseService(metaclass=abc.ABCMeta):  # noqa: B024
-    """A service containing the actual business logic of one or more commands."""
+# This is abstract to prevent it from being used directly. Ignore the lack of
+# abstract methods.
+class AppService(metaclass=abc.ABCMeta):  # noqa: B024
+    """A service class, containing application business logic.
+
+    The AppService base class is for services that do not need access to an
+    existing project.
+    """
+
+    def __init__(self, app: AppMetadata, services: ServiceFactory) -> None:
+        self._app = app
+        self._services = services
+
+    def setup(self) -> None:
+        """Application-specific service setup."""
+        emit.debug(f"Setting up {self.__class__.__name__}")
+
+
+class ProjectService(AppService, metaclass=abc.ABCMeta):
+    """A service that requires access to a project.
+
+    The ServiceFactory will refuse to instantiate a subclass of this service if
+    no project can be created or the project is invalid.
+    """
+
+    def __init__(
+        self, app: AppMetadata, services: ServiceFactory, *, project: models.Project
+    ) -> None:
+        super().__init__(app=app, services=services)
+        self._project = project
+
+
+class BaseService(ProjectService):
+    """(DEPRECATED) alias for ProjectService."""
 
     def __init__(
         self, app: AppMetadata, project: models.Project, services: ServiceFactory
     ) -> None:
-        self._app = app
-        self._project = project
-        self._services = services
-
-    def setup(self) -> None:
-        """Application-specific service preparation."""
-        emit.debug("setting up service")
+        warnings.warn(
+            "BaseService is deprecated and will be removed in 1.0. Use ProjectService.",
+            DeprecationWarning,
+            stacklevel=2,  # Warning takes place in the subclass
+        )
+        super().__init__(app=app, services=services, project=project)
