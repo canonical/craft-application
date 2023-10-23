@@ -17,7 +17,7 @@ from __future__ import annotations
 import dataclasses
 from typing import TYPE_CHECKING, Any
 
-from craft_application import errors, models, services
+from craft_application import models, services
 
 if TYPE_CHECKING:
     from craft_application.application import AppMetadata
@@ -40,7 +40,7 @@ class ServiceFactory:
     LifecycleClass: type[services.LifecycleService] = services.LifecycleService
     ProviderClass: type[services.ProviderService] = services.ProviderService
 
-    project: models.Project = None  # type: ignore[assignment]
+    project: models.Project | None = None
 
     if TYPE_CHECKING:
         # Cheeky hack that lets static type checkers report the correct types.
@@ -60,7 +60,7 @@ class ServiceFactory:
         """Set up the keyword arguments to pass to a particular service class."""
         self._service_kwargs[service] = kwargs
 
-    def __getattr__(self, service: str) -> services.BaseService:
+    def __getattr__(self, service: str) -> services.AppService:
         """Instantiate a service class.
 
         This allows us to lazy-load only the necessary services whilst still
@@ -71,24 +71,23 @@ class ServiceFactory:
         instantiated service as an instance attribute, allowing the same service
         instance to be reused for the entire run of the application.
         """
-        if self.project is None:  # pyright: ignore[reportUnnecessaryComparison]
-            raise errors.ApplicationError(
-                "ServiceFactory requires a project to be set before getting a service.",
-                app_name=self.app.name,
-                docs_url="https://github.com/canonical/craft-application/pull/40#discussion_r1253593262",
-            )
         service_cls_name = "".join(word.title() for word in service.split("_"))
         service_cls_name += "Class"
         classes = dataclasses.asdict(self)
         if service_cls_name not in classes:
             raise AttributeError(service)
         cls = getattr(self, service_cls_name)
-        if issubclass(cls, services.BaseService):
-            kwargs = self._service_kwargs.get(service, {})
-            instance = cls(self.app, self.project, self, **kwargs)
-            instance.setup()
-            setattr(self, service, instance)
-            # Mypy and pyright interpret this differently.
-            # Pyright
-            return instance  # type: ignore[no-any-return]
-        raise TypeError(f"{cls.__name__} is not a service class")
+        if not issubclass(cls, services.AppService):
+            raise TypeError(f"{cls.__name__} is not a service class")
+        kwargs = self._service_kwargs.get(service, {})
+        if issubclass(cls, services.ProjectService):
+            if not self.project:
+                raise ValueError(
+                    f"{cls.__name__} requires a project to be available before creation."
+                )
+            kwargs.setdefault("project", self.project)
+
+        instance: services.AppService = cls(app=self.app, services=self, **kwargs)
+        instance.setup()
+        setattr(self, service, instance)
+        return instance

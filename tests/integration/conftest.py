@@ -45,8 +45,8 @@ def provider_service(app_metadata, fake_project, fake_services):
     """Provider service with install snap disabled for integration tests"""
     return provider.ProviderService(
         app_metadata,
-        fake_project,
         fake_services,
+        project=fake_project,
         work_dir=pathlib.Path(),
         install_snap=False,
     )

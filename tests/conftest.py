@@ -103,8 +103,8 @@ def lifecycle_service(
 
     service = services.LifecycleService(
         app_metadata,
-        fake_project,
         fake_services,
+        project=fake_project,
         work_dir=work_dir,
         cache_dir=cache_dir,
         platform=None,
@@ -128,10 +128,11 @@ def fake_provider_service_class():
         def __init__(
             self,
             app: application.AppMetadata,
-            project: models.Project,
             services: services.ServiceFactory,
+            *,
+            project: models.Project,
         ):
-            super().__init__(app, project, services, work_dir=pathlib.Path())
+            super().__init__(app, services, project=project, work_dir=pathlib.Path())
 
     return FakeProviderService
 
@@ -166,8 +167,8 @@ def fake_lifecycle_service_class(tmp_path):
         ):
             super().__init__(
                 app,
-                project,
                 services,
+                project=project,
                 work_dir=tmp_path / "work",
                 cache_dir=tmp_path / "cache",
                 platform=None,
