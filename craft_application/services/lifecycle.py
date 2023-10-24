@@ -183,7 +183,7 @@ class LifecycleService(base.ProjectService):
                 for action in actions:
                     message = _get_parts_action_message(action)
                     emit.progress(message)
-                    with emit.open_stream(message) as stream:
+                    with emit.open_stream() as stream:
                         aex.execute(action, stdout=stream, stderr=stream)
         except PartsError as err:
             raise errors.PartsLifecycleError.from_parts_error(err) from err
