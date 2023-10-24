@@ -185,6 +185,8 @@ class LifecycleService(base.ProjectService):
                     emit.progress(message)
                     with emit.open_stream(message) as stream:
                         aex.execute(action, stdout=stream, stderr=stream)
+        except PartsError as err:
+            raise errors.PartsLifecycleError.from_parts_error(err) from err
         except RuntimeError as err:
             raise RuntimeError(f"Parts processing internal error: {err}") from err
         except OSError as err:

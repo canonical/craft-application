@@ -313,6 +313,7 @@ def test_run_no_step(fake_parts_lifecycle):
         (RuntimeError("yolo"), RuntimeError, "^Parts processing internal error: yolo$"),
         (OSError(0, "Hi"), PartsLifecycleError, "^Hi$"),
         (Exception("u wot m8"), PartsLifecycleError, "^Unknown error: u wot m8$"),
+        (craft_parts.PartsError("parts error"), PartsLifecycleError, "^parts error$"),
     ],
 )
 def test_run_failure(fake_parts_lifecycle, err, exc_class, message_regex):

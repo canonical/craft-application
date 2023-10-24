@@ -358,19 +358,22 @@ class Application:
             self._emit_error(
                 craft_cli.CraftError(
                     err.brief, details=err.details, resolution=err.resolution
-                )
+                ),
+                cause=err,
             )
             return_code = 1
         except craft_providers.ProviderError as err:
             self._emit_error(
                 craft_cli.CraftError(
                     err.brief, details=err.details, resolution=err.resolution
-                )
+                ),
+                cause=err,
             )
             return_code = 1
         except Exception as err:  # noqa: BLE001 pylint: disable=broad-except
             self._emit_error(
-                craft_cli.CraftError(f"{self.app.name} internal error: {err!r}")
+                craft_cli.CraftError(f"{self.app.name} internal error: {err!r}"),
+                cause=err,
             )
             if os.getenv("CRAFT_DEBUG") == "1":
                 raise

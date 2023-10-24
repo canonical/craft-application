@@ -1,0 +1,10 @@
+name: build-error
+title: A project that fails to build
+version: git
+base: ["ubuntu", "22.04"]
+
+parts:
+  my-part:
+    plugin: nil
+    override-build: |
+      ls i-dont-exist.txt
