@@ -14,7 +14,9 @@
 # You should have received a copy of the GNU Lesser General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Integration tests for parts lifecycle."""
+import textwrap
 
+import craft_cli
 import pytest
 import pytest_check
 from craft_application.services.lifecycle import LifecycleService
@@ -74,3 +76,24 @@ def test_run_and_clean_my_part(parts_lifecycle, emitter, check):
 
     with check:
         emitter.assert_progress("Cleaning parts: my-part")
+
+
+def test_lifecycle_messages_no_duplicates(parts_lifecycle, request, capsys):
+    if request.node.callspec.id != "basic":
+        pytest.skip("Hardcoded expected output assumes 'basic' lifecycle parts.")
+
+    craft_cli.emit.set_mode(craft_cli.EmitterMode.VERBOSE)
+    parts_lifecycle.run("prime")
+
+    _, stderr = capsys.readouterr()
+
+    expected_output = textwrap.dedent(
+        """\
+        Pulling my-part
+        Building my-part
+        Staging my-part
+        Priming my-part
+        """
+    )
+
+    assert expected_output in stderr
