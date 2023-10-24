@@ -8,6 +8,12 @@ Setting up a development environment
 ------------------------------------
 We use a forking, feature-based workflow, so you should start by forking the repository. Once you've done that, clone the project to your computer using git clone's ``--recurse-submodules`` parameter. (See more on the `git submodules`_ documentation.)
 
+Dependencies
+============
+
+Ensure you have ``python-apt`` installed in your development environment.
+On Ubuntu, the correct source package for your distro can be found at https://launchpad.net/ubuntu/+source/python-apt
+
 Tooling
 =======
 We use a large number of tools for our project. Most of these are installed for you with tox, but you'll need to install:
