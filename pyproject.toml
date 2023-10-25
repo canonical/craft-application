@@ -13,14 +13,16 @@ dependencies = [
     "typing_extensions>=4.4.0",
 ]
 classifiers = [
-    "Development Status :: 1 - Planning",
-    "License :: OSI Approved :: GNU Lesser General Public License (LGPL)",
-    "Programming Language :: Python :: 3",
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: GNU Lesser General Public License v3 (LGPLv3)",
+    "Operating System :: POSIX :: Linux",
     "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries :: Application Frameworks",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Typing :: Typed",
 ]
 requires-python = ">=3.8"
 
@@ -30,27 +32,27 @@ requires-python = ">=3.8"
 dev = [
     "coverage[toml]==7.3.2",
     "hypothesis>=6.0",
-    "pytest==7.4.2",
+    "pytest==7.4.3",
     "pytest-check==2.2.2",
     "pytest-cov==4.1.0",
     "pytest-mock==3.12.0",
     "pytest-rerunfailures==12.0",
 ]
 lint = [
-    "black==23.10.0",
+    "black==23.10.1",
     "codespell[toml]==2.2.6",
     "ruff==0.1.1",
     "yamllint==1.32.0"
 ]
 types = [
     "mypy[reports]==1.6.1",
-    "pyright==1.1.332",
+    "pyright==1.1.333",
     "types-requests",
     "types-urllib3",
 ]
 docs = [
     "furo==2023.9.10",
-    "sphinx>=6.2.1,<7.0",
+    "sphinx>=7.2.6,<7.3",
     "sphinx-autobuild==2021.3.14",
     "sphinx-copybutton==0.5.2",
     "sphinx-design==0.5.0",
@@ -58,15 +60,8 @@ docs = [
     "sphinx-toolbox==3.5.0",
     "sphinx-lint==0.8.1",
 ]
-# Python-apt bindings for specific Ubuntu versions.
-# Up to date package links can be found at https://launchpad.net/ubuntu/+source/python-apt
-# Note: These extras can break requirements from other packages, so
-# do not use them in dependencies unless you know what you're doing.
-jammy-dev = [
-    "python-apt@https://launchpad.net/ubuntu/+archive/primary/+sourcefiles/python-apt/2.4.0ubuntu2/python-apt_2.4.0ubuntu2.tar.xz;sys_platform=='linux'"
-]
-lunar-dev = [
-    "python-apt@https://launchpad.net/ubuntu/+archive/primary/+sourcefiles/python-apt/2.5.3ubuntu1/python-apt_2.5.3ubuntu1.tar.xz;sys_platform=='linux'"
+apt = [
+    "python-apt>=2.4.0;sys_platform=='linux'"
 ]
 
 [build-system]
@@ -96,12 +91,8 @@ version_scheme = "post-release"
 git_describe_command = "git describe --long --match '[0-9]*.[0-9]*.[0-9]*' --exclude '*[^0-9.]*'"
 
 [tool.setuptools.packages.find]
-exclude = [
-    "dist",
-    "docs",
-    "results",
-    "tests",
-]
+include = ["*craft*"]
+namespaces = false
 
 [tool.black]
 target-version = ["py38"]
@@ -124,6 +115,9 @@ line_length = 88
 minversion = "7.0"
 testpaths = "tests"
 xfail_strict = true
+markers = [
+    "enable_features: Tests that require specific features",
+]
 
 [tool.coverage.run]
 branch = true
