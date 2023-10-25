@@ -15,7 +15,6 @@
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Integration tests for provider service."""
 import contextlib
-import sys
 
 import craft_providers
 import pytest
@@ -27,14 +26,9 @@ from craft_providers import bases
 @pytest.mark.parametrize(
     "base_name",
     [
-        pytest.param(
-            ("ubuntu", "devel"),
-            marks=pytest.mark.skipif(
-                sys.platform != "linux", reason="Only available on Linux."
-            ),
-            id="ubuntu_devel",
-        ),
-        pytest.param(("ubuntu", "22.04"), id="ubuntu_22.04"),
+        pytest.param(("ubuntu", "23.10"), id="ubuntu_latest"),
+        pytest.param(("ubuntu", "22.04"), id="ubuntu_lts"),
+        pytest.param(("ubuntu", "20.04"), id="ubuntu_old_lts"),
         pytest.param(("almalinux", "9"), id="almalinux_9"),
     ],
 )
