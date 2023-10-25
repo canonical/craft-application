@@ -77,8 +77,13 @@ jobs:
           mkdir -p results
       - name: Setup Tox environments
         run: tox run -m tests --notest
-      - name: Test with tox
-        run: .tox/.tox/bin/tox run --skip-pkg-install --no-list-dependencies --result-json results/tox-${{ matrix.platform }}.json -m tests
+      - name: Unit tests
+        run: .tox/.tox/bin/tox run --skip-pkg-install --no-list-dependencies --result-json results/tox-${{ matrix.platform }}.json -m unit-tests
+        env:
+          PYTEST_ADDOPTS: "--no-header -vv -rN"
+      - name: Integration tests
+        if: '!cancelled()'
+        run: .tox/.tox/bin/tox run --skip-pkg-install --no-list-dependencies --result-json results/tox-${{ matrix.platform }}.json -m integration-tests
         env:
           PYTEST_ADDOPTS: "--no-header -vv -rN"
       - name: Upload code coverage
