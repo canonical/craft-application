@@ -13,14 +13,16 @@ dependencies = [
     "typing_extensions>=4.4.0",
 ]
 classifiers = [
-    "Development Status :: 1 - Planning",
-    "License :: OSI Approved :: GNU Lesser General Public License (LGPL)",
-    "Programming Language :: Python :: 3",
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: GNU Lesser General Public License v3 (LGPLv3)",
+    "Operating System :: POSIX :: Linux",
     "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries :: Application Frameworks",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Typing :: Typed",
 ]
 requires-python = ">=3.8"
 
@@ -58,15 +60,8 @@ docs = [
     "sphinx-toolbox==3.5.0",
     "sphinx-lint==0.8.1",
 ]
-# Python-apt bindings for specific Ubuntu versions.
-# Up to date package links can be found at https://launchpad.net/ubuntu/+source/python-apt
-# Note: These extras can break requirements from other packages, so
-# do not use them in dependencies unless you know what you're doing.
-jammy-dev = [
-    "python-apt@https://launchpad.net/ubuntu/+archive/primary/+sourcefiles/python-apt/2.4.0ubuntu2/python-apt_2.4.0ubuntu2.tar.xz;sys_platform=='linux'"
-]
-lunar-dev = [
-    "python-apt@https://launchpad.net/ubuntu/+archive/primary/+sourcefiles/python-apt/2.5.3ubuntu1/python-apt_2.5.3ubuntu1.tar.xz;sys_platform=='linux'"
+apt = [
+    "python-apt>=2.4.0;sys_platform=='linux'"
 ]
 
 [build-system]
