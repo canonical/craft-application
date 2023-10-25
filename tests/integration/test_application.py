@@ -344,3 +344,46 @@ def test_build_secrets_managed(
     app.run()
 
     check_secrets_output()
+
+
+def test_lifecycle_error_logging(monkeypatch, tmp_path, create_app):
+    monkeypatch.chdir(tmp_path)
+    shutil.copytree(INVALID_PROJECTS_DIR / "build-error", tmp_path, dirs_exist_ok=True)
+
+    monkeypatch.setattr("sys.argv", ["testcraft", "pack", "--destructive-mode"])
+    app = create_app()
+    app.run()
+
+    log_contents = craft_cli.emit._log_filepath.read_text()
+
+    # Make sure there's a traceback
+    assert "Traceback (most recent call last):" in log_contents
+
+    # Make sure it's identified as the correct error type
+    parts_message = "craft_parts.errors.ScriptletRunError: 'override-build' in part 'my-part' failed"
+    assert parts_message in log_contents
+
+
+def test_runtime_error_logging(monkeypatch, tmp_path, create_app, mocker):
+    monkeypatch.chdir(tmp_path)
+    shutil.copytree(INVALID_PROJECTS_DIR / "build-error", tmp_path, dirs_exist_ok=True)
+
+    # Pretend a random piece of code in the LifecycleService raises a RuntimeError.
+    runtime_error = RuntimeError("An unexpected error")
+    mocker.patch(
+        "craft_application.services.lifecycle._get_parts_action_message",
+        side_effect=runtime_error,
+    )
+
+    monkeypatch.setattr("sys.argv", ["testcraft", "pack", "--destructive-mode"])
+    app = create_app()
+    app.run()
+
+    log_contents = craft_cli.emit._log_filepath.read_text()
+
+    # Make sure there's a traceback
+    assert "Traceback (most recent call last):" in log_contents
+
+    # Make sure it's identified as the correct error type
+    parts_message = "Parts processing internal error: An unexpected error"
+    assert parts_message in log_contents
