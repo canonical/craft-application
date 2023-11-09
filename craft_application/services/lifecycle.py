@@ -194,6 +194,15 @@ class LifecycleService(base.ProjectService):
         except Exception as err:  # noqa: BLE001 - Converting general error.
             raise errors.PartsLifecycleError(f"Unknown error: {str(err)}") from err
 
+        if target_step == Step.PRIME:
+            self.post_prime()
+
+    def post_prime(self) -> None:
+        """Perform any necessary post-lifecycle modifications to the prime directory.
+
+        This method should be idempotent.
+        """
+
     def clean(self, part_names: list[str] | None = None) -> None:
         """Remove lifecycle artifacts.
 
