@@ -17,12 +17,22 @@
 from __future__ import annotations
 
 import contextlib
-from typing import TYPE_CHECKING, Any, TextIO
+from typing import TYPE_CHECKING, Any, TextIO, Type, Union, cast, overload
 
 import yaml
 
 if TYPE_CHECKING:  # pragma: no cover
     from collections.abc import Hashable
+
+
+# pyright: reportUnknownMemberType=false
+# Type of "represent_scalar" is
+# (tag: str, value: Unknown, style: str | None = None) -> ScalarNode
+def _repr_str(dumper: yaml.Dumper, data: str) -> yaml.ScalarNode:
+    """Multi-line string representer for the YAML dumper."""
+    if "\n" in data:
+        return dumper.represent_scalar("tag:yaml.org,2002:str", data, style="|")
+    return dumper.represent_scalar("tag:yaml.org,2002:str", data)
 
 
 def _check_duplicate_key_node(
@@ -92,3 +102,38 @@ def safe_yaml_load(stream: TextIO) -> Any:  # noqa: ANN401 - The YAML could be a
     # Silencing S506 ("probable use of unsafe loader") because we override it by using
     # our own safe loader.
     return yaml.load(stream, Loader=_SafeYamlLoader)  # noqa: S506
+
+
+@overload
+def dump_yaml(
+    data: Any, stream: TextIO, **kwargs: Any  # noqa: ANN401 Any gets passed to pyyaml
+) -> None:
+    ...
+
+
+@overload
+def dump_yaml(
+    data: Any,  # noqa: ANN401 Any gets passed to pyyaml
+    stream: None = None,
+    **kwargs: Any,  # noqa: ANN401 Any gets passed to pyyaml
+) -> str:
+    ...
+
+
+def dump_yaml(data: Any, stream: TextIO | None = None, **kwargs: Any) -> str | None:
+    """Dump an object to YAML using PyYAML.
+
+    This works as a drop-in replacement for ``yaml.safe_dump``, but adjusting
+    formatting as appropriate.
+
+    :param data: the data structure to dump.
+    :param stream: The optional text stream to which to write.
+    :param kwargs: Keyword arguments passed to pyyaml
+    """
+    yaml.add_representer(
+        str, _repr_str, Dumper=cast(Type[yaml.Dumper], yaml.SafeDumper)
+    )
+    kwargs.setdefault("sort_keys", False)
+    return cast(  # This cast is needed for pyright but not mypy
+        Union[str, None], yaml.dump(data, stream, Dumper=yaml.SafeDumper, **kwargs)
+    )

@@ -16,34 +16,17 @@
 """Base pydantic model for *craft applications."""
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Type, cast
+import pathlib
+from typing import Any
 
 import pydantic
-import yaml
-from yaml.dumper import SafeDumper
+from typing_extensions import Self
 
-from craft_application import errors
-from craft_application.util import safe_yaml_load
-
-if TYPE_CHECKING:  # pragma: no cover
-    import pathlib
-
-    from typing_extensions import Self
+from craft_application import errors, util
 
 
 def _alias_generator(s: str) -> str:
     return s.replace("_", "-")
-
-
-# pyright: reportUnknownMemberType=false
-# Type of "represent_scalar" is "(tag: str, value: Unknown, style: str | None = None)
-# ->
-# ScalarNode" (reportUnknownMemberType)
-def _repr_str(dumper: yaml.Dumper, data: str) -> yaml.ScalarNode:
-    """Multi-line string representer for the YAML dumper."""
-    if "\n" in data:
-        return dumper.represent_scalar("tag:yaml.org,2002:str", data, style="|")
-    return dumper.represent_scalar("tag:yaml.org,2002:str", data)
 
 
 class CraftBaseConfig(pydantic.BaseConfig):  # pylint: disable=too-few-public-methods
@@ -84,7 +67,7 @@ class CraftBaseModel(pydantic.BaseModel):
     def from_yaml_file(cls, path: pathlib.Path) -> Self:
         """Instantiate this model from a YAML file."""
         with path.open() as file:
-            data = safe_yaml_load(file)
+            data = util.safe_yaml_load(file)
         return cls.from_yaml_data(data, path)
 
     @classmethod
@@ -104,9 +87,4 @@ class CraftBaseModel(pydantic.BaseModel):
     def to_yaml_file(self, path: pathlib.Path) -> None:
         """Write this model to a YAML file."""
         with path.open("wt") as file:
-            yaml.add_representer(
-                str, _repr_str, Dumper=cast(Type[yaml.Dumper], yaml.SafeDumper)
-            )
-            yaml.dump(
-                data=self.marshal(), stream=file, Dumper=SafeDumper, sort_keys=False
-            )
+            util.dump_yaml(self.marshal(), stream=file)
