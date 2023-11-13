@@ -321,10 +321,9 @@ class Application:
         # Set the logging level to DEBUG for all craft-libraries. This is OK even if
         # the specific application doesn't use a specific library, the call does not
         # import the package.
-        craft_libs = ["craft_archives", "craft_parts", "craft_providers", "craft_store"]
-        for craft_lib in craft_libs:
-            logger = logging.getLogger(craft_lib)
-            logger.setLevel(logging.DEBUG)
+        util.setup_loggers(
+            ("craft_archives", "craft_parts", "craft_providers", "craft_store")
+        )
 
         craft_cli.emit.init(
             mode=craft_cli.EmitterMode.BRIEF,
