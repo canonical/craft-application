@@ -138,6 +138,7 @@ class ProviderService(base.ProjectService):
         base_class = bases.get_base_from_alias(alias)
         return base_class(
             alias=alias,
+            compatibility_tag=f"{self._app.name}-{base_class.compatibility_tag}",
             hostname=instance_name,
             snaps=self.snaps,
             environment=self.environment,

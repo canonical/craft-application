@@ -141,6 +141,7 @@ def test_get_base(check, provider_service, base_name, base_class, alias, environ
 
     check.is_instance(base, base_class)
     check.equal(base.alias, alias)
+    check.equal(base.compatibility_tag, f"testcraft-{base_class.compatibility_tag}")
     check.equal(base._environment, environment)
 
 
