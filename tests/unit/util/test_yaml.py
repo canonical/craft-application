@@ -48,9 +48,17 @@ def test_safe_yaml_loader_invalid(file):
     [
         (None, {}, "null\n...\n"),
         ({"thing": "stuff!"}, {}, "thing: stuff!\n"),
-        ({"ordered": "no", "comes_first": False}, {}, "ordered: 'no'\ncomes_first: false\n"),
-        ({"ordered": "yes", "comes_first": True}, {"sort_keys": True}, "comes_first: true\nordered: 'yes'\n"),
-    ]
+        (
+            {"ordered": "no", "comes_first": False},
+            {},
+            "ordered: 'no'\ncomes_first: false\n",
+        ),
+        (
+            {"ordered": "yes", "comes_first": True},
+            {"sort_keys": True},
+            "comes_first: true\nordered: 'yes'\n",
+        ),
+    ],
 )
 def test_dump_yaml_to_string(data, kwargs, expected):
     actual = yaml.dump_yaml(data, **kwargs)
@@ -63,9 +71,17 @@ def test_dump_yaml_to_string(data, kwargs, expected):
     [
         (None, {}, "null\n...\n"),
         ({"thing": "stuff!"}, {}, "thing: stuff!\n"),
-        ({"ordered": "no", "comes_first": False}, {}, "ordered: 'no'\ncomes_first: false\n"),
-        ({"ordered": "yes", "comes_first": True}, {"sort_keys": True}, "comes_first: true\nordered: 'yes'\n"),
-    ]
+        (
+            {"ordered": "no", "comes_first": False},
+            {},
+            "ordered: 'no'\ncomes_first: false\n",
+        ),
+        (
+            {"ordered": "yes", "comes_first": True},
+            {"sort_keys": True},
+            "comes_first: true\nordered: 'yes'\n",
+        ),
+    ],
 )
 def test_dump_yaml_to_stream(data, kwargs, expected):
     with io.StringIO() as file:
