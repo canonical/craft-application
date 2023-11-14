@@ -430,7 +430,7 @@ def test_pack_run_wrong_step(app_metadata, fake_services):
     )
 
     with pytest.raises(RuntimeError) as exc_info:
-        command.run(parsed_args, "wrong-command")
+        command.run(parsed_args, step_name="wrong-command")
 
     assert exc_info.value.args[0] == "Step name wrong-command passed to pack command."
 
