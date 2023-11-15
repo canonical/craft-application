@@ -25,8 +25,6 @@ import sys
 from textwrap import dedent
 from unittest import mock
 
-from pyfakefs.fake_filesystem import FakeFilesystem
-
 import craft_application
 import craft_cli
 import craft_parts
@@ -230,7 +228,7 @@ def test_run_managed_multiple(app, fake_project, monkeypatch):
     info2 = BuildInfo("a2", arch, "arch2", bases.BaseName("base", "2"))
 
     monkeypatch.setattr(
-        app.project.__class__,
+        app.get_project().__class__,
         "get_build_plan",
         lambda _: [info1, info2],
     )
@@ -250,7 +248,7 @@ def test_run_managed_specified_arch(app, fake_project, monkeypatch):
     info2 = BuildInfo("a2", arch, "arch2", bases.BaseName("base", "2"))
 
     monkeypatch.setattr(
-        app.project.__class__,
+        app.get_project().__class__,
         "get_build_plan",
         lambda _: [info1, info2],
     )
@@ -270,7 +268,7 @@ def test_run_managed_specified_platform(app, fake_project, monkeypatch):
     info2 = BuildInfo("a2", arch, "arch2", bases.BaseName("base", "2"))
 
     monkeypatch.setattr(
-        app.project.__class__,
+        app.get_project().__class__,
         "get_build_plan",
         lambda _: [info1, info2],
     )
@@ -519,8 +517,8 @@ def test_work_dir_project_non_managed(monkeypatch, app_metadata, fake_services):
     assert app._work_dir == pathlib.Path.cwd()
 
     # Make sure the project is loaded correctly (from the cwd)
-    assert app.project.name == "myproject"
-    assert app.project.version == "1.0"
+    assert app.get_project().name == "myproject"
+    assert app.get_project().version == "1.0"
 
 
 @pytest.mark.usefixtures("fake_project_file")
@@ -531,8 +529,8 @@ def test_work_dir_project_managed(monkeypatch, app_metadata, fake_services):
     assert app._work_dir == pathlib.PosixPath("/root")
 
     # Make sure the project is loaded correctly (from the cwd)
-    assert app.project.name == "myproject"
-    assert app.project.version == "1.0"
+    assert app.get_project().name == "myproject"
+    assert app.get_project().version == "1.0"
 
 
 @pytest.fixture()
@@ -560,7 +558,7 @@ def environment_project(monkeypatch, tmp_path):
 @pytest.mark.usefixtures("environment_project")
 def test_application_expand_environment(app_metadata, fake_services):
     app = application.Application(app_metadata, fake_services)
-    project = app.project
+    project = app.get_project()
 
     assert project.parts["mypart"]["source-tag"] == "v1.2.3"
 
@@ -597,7 +595,7 @@ def test_application_build_secrets(app_metadata, fake_services, monkeypatch, moc
     spied_set_secrets = mocker.spy(craft_cli.emit, "set_secrets")
 
     app = application.Application(app_metadata, fake_services)
-    project = app.project
+    project = app.get_project()
 
     mypart = project.parts["mypart"]
     assert mypart["source"] == "source-folder/project"
@@ -621,7 +619,8 @@ def test_project_deprecated(app, fake_project):
         del app.project
 
 
-def test_get_project_current_dir(app, fake_project_file):
+@pytest.mark.usefixtures("fake_project_file")
+def test_get_project_current_dir(app):
     # Load a project file from the current directory
     project = app.get_project()
 

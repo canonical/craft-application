@@ -260,7 +260,7 @@ class Application:
         """Run the application in a managed instance."""
         extra_args: dict[str, Any] = {}
 
-        build_plan = self.project.get_build_plan()
+        build_plan = self.get_project().get_build_plan()
         build_plan = _filter_plan(build_plan, platform, build_for)
 
         for build_info in build_plan:
@@ -394,16 +394,16 @@ class Application:
                 # command runs in the outer instance
                 craft_cli.emit.debug(f"Running {self.app.name} {command.name} on host")
                 if command.always_load_project:
-                    self.services.project = self.project
+                    self.services.project = self.get_project()
                 return_code = dispatcher.run() or 0
             elif not self.is_managed():
                 # command runs in inner instance, but this is the outer instance
-                self.services.project = self.project
+                self.services.project = self.get_project()
                 self.run_managed(platform, build_for)
                 return_code = 0
             else:
                 # command runs in inner instance
-                self.services.project = self.project
+                self.services.project = self.get_project()
                 return_code = dispatcher.run() or 0
         except craft_cli.ArgumentParsingError as err:
             print(err, file=sys.stderr)  # to stderr, as argparse normally does
