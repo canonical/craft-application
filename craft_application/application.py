@@ -215,7 +215,8 @@ class Application:
 
         yaml_data = self._transform_project_yaml(yaml_data)
 
-        return self.app.ProjectClass.from_yaml_data(yaml_data, project_path)
+        self.__project = self.app.ProjectClass.from_yaml_data(yaml_data, project_path)
+        return self.__project
 
     @property
     def project(self) -> models.Project:

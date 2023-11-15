@@ -25,6 +25,8 @@ import sys
 from textwrap import dedent
 from unittest import mock
 
+from pyfakefs.fake_filesystem import FakeFilesystem
+
 import craft_application
 import craft_cli
 import craft_parts
@@ -617,3 +619,21 @@ def test_project_deprecated(app, fake_project):
         _ = app.project
     with pytest.warns(DeprecationWarning, match=warning_re):
         del app.project
+
+
+def test_get_project_current_dir(app, fake_project_file):
+    # Load a project file from the current directory
+    project = app.get_project()
+
+    # Check that it caches that project.
+    assert app.get_project() == project, "Project file was not cached."
+
+
+def test_get_project_other_dir(monkeypatch, tmp_path, app, fake_project_file):
+    monkeypatch.chdir(tmp_path)
+    assert not (tmp_path / fake_project_file.name).exists(), "Test setup failed."
+
+    project = app.get_project(fake_project_file.parent)
+
+    assert app.get_project(fake_project_file.parent) is project
+    assert app.get_project() is project
