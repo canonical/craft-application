@@ -58,7 +58,7 @@ class _LifecycleCommand(base.ExtensibleCommand):
         emit.trace(f"lifecycle command: {self.name!r}, arguments: {parsed_args!r}")
 
 
-class _LifecyclePartsCommand(_LifecycleCommand):
+class LifecyclePartsCommand(_LifecycleCommand):
     # All lifecycle-related commands need a project to work
     always_load_project = True
 
@@ -87,7 +87,7 @@ class _LifecyclePartsCommand(_LifecycleCommand):
         return cmd
 
 
-class _LifecycleStepCommand(_LifecyclePartsCommand):
+class LifecycleStepCommand(LifecyclePartsCommand):
     @override
     def run_managed(self, parsed_args: argparse.Namespace) -> bool:
         return not parsed_args.destructive_mode
@@ -188,7 +188,7 @@ class _LifecycleStepCommand(_LifecyclePartsCommand):
         return True
 
 
-class PullCommand(_LifecycleStepCommand):
+class PullCommand(LifecycleStepCommand):
     """Command to pull parts."""
 
     name = "pull"
@@ -202,7 +202,7 @@ class PullCommand(_LifecycleStepCommand):
     )
 
 
-class OverlayCommand(_LifecycleStepCommand):
+class OverlayCommand(LifecycleStepCommand):
     """Command to overlay parts."""
 
     name = "overlay"
@@ -215,7 +215,7 @@ class OverlayCommand(_LifecycleStepCommand):
     )
 
 
-class BuildCommand(_LifecycleStepCommand):
+class BuildCommand(LifecycleStepCommand):
     """Command to build parts."""
 
     name = "build"
@@ -228,7 +228,7 @@ class BuildCommand(_LifecycleStepCommand):
     )
 
 
-class StageCommand(_LifecycleStepCommand):
+class StageCommand(LifecycleStepCommand):
     """Command to stage parts."""
 
     name = "stage"
@@ -242,7 +242,7 @@ class StageCommand(_LifecycleStepCommand):
     )
 
 
-class PrimeCommand(_LifecycleStepCommand):
+class PrimeCommand(LifecycleStepCommand):
     """Command to prime parts."""
 
     name = "prime"
@@ -322,7 +322,7 @@ class PackCommand(PrimeCommand):
         return False
 
 
-class CleanCommand(_LifecyclePartsCommand):
+class CleanCommand(LifecyclePartsCommand):
     """Command to remove part assets."""
 
     name = "clean"
