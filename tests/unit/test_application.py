@@ -74,9 +74,16 @@ def test_app_metadata_dev():
     assert app.version == "dev"
 
 
+class FakeApplication(application.Application):
+    """An application class explicitly for testing. Adds some convenient test hooks."""
+
+    def set_project(self, project):
+        self._Application__project = project
+
+
 @pytest.fixture()
 def app(app_metadata, fake_services):
-    return application.Application(app_metadata, fake_services)
+    return FakeApplication(app_metadata, fake_services)
 
 
 @pytest.fixture()
@@ -159,7 +166,7 @@ def test_log_path(monkeypatch, app, provider_managed, expected):
 def test_run_managed_success(app, fake_project):
     mock_provider = mock.MagicMock(spec_set=services.ProviderService)
     app.services.provider = mock_provider
-    app.project = fake_project
+    app.set_project(fake_project)
 
     arch = get_host_architecture()
     app.run_managed(None, arch)
@@ -178,7 +185,7 @@ def test_run_managed_failure(app, fake_project):
     instance = mock_provider.instance.return_value.__enter__.return_value
     instance.execute_run.side_effect = subprocess.CalledProcessError(1, [])
     app.services.provider = mock_provider
-    app.project = fake_project
+    app.set_project(fake_project)
 
     with pytest.raises(craft_providers.ProviderError) as exc_info:
         app.run_managed(None, get_host_architecture())
@@ -192,7 +199,7 @@ def test_run_managed_secrets(app, fake_project):
     instance = mock_provider.instance.return_value.__enter__.return_value
     mock_execute = instance.execute_run
     app.services.provider = mock_provider
-    app.project = fake_project
+    app.set_project(fake_project)
 
     fake_encoded_environment = {
         "CRAFT_TEST": "banana",
@@ -214,7 +221,7 @@ def test_run_managed_secrets(app, fake_project):
 def test_run_managed_multiple(app, fake_project, monkeypatch):
     mock_provider = mock.MagicMock(spec_set=services.ProviderService)
     app.services.provider = mock_provider
-    app.project = fake_project
+    app.set_project(fake_project)
 
     arch = get_host_architecture()
     info1 = BuildInfo("a1", arch, "arch1", bases.BaseName("base", "1"))
@@ -234,7 +241,7 @@ def test_run_managed_multiple(app, fake_project, monkeypatch):
 def test_run_managed_specified_arch(app, fake_project, monkeypatch):
     mock_provider = mock.MagicMock(spec_set=services.ProviderService)
     app.services.provider = mock_provider
-    app.project = fake_project
+    app.set_project(fake_project)
 
     arch = get_host_architecture()
     info1 = BuildInfo("a1", arch, "arch1", bases.BaseName("base", "1"))
@@ -254,7 +261,7 @@ def test_run_managed_specified_arch(app, fake_project, monkeypatch):
 def test_run_managed_specified_platform(app, fake_project, monkeypatch):
     mock_provider = mock.MagicMock(spec_set=services.ProviderService)
     app.services.provider = mock_provider
-    app.project = fake_project
+    app.set_project(fake_project)
 
     arch = get_host_architecture()
     info1 = BuildInfo("a1", arch, "arch1", bases.BaseName("base", "1"))
@@ -345,7 +352,7 @@ def test_run_success_unmanaged(
     monkeypatch.setattr(sys, "argv", ["testcraft", "pass"])
 
     app.add_command_group("test", [UnmanagedCommand])
-    app.project = fake_project
+    app.set_project(fake_project)
 
     check.equal(app.run(), return_code or 0)
     with check:
@@ -355,7 +362,7 @@ def test_run_success_unmanaged(
 
 
 def test_run_success_managed(monkeypatch, app, fake_project):
-    app.project = fake_project
+    app.set_project(fake_project)
     app.run_managed = mock.Mock()
     monkeypatch.setattr(sys, "argv", ["testcraft", "pull"])
 
@@ -365,7 +372,7 @@ def test_run_success_managed(monkeypatch, app, fake_project):
 
 
 def test_run_success_managed_with_arch(monkeypatch, app, fake_project):
-    app.project = fake_project
+    app.set_project(fake_project)
     app.run_managed = mock.Mock()
     arch = get_host_architecture()
     monkeypatch.setattr(sys, "argv", ["testcraft", "pull", f"--build-for={arch}"])
@@ -376,7 +383,7 @@ def test_run_success_managed_with_arch(monkeypatch, app, fake_project):
 
 
 def test_run_success_managed_with_platform(monkeypatch, app, fake_project):
-    app.project = fake_project
+    app.set_project(fake_project)
     app.run_managed = mock.Mock()
     monkeypatch.setattr(sys, "argv", ["testcraft", "pull", "--platform=foo"])
 
@@ -389,7 +396,7 @@ def test_run_success_managed_with_platform(monkeypatch, app, fake_project):
 def test_run_success_managed_inside_managed(
     monkeypatch, check, app, fake_project, mock_dispatcher, return_code
 ):
-    app.project = fake_project
+    app.set_project(fake_project)
     app.run_managed = mock.Mock()
     mock_dispatcher.run.return_value = return_code
     mock_dispatcher.pre_parse_args.return_value = {}
@@ -428,7 +435,7 @@ def test_run_error(
     return_code,
     error_msg,
 ):
-    app.project = fake_project
+    app.set_project(fake_project)
     mock_dispatcher.load_command.side_effect = error
     mock_dispatcher.pre_parse_args.return_value = {}
     monkeypatch.setattr(sys, "argv", ["testcraft", "pull"])
@@ -440,7 +447,7 @@ def test_run_error(
 
 @pytest.mark.parametrize("error", [KeyError(), ValueError(), Exception()])
 def test_run_error_debug(monkeypatch, mock_dispatcher, app, fake_project, error):
-    app.project = fake_project
+    app.set_project(fake_project)
     mock_dispatcher.load_command.side_effect = error
     mock_dispatcher.pre_parse_args.return_value = {}
     monkeypatch.setattr(sys, "argv", ["testcraft", "pull"])
@@ -595,3 +602,18 @@ def test_application_build_secrets(app_metadata, fake_services, monkeypatch, moc
     assert mypart["build-environment"][0]["MY_VAR"] == "secret-value"
 
     spied_set_secrets.assert_called_once_with(list({"source-folder", "secret-value"}))
+
+
+def test_project_deprecated(app, fake_project):
+    """Ensure that the project property raises a deprecation warning."""
+    warning_re = re.compile(
+        r"^Direct access to an application's project property is deprecated "
+        r"and will be removed in craft-application 2\.0\."
+    )
+
+    with pytest.warns(DeprecationWarning, match=warning_re):
+        app.project = fake_project
+    with pytest.warns(DeprecationWarning, match=warning_re):
+        _ = app.project
+    with pytest.warns(DeprecationWarning, match=warning_re):
+        del app.project
