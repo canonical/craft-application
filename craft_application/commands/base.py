@@ -17,16 +17,14 @@
 from __future__ import annotations
 
 import abc
-from typing import TYPE_CHECKING, Any, Optional, Protocol, final
+import argparse
+from typing import Any, Optional, Protocol, final
 
 from craft_cli import BaseCommand, emit
 from typing_extensions import Self
 
-if TYPE_CHECKING:  # pragma: no cover
-    import argparse
-
-    from craft_application import application
-    from craft_application.services import service_factory
+from craft_application import application, util
+from craft_application.services import service_factory
 
 
 class ParserCallback(Protocol):
@@ -137,7 +135,6 @@ class ExtensibleCommand(AppCommand):
 
     def _fill_parser(self, parser: argparse.ArgumentParser) -> None:
         """Real parser filler for an ExtensibleCommand."""
-        super().fill_parser(parser)  # type: ignore[arg-type]
 
     @final
     def fill_parser(self, parser: argparse.ArgumentParser) -> None:
@@ -148,9 +145,9 @@ class ExtensibleCommand(AppCommand):
         (That is, starting with the top ancestor.)
         """
         self._fill_parser(parser)
-        for cls in reversed(self.__class__.mro()):
-            if callback := getattr(cls, "_parse_callback", None):
-                callback(self, parser)
+        callbacks = util.get_unique_callbacks(self.__class__, "_parse_callback")
+        for callback in callbacks:
+            callback(self, parser)
 
     @abc.abstractmethod
     def _run(

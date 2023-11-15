@@ -15,17 +15,19 @@
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Utilities for craft-application."""
 
-from craft_application.util.yaml import safe_yaml_load, dump_yaml
+from craft_application.util.callbacks import get_unique_callbacks
 from craft_application.util.paths import get_managed_logpath
 from craft_application.util.platforms import (
     get_host_architecture,
     convert_architecture_deb_to_platform,
 )
+from craft_application.util.yaml import dump_yaml, safe_yaml_load
 
 __all__ = [
-    "safe_yaml_load",
-    "dump_yaml",
+    "get_unique_callbacks",
+    "get_managed_logpath",
     "get_host_architecture",
     "convert_architecture_deb_to_platform",
-    "get_managed_logpath",
+    "dump_yaml",
+    "safe_yaml_load",
 ]
