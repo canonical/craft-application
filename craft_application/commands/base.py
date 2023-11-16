@@ -103,6 +103,11 @@ class ExtensibleCommand(AppCommand):
     _prologue: RunCallback | None
     _epilogue: RunCallback | None
 
+    @property
+    def services(self) -> service_factory.ServiceFactory:
+        """Services available to this command."""
+        return self._services
+
     @classmethod
     def register_parser_filler(cls, callback: ParserCallback) -> None:
         """Register a function that modifies the argument parser.
