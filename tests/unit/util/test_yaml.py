@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Tests for internal model utilities."""
+import io
 import pathlib
 
 import pytest
@@ -40,3 +41,50 @@ def test_safe_yaml_loader_invalid(file):
     with file.open() as f:
         with pytest.raises(YAMLError):
             yaml.safe_yaml_load(f)
+
+
+@pytest.mark.parametrize(
+    ("data", "kwargs", "expected"),
+    [
+        (None, {}, "null\n...\n"),
+        ({"thing": "stuff!"}, {}, "thing: stuff!\n"),
+        (
+            {"ordered": "no", "comes_first": False},
+            {},
+            "ordered: 'no'\ncomes_first: false\n",
+        ),
+        (
+            {"ordered": "yes", "comes_first": True},
+            {"sort_keys": True},
+            "comes_first: true\nordered: 'yes'\n",
+        ),
+    ],
+)
+def test_dump_yaml_to_string(data, kwargs, expected):
+    actual = yaml.dump_yaml(data, **kwargs)
+
+    assert actual == expected
+
+
+@pytest.mark.parametrize(
+    ("data", "kwargs", "expected"),
+    [
+        (None, {}, "null\n...\n"),
+        ({"thing": "stuff!"}, {}, "thing: stuff!\n"),
+        (
+            {"ordered": "no", "comes_first": False},
+            {},
+            "ordered: 'no'\ncomes_first: false\n",
+        ),
+        (
+            {"ordered": "yes", "comes_first": True},
+            {"sort_keys": True},
+            "comes_first: true\nordered: 'yes'\n",
+        ),
+    ],
+)
+def test_dump_yaml_to_stream(data, kwargs, expected):
+    with io.StringIO() as file:
+        yaml.dump_yaml(data, file, **kwargs)
+
+        assert file.getvalue() == expected
