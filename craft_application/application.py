@@ -16,7 +16,6 @@
 """Main application classes for a craft-application."""
 from __future__ import annotations
 
-import functools
 import importlib
 import logging
 import os
@@ -33,8 +32,8 @@ import craft_parts
 import craft_providers
 from xdg.BaseDirectory import save_cache_path  # type: ignore[import]
 
-from craft_application import commands, models, secrets, util
-from craft_application.models import BuildInfo
+from craft_application import commands, errors, grammar, models, secrets, util
+from craft_application.models import BuildInfo, GrammarAwareProject
 
 if TYPE_CHECKING:
     from craft_application.services import service_factory
@@ -103,6 +102,7 @@ class Application:
         self.services = services
         self._command_groups: list[craft_cli.CommandGroup] = []
         self._global_arguments: list[craft_cli.GlobalArgument] = [GLOBAL_VERSION]
+        self.project: models.Project | None = None
 
         # When build_secrets are enabled, this contains the secret info to pass to
         # managed instances.
@@ -178,8 +178,7 @@ class Application:
             work_dir=self._work_dir,
         )
 
-    @functools.cached_property
-    def project(self) -> models.Project:
+    def load_project(self, build_on: str, build_for: str) -> None:
         """Get this application's Project metadata."""
         # Current working directory contains the project file
         project_file = pathlib.Path(f"{self.app.name}.yaml").resolve()
@@ -188,9 +187,20 @@ class Application:
         with project_file.open() as file:
             yaml_data = util.safe_yaml_load(file)
 
+        # validate project grammar
+        GrammarAwareProject.validate_grammar(yaml_data)
+
         yaml_data = self._transform_project_yaml(yaml_data)
 
-        return self.app.ProjectClass.from_yaml_data(yaml_data, project_file)
+        if "parts" in yaml_data:
+            craft_cli.emit.debug(f"Processing grammar (on {build_on} for {build_for})")
+            yaml_data["parts"] = grammar.process_parts(
+                parts_yaml_data=yaml_data["parts"],
+                arch=build_on,
+                target_arch=build_for,
+            )
+
+        self.project = self.app.ProjectClass.from_yaml_data(yaml_data, project_file)
 
     def is_managed(self) -> bool:
         """Shortcut to tell whether we're running in managed mode."""
@@ -199,6 +209,9 @@ class Application:
     def run_managed(self, platform: str | None, build_for: str | None) -> None:
         """Run the application in a managed instance."""
         extra_args: dict[str, Any] = {}
+
+        if not self.project:
+            raise RuntimeError("project not loaded")
 
         build_plan = self.project.get_build_plan()
         build_plan = _filter_plan(build_plan, platform, build_for)
@@ -313,7 +326,7 @@ class Application:
     def run(self) -> int:  # noqa: PLR0912 (too many branches due to error handling)
         """Bootstrap and run the application."""
         dispatcher = self._get_dispatcher()
-        craft_cli.emit.trace("Preparing application...")
+        craft_cli.emit.debug("Preparing application...")
 
         return_code = 1  # General error
         try:
@@ -327,23 +340,38 @@ class Application:
                 ),
             )
             platform = getattr(dispatcher.parsed_args(), "platform", None)
-            build_for = getattr(dispatcher.parsed_args(), "build_for", None)
+            build_on = util.get_host_architecture()
+            build_for = getattr(dispatcher.parsed_args(), "build_for", build_on)
             self._configure_services(platform, build_for)
 
-            if not command.run_managed(dispatcher.parsed_args()):
+            craft_cli.emit.debug(
+                f"build_on={build_on}, build_for={build_for}, platform={platform}"
+            )
+
+            managed_mode = command.run_managed(dispatcher.parsed_args())
+            if managed_mode or command.always_load_project:
+                self.load_project(build_on, build_for)
+                build_plan = (
+                    self.project.get_build_plan()  # type: ignore[union-attr]  # pyright: ignore[reportOptionalMemberAccess]
+                )
+
+                if platform:
+                    # load project again, now resolving grammar for platform
+                    build_for = _get_platform_build_for(platform, build_plan)
+                    self.load_project(build_on, build_for)
+
+                self.services.project = self.project
+
+            if not managed_mode:
                 # command runs in the outer instance
                 craft_cli.emit.debug(f"Running {self.app.name} {command.name} on host")
-                if command.always_load_project:
-                    self.services.project = self.project
                 return_code = dispatcher.run() or 0
             elif not self.is_managed():
                 # command runs in inner instance, but this is the outer instance
-                self.services.project = self.project
                 self.run_managed(platform, build_for)
                 return_code = 0
             else:
                 # command runs in inner instance
-                self.services.project = self.project
                 return_code = dispatcher.run() or 0
         except craft_cli.ArgumentParsingError as err:
             print(err, file=sys.stderr)  # to stderr, as argparse normally does
@@ -478,3 +506,12 @@ def _filter_plan(
             plan.append(build_info)
 
     return plan
+
+
+def _get_platform_build_for(platform: str, build_plan: list[BuildInfo]) -> str:
+    """Raise an error if platform is not in the build plan."""
+    all_platforms = {b.platform: b for b in build_plan}
+    if platform not in all_platforms:
+        raise errors.InvalidPlatformError(platform, list(all_platforms.keys()))
+
+    return all_platforms[platform].build_for

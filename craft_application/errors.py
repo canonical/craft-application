@@ -19,7 +19,7 @@ All errors inherit from craft_cli.CraftError.
 """
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Sequence
 
 from craft_cli import CraftError
 
@@ -103,3 +103,13 @@ class SecretsManagedError(CraftError):
             f'Build secret "{host_directive}" was not found in the managed environment.'
         )
         super().__init__(message=message)
+
+
+class InvalidPlatformError(CraftError):
+    """The selected build plan platform is invalid."""
+
+    def __init__(self, platform: str, all_platforms: Sequence[str]) -> None:
+        message = f"Platform {platform!r} not found in the project definition."
+        details = f"Valid platforms are: {', '.join(all_platforms)}."
+
+        super().__init__(message=message, details=details)

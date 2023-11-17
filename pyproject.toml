@@ -4,6 +4,7 @@ description = "A framework for *craft applications."
 dynamic = ["version", "readme"]
 dependencies = [
     "craft-cli>=2.4.0",
+    "craft-grammar>=1.1.1",
     "craft-parts>=1.21.1",
     "craft-providers>=1.20.0,<2.0",
     "pydantic>=1.10,<2.0",

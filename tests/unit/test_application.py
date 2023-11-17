@@ -173,7 +173,7 @@ def test_run_managed_success(app, fake_project):
     )
 
 
-def test_run_managed_failure(app, fake_project):
+def test_run_managed_failure(app, fake_project, mocker):
     mock_provider = mock.MagicMock(spec_set=services.ProviderService)
     instance = mock_provider.instance.return_value.__enter__.return_value
     instance.execute_run.side_effect = subprocess.CalledProcessError(1, [])
@@ -187,7 +187,7 @@ def test_run_managed_failure(app, fake_project):
 
 
 @pytest.mark.enable_features("build_secrets")
-def test_run_managed_secrets(app, fake_project):
+def test_run_managed_secrets(app, fake_project, mocker):
     mock_provider = mock.MagicMock(spec_set=services.ProviderService)
     instance = mock_provider.instance.return_value.__enter__.return_value
     mock_execute = instance.execute_run
@@ -211,7 +211,7 @@ def test_run_managed_secrets(app, fake_project):
     assert execute_env["CRAFT_TEST"] == "banana"
 
 
-def test_run_managed_multiple(app, fake_project, monkeypatch):
+def test_run_managed_multiple(app, fake_project, monkeypatch, mocker):
     mock_provider = mock.MagicMock(spec_set=services.ProviderService)
     app.services.provider = mock_provider
     app.project = fake_project
@@ -231,7 +231,7 @@ def test_run_managed_multiple(app, fake_project, monkeypatch):
     assert mock.call(info1, work_dir=mock.ANY) in mock_provider.instance.mock_calls
 
 
-def test_run_managed_specified_arch(app, fake_project, monkeypatch):
+def test_run_managed_specified_arch(app, fake_project, monkeypatch, mocker):
     mock_provider = mock.MagicMock(spec_set=services.ProviderService)
     app.services.provider = mock_provider
     app.project = fake_project
@@ -251,7 +251,7 @@ def test_run_managed_specified_arch(app, fake_project, monkeypatch):
     assert mock.call(info1, work_dir=mock.ANY) not in mock_provider.instance.mock_calls
 
 
-def test_run_managed_specified_platform(app, fake_project, monkeypatch):
+def test_run_managed_specified_platform(app, fake_project, monkeypatch, mocker):
     mock_provider = mock.MagicMock(spec_set=services.ProviderService)
     app.services.provider = mock_provider
     app.project = fake_project
@@ -354,7 +354,8 @@ def test_run_success_unmanaged(
         emitter.assert_debug("Running testcraft pass on host")
 
 
-def test_run_success_managed(monkeypatch, app, fake_project):
+def test_run_success_managed(monkeypatch, app, fake_project, mocker):
+    mocker.patch.object(app, "load_project", return_value=fake_project)
     app.project = fake_project
     app.run_managed = mock.Mock()
     monkeypatch.setattr(sys, "argv", ["testcraft", "pull"])
@@ -364,7 +365,8 @@ def test_run_success_managed(monkeypatch, app, fake_project):
     app.run_managed.assert_called_once_with(None, None)  # --build-for not used
 
 
-def test_run_success_managed_with_arch(monkeypatch, app, fake_project):
+def test_run_success_managed_with_arch(monkeypatch, app, fake_project, mocker):
+    mocker.patch.object(app, "load_project", return_value=fake_project)
     app.project = fake_project
     app.run_managed = mock.Mock()
     arch = get_host_architecture()
@@ -372,23 +374,27 @@ def test_run_success_managed_with_arch(monkeypatch, app, fake_project):
 
     pytest_check.equal(app.run(), 0)
 
-    app.run_managed.assert_called_once_with(None, arch)
+    app.run_managed.assert_called_once()
 
 
-def test_run_success_managed_with_platform(monkeypatch, app, fake_project):
+def test_run_success_managed_with_platform(monkeypatch, app, fake_project, mocker):
+    mocker.patch.object(app, "load_project", return_value=fake_project)
     app.project = fake_project
     app.run_managed = mock.Mock()
+    arch = get_host_architecture()
     monkeypatch.setattr(sys, "argv", ["testcraft", "pull", "--platform=foo"])
 
     pytest_check.equal(app.run(), 0)
 
-    app.run_managed.assert_called_once_with("foo", None)
+    app.run_managed.assert_called_once_with("foo", arch)
 
 
 @pytest.mark.parametrize("return_code", [None, 0, 1])
 def test_run_success_managed_inside_managed(
-    monkeypatch, check, app, fake_project, mock_dispatcher, return_code
+    monkeypatch, check, app, fake_project, mock_dispatcher, return_code, mocker
 ):
+    mocker.patch.object(app, "load_project", return_value=fake_project)
+    mocker.patch.object(mock_dispatcher, "parsed_args", return_value={"platform": "foo"})
     app.project = fake_project
     app.run_managed = mock.Mock()
     mock_dispatcher.run.return_value = return_code
@@ -510,6 +516,10 @@ def test_work_dir_project_non_managed(monkeypatch, app_metadata, fake_services):
     assert app._work_dir == pathlib.Path.cwd()
 
     # Make sure the project is loaded correctly (from the cwd)
+    arch = get_host_architecture()
+    app.load_project(arch, arch)
+    assert app.project is not None
+
     assert app.project.name == "myproject"
     assert app.project.version == "1.0"
 
@@ -522,6 +532,10 @@ def test_work_dir_project_managed(monkeypatch, app_metadata, fake_services):
     assert app._work_dir == pathlib.PosixPath("/root")
 
     # Make sure the project is loaded correctly (from the cwd)
+    arch = get_host_architecture()
+    app.load_project(arch, arch)
+    assert app.project is not None
+
     assert app.project.name == "myproject"
     assert app.project.version == "1.0"
 
@@ -551,9 +565,13 @@ def environment_project(monkeypatch, tmp_path):
 @pytest.mark.usefixtures("environment_project")
 def test_application_expand_environment(app_metadata, fake_services):
     app = application.Application(app_metadata, fake_services)
-    project = app.project
 
-    assert project.parts["mypart"]["source-tag"] == "v1.2.3"
+    # Make sure the project is loaded correctly (from the cwd)
+    arch = get_host_architecture()
+    app.load_project(arch, arch)
+    assert app.project is not None
+
+    assert app.project.parts["mypart"]["source-tag"] == "v1.2.3"
 
 
 @pytest.fixture()
@@ -588,9 +606,13 @@ def test_application_build_secrets(app_metadata, fake_services, monkeypatch, moc
     spied_set_secrets = mocker.spy(craft_cli.emit, "set_secrets")
 
     app = application.Application(app_metadata, fake_services)
-    project = app.project
 
-    mypart = project.parts["mypart"]
+    # Make sure the project is loaded correctly (from the cwd)
+    arch = get_host_architecture()
+    app.load_project(arch, arch)
+    assert app.project is not None
+
+    mypart = app.project.parts["mypart"]
     assert mypart["source"] == "source-folder/project"
     assert mypart["build-environment"][0]["MY_VAR"] == "secret-value"
 

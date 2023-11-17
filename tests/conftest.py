@@ -31,7 +31,16 @@ if TYPE_CHECKING:  # pragma: no cover
     from collections.abc import Iterator
 
 
+class Platform(models.CraftBaseModel):
+    """Platform definition."""
+
+    build_on: str
+    build_for: str
+
+
 class MyProject(models.Project):
+    platforms: dict[str, Platform]
+
     def get_build_plan(self) -> list[models.BuildInfo]:
         arch = util.get_host_architecture()
         return [models.BuildInfo("foo", arch, arch, bases.BaseName("ubuntu", "22.04"))]
@@ -70,6 +79,7 @@ def app_metadata(features) -> craft_application.AppMetadata:
 
 @pytest.fixture()
 def fake_project() -> models.Project:
+    arch = util.get_host_architecture()
     return MyProject(
         name="full-project",  # pyright: ignore[reportGeneralTypeIssues]
         title="A fully-defined project",  # pyright: ignore[reportGeneralTypeIssues]
@@ -82,6 +92,7 @@ def fake_project() -> models.Project:
         description="A fully-defined craft-application project. (description)",
         license="LGPLv3",
         parts={"my-part": {"plugin": "nil"}},
+        platforms={"foo": Platform(build_on=arch, build_for=arch)},
     )
 
 
