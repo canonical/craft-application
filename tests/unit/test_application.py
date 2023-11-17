@@ -625,7 +625,7 @@ def test_get_project_current_dir(app):
     project = app.get_project()
 
     # Check that it caches that project.
-    assert app.get_project() == project, "Project file was not cached."
+    assert app.get_project() is project, "Project file was not cached."
 
 
 def test_get_project_other_dir(monkeypatch, tmp_path, app, fake_project_file):
