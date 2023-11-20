@@ -120,6 +120,19 @@ class Application:
             self._work_dir = pathlib.Path.cwd()
 
     @property
+    def app_config(self) -> dict[str, Any]:
+        """Get the configuration passed to dispatcher.load_command().
+
+        This can generally be left as-is. It's strongly recommended that if you are
+        overriding it, you begin with ``config = super().app_config`` and update the
+        dictionary from there.
+        """
+        return {
+            "app": self.app,
+            "services": self.services,
+        }
+
+    @property
     def command_groups(self) -> list[craft_cli.CommandGroup]:
         """Return command groups."""
         lifecycle_commands = commands.get_lifecycle_command_group()
@@ -379,12 +392,7 @@ class Application:
         try:
             command = cast(
                 commands.AppCommand,
-                dispatcher.load_command(
-                    {
-                        "app": self.app,
-                        "services": self.services,
-                    }
-                ),
+                dispatcher.load_command(self.app_config),
             )
             platform = getattr(dispatcher.parsed_args(), "platform", None)
             build_for = getattr(dispatcher.parsed_args(), "build_for", None)
