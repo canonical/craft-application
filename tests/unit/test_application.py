@@ -337,14 +337,16 @@ def test_run_outputs_version(monkeypatch, capsys, app, argv):
     assert out == "testcraft 3.14159\n"
 
 
+@pytest.mark.parametrize("load_project", [True, False])
 @pytest.mark.parametrize("return_code", [None, 0, 1])
 def test_run_success_unmanaged(
-    monkeypatch, emitter, check, app, fake_project, return_code
+    monkeypatch, emitter, check, app, fake_project, return_code, load_project
 ):
     class UnmanagedCommand(commands.AppCommand):
         name = "pass"
         help_msg = "Return without doing anything"
         overview = "Return without doing anything"
+        always_load_project = load_project
 
         def run(self, parsed_args: argparse.Namespace):  # noqa: ARG002
             return return_code
