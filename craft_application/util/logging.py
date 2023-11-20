@@ -15,7 +15,6 @@
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Logging helpers."""
 import logging
-from typing import Iterable
 
 
 def setup_loggers(*names: str) -> None:
