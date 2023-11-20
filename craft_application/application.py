@@ -16,7 +16,6 @@
 """Main application classes for a craft-application."""
 from __future__ import annotations
 
-import functools
 import importlib
 import logging
 import os
@@ -24,6 +23,7 @@ import pathlib
 import signal
 import subprocess
 import sys
+import warnings
 from dataclasses import dataclass, field
 from importlib import metadata
 from typing import TYPE_CHECKING, Any, cast, final
@@ -107,6 +107,12 @@ class Application:
         # When build_secrets are enabled, this contains the secret info to pass to
         # managed instances.
         self._secrets: secrets.BuildSecrets | None = None
+        # Cached project object, allows only the first time we load the project
+        # to specify things like the project directory.
+        # This is set as a private attribute in order to discourage real application
+        # implementations from accessing it directly. They should always use
+        # ``get_project`` to access the project.
+        self.__project: models.Project | None = None
 
         if self.is_managed():
             self._work_dir = pathlib.Path("/root")
@@ -191,19 +197,73 @@ class Application:
             work_dir=self._work_dir,
         )
 
-    @functools.cached_property
-    def project(self) -> models.Project:
-        """Get this application's Project metadata."""
-        # Current working directory contains the project file
-        project_file = pathlib.Path(f"{self.app.name}.yaml").resolve()
-        craft_cli.emit.debug(f"Loading project file '{project_file!s}'")
+    def _resolve_project_path(self, project_dir: pathlib.Path | None) -> pathlib.Path:
+        """Find the project file for the current project.
 
-        with project_file.open() as file:
+        The default implementation simply looks for the project file in the project
+        directory. Applications may wish to override this if the project file could be
+         in multiple places within the project directory.
+        """
+        if project_dir is None:
+            project_dir = pathlib.Path.cwd()
+        return (project_dir / f"{self.app.name}.yaml").resolve(strict=True)
+
+    def get_project(self, project_dir: pathlib.Path | None = None) -> models.Project:
+        """Get the project model.
+
+        This only resolves and renders the project the first time it gets run.
+        After that, it merely uses a cached project model.
+
+        :param project_dir: the base directory to traverse for finding the project file.
+        :returns: A transformed, loaded project model.
+        """
+        if self.__project is not None:
+            return self.__project
+
+        project_path = self._resolve_project_path(project_dir)
+        craft_cli.emit.debug(f"Loading project file '{project_path!s}'")
+
+        with project_path.open() as file:
             yaml_data = util.safe_yaml_load(file)
 
         yaml_data = self._transform_project_yaml(yaml_data)
 
-        return self.app.ProjectClass.from_yaml_data(yaml_data, project_file)
+        self.__project = self.app.ProjectClass.from_yaml_data(yaml_data, project_path)
+        return self.__project
+
+    @property
+    def project(self) -> models.Project:
+        """Get this application's Project metadata.
+
+        DEPRECATED: use ``get_project`` instead.
+        """
+        warnings.warn(
+            "Direct access to an application's project property is deprecated "
+            "and will be removed in craft-application 2.0. Use get_project instead.",
+            DeprecationWarning,
+            stacklevel=1,
+        )
+        return self.get_project()
+
+    @project.setter
+    def project(self, value: models.Project) -> None:
+        warnings.warn(
+            "Direct access to an application's project property is deprecated "
+            "and will be removed in craft-application 2.0.",
+            DeprecationWarning,
+            stacklevel=1,
+        )
+        self.__project = value
+
+    @project.deleter
+    def project(self) -> None:
+        warnings.warn(
+            "Direct access to an application's project property is deprecated "
+            "and will be removed in craft-application 2.0.",
+            DeprecationWarning,
+            stacklevel=1,
+        )
+        self.__project = None
 
     def is_managed(self) -> bool:
         """Shortcut to tell whether we're running in managed mode."""
@@ -213,7 +273,7 @@ class Application:
         """Run the application in a managed instance."""
         extra_args: dict[str, Any] = {}
 
-        build_plan = self.project.get_build_plan()
+        build_plan = self.get_project().get_build_plan()
         build_plan = _filter_plan(build_plan, platform, build_for)
 
         for build_info in build_plan:
@@ -342,16 +402,16 @@ class Application:
                 # command runs in the outer instance
                 craft_cli.emit.debug(f"Running {self.app.name} {command.name} on host")
                 if command.always_load_project:
-                    self.services.project = self.project
+                    self.services.project = self.get_project()
                 return_code = dispatcher.run() or 0
             elif not self.is_managed():
                 # command runs in inner instance, but this is the outer instance
-                self.services.project = self.project
+                self.services.project = self.get_project()
                 self.run_managed(platform, build_for)
                 return_code = 0
             else:
                 # command runs in inner instance
-                self.services.project = self.project
+                self.services.project = self.get_project()
                 return_code = dispatcher.run() or 0
         except craft_cli.ArgumentParsingError as err:
             print(err, file=sys.stderr)  # to stderr, as argparse normally does
