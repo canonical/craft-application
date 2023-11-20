@@ -321,7 +321,7 @@ class Application:
         # the specific application doesn't use a specific library, the call does not
         # import the package.
         util.setup_loggers(
-            ("craft_archives", "craft_parts", "craft_providers", "craft_store")
+            "craft_archives", "craft_parts", "craft_providers", "craft_store"
         )
 
         craft_cli.emit.init(

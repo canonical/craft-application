@@ -13,7 +13,7 @@ def test_setup_loggers_resulting_level(names):
         logger = logging.getLogger(name)
         logger.setLevel(logging.NOTSET)
 
-    util.setup_loggers(names)
+    util.setup_loggers(*names)
 
     for name in names:
         logger = logging.getLogger(name)

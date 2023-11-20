@@ -18,7 +18,7 @@ import logging
 from typing import Iterable
 
 
-def setup_loggers(names: Iterable[str]) -> None:
+def setup_loggers(*names: str) -> None:
     """Set up loggers by name so that craft-cli handles them correctly."""
     for lib in names:
         logger = logging.getLogger(lib)
