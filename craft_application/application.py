@@ -17,7 +17,6 @@
 from __future__ import annotations
 
 import importlib
-import logging
 import os
 import pathlib
 import signal
@@ -26,7 +25,7 @@ import sys
 import warnings
 from dataclasses import dataclass, field
 from importlib import metadata
-from typing import TYPE_CHECKING, Any, cast, final
+from typing import TYPE_CHECKING, Any, Iterable, cast, final
 
 import craft_cli
 import craft_parts
@@ -41,6 +40,10 @@ if TYPE_CHECKING:
 
 GLOBAL_VERSION = craft_cli.GlobalArgument(
     "version", "flag", "-V", "--version", "Show the application version and exit"
+)
+
+DEFAULT_CLI_LOGGERS = frozenset(
+    {"craft_archives", "craft_parts", "craft_providers", "craft_store"}
 )
 
 
@@ -92,17 +95,22 @@ class Application:
 
     :ivar app: Metadata about this application
     :ivar services: A ServiceFactory for this application
+    :param extra_loggers: Logger names to integrate with craft-cli beyond the defaults.
+
     """
 
     def __init__(
         self,
         app: AppMetadata,
         services: service_factory.ServiceFactory,
+        *,
+        extra_loggers: Iterable[str] = (),
     ) -> None:
         self.app = app
         self.services = services
         self._command_groups: list[craft_cli.CommandGroup] = []
         self._global_arguments: list[craft_cli.GlobalArgument] = [GLOBAL_VERSION]
+        self._cli_loggers = DEFAULT_CLI_LOGGERS | set(extra_loggers)
 
         # When build_secrets are enabled, this contains the secret info to pass to
         # managed instances.
@@ -321,10 +329,7 @@ class Application:
         # Set the logging level to DEBUG for all craft-libraries. This is OK even if
         # the specific application doesn't use a specific library, the call does not
         # import the package.
-        craft_libs = ["craft_archives", "craft_parts", "craft_providers", "craft_store"]
-        for craft_lib in craft_libs:
-            logger = logging.getLogger(craft_lib)
-            logger.setLevel(logging.DEBUG)
+        util.setup_loggers(*self._cli_loggers)
 
         craft_cli.emit.init(
             mode=craft_cli.EmitterMode.BRIEF,
