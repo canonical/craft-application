@@ -106,7 +106,7 @@ class ExtensibleCommand(AppCommand):
     @property
     def services(self) -> service_factory.ServiceFactory:
         """Services available to this command."""
-        return self._services
+        return self._services  # pragma: no cover
 
     @classmethod
     def register_parser_filler(cls, callback: ParserCallback) -> None:

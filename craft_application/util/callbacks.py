@@ -18,7 +18,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Callable, Iterable, Literal, overload
 
-if TYPE_CHECKING:  # pragma: no-cover
+if TYPE_CHECKING:  # pragma: no cover
     # Caution: Removing these from type checking will result in circular imports.
     from craft_application.commands.base import ParserCallback, RunCallback
 
@@ -27,14 +27,14 @@ if TYPE_CHECKING:  # pragma: no-cover
 def get_unique_callbacks(
     cls: type, callback_name: Literal["_parse_callback"]
 ) -> Iterable[ParserCallback]:
-    ...
+    ...  # pragma: no cover
 
 
 @overload
 def get_unique_callbacks(
     cls: type, callback_name: Literal["_prologue", "_epilogue"]
 ) -> Iterable[RunCallback]:
-    ...
+    ...  # pragma: no cover
 
 
 def get_unique_callbacks(  # pyright: ignore[reportUnknownParameterType]
