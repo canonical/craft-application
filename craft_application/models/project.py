@@ -87,8 +87,9 @@ class Project(CraftBaseModel):
             return self.base
         raise RuntimeError("Could not determine effective base")
 
-    def get_build_plan(self) -> List[BuildInfo]:
+    @classmethod
+    def get_build_plan(cls, data: Dict[str, Any]) -> List[BuildInfo]:
         """Obtain the list of architectures and bases from the project file."""
         raise NotImplementedError(
-            f"{self.__class__.__name__!s} must implement get_build_plan"
+            f"{cls.__name__!s} must implement get_build_plan"
         )

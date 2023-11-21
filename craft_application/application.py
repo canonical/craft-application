@@ -102,6 +102,7 @@ class Application:
         self.services = services
         self._command_groups: list[craft_cli.CommandGroup] = []
         self._global_arguments: list[craft_cli.GlobalArgument] = [GLOBAL_VERSION]
+        self._build_plan: list[BuildInfo] = []
         self.project: models.Project | None = None
 
         # When build_secrets are enabled, this contains the secret info to pass to
@@ -178,7 +179,7 @@ class Application:
             work_dir=self._work_dir,
         )
 
-    def load_project(self, build_on: str, build_for: str) -> None:
+    def load_project(self, platform: str | None, build_on: str, build_for: str) -> None:
         """Get this application's Project metadata."""
         # Current working directory contains the project file
         project_file = pathlib.Path(f"{self.app.name}.yaml").resolve()
@@ -187,19 +188,19 @@ class Application:
         with project_file.open() as file:
             yaml_data = util.safe_yaml_load(file)
 
+        build_plan = self.app.ProjectClass.get_build_plan(yaml_data)
+        self._build_plan = _filter_plan(build_plan, platform, build_for)
+
+        if platform:
+            all_platforms = {b.platform: b for b in build_plan}
+            if platform not in all_platforms:
+                raise errors.InvalidPlatformError(platform, list(all_platforms.keys()))
+            build_for = all_platforms[platform].build_for
+
         # validate project grammar
         GrammarAwareProject.validate_grammar(yaml_data)
 
-        yaml_data = self._transform_project_yaml(yaml_data)
-
-        if "parts" in yaml_data:
-            craft_cli.emit.debug(f"Processing grammar (on {build_on} for {build_for})")
-            yaml_data["parts"] = grammar.process_parts(
-                parts_yaml_data=yaml_data["parts"],
-                arch=build_on,
-                target_arch=build_for,
-            )
-
+        yaml_data = self._transform_project_yaml(yaml_data, build_on, build_for)
         self.project = self.app.ProjectClass.from_yaml_data(yaml_data, project_file)
 
     def is_managed(self) -> bool:
@@ -213,10 +214,13 @@ class Application:
         if not self.project:
             raise RuntimeError("project not loaded")
 
-        build_plan = self.project.get_build_plan()
-        build_plan = _filter_plan(build_plan, platform, build_for)
+        for build_info in self._build_plan:
+            if platform and platform != build_info.platform:
+                continue
 
-        for build_info in build_plan:
+            if build_for and build_for != build_info.build_for:
+                continue
+
             env = {"CRAFT_PLATFORM": build_info.platform}
 
             if self.app.features.build_secrets:
@@ -323,7 +327,7 @@ class Application:
 
         return dispatcher
 
-    def run(self) -> int:  # noqa: PLR0912 (too many branches due to error handling)
+    def run(self) -> int:  # noqa: PLR0912 (too many branches)
         """Bootstrap and run the application."""
         dispatcher = self._get_dispatcher()
         craft_cli.emit.debug("Preparing application...")
@@ -350,17 +354,9 @@ class Application:
 
             managed_mode = command.run_managed(dispatcher.parsed_args())
             if managed_mode or command.always_load_project:
-                self.load_project(build_on, build_for)
-                build_plan = (
-                    self.project.get_build_plan()  # type: ignore[union-attr]  # pyright: ignore[reportOptionalMemberAccess]
-                )
-
-                if platform:
-                    # load project again, now resolving grammar for platform
-                    build_for = _get_platform_build_for(platform, build_plan)
-                    self.load_project(build_on, build_for)
-
+                self.load_project(platform, build_on, build_for)
                 self.services.project = self.project
+                self.services.build_plan = self._build_plan
 
             if not managed_mode:
                 # command runs in the outer instance
@@ -425,7 +421,9 @@ class Application:
 
         craft_cli.emit.error(error)
 
-    def _transform_project_yaml(self, yaml_data: dict[str, Any]) -> dict[str, Any]:
+    def _transform_project_yaml(
+        self, yaml_data: dict[str, Any], build_on: str, build_for: str
+    ) -> dict[str, Any]:
         """Update the project's yaml data with runtime properties.
 
         Performs task such as environment expansion. Note that this transforms
@@ -437,6 +435,15 @@ class Application:
         # Handle build secrets.
         if self.app.features.build_secrets:
             self._render_secrets(yaml_data)
+
+        # Expand grammar.
+        if "parts" in yaml_data:
+            craft_cli.emit.debug(f"Processing grammar (on {build_on} for {build_for})")
+            yaml_data["parts"] = grammar.process_parts(
+                parts_yaml_data=yaml_data["parts"],
+                arch=build_on,
+                target_arch=build_for,
+            )
 
         # Perform extra, application-specific transformations.
         return self._extra_yaml_transform(yaml_data)
@@ -506,12 +513,3 @@ def _filter_plan(
             plan.append(build_info)
 
     return plan
-
-
-def _get_platform_build_for(platform: str, build_plan: list[BuildInfo]) -> str:
-    """Raise an error if platform is not in the build plan."""
-    all_platforms = {b.platform: b for b in build_plan}
-    if platform not in all_platforms:
-        raise errors.InvalidPlatformError(platform, list(all_platforms.keys()))
-
-    return all_platforms[platform].build_for

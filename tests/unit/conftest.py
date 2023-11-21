@@ -23,9 +23,15 @@ from craft_application import services
 
 
 @pytest.fixture()
-def provider_service(app_metadata, fake_project, fake_services, tmp_path):
+def provider_service(
+    app_metadata, fake_project, fake_build_plan, fake_services, tmp_path
+):
     return services.ProviderService(
-        app_metadata, fake_services, project=fake_project, work_dir=tmp_path
+        app_metadata,
+        fake_services,
+        project=fake_project,
+        build_plan=fake_build_plan,
+        work_dir=tmp_path,
     )
 
 

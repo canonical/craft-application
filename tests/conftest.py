@@ -39,9 +39,10 @@ class Platform(models.CraftBaseModel):
 
 
 class MyProject(models.Project):
-    platforms: dict[str, Platform]
+    platforms: dict[str, Platform] | None
 
-    def get_build_plan(self) -> list[models.BuildInfo]:
+    @classmethod
+    def get_build_plan(cls, data: dict[str, Any]) -> list[models.BuildInfo]:
         arch = util.get_host_architecture()
         return [models.BuildInfo("foo", arch, arch, bases.BaseName("ubuntu", "22.04"))]
 
@@ -97,6 +98,12 @@ def fake_project() -> models.Project:
 
 
 @pytest.fixture()
+def fake_build_plan() -> list[models.BuildInfo]:
+    arch = util.get_host_architecture()
+    return [models.BuildInfo("foo", arch, arch, bases.BaseName("base", "1"))]
+
+
+@pytest.fixture()
 def enable_overlay() -> Iterator[craft_parts.Features]:
     """Enable the overlay feature in craft_parts for the relevant test."""
     craft_parts.Features.reset()
@@ -106,7 +113,7 @@ def enable_overlay() -> Iterator[craft_parts.Features]:
 
 @pytest.fixture()
 def lifecycle_service(
-    app_metadata, fake_project, fake_services, tmp_path
+    app_metadata, fake_project, fake_build_plan, fake_services, tmp_path
 ) -> services.LifecycleService:
     work_dir = tmp_path / "work"
     cache_dir = tmp_path / "cache"
@@ -116,6 +123,7 @@ def lifecycle_service(
         app_metadata,
         fake_services,
         project=fake_project,
+        build_plan=fake_build_plan,
         work_dir=work_dir,
         cache_dir=cache_dir,
         platform=None,
@@ -142,8 +150,15 @@ def fake_provider_service_class():
             services: services.ServiceFactory,
             *,
             project: models.Project,
+            build_plan: list[models.BuildInfo],
         ):
-            super().__init__(app, services, project=project, work_dir=pathlib.Path())
+            super().__init__(
+                app,
+                services,
+                project=project,
+                build_plan=build_plan,
+                work_dir=pathlib.Path(),
+            )
 
     return FakeProviderService
 
@@ -192,11 +207,16 @@ def fake_lifecycle_service_class(tmp_path):
 
 @pytest.fixture()
 def fake_services(
-    app_metadata, fake_project, fake_lifecycle_service_class, fake_package_service_class
+    app_metadata,
+    fake_project,
+    fake_build_plan,
+    fake_lifecycle_service_class,
+    fake_package_service_class,
 ):
     return services.ServiceFactory(
         app_metadata,
         project=fake_project,
+        build_plan=fake_build_plan,
         PackageClass=fake_package_service_class,
         LifecycleClass=fake_lifecycle_service_class,
     )

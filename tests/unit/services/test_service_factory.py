@@ -24,11 +24,16 @@ from craft_cli import emit
 
 @pytest.fixture()
 def factory(
-    app_metadata, fake_project, fake_package_service_class, fake_lifecycle_service_class
+    app_metadata,
+    fake_project,
+    fake_build_plan,
+    fake_package_service_class,
+    fake_lifecycle_service_class,
 ):
     return services.ServiceFactory(
         app_metadata,
         project=fake_project,
+        build_plan=fake_build_plan,
         PackageClass=fake_package_service_class,
         LifecycleClass=fake_lifecycle_service_class,
     )
@@ -37,6 +42,7 @@ def factory(
 def test_correct_init(
     app_metadata,
     fake_project,
+    fake_build_plan,
     fake_package_service_class,
     fake_lifecycle_service_class,
     fake_provider_service_class,
@@ -44,6 +50,7 @@ def test_correct_init(
     factory = services.ServiceFactory(
         app_metadata,
         project=fake_project,
+        build_plan=fake_build_plan,
         PackageClass=fake_package_service_class,
         LifecycleClass=fake_lifecycle_service_class,
         ProviderClass=fake_provider_service_class,
@@ -62,7 +69,12 @@ def test_correct_init(
     ],
 )
 def test_set_kwargs(
-    app_metadata, fake_project, check, fake_package_service_class, kwargs
+    app_metadata,
+    fake_project,
+    fake_build_plan,
+    check,
+    fake_package_service_class,
+    kwargs,
 ):
     class MockPackageService(fake_package_service_class):
         mock_class = mock.Mock(return_value=mock.Mock(spec_set=services.PackageService))
@@ -71,7 +83,10 @@ def test_set_kwargs(
             return cls.mock_class(*args, **kwargs)
 
     factory = services.ServiceFactory(
-        app_metadata, project=fake_project, PackageClass=MockPackageService
+        app_metadata,
+        project=fake_project,
+        build_plan=fake_build_plan,
+        PackageClass=MockPackageService,
     )
 
     factory.set_kwargs("package", **kwargs)
@@ -79,7 +94,11 @@ def test_set_kwargs(
     check.equal(factory.package, MockPackageService.mock_class.return_value)
     with check:
         MockPackageService.mock_class.assert_called_once_with(
-            app=app_metadata, services=factory, project=fake_project, **kwargs
+            app=app_metadata,
+            services=factory,
+            project=fake_project,
+            build_plan=fake_build_plan,
+            **kwargs,
         )
 
 
@@ -100,13 +119,14 @@ def test_getattr_not_a_class(factory):
         _ = factory.invalid_name
 
 
-def test_getattr_not_a_service_class(app_metadata, fake_project):
+def test_getattr_not_a_service_class(app_metadata, fake_project, fake_build_plan):
     class InvalidClass:
         pass
 
     factory = services.ServiceFactory(
         app_metadata,
         project=fake_project,
+        build_plan=fake_build_plan,
         # This incorrect type is intentional
         PackageClass=InvalidClass,  # pyright: ignore[reportGeneralTypeIssues]
     )
@@ -127,13 +147,18 @@ def test_getattr_project_none(app_metadata, fake_package_service_class):
         _ = factory.package
 
 
-def test_service_setup(app_metadata, fake_project, fake_package_service_class, emitter):
+def test_service_setup(
+    app_metadata, fake_project, fake_package_service_class, fake_build_plan, emitter
+):
     class FakePackageService(fake_package_service_class):
         def setup(self) -> None:
             emit.debug("setting up package service")
 
     factory = services.ServiceFactory(
-        app_metadata, project=fake_project, PackageClass=FakePackageService
+        app_metadata,
+        project=fake_project,
+        build_plan=fake_build_plan,
+        PackageClass=FakePackageService,
     )
     _ = factory.package
 

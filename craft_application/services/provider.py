@@ -58,10 +58,11 @@ class ProviderService(base.ProjectService):
         services: ServiceFactory,
         *,
         project: models.Project,
+        build_plan: list[models.BuildInfo],
         work_dir: pathlib.Path,
         install_snap: bool = True,
     ) -> None:
-        super().__init__(app, services, project=project)
+        super().__init__(app, services, project=project, build_plan=build_plan)
         self._provider: craft_providers.Provider | None = None
         self._work_dir = work_dir
         self.snaps: list[Snap] = []
@@ -169,7 +170,7 @@ class ProviderService(base.ProjectService):
         provider = self.get_provider()
 
         current_arch = platforms.get_host_architecture()
-        build_plan = self._project.get_build_plan()
+        build_plan = self._build_plan
         build_plan = [info for info in build_plan if info.build_on == current_arch]
 
         if build_plan:
