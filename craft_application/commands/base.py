@@ -166,14 +166,11 @@ class ExtensibleCommand(AppCommand):
     ) -> Optional[int]:  # noqa: UP007
         """Run any prologue callbacks, the main command, and any epilogue callbacks."""
         result = None
-        for cls in reversed(self.__class__.mro()):
-            if callback := getattr(cls, "_prologue", None):
-                result = callback(self, parsed_args, **kwargs) or result
+        for prologue in util.get_unique_callbacks(self.__class__, "_prologue"):
+            result = prologue(self, parsed_args, **kwargs) or result
         result = self._run(parsed_args, **kwargs) or result
-        for cls in reversed(self.__class__.mro()):
-            if callback := getattr(cls, "_epilogue", None):
-                result = (
-                    callback(self, parsed_args, current_result=result, **kwargs)
-                    or result
-                )
+        for epilogue in util.get_unique_callbacks(self.__class__, "_epilogue"):
+            result = (
+                epilogue(self, parsed_args, current_result=result, **kwargs) or result
+            )
         return result
