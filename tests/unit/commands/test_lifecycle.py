@@ -23,13 +23,13 @@ import pytest
 from craft_application.commands.lifecycle import (
     BuildCommand,
     CleanCommand,
+    LifecyclePartsCommand,
+    LifecycleStepCommand,
     OverlayCommand,
     PackCommand,
     PrimeCommand,
     PullCommand,
     StageCommand,
-    LifecyclePartsCommand,
-    LifecycleStepCommand,
     get_lifecycle_command_group,
 )
 from craft_cli import emit

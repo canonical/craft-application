@@ -59,6 +59,8 @@ class _LifecycleCommand(base.ExtensibleCommand):
 
 
 class LifecyclePartsCommand(_LifecycleCommand):
+    """A lifecycle command that uses parts."""
+
     # All lifecycle-related commands need a project to work
     always_load_project = True
 
@@ -88,6 +90,8 @@ class LifecyclePartsCommand(_LifecycleCommand):
 
 
 class LifecycleStepCommand(LifecyclePartsCommand):
+    """An actual lifecycle step."""
+
     @override
     def run_managed(self, parsed_args: argparse.Namespace) -> bool:
         return not parsed_args.destructive_mode
