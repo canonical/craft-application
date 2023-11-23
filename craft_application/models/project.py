@@ -66,9 +66,6 @@ class BuildProject(CraftBaseModel):
 
     Config = BuildProjectConfig
 
-    base: Optional[str] = None
-    build_base: Optional[str] = None
-
     def get_build_plan(self) -> List[BuildInfo]:
         """Obtain the list of architectures and bases from the project file."""
         raise NotImplementedError(
@@ -76,7 +73,7 @@ class BuildProject(CraftBaseModel):
         )
 
 
-class Project(BuildProject):
+class Project(CraftBaseModel):
     """Craft Application project definition."""
 
     name: ProjectName
@@ -84,6 +81,10 @@ class Project(BuildProject):
     version: VersionStr
     summary: Optional[SummaryStr]
     description: Optional[str]
+
+    base: Optional[str] = None
+    build_base: Optional[str] = None
+    platforms: Optional[Dict[str, Any]] = None
 
     contact: Optional[Union[str, UniqueStrList]]
     issues: Optional[Union[str, UniqueStrList]]

@@ -178,9 +178,16 @@ class Application:
         self.services.set_kwargs(
             "provider",
             work_dir=self._work_dir,
+            get_build_plan=self.get_build_plan,
         )
 
-    def load_project(self, platform: str | None, build_on: str, build_for: str) -> None:
+    def get_build_plan(self):
+        """Get the project's build plan."""
+        return self._build_plan
+
+    def get_project(
+        self, platform: str | None, build_on: str, build_for: str
+    ) -> models.Project:
         """Get this application's Project metadata."""
         # Current working directory contains the project file
         project_file = pathlib.Path(f"{self.app.name}.yaml").resolve()
@@ -189,7 +196,8 @@ class Application:
         with project_file.open() as file:
             yaml_data = util.safe_yaml_load(file)
 
-        build_plan = self.app.BuildProjectClass.unmarshal(yaml_data).get_build_plan()
+        build_project = self.app.BuildProjectClass.unmarshal(yaml_data)
+        build_plan = build_project.get_build_plan()
         self._build_plan = _filter_plan(build_plan, platform, build_for)
 
         if platform:
@@ -202,7 +210,7 @@ class Application:
         GrammarAwareProject.validate_grammar(yaml_data)
 
         yaml_data = self._transform_project_yaml(yaml_data, build_on, build_for)
-        self.project = self.app.ProjectClass.from_yaml_data(yaml_data, project_file)
+        return self.app.ProjectClass.from_yaml_data(yaml_data, project_file)
 
     def is_managed(self) -> bool:
         """Shortcut to tell whether we're running in managed mode."""
@@ -211,9 +219,6 @@ class Application:
     def run_managed(self, platform: str | None, build_for: str | None) -> None:
         """Run the application in a managed instance."""
         extra_args: dict[str, Any] = {}
-
-        if not self.project:
-            raise RuntimeError("project not loaded")
 
         for build_info in self._build_plan:
             if platform and platform != build_info.platform:
@@ -355,7 +360,7 @@ class Application:
 
             managed_mode = command.run_managed(dispatcher.parsed_args())
             if managed_mode or command.always_load_project:
-                self.load_project(platform, build_on, build_for)
+                self.project = self.get_project(platform, build_on, build_for)
                 self.services.project = self.project
 
             if not managed_mode:

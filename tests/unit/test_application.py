@@ -156,7 +156,7 @@ def test_log_path(monkeypatch, app, provider_managed, expected):
     assert actual == expected
 
 
-def test_run_managed_success(app, fake_project, fake_build_plan, mocker):
+def test_run_managed_success(app, fake_project, fake_build_plan):
     mock_provider = mock.MagicMock(spec_set=services.ProviderService)
     app.services.provider = mock_provider
     app.project = fake_project
@@ -214,7 +214,7 @@ def test_run_managed_secrets(app, fake_project, fake_build_plan):
     assert execute_env["CRAFT_TEST"] == "banana"
 
 
-def test_run_managed_multiple(app, fake_project, monkeypatch):
+def test_run_managed_multiple(app, fake_project):
     mock_provider = mock.MagicMock(spec_set=services.ProviderService)
     app.services.provider = mock_provider
     app.project = fake_project
@@ -230,7 +230,7 @@ def test_run_managed_multiple(app, fake_project, monkeypatch):
     assert mock.call(info1, work_dir=mock.ANY) in mock_provider.instance.mock_calls
 
 
-def test_run_managed_specified_arch(app, fake_project, monkeypatch):
+def test_run_managed_specified_arch(app, fake_project):
     mock_provider = mock.MagicMock(spec_set=services.ProviderService)
     app.services.provider = mock_provider
     app.project = fake_project
@@ -240,18 +240,13 @@ def test_run_managed_specified_arch(app, fake_project, monkeypatch):
     info2 = BuildInfo("a2", arch, "arch2", bases.BaseName("base", "2"))
     app._build_plan = [info1, info2]
 
-    monkeypatch.setattr(
-        app.project.__class__,
-        "get_build_plan",
-        lambda _: [info1, info2],
-    )
     app.run_managed(None, "arch2")
 
     assert mock.call(info2, work_dir=mock.ANY) in mock_provider.instance.mock_calls
     assert mock.call(info1, work_dir=mock.ANY) not in mock_provider.instance.mock_calls
 
 
-def test_run_managed_specified_platform(app, fake_project, monkeypatch):
+def test_run_managed_specified_platform(app, fake_project):
     mock_provider = mock.MagicMock(spec_set=services.ProviderService)
     app.services.provider = mock_provider
     app.project = fake_project
@@ -261,11 +256,6 @@ def test_run_managed_specified_platform(app, fake_project, monkeypatch):
     info2 = BuildInfo("a2", arch, "arch2", bases.BaseName("base", "2"))
     app._build_plan = [info1, info2]
 
-    monkeypatch.setattr(
-        app.project.__class__,
-        "get_build_plan",
-        lambda _: [info1, info2],
-    )
     app.run_managed("a2", None)
 
     assert mock.call(info2, work_dir=mock.ANY) in mock_provider.instance.mock_calls
@@ -356,8 +346,7 @@ def test_run_success_unmanaged(
 
 
 def test_run_success_managed(monkeypatch, app, fake_project, mocker):
-    mocker.patch.object(app, "load_project", return_value=fake_project)
-    app.project = fake_project
+    mocker.patch.object(app, "get_project", return_value=fake_project)
     app.run_managed = mock.Mock()
     monkeypatch.setattr(sys, "argv", ["testcraft", "pull"])
 
@@ -367,8 +356,7 @@ def test_run_success_managed(monkeypatch, app, fake_project, mocker):
 
 
 def test_run_success_managed_with_arch(monkeypatch, app, fake_project, mocker):
-    mocker.patch.object(app, "load_project", return_value=fake_project)
-    app.project = fake_project
+    mocker.patch.object(app, "get_project", return_value=fake_project)
     app.run_managed = mock.Mock()
     arch = get_host_architecture()
     monkeypatch.setattr(sys, "argv", ["testcraft", "pull", f"--build-for={arch}"])
@@ -379,8 +367,7 @@ def test_run_success_managed_with_arch(monkeypatch, app, fake_project, mocker):
 
 
 def test_run_success_managed_with_platform(monkeypatch, app, fake_project, mocker):
-    mocker.patch.object(app, "load_project", return_value=fake_project)
-    app.project = fake_project
+    mocker.patch.object(app, "get_project", return_value=fake_project)
     app.run_managed = mock.Mock()
     monkeypatch.setattr(sys, "argv", ["testcraft", "pull", "--platform=foo"])
 
@@ -393,9 +380,8 @@ def test_run_success_managed_with_platform(monkeypatch, app, fake_project, mocke
 def test_run_success_managed_inside_managed(
     monkeypatch, check, app, fake_project, mock_dispatcher, return_code, mocker
 ):
-    mocker.patch.object(app, "load_project", return_value=fake_project)
+    mocker.patch.object(app, "get_project", return_value=fake_project)
     mocker.patch.object(mock_dispatcher, "parsed_args", return_value={"platform": "foo"})
-    app.project = fake_project
     app.run_managed = mock.Mock()
     mock_dispatcher.run.return_value = return_code
     mock_dispatcher.pre_parse_args.return_value = {}
@@ -517,7 +503,7 @@ def test_work_dir_project_non_managed(monkeypatch, app_metadata, fake_services):
 
     # Make sure the project is loaded correctly (from the cwd)
     arch = get_host_architecture()
-    app.load_project(None, arch, arch)
+    app.project = app.get_project(None, arch, arch)
     assert app.project is not None
 
     assert app.project.name == "myproject"
@@ -533,7 +519,7 @@ def test_work_dir_project_managed(monkeypatch, app_metadata, fake_services):
 
     # Make sure the project is loaded correctly (from the cwd)
     arch = get_host_architecture()
-    app.load_project(None, arch, arch)
+    app.project = app.get_project(None, arch, arch)
     assert app.project is not None
 
     assert app.project.name == "myproject"
@@ -568,7 +554,7 @@ def test_application_expand_environment(app_metadata, fake_services):
 
     # Make sure the project is loaded correctly (from the cwd)
     arch = get_host_architecture()
-    app.load_project(None, arch, arch)
+    app.project = app.get_project(None, arch, arch)
     assert app.project is not None
 
     assert app.project.parts["mypart"]["source-tag"] == "v1.2.3"
@@ -609,7 +595,7 @@ def test_application_build_secrets(app_metadata, fake_services, monkeypatch, moc
 
     # Make sure the project is loaded correctly (from the cwd)
     arch = get_host_architecture()
-    app.load_project(None, arch, arch)
+    app.project = app.get_project(None, arch, arch)
     assert app.project is not None
 
     mypart = app.project.parts["mypart"]

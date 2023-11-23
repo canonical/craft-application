@@ -1,4 +1,3 @@
-base: core24
 name: full-project
 title: A fully-defined project
 version: 1.0.0.post64+git12345678
@@ -6,6 +5,7 @@ summary: A fully-defined craft-application project.
 description: |
   A fully-defined craft-application project.
   With more than one line.
+base: core24
 contact: author@project.org
 issues: https://github.com/canonical/craft-application/issues
 source-code: https://github.com/canonical/craft-application

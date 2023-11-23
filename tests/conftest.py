@@ -140,7 +140,7 @@ def emitter_verbosity(request):
 
 
 @pytest.fixture()
-def fake_provider_service_class():
+def fake_provider_service_class(fake_build_plan):
     class FakeProviderService(services.ProviderService):
         def __init__(
             self,
@@ -148,8 +148,9 @@ def fake_provider_service_class():
             services: services.ServiceFactory,
             *,
             project: models.Project,
+            get_build_plan: callable[[], list[models.BuildInfo]],
         ):
-            super().__init__(app, services, project=project, work_dir=pathlib.Path())
+            super().__init__(app, services, project=project, work_dir=pathlib.Path(),get_build_plan=get_build_plan)
 
     return FakeProviderService
 
