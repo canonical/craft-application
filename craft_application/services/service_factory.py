@@ -41,7 +41,6 @@ class ServiceFactory:
     ProviderClass: type[services.ProviderService] = services.ProviderService
 
     project: models.Project | None = None
-    build_plan: list[models.BuildInfo] | None = None
 
     if TYPE_CHECKING:
         # Cheeky hack that lets static type checkers report the correct types.
@@ -87,12 +86,6 @@ class ServiceFactory:
                     f"{cls.__name__} requires a project to be available before creation."
                 )
             kwargs.setdefault("project", self.project)
-
-            if not self.build_plan:
-                raise ValueError(
-                    f"{cls.__name__} requires a build plan to be available before creation."
-                )
-            kwargs.setdefault("build_plan", self.build_plan)
 
         instance: services.AppService = cls(app=self.app, services=self, **kwargs)
         instance.setup()

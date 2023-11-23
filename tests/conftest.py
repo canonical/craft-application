@@ -38,11 +38,10 @@ class Platform(models.CraftBaseModel):
     build_for: str
 
 
-class MyProject(models.Project):
-    platforms: dict[str, Platform] | None
+class MyBuildProject(models.BuildProject):
+    """Build project definition for tests."""
 
-    @classmethod
-    def get_build_plan(cls, data: dict[str, Any]) -> list[models.BuildInfo]:
+    def get_build_plan(self) -> list[models.BuildInfo]:
         arch = util.get_host_architecture()
         return [models.BuildInfo("foo", arch, arch, bases.BaseName("ubuntu", "22.04"))]
 
@@ -72,7 +71,7 @@ def app_metadata(features) -> craft_application.AppMetadata:
         return craft_application.AppMetadata(
             "testcraft",
             "A fake app for testing craft-application",
-            ProjectClass=MyProject,
+            BuildProjectClass=MyBuildProject,
             source_ignore_patterns=["*.snap", "*.charm", "*.starcraft"],
             features=craft_application.AppFeatures(**features),
         )
@@ -81,7 +80,7 @@ def app_metadata(features) -> craft_application.AppMetadata:
 @pytest.fixture()
 def fake_project() -> models.Project:
     arch = util.get_host_architecture()
-    return MyProject(
+    return models.Project(
         name="full-project",  # pyright: ignore[reportGeneralTypeIssues]
         title="A fully-defined project",  # pyright: ignore[reportGeneralTypeIssues]
         base="core24",
@@ -100,7 +99,7 @@ def fake_project() -> models.Project:
 @pytest.fixture()
 def fake_build_plan() -> list[models.BuildInfo]:
     arch = util.get_host_architecture()
-    return [models.BuildInfo("foo", arch, arch, bases.BaseName("base", "1"))]
+    return [models.BuildInfo("foo", arch, arch, bases.BaseName("ubuntu", "22.04"))]
 
 
 @pytest.fixture()
@@ -113,7 +112,7 @@ def enable_overlay() -> Iterator[craft_parts.Features]:
 
 @pytest.fixture()
 def lifecycle_service(
-    app_metadata, fake_project, fake_build_plan, fake_services, tmp_path
+    app_metadata, fake_project, fake_services, tmp_path
 ) -> services.LifecycleService:
     work_dir = tmp_path / "work"
     cache_dir = tmp_path / "cache"
@@ -123,7 +122,6 @@ def lifecycle_service(
         app_metadata,
         fake_services,
         project=fake_project,
-        build_plan=fake_build_plan,
         work_dir=work_dir,
         cache_dir=cache_dir,
         platform=None,
@@ -150,15 +148,8 @@ def fake_provider_service_class():
             services: services.ServiceFactory,
             *,
             project: models.Project,
-            build_plan: list[models.BuildInfo],
         ):
-            super().__init__(
-                app,
-                services,
-                project=project,
-                build_plan=build_plan,
-                work_dir=pathlib.Path(),
-            )
+            super().__init__(app, services, project=project, work_dir=pathlib.Path())
 
     return FakeProviderService
 
@@ -207,16 +198,10 @@ def fake_lifecycle_service_class(tmp_path):
 
 @pytest.fixture()
 def fake_services(
-    app_metadata,
-    fake_project,
-    fake_build_plan,
-    fake_lifecycle_service_class,
-    fake_package_service_class,
-):
+    app_metadata, fake_project, fake_lifecycle_service_class, fake_package_service_class):
     return services.ServiceFactory(
         app_metadata,
         project=fake_project,
-        build_plan=fake_build_plan,
         PackageClass=fake_package_service_class,
         LifecycleClass=fake_lifecycle_service_class,
     )

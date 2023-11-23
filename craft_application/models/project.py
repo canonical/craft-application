@@ -25,7 +25,7 @@ import craft_providers.bases
 import pydantic
 from pydantic import AnyUrl
 
-from craft_application.models.base import CraftBaseModel
+from craft_application.models.base import CraftBaseConfig, CraftBaseModel
 from craft_application.models.constraints import (
     ProjectName,
     ProjectTitle,
@@ -52,7 +52,31 @@ class BuildInfo:
     """The base to build on."""
 
 
-class Project(CraftBaseModel):
+class BuildProjectConfig(CraftBaseConfig):
+    """Config for BuildProjects."""
+
+    extra = pydantic.Extra.ignore
+    """BuildProjects are used to validate only the build-related data from
+    a model; this config lets us parse only those items and ignore everything
+    else."""
+
+
+class BuildProject(CraftBaseModel):
+    """Platform and build plan definition."""
+
+    Config = BuildProjectConfig
+
+    base: Optional[str] = None
+    build_base: Optional[str] = None
+
+    def get_build_plan(self) -> List[BuildInfo]:
+        """Obtain the list of architectures and bases from the project file."""
+        raise NotImplementedError(
+            f"{self.__class__.__name__!s} must implement get_build_plan"
+        )
+
+
+class Project(BuildProject):
     """Craft Application project definition."""
 
     name: ProjectName
@@ -60,8 +84,6 @@ class Project(CraftBaseModel):
     version: VersionStr
     summary: Optional[SummaryStr]
     description: Optional[str]
-
-    base: Optional[Any]
 
     contact: Optional[Union[str, UniqueStrList]]
     issues: Optional[Union[str, UniqueStrList]]
@@ -86,10 +108,3 @@ class Project(CraftBaseModel):
         if self.base is not None:
             return self.base
         raise RuntimeError("Could not determine effective base")
-
-    @classmethod
-    def get_build_plan(cls, data: Dict[str, Any]) -> List[BuildInfo]:
-        """Obtain the list of architectures and bases from the project file."""
-        raise NotImplementedError(
-            f"{cls.__name__!s} must implement get_build_plan"
-        )

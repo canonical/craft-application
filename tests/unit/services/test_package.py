@@ -35,12 +35,8 @@ class FakePackageService(package.PackageService):
         return models.BaseMetadata()
 
 
-def test_write_metadata(
-    tmp_path, app_metadata, fake_project, fake_build_plan, fake_services
-):
-    service = FakePackageService(
-        app_metadata, fake_services, project=fake_project, build_plan=fake_build_plan
-    )
+def test_write_metadata(tmp_path, app_metadata, fake_project, fake_services):
+    service = FakePackageService(app_metadata, fake_services, project=fake_project)
     metadata_file = tmp_path / "metadata.yaml"
     assert not metadata_file.exists()
 

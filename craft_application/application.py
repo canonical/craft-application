@@ -64,6 +64,7 @@ class AppMetadata:
     features: AppFeatures = AppFeatures()
 
     ProjectClass: type[models.Project] = models.Project
+    BuildProjectClass: type[models.BuildProject] = models.BuildProject
 
     def __post_init__(self) -> None:
         setter = super().__setattr__
@@ -188,7 +189,7 @@ class Application:
         with project_file.open() as file:
             yaml_data = util.safe_yaml_load(file)
 
-        build_plan = self.app.ProjectClass.get_build_plan(yaml_data)
+        build_plan = self.app.BuildProjectClass.unmarshal(yaml_data).get_build_plan()
         self._build_plan = _filter_plan(build_plan, platform, build_for)
 
         if platform:
@@ -356,7 +357,6 @@ class Application:
             if managed_mode or command.always_load_project:
                 self.load_project(platform, build_on, build_for)
                 self.services.project = self.project
-                self.services.build_plan = self._build_plan
 
             if not managed_mode:
                 # command runs in the outer instance

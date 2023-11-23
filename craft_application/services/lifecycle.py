@@ -33,7 +33,7 @@ if TYPE_CHECKING:  # pragma: no cover
     import craft_parts
 
     from craft_application.application import AppMetadata
-    from craft_application.models import BuildInfo, Project
+    from craft_application.models import Project
     from craft_application.services import ServiceFactory
 
 
@@ -119,13 +119,12 @@ class LifecycleService(base.ProjectService):
         services: ServiceFactory,
         *,
         project: Project,
-        build_plan: list[BuildInfo],
         work_dir: Path | str,
         cache_dir: Path | str,
         build_for: str,
         **lifecycle_kwargs: Any,  # noqa: ANN401 - eventually used in an Any
     ) -> None:
-        super().__init__(app, services, project=project, build_plan=build_plan)
+        super().__init__(app, services, project=project)
         self._work_dir = work_dir
         self._cache_dir = cache_dir
         self._build_for = build_for
