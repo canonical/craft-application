@@ -66,6 +66,8 @@ class AppMetadata:
     ProjectClass: type[models.Project] = models.Project
     BuildProjectClass: type[models.BuildProject] = models.BuildProject
 
+    build_plan: list[BuildInfo] = field(default_factory=list)
+
     def __post_init__(self) -> None:
         setter = super().__setattr__
 
@@ -86,6 +88,10 @@ class AppMetadata:
             md = metadata.metadata(self.name)
             setter("summary", md["summary"])
 
+    def set_build_plan(self, value: list[BuildInfo]) -> None:
+        """Store the filtered build plan."""
+        object.__setattr__(self, "build_plan", value)
+
 
 class Application:
     """Craft Application Builder.
@@ -103,7 +109,6 @@ class Application:
         self.services = services
         self._command_groups: list[craft_cli.CommandGroup] = []
         self._global_arguments: list[craft_cli.GlobalArgument] = [GLOBAL_VERSION]
-        self._build_plan: list[BuildInfo] = []
         self.project: models.Project | None = None
 
         # When build_secrets are enabled, this contains the secret info to pass to
@@ -178,12 +183,7 @@ class Application:
         self.services.set_kwargs(
             "provider",
             work_dir=self._work_dir,
-            get_build_plan=self.get_build_plan,
         )
-
-    def get_build_plan(self):
-        """Get the project's build plan."""
-        return self._build_plan
 
     def get_project(
         self, platform: str | None, build_on: str, build_for: str
@@ -198,7 +198,7 @@ class Application:
 
         build_project = self.app.BuildProjectClass.unmarshal(yaml_data)
         build_plan = build_project.get_build_plan()
-        self._build_plan = _filter_plan(build_plan, platform, build_for)
+        self.app.set_build_plan(_filter_plan(build_plan, platform, build_for))
 
         if platform:
             all_platforms = {b.platform: b for b in build_plan}
@@ -220,7 +220,7 @@ class Application:
         """Run the application in a managed instance."""
         extra_args: dict[str, Any] = {}
 
-        for build_info in self._build_plan:
+        for build_info in self.app.build_plan:
             if platform and platform != build_info.platform:
                 continue
 

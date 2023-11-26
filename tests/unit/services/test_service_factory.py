@@ -49,8 +49,6 @@ def test_correct_init(
         ProviderClass=fake_provider_service_class,
     )
 
-    factory.set_kwargs("provider", get_build_plan=lambda _: [])
-
     pytest_check.is_instance(factory.package, services.PackageService)
     pytest_check.is_instance(factory.lifecycle, services.LifecycleService)
     pytest_check.is_instance(factory.provider, services.ProviderService)

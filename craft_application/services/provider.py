@@ -20,7 +20,7 @@ import contextlib
 import os
 import pathlib
 import sys
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING
 
 from craft_cli import CraftError, emit
 from craft_providers import bases
@@ -59,7 +59,6 @@ class ProviderService(base.ProjectService):
         *,
         project: models.Project,
         work_dir: pathlib.Path,
-        get_build_plan: Callable[[], list[models.BuildInfo]],
         install_snap: bool = True,
     ) -> None:
         super().__init__(app, services, project=project)
@@ -68,7 +67,6 @@ class ProviderService(base.ProjectService):
         self.snaps: list[Snap] = []
         if install_snap:
             self.snaps.append(Snap(name=app.name, channel=None, classic=True))
-        self.get_build_plan = get_build_plan
         self.environment: dict[str, str | None] = {self.managed_mode_env_var: "1"}
         self.packages: list[str] = []
 
@@ -172,7 +170,7 @@ class ProviderService(base.ProjectService):
 
         current_arch = platforms.get_host_architecture()
         build_plan = [
-            info for info in self.get_build_plan() if info.build_on == current_arch
+            info for info in self._app.build_plan if info.build_on == current_arch
         ]
 
         if build_plan:

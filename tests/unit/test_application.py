@@ -160,7 +160,7 @@ def test_run_managed_success(app, fake_project, fake_build_plan):
     mock_provider = mock.MagicMock(spec_set=services.ProviderService)
     app.services.provider = mock_provider
     app.project = fake_project
-    app._build_plan = fake_build_plan
+    app.app.set_build_plan(fake_build_plan)
     arch = get_host_architecture()
 
     app.run_managed(None, arch)
@@ -180,7 +180,7 @@ def test_run_managed_failure(app, fake_project, fake_build_plan):
     instance.execute_run.side_effect = subprocess.CalledProcessError(1, [])
     app.services.provider = mock_provider
     app.project = fake_project
-    app._build_plan = fake_build_plan
+    app.app.set_build_plan(fake_build_plan)
 
     with pytest.raises(craft_providers.ProviderError) as exc_info:
         app.run_managed(None, get_host_architecture())
@@ -195,7 +195,7 @@ def test_run_managed_secrets(app, fake_project, fake_build_plan):
     mock_execute = instance.execute_run
     app.services.provider = mock_provider
     app.project = fake_project
-    app._build_plan = fake_build_plan
+    app.app.set_build_plan(fake_build_plan)
 
     fake_encoded_environment = {
         "CRAFT_TEST": "banana",
@@ -222,7 +222,7 @@ def test_run_managed_multiple(app, fake_project):
     arch = get_host_architecture()
     info1 = BuildInfo("a1", arch, "arch1", bases.BaseName("base", "1"))
     info2 = BuildInfo("a2", arch, "arch2", bases.BaseName("base", "2"))
-    app._build_plan = [info1, info2]
+    app.app.set_build_plan([info1, info2])
 
     app.run_managed(None, None)
 
@@ -238,7 +238,7 @@ def test_run_managed_specified_arch(app, fake_project):
     arch = get_host_architecture()
     info1 = BuildInfo("a1", arch, "arch1", bases.BaseName("base", "1"))
     info2 = BuildInfo("a2", arch, "arch2", bases.BaseName("base", "2"))
-    app._build_plan = [info1, info2]
+    app.app.set_build_plan([info1, info2])
 
     app.run_managed(None, "arch2")
 
@@ -254,7 +254,7 @@ def test_run_managed_specified_platform(app, fake_project):
     arch = get_host_architecture()
     info1 = BuildInfo("a1", arch, "arch1", bases.BaseName("base", "1"))
     info2 = BuildInfo("a2", arch, "arch2", bases.BaseName("base", "2"))
-    app._build_plan = [info1, info2]
+    app.app.set_build_plan([info1, info2])
 
     app.run_managed("a2", None)
 
@@ -381,7 +381,9 @@ def test_run_success_managed_inside_managed(
     monkeypatch, check, app, fake_project, mock_dispatcher, return_code, mocker
 ):
     mocker.patch.object(app, "get_project", return_value=fake_project)
-    mocker.patch.object(mock_dispatcher, "parsed_args", return_value={"platform": "foo"})
+    mocker.patch.object(
+        mock_dispatcher, "parsed_args", return_value={"platform": "foo"}
+    )
     app.run_managed = mock.Mock()
     mock_dispatcher.run.return_value = return_code
     mock_dispatcher.pre_parse_args.return_value = {}
