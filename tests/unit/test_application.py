@@ -504,8 +504,7 @@ def test_work_dir_project_non_managed(monkeypatch, app_metadata, fake_services):
     assert app._work_dir == pathlib.Path.cwd()
 
     # Make sure the project is loaded correctly (from the cwd)
-    arch = get_host_architecture()
-    app.project = app.get_project(None, arch, arch)
+    app.project = app.get_project(None, get_host_architecture())
     assert app.project is not None
 
     assert app.project.name == "myproject"
@@ -520,8 +519,7 @@ def test_work_dir_project_managed(monkeypatch, app_metadata, fake_services):
     assert app._work_dir == pathlib.PosixPath("/root")
 
     # Make sure the project is loaded correctly (from the cwd)
-    arch = get_host_architecture()
-    app.project = app.get_project(None, arch, arch)
+    app.project = app.get_project(None, get_host_architecture())
     assert app.project is not None
 
     assert app.project.name == "myproject"
@@ -555,8 +553,7 @@ def test_application_expand_environment(app_metadata, fake_services):
     app = application.Application(app_metadata, fake_services)
 
     # Make sure the project is loaded correctly (from the cwd)
-    arch = get_host_architecture()
-    app.project = app.get_project(None, arch, arch)
+    app.project = app.get_project(None, get_host_architecture())
     assert app.project is not None
 
     assert app.project.parts["mypart"]["source-tag"] == "v1.2.3"
@@ -596,8 +593,7 @@ def test_application_build_secrets(app_metadata, fake_services, monkeypatch, moc
     app = application.Application(app_metadata, fake_services)
 
     # Make sure the project is loaded correctly (from the cwd)
-    arch = get_host_architecture()
-    app.project = app.get_project(None, arch, arch)
+    app.project = app.get_project(None, get_host_architecture())
     assert app.project is not None
 
     mypart = app.project.parts["mypart"]

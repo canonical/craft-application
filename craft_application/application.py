@@ -182,7 +182,7 @@ class Application:
         )
 
     def get_project(
-        self, platform: str | None, build_on: str, build_for: str
+        self, platform: str | None, build_for: str | None
     ) -> models.Project:
         """Get this application's Project metadata."""
         # Current working directory contains the project file
@@ -205,6 +205,7 @@ class Application:
         # validate project grammar
         GrammarAwareProject.validate_grammar(yaml_data)
 
+        build_on = util.get_host_architecture()
         yaml_data = self._transform_project_yaml(yaml_data, build_on, build_for)
         return self.app.ProjectClass.from_yaml_data(yaml_data, project_file)
 
@@ -346,16 +347,13 @@ class Application:
                 ),
             )
             platform = getattr(dispatcher.parsed_args(), "platform", None)
-            build_on = util.get_host_architecture()
-            build_for = getattr(dispatcher.parsed_args(), "build_for", build_on)
+            build_for = getattr(dispatcher.parsed_args(), "build_for", None)
 
-            craft_cli.emit.debug(
-                f"build_on={build_on}, build_for={build_for}, platform={platform}"
-            )
+            craft_cli.emit.debug(f"platform={platform}, build_for={build_for}")
 
             managed_mode = command.run_managed(dispatcher.parsed_args())
             if managed_mode or command.always_load_project:
-                self.project = self.get_project(platform, build_on, build_for)
+                self.project = self.get_project(platform, build_for)
                 self.services.project = self.project
 
             self._configure_services(platform, build_for)
