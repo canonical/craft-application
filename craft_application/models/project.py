@@ -81,7 +81,7 @@ class Project(CraftBaseModel):
     description: Optional[str]
 
     base: Optional[Any] = None
-    build_base: Optional[str] = None
+    build_base: Optional[Any] = None
     platforms: Optional[Dict[str, Any]] = None
 
     contact: Optional[Union[str, UniqueStrList]]
