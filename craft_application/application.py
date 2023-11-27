@@ -64,9 +64,7 @@ class AppMetadata:
     features: AppFeatures = AppFeatures()
 
     ProjectClass: type[models.Project] = models.Project
-    BuildProjectClass: type[models.BuildProject] = models.BuildProject
-
-    build_plan: list[BuildInfo] = field(default_factory=list)
+    BuildPlannerClass: type[models.BuildPlanner] = models.BuildPlanner
 
     def __post_init__(self) -> None:
         setter = super().__setattr__
@@ -88,10 +86,6 @@ class AppMetadata:
             md = metadata.metadata(self.name)
             setter("summary", md["summary"])
 
-    def set_build_plan(self, value: list[BuildInfo]) -> None:
-        """Store the filtered build plan."""
-        object.__setattr__(self, "build_plan", value)
-
 
 class Application:
     """Craft Application Builder.
@@ -109,6 +103,7 @@ class Application:
         self.services = services
         self._command_groups: list[craft_cli.CommandGroup] = []
         self._global_arguments: list[craft_cli.GlobalArgument] = [GLOBAL_VERSION]
+        self._build_plan: list[models.BuildInfo] = []
         self.project: models.Project | None = None
 
         # When build_secrets are enabled, this contains the secret info to pass to
@@ -183,6 +178,7 @@ class Application:
         self.services.set_kwargs(
             "provider",
             work_dir=self._work_dir,
+            build_plan=self._build_plan,
         )
 
     def get_project(
@@ -196,12 +192,12 @@ class Application:
         with project_file.open() as file:
             yaml_data = util.safe_yaml_load(file)
 
-        build_project = self.app.BuildProjectClass.unmarshal(yaml_data)
-        build_plan = build_project.get_build_plan()
-        self.app.set_build_plan(_filter_plan(build_plan, platform, build_for))
+        build_planner = self.app.BuildPlannerClass.unmarshal(yaml_data)
+        full_build_plan = build_planner.get_build_plan()
+        self._build_plan = _filter_plan(full_build_plan, platform, build_for)
 
         if platform:
-            all_platforms = {b.platform: b for b in build_plan}
+            all_platforms = {b.platform: b for b in full_build_plan}
             if platform not in all_platforms:
                 raise errors.InvalidPlatformError(platform, list(all_platforms.keys()))
             build_for = all_platforms[platform].build_for
@@ -220,7 +216,7 @@ class Application:
         """Run the application in a managed instance."""
         extra_args: dict[str, Any] = {}
 
-        for build_info in self.app.build_plan:
+        for build_info in self._build_plan:
             if platform and platform != build_info.platform:
                 continue
 
@@ -352,7 +348,6 @@ class Application:
             platform = getattr(dispatcher.parsed_args(), "platform", None)
             build_on = util.get_host_architecture()
             build_for = getattr(dispatcher.parsed_args(), "build_for", build_on)
-            self._configure_services(platform, build_for)
 
             craft_cli.emit.debug(
                 f"build_on={build_on}, build_for={build_for}, platform={platform}"
@@ -362,6 +357,8 @@ class Application:
             if managed_mode or command.always_load_project:
                 self.project = self.get_project(platform, build_on, build_for)
                 self.services.project = self.project
+
+            self._configure_services(platform, build_for)
 
             if not managed_mode:
                 # command runs in the outer instance

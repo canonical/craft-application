@@ -21,13 +21,13 @@ from typing import Optional
 import pytest
 from craft_application import util
 from craft_application.errors import CraftValidationError
-from craft_application.models import BuildProject, Project
+from craft_application.models import BuildPlanner, Project
 
 PROJECTS_DIR = pathlib.Path(__file__).parent / "project_models"
 PARTS_DICT = {"my-part": {"plugin": "nil"}}
 # pyright doesn't like these types and doesn't have a pydantic plugin like mypy.
 # Because of this, we need to silence several errors in these constants.
-BUILD_PROJECT = BuildProject()
+BUILD_PLANNER = BuildPlanner()
 BASIC_PROJECT = Project(
     name="project-name",  # pyright: ignore[reportGeneralTypeIssues]
     version="1.0",  # pyright: ignore[reportGeneralTypeIssues]
@@ -104,9 +104,9 @@ def test_unmarshal_then_marshal(project_dict):
 
 
 def test_build_plan_not_implemented():
-    build_project = BUILD_PROJECT
+    build_planner = BUILD_PLANNER
     with pytest.raises(NotImplementedError):
-        build_project.get_build_plan()
+        build_planner.get_build_plan()
 
 
 @pytest.mark.parametrize(

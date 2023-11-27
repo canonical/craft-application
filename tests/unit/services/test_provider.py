@@ -30,12 +30,15 @@ from craft_providers.actions.snap_installer import Snap
     ("install_snap", "snaps"),
     [(True, [Snap(name="testcraft", channel=None, classic=True)]), (False, [])],
 )
-def test_install_snap(app_metadata, fake_project, fake_services, install_snap, snaps):
+def test_install_snap(
+    app_metadata, fake_project, fake_build_plan, fake_services, install_snap, snaps
+):
     service = provider.ProviderService(
         app_metadata,
         fake_services,
         project=fake_project,
         work_dir=pathlib.Path(),
+        build_plan=fake_build_plan,
         install_snap=install_snap,
     )
 
@@ -384,7 +387,7 @@ def test_clean_instances(
     current_provider = provider_service.get_provider()
     mock_clean = mocker.patch.object(current_provider, "clean_project_environments")
 
-    provider_service._app.set_build_plan(build_infos)
+    provider_service._build_plan = build_infos
     provider_service.clean_instances()
 
     work_dir_inode = tmp_path.stat().st_ino

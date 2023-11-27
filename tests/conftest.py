@@ -38,8 +38,8 @@ class Platform(models.CraftBaseModel):
     build_for: str
 
 
-class MyBuildProject(models.BuildProject):
-    """Build project definition for tests."""
+class MyBuildPlanner(models.BuildPlanner):
+    """Build planner definition for tests."""
 
     def get_build_plan(self) -> list[models.BuildInfo]:
         arch = util.get_host_architecture()
@@ -71,7 +71,7 @@ def app_metadata(features) -> craft_application.AppMetadata:
         return craft_application.AppMetadata(
             "testcraft",
             "A fake app for testing craft-application",
-            BuildProjectClass=MyBuildProject,
+            BuildPlannerClass=MyBuildPlanner,
             source_ignore_patterns=["*.snap", "*.charm", "*.starcraft"],
             features=craft_application.AppFeatures(**features),
         )
@@ -140,7 +140,7 @@ def emitter_verbosity(request):
 
 
 @pytest.fixture()
-def fake_provider_service_class():
+def fake_provider_service_class(fake_build_plan):
     class FakeProviderService(services.ProviderService):
         def __init__(
             self,
@@ -149,7 +149,13 @@ def fake_provider_service_class():
             *,
             project: models.Project,
         ):
-            super().__init__(app, services, project=project, work_dir=pathlib.Path())
+            super().__init__(
+                app,
+                services,
+                project=project,
+                work_dir=pathlib.Path(),
+                build_plan=fake_build_plan,
+            )
 
     return FakeProviderService
 

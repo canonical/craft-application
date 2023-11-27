@@ -52,19 +52,17 @@ class BuildInfo:
     """The base to build on."""
 
 
-class BuildProjectConfig(CraftBaseConfig):
+class BuildPlannerConfig(CraftBaseConfig):
     """Config for BuildProjects."""
 
     extra = pydantic.Extra.ignore
-    """BuildProjects are used to validate only the build-related data from
-    a model; this config lets us parse only those items and ignore everything
-    else."""
+    """The BuildPlanner model uses attributes from the project yaml."""
 
 
-class BuildProject(CraftBaseModel):
-    """Platform and build plan definition."""
+class BuildPlanner(CraftBaseModel):
+    """The BuildPlanner obtains a build plan for the project."""
 
-    Config = BuildProjectConfig
+    Config = BuildPlannerConfig
 
     def get_build_plan(self) -> List[BuildInfo]:
         """Obtain the list of architectures and bases from the project file."""
@@ -82,7 +80,7 @@ class Project(CraftBaseModel):
     summary: Optional[SummaryStr]
     description: Optional[str]
 
-    base: Optional[str] = None
+    base: Optional[Any] = None
     build_base: Optional[str] = None
     platforms: Optional[Dict[str, Any]] = None
 
