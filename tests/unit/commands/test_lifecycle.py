@@ -23,13 +23,13 @@ import pytest
 from craft_application.commands.lifecycle import (
     BuildCommand,
     CleanCommand,
+    LifecyclePartsCommand,
+    LifecycleStepCommand,
     OverlayCommand,
     PackCommand,
     PrimeCommand,
     PullCommand,
     StageCommand,
-    _LifecyclePartsCommand,
-    _LifecycleStepCommand,
     get_lifecycle_command_group,
 )
 from craft_cli import emit
@@ -109,7 +109,7 @@ def test_get_lifecycle_command_group(enable_overlay, commands):
 def test_parts_command_fill_parser(
     app_metadata, fake_services, destructive_arg, parts_args
 ):
-    cls = get_fake_command_class(_LifecyclePartsCommand, managed=True)
+    cls = get_fake_command_class(LifecyclePartsCommand, managed=True)
     parser = argparse.ArgumentParser("parts_command")
     command = cls({"app": app_metadata, "services": fake_services})
 
@@ -130,7 +130,7 @@ def test_parts_command_fill_parser(
 def test_parts_command_get_managed_cmd(
     app_metadata, fake_services, parts, emitter_verbosity
 ):
-    cls = get_fake_command_class(_LifecyclePartsCommand, managed=True)
+    cls = get_fake_command_class(LifecyclePartsCommand, managed=True)
 
     expected = [
         app_metadata.name,
@@ -162,7 +162,7 @@ def test_step_command_fill_parser(
     shell_args,
     shell_dict,
 ):
-    cls = get_fake_command_class(_LifecycleStepCommand, managed=True)
+    cls = get_fake_command_class(LifecycleStepCommand, managed=True)
     parser = argparse.ArgumentParser("step_command")
     expected = {
         "parts": parts_args,
@@ -187,7 +187,7 @@ def test_step_command_fill_parser(
 def test_step_command_get_managed_cmd(
     app_metadata, fake_services, parts, emitter_verbosity, shell_params, shell_opts
 ):
-    cls = get_fake_command_class(_LifecycleStepCommand, managed=True)
+    cls = get_fake_command_class(LifecycleStepCommand, managed=True)
 
     expected = [
         app_metadata.name,
@@ -209,7 +209,7 @@ def test_step_command_get_managed_cmd(
 @pytest.mark.parametrize("step_name", STEP_NAMES)
 @pytest.mark.parametrize("parts", PARTS_LISTS)
 def test_step_command_run_explicit_step(app_metadata, mock_services, parts, step_name):
-    cls = get_fake_command_class(_LifecycleStepCommand, managed=True)
+    cls = get_fake_command_class(LifecycleStepCommand, managed=True)
 
     parsed_args = argparse.Namespace(parts=parts)
     command = cls({"app": app_metadata, "services": mock_services})
@@ -430,7 +430,7 @@ def test_pack_run_wrong_step(app_metadata, fake_services):
     )
 
     with pytest.raises(RuntimeError) as exc_info:
-        command.run(parsed_args, "wrong-command")
+        command.run(parsed_args, step_name="wrong-command")
 
     assert exc_info.value.args[0] == "Step name wrong-command passed to pack command."
 

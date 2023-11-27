@@ -18,7 +18,7 @@ import os
 import pathlib
 import subprocess
 import textwrap
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from craft_cli import CommandGroup, emit
 from craft_parts.features import Features
@@ -50,21 +50,23 @@ def get_lifecycle_command_group() -> CommandGroup:
     )
 
 
-class _LifecycleCommand(base.AppCommand):
+class _LifecycleCommand(base.ExtensibleCommand):
     """Lifecycle-related commands."""
 
     @override
-    def run(self, parsed_args: argparse.Namespace) -> None:
+    def _run(self, parsed_args: argparse.Namespace, **kwargs: Any) -> None:
         emit.trace(f"lifecycle command: {self.name!r}, arguments: {parsed_args!r}")
 
 
-class _LifecyclePartsCommand(_LifecycleCommand):
+class LifecyclePartsCommand(_LifecycleCommand):
+    """A lifecycle command that uses parts."""
+
     # All lifecycle-related commands need a project to work
     always_load_project = True
 
     @override
-    def fill_parser(self, parser: argparse.ArgumentParser) -> None:
-        super().fill_parser(parser)  # type: ignore[arg-type]
+    def _fill_parser(self, parser: argparse.ArgumentParser) -> None:
+        super()._fill_parser(parser)  # type: ignore[arg-type]
         parser.add_argument(
             "parts",
             metavar="part-name",
@@ -87,14 +89,16 @@ class _LifecyclePartsCommand(_LifecycleCommand):
         return cmd
 
 
-class _LifecycleStepCommand(_LifecyclePartsCommand):
+class LifecycleStepCommand(LifecyclePartsCommand):
+    """An actual lifecycle step."""
+
     @override
     def run_managed(self, parsed_args: argparse.Namespace) -> bool:
         return not parsed_args.destructive_mode
 
     @override
-    def fill_parser(self, parser: argparse.ArgumentParser) -> None:
-        super().fill_parser(parser)
+    def _fill_parser(self, parser: argparse.ArgumentParser) -> None:
+        super()._fill_parser(parser)
 
         if self._should_add_shell_args():
             group = parser.add_mutually_exclusive_group()
@@ -149,11 +153,14 @@ class _LifecycleStepCommand(_LifecyclePartsCommand):
         return cmd
 
     @override
-    def run(
-        self, parsed_args: argparse.Namespace, step_name: str | None = None
+    def _run(
+        self,
+        parsed_args: argparse.Namespace,
+        step_name: str | None = None,
+        **kwargs: Any,
     ) -> None:
         """Run a lifecycle step command."""
-        super().run(parsed_args)
+        super()._run(parsed_args)
 
         shell = getattr(parsed_args, "shell", False)
         shell_after = getattr(parsed_args, "shell_after", False)
@@ -185,7 +192,7 @@ class _LifecycleStepCommand(_LifecyclePartsCommand):
         return True
 
 
-class PullCommand(_LifecycleStepCommand):
+class PullCommand(LifecycleStepCommand):
     """Command to pull parts."""
 
     name = "pull"
@@ -199,7 +206,7 @@ class PullCommand(_LifecycleStepCommand):
     )
 
 
-class OverlayCommand(_LifecycleStepCommand):
+class OverlayCommand(LifecycleStepCommand):
     """Command to overlay parts."""
 
     name = "overlay"
@@ -212,7 +219,7 @@ class OverlayCommand(_LifecycleStepCommand):
     )
 
 
-class BuildCommand(_LifecycleStepCommand):
+class BuildCommand(LifecycleStepCommand):
     """Command to build parts."""
 
     name = "build"
@@ -225,7 +232,7 @@ class BuildCommand(_LifecycleStepCommand):
     )
 
 
-class StageCommand(_LifecycleStepCommand):
+class StageCommand(LifecycleStepCommand):
     """Command to stage parts."""
 
     name = "stage"
@@ -239,7 +246,7 @@ class StageCommand(_LifecycleStepCommand):
     )
 
 
-class PrimeCommand(_LifecycleStepCommand):
+class PrimeCommand(LifecycleStepCommand):
     """Command to prime parts."""
 
     name = "prime"
@@ -253,11 +260,14 @@ class PrimeCommand(_LifecycleStepCommand):
     )
 
     @override
-    def run(
-        self, parsed_args: argparse.Namespace, step_name: str | None = None
+    def _run(
+        self,
+        parsed_args: argparse.Namespace,
+        step_name: str | None = None,
+        **kwargs: Any,
     ) -> None:
         """Run the prime command."""
-        super().run(parsed_args, step_name=step_name)
+        super()._run(parsed_args, step_name=step_name)
 
         self._services.package.write_metadata(self._services.lifecycle.prime_dir)
 
@@ -274,8 +284,8 @@ class PackCommand(PrimeCommand):
     )
 
     @override
-    def fill_parser(self, parser: argparse.ArgumentParser) -> None:
-        super().fill_parser(parser)
+    def _fill_parser(self, parser: argparse.ArgumentParser) -> None:
+        super()._fill_parser(parser)
 
         parser.add_argument(
             "--output",
@@ -286,13 +296,16 @@ class PackCommand(PrimeCommand):
         )
 
     @override
-    def run(
-        self, parsed_args: argparse.Namespace, step_name: str | None = None
+    def _run(
+        self,
+        parsed_args: argparse.Namespace,
+        step_name: str | None = None,
+        **kwargs: Any,
     ) -> None:
         """Run the pack command."""
         if step_name not in ("pack", None):
             raise RuntimeError(f"Step name {step_name} passed to pack command.")
-        super().run(parsed_args, step_name="prime")
+        super()._run(parsed_args, step_name="prime")
 
         emit.progress("Packing...")
         packages = self._services.package.pack(
@@ -313,7 +326,7 @@ class PackCommand(PrimeCommand):
         return False
 
 
-class CleanCommand(_LifecyclePartsCommand):
+class CleanCommand(LifecyclePartsCommand):
     """Command to remove part assets."""
 
     name = "clean"
@@ -326,9 +339,9 @@ class CleanCommand(_LifecyclePartsCommand):
     )
 
     @override
-    def run(self, parsed_args: argparse.Namespace) -> None:
+    def _run(self, parsed_args: argparse.Namespace, **kwargs: Any) -> None:
         """Run the clean command."""
-        super().run(parsed_args)
+        super()._run(parsed_args)
 
         if parsed_args.destructive_mode or not self._should_clean_instances(
             parsed_args
