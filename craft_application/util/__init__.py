@@ -16,6 +16,7 @@
 """Utilities for craft-application."""
 
 from craft_application.util.callbacks import get_unique_callbacks
+from craft_application.util.logging import setup_loggers
 from craft_application.util.paths import get_managed_logpath
 from craft_application.util.platforms import (
     get_host_architecture,
@@ -25,6 +26,7 @@ from craft_application.util.yaml import dump_yaml, safe_yaml_load
 
 __all__ = [
     "get_unique_callbacks",
+    "setup_loggers",
     "get_managed_logpath",
     "get_host_architecture",
     "convert_architecture_deb_to_platform",
