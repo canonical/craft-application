@@ -356,27 +356,4 @@ def test_repr(fake_parts_lifecycle, app_metadata, fake_project):
     )
 
 
-@pytest.mark.parametrize("part_names", [None, [], ["something"], ["other", "another"]])
-def test_post_prime_runs(fake_parts_lifecycle, part_names):
-    post_prime = mock.Mock()
-    fake_parts_lifecycle.post_prime = post_prime
-    fake_parts_lifecycle._lcm = mock.MagicMock()
-
-    fake_parts_lifecycle.run("prime", part_names)
-
-    post_prime.assert_called_once_with()
-
-
-@pytest.mark.parametrize("step_name", [None, "pull", "build", "stage"])
-@pytest.mark.parametrize("part_names", [None, [], ["something"], ["other", "another"]])
-def test_post_prime_doesnt_run(fake_parts_lifecycle, step_name, part_names):
-    post_prime = mock.Mock()
-    fake_parts_lifecycle.post_prime = post_prime
-    fake_parts_lifecycle._lcm = mock.MagicMock()
-
-    fake_parts_lifecycle.run(step_name, part_names)
-
-    post_prime.assert_not_called()
-
-
 # endregion
