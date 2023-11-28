@@ -26,7 +26,15 @@ import pytest_check
 from craft_application import util
 from craft_application.errors import PartsLifecycleError
 from craft_application.services import lifecycle
-from craft_parts import Action, ActionType, LifecycleManager, Step
+from craft_parts import (
+    Action,
+    ActionType,
+    LifecycleManager,
+    Part,
+    PartInfo,
+    Step,
+    StepInfo,
+)
 from craft_parts.executor import (
     ExecutionContext,  # pyright: ignore[reportPrivateImportUsage]
 )
@@ -354,6 +362,31 @@ def test_repr(fake_parts_lifecycle, app_metadata, fake_project):
             actual,
         )
     )
+
+
+def test_post_prime_success(fake_parts_lifecycle):
+    step_info = StepInfo(
+        part_info=PartInfo(
+            fake_parts_lifecycle.project_info, part=Part("test-part", {})
+        ),
+        step=Step.PRIME,
+    )
+
+    assert not fake_parts_lifecycle.post_prime(step_info)
+
+
+@pytest.mark.parametrize("step", [Step.PULL, Step.OVERLAY, Step.BUILD, Step.STAGE])
+def test_post_prime_wrong_step(fake_parts_lifecycle, step):
+    step_info = StepInfo(
+        part_info=PartInfo(
+            fake_parts_lifecycle.project_info,
+            part=Part("test-part", {}),
+        ),
+        step=step,
+    )
+
+    with pytest.raises(RuntimeError, match="^Post-prime hook called after step: "):
+        fake_parts_lifecycle.post_prime(step_info)
 
 
 # endregion
