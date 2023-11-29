@@ -22,8 +22,8 @@ import pathlib
 import signal
 import subprocess
 import sys
-import warnings
 from dataclasses import dataclass, field
+from functools import cached_property
 from importlib import metadata
 from typing import TYPE_CHECKING, Any, Iterable, cast, final
 
@@ -239,39 +239,10 @@ class Application:
         self.__project = self.app.ProjectClass.from_yaml_data(yaml_data, project_path)
         return self.__project
 
-    @property
+    @cached_property
     def project(self) -> models.Project:
-        """Get this application's Project metadata.
-
-        DEPRECATED: use ``get_project`` instead.
-        """
-        warnings.warn(
-            "Direct access to an application's project property is deprecated "
-            "and will be removed in craft-application 2.0. Use get_project instead.",
-            DeprecationWarning,
-            stacklevel=1,
-        )
+        """Get this application's Project metadata."""
         return self.get_project()
-
-    @project.setter
-    def project(self, value: models.Project) -> None:
-        warnings.warn(
-            "Direct access to an application's project property is deprecated "
-            "and will be removed in craft-application 2.0.",
-            DeprecationWarning,
-            stacklevel=1,
-        )
-        self.__project = value
-
-    @project.deleter
-    def project(self) -> None:
-        warnings.warn(
-            "Direct access to an application's project property is deprecated "
-            "and will be removed in craft-application 2.0.",
-            DeprecationWarning,
-            stacklevel=1,
-        )
-        self.__project = None
 
     def is_managed(self) -> bool:
         """Shortcut to tell whether we're running in managed mode."""
