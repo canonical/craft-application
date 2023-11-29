@@ -606,21 +606,6 @@ def test_application_build_secrets(app_metadata, fake_services, monkeypatch, moc
     spied_set_secrets.assert_called_once_with(list({"source-folder", "secret-value"}))
 
 
-def test_project_deprecated(app, fake_project):
-    """Ensure that the project property raises a deprecation warning."""
-    warning_re = re.compile(
-        r"^Direct access to an application's project property is deprecated "
-        r"and will be removed in craft-application 2\.0\."
-    )
-
-    with pytest.warns(DeprecationWarning, match=warning_re):
-        app.project = fake_project
-    with pytest.warns(DeprecationWarning, match=warning_re):
-        _ = app.project
-    with pytest.warns(DeprecationWarning, match=warning_re):
-        del app.project
-
-
 @pytest.mark.usefixtures("fake_project_file")
 def test_get_project_current_dir(app):
     # Load a project file from the current directory
