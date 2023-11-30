@@ -17,15 +17,15 @@
 from __future__ import annotations
 
 import importlib
-import logging
 import os
 import pathlib
 import signal
 import subprocess
 import sys
 from dataclasses import dataclass, field
+from functools import cached_property
 from importlib import metadata
-from typing import TYPE_CHECKING, Any, cast, final
+from typing import TYPE_CHECKING, Any, Iterable, cast, final
 
 import craft_cli
 import craft_parts
@@ -40,6 +40,10 @@ if TYPE_CHECKING:
 
 GLOBAL_VERSION = craft_cli.GlobalArgument(
     "version", "flag", "-V", "--version", "Show the application version and exit"
+)
+
+DEFAULT_CLI_LOGGERS = frozenset(
+    {"craft_archives", "craft_parts", "craft_providers", "craft_store"}
 )
 
 
@@ -92,28 +96,50 @@ class Application:
 
     :ivar app: Metadata about this application
     :ivar services: A ServiceFactory for this application
+    :param extra_loggers: Logger names to integrate with craft-cli beyond the defaults.
+
     """
 
     def __init__(
         self,
         app: AppMetadata,
         services: service_factory.ServiceFactory,
+        *,
+        extra_loggers: Iterable[str] = (),
     ) -> None:
         self.app = app
         self.services = services
         self._command_groups: list[craft_cli.CommandGroup] = []
         self._global_arguments: list[craft_cli.GlobalArgument] = [GLOBAL_VERSION]
+        self._cli_loggers = DEFAULT_CLI_LOGGERS | set(extra_loggers)
         self._build_plan: list[models.BuildInfo] = []
-        self.project: models.Project | None = None
-
         # When build_secrets are enabled, this contains the secret info to pass to
         # managed instances.
         self._secrets: secrets.BuildSecrets | None = None
+        # Cached project object, allows only the first time we load the project
+        # to specify things like the project directory.
+        # This is set as a private attribute in order to discourage real application
+        # implementations from accessing it directly. They should always use
+        # ``get_project`` to access the project.
+        self.__project: models.Project | None = None
 
         if self.is_managed():
             self._work_dir = pathlib.Path("/root")
         else:
             self._work_dir = pathlib.Path.cwd()
+
+    @property
+    def app_config(self) -> dict[str, Any]:
+        """Get the configuration passed to dispatcher.load_command().
+
+        This can generally be left as-is. It's strongly recommended that if you are
+        overriding it, you begin with ``config = super().app_config`` and update the
+        dictionary from there.
+        """
+        return {
+            "app": self.app,
+            "services": self.services,
+        }
 
     @property
     def command_groups(self) -> list[craft_cli.CommandGroup]:
@@ -181,15 +207,40 @@ class Application:
             build_plan=self._build_plan,
         )
 
-    def get_project(
-        self, platform: str | None, build_for: str | None
-    ) -> models.Project:
-        """Get this application's Project metadata."""
-        # Current working directory contains the project file
-        project_file = pathlib.Path(f"{self.app.name}.yaml").resolve()
-        craft_cli.emit.debug(f"Loading project file '{project_file!s}'")
+    def _resolve_project_path(self, project_dir: pathlib.Path | None) -> pathlib.Path:
+        """Find the project file for the current project.
 
-        with project_file.open() as file:
+        The default implementation simply looks for the project file in the project
+        directory. Applications may wish to override this if the project file could be
+         in multiple places within the project directory.
+        """
+        if project_dir is None:
+            project_dir = pathlib.Path.cwd()
+        return (project_dir / f"{self.app.name}.yaml").resolve(strict=True)
+
+    def get_project(
+        self,
+        platform: str | None = None,
+        build_for: str | None = None,
+        project_dir: pathlib.Path | None = None,
+    ) -> models.Project:
+        """Get the project model.
+
+        This only resolves and renders the project the first time it gets run.
+        After that, it merely uses a cached project model.
+
+        :param project_dir: the base directory to traverse for finding the project file.
+        :param platform: the platform name listed in the build plan.
+        :param build_for: the architecture to build this project for.
+        :returns: A transformed, loaded project model.
+        """
+        if self.__project is not None:
+            return self.__project
+
+        project_path = self._resolve_project_path(project_dir)
+        craft_cli.emit.debug(f"Loading project file '{project_path!s}'")
+
+        with project_path.open() as file:
             yaml_data = util.safe_yaml_load(file)
 
         build_planner = self.app.BuildPlannerClass.unmarshal(yaml_data)
@@ -207,7 +258,13 @@ class Application:
 
         build_on = util.get_host_architecture()
         yaml_data = self._transform_project_yaml(yaml_data, build_on, build_for)
-        return self.app.ProjectClass.from_yaml_data(yaml_data, project_file)
+        self.__project = self.app.ProjectClass.from_yaml_data(yaml_data, project_path)
+        return self.__project
+
+    @cached_property
+    def project(self) -> models.Project:
+        """Get this application's Project metadata."""
+        return self.get_project()
 
     def is_managed(self) -> bool:
         """Shortcut to tell whether we're running in managed mode."""
@@ -268,10 +325,7 @@ class Application:
         # Set the logging level to DEBUG for all craft-libraries. This is OK even if
         # the specific application doesn't use a specific library, the call does not
         # import the package.
-        craft_libs = ["craft_archives", "craft_parts", "craft_providers", "craft_store"]
-        for craft_lib in craft_libs:
-            logger = logging.getLogger(craft_lib)
-            logger.setLevel(logging.DEBUG)
+        util.setup_loggers(*self._cli_loggers)
 
         craft_cli.emit.init(
             mode=craft_cli.EmitterMode.BRIEF,
@@ -339,12 +393,7 @@ class Application:
         try:
             command = cast(
                 commands.AppCommand,
-                dispatcher.load_command(
-                    {
-                        "app": self.app,
-                        "services": self.services,
-                    }
-                ),
+                dispatcher.load_command(self.app_config),
             )
             platform = getattr(dispatcher.parsed_args(), "platform", None)
             build_for = getattr(dispatcher.parsed_args(), "build_for", None)
@@ -353,8 +402,7 @@ class Application:
 
             managed_mode = command.run_managed(dispatcher.parsed_args())
             if managed_mode or command.always_load_project:
-                self.project = self.get_project(platform, build_for)
-                self.services.project = self.project
+                self.services.project = self.get_project(platform, build_for)
 
             self._configure_services(platform, build_for)
 

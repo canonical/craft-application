@@ -74,9 +74,16 @@ def test_app_metadata_dev():
     assert app.version == "dev"
 
 
+class FakeApplication(application.Application):
+    """An application class explicitly for testing. Adds some convenient test hooks."""
+
+    def set_project(self, project):
+        self._Application__project = project
+
+
 @pytest.fixture()
 def app(app_metadata, fake_services):
-    return application.Application(app_metadata, fake_services)
+    return FakeApplication(app_metadata, fake_services)
 
 
 @pytest.fixture()
@@ -217,7 +224,7 @@ def test_run_managed_secrets(app, fake_project, fake_build_plan):
 def test_run_managed_multiple(app, fake_project):
     mock_provider = mock.MagicMock(spec_set=services.ProviderService)
     app.services.provider = mock_provider
-    app.project = fake_project
+    app.set_project(fake_project)
 
     arch = get_host_architecture()
     info1 = BuildInfo("a1", arch, "arch1", bases.BaseName("base", "1"))
@@ -233,7 +240,7 @@ def test_run_managed_multiple(app, fake_project):
 def test_run_managed_specified_arch(app, fake_project):
     mock_provider = mock.MagicMock(spec_set=services.ProviderService)
     app.services.provider = mock_provider
-    app.project = fake_project
+    app.set_project(fake_project)
 
     arch = get_host_architecture()
     info1 = BuildInfo("a1", arch, "arch1", bases.BaseName("base", "1"))
@@ -249,7 +256,7 @@ def test_run_managed_specified_arch(app, fake_project):
 def test_run_managed_specified_platform(app, fake_project):
     mock_provider = mock.MagicMock(spec_set=services.ProviderService)
     app.services.provider = mock_provider
-    app.project = fake_project
+    app.set_project(fake_project)
 
     arch = get_host_architecture()
     info1 = BuildInfo("a1", arch, "arch1", bases.BaseName("base", "1"))
@@ -321,14 +328,16 @@ def test_run_outputs_version(monkeypatch, capsys, app, argv):
     assert out == "testcraft 3.14159\n"
 
 
+@pytest.mark.parametrize("load_project", [True, False])
 @pytest.mark.parametrize("return_code", [None, 0, 1])
 def test_run_success_unmanaged(
-    monkeypatch, emitter, check, app, fake_project, return_code
+    monkeypatch, emitter, check, app, fake_project, return_code, load_project
 ):
     class UnmanagedCommand(commands.AppCommand):
         name = "pass"
         help_msg = "Return without doing anything"
         overview = "Return without doing anything"
+        always_load_project = load_project
 
         def run(self, parsed_args: argparse.Namespace):  # noqa: ARG002
             return return_code
@@ -336,7 +345,7 @@ def test_run_success_unmanaged(
     monkeypatch.setattr(sys, "argv", ["testcraft", "pass"])
 
     app.add_command_group("test", [UnmanagedCommand])
-    app.project = fake_project
+    app.set_project(fake_project)
 
     check.equal(app.run(), return_code or 0)
     with check:
@@ -422,7 +431,7 @@ def test_run_error(
     return_code,
     error_msg,
 ):
-    app.project = fake_project
+    app.set_project(fake_project)
     mock_dispatcher.load_command.side_effect = error
     mock_dispatcher.pre_parse_args.return_value = {}
     monkeypatch.setattr(sys, "argv", ["testcraft", "pull"])
@@ -434,7 +443,7 @@ def test_run_error(
 
 @pytest.mark.parametrize("error", [KeyError(), ValueError(), Exception()])
 def test_run_error_debug(monkeypatch, mock_dispatcher, app, fake_project, error):
-    app.project = fake_project
+    app.set_project(fake_project)
     mock_dispatcher.load_command.side_effect = error
     mock_dispatcher.pre_parse_args.return_value = {}
     monkeypatch.setattr(sys, "argv", ["testcraft", "pull"])
@@ -503,12 +512,12 @@ def test_work_dir_project_non_managed(monkeypatch, app_metadata, fake_services):
     app = application.Application(app_metadata, fake_services)
     assert app._work_dir == pathlib.Path.cwd()
 
-    # Make sure the project is loaded correctly (from the cwd)
-    app.project = app.get_project(None, get_host_architecture())
-    assert app.project is not None
+    project = app.get_project(build_for=get_host_architecture())
 
-    assert app.project.name == "myproject"
-    assert app.project.version == "1.0"
+    # Make sure the project is loaded correctly (from the cwd)
+    assert project is not None
+    assert project.name == "myproject"
+    assert project.version == "1.0"
 
 
 @pytest.mark.usefixtures("fake_project_file")
@@ -518,12 +527,13 @@ def test_work_dir_project_managed(monkeypatch, app_metadata, fake_services):
     app = application.Application(app_metadata, fake_services)
     assert app._work_dir == pathlib.PosixPath("/root")
 
-    # Make sure the project is loaded correctly (from the cwd)
-    app.project = app.get_project(None, get_host_architecture())
-    assert app.project is not None
+    project = app.get_project(build_for=get_host_architecture())
 
-    assert app.project.name == "myproject"
-    assert app.project.version == "1.0"
+    # Make sure the project is loaded correctly (from the cwd)
+    assert project is not None
+
+    assert project.name == "myproject"
+    assert project.version == "1.0"
 
 
 @pytest.fixture()
@@ -549,14 +559,13 @@ def environment_project(monkeypatch, tmp_path):
 
 
 @pytest.mark.usefixtures("environment_project")
-def test_application_expand_environment(app_metadata, fake_services):
+def test_applcation_expand_environment(app_metadata, fake_services):
     app = application.Application(app_metadata, fake_services)
+    project = app.get_project(build_for=get_host_architecture())
 
     # Make sure the project is loaded correctly (from the cwd)
-    app.project = app.get_project(None, get_host_architecture())
-    assert app.project is not None
-
-    assert app.project.parts["mypart"]["source-tag"] == "v1.2.3"
+    assert project is not None
+    assert project.parts["mypart"]["source-tag"] == "v1.2.3"
 
 
 @pytest.fixture()
@@ -591,13 +600,32 @@ def test_application_build_secrets(app_metadata, fake_services, monkeypatch, moc
     spied_set_secrets = mocker.spy(craft_cli.emit, "set_secrets")
 
     app = application.Application(app_metadata, fake_services)
+    project = app.get_project(build_for=get_host_architecture())
 
     # Make sure the project is loaded correctly (from the cwd)
-    app.project = app.get_project(None, get_host_architecture())
-    assert app.project is not None
+    assert project is not None
 
-    mypart = app.project.parts["mypart"]
+    mypart = project.parts["mypart"]
     assert mypart["source"] == "source-folder/project"
     assert mypart["build-environment"][0]["MY_VAR"] == "secret-value"
 
     spied_set_secrets.assert_called_once_with(list({"source-folder", "secret-value"}))
+
+
+@pytest.mark.usefixtures("fake_project_file")
+def test_get_project_current_dir(app):
+    # Load a project file from the current directory
+    project = app.get_project()
+
+    # Check that it caches that project.
+    assert app.get_project() is project, "Project file was not cached."
+
+
+def test_get_project_other_dir(monkeypatch, tmp_path, app, fake_project_file):
+    monkeypatch.chdir(tmp_path)
+    assert not (tmp_path / fake_project_file.name).exists(), "Test setup failed."
+
+    project = app.get_project(fake_project_file.parent)
+
+    assert app.get_project(fake_project_file.parent) is project
+    assert app.get_project() is project

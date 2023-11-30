@@ -20,7 +20,17 @@ import types
 from typing import TYPE_CHECKING, Any
 
 from craft_cli import emit
-from craft_parts import Action, ActionType, Features, LifecycleManager, PartsError, Step
+from craft_parts import (
+    Action,
+    ActionType,
+    Features,
+    LifecycleManager,
+    PartsError,
+    ProjectInfo,
+    Step,
+    StepInfo,
+    callbacks,
+)
 from typing_extensions import override
 
 from craft_application import errors
@@ -29,8 +39,6 @@ from craft_application.util import convert_architecture_deb_to_platform
 
 if TYPE_CHECKING:  # pragma: no cover
     from pathlib import Path
-
-    import craft_parts
 
     from craft_application.application import AppMetadata
     from craft_application.models import Project
@@ -135,6 +143,7 @@ class LifecycleService(base.ProjectService):
     def setup(self) -> None:
         """Initialize the LifecycleManager with previously-set arguments."""
         self._lcm = self._init_lifecycle_manager()
+        callbacks.register_post_step(self.post_prime, step_list=[Step.PRIME])
 
     def _init_lifecycle_manager(self) -> LifecycleManager:
         """Create and return the Lifecycle manager.
@@ -163,7 +172,7 @@ class LifecycleService(base.ProjectService):
         return self._lcm.project_info.dirs.prime_dir
 
     @property
-    def project_info(self) -> craft_parts.ProjectInfo:
+    def project_info(self) -> ProjectInfo:
         """The lifecycle's ProjectInfo."""
         return self._lcm.project_info
 
@@ -193,6 +202,19 @@ class LifecycleService(base.ProjectService):
             raise errors.PartsLifecycleError.from_os_error(err) from err
         except Exception as err:  # noqa: BLE001 - Converting general error.
             raise errors.PartsLifecycleError(f"Unknown error: {str(err)}") from err
+
+    def post_prime(self, step_info: StepInfo) -> bool:
+        """Perform any necessary post-lifecycle modifications to the prime directory.
+
+        This method should be idempotent and meet the requirements for a craft-parts
+        callback. It is added as a post-prime callback during the setup phase.
+
+        NOTE: This is not guaranteed to run in any particular order if other callbacks
+        are added to the prime step.
+        """
+        if step_info.step != Step.PRIME:
+            raise RuntimeError(f"Post-prime hook called after step: {step_info.step}")
+        return False
 
     def clean(self, part_names: list[str] | None = None) -> None:
         """Remove lifecycle artifacts.
