@@ -220,9 +220,10 @@ class Application:
 
     def get_project(
         self,
+        project_dir: pathlib.Path | None = None,
+        *,
         platform: str | None = None,
         build_for: str | None = None,
-        project_dir: pathlib.Path | None = None,
     ) -> models.Project:
         """Get the project model.
 
@@ -402,7 +403,9 @@ class Application:
 
             managed_mode = command.run_managed(dispatcher.parsed_args())
             if managed_mode or command.always_load_project:
-                self.services.project = self.get_project(platform, build_for)
+                self.services.project = self.get_project(
+                    platform=platform, build_for=build_for
+                )
 
             self._configure_services(platform, build_for)
 
@@ -470,7 +473,7 @@ class Application:
         craft_cli.emit.error(error)
 
     def _transform_project_yaml(
-        self, yaml_data: dict[str, Any], build_on: str, build_for: str
+        self, yaml_data: dict[str, Any], build_on: str, build_for: str | None
     ) -> dict[str, Any]:
         """Update the project's yaml data with runtime properties.
 
@@ -485,7 +488,7 @@ class Application:
             self._render_secrets(yaml_data)
 
         # Expand grammar.
-        if "parts" in yaml_data:
+        if build_for and "parts" in yaml_data:
             craft_cli.emit.debug(f"Processing grammar (on {build_on} for {build_for})")
             yaml_data["parts"] = grammar.process_parts(
                 parts_yaml_data=yaml_data["parts"],

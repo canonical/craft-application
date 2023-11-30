@@ -27,7 +27,7 @@ from typing_extensions import override
 
 
 @pytest.fixture()
-def create_app(app_metadata, fake_build_plan, fake_package_service_class):
+def create_app(app_metadata, fake_package_service_class):
     def _inner():
         # Create a factory without a project, to simulate a real application use
         # and force loading from disk.
