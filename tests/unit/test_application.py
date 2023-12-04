@@ -31,7 +31,7 @@ import craft_parts
 import craft_providers
 import pytest
 import pytest_check
-from craft_application import application, commands, secrets, services
+from craft_application import application, commands, errors, secrets, services
 from craft_application.models import BuildInfo
 from craft_application.util import (
     get_host_architecture,  # pyright: ignore[reportGeneralTypeIssues]
@@ -629,3 +629,15 @@ def test_get_project_other_dir(monkeypatch, tmp_path, app, fake_project_file):
 
     assert app.get_project(fake_project_file.parent) is project
     assert app.get_project() is project
+
+
+@pytest.mark.usefixtures("fake_project_file")
+def test_get_project_invalid_platform(app):
+    # Load a project file from the current directory
+
+    with pytest.raises(errors.InvalidPlatformError) as raised:
+        app.get_project(platform="invalid")
+
+    assert (
+        str(raised.value) == "Platform 'invalid' not found in the project definition."
+    )
