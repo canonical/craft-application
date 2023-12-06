@@ -54,15 +54,15 @@ def format_pydantic_error(loc: Iterable[Union[str, int]], message: str) -> str:
     field_path = _format_pydantic_error_location(loc)
     message = _format_pydantic_error_message(message)
     field_name, location = FieldLocationTuple.from_str(field_path)
+    if location != "top-level":
+        location = repr(location)
 
     if message == "field required":
-        return f"- field {field_name} required in {location} configuration"
+        return f"- field {field_name!r} required in {location} configuration"
     if message == "extra fields not permitted":
-        return f"- extra field {field_name} not permitted in {location} configuration"
+        return f"- extra field {field_name!r} not permitted in {location} configuration"
     if message == "the list has duplicated items":
-        return (
-            f"- duplicate {field_name} entry not permitted in {location} configuration"
-        )
+        return f"- duplicate {field_name!r} entry not permitted in {location} configuration"
     if field_path == "__root__":
         return f"- {message}"
     return f"- {message} (in field {field_path!r})"
