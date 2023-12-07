@@ -19,7 +19,7 @@ All errors inherit from craft_cli.CraftError.
 """
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Iterable
+from typing import TYPE_CHECKING
 
 from craft_cli import CraftError
 
@@ -28,7 +28,6 @@ from craft_application.util.error_formatting import format_pydantic_errors
 if TYPE_CHECKING:  # pragma: no cover
     import craft_parts
     import pydantic
-    from pydantic.error_wrappers import ErrorDict
     from typing_extensions import Self
 
 
@@ -53,23 +52,7 @@ class CraftValidationError(CraftError):
         :param file_name: An optional file name of the malformed yaml file
         :param kwargs: additional keyword arguments get passed to CraftError
         """
-        return cls.from_pydantic_errors(error.errors(), file_name=file_name, **kwargs)
-
-    @classmethod
-    def from_pydantic_errors(
-        cls,
-        errors: Iterable[ErrorDict],
-        *,
-        file_name: str = "yaml file",
-        **kwargs: str | bool | int,
-    ) -> Self:
-        """Convert this error from a list of pydantic error dicts.
-
-        :param errors: The sequence of error dicts
-        :param file_name: An optional file name of the malformed yaml file
-        :param kwargs: additional keyword arguments get passed to CraftError
-        """
-        message = format_pydantic_errors(errors, file_name=file_name)
+        message = format_pydantic_errors(error.errors(), file_name=file_name)
         return cls(message, **kwargs)  # type: ignore[arg-type]
 
 

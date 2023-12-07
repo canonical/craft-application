@@ -18,7 +18,7 @@
 This defines the structure of the input file (e.g. snapcraft.yaml)
 """
 import dataclasses
-from typing import TYPE_CHECKING, Any, Dict, Iterable, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import craft_parts
 import craft_providers.bases
@@ -36,9 +36,6 @@ from craft_application.models.constraints import (
     UniqueStrList,
     VersionStr,
 )
-
-if TYPE_CHECKING:  # pragma: no cover
-    from pydantic.error_wrappers import ErrorDict
 
 
 @dataclasses.dataclass
@@ -101,18 +98,18 @@ class Project(CraftBaseModel):
 
     @override
     @classmethod
-    def transform_pydantic_errors(cls, errors: "Iterable[ErrorDict]") -> None:
+    def transform_pydantic_error(cls, error: pydantic.ValidationError) -> None:
         errors_to_messages: Dict[Tuple[str, str], str] = {
             ("version", "value_error.str.regex"): MESSAGE_INVALID_VERSION,
             ("name", "value_error.str.regex"): MESSAGE_INVALID_NAME,
         }
 
-        CraftBaseModel.transform_pydantic_errors(errors)
+        CraftBaseModel.transform_pydantic_error(error)
 
-        for error in errors:
-            loc_and_type = (str(error["loc"][0]), error["type"])
+        for error_dict in error.errors():
+            loc_and_type = (str(error_dict["loc"][0]), error_dict["type"])
             if message := errors_to_messages.get(loc_and_type):
                 # Note that unfortunately, Pydantic 1.x does not have the
                 # "input" key in the error dict, so we can't put the original
                 # value in the error message.
-                error["msg"] = message
+                error_dict["msg"] = message
