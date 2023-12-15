@@ -1,6 +1,10 @@
 {
   // Configuration file for RenovateBot: https://docs.renovatebot.com/configuration-options
   extends: ["config:base"],
+  ignoreDeps: [
+    "pydantic",  // Pydantic v2 update is a project.
+    "pydantic-yaml", // Update with pydantic v2
+  ],
   labels: ["dependencies"],  // For convenient searching in GitHub
   pip_requirements: {
     fileMatch: ["^tox.ini$", "(^|/)requirements([\\w-]*)\\.txt$"]
@@ -27,7 +31,7 @@
       groupName: "GitHub Actions",
       matchManagers: ["github-actions"],
       prPriority: 1,
-      automerge: true,
+      automerge: true
     },
     // Everything not in one of these rules gets priority 0 and falls here.
     {
@@ -50,7 +54,7 @@
       groupSlug: "doc-dependencies",
       matchPackageNames: ["Sphinx"],
       matchPackagePatterns: ["^[Ss]phinx.*$", "^furo$"],
-      matchPackagePrefixes: ["docs"],
+      matchPackagePrefixes: ["docs"]
     },
     {
       // Other major dependencies get deprioritised below minor dev dependencies.
