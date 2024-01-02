@@ -627,16 +627,14 @@ def test_get_project_other_dir(monkeypatch, tmp_path, app, fake_project_file):
 
 def test_get_cache_dir(tmp_path, app):
     """Test that the cache dir is created and returned."""
-    with mock.patch("xdg.BaseDirectory.xdg_cache_home", str(tmp_path / "cache")):
-        assert app.cache_dir == str(tmp_path / "cache" / "testcraft")
+    with mock.patch.dict("os.environ", {"XDG_CACHE_HOME": str(tmp_path / "cache")}):
+        assert app.cache_dir == tmp_path / "cache" / "testcraft"
+        assert app.cache_dir.is_dir()
 
 
 def test_get_cache_dir_exists(tmp_path, app):
     """Test that the cache dir is returned when already exists."""
-    # This currently fails with pyxdg, [Errno 17] File exists
     (tmp_path / "cache" / "testcraft").mkdir(parents=True, exist_ok=True)
-    with mock.patch("xdg.BaseDirectory.xdg_cache_home", str(tmp_path / "cache")):
-        # Race condition here, that is in shared environment
-        with mock.patch("os.path.isdir") as isdir:
-            isdir.return_value = False
-            assert app.cache_dir == str(tmp_path / "cache" / "testcraft")
+    with mock.patch.dict("os.environ", {"XDG_CACHE_HOME": str(tmp_path / "cache")}):
+        assert app.cache_dir == tmp_path / "cache" / "testcraft"
+        assert app.cache_dir.is_dir()

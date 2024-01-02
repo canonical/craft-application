@@ -30,7 +30,7 @@ from typing import TYPE_CHECKING, Any, Iterable, cast, final
 import craft_cli
 import craft_parts
 import craft_providers
-from xdg.BaseDirectory import save_cache_path  # type: ignore[import]
+from platformdirs import user_cache_path
 
 from craft_application import commands, models, secrets, util
 from craft_application.models import BuildInfo
@@ -177,12 +177,9 @@ class Application:
         self._command_groups.append(craft_cli.CommandGroup(name, commands))
 
     @property
-    def cache_dir(self) -> str:
+    def cache_dir(self) -> pathlib.Path:
         """Get the directory for caching any data."""
-        # Mypy doesn't know what type save_cache_path returns, but pyright figures
-        # it out correctly. We can remove this ignore comment once the typeshed has
-        # xdg types: https://github.com/python/typeshed/pull/10163
-        return save_cache_path(self.app.name)  # type: ignore[no-any-return]
+        return user_cache_path(self.app.name, ensure_exists=True)
 
     def _configure_services(
         self,
