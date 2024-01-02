@@ -337,6 +337,17 @@ def test_run_outputs_version(monkeypatch, capsys, app, argv):
     assert out == "testcraft 3.14159\n"
 
 
+def test_show_app_name_and_version(monkeypatch, capsys, app):
+    """Test that the app name and version are shown during logging."""
+    monkeypatch.setattr(sys, "argv", ["testcraft", "--verbosity=trace"])
+
+    with pytest.raises(SystemExit):
+        app._get_dispatcher()
+
+    _, err = capsys.readouterr()
+    assert f"Starting testcraft, version {app.app.version}" in err
+
+
 @pytest.mark.parametrize("load_project", [True, False])
 @pytest.mark.parametrize("return_code", [None, 0, 1])
 def test_run_success_unmanaged(
