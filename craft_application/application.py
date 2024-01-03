@@ -33,6 +33,7 @@ import craft_providers
 from platformdirs import user_cache_path
 
 from craft_application import commands, models, secrets, util
+from craft_application.errors import PathInvalidError
 from craft_application.models import BuildInfo
 
 if TYPE_CHECKING:
@@ -176,10 +177,19 @@ class Application:
         """Add a CommandGroup to the Application."""
         self._command_groups.append(craft_cli.CommandGroup(name, commands))
 
-    @property
+    @cached_property
     def cache_dir(self) -> pathlib.Path:
         """Get the directory for caching any data."""
-        return user_cache_path(self.app.name, ensure_exists=True)
+        try:
+            return user_cache_path(self.app.name, ensure_exists=True)
+        except FileExistsError as err:
+            raise PathInvalidError(
+                f"The cache path is not a directory: {err.strerror}"
+            ) from err
+        except OSError as err:
+            raise PathInvalidError(
+                f"Unable to create/access cache directory: {err.strerror}"
+            ) from err
 
     def _configure_services(
         self,
