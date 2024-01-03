@@ -634,3 +634,39 @@ def test_get_project_other_dir(monkeypatch, tmp_path, app, fake_project_file):
 
     assert app.get_project(fake_project_file.parent) is project
     assert app.get_project() is project
+
+
+def test_get_cache_dir(tmp_path, app):
+    """Test that the cache dir is created and returned."""
+    with mock.patch.dict("os.environ", {"XDG_CACHE_HOME": str(tmp_path / "cache")}):
+        assert app.cache_dir == tmp_path / "cache" / "testcraft"
+        assert app.cache_dir.is_dir()
+
+
+def test_get_cache_dir_exists(tmp_path, app):
+    """Test that the cache dir is returned when already exists."""
+    (tmp_path / "cache" / "testcraft").mkdir(parents=True, exist_ok=True)
+    with mock.patch.dict("os.environ", {"XDG_CACHE_HOME": str(tmp_path / "cache")}):
+        assert app.cache_dir == tmp_path / "cache" / "testcraft"
+        assert app.cache_dir.is_dir()
+
+
+def test_get_cache_dir_is_file(tmp_path, app):
+    """Test that the cache dir path is not valid when it is a file."""
+    (tmp_path / "cache").mkdir(parents=True, exist_ok=True)
+    (tmp_path / "cache" / "testcraft").write_text("test")
+    with mock.patch.dict("os.environ", {"XDG_CACHE_HOME": str(tmp_path / "cache")}):
+        with pytest.raises(application.PathInvalidError, match="is not a directory"):
+            assert app.cache_dir == tmp_path / "cache" / "testcraft"
+
+
+def test_get_cache_dir_parent_read_only(tmp_path, app):
+    """Test that the cache dir path is not valid when its parent is read-only."""
+    (tmp_path / "cache").mkdir(parents=True, exist_ok=True)
+    (tmp_path / "cache").chmod(0o400)
+    with mock.patch.dict("os.environ", {"XDG_CACHE_HOME": str(tmp_path / "cache")}):
+        with pytest.raises(
+            application.PathInvalidError,
+            match="Unable to create/access cache directory: Permission denied",
+        ):
+            assert app.cache_dir == tmp_path / "cache" / "testcraft"
