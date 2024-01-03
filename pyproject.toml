@@ -6,7 +6,7 @@ dependencies = [
     "craft-cli>=2.4.0",
     "craft-parts>=1.21.1",
     "craft-providers>=1.20.0,<2.0",
-    "platformdirs",
+    "platformdirs>=3.10",
     "pydantic>=1.10,<2.0",
     "pydantic-yaml<1.0",
     "PyYaml>=6.0",
