@@ -312,7 +312,7 @@ class Application:
         craft_cli.emit.init(
             mode=craft_cli.EmitterMode.BRIEF,
             appname=self.app.name,
-            greeting=f"Starting {self.app.name}",
+            greeting=f"Starting {self.app.name}, version {self.app.version}",
             log_filepath=self.log_path,
             streaming_brief=True,
         )
