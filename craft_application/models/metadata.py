@@ -27,8 +27,4 @@ class BaseMetadata(CraftBaseModel):
     the application's output.
     """
 
-    @override
-    class Config(CraftBaseConfig):
-        """Allows writing of unknown fields."""
-
-        extra = pydantic.Extra.allow
+    model_config = pydantic.ConfigDict(extra="allow")
