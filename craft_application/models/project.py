@@ -24,7 +24,8 @@ import craft_parts
 import craft_providers.bases
 import pydantic
 from pydantic import AnyUrl
-from typing_extensions import override
+from pydantic.functional_validators import AfterValidator
+from typing_extensions import Annotated, override
 
 from craft_application.models.base import CraftBaseModel
 from craft_application.models.constraints import (
@@ -36,6 +37,12 @@ from craft_application.models.constraints import (
     UniqueStrList,
     VersionStr,
 )
+
+
+def _validate_parts(item: Dict[str, Any]) -> Dict[str, Any]:
+    """Verify each part (craft-parts will re-validate this)."""
+    craft_parts.validate_part(item)
+    return item
 
 
 @dataclasses.dataclass
@@ -59,26 +66,21 @@ class Project(CraftBaseModel):
     """Craft Application project definition."""
 
     name: ProjectName
-    title: Optional[ProjectTitle]
+    title: Optional[ProjectTitle] = None
     version: VersionStr
-    summary: Optional[SummaryStr]
-    description: Optional[str]
+    summary: Optional[SummaryStr] = None
+    description: Optional[str] = None
 
-    base: Optional[Any]
+    base: Optional[Any] = None
 
-    contact: Optional[Union[str, UniqueStrList]]
-    issues: Optional[Union[str, UniqueStrList]]
-    source_code: Optional[AnyUrl]
-    license: Optional[str]
+    contact: Optional[Union[str, UniqueStrList]] = None
+    issues: Optional[Union[str, UniqueStrList]] = None
+    source_code: Optional[AnyUrl] = None
+    license: Optional[str] = None
 
-    parts: Dict[str, Dict[str, Any]]  # parts are handled by craft-parts
-
-    @pydantic.validator("parts", each_item=True)
-    @classmethod
-    def _validate_parts(cls, item: Dict[str, Any]) -> Dict[str, Any]:
-        """Verify each part (craft-parts will re-validate this)."""
-        craft_parts.validate_part(item)
-        return item
+    parts: Dict[
+        str, Annotated[Dict[str, Any], AfterValidator(_validate_parts)]
+    ]  # parts are handled by craft-parts
 
     @property
     def effective_base(self) -> Any:  # noqa: ANN401 app specific classes can improve
