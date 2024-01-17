@@ -23,6 +23,7 @@ import re
 import subprocess
 import sys
 from textwrap import dedent
+from typing import List, Set
 from unittest import mock
 
 import craft_application
@@ -84,6 +85,31 @@ class FakeApplication(application.Application):
 @pytest.fixture()
 def app(app_metadata, fake_services):
     return FakeApplication(app_metadata, fake_services)
+
+
+class FakePlugin(craft_parts.plugins.Plugin):
+    def __init__(self, properties, part_info):
+        pass
+
+    def get_build_commands(self) -> List[str]:
+        return []
+
+    def get_build_snaps(self) -> Set[str]:
+        return set()
+
+    def get_build_packages(self) -> Set[str]:
+        return set()
+
+    def get_build_environment(self) -> Set[str]:
+        return set()
+
+    def get_build_sources(self) -> Set[str]:
+        return set()
+
+
+@pytest.fixture()
+def fake_plugin(app_metadata, fake_services):
+    return FakePlugin(app_metadata, fake_services)
 
 
 @pytest.fixture()
@@ -670,3 +696,26 @@ def test_get_cache_dir_parent_read_only(tmp_path, app):
             match="Unable to create/access cache directory: Permission denied",
         ):
             assert app.cache_dir == tmp_path / "cache" / "testcraft"
+
+
+def test_register_plugins(mocker, app_metadata, fake_services):
+    """Test that the App registers plugins when initialing."""
+    reg = mocker.patch("craft_parts.plugins.register")
+
+    class FakeApplicationWithPlugins(FakeApplication):
+        def _get_app_plugins(self):
+            return {"fake": FakePlugin}
+
+    FakeApplicationWithPlugins(app_metadata, fake_services)
+
+    assert reg.call_count == 1
+    assert reg.call_args[0][0] == {"fake": FakePlugin}
+
+
+def test_register_plugins_default(mocker, app_metadata, fake_services):
+    """Test that the App registers default plugins when initialing."""
+    reg = mocker.patch("craft_parts.plugins.register")
+
+    FakeApplication(app_metadata, fake_services)
+
+    assert reg.call_count == 0

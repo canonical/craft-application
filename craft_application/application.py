@@ -30,6 +30,7 @@ from typing import TYPE_CHECKING, Any, Iterable, cast, final
 import craft_cli
 import craft_parts
 import craft_providers
+from craft_parts.plugins.plugins import PluginType
 from platformdirs import user_cache_path
 
 from craft_application import commands, models, secrets, util
@@ -122,6 +123,8 @@ class Application:
         # implementations from accessing it directly. They should always use
         # ``get_project`` to access the project.
         self.__project: models.Project | None = None
+
+        self._register_default_plugins()
 
         if self.is_managed():
             self._work_dir = pathlib.Path("/root")
@@ -365,6 +368,29 @@ class Application:
         self.configure(global_args)
 
         return dispatcher
+
+    def _get_app_plugins(self) -> dict[str, PluginType]:
+        """Get the plugins for this application.
+
+        Should be overridden by applications that need to register plugins at startup.
+        """
+        return {}
+
+    def register_plugins(self, plugins: dict[str, PluginType]) -> None:
+        """Register plugins for this application."""
+        if not plugins:
+            return
+
+        craft_cli.emit.trace("Registering plugins...")
+        craft_cli.emit.trace(f"Plugins: {', '.join(plugins.keys())}")
+        craft_parts.plugins.register(plugins)
+
+    def _register_default_plugins(self) -> None:
+        """Register default + per application plugins when initializing."""
+        default_plugins: dict[str, PluginType] = {}
+        plugins = {**default_plugins, **self._get_app_plugins()}
+
+        self.register_plugins(plugins)
 
     def run(self) -> int:  # noqa: PLR0912 (too many branches due to error handling)
         """Bootstrap and run the application."""
