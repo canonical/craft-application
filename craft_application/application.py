@@ -124,6 +124,19 @@ class Application:
         # ``get_project`` to access the project.
         self.__project: models.Project | None = None
 
+        # Set the logging level to DEBUG for all craft-libraries. This is OK even if
+        # the specific application doesn't use a specific library, the call does not
+        # import the package.
+        util.setup_loggers(*self._cli_loggers)
+
+        craft_cli.emit.init(
+            mode=craft_cli.EmitterMode.BRIEF,
+            appname=self.app.name,
+            greeting=f"Starting {self.app.name}, version {self.app.version}",
+            log_filepath=self.log_path,
+            streaming_brief=True,
+        )
+
         self._register_default_plugins()
 
         if self.is_managed():
@@ -307,19 +320,6 @@ class Application:
 
         :returns: A ready-to-run Dispatcher object
         """
-        # Set the logging level to DEBUG for all craft-libraries. This is OK even if
-        # the specific application doesn't use a specific library, the call does not
-        # import the package.
-        util.setup_loggers(*self._cli_loggers)
-
-        craft_cli.emit.init(
-            mode=craft_cli.EmitterMode.BRIEF,
-            appname=self.app.name,
-            greeting=f"Starting {self.app.name}, version {self.app.version}",
-            log_filepath=self.log_path,
-            streaming_brief=True,
-        )
-
         dispatcher = craft_cli.Dispatcher(
             self.app.name,
             self.command_groups,
@@ -386,11 +386,8 @@ class Application:
         craft_parts.plugins.register(plugins)
 
     def _register_default_plugins(self) -> None:
-        """Register default + per application plugins when initializing."""
-        default_plugins: dict[str, PluginType] = {}
-        plugins = {**default_plugins, **self._get_app_plugins()}
-
-        self.register_plugins(plugins)
+        """Register per application plugins when initializing."""
+        self.register_plugins(self._get_app_plugins())
 
     def run(self) -> int:  # noqa: PLR0912 (too many branches due to error handling)
         """Bootstrap and run the application."""

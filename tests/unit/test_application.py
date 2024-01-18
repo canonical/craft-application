@@ -332,7 +332,7 @@ def test_get_dispatcher_error(
     check.is_true(re.fullmatch(message, captured.err), captured.err)
 
 
-def test_craft_lib_log_level(app):
+def test_craft_lib_log_level(app_metadata, fake_services):
     craft_libs = ["craft_archives", "craft_parts", "craft_providers", "craft_store"]
 
     # The logging module is stateful and global, so first lets clear the logging level
@@ -341,6 +341,7 @@ def test_craft_lib_log_level(app):
         logger = logging.getLogger(craft_lib)
         logger.setLevel(logging.NOTSET)
 
+    app = FakeApplication(app_metadata, fake_services)
     with pytest.raises(SystemExit):
         app._get_dispatcher()
 
