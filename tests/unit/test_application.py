@@ -720,6 +720,8 @@ def test_register_plugins_default(mocker, app_metadata, fake_services):
     """Test that the App registers default plugins when initialing."""
     reg = mocker.patch("craft_parts.plugins.register")
 
-    FakeApplication(app_metadata, fake_services)
+    app = FakeApplication(app_metadata, fake_services)
+    with pytest.raises(SystemExit):
+        app.run()
 
     assert reg.call_count == 0
