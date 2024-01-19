@@ -124,21 +124,6 @@ class Application:
         # ``get_project`` to access the project.
         self.__project: models.Project | None = None
 
-        # Set the logging level to DEBUG for all craft-libraries. This is OK even if
-        # the specific application doesn't use a specific library, the call does not
-        # import the package.
-        util.setup_loggers(*self._cli_loggers)
-
-        craft_cli.emit.init(
-            mode=craft_cli.EmitterMode.BRIEF,
-            appname=self.app.name,
-            greeting=f"Starting {self.app.name}, version {self.app.version}",
-            log_filepath=self.log_path,
-            streaming_brief=True,
-        )
-
-        self._register_default_plugins()
-
         if self.is_managed():
             self._work_dir = pathlib.Path("/root")
         else:
@@ -391,6 +376,8 @@ class Application:
 
     def run(self) -> int:  # noqa: PLR0912 (too many branches due to error handling)
         """Bootstrap and run the application."""
+        self._setup_logging()
+        self._register_default_plugins()
         dispatcher = self._get_dispatcher()
         craft_cli.emit.trace("Preparing application...")
 
@@ -534,6 +521,21 @@ class Application:
         Note: subclasses should return a new dict and keep the parameter unmodified.
         """
         return yaml_data
+
+    def _setup_logging(self) -> None:
+        """Initialize the logging system."""
+        # Set the logging level to DEBUG for all craft-libraries. This is OK even if
+        # the specific application doesn't use a specific library, the call does not
+        # import the package.
+        util.setup_loggers(*self._cli_loggers)
+
+        craft_cli.emit.init(
+            mode=craft_cli.EmitterMode.BRIEF,
+            appname=self.app.name,
+            greeting=f"Starting {self.app.name}, version {self.app.version}",
+            log_filepath=self.log_path,
+            streaming_brief=True,
+        )
 
 
 def _filter_plan(

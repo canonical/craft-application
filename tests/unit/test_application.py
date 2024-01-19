@@ -343,7 +343,7 @@ def test_craft_lib_log_level(app_metadata, fake_services):
 
     app = FakeApplication(app_metadata, fake_services)
     with pytest.raises(SystemExit):
-        app._get_dispatcher()
+        app.run()
 
     for craft_lib in craft_libs:
         logger = logging.getLogger(craft_lib)
@@ -369,7 +369,7 @@ def test_show_app_name_and_version(monkeypatch, capsys, app):
     monkeypatch.setattr(sys, "argv", ["testcraft", "--verbosity=trace"])
 
     with pytest.raises(SystemExit):
-        app._get_dispatcher()
+        app.run()
 
     _, err = capsys.readouterr()
     assert f"Starting testcraft, version {app.app.version}" in err
@@ -707,7 +707,10 @@ def test_register_plugins(mocker, app_metadata, fake_services):
         def _get_app_plugins(self):
             return {"fake": FakePlugin}
 
-    FakeApplicationWithPlugins(app_metadata, fake_services)
+    app = FakeApplicationWithPlugins(app_metadata, fake_services)
+
+    with pytest.raises(SystemExit):
+        app.run()
 
     assert reg.call_count == 1
     assert reg.call_args[0][0] == {"fake": FakePlugin}
