@@ -212,11 +212,15 @@ def test_instance(
         assert spy_pause.call_count == 1
 
 
-def test_load_bashrc():
+def test_load_bashrc(emitter):
     """Test that we are able to load the bashrc file from the craft-application package."""
     bashrc = pkgutil.get_data("craft_application", "misc/instance_bashrc")
     assert bashrc is not None
     assert bashrc.decode("UTF-8").startswith("#!/bin/bash")
+    with pytest.raises(AssertionError):
+        emitter.assert_debug(
+            "Could not find the bashrc file in the craft-application package"
+        )
 
 
 @pytest.mark.parametrize("allow_unstable", [True, False])
