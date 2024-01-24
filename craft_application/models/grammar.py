@@ -18,7 +18,11 @@
 from typing import Any, Dict, List, Optional
 
 import pydantic
-from craft_grammar.models import GrammarSingleEntryDictList, GrammarStr, GrammarStrList
+from craft_grammar.models import (  # type: ignore[import-untyped]
+    GrammarSingleEntryDictList,
+    GrammarStr,
+    GrammarStrList,
+)
 
 
 class _GrammarAwareModel(pydantic.BaseModel):

@@ -14,14 +14,16 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Tests for BaseProject"""
+import copy
 import pathlib
+import textwrap
 from textwrap import dedent
 from typing import Optional
 
 import pytest
 from craft_application import util
 from craft_application.errors import CraftValidationError
-from craft_application.models import BuildPlanner, Project
+from craft_application.models import BuildPlanner, Project, constraints
 
 PROJECTS_DIR = pathlib.Path(__file__).parent / "project_models"
 PARTS_DICT = {"my-part": {"plugin": "nil"}}
@@ -69,6 +71,12 @@ FULL_PROJECT_DICT = {
     "title": "A fully-defined project",
     "version": "1.0.0.post64+git12345678",
 }
+
+
+@pytest.fixture()
+def full_project_dict():
+    """Provides a modifiable copy of ``FULL_PROJECT_DICT``"""
+    return copy.deepcopy(FULL_PROJECT_DICT)
 
 
 @pytest.mark.parametrize(
@@ -217,3 +225,38 @@ def test_effective_base_unknown():
         _ = project.effective_base
 
     assert exc_info.match("Could not determine effective base")
+
+
+@pytest.mark.parametrize(
+    ("field_name", "invalid_value", "expected_message"),
+    [
+        pytest.param(
+            "version",
+            "invalid_version",
+            constraints.MESSAGE_INVALID_VERSION,
+            id="version",
+        ),
+        pytest.param(
+            "name", "invalid_name", constraints.MESSAGE_INVALID_NAME, id="name"
+        ),
+    ],
+)
+def test_invalid_field_message(
+    full_project_dict, field_name, invalid_value, expected_message
+):
+    """Test that invalid regex-based fields generate expected messages."""
+    full_project_dict[field_name] = invalid_value
+    project_path = pathlib.Path("myproject.yaml")
+
+    with pytest.raises(CraftValidationError) as exc:
+        Project.from_yaml_data(full_project_dict, project_path)
+
+    full_expected_message = textwrap.dedent(
+        f"""
+        Bad myproject.yaml content:
+        - {expected_message} (in field '{field_name}')
+        """
+    ).strip()
+
+    message = str(exc.value)
+    assert message == full_expected_message

@@ -30,9 +30,10 @@ from typing import TYPE_CHECKING, Any, Iterable, cast, final
 import craft_cli
 import craft_parts
 import craft_providers
-from xdg.BaseDirectory import save_cache_path  # type: ignore[import]
+from platformdirs import user_cache_path
 
 from craft_application import commands, errors, grammar, models, secrets, util
+from craft_application.errors import PathInvalidError
 from craft_application.models import BuildInfo, GrammarAwareProject
 
 if TYPE_CHECKING:
@@ -177,13 +178,19 @@ class Application:
         """Add a CommandGroup to the Application."""
         self._command_groups.append(craft_cli.CommandGroup(name, commands))
 
-    @property
-    def cache_dir(self) -> str:
+    @cached_property
+    def cache_dir(self) -> pathlib.Path:
         """Get the directory for caching any data."""
-        # Mypy doesn't know what type save_cache_path returns, but pyright figures
-        # it out correctly. We can remove this ignore comment once the typeshed has
-        # xdg types: https://github.com/python/typeshed/pull/10163
-        return save_cache_path(self.app.name)  # type: ignore[no-any-return]
+        try:
+            return user_cache_path(self.app.name, ensure_exists=True)
+        except FileExistsError as err:
+            raise PathInvalidError(
+                f"The cache path is not a directory: {err.strerror}"
+            ) from err
+        except OSError as err:
+            raise PathInvalidError(
+                f"Unable to create/access cache directory: {err.strerror}"
+            ) from err
 
     def _configure_services(
         self,
@@ -331,7 +338,7 @@ class Application:
         craft_cli.emit.init(
             mode=craft_cli.EmitterMode.BRIEF,
             appname=self.app.name,
-            greeting=f"Starting {self.app.name}",
+            greeting=f"Starting {self.app.name}, version {self.app.version}",
             log_filepath=self.log_path,
             streaming_brief=True,
         )

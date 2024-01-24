@@ -35,6 +35,10 @@ class ProjectFileMissingError(CraftError, FileNotFoundError):
     """Error finding project file."""
 
 
+class PathInvalidError(CraftError, OSError):
+    """Error that the given path is not usable."""
+
+
 class CraftValidationError(CraftError):
     """Error validating project yaml."""
 

@@ -18,15 +18,18 @@
 This defines the structure of the input file (e.g. snapcraft.yaml)
 """
 import dataclasses
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import craft_parts
 import craft_providers.bases
 import pydantic
 from pydantic import AnyUrl
+from typing_extensions import override
 
 from craft_application.models.base import CraftBaseConfig, CraftBaseModel
 from craft_application.models.constraints import (
+    MESSAGE_INVALID_NAME,
+    MESSAGE_INVALID_VERSION,
     ProjectName,
     ProjectTitle,
     SummaryStr,
@@ -107,3 +110,27 @@ class Project(CraftBaseModel):
         if self.base is not None:
             return self.base
         raise RuntimeError("Could not determine effective base")
+
+    def get_build_plan(self) -> List[BuildInfo]:
+        """Obtain the list of architectures and bases from the project file."""
+        raise NotImplementedError(
+            f"{self.__class__.__name__!s} must implement get_build_plan"
+        )
+
+    @override
+    @classmethod
+    def transform_pydantic_error(cls, error: pydantic.ValidationError) -> None:
+        errors_to_messages: Dict[Tuple[str, str], str] = {
+            ("version", "value_error.str.regex"): MESSAGE_INVALID_VERSION,
+            ("name", "value_error.str.regex"): MESSAGE_INVALID_NAME,
+        }
+
+        CraftBaseModel.transform_pydantic_error(error)
+
+        for error_dict in error.errors():
+            loc_and_type = (str(error_dict["loc"][0]), error_dict["type"])
+            if message := errors_to_messages.get(loc_and_type):
+                # Note that unfortunately, Pydantic 1.x does not have the
+                # "input" key in the error dict, so we can't put the original
+                # value in the error message.
+                error_dict["msg"] = message

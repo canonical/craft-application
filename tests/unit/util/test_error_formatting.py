@@ -42,31 +42,35 @@ def test_field_location_tuple_from_str(loc_str, location, field):
 @pytest.mark.parametrize(
     ("field_path", "message", "expected"),
     [
-        (["foo"], "field required", "- field foo required in top-level configuration"),
+        (
+            ["foo"],
+            "field required",
+            "- field 'foo' required in top-level configuration",
+        ),
         (
             ["foo", 0, "bar"],
             "field required",
-            "- field bar required in foo[0] configuration",
+            "- field 'bar' required in 'foo[0]' configuration",
         ),
         (
             ["foo"],
             "extra fields not permitted",
-            "- extra field foo not permitted in top-level configuration",
+            "- extra field 'foo' not permitted in top-level configuration",
         ),
         (
             ["foo", 2, "bar"],
             "extra fields not permitted",
-            "- extra field bar not permitted in foo[2] configuration",
+            "- extra field 'bar' not permitted in 'foo[2]' configuration",
         ),
         (
             ["foo"],
             "the list has duplicated items",
-            "- duplicate foo entry not permitted in top-level configuration",
+            "- duplicate 'foo' entry not permitted in top-level configuration",
         ),
         (
             ["foo", 1, "bar"],
             "the list has duplicated items",
-            "- duplicate bar entry not permitted in foo[1] configuration",
+            "- duplicate 'bar' entry not permitted in 'foo[1]' configuration",
         ),
         (["__root__"], "generic error message", "- generic error message"),
         (

@@ -328,6 +328,17 @@ def test_run_outputs_version(monkeypatch, capsys, app, argv):
     assert out == "testcraft 3.14159\n"
 
 
+def test_show_app_name_and_version(monkeypatch, capsys, app):
+    """Test that the app name and version are shown during logging."""
+    monkeypatch.setattr(sys, "argv", ["testcraft", "--verbosity=trace"])
+
+    with pytest.raises(SystemExit):
+        app._get_dispatcher()
+
+    _, err = capsys.readouterr()
+    assert f"Starting testcraft, version {app.app.version}" in err
+
+
 @pytest.mark.parametrize("load_project", [True, False])
 @pytest.mark.parametrize("return_code", [None, 0, 1])
 def test_run_success_unmanaged(
@@ -641,3 +652,39 @@ def test_get_project_invalid_platform(app):
     assert (
         str(raised.value) == "Platform 'invalid' not found in the project definition."
     )
+
+
+def test_get_cache_dir(tmp_path, app):
+    """Test that the cache dir is created and returned."""
+    with mock.patch.dict("os.environ", {"XDG_CACHE_HOME": str(tmp_path / "cache")}):
+        assert app.cache_dir == tmp_path / "cache" / "testcraft"
+        assert app.cache_dir.is_dir()
+
+
+def test_get_cache_dir_exists(tmp_path, app):
+    """Test that the cache dir is returned when already exists."""
+    (tmp_path / "cache" / "testcraft").mkdir(parents=True, exist_ok=True)
+    with mock.patch.dict("os.environ", {"XDG_CACHE_HOME": str(tmp_path / "cache")}):
+        assert app.cache_dir == tmp_path / "cache" / "testcraft"
+        assert app.cache_dir.is_dir()
+
+
+def test_get_cache_dir_is_file(tmp_path, app):
+    """Test that the cache dir path is not valid when it is a file."""
+    (tmp_path / "cache").mkdir(parents=True, exist_ok=True)
+    (tmp_path / "cache" / "testcraft").write_text("test")
+    with mock.patch.dict("os.environ", {"XDG_CACHE_HOME": str(tmp_path / "cache")}):
+        with pytest.raises(application.PathInvalidError, match="is not a directory"):
+            assert app.cache_dir == tmp_path / "cache" / "testcraft"
+
+
+def test_get_cache_dir_parent_read_only(tmp_path, app):
+    """Test that the cache dir path is not valid when its parent is read-only."""
+    (tmp_path / "cache").mkdir(parents=True, exist_ok=True)
+    (tmp_path / "cache").chmod(0o400)
+    with mock.patch.dict("os.environ", {"XDG_CACHE_HOME": str(tmp_path / "cache")}):
+        with pytest.raises(
+            application.PathInvalidError,
+            match="Unable to create/access cache directory: Permission denied",
+        ):
+            assert app.cache_dir == tmp_path / "cache" / "testcraft"

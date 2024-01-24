@@ -17,7 +17,7 @@
 
 from typing import Any, Dict
 
-from craft_grammar import GrammarProcessor
+from craft_grammar import GrammarProcessor  # type: ignore[import-untyped]
 
 _KEYS = [
     "source",
