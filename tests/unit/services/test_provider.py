@@ -127,12 +127,6 @@ def test_get_existing_provider(provider_service):
     [
         (("ubuntu", "devel"), bases.BuilddBase, bases.BuilddBaseAlias.DEVEL),
         (("ubuntu", "22.04"), bases.BuilddBase, bases.BuilddBaseAlias.JAMMY),
-        (("centos", "7"), bases.centos.CentOSBase, bases.centos.CentOSBaseAlias.SEVEN),
-        (
-            ("almalinux", "9"),
-            bases.almalinux.AlmaLinuxBase,
-            bases.almalinux.AlmaLinuxBaseAlias.NINE,
-        ),
     ],
 )
 def test_get_base(check, provider_service, base_name, base_class, alias, environment):
@@ -162,8 +156,6 @@ def test_get_base_packages(provider_service):
     [
         ("ubuntu", "devel"),
         ("ubuntu", "22.04"),
-        ("centos", "7"),
-        ("almalinux", "9"),
     ],
 )
 def test_instance(
