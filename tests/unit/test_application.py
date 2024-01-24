@@ -23,6 +23,7 @@ import re
 import subprocess
 import sys
 from textwrap import dedent
+from typing import List, Set
 from unittest import mock
 
 import craft_application
@@ -84,6 +85,31 @@ class FakeApplication(application.Application):
 @pytest.fixture()
 def app(app_metadata, fake_services):
     return FakeApplication(app_metadata, fake_services)
+
+
+class FakePlugin(craft_parts.plugins.Plugin):
+    def __init__(self, properties, part_info):
+        pass
+
+    def get_build_commands(self) -> List[str]:
+        return []
+
+    def get_build_snaps(self) -> Set[str]:
+        return set()
+
+    def get_build_packages(self) -> Set[str]:
+        return set()
+
+    def get_build_environment(self) -> Set[str]:
+        return set()
+
+    def get_build_sources(self) -> Set[str]:
+        return set()
+
+
+@pytest.fixture()
+def fake_plugin(app_metadata, fake_services):
+    return FakePlugin(app_metadata, fake_services)
 
 
 @pytest.fixture()
@@ -306,7 +332,7 @@ def test_get_dispatcher_error(
     check.is_true(re.fullmatch(message, captured.err), captured.err)
 
 
-def test_craft_lib_log_level(app):
+def test_craft_lib_log_level(app_metadata, fake_services):
     craft_libs = ["craft_archives", "craft_parts", "craft_providers", "craft_store"]
 
     # The logging module is stateful and global, so first lets clear the logging level
@@ -315,8 +341,9 @@ def test_craft_lib_log_level(app):
         logger = logging.getLogger(craft_lib)
         logger.setLevel(logging.NOTSET)
 
+    app = FakeApplication(app_metadata, fake_services)
     with pytest.raises(SystemExit):
-        app._get_dispatcher()
+        app.run()
 
     for craft_lib in craft_libs:
         logger = logging.getLogger(craft_lib)
@@ -342,7 +369,7 @@ def test_show_app_name_and_version(monkeypatch, capsys, app):
     monkeypatch.setattr(sys, "argv", ["testcraft", "--verbosity=trace"])
 
     with pytest.raises(SystemExit):
-        app._get_dispatcher()
+        app.run()
 
     _, err = capsys.readouterr()
     assert f"Starting testcraft, version {app.app.version}" in err
@@ -670,3 +697,31 @@ def test_get_cache_dir_parent_read_only(tmp_path, app):
             match="Unable to create/access cache directory: Permission denied",
         ):
             assert app.cache_dir == tmp_path / "cache" / "testcraft"
+
+
+def test_register_plugins(mocker, app_metadata, fake_services):
+    """Test that the App registers plugins when initialing."""
+    reg = mocker.patch("craft_parts.plugins.register")
+
+    class FakeApplicationWithPlugins(FakeApplication):
+        def _get_app_plugins(self):
+            return {"fake": FakePlugin}
+
+    app = FakeApplicationWithPlugins(app_metadata, fake_services)
+
+    with pytest.raises(SystemExit):
+        app.run()
+
+    assert reg.call_count == 1
+    assert reg.call_args[0][0] == {"fake": FakePlugin}
+
+
+def test_register_plugins_default(mocker, app_metadata, fake_services):
+    """Test that the App registers default plugins when initialing."""
+    reg = mocker.patch("craft_parts.plugins.register")
+
+    app = FakeApplication(app_metadata, fake_services)
+    with pytest.raises(SystemExit):
+        app.run()
+
+    assert reg.call_count == 0
