@@ -394,8 +394,8 @@ class Application:
 
     def run(self) -> int:  # noqa: PLR0912 (too many branches)
         """Bootstrap and run the application."""
-        craft_cli.emit.debug("Preparing application...")
         dispatcher = self._get_dispatcher()
+        craft_cli.emit.debug("Preparing application...")
 
         return_code = 1  # General error
         try:
