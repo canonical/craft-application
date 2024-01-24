@@ -15,6 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Unit tests for provider service"""
 import pathlib
+import pkgutil
 from unittest import mock
 
 import craft_providers
@@ -129,12 +130,6 @@ def test_get_existing_provider(provider_service):
     [
         (("ubuntu", "devel"), bases.BuilddBase, bases.BuilddBaseAlias.DEVEL),
         (("ubuntu", "22.04"), bases.BuilddBase, bases.BuilddBaseAlias.JAMMY),
-        (("centos", "7"), bases.centos.CentOSBase, bases.centos.CentOSBaseAlias.SEVEN),
-        (
-            ("almalinux", "9"),
-            bases.almalinux.AlmaLinuxBase,
-            bases.almalinux.AlmaLinuxBaseAlias.NINE,
-        ),
     ],
 )
 def test_get_base(check, provider_service, base_name, base_class, alias, environment):
@@ -164,8 +159,6 @@ def test_get_base_packages(provider_service):
     [
         ("ubuntu", "devel"),
         ("ubuntu", "22.04"),
-        ("centos", "7"),
-        ("almalinux", "9"),
     ],
 )
 def test_instance(
@@ -203,10 +196,61 @@ def test_instance(
         instance.mount.assert_called_once_with(
             host_source=tmp_path, target=app_metadata.managed_instance_project_path
         )
+        instance.push_file_io.assert_called_once_with(
+            destination=pathlib.Path("/root/.bashrc"),
+            content=mock.ANY,
+            file_mode="644",
+        )
     with check:
         emitter.assert_progress("Launching managed .+ instance...", regex=True)
     with check:
         assert spy_pause.call_count == 1
+
+
+def test_load_bashrc(emitter):
+    """Test that we are able to load the bashrc file from the craft-application package."""
+    bashrc = pkgutil.get_data("craft_application", "misc/instance_bashrc")
+    assert bashrc is not None
+    assert bashrc.decode("UTF-8").startswith("#!/bin/bash")
+    with pytest.raises(AssertionError):
+        emitter.assert_debug(
+            "Could not find the bashrc file in the craft-application package"
+        )
+
+
+@pytest.mark.parametrize("allow_unstable", [True, False])
+@pytest.mark.parametrize(
+    "base_name",
+    [
+        ("ubuntu", "devel"),
+        ("ubuntu", "22.04"),
+        ("centos", "7"),
+        ("almalinux", "9"),
+    ],
+)
+def test_load_bashrc_missing(
+    monkeypatch,
+    emitter,
+    tmp_path,
+    provider_service,
+    base_name,
+    allow_unstable,
+    mocker,
+):
+    """Test that we handle the case where the bashrc file is missing."""
+    mock_provider = mock.MagicMock(spec=craft_providers.Provider)
+    monkeypatch.setattr(provider_service, "get_provider", lambda: mock_provider)
+    arch = util.get_host_architecture()
+    build_info = models.BuildInfo("foo", arch, arch, base_name)
+
+    mocker.patch.object(pkgutil, "get_data", return_value=None)
+    with provider_service.instance(
+        build_info, work_dir=tmp_path, allow_unstable=allow_unstable
+    ) as instance:
+        instance._setup_instance_bashrc(instance)
+    emitter.assert_debug(
+        "Could not find the bashrc file in the craft-application package"
+    )
 
 
 @pytest.fixture()

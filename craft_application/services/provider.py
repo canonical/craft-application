@@ -17,9 +17,12 @@
 from __future__ import annotations
 
 import contextlib
+import io
 import os
 import pathlib
+import pkgutil
 import sys
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from craft_cli import CraftError, emit
@@ -114,6 +117,7 @@ class ProviderService(base.ProjectService):
                 target=self._app.managed_instance_project_path,  # type: ignore[arg-type]
             )
             emit.debug("Instance launched and working directory mounted")
+            self._setup_instance_bashrc(instance)
             try:
                 with emit.pause():
                     yield instance
@@ -236,3 +240,20 @@ class ProviderService(base.ProjectService):
                 emit.debug(
                     f"Could not find log file {source_log_path.as_posix()} in instance."
                 )
+
+    def _setup_instance_bashrc(self, instance: craft_providers.Executor) -> None:
+        """Set up the instance's bashrc to export environment."""
+        bashrc = pkgutil.get_data("craft_application", "misc/instance_bashrc")
+
+        if bashrc is None:
+            emit.debug(
+                "Could not find the bashrc file in the craft-application package"
+            )
+            return
+
+        emit.debug("Pushing bashrc to instance")
+        instance.push_file_io(
+            destination=Path("/root/.bashrc"),
+            content=io.BytesIO(bashrc),
+            file_mode="644",
+        )
