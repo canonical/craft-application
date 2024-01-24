@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import pathlib
 from importlib import metadata
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, Type, cast
 
 import craft_application
 import craft_parts
@@ -62,7 +62,7 @@ def app_metadata(features) -> craft_application.AppMetadata:
         return craft_application.AppMetadata(
             "testcraft",
             "A fake app for testing craft-application",
-            ProjectClass=cast(type[models.Project], MyProject),
+            ProjectClass=cast(Type[models.Project], MyProject),
             source_ignore_patterns=["*.snap", "*.charm", "*.starcraft"],
             features=craft_application.AppFeatures(**features),
         )
