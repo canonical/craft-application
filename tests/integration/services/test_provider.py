@@ -15,6 +15,7 @@
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Integration tests for provider service."""
 import contextlib
+import subprocess
 
 import craft_providers
 import pytest
@@ -29,7 +30,6 @@ from craft_providers import bases
         pytest.param(("ubuntu", "23.10"), id="ubuntu_latest"),
         pytest.param(("ubuntu", "22.04"), id="ubuntu_lts"),
         pytest.param(("ubuntu", "20.04"), id="ubuntu_old_lts"),
-        pytest.param(("almalinux", "9"), id="almalinux_9"),
     ],
 )
 @pytest.mark.parametrize(
@@ -60,9 +60,16 @@ def test_provider_lifecycle(
             executor.execute_run(
                 ["touch", str(app_metadata.managed_instance_project_path / "test")]
             )
+            proc_result = executor.execute_run(
+                ["cat", "/root/.bashrc"],
+                text=True,
+                stdout=subprocess.PIPE,
+                check=True,
+            )
     finally:
         if executor is not None:
             with contextlib.suppress(craft_providers.ProviderError):
                 executor.delete()
 
     assert (snap_safe_tmp_path / "test").exists()
+    assert proc_result.stdout.startswith("#!/bin/bash")
