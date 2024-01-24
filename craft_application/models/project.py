@@ -18,11 +18,12 @@
 This defines the structure of the input file (e.g. snapcraft.yaml)
 """
 import dataclasses
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, Union, cast
 
 import craft_parts
 import craft_providers.bases
 import pydantic
+from craft_archives import repo  # type: ignore[import-untyped]
 from pydantic import AnyUrl
 from typing_extensions import override
 
@@ -36,6 +37,9 @@ from craft_application.models.constraints import (
     UniqueStrList,
     VersionStr,
 )
+
+if TYPE_CHECKING:
+    from craft_application.application import AppFeatures
 
 
 @dataclasses.dataclass
@@ -55,7 +59,22 @@ class BuildInfo:
     """The base to build on."""
 
 
-class Project(CraftBaseModel):
+class AppFeaturePackageRepositoryMixin(CraftBaseModel):
+    """Mixin Model for package repository."""
+
+    package_repositories: Optional[List[Dict[str, Any]]]
+
+    @pydantic.validator("package_repositories", each_item=True)
+    @classmethod
+    def _validate_package_repositories(
+        cls, repository: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        repo.validate_repository(repository)
+
+        return repository
+
+
+class BaseProject(CraftBaseModel):
     """Craft Application project definition."""
 
     name: ProjectName
@@ -113,3 +132,40 @@ class Project(CraftBaseModel):
                 # "input" key in the error dict, so we can't put the original
                 # value in the error message.
                 error_dict["msg"] = message
+
+
+class ProjectWithRepo(BaseProject, AppFeaturePackageRepositoryMixin):
+    """Project with repository."""
+
+    pass
+
+
+# This is a hack to allow us to use the same type for the project model
+if TYPE_CHECKING:
+
+    class Project(BaseProject, AppFeaturePackageRepositoryMixin):
+        """Full model for typing."""
+
+else:
+
+    class Project(CraftBaseModel):
+        """Dummy project model that should not be used.
+
+        If something try to use this, it did not use the get_project_model
+        """
+
+
+def get_project_model(features: "AppFeatures") -> Type[Project]:
+    """Return the project model for the craft application.
+
+    Not enabled and waiting for pydantic 2:
+    The project model is inherited using the following order:
+    1. BaseProject, which contains the basic project fields.
+    2. Feature models, which contain the fields for the enabled features.
+    3. The app_project_model, which contains the fields for the application,
+       also allowing it to override any of the above fields.
+    """
+    if features.package_repository:
+        return cast(Type[Project], ProjectWithRepo)
+
+    return cast(Type[Project], BaseProject)

@@ -31,12 +31,6 @@ if TYPE_CHECKING:  # pragma: no cover
     from collections.abc import Iterator
 
 
-class MyProject(models.Project):
-    def get_build_plan(self) -> list[models.BuildInfo]:
-        arch = util.get_host_architecture()
-        return [models.BuildInfo("foo", arch, arch, bases.BaseName("ubuntu", "22.04"))]
-
-
 @pytest.fixture()
 def features(request) -> dict[str, bool]:
     """Fixture that controls the enabled features.
@@ -57,6 +51,9 @@ def features(request) -> dict[str, bool]:
 
 @pytest.fixture()
 def app_metadata(features) -> craft_application.AppMetadata:
+    app_features = craft_application.AppFeatures(**features)
+    MyProject = models.get_project_model(app_features)  # noqa: N806
+
     with pytest.MonkeyPatch.context() as m:
         m.setattr(metadata, "version", lambda _: "3.14159")
         return craft_application.AppMetadata(
@@ -69,7 +66,17 @@ def app_metadata(features) -> craft_application.AppMetadata:
 
 
 @pytest.fixture()
-def fake_project() -> models.Project:
+def fake_project(features) -> models.Project:
+    app_features = craft_application.AppFeatures(**features)
+    _MyProject = models.get_project_model(app_features)  # noqa: N806
+
+    class MyProject(_MyProject):
+        def get_build_plan(self) -> list[models.BuildInfo]:
+            arch = util.get_host_architecture()
+            return [
+                models.BuildInfo("foo", arch, arch, bases.BaseName("ubuntu", "22.04"))
+            ]
+
     return MyProject(
         name="full-project",  # pyright: ignore[reportGeneralTypeIssues]
         title="A fully-defined project",  # pyright: ignore[reportGeneralTypeIssues]

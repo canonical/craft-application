@@ -14,12 +14,16 @@
 # You should have received a copy of the GNU Lesser General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Integration tests for parts lifecycle."""
+import os
 import textwrap
 
 import craft_cli
+import craft_parts
+import craft_parts.overlays
 import pytest
 import pytest_check
 from craft_application.services.lifecycle import LifecycleService
+from craft_application.services.package import RepositoryService
 from craft_application.util import get_host_architecture
 
 
@@ -97,3 +101,72 @@ def test_lifecycle_messages_no_duplicates(parts_lifecycle, request, capsys):
     )
 
     assert expected_output in stderr
+
+
+@pytest.mark.enable_features("package_repository")
+def test_package_repositories_in_overlay(
+    app_metadata, fake_project, fake_services, tmp_path, mocker
+):
+    craft_parts.Features.reset()
+    craft_parts.Features(enable_overlay=True)
+    # Mock overlay-related calls that need root; we won't be actually installing
+    # any packages, just checking that the repositories are correctly installed
+    # in the overlay.
+    mocker.patch.object(craft_parts.overlays.OverlayManager, "refresh_packages_list")  # type: ignore[reportPrivateImportUsage]
+    mocker.patch.object(craft_parts.overlays.OverlayManager, "download_packages")  # type: ignore[reportPrivateImportUsage]
+    mocker.patch.object(craft_parts.overlays.OverlayManager, "install_packages")  # type: ignore[reportPrivateImportUsage]
+    mocker.patch.object(os, "geteuid", return_value=0)
+
+    parts = {
+        "with-overlay": {
+            "plugin": "nil",
+            "overlay-packages": ["hello"],
+        }
+    }
+    work_dir = tmp_path / "work"
+    work_dir.mkdir()
+    base_dir = tmp_path / "base"
+    base_dir.mkdir()
+
+    base_layer_dir = base_dir / "base"
+    base_layer_dir.mkdir()
+
+    # Create a fake Apt installation inside the base layer dir
+    (base_layer_dir / "etc/apt").mkdir(parents=True)
+    (base_layer_dir / "etc/apt/keyrings").mkdir()
+    (base_layer_dir / "etc/apt/sources.list.d").mkdir()
+    (base_layer_dir / "etc/apt/preferences.d").mkdir()
+
+    package_repositories = [
+        {"type": "apt", "ppa": "mozillateam/ppa", "priority": "always"}
+    ]
+
+    # Mock the installation of package repositories in the base system, as that
+    # is undesired and will fail without root.
+    mocker.patch.object(RepositoryService, "install_package_repositories")
+
+    fake_project.package_repositories = package_repositories
+    fake_project.parts = parts
+    service = LifecycleService(
+        app_metadata,
+        fake_services,
+        project=fake_project,
+        work_dir=work_dir,
+        cache_dir=tmp_path / "cache",
+        platform=None,
+        build_for=get_host_architecture(),
+        base_layer_dir=base_layer_dir,
+        base_layer_hash=b"deadbeef",
+    )
+    service.setup()
+    service.run("prime")
+    # pylint: disable=protected-access
+    parts_lifecycle = service._lcm
+
+    overlay_apt = parts_lifecycle.project_info.overlay_dir / "packages/etc/apt"
+    assert overlay_apt.is_dir()
+
+    # Checking that the files are present should be enough
+    assert (overlay_apt / "keyrings/craft-CE49EC21.gpg").is_file()
+    assert (overlay_apt / "sources.list.d/craft-ppa-mozillateam_ppa.sources").is_file()
+    assert (overlay_apt / "preferences.d/craft-archives").is_file()

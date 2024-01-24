@@ -53,7 +53,11 @@ class ProjectService(AppService, metaclass=abc.ABCMeta):
     """
 
     def __init__(
-        self, app: AppMetadata, services: ServiceFactory, *, project: models.Project
+        self,
+        app: AppMetadata,
+        services: ServiceFactory,
+        *,
+        project: models.Project,
     ) -> None:
         super().__init__(app=app, services=services)
         self._project = project

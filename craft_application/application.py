@@ -34,7 +34,7 @@ from platformdirs import user_cache_path
 
 from craft_application import commands, models, secrets, util
 from craft_application.errors import PathInvalidError
-from craft_application.models import BuildInfo
+from craft_application.models import BuildInfo, get_project_model
 
 if TYPE_CHECKING:
     from craft_application.services import service_factory
@@ -52,8 +52,10 @@ DEFAULT_CLI_LOGGERS = frozenset(
 class AppFeatures:
     """Specific features that can be enabled/disabled per-application."""
 
+    # Support for build-time secrets
     build_secrets: bool = False
-    """Support for build-time secrets."""
+    # Support for add / modify package repositories
+    package_repository: bool = False
 
 
 @final
@@ -68,7 +70,7 @@ class AppMetadata:
     managed_instance_project_path = pathlib.PurePosixPath("/root/project")
     features: AppFeatures = AppFeatures()
 
-    ProjectClass: type[models.Project] = models.Project
+    ProjectClass: type[models.Project] = cast(type[models.Project], models.BaseProject)
 
     def __post_init__(self) -> None:
         setter = super().__setattr__
@@ -89,6 +91,9 @@ class AppMetadata:
         if self.summary is None:
             md = metadata.metadata(self.name)
             setter("summary", md["summary"])
+
+        new_project_model = get_project_model(self.features)
+        object.__setattr__(self, "ProjectClass", new_project_model)
 
 
 class Application:
@@ -467,7 +472,6 @@ class Application:
     def _expand_environment(self, yaml_data: dict[str, Any]) -> None:
         """Perform expansion of project environment variables."""
         project_vars = self._project_vars(yaml_data)
-
         info = craft_parts.ProjectInfo(
             application_name=self.app.name,  # not used in environment expansion
             cache_dir=pathlib.Path(),  # not used in environment expansion

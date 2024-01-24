@@ -20,12 +20,15 @@ import re
 from pathlib import Path
 from unittest import mock
 
-import craft_parts.errors
+import craft_parts
+import craft_parts.callbacks
 import pytest
 import pytest_check
 from craft_application import util
 from craft_application.errors import PartsLifecycleError
 from craft_application.services import lifecycle
+from craft_application.services.package import RepositoryService
+from craft_application.util import get_host_architecture
 from craft_parts import (
     Action,
     ActionType,
@@ -387,6 +390,47 @@ def test_post_prime_wrong_step(fake_parts_lifecycle, step):
 
     with pytest.raises(RuntimeError, match="^Post-prime hook called after step: "):
         fake_parts_lifecycle.post_prime(step_info)
+
+
+# endregion
+# region Feature package repositories tests
+
+
+@pytest.mark.enable_features("package_repository")
+def test_lifecycle_package_repositories(
+    app_metadata, fake_project, fake_services, tmp_path, mocker
+):
+    """Test that package repositories installation is called in the lifecycle."""
+    fake_repositories = [{"type": "apt", "ppa": "ppa/ppa"}]
+    fake_project.package_repositories = fake_repositories.copy()
+    work_dir = tmp_path / "work"
+
+    service = lifecycle.LifecycleService(
+        app_metadata,
+        fake_services,
+        project=fake_project,
+        work_dir=work_dir,
+        cache_dir=tmp_path / "cache",
+        platform=None,
+        build_for=get_host_architecture(),
+    )
+    service._lcm = mock.MagicMock(spec=LifecycleManager)
+
+    # Installation of repositories in the build instance
+    mock_install = mocker.patch.object(
+        RepositoryService, "install_package_repositories"
+    )
+    # Installation of repositories in overlays
+    mock_callback = mocker.patch.object(
+        craft_parts.callbacks, "register_configure_overlay"
+    )
+
+    service.run("prime")
+
+    mock_install.assert_called_once_with(fake_repositories, service._lcm)
+    mock_callback.assert_called_once_with(
+        RepositoryService.install_overlay_repositories
+    )
 
 
 # endregion

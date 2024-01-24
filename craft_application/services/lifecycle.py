@@ -16,6 +16,7 @@
 """craft-parts lifecycle integration."""
 from __future__ import annotations
 
+import contextlib
 import types
 from typing import TYPE_CHECKING, Any
 
@@ -31,10 +32,11 @@ from craft_parts import (
     StepInfo,
     callbacks,
 )
+from craft_parts.errors import CallbackRegistrationError
 from typing_extensions import override
 
 from craft_application import errors
-from craft_application.services import base
+from craft_application.services import base, package
 from craft_application.util import convert_architecture_deb_to_platform
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -153,6 +155,11 @@ class LifecycleService(base.ProjectService):
         """
         emit.debug(f"Initialising lifecycle manager in {self._work_dir}")
         emit.trace(f"Lifecycle: {repr(self)}")
+        feature_args: dict[str, Any] = {}
+
+        if self._app.features.package_repository:
+            feature_args["package_repositories"] = self._project.package_repositories
+
         try:
             return LifecycleManager(
                 {"parts": self._project.parts},
@@ -162,6 +169,7 @@ class LifecycleService(base.ProjectService):
                 work_dir=self._work_dir,
                 ignore_local_sources=self._app.source_ignore_patterns,
                 **self._manager_kwargs,
+                **feature_args,
             )
         except PartsError as err:
             raise errors.PartsLifecycleError.from_parts_error(err) from err
@@ -181,6 +189,18 @@ class LifecycleService(base.ProjectService):
         target_step = _get_step(step_name) if step_name else None
 
         try:
+            if (
+                self._app.features.package_repository
+                and self._project.package_repositories
+            ):
+                emit.trace("Installing package repositories")
+                package.RepositoryService.install_package_repositories(
+                    self._project.package_repositories, self._lcm
+                )
+                with contextlib.suppress(CallbackRegistrationError):
+                    callbacks.register_configure_overlay(
+                        package.RepositoryService.install_overlay_repositories
+                    )
             if target_step:
                 emit.trace(f"Planning {step_name} for {part_names or 'all parts'}")
                 actions = self._lcm.plan(target_step, part_names=part_names)
