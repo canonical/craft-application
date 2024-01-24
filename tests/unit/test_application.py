@@ -360,7 +360,7 @@ def test_run_success_unmanaged(
 
     check.equal(app.run(), return_code or 0)
     with check:
-        emitter.assert_trace("Preparing application...")
+        emitter.assert_debug("Preparing application...")
     with check:
         emitter.assert_debug("Running testcraft pass on host")
 

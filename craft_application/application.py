@@ -387,15 +387,15 @@ class Application:
                 raise
             sys.exit(70)  # EX_SOFTWARE from sysexits.h
 
-        craft_cli.emit.trace("Preparing application...")
+        craft_cli.emit.debug("Configuring application...")
         self.configure(global_args)
 
         return dispatcher
 
     def run(self) -> int:  # noqa: PLR0912 (too many branches)
         """Bootstrap and run the application."""
-        dispatcher = self._get_dispatcher()
         craft_cli.emit.debug("Preparing application...")
+        dispatcher = self._get_dispatcher()
 
         return_code = 1  # General error
         try:
@@ -406,7 +406,9 @@ class Application:
             platform = getattr(dispatcher.parsed_args(), "platform", None)
             build_for = getattr(dispatcher.parsed_args(), "build_for", None)
 
-            craft_cli.emit.debug(f"platform={platform}, build_for={build_for}")
+            craft_cli.emit.debug(
+                f"Build plan: platform={platform}, build_for={build_for}"
+            )
 
             managed_mode = command.run_managed(dispatcher.parsed_args())
             if managed_mode or command.always_load_project:

@@ -24,6 +24,8 @@ from craft_grammar.models import (  # type: ignore[import-untyped]
     GrammarStrList,
 )
 
+from craft_application.models.base import alias_generator
+
 
 class _GrammarAwareModel(pydantic.BaseModel):
     class Config:
@@ -31,9 +33,7 @@ class _GrammarAwareModel(pydantic.BaseModel):
 
         validate_assignment = True
         extra = pydantic.Extra.allow  # verify only grammar-aware parts
-        alias_generator = lambda s: s.replace(  # noqa: E731 # pyright: ignore[reportUnknownLambdaType, reportUnknownVariableType, reportUnknownMemberType]
-            "_", "-"
-        )
+        alias_generator = alias_generator
         allow_population_by_field_name = True
 
 
