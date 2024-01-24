@@ -27,13 +27,12 @@ from craft_application.models.metadata import BaseMetadata
 from craft_application.models.project import (
     BuildInfo,
     BaseProject,
-    get_project_model,
+    AppFeaturePackageRepositoryMixin,
     Project,
-    ProjectWithRepo,
 )
 
 __all__ = [
-    "get_project_model",
+    "AppFeaturePackageRepositoryMixin",
     "BaseMetadata",
     "BuildInfo",
     "CraftBaseConfig",
@@ -42,7 +41,6 @@ __all__ = [
     "Project",
     "ProjectName",
     "ProjectTitle",
-    "ProjectWithRepo",
     "SummaryStr",
     "UniqueStrList",
     "VersionStr",

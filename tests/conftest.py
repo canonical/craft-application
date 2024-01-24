@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import pathlib
 from importlib import metadata
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 import craft_application
 import craft_parts
@@ -29,6 +29,12 @@ from craft_providers import bases
 
 if TYPE_CHECKING:  # pragma: no cover
     from collections.abc import Iterator
+
+
+class MyProject(models.BaseProject):
+    def get_build_plan(self) -> list[models.BuildInfo]:
+        arch = util.get_host_architecture()
+        return [models.BuildInfo("foo", arch, arch, bases.BaseName("ubuntu", "22.04"))]
 
 
 @pytest.fixture()
@@ -51,15 +57,12 @@ def features(request) -> dict[str, bool]:
 
 @pytest.fixture()
 def app_metadata(features) -> craft_application.AppMetadata:
-    app_features = craft_application.AppFeatures(**features)
-    MyProject = models.get_project_model(app_features)  # noqa: N806
-
     with pytest.MonkeyPatch.context() as m:
         m.setattr(metadata, "version", lambda _: "3.14159")
         return craft_application.AppMetadata(
             "testcraft",
             "A fake app for testing craft-application",
-            ProjectClass=MyProject,
+            ProjectClass=cast(type[models.Project], MyProject),
             source_ignore_patterns=["*.snap", "*.charm", "*.starcraft"],
             features=craft_application.AppFeatures(**features),
         )
@@ -68,16 +71,21 @@ def app_metadata(features) -> craft_application.AppMetadata:
 @pytest.fixture()
 def fake_project(features) -> models.Project:
     app_features = craft_application.AppFeatures(**features)
-    _MyProject = models.get_project_model(app_features)  # noqa: N806
 
-    class MyProject(_MyProject):
-        def get_build_plan(self) -> list[models.BuildInfo]:
-            arch = util.get_host_architecture()
-            return [
-                models.BuildInfo("foo", arch, arch, bases.BaseName("ubuntu", "22.04"))
-            ]
+    def mix_model(base, model):
+        class MixedModel(base, model):
+            pass
 
-    return MyProject(
+        return MixedModel
+
+    Project = MyProject  # noqa: N806
+
+    if app_features.package_repository:
+        Project = mix_model(  # noqa: N806
+            Project, models.AppFeaturePackageRepositoryMixin
+        )
+
+    project = Project(
         name="full-project",  # pyright: ignore[reportGeneralTypeIssues]
         title="A fully-defined project",  # pyright: ignore[reportGeneralTypeIssues]
         base="core24",
@@ -90,6 +98,8 @@ def fake_project(features) -> models.Project:
         license="LGPLv3",
         parts={"my-part": {"plugin": "nil"}},
     )
+
+    return cast(models.Project, project)
 
 
 @pytest.fixture()

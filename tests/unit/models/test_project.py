@@ -21,13 +21,12 @@ from textwrap import dedent
 from typing import Optional
 
 import pytest
-from craft_application import AppFeatures, util
+from craft_application import util
 from craft_application.errors import CraftValidationError
 from craft_application.models import (
+    AppFeaturePackageRepositoryMixin,
     BaseProject,
-    ProjectWithRepo,
     constraints,
-    get_project_model,
 )
 
 PROJECTS_DIR = pathlib.Path(__file__).parent / "project_models"
@@ -286,7 +285,10 @@ def test_unmarshal_repositories(full_project_dict):
     full_project_dict["package-repositories"] = [{"ppa": "ppa/ppa", "type": "apt"}]
     project_path = pathlib.Path("myproject.yaml")
 
-    project = ProjectWithRepo.from_yaml_data(full_project_dict, project_path)
+    class MixedProject(BaseProject, AppFeaturePackageRepositoryMixin):
+        pass
+
+    project = MixedProject.from_yaml_data(full_project_dict, project_path)
 
     assert project.package_repositories == [{"ppa": "ppa/ppa", "type": "apt"}]
 
@@ -297,7 +299,10 @@ def test_unmarshal_no_repositories(full_project_dict):
     full_project_dict["package-repositories"] = None
     project_path = pathlib.Path("myproject.yaml")
 
-    project = ProjectWithRepo.from_yaml_data(full_project_dict, project_path)
+    class MixedProject(BaseProject, AppFeaturePackageRepositoryMixin):
+        pass
+
+    project = MixedProject.from_yaml_data(full_project_dict, project_path)
 
     assert project.package_repositories is None
 
@@ -309,7 +314,11 @@ def test_unmarshal_undefined_repositories(full_project_dict):
         del full_project_dict["package-repositories"]
 
     project_path = pathlib.Path("myproject.yaml")
-    project = ProjectWithRepo.from_yaml_data(full_project_dict, project_path)
+
+    class MixedProject(BaseProject, AppFeaturePackageRepositoryMixin):
+        pass
+
+    project = MixedProject.from_yaml_data(full_project_dict, project_path)
 
     assert project.package_repositories is None
 
@@ -320,8 +329,11 @@ def test_unmarshal_invalid_repositories(full_project_dict):
     full_project_dict["package-repositories"] = [{}]
     project_path = pathlib.Path("myproject.yaml")
 
+    class MixedProject(BaseProject, AppFeaturePackageRepositoryMixin):
+        pass
+
     with pytest.raises(CraftValidationError) as error:
-        ProjectWithRepo.from_yaml_data(full_project_dict, project_path)
+        MixedProject.from_yaml_data(full_project_dict, project_path)
 
     assert error.value.args[0] == (
         "Bad myproject.yaml content:\n"
@@ -329,18 +341,3 @@ def test_unmarshal_invalid_repositories(full_project_dict):
         "- field 'url' required in 'package-repositories[0]' configuration\n"
         "- field 'key-id' required in 'package-repositories[0]' configuration"
     )
-
-
-def test_get_project_model_default(features):
-    """Test that the default project model is BaseProject."""
-    app_features = AppFeatures(**features)
-    model = get_project_model(app_features)
-    assert model == BaseProject
-
-
-@pytest.mark.enable_features("package_repository")
-def test_get_project_model_package_repositories(features):
-    """Test that the package-repositories enabled project model is returned."""
-    app_features = AppFeatures(**features)
-    model = get_project_model(app_features)
-    assert model == ProjectWithRepo

@@ -18,7 +18,7 @@
 This defines the structure of the input file (e.g. snapcraft.yaml)
 """
 import dataclasses
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, Union, cast
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
 
 import craft_parts
 import craft_providers.bases
@@ -37,9 +37,6 @@ from craft_application.models.constraints import (
     UniqueStrList,
     VersionStr,
 )
-
-if TYPE_CHECKING:
-    from craft_application.application import AppFeatures
 
 
 @dataclasses.dataclass
@@ -134,12 +131,6 @@ class BaseProject(CraftBaseModel):
                 error_dict["msg"] = message
 
 
-class ProjectWithRepo(BaseProject, AppFeaturePackageRepositoryMixin):
-    """Project with repository."""
-
-    pass
-
-
 # This is a hack to allow us to use the same type for the project model
 if TYPE_CHECKING:
 
@@ -153,19 +144,3 @@ else:
 
         If something try to use this, it did not use the get_project_model
         """
-
-
-def get_project_model(features: "AppFeatures") -> Type[Project]:
-    """Return the project model for the craft application.
-
-    Not enabled and waiting for pydantic 2:
-    The project model is inherited using the following order:
-    1. BaseProject, which contains the basic project fields.
-    2. Feature models, which contain the fields for the enabled features.
-    3. The app_project_model, which contains the fields for the application,
-       also allowing it to override any of the above fields.
-    """
-    if features.package_repository:
-        return cast(Type[Project], ProjectWithRepo)
-
-    return cast(Type[Project], BaseProject)

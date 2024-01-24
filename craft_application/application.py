@@ -34,7 +34,7 @@ from platformdirs import user_cache_path
 
 from craft_application import commands, models, secrets, util
 from craft_application.errors import PathInvalidError
-from craft_application.models import BuildInfo, get_project_model
+from craft_application.models import BuildInfo
 
 if TYPE_CHECKING:
     from craft_application.services import service_factory
@@ -91,9 +91,6 @@ class AppMetadata:
         if self.summary is None:
             md = metadata.metadata(self.name)
             setter("summary", md["summary"])
-
-        new_project_model = get_project_model(self.features)
-        object.__setattr__(self, "ProjectClass", new_project_model)
 
 
 class Application:
