@@ -102,7 +102,7 @@ def test_lifecycle_messages_no_duplicates(parts_lifecycle, request, capsys):
     assert expected_output in stderr
 
 
-@pytest.mark.enable_features("package_repository")
+@pytest.mark.enable_features("package_repositories")
 def test_package_repositories_in_overlay(
     app_metadata, fake_project, fake_services, tmp_path, mocker
 ):
@@ -142,7 +142,7 @@ def test_package_repositories_in_overlay(
 
     # Mock the installation of package repositories in the base system, as that
     # is undesired and will fail without root.
-    mocker.patch("craft_application.util.repository.install_package_repositories")
+    mocker.patch("craft_application.util.repositories.install_package_repositories")
 
     fake_project.package_repositories = package_repositories
     fake_project.parts = parts

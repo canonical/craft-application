@@ -20,7 +20,7 @@ from pathlib import Path
 
 from craft_application import models
 from craft_application.services import package
-from craft_application.util import repository
+from craft_application.util import repositories
 
 
 class FakePackageService(package.PackageService):
@@ -50,7 +50,7 @@ def test_repo_install_package_repositories(emitter, mocker, lifecycle_service):
 
     repo_install = mocker.patch("craft_archives.repo.install", return_value=False)
 
-    repository.install_package_repositories(
+    repositories.install_package_repositories(
         package_repositories, lifecycle_service._lcm
     )
 
@@ -66,7 +66,7 @@ def test_repo_install_package_repositories_empty(emitter, mocker, lifecycle_serv
 
     repo_install = mocker.patch("craft_archives.repo.install", return_value=False)
 
-    repository.install_package_repositories(
+    repositories.install_package_repositories(
         package_repositories, lifecycle_service._lcm
     )
 
@@ -83,7 +83,7 @@ def test_repo_install_package_repositories_refresh(emitter, mocker, lifecycle_se
         "craft_parts.lifecycle_manager.LifecycleManager.refresh_packages_list"
     )
 
-    repository.install_package_repositories(
+    repositories.install_package_repositories(
         package_repositories, lifecycle_service._lcm
     )
 
@@ -106,7 +106,7 @@ def test_repo_install_overlay_repositories(tmp_path, mocker, lifecycle_service):
 
     repo_install = mocker.patch("craft_archives.repo.install_in_root")
 
-    repository.install_overlay_repositories(overlay_dir, project_info)
+    repositories.install_overlay_repositories(overlay_dir, project_info)
 
     repo_install.assert_called_once_with(
         project_repositories=package_repositories,
@@ -125,6 +125,6 @@ def test_repo_install_overlay_repositories_bare(tmp_path, mocker, lifecycle_serv
 
     repo_install = mocker.patch("craft_archives.repo.install_in_root")
 
-    repository.install_overlay_repositories(overlay_dir, project_info)
+    repositories.install_overlay_repositories(overlay_dir, project_info)
 
     repo_install.assert_not_called()

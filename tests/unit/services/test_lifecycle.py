@@ -27,7 +27,7 @@ import pytest_check
 from craft_application import util
 from craft_application.errors import PartsLifecycleError
 from craft_application.services import lifecycle
-from craft_application.util import get_host_architecture, repository
+from craft_application.util import get_host_architecture, repositories
 from craft_parts import (
     Action,
     ActionType,
@@ -270,7 +270,7 @@ def test_init_parts_error(
     assert exc_info.value.args == expected.args
 
 
-@pytest.mark.enable_features("package_repository")
+@pytest.mark.enable_features("package_repositories")
 def test_init_with_feature_package_repositories(
     app_metadata, fake_project, fake_services, tmp_path
 ):
@@ -291,7 +291,7 @@ def test_init_with_feature_package_repositories(
     assert service._lcm._project_info.package_repositories == package_repositories
 
 
-@pytest.mark.enable_features("package_repository")
+@pytest.mark.enable_features("package_repositories")
 def test_init_with_feature_package_repositories_not_set(
     app_metadata, fake_project, fake_services, tmp_path
 ):
@@ -435,7 +435,7 @@ def test_post_prime_wrong_step(fake_parts_lifecycle, step):
 # region Feature package repositories tests
 
 
-@pytest.mark.enable_features("package_repository")
+@pytest.mark.enable_features("package_repositories")
 def test_lifecycle_package_repositories(
     app_metadata, fake_project, fake_services, tmp_path, mocker
 ):
@@ -457,7 +457,7 @@ def test_lifecycle_package_repositories(
 
     # Installation of repositories in the build instance
     mock_install = mocker.patch(
-        "craft_application.util.repository.install_package_repositories"
+        "craft_application.util.repositories.install_package_repositories"
     )
     # Installation of repositories in overlays
     mock_callback = mocker.patch.object(
@@ -467,7 +467,7 @@ def test_lifecycle_package_repositories(
     service.run("prime")
 
     mock_install.assert_called_once_with(fake_repositories, service._lcm)
-    mock_callback.assert_called_once_with(repository.install_overlay_repositories)
+    mock_callback.assert_called_once_with(repositories.install_overlay_repositories)
 
 
 # endregion

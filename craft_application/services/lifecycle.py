@@ -38,7 +38,7 @@ from typing_extensions import override
 import craft_application.models
 from craft_application import errors
 from craft_application.services import base
-from craft_application.util import convert_architecture_deb_to_platform, repository
+from craft_application.util import convert_architecture_deb_to_platform, repositories
 
 if TYPE_CHECKING:  # pragma: no cover
     from pathlib import Path
@@ -157,11 +157,11 @@ class LifecycleService(base.ProjectService):
         emit.debug(f"Initialising lifecycle manager in {self._work_dir}")
         emit.trace(f"Lifecycle: {repr(self)}")
 
-        if self._app.features.package_repository and issubclass(
-            self._project.__class__, craft_application.models.PackageRepositoryMixin
+        if self._app.features.package_repositories and issubclass(
+            self._project.__class__, craft_application.models.PackageRepositoriesMixin
         ):
             project_mixin = cast(
-                craft_application.models.PackageRepositoryMixin, self._project
+                craft_application.models.PackageRepositoriesMixin, self._project
             )
             self._manager_kwargs[
                 "package_repositories"
@@ -196,20 +196,21 @@ class LifecycleService(base.ProjectService):
         target_step = _get_step(step_name) if step_name else None
 
         try:
-            if self._app.features.package_repository and issubclass(
-                self._project.__class__, craft_application.models.PackageRepositoryMixin
+            if self._app.features.package_repositories and issubclass(
+                self._project.__class__,
+                craft_application.models.PackageRepositoriesMixin,
             ):
                 project_mixin = cast(
-                    craft_application.models.PackageRepositoryMixin, self._project
+                    craft_application.models.PackageRepositoriesMixin, self._project
                 )
                 if project_mixin.package_repositories:
                     emit.trace("Installing package repositories")
-                    repository.install_package_repositories(
+                    repositories.install_package_repositories(
                         project_mixin.package_repositories, self._lcm
                     )
                     with contextlib.suppress(CallbackRegistrationError):
                         callbacks.register_configure_overlay(
-                            repository.install_overlay_repositories
+                            repositories.install_overlay_repositories
                         )
                 del project_mixin
             if target_step:

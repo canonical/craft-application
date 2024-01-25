@@ -55,8 +55,8 @@ class BuildInfo:
     """The base to build on."""
 
 
-class PackageRepositoryMixin(CraftBaseModel):
-    """Mixin Model for package repository."""
+class PackageRepositoriesMixin(CraftBaseModel):
+    """Mixin Model for package repositories."""
 
     package_repositories: Optional[List[Dict[str, Any]]]
 

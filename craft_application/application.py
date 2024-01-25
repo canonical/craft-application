@@ -56,7 +56,7 @@ class AppFeatures:
     build_secrets: bool = False
     """Support for build-time secrets"""
 
-    package_repository: bool = False
+    package_repositories: bool = False
     """Support for add / modify package repositories"""
 
 

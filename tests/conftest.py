@@ -80,8 +80,8 @@ def fake_project(features) -> models.Project:
 
     Project = MyProject  # noqa: N806
 
-    if app_features.package_repository:
-        Project = mix_model(Project, models.PackageRepositoryMixin)  # noqa: N806
+    if app_features.package_repositories:
+        Project = mix_model(Project, models.PackageRepositoriesMixin)  # noqa: N806
 
     project = Project(
         name="full-project",  # pyright: ignore[reportGeneralTypeIssues]

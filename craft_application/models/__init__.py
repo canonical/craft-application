@@ -27,11 +27,11 @@ from craft_application.models.metadata import BaseMetadata
 from craft_application.models.project import (
     BuildInfo,
     Project,
-    PackageRepositoryMixin,
+    PackageRepositoriesMixin,
 )
 
 __all__ = [
-    "PackageRepositoryMixin",
+    "PackageRepositoriesMixin",
     "BaseMetadata",
     "BuildInfo",
     "CraftBaseConfig",
