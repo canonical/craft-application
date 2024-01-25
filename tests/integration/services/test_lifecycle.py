@@ -142,7 +142,7 @@ def test_package_repositories_in_overlay(
 
     # Mock the installation of package repositories in the base system, as that
     # is undesired and will fail without root.
-    mocker.patch("craft_applicaiton.util.repository.install_package_repositories")
+    mocker.patch("craft_application.util.repository.install_package_repositories")
 
     fake_project.package_repositories = package_repositories
     fake_project.parts = parts
