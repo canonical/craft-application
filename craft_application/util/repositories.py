@@ -50,8 +50,8 @@ def install_overlay_repositories(overlay_dir: Path, project_info: ProjectInfo) -
     """Install overlay repositories in the environment."""
     from craft_archives import repo  # type: ignore[import-untyped]
 
-    if project_info.base != "bare":
-        package_repositories = project_info.package_repositories
+    package_repositories = project_info.package_repositories
+    if package_repositories:
         repo.install_in_root(
             project_repositories=package_repositories,
             root=overlay_dir,

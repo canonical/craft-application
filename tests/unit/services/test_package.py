@@ -115,12 +115,11 @@ def test_repo_install_overlay_repositories(tmp_path, mocker, lifecycle_service):
     )
 
 
-def test_repo_install_overlay_repositories_bare(tmp_path, mocker, lifecycle_service):
-    package_repositories = [{"type": "apt", "ppa": "ppa/ppa"}]
+def test_repo_install_overlay_repositories_empty(tmp_path, mocker, lifecycle_service):
+    package_repositories = []
     overlay_dir = tmp_path / "overlay"
     project_info = lifecycle_service._lcm._project_info
 
-    lifecycle_service._lcm._project_info._base = "bare"
     lifecycle_service._lcm._project_info.package_repositories = package_repositories
 
     repo_install = mocker.patch("craft_archives.repo.install_in_root")
