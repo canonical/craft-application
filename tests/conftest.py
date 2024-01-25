@@ -43,7 +43,14 @@ class MyBuildPlanner(models.BuildPlanner):
 
     def get_build_plan(self) -> list[models.BuildInfo]:
         arch = util.get_host_architecture()
-        return [models.BuildInfo("foo", arch, arch, bases.BaseName("ubuntu", "22.04"))]
+        return [
+            models.BuildInfo(
+                "ubuntu-22.04", arch, arch, bases.BaseName("ubuntu", "22.04")
+            ),
+            models.BuildInfo(
+                "ubuntu-24.04", arch, arch, bases.BaseName("ubuntu", "24.04")
+            ),
+        ]
 
 
 @pytest.fixture()

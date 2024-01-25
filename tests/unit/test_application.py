@@ -670,6 +670,11 @@ def test_get_project_other_dir(monkeypatch, tmp_path, app, fake_project_file):
 
 
 @pytest.mark.usefixtures("fake_project_file")
+def test_get_project_all_platform(app):
+    app.get_project(platform="ubuntu-22.04")
+
+
+@pytest.mark.usefixtures("fake_project_file")
 def test_get_project_invalid_platform(app):
     # Load a project file from the current directory
 
@@ -679,6 +684,17 @@ def test_get_project_invalid_platform(app):
     assert (
         str(raised.value) == "Platform 'invalid' not found in the project definition."
     )
+
+
+@pytest.mark.usefixtures("fake_project_file")
+def test_get_project_build_plan(app):
+    with pytest.raises(NotImplementedError):
+        app.get_project(build_for="ubuntu-22.04").get_build_plan()
+
+
+@pytest.mark.usefixtures("fake_project_file")
+def test_get_project_propoery(app):
+    assert app.project == app.get_project()
 
 
 def test_get_cache_dir(tmp_path, app):
