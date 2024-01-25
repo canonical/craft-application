@@ -34,7 +34,7 @@ from craft_parts.plugins.plugins import PluginType
 from platformdirs import user_cache_path
 
 from craft_application import commands, models, secrets, util
-from craft_application.errors import PathInvalidError
+from craft_application.errors import AppFeaturesMissingModelError, PathInvalidError
 from craft_application.models import BuildInfo
 
 if TYPE_CHECKING:
@@ -194,6 +194,14 @@ class Application:
             raise PathInvalidError(
                 f"Unable to create/access cache directory: {err.strerror}"
             ) from err
+
+    def _check_app_features_models(self) -> None:
+        if self.app.features.package_repositories and not issubclass(
+            self.app.ProjectClass, models.PackageRepositoriesMixin
+        ):
+            raise AppFeaturesMissingModelError(
+                "package_repositories", models.PackageRepositoriesMixin.__name__
+            )
 
     def _configure_services(
         self,
@@ -380,6 +388,7 @@ class Application:
     def run(self) -> int:  # noqa: PLR0912 (too many branches due to error handling)
         """Bootstrap and run the application."""
         self._setup_logging()
+        self._check_app_features_models()
         self._register_default_plugins()
         dispatcher = self._get_dispatcher()
         craft_cli.emit.trace("Preparing application...")
