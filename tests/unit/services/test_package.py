@@ -83,7 +83,6 @@ def test_repo_install_package_repositories_refresh(emitter, mocker, lifecycle_se
         "craft_parts.lifecycle_manager.LifecycleManager.refresh_packages_list"
     )
 
-    print(lifecycle_service.__dict__)
     repository.install_package_repositories(
         package_repositories, lifecycle_service._lcm
     )
@@ -121,7 +120,6 @@ def test_repo_install_overlay_repositories_bare(tmp_path, mocker, lifecycle_serv
     overlay_dir = tmp_path / "overlay"
     project_info = lifecycle_service._lcm._project_info
 
-    print(lifecycle_service._lcm._project_info.__dict__)
     lifecycle_service._lcm._project_info._base = "bare"
     lifecycle_service._lcm._project_info.package_repositories = package_repositories
 
