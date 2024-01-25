@@ -271,6 +271,46 @@ def test_init_parts_error(
     assert exc_info.value.args == expected.args
 
 
+@pytest.mark.enable_features("package_repository")
+def test_init_with_feature_package_repositories(
+    app_metadata, fake_project, fake_services, tmp_path
+):
+    package_repositories = [{"type": "apt", "ppa": "ppa/ppa"}]
+    fake_project.package_repositories = package_repositories.copy()
+    service = lifecycle.LifecycleService(
+        app_metadata,
+        fake_services,
+        project=fake_project,
+        work_dir=tmp_path,
+        cache_dir=tmp_path,
+        platform=None,
+        build_for=util.get_host_architecture(),
+    )
+    assert service._lcm is None
+    service.setup()
+    assert service._lcm is not None
+    assert service._lcm._project_info.package_repositories == package_repositories
+
+
+@pytest.mark.enable_features("package_repository")
+def test_init_with_feature_package_repositories_not_set(
+    app_metadata, fake_project, fake_services, tmp_path
+):
+    service = lifecycle.LifecycleService(
+        app_metadata,
+        fake_services,
+        project=fake_project,
+        work_dir=tmp_path,
+        cache_dir=tmp_path,
+        platform=None,
+        build_for=util.get_host_architecture(),
+    )
+    assert service._lcm is None
+    service.setup()
+    assert service._lcm is not None
+    assert service._lcm._project_info.package_repositories is None
+
+
 def test_prime_dir(lifecycle_service, tmp_path):
     prime_dir = lifecycle_service.prime_dir
 

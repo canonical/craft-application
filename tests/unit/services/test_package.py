@@ -16,17 +16,14 @@
 """Tests for PackageService."""
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from pathlib import Path
 
 from craft_application import models
 from craft_application.services import package
 
-if TYPE_CHECKING:  # pragma: no cover
-    import pathlib
-
 
 class FakePackageService(package.PackageService):
-    def pack(self, prime_dir: pathlib.Path, dest: pathlib.Path) -> list[pathlib.Path]:
+    def pack(self, prime_dir: Path, dest: Path) -> list[Path]:
         """Create a fake package."""
         raise NotImplementedError
 
@@ -45,3 +42,90 @@ def test_write_metadata(tmp_path, app_metadata, fake_project, fake_services):
     assert metadata_file.is_file()
     metadata = models.BaseMetadata.from_yaml_file(metadata_file)
     assert metadata == service.metadata
+
+
+def test_repo_install_package_repositories(emitter, mocker, lifecycle_service):
+    package_repositories = [{"type": "apt", "ppa": "ppa/ppa"}]
+
+    repo_install = mocker.patch("craft_archives.repo.install", return_value=False)
+
+    package.RepositoryService.install_package_repositories(
+        package_repositories, lifecycle_service._lcm
+    )
+
+    repo_install.assert_called_once_with(
+        package_repositories, key_assets=Path("/dev/null")
+    )
+
+    emitter.assert_progress("Package repositories installed")
+
+
+def test_repo_install_package_repositories_empty(emitter, mocker, lifecycle_service):
+    package_repositories = None
+
+    repo_install = mocker.patch("craft_archives.repo.install", return_value=False)
+
+    package.RepositoryService.install_package_repositories(
+        package_repositories, lifecycle_service._lcm
+    )
+
+    repo_install.assert_not_called()
+
+    emitter.assert_debug("No package repositories specified, none to install.")
+
+
+def test_repo_install_package_repositories_refresh(emitter, mocker, lifecycle_service):
+    package_repositories = [{"type": "apt", "ppa": "ppa/ppa"}]
+
+    repo_install = mocker.patch("craft_archives.repo.install", return_value=True)
+    lcm_refresh = mocker.patch(
+        "craft_parts.lifecycle_manager.LifecycleManager.refresh_packages_list"
+    )
+
+    print(lifecycle_service.__dict__)
+    package.RepositoryService.install_package_repositories(
+        package_repositories, lifecycle_service._lcm
+    )
+
+    repo_install.assert_called_once_with(
+        package_repositories, key_assets=Path("/dev/null")
+    )
+
+    lcm_refresh.assert_called_once()
+
+    emitter.assert_progress("Refreshing repositories")
+    emitter.assert_progress("Package repositories installed")
+
+
+def test_repo_install_overlay_repositories(tmp_path, mocker, lifecycle_service):
+    package_repositories = [{"type": "apt", "ppa": "ppa/ppa"}]
+    overlay_dir = tmp_path / "overlay"
+    project_info = lifecycle_service._lcm._project_info
+
+    lifecycle_service._lcm._project_info.package_repositories = package_repositories
+
+    repo_install = mocker.patch("craft_archives.repo.install_in_root")
+
+    package.RepositoryService.install_overlay_repositories(overlay_dir, project_info)
+
+    repo_install.assert_called_once_with(
+        project_repositories=package_repositories,
+        root=overlay_dir,
+        key_assets=Path("/dev/null"),
+    )
+
+
+def test_repo_install_overlay_repositories_bare(tmp_path, mocker, lifecycle_service):
+    package_repositories = [{"type": "apt", "ppa": "ppa/ppa"}]
+    overlay_dir = tmp_path / "overlay"
+    project_info = lifecycle_service._lcm._project_info
+
+    print(lifecycle_service._lcm._project_info.__dict__)
+    lifecycle_service._lcm._project_info._base = "bare"
+    lifecycle_service._lcm._project_info.package_repositories = package_repositories
+
+    repo_install = mocker.patch("craft_archives.repo.install_in_root")
+
+    package.RepositoryService.install_overlay_repositories(overlay_dir, project_info)
+
+    repo_install.assert_not_called()
