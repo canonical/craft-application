@@ -37,7 +37,6 @@ __all__ = [
     "CraftBaseConfig",
     "CraftBaseModel",
     "Project",
-    "Project",
     "ProjectName",
     "ProjectTitle",
     "SummaryStr",
