@@ -26,18 +26,17 @@ from craft_application.models.constraints import (
 from craft_application.models.metadata import BaseMetadata
 from craft_application.models.project import (
     BuildInfo,
-    BaseProject,
-    AppFeaturePackageRepositoryMixin,
     Project,
+    PackageRepositoryMixin,
 )
 
 __all__ = [
-    "AppFeaturePackageRepositoryMixin",
+    "PackageRepositoryMixin",
     "BaseMetadata",
     "BuildInfo",
     "CraftBaseConfig",
     "CraftBaseModel",
-    "BaseProject",
+    "Project",
     "Project",
     "ProjectName",
     "ProjectTitle",

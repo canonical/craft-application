@@ -26,16 +26,6 @@ if TYPE_CHECKING:  # pragma: no cover
 
     from craft_application import models
 
-from pathlib import Path
-from typing import Any
-
-from craft_archives import repo  # type: ignore[import-untyped]
-from craft_cli import emit
-from craft_parts import (
-    LifecycleManager,
-    ProjectInfo,
-)
-
 
 class PackageService(base.ProjectService):
     """Business logic for creating packages."""
@@ -61,40 +51,3 @@ class PackageService(base.ProjectService):
         """
         path.mkdir(parents=True, exist_ok=True)
         self.metadata.to_yaml_file(path / "metadata.yaml")
-
-
-class RepositoryService(base.ProjectService):
-    """Business logic for managing repositories."""
-
-    @classmethod
-    def install_package_repositories(
-        cls,
-        package_repositories: list[dict[str, Any]] | None,
-        lifecycle_manager: LifecycleManager,
-    ) -> None:
-        """Install package repositories in the environment."""
-        if not package_repositories:
-            emit.debug("No package repositories specified, none to install.")
-            return
-
-        refresh_required = repo.install(
-            package_repositories, key_assets=Path("/dev/null")
-        )
-        if refresh_required:
-            emit.progress("Refreshing repositories")
-            lifecycle_manager.refresh_packages_list()
-
-        emit.progress("Package repositories installed")
-
-    @classmethod
-    def install_overlay_repositories(
-        cls, overlay_dir: Path, project_info: ProjectInfo
-    ) -> None:
-        """Install overlay repositories in the environment."""
-        if project_info.base != "bare":
-            package_repositories = project_info.package_repositories
-            repo.install_in_root(
-                project_repositories=package_repositories,
-                root=overlay_dir,
-                key_assets=Path("/dev/null"),
-            )

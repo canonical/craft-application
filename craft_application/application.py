@@ -25,7 +25,7 @@ import sys
 from dataclasses import dataclass, field
 from functools import cached_property
 from importlib import metadata
-from typing import TYPE_CHECKING, Any, Iterable, Type, cast, final
+from typing import TYPE_CHECKING, Any, Iterable, cast, final
 
 import craft_cli
 import craft_parts
@@ -53,10 +53,11 @@ DEFAULT_CLI_LOGGERS = frozenset(
 class AppFeatures:
     """Specific features that can be enabled/disabled per-application."""
 
-    # Support for build-time secrets
     build_secrets: bool = False
-    # Support for add / modify package repositories
+    """Support for build-time secrets"""
+
     package_repository: bool = False
+    """Support for add / modify package repositories"""
 
 
 @final
@@ -71,7 +72,7 @@ class AppMetadata:
     managed_instance_project_path = pathlib.PurePosixPath("/root/project")
     features: AppFeatures = AppFeatures()
 
-    ProjectClass: type[models.Project] = cast(Type[models.Project], models.BaseProject)
+    ProjectClass: type[models.Project] = models.Project
 
     def __post_init__(self) -> None:
         setter = super().__setattr__

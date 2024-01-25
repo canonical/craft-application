@@ -24,8 +24,8 @@ import pytest
 from craft_application import util
 from craft_application.errors import CraftValidationError
 from craft_application.models import (
-    AppFeaturePackageRepositoryMixin,
-    BaseProject,
+    PackageRepositoryMixin,
+    Project,
     constraints,
 )
 
@@ -33,7 +33,7 @@ PROJECTS_DIR = pathlib.Path(__file__).parent / "project_models"
 PARTS_DICT = {"my-part": {"plugin": "nil"}}
 # pyright doesn't like these types and doesn't have a pydantic plugin like mypy.
 # Because of this, we need to silence several errors in these constants.
-BASIC_PROJECT = BaseProject(
+BASIC_PROJECT = Project(
     name="project-name",  # pyright: ignore[reportGeneralTypeIssues]
     version="1.0",  # pyright: ignore[reportGeneralTypeIssues]
     parts=PARTS_DICT,
@@ -43,7 +43,7 @@ BASIC_PROJECT_DICT = {
     "version": "1.0",
     "parts": PARTS_DICT,
 }
-FULL_PROJECT = BaseProject(
+FULL_PROJECT = Project(
     name="full-project",  # pyright: ignore[reportGeneralTypeIssues]
     title="A fully-defined project",  # pyright: ignore[reportGeneralTypeIssues]
     base="core24",
@@ -95,23 +95,23 @@ def test_marshal(project, project_dict):
     [(BASIC_PROJECT, BASIC_PROJECT_DICT), (FULL_PROJECT, FULL_PROJECT_DICT)],
 )
 def test_unmarshal_success(project, project_dict):
-    assert BaseProject.unmarshal(project_dict) == project
+    assert Project.unmarshal(project_dict) == project
 
 
 @pytest.mark.parametrize("data", [None, [], (), 0, ""])
 def test_unmarshal_error(data):
     with pytest.raises(TypeError):
-        BaseProject.unmarshal(data)
+        Project.unmarshal(data)
 
 
 @pytest.mark.parametrize("project", [BASIC_PROJECT, FULL_PROJECT])
 def test_marshal_then_unmarshal(project):
-    assert BaseProject.unmarshal(project.marshal()) == project
+    assert Project.unmarshal(project.marshal()) == project
 
 
 @pytest.mark.parametrize("project_dict", [BASIC_PROJECT_DICT, FULL_PROJECT_DICT])
 def test_unmarshal_then_marshal(project_dict):
-    assert BaseProject.unmarshal(project_dict).marshal() == project_dict
+    assert Project.unmarshal(project_dict).marshal() == project_dict
 
 
 @pytest.mark.parametrize("project", [BASIC_PROJECT, FULL_PROJECT])
@@ -129,7 +129,7 @@ def test_build_plan_not_implemented(project):
 )
 def test_from_yaml_file_success(project_file, expected):
     with project_file.open():
-        actual = BaseProject.from_yaml_file(project_file)
+        actual = Project.from_yaml_file(project_file)
 
     assert expected == actual
 
@@ -143,7 +143,7 @@ def test_from_yaml_file_success(project_file, expected):
 )
 def test_from_yaml_file_failure(project_file, error_class):
     with pytest.raises(error_class):
-        BaseProject.from_yaml_file(project_file)
+        Project.from_yaml_file(project_file)
 
 
 @pytest.mark.parametrize(
@@ -157,7 +157,7 @@ def test_from_yaml_data_success(project_file, expected):
     with project_file.open() as file:
         data = util.safe_yaml_load(file)
 
-    actual = BaseProject.from_yaml_data(data, project_file)
+    actual = Project.from_yaml_data(data, project_file)
 
     assert expected == actual
 
@@ -173,7 +173,7 @@ def test_from_yaml_data_failure(project_file, error_class):
         data = util.safe_yaml_load(file)
 
     with pytest.raises(error_class):
-        BaseProject.from_yaml_data(data, project_file)
+        Project.from_yaml_data(data, project_file)
 
 
 @pytest.mark.parametrize(
@@ -196,7 +196,7 @@ def test_effective_base_is_base(project):
     assert project.effective_base == project.base
 
 
-class FakeBuildBaseProject(BaseProject):
+class FakeBuildBaseProject(Project):
     build_base: Optional[str]
 
 
@@ -252,7 +252,7 @@ def test_invalid_field_message(
     project_path = pathlib.Path("myproject.yaml")
 
     with pytest.raises(CraftValidationError) as exc:
-        BaseProject.from_yaml_data(full_project_dict, project_path)
+        Project.from_yaml_data(full_project_dict, project_path)
 
     full_expected_message = textwrap.dedent(
         f"""
@@ -271,7 +271,7 @@ def test_unmarshal_repositories_in_base_project(full_project_dict):
 
     project_path = pathlib.Path("myproject.yaml")
     with pytest.raises(CraftValidationError) as error:
-        BaseProject.from_yaml_data(full_project_dict, project_path)
+        Project.from_yaml_data(full_project_dict, project_path)
 
     assert error.value.args[0] == (
         "Bad myproject.yaml content:\n"
@@ -285,7 +285,7 @@ def test_unmarshal_repositories(full_project_dict):
     full_project_dict["package-repositories"] = [{"ppa": "ppa/ppa", "type": "apt"}]
     project_path = pathlib.Path("myproject.yaml")
 
-    class MixedProject(BaseProject, AppFeaturePackageRepositoryMixin):
+    class MixedProject(Project, PackageRepositoryMixin):
         pass
 
     project = MixedProject.from_yaml_data(full_project_dict, project_path)
@@ -299,7 +299,7 @@ def test_unmarshal_no_repositories(full_project_dict):
     full_project_dict["package-repositories"] = None
     project_path = pathlib.Path("myproject.yaml")
 
-    class MixedProject(BaseProject, AppFeaturePackageRepositoryMixin):
+    class MixedProject(Project, PackageRepositoryMixin):
         pass
 
     project = MixedProject.from_yaml_data(full_project_dict, project_path)
@@ -315,7 +315,7 @@ def test_unmarshal_undefined_repositories(full_project_dict):
 
     project_path = pathlib.Path("myproject.yaml")
 
-    class MixedProject(BaseProject, AppFeaturePackageRepositoryMixin):
+    class MixedProject(Project, PackageRepositoryMixin):
         pass
 
     project = MixedProject.from_yaml_data(full_project_dict, project_path)
@@ -329,7 +329,7 @@ def test_unmarshal_invalid_repositories(full_project_dict):
     full_project_dict["package-repositories"] = [{}]
     project_path = pathlib.Path("myproject.yaml")
 
-    class MixedProject(BaseProject, AppFeaturePackageRepositoryMixin):
+    class MixedProject(Project, PackageRepositoryMixin):
         pass
 
     with pytest.raises(CraftValidationError) as error:

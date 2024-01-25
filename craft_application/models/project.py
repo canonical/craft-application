@@ -18,12 +18,11 @@
 This defines the structure of the input file (e.g. snapcraft.yaml)
 """
 import dataclasses
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import craft_parts
 import craft_providers.bases
 import pydantic
-from craft_archives import repo  # type: ignore[import-untyped]
 from pydantic import AnyUrl
 from typing_extensions import override
 
@@ -56,7 +55,7 @@ class BuildInfo:
     """The base to build on."""
 
 
-class AppFeaturePackageRepositoryMixin(CraftBaseModel):
+class PackageRepositoryMixin(CraftBaseModel):
     """Mixin Model for package repository."""
 
     package_repositories: Optional[List[Dict[str, Any]]]
@@ -66,12 +65,14 @@ class AppFeaturePackageRepositoryMixin(CraftBaseModel):
     def _validate_package_repositories(
         cls, repository: Dict[str, Any]
     ) -> Dict[str, Any]:
+        from craft_archives import repo  # type: ignore[import-untyped]
+
         repo.validate_repository(repository)
 
         return repository
 
 
-class BaseProject(CraftBaseModel):
+class Project(CraftBaseModel):
     """Craft Application project definition."""
 
     name: ProjectName
@@ -129,18 +130,3 @@ class BaseProject(CraftBaseModel):
                 # "input" key in the error dict, so we can't put the original
                 # value in the error message.
                 error_dict["msg"] = message
-
-
-# This is a hack to allow us to use the same type for the project model
-if TYPE_CHECKING:
-
-    class Project(BaseProject, AppFeaturePackageRepositoryMixin):
-        """Full model for typing."""
-
-else:
-
-    class Project(CraftBaseModel):
-        """Dummy project model that should not be used.
-
-        If something try to use this, it did not use the get_project_model
-        """

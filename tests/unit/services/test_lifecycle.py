@@ -27,8 +27,7 @@ import pytest_check
 from craft_application import util
 from craft_application.errors import PartsLifecycleError
 from craft_application.services import lifecycle
-from craft_application.services.package import RepositoryService
-from craft_application.util import get_host_architecture
+from craft_application.util import get_host_architecture, repository
 from craft_parts import (
     Action,
     ActionType,
@@ -457,8 +456,8 @@ def test_lifecycle_package_repositories(
     service._lcm = mock.MagicMock(spec=LifecycleManager)
 
     # Installation of repositories in the build instance
-    mock_install = mocker.patch.object(
-        RepositoryService, "install_package_repositories"
+    mock_install = mocker.patch(
+        "craft_application.util.repository.install_package_repositories"
     )
     # Installation of repositories in overlays
     mock_callback = mocker.patch.object(
@@ -468,9 +467,7 @@ def test_lifecycle_package_repositories(
     service.run("prime")
 
     mock_install.assert_called_once_with(fake_repositories, service._lcm)
-    mock_callback.assert_called_once_with(
-        RepositoryService.install_overlay_repositories
-    )
+    mock_callback.assert_called_once_with(repository.install_overlay_repositories)
 
 
 # endregion

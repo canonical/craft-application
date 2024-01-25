@@ -20,6 +20,7 @@ from pathlib import Path
 
 from craft_application import models
 from craft_application.services import package
+from craft_application.util import repository
 
 
 class FakePackageService(package.PackageService):
@@ -49,7 +50,7 @@ def test_repo_install_package_repositories(emitter, mocker, lifecycle_service):
 
     repo_install = mocker.patch("craft_archives.repo.install", return_value=False)
 
-    package.RepositoryService.install_package_repositories(
+    repository.install_package_repositories(
         package_repositories, lifecycle_service._lcm
     )
 
@@ -65,7 +66,7 @@ def test_repo_install_package_repositories_empty(emitter, mocker, lifecycle_serv
 
     repo_install = mocker.patch("craft_archives.repo.install", return_value=False)
 
-    package.RepositoryService.install_package_repositories(
+    repository.install_package_repositories(
         package_repositories, lifecycle_service._lcm
     )
 
@@ -83,7 +84,7 @@ def test_repo_install_package_repositories_refresh(emitter, mocker, lifecycle_se
     )
 
     print(lifecycle_service.__dict__)
-    package.RepositoryService.install_package_repositories(
+    repository.install_package_repositories(
         package_repositories, lifecycle_service._lcm
     )
 
@@ -106,7 +107,7 @@ def test_repo_install_overlay_repositories(tmp_path, mocker, lifecycle_service):
 
     repo_install = mocker.patch("craft_archives.repo.install_in_root")
 
-    package.RepositoryService.install_overlay_repositories(overlay_dir, project_info)
+    repository.install_overlay_repositories(overlay_dir, project_info)
 
     repo_install.assert_called_once_with(
         project_repositories=package_repositories,
@@ -126,6 +127,6 @@ def test_repo_install_overlay_repositories_bare(tmp_path, mocker, lifecycle_serv
 
     repo_install = mocker.patch("craft_archives.repo.install_in_root")
 
-    package.RepositoryService.install_overlay_repositories(overlay_dir, project_info)
+    repository.install_overlay_repositories(overlay_dir, project_info)
 
     repo_install.assert_not_called()

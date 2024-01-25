@@ -31,7 +31,7 @@ if TYPE_CHECKING:  # pragma: no cover
     from collections.abc import Iterator
 
 
-class MyProject(models.BaseProject):
+class MyProject(models.Project):
     def get_build_plan(self) -> list[models.BuildInfo]:
         arch = util.get_host_architecture()
         return [models.BuildInfo("foo", arch, arch, bases.BaseName("ubuntu", "22.04"))]
@@ -81,9 +81,7 @@ def fake_project(features) -> models.Project:
     Project = MyProject  # noqa: N806
 
     if app_features.package_repository:
-        Project = mix_model(  # noqa: N806
-            Project, models.AppFeaturePackageRepositoryMixin
-        )
+        Project = mix_model(Project, models.PackageRepositoryMixin)  # noqa: N806
 
     project = Project(
         name="full-project",  # pyright: ignore[reportGeneralTypeIssues]

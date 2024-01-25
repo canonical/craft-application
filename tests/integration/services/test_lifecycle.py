@@ -23,7 +23,6 @@ import craft_parts.overlays
 import pytest
 import pytest_check
 from craft_application.services.lifecycle import LifecycleService
-from craft_application.services.package import RepositoryService
 from craft_application.util import get_host_architecture
 
 
@@ -143,7 +142,7 @@ def test_package_repositories_in_overlay(
 
     # Mock the installation of package repositories in the base system, as that
     # is undesired and will fail without root.
-    mocker.patch.object(RepositoryService, "install_package_repositories")
+    mocker.patch("craft_applicaiton.util.repository.install_package_repositories")
 
     fake_project.package_repositories = package_repositories
     fake_project.parts = parts
