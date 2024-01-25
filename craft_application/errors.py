@@ -110,8 +110,11 @@ class SecretsManagedError(CraftError):
 
 
 class AppFeaturesMissingModelError(CraftError):
-    """A app feature is enabled but the mixin model is missing."""
+    """An app feature is enabled but the mixin model is missing."""
 
     def __init__(self, feature: str, missing_model: str) -> None:
-        message = f'A app feature "{feature}" is enabled but the mixin model "{missing_model}" is not inherited.'
+        message = (
+            f'An app feature "{feature}" is enabled but the Project subclass '
+            f'does not inherit from the mixin model "{missing_model}".'
+        )
         super().__init__(message=message)
