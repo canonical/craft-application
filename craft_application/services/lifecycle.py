@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import contextlib
 import types
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any
 
 from craft_cli import emit
 from craft_parts import (
@@ -35,7 +35,6 @@ from craft_parts import (
 from craft_parts.errors import CallbackRegistrationError
 from typing_extensions import override
 
-import craft_application.models
 from craft_application import errors
 from craft_application.services import base
 from craft_application.util import convert_architecture_deb_to_platform, repositories
@@ -157,16 +156,10 @@ class LifecycleService(base.ProjectService):
         emit.debug(f"Initialising lifecycle manager in {self._work_dir}")
         emit.trace(f"Lifecycle: {repr(self)}")
 
-        if self._app.features.package_repositories and issubclass(
-            self._project.__class__, craft_application.models.PackageRepositoriesMixin
-        ):
-            project_mixin = cast(
-                craft_application.models.PackageRepositoriesMixin, self._project
-            )
+        if self._project.package_repositories:
             self._manager_kwargs[
                 "package_repositories"
-            ] = project_mixin.package_repositories
-            del project_mixin
+            ] = self._project.package_repositories
 
         try:
             return LifecycleManager(
@@ -196,23 +189,15 @@ class LifecycleService(base.ProjectService):
         target_step = _get_step(step_name) if step_name else None
 
         try:
-            if self._app.features.package_repositories and issubclass(
-                self._project.__class__,
-                craft_application.models.PackageRepositoriesMixin,
-            ):
-                project_mixin = cast(
-                    craft_application.models.PackageRepositoriesMixin, self._project
+            if self._project.package_repositories:
+                emit.trace("Installing package repositories")
+                repositories.install_package_repositories(
+                    self._project.package_repositories, self._lcm
                 )
-                if project_mixin.package_repositories:
-                    emit.trace("Installing package repositories")
-                    repositories.install_package_repositories(
-                        project_mixin.package_repositories, self._lcm
+                with contextlib.suppress(CallbackRegistrationError):
+                    callbacks.register_configure_overlay(
+                        repositories.install_overlay_repositories
                     )
-                    with contextlib.suppress(CallbackRegistrationError):
-                        callbacks.register_configure_overlay(
-                            repositories.install_overlay_repositories
-                        )
-                del project_mixin
             if target_step:
                 emit.trace(f"Planning {step_name} for {part_names or 'all parts'}")
                 actions = self._lcm.plan(target_step, part_names=part_names)

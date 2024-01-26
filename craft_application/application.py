@@ -34,7 +34,7 @@ from craft_parts.plugins.plugins import PluginType
 from platformdirs import user_cache_path
 
 from craft_application import commands, models, secrets, util
-from craft_application.errors import AppFeaturesMissingModelError, PathInvalidError
+from craft_application.errors import PathInvalidError
 from craft_application.models import BuildInfo
 
 if TYPE_CHECKING:
@@ -55,9 +55,6 @@ class AppFeatures:
 
     build_secrets: bool = False
     """Support for build-time secrets"""
-
-    package_repositories: bool = False
-    """Support for add / modify package repositories"""
 
 
 @final
@@ -196,12 +193,7 @@ class Application:
             ) from err
 
     def _check_app_features_models(self) -> None:
-        if self.app.features.package_repositories and not issubclass(
-            self.app.ProjectClass, models.PackageRepositoriesMixin
-        ):
-            raise AppFeaturesMissingModelError(
-                "package_repositories", models.PackageRepositoriesMixin.__name__
-            )
+        return
 
     def _configure_services(
         self,

@@ -57,46 +57,20 @@ def features(request) -> dict[str, bool]:
 
 @pytest.fixture()
 def app_metadata(features) -> craft_application.AppMetadata:
-    app_features = craft_application.AppFeatures(**features)
-
-    def mix_model(base, model):
-        class MixedModel(base, model):
-            pass
-
-        return MixedModel
-
-    Project = MyProject  # noqa: N806
-
-    if app_features.package_repositories:
-        Project = mix_model(Project, models.PackageRepositoriesMixin)  # noqa: N806
-
     with pytest.MonkeyPatch.context() as m:
         m.setattr(metadata, "version", lambda _: "3.14159")
         return craft_application.AppMetadata(
             "testcraft",
             "A fake app for testing craft-application",
-            ProjectClass=cast(Type[models.Project], Project),
+            ProjectClass=cast(Type[models.Project], MyProject),
             source_ignore_patterns=["*.snap", "*.charm", "*.starcraft"],
             features=craft_application.AppFeatures(**features),
         )
 
 
 @pytest.fixture()
-def fake_project(features) -> models.Project:
-    app_features = craft_application.AppFeatures(**features)
-
-    def mix_model(base, model):
-        class MixedModel(base, model):
-            pass
-
-        return MixedModel
-
-    Project = MyProject  # noqa: N806
-
-    if app_features.package_repositories:
-        Project = mix_model(Project, models.PackageRepositoriesMixin)  # noqa: N806
-
-    project = Project(
+def fake_project() -> models.Project:
+    project = MyProject(
         name="full-project",  # pyright: ignore[reportGeneralTypeIssues]
         title="A fully-defined project",  # pyright: ignore[reportGeneralTypeIssues]
         base="core24",

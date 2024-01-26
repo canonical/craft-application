@@ -732,24 +732,3 @@ def test_app_feature_check(app):
     """Test that the App checks for features when initialing."""
     app._check_app_features_models()
     assert issubclass(app.app.ProjectClass, craft_application.models.Project)
-    assert not issubclass(
-        app.app.ProjectClass, craft_application.models.PackageRepositoriesMixin
-    )
-
-
-@pytest.mark.enable_features("package_repositories")
-def test_app_feature_check_package_repositories(app):
-    """Test that the App checks for package_repositories feature when initialing."""
-    app._check_app_features_models()
-    assert issubclass(app.app.ProjectClass, craft_application.models.Project)
-    assert issubclass(
-        app.app.ProjectClass, craft_application.models.PackageRepositoriesMixin
-    )
-
-
-@pytest.mark.enable_features("package_repositories")
-def test_app_feature_check_package_repositories_not_inherited(app):
-    """Test that the App checks for package_repositories feature when initialing."""
-    object.__setattr__(app.app, "ProjectClass", craft_application.models.Project)
-    with pytest.raises(craft_application.errors.AppFeaturesMissingModelError):
-        app._check_app_features_models()

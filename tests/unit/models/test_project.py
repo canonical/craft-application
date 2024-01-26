@@ -24,7 +24,6 @@ import pytest
 from craft_application import util
 from craft_application.errors import CraftValidationError
 from craft_application.models import (
-    PackageRepositoriesMixin,
     Project,
     constraints,
 )
@@ -265,49 +264,25 @@ def test_invalid_field_message(
     assert message == full_expected_message
 
 
-def test_unmarshal_repositories_in_base_project(full_project_dict):
-    """Test that package-repositories are not allowed in BaseProject."""
-    full_project_dict["package-repositories"] = [{"ppa": "ppa/ppa", "type": "apt"}]
-
-    project_path = pathlib.Path("myproject.yaml")
-    with pytest.raises(CraftValidationError) as error:
-        Project.from_yaml_data(full_project_dict, project_path)
-
-    assert error.value.args[0] == (
-        "Bad myproject.yaml content:\n"
-        "- extra field 'package-repositories' not permitted in top-level configuration"
-    )
-
-
-@pytest.mark.enable_features("package_repositories")
 def test_unmarshal_repositories(full_project_dict):
     """Test that package-repositories are allowed in Project with package repositories feature."""
     full_project_dict["package-repositories"] = [{"ppa": "ppa/ppa", "type": "apt"}]
     project_path = pathlib.Path("myproject.yaml")
-
-    class MixedProject(Project, PackageRepositoriesMixin):
-        pass
-
-    project = MixedProject.from_yaml_data(full_project_dict, project_path)
+    project = Project.from_yaml_data(full_project_dict, project_path)
 
     assert project.package_repositories == [{"ppa": "ppa/ppa", "type": "apt"}]
 
 
-@pytest.mark.enable_features("package_repositories")
 def test_unmarshal_no_repositories(full_project_dict):
     """Test that package-repositories are allowed to be None in Project with package repositories feature."""
     full_project_dict["package-repositories"] = None
     project_path = pathlib.Path("myproject.yaml")
 
-    class MixedProject(Project, PackageRepositoriesMixin):
-        pass
-
-    project = MixedProject.from_yaml_data(full_project_dict, project_path)
+    project = Project.from_yaml_data(full_project_dict, project_path)
 
     assert project.package_repositories is None
 
 
-@pytest.mark.enable_features("package_repositories")
 def test_unmarshal_undefined_repositories(full_project_dict):
     """Test that package-repositories are allowed to not exist in Project with package repositories feature."""
     if "package-repositories" in full_project_dict:
@@ -315,25 +290,18 @@ def test_unmarshal_undefined_repositories(full_project_dict):
 
     project_path = pathlib.Path("myproject.yaml")
 
-    class MixedProject(Project, PackageRepositoriesMixin):
-        pass
-
-    project = MixedProject.from_yaml_data(full_project_dict, project_path)
+    project = Project.from_yaml_data(full_project_dict, project_path)
 
     assert project.package_repositories is None
 
 
-@pytest.mark.enable_features("package_repositories")
 def test_unmarshal_invalid_repositories(full_project_dict):
     """Test that package-repositories are validated in Project with package repositories feature."""
-    full_project_dict["package-repositories"] = [{}]
+    full_project_dict["package-repositories"] = [[]]
     project_path = pathlib.Path("myproject.yaml")
 
-    class MixedProject(Project, PackageRepositoriesMixin):
-        pass
-
     with pytest.raises(CraftValidationError) as error:
-        MixedProject.from_yaml_data(full_project_dict, project_path)
+        Project.from_yaml_data(full_project_dict, project_path)
 
     assert error.value.args[0] == (
         "Bad myproject.yaml content:\n"

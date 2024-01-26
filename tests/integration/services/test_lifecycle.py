@@ -102,7 +102,6 @@ def test_lifecycle_messages_no_duplicates(parts_lifecycle, request, capsys):
     assert expected_output in stderr
 
 
-@pytest.mark.enable_features("package_repositories")
 def test_package_repositories_in_overlay(
     app_metadata, fake_project, fake_services, tmp_path, mocker
 ):
