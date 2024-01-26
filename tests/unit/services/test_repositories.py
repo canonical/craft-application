@@ -18,11 +18,19 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
 from craft_application.util import repositories
+from craft_archives.repo.package_repository import (  # type: ignore[import-untyped]
+    PackageRepositoryApt,
+    PackageRepositoryAptPPA,
+    PackageRepositoryAptUCA,
+)
 
 
 def test_repo_install_package_repositories(emitter, mocker, lifecycle_service):
-    package_repositories = [{"type": "apt", "ppa": "ppa/ppa"}]
+    package_repositories: list[
+        PackageRepositoryApt | PackageRepositoryAptPPA | PackageRepositoryAptUCA
+    ] = [PackageRepositoryAptPPA(type="apt", priority=None, ppa="ppa/ppa")]
 
     repo_install = mocker.patch("craft_archives.repo.install", return_value=False)
 
@@ -31,15 +39,22 @@ def test_repo_install_package_repositories(emitter, mocker, lifecycle_service):
     )
 
     repo_install.assert_called_once_with(
-        package_repositories, key_assets=Path("/dev/null")
+        [{"type": "apt", "ppa": "ppa/ppa"}], key_assets=Path("/dev/null")
     )
 
     emitter.assert_progress("Package repositories installed")
 
 
-def test_repo_install_package_repositories_empty(emitter, mocker, lifecycle_service):
-    package_repositories = None
-
+@pytest.mark.parametrize(
+    ("package_repositories"),
+    [
+        (None),
+        ([]),
+    ],
+)
+def test_repo_install_package_repositories_empty(
+    emitter, mocker, lifecycle_service, package_repositories
+):
     repo_install = mocker.patch("craft_archives.repo.install", return_value=False)
 
     repositories.install_package_repositories(
@@ -52,7 +67,9 @@ def test_repo_install_package_repositories_empty(emitter, mocker, lifecycle_serv
 
 
 def test_repo_install_package_repositories_refresh(emitter, mocker, lifecycle_service):
-    package_repositories = [{"type": "apt", "ppa": "ppa/ppa"}]
+    package_repositories: list[
+        PackageRepositoryApt | PackageRepositoryAptPPA | PackageRepositoryAptUCA
+    ] = [PackageRepositoryAptPPA(type="apt", priority=None, ppa="ppa/ppa")]
 
     repo_install = mocker.patch("craft_archives.repo.install", return_value=True)
     lcm_refresh = mocker.patch(
@@ -64,7 +81,7 @@ def test_repo_install_package_repositories_refresh(emitter, mocker, lifecycle_se
     )
 
     repo_install.assert_called_once_with(
-        package_repositories, key_assets=Path("/dev/null")
+        [{"type": "apt", "ppa": "ppa/ppa"}], key_assets=Path("/dev/null")
     )
 
     lcm_refresh.assert_called_once()
@@ -74,7 +91,9 @@ def test_repo_install_package_repositories_refresh(emitter, mocker, lifecycle_se
 
 
 def test_repo_install_overlay_repositories(tmp_path, mocker, lifecycle_service):
-    package_repositories = [{"type": "apt", "ppa": "ppa/ppa"}]
+    package_repositories = [
+        PackageRepositoryAptPPA(type="apt", priority=None, ppa="ppa/ppa")
+    ]
     overlay_dir = tmp_path / "overlay"
     project_info = lifecycle_service._lcm._project_info
 
@@ -85,14 +104,22 @@ def test_repo_install_overlay_repositories(tmp_path, mocker, lifecycle_service):
     repositories.install_overlay_repositories(overlay_dir, project_info)
 
     repo_install.assert_called_once_with(
-        project_repositories=package_repositories,
+        project_repositories=[{"type": "apt", "ppa": "ppa/ppa"}],
         root=overlay_dir,
         key_assets=Path("/dev/null"),
     )
 
 
-def test_repo_install_overlay_repositories_empty(tmp_path, mocker, lifecycle_service):
-    package_repositories = []
+@pytest.mark.parametrize(
+    ("package_repositories"),
+    [
+        (None),
+        ([]),
+    ],
+)
+def test_repo_install_overlay_repositories_empty(
+    tmp_path, mocker, lifecycle_service, package_repositories
+):
     overlay_dir = tmp_path / "overlay"
     project_info = lifecycle_service._lcm._project_info
 

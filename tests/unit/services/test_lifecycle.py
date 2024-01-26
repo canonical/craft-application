@@ -28,6 +28,9 @@ from craft_application import util
 from craft_application.errors import PartsLifecycleError
 from craft_application.services import lifecycle
 from craft_application.util import get_host_architecture, repositories
+from craft_archives.repo.package_repository import (  # type: ignore[import-untyped]
+    PackageRepositoryAptPPA,
+)
 from craft_parts import (
     Action,
     ActionType,
@@ -287,7 +290,9 @@ def test_init_with_feature_package_repositories(
     assert service._lcm is None
     service.setup()
     assert service._lcm is not None
-    assert service._lcm._project_info.package_repositories == package_repositories
+    assert service._lcm._project_info.package_repositories == [
+        PackageRepositoryAptPPA(type="apt", priority=None, ppa="ppa/ppa")
+    ]
 
 
 def test_prime_dir(lifecycle_service, tmp_path):
@@ -445,7 +450,10 @@ def test_lifecycle_package_repositories(
 
     service.run("prime")
 
-    mock_install.assert_called_once_with(fake_repositories, service._lcm)
+    mock_install.assert_called_once_with(
+        [PackageRepositoryAptPPA(type="apt", priority=None, ppa="ppa/ppa")],
+        service._lcm,
+    )
     mock_callback.assert_called_once_with(repositories.install_overlay_repositories)
 
 

@@ -192,7 +192,8 @@ class LifecycleService(base.ProjectService):
             if self._project.package_repositories:
                 emit.trace("Installing package repositories")
                 repositories.install_package_repositories(
-                    self._project.package_repositories, self._lcm
+                    self._project.package_repositories,
+                    self._lcm,
                 )
                 with contextlib.suppress(CallbackRegistrationError):
                     callbacks.register_configure_overlay(
