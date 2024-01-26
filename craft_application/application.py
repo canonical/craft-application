@@ -54,7 +54,7 @@ class AppFeatures:
     """Specific features that can be enabled/disabled per-application."""
 
     build_secrets: bool = False
-    """Support for build-time secrets"""
+    """Support for build-time secrets."""
 
 
 @final
@@ -191,9 +191,6 @@ class Application:
             raise PathInvalidError(
                 f"Unable to create/access cache directory: {err.strerror}"
             ) from err
-
-    def _check_app_features_models(self) -> None:
-        return
 
     def _configure_services(
         self,
@@ -380,7 +377,6 @@ class Application:
     def run(self) -> int:  # noqa: PLR0912 (too many branches due to error handling)
         """Bootstrap and run the application."""
         self._setup_logging()
-        self._check_app_features_models()
         self._register_default_plugins()
         dispatcher = self._get_dispatcher()
         craft_cli.emit.trace("Preparing application...")

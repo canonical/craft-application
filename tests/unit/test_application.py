@@ -726,9 +726,3 @@ def test_register_plugins_default(mocker, app_metadata, fake_services):
         app.run()
 
     assert reg.call_count == 0
-
-
-def test_app_feature_check(app):
-    """Test that the App checks for features when initialing."""
-    app._check_app_features_models()
-    assert issubclass(app.app.ProjectClass, craft_application.models.Project)
