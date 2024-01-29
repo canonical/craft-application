@@ -27,9 +27,6 @@ from craft_application.models import (
     Project,
     constraints,
 )
-from craft_archives.repo.package_repository import (  # type: ignore[import-untyped]
-    PackageRepositoryAptPPA,
-)
 
 PROJECTS_DIR = pathlib.Path(__file__).parent / "project_models"
 PARTS_DICT = {"my-part": {"plugin": "nil"}}
@@ -273,9 +270,7 @@ def test_unmarshal_repositories(full_project_dict):
     project_path = pathlib.Path("myproject.yaml")
     project = Project.from_yaml_data(full_project_dict, project_path)
 
-    assert project.package_repositories == [
-        PackageRepositoryAptPPA(type="apt", priority=None, ppa="ppa/ppa")
-    ]
+    assert project.package_repositories == [{"ppa": "ppa/ppa", "type": "apt"}]
 
 
 def test_unmarshal_no_repositories(full_project_dict):
@@ -308,6 +303,9 @@ def test_unmarshal_invalid_repositories(full_project_dict):
     with pytest.raises(CraftValidationError) as error:
         Project.from_yaml_data(full_project_dict, project_path)
 
-    # the order of the errors is not guaranteed
-    assert "Bad myproject.yaml content:\n" in error.value.args[0]
-    assert "required in 'package-repositories[0]' configuration" in error.value.args[0]
+    assert error.value.args[0] == (
+        "Bad myproject.yaml content:\n"
+        "- field 'type' required in 'package-repositories[0]' configuration\n"
+        "- field 'url' required in 'package-repositories[0]' configuration\n"
+        "- field 'key-id' required in 'package-repositories[0]' configuration"
+    )

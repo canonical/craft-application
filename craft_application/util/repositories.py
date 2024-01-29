@@ -18,13 +18,8 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
-from craft_archives import repo  # type: ignore[import-untyped]
-from craft_archives.repo.package_repository import (  # type: ignore[import-untyped]
-    PackageRepositoryApt,
-    PackageRepositoryAptPPA,
-    PackageRepositoryAptUCA,
-)
 from craft_cli import emit
 from craft_parts import (
     LifecycleManager,
@@ -33,19 +28,17 @@ from craft_parts import (
 
 
 def install_package_repositories(
-    package_repositories: list[
-        PackageRepositoryApt | PackageRepositoryAptPPA | PackageRepositoryAptUCA
-    ]
-    | None,
+    package_repositories: list[dict[str, Any]] | None,
     lifecycle_manager: LifecycleManager,
 ) -> None:
     """Install package repositories in the environment."""
+    from craft_archives import repo  # type: ignore[import-untyped]
+
     if not package_repositories:
         emit.debug("No package repositories specified, none to install.")
         return
 
-    repos = [repo.marshal() for repo in package_repositories]
-    refresh_required = repo.install(repos, key_assets=Path("/dev/null"))
+    refresh_required = repo.install(package_repositories, key_assets=Path("/dev/null"))
     if refresh_required:
         emit.progress("Refreshing repositories")
         lifecycle_manager.refresh_packages_list()
@@ -55,13 +48,12 @@ def install_package_repositories(
 
 def install_overlay_repositories(overlay_dir: Path, project_info: ProjectInfo) -> None:
     """Install overlay repositories in the environment."""
-    if not project_info.package_repositories:
-        emit.debug("No package repositories specified, none to install.")
-        return
-    repos = [repo.marshal() for repo in project_info.package_repositories]
-    if repos:
+    from craft_archives import repo  # type: ignore[import-untyped]
+
+    package_repositories = project_info.package_repositories
+    if package_repositories:
         repo.install_in_root(
-            project_repositories=repos,
+            project_repositories=package_repositories,
             root=overlay_dir,
             key_assets=Path("/dev/null"),
         )
