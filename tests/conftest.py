@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import pathlib
 from importlib import metadata
-from typing import TYPE_CHECKING, Any, Type, cast
+from typing import TYPE_CHECKING, Any
 
 import craft_application
 import craft_parts
@@ -62,7 +62,7 @@ def app_metadata(features) -> craft_application.AppMetadata:
         return craft_application.AppMetadata(
             "testcraft",
             "A fake app for testing craft-application",
-            ProjectClass=cast(Type[models.Project], MyProject),
+            ProjectClass=MyProject,
             source_ignore_patterns=["*.snap", "*.charm", "*.starcraft"],
             features=craft_application.AppFeatures(**features),
         )
@@ -70,7 +70,7 @@ def app_metadata(features) -> craft_application.AppMetadata:
 
 @pytest.fixture()
 def fake_project() -> models.Project:
-    project = MyProject(
+    return MyProject(
         name="full-project",  # pyright: ignore[reportGeneralTypeIssues]
         title="A fully-defined project",  # pyright: ignore[reportGeneralTypeIssues]
         base="core24",
@@ -83,8 +83,6 @@ def fake_project() -> models.Project:
         license="LGPLv3",
         parts={"my-part": {"plugin": "nil"}},
     )
-
-    return cast(models.Project, project)
 
 
 @pytest.fixture()
