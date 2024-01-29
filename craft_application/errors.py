@@ -107,14 +107,3 @@ class SecretsManagedError(CraftError):
             f'Build secret "{host_directive}" was not found in the managed environment.'
         )
         super().__init__(message=message)
-
-
-class AppFeaturesMissingModelError(CraftError):
-    """An app feature is enabled but the mixin model is missing."""
-
-    def __init__(self, feature: str, missing_model: str) -> None:
-        message = (
-            f'An app feature "{feature}" is enabled but the Project subclass '
-            f'does not inherit from the mixin model "{missing_model}".'
-        )
-        super().__init__(message=message)
