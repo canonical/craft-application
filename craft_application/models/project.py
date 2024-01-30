@@ -26,7 +26,7 @@ import pydantic
 from pydantic import AnyUrl
 from typing_extensions import override
 
-from craft_application.models.base import CraftBaseModel
+from craft_application.models.base import CraftBaseConfig, CraftBaseModel
 from craft_application.models.constraints import (
     MESSAGE_INVALID_NAME,
     MESSAGE_INVALID_VERSION,
@@ -55,6 +55,25 @@ class BuildInfo:
     """The base to build on."""
 
 
+class BuildPlannerConfig(CraftBaseConfig):
+    """Config for BuildProjects."""
+
+    extra = pydantic.Extra.ignore
+    """The BuildPlanner model uses attributes from the project yaml."""
+
+
+class BuildPlanner(CraftBaseModel):
+    """The BuildPlanner obtains a build plan for the project."""
+
+    Config = BuildPlannerConfig
+
+    def get_build_plan(self) -> List[BuildInfo]:
+        """Obtain the list of architectures and bases from the project file."""
+        raise NotImplementedError(
+            f"{self.__class__.__name__!s} must implement get_build_plan"
+        )
+
+
 class Project(CraftBaseModel):
     """Craft Application project definition."""
 
@@ -64,7 +83,9 @@ class Project(CraftBaseModel):
     summary: Optional[SummaryStr]
     description: Optional[str]
 
-    base: Optional[Any]
+    base: Optional[Any] = None
+    build_base: Optional[Any] = None
+    platforms: Optional[Dict[str, Any]] = None
 
     contact: Optional[Union[str, UniqueStrList]]
     issues: Optional[Union[str, UniqueStrList]]

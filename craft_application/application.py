@@ -33,9 +33,9 @@ import craft_providers
 from craft_parts.plugins.plugins import PluginType
 from platformdirs import user_cache_path
 
-from craft_application import commands, models, secrets, util
+from craft_application import commands, errors, grammar, models, secrets, util
 from craft_application.errors import PathInvalidError
-from craft_application.models import BuildInfo
+from craft_application.models import BuildInfo, GrammarAwareProject
 
 if TYPE_CHECKING:
     from craft_application.services import service_factory
@@ -70,6 +70,7 @@ class AppMetadata:
     features: AppFeatures = AppFeatures()
 
     ProjectClass: type[models.Project] = models.Project
+    BuildPlannerClass: type[models.BuildPlanner] = models.BuildPlanner
 
     def __post_init__(self) -> None:
         setter = super().__setattr__
@@ -113,7 +114,7 @@ class Application:
         self._command_groups: list[craft_cli.CommandGroup] = []
         self._global_arguments: list[craft_cli.GlobalArgument] = [GLOBAL_VERSION]
         self._cli_loggers = DEFAULT_CLI_LOGGERS | set(extra_loggers)
-
+        self._build_plan: list[models.BuildInfo] = []
         # When build_secrets are enabled, this contains the secret info to pass to
         # managed instances.
         self._secrets: secrets.BuildSecrets | None = None
@@ -211,6 +212,7 @@ class Application:
         self.services.set_kwargs(
             "provider",
             work_dir=self._work_dir,
+            build_plan=self._build_plan,
         )
 
     def _resolve_project_path(self, project_dir: pathlib.Path | None) -> pathlib.Path:
@@ -224,13 +226,21 @@ class Application:
             project_dir = pathlib.Path.cwd()
         return (project_dir / f"{self.app.name}.yaml").resolve(strict=True)
 
-    def get_project(self, project_dir: pathlib.Path | None = None) -> models.Project:
+    def get_project(
+        self,
+        project_dir: pathlib.Path | None = None,
+        *,
+        platform: str | None = None,
+        build_for: str | None = None,
+    ) -> models.Project:
         """Get the project model.
 
         This only resolves and renders the project the first time it gets run.
         After that, it merely uses a cached project model.
 
         :param project_dir: the base directory to traverse for finding the project file.
+        :param platform: the platform name listed in the build plan.
+        :param build_for: the architecture to build this project for.
         :returns: A transformed, loaded project model.
         """
         if self.__project is not None:
@@ -242,8 +252,21 @@ class Application:
         with project_path.open() as file:
             yaml_data = util.safe_yaml_load(file)
 
-        yaml_data = self._transform_project_yaml(yaml_data)
+        build_planner = self.app.BuildPlannerClass.unmarshal(yaml_data)
+        full_build_plan = build_planner.get_build_plan()
+        self._build_plan = _filter_plan(full_build_plan, platform, build_for)
 
+        if platform:
+            all_platforms = {b.platform: b for b in full_build_plan}
+            if platform not in all_platforms:
+                raise errors.InvalidPlatformError(platform, list(all_platforms.keys()))
+            build_for = all_platforms[platform].build_for
+
+        # validate project grammar
+        GrammarAwareProject.validate_grammar(yaml_data)
+
+        build_on = util.get_host_architecture()
+        yaml_data = self._transform_project_yaml(yaml_data, build_on, build_for)
         self.__project = self.app.ProjectClass.from_yaml_data(yaml_data, project_path)
         return self.__project
 
@@ -260,10 +283,13 @@ class Application:
         """Run the application in a managed instance."""
         extra_args: dict[str, Any] = {}
 
-        build_plan = self.get_project().get_build_plan()
-        build_plan = _filter_plan(build_plan, platform, build_for)
+        for build_info in self._build_plan:
+            if platform and platform != build_info.platform:
+                continue
 
-        for build_info in build_plan:
+            if build_for and build_for != build_info.build_for:
+                continue
+
             env = {"CRAFT_PLATFORM": build_info.platform}
 
             if self.app.features.build_secrets:
@@ -349,7 +375,7 @@ class Application:
                 raise
             sys.exit(70)  # EX_SOFTWARE from sysexits.h
 
-        craft_cli.emit.trace("Preparing application...")
+        craft_cli.emit.debug("Configuring application...")
         self.configure(global_args)
 
         return dispatcher
@@ -374,12 +400,12 @@ class Application:
         """Register per application plugins when initializing."""
         self.register_plugins(self._get_app_plugins())
 
-    def run(self) -> int:  # noqa: PLR0912 (too many branches due to error handling)
+    def run(self) -> int:  # noqa: PLR0912 (too many branches)
         """Bootstrap and run the application."""
         self._setup_logging()
         self._register_default_plugins()
         dispatcher = self._get_dispatcher()
-        craft_cli.emit.trace("Preparing application...")
+        craft_cli.emit.debug("Preparing application...")
 
         return_code = 1  # General error
         try:
@@ -389,22 +415,29 @@ class Application:
             )
             platform = getattr(dispatcher.parsed_args(), "platform", None)
             build_for = getattr(dispatcher.parsed_args(), "build_for", None)
+
+            craft_cli.emit.debug(
+                f"Build plan: platform={platform}, build_for={build_for}"
+            )
+
+            managed_mode = command.run_managed(dispatcher.parsed_args())
+            if managed_mode or command.always_load_project:
+                self.services.project = self.get_project(
+                    platform=platform, build_for=build_for
+                )
+
             self._configure_services(platform, build_for)
 
-            if not command.run_managed(dispatcher.parsed_args()):
+            if not managed_mode:
                 # command runs in the outer instance
                 craft_cli.emit.debug(f"Running {self.app.name} {command.name} on host")
-                if command.always_load_project:
-                    self.services.project = self.get_project()
                 return_code = dispatcher.run() or 0
             elif not self.is_managed():
                 # command runs in inner instance, but this is the outer instance
-                self.services.project = self.get_project()
                 self.run_managed(platform, build_for)
                 return_code = 0
             else:
                 # command runs in inner instance
-                self.services.project = self.get_project()
                 return_code = dispatcher.run() or 0
         except craft_cli.ArgumentParsingError as err:
             print(err, file=sys.stderr)  # to stderr, as argparse normally does
@@ -458,7 +491,9 @@ class Application:
 
         craft_cli.emit.error(error)
 
-    def _transform_project_yaml(self, yaml_data: dict[str, Any]) -> dict[str, Any]:
+    def _transform_project_yaml(
+        self, yaml_data: dict[str, Any], build_on: str, build_for: str | None
+    ) -> dict[str, Any]:
         """Update the project's yaml data with runtime properties.
 
         Performs task such as environment expansion. Note that this transforms
@@ -470,6 +505,15 @@ class Application:
         # Handle build secrets.
         if self.app.features.build_secrets:
             self._render_secrets(yaml_data)
+
+        # Expand grammar.
+        if build_for and "parts" in yaml_data:
+            craft_cli.emit.debug(f"Processing grammar (on {build_on} for {build_for})")
+            yaml_data["parts"] = grammar.process_parts(
+                parts_yaml_data=yaml_data["parts"],
+                arch=build_on,
+                target_arch=build_for,
+            )
 
         # Perform extra, application-specific transformations.
         return self._extra_yaml_transform(yaml_data)

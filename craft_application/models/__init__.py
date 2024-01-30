@@ -23,18 +23,19 @@ from craft_application.models.constraints import (
     UniqueStrList,
     VersionStr,
 )
+from craft_application.models.grammar import GrammarAwareProject
 from craft_application.models.metadata import BaseMetadata
-from craft_application.models.project import (
-    BuildInfo,
-    Project,
-)
+from craft_application.models.project import BuildInfo, BuildPlanner, Project
+
 
 __all__ = [
     "BaseMetadata",
     "BuildInfo",
     "CraftBaseConfig",
     "CraftBaseModel",
+    "GrammarAwareProject",
     "Project",
+    "BuildPlanner",
     "ProjectName",
     "ProjectTitle",
     "SummaryStr",

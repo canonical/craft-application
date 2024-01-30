@@ -31,10 +31,26 @@ if TYPE_CHECKING:  # pragma: no cover
     from collections.abc import Iterator
 
 
-class MyProject(models.Project):
+class Platform(models.CraftBaseModel):
+    """Platform definition."""
+
+    build_on: str
+    build_for: str
+
+
+class MyBuildPlanner(models.BuildPlanner):
+    """Build planner definition for tests."""
+
     def get_build_plan(self) -> list[models.BuildInfo]:
         arch = util.get_host_architecture()
-        return [models.BuildInfo("foo", arch, arch, bases.BaseName("ubuntu", "22.04"))]
+        return [
+            models.BuildInfo(
+                "ubuntu-22.04", arch, arch, bases.BaseName("ubuntu", "22.04")
+            ),
+            models.BuildInfo(
+                "ubuntu-24.04", arch, arch, bases.BaseName("ubuntu", "24.04")
+            ),
+        ]
 
 
 @pytest.fixture()
@@ -62,7 +78,7 @@ def app_metadata(features) -> craft_application.AppMetadata:
         return craft_application.AppMetadata(
             "testcraft",
             "A fake app for testing craft-application",
-            ProjectClass=MyProject,
+            BuildPlannerClass=MyBuildPlanner,
             source_ignore_patterns=["*.snap", "*.charm", "*.starcraft"],
             features=craft_application.AppFeatures(**features),
         )
@@ -70,7 +86,8 @@ def app_metadata(features) -> craft_application.AppMetadata:
 
 @pytest.fixture()
 def fake_project() -> models.Project:
-    return MyProject(
+    arch = util.get_host_architecture()
+    return models.Project(
         name="full-project",  # pyright: ignore[reportGeneralTypeIssues]
         title="A fully-defined project",  # pyright: ignore[reportGeneralTypeIssues]
         base="core24",
@@ -82,7 +99,14 @@ def fake_project() -> models.Project:
         description="A fully-defined craft-application project. (description)",
         license="LGPLv3",
         parts={"my-part": {"plugin": "nil"}},
+        platforms={"foo": Platform(build_on=arch, build_for=arch)},
     )
+
+
+@pytest.fixture()
+def fake_build_plan() -> list[models.BuildInfo]:
+    arch = util.get_host_architecture()
+    return [models.BuildInfo("foo", arch, arch, bases.BaseName("ubuntu", "22.04"))]
 
 
 @pytest.fixture()
@@ -123,7 +147,7 @@ def emitter_verbosity(request):
 
 
 @pytest.fixture()
-def fake_provider_service_class():
+def fake_provider_service_class(fake_build_plan):
     class FakeProviderService(services.ProviderService):
         def __init__(
             self,
@@ -132,7 +156,13 @@ def fake_provider_service_class():
             *,
             project: models.Project,
         ):
-            super().__init__(app, services, project=project, work_dir=pathlib.Path())
+            super().__init__(
+                app,
+                services,
+                project=project,
+                work_dir=pathlib.Path(),
+                build_plan=fake_build_plan,
+            )
 
     return FakeProviderService
 

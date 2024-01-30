@@ -111,7 +111,9 @@ def test_special_inputs(capsys, monkeypatch, app, argv, stdout, stderr, exit_cod
 
 
 @pytest.mark.parametrize("project", (d.name for d in VALID_PROJECTS_DIR.iterdir()))
-def test_project_managed(capsys, monkeypatch, tmp_path, project, create_app):
+def test_project_managed(
+    capsys, monkeypatch, tmp_path, project, create_app, fake_build_plan
+):
     monkeypatch.setenv("CRAFT_DEBUG", "1")
     monkeypatch.setenv("CRAFT_MANAGED_MODE", "1")
     monkeypatch.setattr("sys.argv", ["testcraft", "pack"])
@@ -120,6 +122,7 @@ def test_project_managed(capsys, monkeypatch, tmp_path, project, create_app):
 
     app = create_app()
     app._work_dir = tmp_path
+    app._build_plan = fake_build_plan
 
     app.run()
 
@@ -132,13 +135,16 @@ def test_project_managed(capsys, monkeypatch, tmp_path, project, create_app):
 
 
 @pytest.mark.parametrize("project", (d.name for d in VALID_PROJECTS_DIR.iterdir()))
-def test_project_destructive(capsys, monkeypatch, tmp_path, project, create_app):
+def test_project_destructive(
+    capsys, monkeypatch, tmp_path, project, create_app, fake_build_plan
+):
     monkeypatch.chdir(tmp_path)
     shutil.copytree(VALID_PROJECTS_DIR / project, tmp_path, dirs_exist_ok=True)
 
     # Run pack in destructive mode
     monkeypatch.setattr("sys.argv", ["testcraft", "pack", "--destructive-mode"])
     app = create_app()
+    app._build_plan = fake_build_plan
     app.run()
 
     assert (tmp_path / "package.tar.zst").exists()
