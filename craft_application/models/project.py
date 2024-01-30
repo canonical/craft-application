@@ -73,6 +73,8 @@ class Project(CraftBaseModel):
 
     parts: Dict[str, Dict[str, Any]]  # parts are handled by craft-parts
 
+    package_repositories: Optional[List[Dict[str, Any]]]
+
     @pydantic.validator("parts", each_item=True)
     @classmethod
     def _validate_parts(cls, item: Dict[str, Any]) -> Dict[str, Any]:
@@ -113,3 +115,15 @@ class Project(CraftBaseModel):
                 # "input" key in the error dict, so we can't put the original
                 # value in the error message.
                 error_dict["msg"] = message
+
+    @pydantic.validator("package_repositories", each_item=True)
+    @classmethod
+    def _validate_package_repositories(
+        cls, repository: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        # This check is not always used, import it here to avoid unnecessary
+        from craft_archives import repo  # type: ignore[import-untyped]
+
+        repo.validate_repository(repository)
+
+        return repository

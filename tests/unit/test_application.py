@@ -27,6 +27,7 @@ from typing import List, Set
 from unittest import mock
 
 import craft_application
+import craft_application.errors
 import craft_cli
 import craft_parts
 import craft_providers
