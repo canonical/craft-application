@@ -102,11 +102,10 @@ def test_lifecycle_messages_no_duplicates(parts_lifecycle, request, capsys):
     assert expected_output in stderr
 
 
+@pytest.mark.usefixtures("enable_overlay")
 def test_package_repositories_in_overlay(
     app_metadata, fake_project, fake_services, tmp_path, mocker
 ):
-    craft_parts.Features.reset()
-    craft_parts.Features(enable_overlay=True)
     # Mock overlay-related calls that need root; we won't be actually installing
     # any packages, just checking that the repositories are correctly installed
     # in the overlay.
