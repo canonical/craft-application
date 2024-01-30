@@ -521,7 +521,6 @@ class Application:
     def _expand_environment(self, yaml_data: dict[str, Any]) -> None:
         """Perform expansion of project environment variables."""
         project_vars = self._project_vars(yaml_data)
-
         info = craft_parts.ProjectInfo(
             application_name=self.app.name,  # not used in environment expansion
             cache_dir=pathlib.Path(),  # not used in environment expansion

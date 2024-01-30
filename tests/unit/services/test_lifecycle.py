@@ -20,12 +20,14 @@ import re
 from pathlib import Path
 from unittest import mock
 
-import craft_parts.errors
+import craft_parts
+import craft_parts.callbacks
 import pytest
 import pytest_check
 from craft_application import util
 from craft_application.errors import PartsLifecycleError
 from craft_application.services import lifecycle
+from craft_application.util import get_host_architecture, repositories
 from craft_parts import (
     Action,
     ActionType,
@@ -268,6 +270,26 @@ def test_init_parts_error(
     assert exc_info.value.args == expected.args
 
 
+def test_init_with_feature_package_repositories(
+    app_metadata, fake_project, fake_services, tmp_path
+):
+    package_repositories = [{"type": "apt", "ppa": "ppa/ppa"}]
+    fake_project.package_repositories = package_repositories.copy()
+    service = lifecycle.LifecycleService(
+        app_metadata,
+        fake_services,
+        project=fake_project,
+        work_dir=tmp_path,
+        cache_dir=tmp_path,
+        platform=None,
+        build_for=util.get_host_architecture(),
+    )
+    assert service._lcm is None
+    service.setup()
+    assert service._lcm is not None
+    assert service._lcm._project_info.package_repositories == package_repositories
+
+
 def test_prime_dir(lifecycle_service, tmp_path):
     prime_dir = lifecycle_service.prime_dir
 
@@ -387,6 +409,44 @@ def test_post_prime_wrong_step(fake_parts_lifecycle, step):
 
     with pytest.raises(RuntimeError, match="^Post-prime hook called after step: "):
         fake_parts_lifecycle.post_prime(step_info)
+
+
+# endregion
+# region Feature package repositories tests
+
+
+def test_lifecycle_package_repositories(
+    app_metadata, fake_project, fake_services, tmp_path, mocker
+):
+    """Test that package repositories installation is called in the lifecycle."""
+    fake_repositories = [{"type": "apt", "ppa": "ppa/ppa"}]
+    fake_project.package_repositories = fake_repositories.copy()
+    work_dir = tmp_path / "work"
+
+    service = lifecycle.LifecycleService(
+        app_metadata,
+        fake_services,
+        project=fake_project,
+        work_dir=work_dir,
+        cache_dir=tmp_path / "cache",
+        platform=None,
+        build_for=get_host_architecture(),
+    )
+    service._lcm = mock.MagicMock(spec=LifecycleManager)
+
+    # Installation of repositories in the build instance
+    mock_install = mocker.patch(
+        "craft_application.util.repositories.install_package_repositories"
+    )
+    # Installation of repositories in overlays
+    mock_callback = mocker.patch.object(
+        craft_parts.callbacks, "register_configure_overlay"
+    )
+
+    service.run("prime")
+
+    mock_install.assert_called_once_with(fake_repositories, service._lcm)
+    mock_callback.assert_called_once_with(repositories.install_overlay_repositories)
 
 
 # endregion

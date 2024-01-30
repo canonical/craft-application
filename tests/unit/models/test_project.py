@@ -260,3 +260,50 @@ def test_invalid_field_message(
 
     message = str(exc.value)
     assert message == full_expected_message
+
+
+def test_unmarshal_repositories(full_project_dict):
+    """Test that package-repositories are allowed in Project with package repositories feature."""
+    full_project_dict["package-repositories"] = [{"ppa": "ppa/ppa", "type": "apt"}]
+    project_path = pathlib.Path("myproject.yaml")
+    project = Project.from_yaml_data(full_project_dict, project_path)
+
+    assert project.package_repositories == [{"ppa": "ppa/ppa", "type": "apt"}]
+
+
+def test_unmarshal_no_repositories(full_project_dict):
+    """Test that package-repositories are allowed to be None in Project with package repositories feature."""
+    full_project_dict["package-repositories"] = None
+    project_path = pathlib.Path("myproject.yaml")
+
+    project = Project.from_yaml_data(full_project_dict, project_path)
+
+    assert project.package_repositories is None
+
+
+def test_unmarshal_undefined_repositories(full_project_dict):
+    """Test that package-repositories are allowed to not exist in Project with package repositories feature."""
+    if "package-repositories" in full_project_dict:
+        del full_project_dict["package-repositories"]
+
+    project_path = pathlib.Path("myproject.yaml")
+
+    project = Project.from_yaml_data(full_project_dict, project_path)
+
+    assert project.package_repositories is None
+
+
+def test_unmarshal_invalid_repositories(full_project_dict):
+    """Test that package-repositories are validated in Project with package repositories feature."""
+    full_project_dict["package-repositories"] = [[]]
+    project_path = pathlib.Path("myproject.yaml")
+
+    with pytest.raises(CraftValidationError) as error:
+        Project.from_yaml_data(full_project_dict, project_path)
+
+    assert error.value.args[0] == (
+        "Bad myproject.yaml content:\n"
+        "- field 'type' required in 'package-repositories[0]' configuration\n"
+        "- field 'url' required in 'package-repositories[0]' configuration\n"
+        "- field 'key-id' required in 'package-repositories[0]' configuration"
+    )

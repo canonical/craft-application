@@ -3,6 +3,7 @@ name = "craft-application"
 description = "A framework for *craft applications."
 dynamic = ["version", "readme"]
 dependencies = [
+    "craft-archives>=1.1.3",
     "craft-cli>=2.4.0",
     "craft-grammar>=1.1.1",
     "craft-parts>=1.21.1",
@@ -33,7 +34,7 @@ requires-python = ">=3.8"
 dev = [
     "coverage[toml]==7.3.2",
     "hypothesis>=6.0",
-    "pytest==7.4.3",
+    "pytest==8.0.0",
     "pytest-check==2.2.2",
     "pytest-cov==4.1.0",
     "pytest-mock==3.12.0",

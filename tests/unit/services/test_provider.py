@@ -55,7 +55,9 @@ def test_install_snap(
     ],
 )
 def test_is_managed(managed_value, expected, monkeypatch):
-    monkeypatch.setenv(provider.ProviderService.managed_mode_env_var, managed_value)
+    monkeypatch.setenv(
+        provider.ProviderService.managed_mode_env_var, str(managed_value)
+    )
 
     assert provider.ProviderService.is_managed() == expected
 
