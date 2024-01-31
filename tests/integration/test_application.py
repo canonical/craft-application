@@ -26,6 +26,19 @@ from craft_application.util import yaml
 from typing_extensions import override
 
 
+class TestableApplication(craft_application.Application):
+    """An application modified for integration tests.
+
+    Modifications are:
+    * Overrides the use of "/root/project" as project_dir when managed
+    """
+
+    def _pre_run(self, dispatcher: craft_cli.Dispatcher) -> None:
+        super()._pre_run(dispatcher)
+        if self.is_managed():
+            self.project_dir = pathlib.Path.cwd()
+
+
 @pytest.fixture()
 def create_app(app_metadata, fake_package_service_class):
     def _inner():
@@ -34,7 +47,7 @@ def create_app(app_metadata, fake_package_service_class):
         services = craft_application.ServiceFactory(
             app_metadata, PackageClass=fake_package_service_class
         )
-        return craft_application.Application(app_metadata, services)
+        return TestableApplication(app_metadata, services)
 
     return _inner
 
@@ -335,7 +348,7 @@ def test_build_secrets_managed(
     app = setup_secrets_project(destructive_mode=False)
 
     monkeypatch.setenv("CRAFT_MANAGED_MODE", "1")
-    assert app.is_managed
+    assert app.is_managed()
     app._work_dir = tmp_path
 
     # Before running the application, configure its environment "as if" the host app

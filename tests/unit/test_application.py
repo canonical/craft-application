@@ -368,6 +368,50 @@ def test_show_app_name_and_version(monkeypatch, capsys, app):
     assert f"Starting testcraft, version {app.app.version}" in err
 
 
+def test_pre_run_project_dir_managed(app):
+    app.is_managed = lambda: True
+    dispatcher = mock.Mock(spec_set=craft_cli.Dispatcher)
+
+    app._pre_run(dispatcher)
+
+    assert app.project_dir == pathlib.Path("/root/project")
+
+
+@pytest.mark.parametrize("project_dir", ["/", ".", "relative/dir", "/absolute/dir"])
+def test_pre_run_project_dir_success_unmanaged(app, fs, project_dir):
+    fs.create_dir(project_dir)
+    app.is_managed = lambda: False
+    dispatcher = mock.Mock(spec_set=craft_cli.Dispatcher)
+    dispatcher.parsed_args.return_value.project_dir = project_dir
+
+    app._pre_run(dispatcher)
+
+    assert app.project_dir == pathlib.Path(project_dir)
+
+
+@pytest.mark.parametrize("project_dir", ["relative/dir", "/absolute/dir"])
+def test_pre_run_project_dir_not_found(app, fs, project_dir):
+    # The fs fixture has to be after app so the app can be created correctly.
+    # This just prevents us from getting linter complaints about that.
+    fs.resume()
+
+    dispatcher = mock.Mock(spec_set=craft_cli.Dispatcher)
+    dispatcher.parsed_args.return_value.project_dir = project_dir
+
+    with pytest.raises(errors.ProjectFileMissingError, match="does not exist"):
+        app._pre_run(dispatcher)
+
+
+@pytest.mark.parametrize("project_dir", ["relative/file", "/absolute/file"])
+def test_pre_run_project_dir_not_a_directory(app, fs, project_dir):
+    fs.create_file(project_dir)
+    dispatcher = mock.Mock(spec_set=craft_cli.Dispatcher)
+    dispatcher.parsed_args.return_value.project_dir = project_dir
+
+    with pytest.raises(errors.ProjectFileMissingError, match="not a directory"):
+        app._pre_run(dispatcher)
+
+
 @pytest.mark.parametrize("load_project", [True, False])
 @pytest.mark.parametrize("return_code", [None, 0, 1])
 def test_run_success_unmanaged(
