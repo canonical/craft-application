@@ -48,7 +48,7 @@ lint = [
 ]
 types = [
     "mypy[reports]==1.6.1",
-    "pyright==1.1.333",
+    "pyright==1.1.349",
     "types-requests",
     "types-urllib3",
 ]
@@ -269,3 +269,8 @@ ignore = [
 ]
 # isort leaves init files alone by default, this makes ruff ignore them too.
 "__init__.py" = ["I001"]
+
+[tool.ruff.lint.pep8-naming]
+classmethod-decorators = [
+    "pydantic.validator",
+]

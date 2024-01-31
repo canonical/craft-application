@@ -30,7 +30,7 @@ PARTS_DICT = {"my-part": {"plugin": "nil"}}
 # pyright doesn't like these types and doesn't have a pydantic plugin like mypy.
 # Because of this, we need to silence several errors in these constants.
 BUILD_PLANNER = BuildPlanner()
-BASIC_PROJECT = Project(
+BASIC_PROJECT = Project(  # pyright: ignore[reportCallIssue]
     name="project-name",  # pyright: ignore[reportGeneralTypeIssues]
     version="1.0",  # pyright: ignore[reportGeneralTypeIssues]
     parts=PARTS_DICT,
@@ -40,7 +40,7 @@ BASIC_PROJECT_DICT = {
     "version": "1.0",
     "parts": PARTS_DICT,
 }
-FULL_PROJECT = Project(
+FULL_PROJECT = Project(  # pyright: ignore[reportCallIssue]
     name="full-project",  # pyright: ignore[reportGeneralTypeIssues]
     title="A fully-defined project",  # pyright: ignore[reportGeneralTypeIssues]
     base="core24",
@@ -198,7 +198,7 @@ class FakeBuildBaseProject(Project):
 
 
 # As above, we need to tell pyright to ignore several typing issues.
-BUILD_BASE_PROJECT = FakeBuildBaseProject(
+BUILD_BASE_PROJECT = FakeBuildBaseProject(  # pyright: ignore[reportCallIssue]
     name="project-name",  # pyright: ignore[reportGeneralTypeIssues]
     version="1.0",  # pyright: ignore[reportGeneralTypeIssues]
     parts={},
@@ -213,7 +213,7 @@ def test_effective_base_is_build_base(project):
 
 
 def test_effective_base_unknown():
-    project = FakeBuildBaseProject(
+    project = FakeBuildBaseProject(  # pyright: ignore[reportCallIssue]
         name="project-name",  # pyright: ignore[reportGeneralTypeIssues]
         version="1.0",  # pyright: ignore[reportGeneralTypeIssues]
         parts={},
