@@ -22,6 +22,7 @@ import pathlib
 import signal
 import subprocess
 import sys
+import warnings
 from dataclasses import dataclass, field
 from functools import cached_property
 from importlib import metadata
@@ -124,6 +125,9 @@ class Application:
         # implementations from accessing it directly. They should always use
         # ``get_project`` to access the project.
         self.__project: models.Project | None = None
+        # Set a globally usable project directory for the application.
+        # This may be overridden by specific application implementations.
+        self.project_dir = pathlib.Path.cwd()
 
         if self.is_managed():
             self._work_dir = pathlib.Path("/root")
@@ -223,12 +227,12 @@ class Application:
          in multiple places within the project directory.
         """
         if project_dir is None:
-            project_dir = pathlib.Path.cwd()
+            project_dir = self.project_dir
         return (project_dir / f"{self.app.name}.yaml").resolve(strict=True)
 
     def get_project(
         self,
-        project_dir: pathlib.Path | None = None,
+        project_dir: None = None,
         *,
         platform: str | None = None,
         build_for: str | None = None,
@@ -238,13 +242,20 @@ class Application:
         This only resolves and renders the project the first time it gets run.
         After that, it merely uses a cached project model.
 
-        :param project_dir: the base directory to traverse for finding the project file.
+        :param project_dir: (deprecated) the base directory to traverse for finding the project file.
         :param platform: the platform name listed in the build plan.
         :param build_for: the architecture to build this project for.
         :returns: A transformed, loaded project model.
         """
         if self.__project is not None:
             return self.__project
+        if project_dir is not None:
+            warnings.warn(
+                "Passing project_dir to get_project will be deprecated in craft-application 2.0. "
+                "An Application has a project_dir property to use instead.",
+                category=PendingDeprecationWarning,
+                stacklevel=2,
+            )
 
         project_path = self._resolve_project_path(project_dir)
         craft_cli.emit.debug(f"Loading project file '{project_path!s}'")
@@ -400,6 +411,33 @@ class Application:
         """Register per application plugins when initializing."""
         self.register_plugins(self._get_app_plugins())
 
+    def _pre_run(self, dispatcher: craft_cli.Dispatcher) -> None:
+        """Do any final setup before running the command.
+
+        At the time this is run, the command is loaded in the dispatcher, but
+        the project has not yet been loaded.
+        """
+        # Some commands might have a project_dir parameter. Those commands and
+        # only those commands should get a project directory, but only when
+        # not managed.
+        if self.is_managed():
+            self.project_dir = pathlib.Path("/root/project")
+        elif project_dir := getattr(dispatcher.parsed_args(), "project_dir", None):
+            project_dir = pathlib.Path(project_dir)
+            if not project_dir.exists():
+                raise errors.ProjectFileMissingError(
+                    "Provided project directory does not exist.",
+                    details=f"Directory not found: {project_dir}",
+                    resolution="Ensure the path entered is correct.",
+                )
+            if not project_dir.is_dir():
+                raise errors.ProjectFileMissingError(
+                    "Provided project directory is not a directory.",
+                    details=f"Not a directory: {project_dir}",
+                    resolution="Ensure the path entered is correct.",
+                )
+            self.project_dir = project_dir
+
     def run(self) -> int:  # noqa: PLR0912 (too many branches)
         """Bootstrap and run the application."""
         self._setup_logging()
@@ -419,6 +457,7 @@ class Application:
             craft_cli.emit.debug(
                 f"Build plan: platform={platform}, build_for={build_for}"
             )
+            self._pre_run(dispatcher)
 
             managed_mode = command.run_managed(dispatcher.parsed_args())
             if managed_mode or command.always_load_project:
