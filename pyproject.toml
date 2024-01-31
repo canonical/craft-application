@@ -41,7 +41,7 @@ dev = [
     "pytest-rerunfailures==13.0",
 ]
 lint = [
-    "black==23.10.1",
+    "black~=24.0",
     "codespell[toml]==2.2.6",
     "ruff==0.1.14",
     "yamllint==1.32.0"

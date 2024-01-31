@@ -157,9 +157,9 @@ class LifecycleService(base.ProjectService):
         emit.trace(f"Lifecycle: {repr(self)}")
 
         if self._project.package_repositories:
-            self._manager_kwargs[
-                "package_repositories"
-            ] = self._project.package_repositories
+            self._manager_kwargs["package_repositories"] = (
+                self._project.package_repositories
+            )
 
         try:
             return LifecycleManager(
