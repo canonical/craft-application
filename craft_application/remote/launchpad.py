@@ -84,14 +84,12 @@ class LaunchpadClient:
     """Launchpad remote builder operations.
 
     :param app_name: Name of the application.
-    :param timeout: Time in seconds to wait for the build to complete.
     """
 
     def __init__(
         self,
         *,
         app_name: str,
-        timeout: int = 0,
     ) -> None:
         self._app_name = app_name
 
@@ -102,12 +100,6 @@ class LaunchpadClient:
         self._lp: Launchpad = self._login()
         self.user = self._lp.me.name  # type: ignore
 
-        # calculate deadline from the timeout
-        if timeout > 0:
-            self._deadline = int(time.time()) + timeout
-        else:
-            self._deadline = 0
-
     @property
     def user(self) -> str:
         """Get the launchpad user."""
@@ -117,18 +109,6 @@ class LaunchpadClient:
     def user(self, user: str) -> None:
         self._lp_user = user
         self._lp_owner = f"/~{user}"
-
-    def _check_timeout_deadline(self) -> None:
-        if self._deadline <= 0:
-            return
-
-        if int(time.time()) >= self._deadline:
-            raise errors.RemoteBuildTimeoutError(
-                recovery_command=(
-                    # TODO
-                    f"{self._app_name} remote-build --recover --build-id build_id"
-                )
-            )
 
     def _create_data_directory(self) -> Path:
         data_dir = Path(
@@ -191,12 +171,13 @@ class LaunchpadClient:
             self._lp = self._login()
             return self._lp.load(url)
 
-    def _wait_for_build_request_acceptance(self, build_id: str, build_request: Entry) -> None:
+    def _wait_for_build_request_acceptance(self, build_id: str, build_request: Entry, deadline: int | None = None) -> None:
         # Not to be confused with the actual build(s), this is
         # ensuring that Launchpad accepts the build request.
         while build_request.status == "Pending":
             # Check to see if we've run out of time.
-            self._check_timeout_deadline()
+            if deadline is not None and time.monotonic_ns() >= deadline:
+                raise TimeoutError()
 
             logger.info("Waiting on Launchpad build request...")
             logger.debug(
@@ -328,21 +309,22 @@ class LaunchpadClient:
         self._delete_snap(name)
         self._delete_git_repository(name)
 
-    def start_build(self, build_id) -> None:
+    def start_build(self, build_id, deadline: int | None = None) -> None:
         """Start build with specified timeout (time.time() in seconds)."""
         snap = self._create_snap(build_id, force=True)
 
         logger.info("Issuing build request on Launchpad...")
         build_request = self._issue_build_request(snap)
-        self._wait_for_build_request_acceptance(build_id, build_request)
+        self._wait_for_build_request_acceptance(build_id, build_request, deadline=deadline)
 
-    def monitor_build(self, project_name: str, build_id: str, interval: int = _LP_POLL_INTERVAL) -> None:
+    def monitor_build(self, project_name: str, build_id: str, interval: int = _LP_POLL_INTERVAL, deadline: int | None = None) -> None:
         """Check build progress, and download artifacts when ready."""
         snap = self._get_snap(build_id)
 
         while True:
             # Check to see if we've run out of time.
-            self._check_timeout_deadline()
+            if deadline is not None and time.monotonic_ns() >= deadline:
+                raise TimeoutError()
 
             builds = self._get_builds(snap)
             pending = False

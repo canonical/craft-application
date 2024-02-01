@@ -18,7 +18,6 @@ import logging
 from pathlib import Path
 from typing import List, Optional
 
-from .git import check_git_repo_for_remote_build
 from .launchpad import LaunchpadClient
 from .utils import get_build_id, humanize_list, validate_architectures
 from .worktree import WorkTree
@@ -48,7 +47,6 @@ class RemoteBuilder:
         project_name: str,
         architectures: List[str],
         project_dir: Path,
-        timeout: int,
     ):
         self._app_name = app_name
         self._project_name = project_name
@@ -76,7 +74,6 @@ class RemoteBuilder:
 
         self._lpc = LaunchpadClient(
             app_name=self._app_name,
-            timeout=timeout,
         )
 
     @property
@@ -103,7 +100,7 @@ class RemoteBuilder:
         """
         return self._lpc.has_outstanding_build(self._build_id)
 
-    def monitor_build(self) -> None:
+    def monitor_build(self, deadline: int | None = None) -> None:
         """Monitor and periodically log the status of a remote build in Launchpad."""
         logger.info(
             "Building snap package for %s. This may take some time to finish.",
@@ -111,7 +108,7 @@ class RemoteBuilder:
         )
 
         logger.info("Building...")
-        self._lpc.monitor_build(self._project_name, self._build_id)
+        self._lpc.monitor_build(self._project_name, self._build_id, deadline=deadline)
 
         logger.info("Build complete.")
 
@@ -121,7 +118,7 @@ class RemoteBuilder:
         self._lpc.cleanup(self._build_id)
         self._worktree.clean_cache()
 
-    def start_build(self) -> None:
+    def start_build(self, deadline: int | None = None) -> None:
         """Start a build in Launchpad.
 
         A local copy of the project is created and pushed to Launchpad via git.
@@ -129,6 +126,6 @@ class RemoteBuilder:
         self._worktree.init_repo()
 
         logger.debug("Cached project at %s", self._worktree.repo_dir)
-        self._lpc.push_source_tree(self._build_id, repo_dir=self._worktree.repo_dir)
+        self._lpc.push_source_tree(self._build_id, repo_dir=self._worktree.repo_dir, deadline=deadline)
 
         self._lpc.start_build(self._build_id)

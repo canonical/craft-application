@@ -71,7 +71,6 @@ def test_remote_builder_init(mock_launchpad_client, mock_worktree):
     assert mock_launchpad_client.mock_calls == [
         call(
             app_name="test-app",
-            timeout=10,
         )
     ]
     assert mock_worktree.mock_calls == [
