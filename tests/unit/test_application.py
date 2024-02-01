@@ -23,7 +23,7 @@ import re
 import subprocess
 import sys
 from textwrap import dedent
-from typing import List, Set
+from typing import Dict, List, Set
 from unittest import mock
 
 import craft_application
@@ -38,6 +38,7 @@ from craft_application.models import BuildInfo
 from craft_application.util import (
     get_host_architecture,  # pyright: ignore[reportGeneralTypeIssues]
 )
+from craft_parts.plugins.plugins import PluginType
 from craft_providers import bases
 
 EMPTY_COMMAND_GROUP = craft_cli.CommandGroup("FakeCommands", [])
@@ -101,8 +102,8 @@ class FakePlugin(craft_parts.plugins.Plugin):
     def get_build_packages(self) -> Set[str]:
         return set()
 
-    def get_build_environment(self) -> Set[str]:
-        return set()
+    def get_build_environment(self) -> Dict[str, str]:
+        return {}
 
     def get_build_sources(self) -> Set[str]:
         return set()
@@ -739,7 +740,7 @@ def test_register_plugins(mocker, app_metadata, fake_services):
     reg = mocker.patch("craft_parts.plugins.register")
 
     class FakeApplicationWithPlugins(FakeApplication):
-        def _get_app_plugins(self):
+        def _get_app_plugins(self) -> Dict[str, PluginType]:
             return {"fake": FakePlugin}
 
     app = FakeApplicationWithPlugins(app_metadata, fake_services)

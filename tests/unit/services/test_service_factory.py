@@ -108,7 +108,7 @@ def test_getattr_not_a_service_class(app_metadata, fake_project):
         app_metadata,
         project=fake_project,
         # This incorrect type is intentional
-        PackageClass=InvalidClass,  # pyright: ignore[reportGeneralTypeIssues]
+        PackageClass=InvalidClass,  # pyright: ignore[reportArgumentType]
     )
 
     with pytest.raises(TypeError):

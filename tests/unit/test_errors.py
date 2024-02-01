@@ -69,7 +69,7 @@ def test_parts_lifecycle_error_from_os_error(
 
 def test_validation_error_from_pydantic():
     class Model(BaseModel):
-        gt_int: conint(gt=42)  # pyright: ignore [reportGeneralTypeIssues]
+        gt_int: conint(gt=42)  # pyright: ignore [reportInvalidTypeForm]
         a_float: float
 
     data = {

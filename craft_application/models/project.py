@@ -96,8 +96,9 @@ class Project(CraftBaseModel):
 
     package_repositories: Optional[List[Dict[str, Any]]]
 
-    @pydantic.validator("parts", each_item=True)
-    @classmethod
+    @pydantic.validator(  # pyright: ignore[reportUnknownMemberType,reportUntypedFunctionDecorator]
+        "parts", each_item=True
+    )
     def _validate_parts(cls, item: Dict[str, Any]) -> Dict[str, Any]:
         """Verify each part (craft-parts will re-validate this)."""
         craft_parts.validate_part(item)
@@ -137,8 +138,9 @@ class Project(CraftBaseModel):
                 # value in the error message.
                 error_dict["msg"] = message
 
-    @pydantic.validator("package_repositories", each_item=True)
-    @classmethod
+    @pydantic.validator(  # pyright: ignore[reportUnknownMemberType,reportUntypedFunctionDecorator]
+        "package_repositories", each_item=True
+    )
     def _validate_package_repositories(
         cls, repository: Dict[str, Any]
     ) -> Dict[str, Any]:
