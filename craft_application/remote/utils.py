@@ -26,7 +26,7 @@ from .errors import UnsupportedArchitectureError
 _SUPPORTED_ARCHS = ["amd64", "arm64", "armhf", "i386", "ppc64el", "riscv64", "s390x"]
 
 
-def validate_architectures(architectures: List[str]) -> None:
+def validate_architectures(architectures: Iterable[str]) -> None:
     """Validate that architectures are supported for remote building.
 
     :param architectures: list of architectures to validate

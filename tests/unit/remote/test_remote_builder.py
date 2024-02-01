@@ -89,8 +89,6 @@ def test_remote_builder_init(mock_launchpad_client, mock_worktree):
     assert mock_launchpad_client.mock_calls == [
         call(
             app_name="test-app",
-            build_id="test-build-id",
-            project_name="test-project",
             architectures=["amd64"],
             timeout=10,
         )
@@ -179,7 +177,7 @@ def test_print_status_no_build_found(mock_log, fake_remote_builder):
     """Print the status of a remote build."""
     fake_remote_builder.print_status()
 
-    assert mock_log.mock_calls == [call("No build task(s) found.")]
+    assert mock_log.mock_calls == [call("No build found.")]
 
 
 @pytest.mark.usefixtures("mock_git_check", "mock_git_type_check")

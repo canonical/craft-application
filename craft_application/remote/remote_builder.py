@@ -78,8 +78,6 @@ class RemoteBuilder:
 
         self._lpc = LaunchpadClient(
             app_name=self._app_name,
-            build_id=self._build_id,
-            project_name=self._project_name,
             architectures=self._architectures,
             timeout=timeout,
         )
@@ -89,21 +87,24 @@ class RemoteBuilder:
         """Get the build id."""
         return self._build_id
 
+    def get_build_status(self) -> dict[str, str]:
+        return self._lpc.get_build_status(self._build_id)
+
     def print_status(self) -> None:
         """Print the status of a remote build in Launchpad."""
-        if self._lpc.has_outstanding_build():
-            build_status = self._lpc.get_build_status()
+        if self._lpc.has_outstanding_build(self._build_id):
+            build_status = self._lpc.get_build_status(self._build_id)
             for arch, status in build_status.items():
                 logger.info("Build status for arch %s: %s", arch, status)
         else:
-            logger.info("No build task(s) found.")
+            logger.info("No build found.")
 
     def has_outstanding_build(self) -> bool:
         """Check if there is an existing build on Launchpad.
 
         :returns: True if there is an existing (incomplete) build on Launchpad.
         """
-        return self._lpc.has_outstanding_build()
+        return self._lpc.has_outstanding_build(self._build_id)
 
     def monitor_build(self) -> None:
         """Monitor and periodically log the status of a remote build in Launchpad."""
@@ -113,15 +114,14 @@ class RemoteBuilder:
         )
 
         logger.info("Building...")
-        try:
-            self._lpc.monitor_build()
-        finally:
-            logger.info("Build task(s) complete.")
+        self._lpc.monitor_build(self._project_name, self._build_id)
+
+        logger.info("Build complete.")
 
     def clean_build(self) -> None:
         """Clean the cache and Launchpad build."""
         logger.info("Cleaning existing builds and artefacts.")
-        self._lpc.cleanup()
+        self._lpc.cleanup(self._build_id)
         self._worktree.clean_cache()
 
     def start_build(self) -> None:
@@ -132,6 +132,6 @@ class RemoteBuilder:
         self._worktree.init_repo()
 
         logger.debug("Cached project at %s", self._worktree.repo_dir)
-        self._lpc.push_source_tree(repo_dir=self._worktree.repo_dir)
+        self._lpc.push_source_tree(self._build_id, repo_dir=self._worktree.repo_dir)
 
-        self._lpc.start_build()
+        self._lpc.start_build(self._build_id)

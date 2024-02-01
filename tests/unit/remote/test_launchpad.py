@@ -18,6 +18,7 @@ from typing import Optional
 from unittest.mock import ANY, MagicMock, Mock, call, patch
 
 import pytest
+
 from craft_application.remote import LaunchpadClient, errors
 
 
@@ -227,8 +228,6 @@ def launchpad_client(mock_login_with):
     """Returns a LaunchpadClient object."""
     return LaunchpadClient(
         app_name="test-app",
-        build_id="id",
-        project_name="test-project",
         architectures=[],
     )
 
@@ -236,8 +235,6 @@ def launchpad_client(mock_login_with):
 def test_login(mock_login_with):
     lpc = LaunchpadClient(
         app_name="test-app",
-        build_id="id",
-        project_name="test-project",
         architectures=[],
     )
 
@@ -259,8 +256,6 @@ def test_login_connection_issues(error, mock_login_with):
     with pytest.raises(errors.LaunchpadHttpsError):
         LaunchpadClient(
             app_name="test-app",
-            build_id="id",
-            project_name="test-project",
             architectures=[],
         )
 
@@ -299,7 +294,7 @@ def test_load_connection_reset_twice(launchpad_client, mock_login_with):
 
 
 def test_create_snap(launchpad_client):
-    launchpad_client._create_snap()
+    launchpad_client._create_snap("id")
     launchpad_client._lp.snaps.new_mock.assert_called_with(
         auto_build=False,
         auto_build_archive="/ubuntu/+archive/primary",
@@ -313,7 +308,7 @@ def test_create_snap(launchpad_client):
 
 def test_create_snap_with_archs(launchpad_client):
     launchpad_client.architectures = ["arch1", "arch2"]
-    launchpad_client._create_snap()
+    launchpad_client._create_snap("id")
     launchpad_client._lp.snaps.new_mock.assert_called_with(
         auto_build=False,
         auto_build_archive="/ubuntu/+archive/primary",
@@ -327,27 +322,27 @@ def test_create_snap_with_archs(launchpad_client):
 
 
 def test_delete_snap(launchpad_client):
-    launchpad_client._delete_snap()
+    launchpad_client._delete_snap("id")
     launchpad_client._lp.snaps.getByName_mock.assert_called_with(
         name="id", owner="/~user"
     )
 
 
 def test_start_build(launchpad_client):
-    launchpad_client.start_build()
+    launchpad_client.start_build("id")
 
 
 def test_start_build_error(mocker, launchpad_client):
     mocker.patch(
         "tests.unit.remote.test_launchpad.SnapImpl.requestBuilds",
         return_value=SnapBuildReqImpl(
-            status="Failed", error_message="craft_application.yaml not found..."
+            status="Failed", error_message="snapcraft.yaml not found..."
         ),
     )
     with pytest.raises(errors.RemoteBuildError) as raised:
-        launchpad_client.start_build()
+        launchpad_client.start_build("id")
 
-    assert str(raised.value) == "craft_application.yaml not found..."
+    assert str(raised.value) == "snapcraft.yaml not found..."
 
 
 def test_start_build_deadline_not_reached(mock_login_with, mocker):
@@ -366,13 +361,11 @@ def test_start_build_deadline_not_reached(mock_login_with, mocker):
 
     lpc = LaunchpadClient(
         app_name="test-app",
-        build_id="id",
-        project_name="test-project",
         architectures=[],
         timeout=100,
     )
 
-    lpc.start_build()
+    lpc.start_build("id")
 
 
 def test_start_build_timeout_error(mock_login_with, mocker):
@@ -384,8 +377,6 @@ def test_start_build_timeout_error(mock_login_with, mocker):
     mocker.patch("time.time", return_value=500)
     lpc = LaunchpadClient(
         app_name="test-app",
-        build_id="id",
-        project_name="test-project",
         architectures=[],
         timeout=100,
     )
@@ -393,11 +384,11 @@ def test_start_build_timeout_error(mock_login_with, mocker):
     mocker.patch("time.time", return_value=601)
 
     with pytest.raises(errors.RemoteBuildTimeoutError) as raised:
-        lpc.start_build()
+        lpc.start_build("id")
 
     assert str(raised.value) == (
         "Remote build command timed out.\nBuild may still be running on Launchpad and "
-        "can be recovered with 'test-app remote-build --recover --build-id id'."
+        "can be recovered with 'test-app remote-build --recover --build-id build_id'."
     )
 
 
@@ -415,32 +406,12 @@ def test_issue_build_request_defaults(launchpad_client):
 
 
 @patch("craft_application.remote.LaunchpadClient._download_file")
-def test_monitor_build(mock_download_file, mock_login_with, new_dir, launchpad_client):
-    mock_login_with._mock_return_value.rbi.builds.entries = [
-        SnapBuildEntryImpl(
-            arch_tag="i386",
-            buildstate="Successfully built",
-            self_link="http://build_self_link_1",
-            build_log_url="url_for/build_log_file_1",
-        ),
-        SnapBuildEntryImpl(
-            arch_tag="amd64",
-            buildstate="Successfully built",
-            self_link="http://build_self_link_2",
-            build_log_url="url_for/build_log_file_2",
-        ),
-        SnapBuildEntryImpl(
-            arch_tag="arm64",
-            buildstate="Successfully built",
-            self_link="http://build_self_link_2",
-            build_log_url=None,
-        ),
-    ]
+def test_monitor_build(mock_download_file, new_dir, launchpad_client):
     Path("test-project_i386.txt", encoding="utf-8").touch()
     Path("test-project_i386.1.txt", encoding="utf-8").touch()
 
-    launchpad_client.start_build()
-    launchpad_client.monitor_build(interval=0)
+    launchpad_client.start_build("id")
+    launchpad_client.monitor_build("test-project", "id", interval=0)
 
     assert mock_download_file.mock_calls == [
         call(url="url_for/snap_file_i386.snap", dst="snap_file_i386.snap"),
@@ -459,11 +430,8 @@ def test_monitor_build_error(mock_log, mock_download_file, mocker, launchpad_cli
     mocker.patch(
         "tests.unit.remote.test_launchpad.BuildImpl.getFileUrls", return_value=[]
     )
-    launchpad_client.start_build()
-    with pytest.raises(
-        errors.RemoteBuildFailedError, match="Build failed for arch amd64."
-    ):
-        launchpad_client.monitor_build(interval=0)
+    launchpad_client.start_build("id")
+    launchpad_client.monitor_build("test-project", "id", interval=0)
 
     assert mock_download_file.mock_calls == [
         call(url="url_for/build_log_file_1", dst="test-project_i386.txt", gunzip=True),
@@ -484,18 +452,12 @@ def test_monitor_build_deadline_not_reached(mock_login_with, mocker):
     mocker.patch("craft_application.remote.LaunchpadClient._download_file")
     lpc = LaunchpadClient(
         app_name="test-app",
-        build_id="id",
-        project_name="test-project",
         architectures=[],
         timeout=100,
     )
 
-    lpc.start_build()
-    # should raise build failed error, not timeout error
-    with pytest.raises(
-        errors.RemoteBuildFailedError, match="Build failed for arch amd64."
-    ):
-        lpc.monitor_build(interval=0)
+    lpc.start_build("id")
+    lpc.monitor_build("test-project", "id", interval=0)
 
 
 def test_monitor_build_timeout_error(mock_login_with, mocker):
@@ -504,28 +466,26 @@ def test_monitor_build_timeout_error(mock_login_with, mocker):
     mocker.patch("time.time", return_value=500)
     lpc = LaunchpadClient(
         app_name="test-app",
-        build_id="id",
-        project_name="test-project",
         architectures=[],
         timeout=100,
     )
     # advance 1 second past deadline
     mocker.patch("time.time", return_value=601)
 
-    lpc.start_build()
+    lpc.start_build("id")
 
     with pytest.raises(errors.RemoteBuildTimeoutError) as raised:
-        lpc.monitor_build(interval=0)
+        lpc.monitor_build("test-project", "id", interval=0)
 
     assert str(raised.value) == (
         "Remote build command timed out.\nBuild may still be running on Launchpad and "
-        "can be recovered with 'test-app remote-build --recover --build-id id'."
+        "can be recovered with 'test-app remote-build --recover --build-id build_id'."
     )
 
 
 def test_get_build_status(launchpad_client):
-    launchpad_client.start_build()
-    build_status = launchpad_client.get_build_status()
+    launchpad_client.start_build("id")
+    build_status = launchpad_client.get_build_status("id")
 
     assert build_status == {
         "amd64": "Failed to build",
@@ -539,12 +499,12 @@ def test_push_source_tree(new_dir, mock_git_repo, launchpad_client):
 
     with patch("craft_application.remote.launchpad.datetime") as mock_datetime:
         mock_datetime.now = lambda tz: now
-        launchpad_client.push_source_tree(Path())
+        launchpad_client.push_source_tree("id", Path())
 
     launchpad_client._lp.git_repositories._git.issueAccessToken_mock.assert_called_once_with(
         description="test-app remote-build for id",
         scopes=["repository:push"],
-        date_expires=(now + timedelta(minutes=60)).isoformat(),
+        date_expires=(now + timedelta(minutes=1)).isoformat(),
     )
 
     mock_git_repo.assert_has_calls(
@@ -555,7 +515,6 @@ def test_push_source_tree(new_dir, mock_git_repo, launchpad_client):
                 "main",
                 "HEAD",
                 "access-token",
-                push_tags=True,
             ),
         ]
     )
@@ -565,4 +524,4 @@ def test_push_source_tree_error(new_dir, mock_git_repo, launchpad_client):
     mock_git_repo.return_value.push_url.side_effect = errors.GitError("test error")
 
     with pytest.raises(errors.GitError):
-        launchpad_client.push_source_tree(Path())
+        launchpad_client.push_source_tree("id", Path())
