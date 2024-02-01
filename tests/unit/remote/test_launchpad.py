@@ -228,14 +228,14 @@ def launchpad_client(mock_login_with):
     """Returns a LaunchpadClient object."""
     return LaunchpadClient(
         app_name="test-app",
-        architectures=[],
+
     )
 
 
 def test_login(mock_login_with):
     lpc = LaunchpadClient(
         app_name="test-app",
-        architectures=[],
+
     )
 
     assert lpc.user == "user"
@@ -256,7 +256,7 @@ def test_login_connection_issues(error, mock_login_with):
     with pytest.raises(errors.LaunchpadHttpsError):
         LaunchpadClient(
             app_name="test-app",
-            architectures=[],
+
         )
 
     mock_login_with.assert_called()
@@ -307,8 +307,7 @@ def test_create_snap(launchpad_client):
 
 
 def test_create_snap_with_archs(launchpad_client):
-    launchpad_client.architectures = ["arch1", "arch2"]
-    launchpad_client._create_snap("id")
+    launchpad_client._create_snap("id", ["arch1", "arch2"])
     launchpad_client._lp.snaps.new_mock.assert_called_with(
         auto_build=False,
         auto_build_archive="/ubuntu/+archive/primary",
@@ -361,7 +360,7 @@ def test_start_build_deadline_not_reached(mock_login_with, mocker):
 
     lpc = LaunchpadClient(
         app_name="test-app",
-        architectures=[],
+
         timeout=100,
     )
 
@@ -377,7 +376,7 @@ def test_start_build_timeout_error(mock_login_with, mocker):
     mocker.patch("time.time", return_value=500)
     lpc = LaunchpadClient(
         app_name="test-app",
-        architectures=[],
+
         timeout=100,
     )
     # advance 1 second past deadline
@@ -452,7 +451,7 @@ def test_monitor_build_deadline_not_reached(mock_login_with, mocker):
     mocker.patch("craft_application.remote.LaunchpadClient._download_file")
     lpc = LaunchpadClient(
         app_name="test-app",
-        architectures=[],
+
         timeout=100,
     )
 
@@ -466,7 +465,7 @@ def test_monitor_build_timeout_error(mock_login_with, mocker):
     mocker.patch("time.time", return_value=500)
     lpc = LaunchpadClient(
         app_name="test-app",
-        architectures=[],
+
         timeout=100,
     )
     # advance 1 second past deadline

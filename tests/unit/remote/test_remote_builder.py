@@ -57,24 +57,6 @@ def fake_remote_builder(new_dir, mock_launchpad_client, mock_worktree):
     )
 
 
-@pytest.fixture()
-def mock_git_check(mocker):
-    """Ignore git check."""
-    mock_git_check = mocker.patch(
-        "craft_application.remote.git.check_git_repo_for_remote_build"
-    )
-    mock_git_check.return_value = None
-    return mock_git_check
-
-
-@pytest.fixture()
-def mock_git_type_check(mocker):
-    """Ignore git type check."""
-    mock_git_type = mocker.patch("craft_application.remote.git.get_git_repo_type")
-    mock_git_type.return_value = GitType.NORMAL
-    return mock_git_type
-
-
 def test_remote_builder_init(mock_launchpad_client, mock_worktree):
     """Verify remote builder is properly initialized."""
     RemoteBuilder(
@@ -89,7 +71,6 @@ def test_remote_builder_init(mock_launchpad_client, mock_worktree):
     assert mock_launchpad_client.mock_calls == [
         call(
             app_name="test-app",
-            architectures=["amd64"],
             timeout=10,
         )
     ]
@@ -98,8 +79,7 @@ def test_remote_builder_init(mock_launchpad_client, mock_worktree):
     ]
 
 
-@pytest.mark.usefixtures("mock_git_check", "mock_git_type_check")
-@pytest.mark.usefixtures("new_dir", "mock_git_check")
+@pytest.mark.usefixtures("new_dir")
 def test_build_id_computed():
     """Compute a build id if it is not provided."""
     remote_builder = RemoteBuilder(
@@ -151,7 +131,6 @@ def test_validate_architectures_unsupported(archs):
         )
 
 
-@pytest.mark.usefixtures("mock_git_check", "mock_git_type_check")
 @patch("logging.Logger.info")
 def test_print_status_builds_found(
     mock_log, mock_launchpad_client, fake_remote_builder
@@ -171,7 +150,6 @@ def test_print_status_builds_found(
     ]
 
 
-@pytest.mark.usefixtures("mock_git_check", "mock_git_type_check")
 @patch("logging.Logger.info")
 def test_print_status_no_build_found(mock_log, fake_remote_builder):
     """Print the status of a remote build."""
@@ -180,7 +158,6 @@ def test_print_status_no_build_found(mock_log, fake_remote_builder):
     assert mock_log.mock_calls == [call("No build found.")]
 
 
-@pytest.mark.usefixtures("mock_git_check", "mock_git_type_check")
 @pytest.mark.parametrize("has_builds", (True, False))
 def test_has_outstanding_build(has_builds, fake_remote_builder, mock_launchpad_client):
     """Check for outstanding builds."""
@@ -189,7 +166,6 @@ def test_has_outstanding_build(has_builds, fake_remote_builder, mock_launchpad_c
     assert fake_remote_builder.has_outstanding_build() == has_builds
 
 
-@pytest.mark.usefixtures("mock_git_check", "mock_git_type_check")
 def test_monitor_build(fake_remote_builder, mock_launchpad_client):
     """Monitor a build."""
     fake_remote_builder.monitor_build()
@@ -197,7 +173,6 @@ def test_monitor_build(fake_remote_builder, mock_launchpad_client):
     mock_launchpad_client.return_value.monitor_build.assert_called_once()
 
 
-@pytest.mark.usefixtures("mock_git_check", "mock_git_type_check")
 def test_clean_build(fake_remote_builder, mock_launchpad_client, mock_worktree):
     """Clean a build."""
     fake_remote_builder.clean_build()
@@ -206,7 +181,6 @@ def test_clean_build(fake_remote_builder, mock_launchpad_client, mock_worktree):
     mock_worktree.return_value.clean_cache.assert_called_once()
 
 
-@pytest.mark.usefixtures("mock_git_check", "mock_git_type_check")
 def test_start_build(fake_remote_builder, mock_launchpad_client, mock_worktree):
     """Start a build."""
     fake_remote_builder.start_build()

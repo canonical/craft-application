@@ -21,7 +21,7 @@ import shutil
 import time
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence, cast
+from typing import Any, Dict, Iterable, List, Optional, Sequence, cast
 from urllib.parse import unquote, urlsplit
 
 import requests
@@ -76,11 +76,14 @@ def _get_url_basename(url: str):
     return unquote(path).split("/")[-1]
 
 
+def _convert_architectures_to_lp_processors(architectures: Iterable[str]) -> Sequence[str]:
+    return [f"/+processors/{arch}" for arch in architectures]
+
+
 class LaunchpadClient:
     """Launchpad remote builder operations.
 
     :param app_name: Name of the application.
-    :param architectures: List of architectures to build on.
     :param timeout: Time in seconds to wait for the build to complete.
     """
 
@@ -88,7 +91,6 @@ class LaunchpadClient:
         self,
         *,
         app_name: str,
-        architectures: Sequence[str],
         timeout: int = 0,
     ) -> None:
         self._app_name = app_name
@@ -96,8 +98,6 @@ class LaunchpadClient:
         self._cache_dir = self._create_cache_directory()
         self._data_dir = self._create_data_directory()
         self._credentials = self._data_dir / "credentials"
-
-        self.architectures = architectures
 
         self._lp: Launchpad = self._login()
         self.user = self._lp.me.name  # type: ignore
@@ -107,20 +107,6 @@ class LaunchpadClient:
             self._deadline = int(time.time()) + timeout
         else:
             self._deadline = 0
-
-    @property
-    def architectures(self) -> Sequence[str]:
-        """Get architectures."""
-        return self._architectures
-
-    @architectures.setter
-    def architectures(self, architectures: Sequence[str]) -> None:
-        self._lp_processors: Optional[Sequence[str]] = None
-
-        if architectures:
-            self._lp_processors = ["/+processors/" + a for a in architectures]
-
-        self._architectures = architectures
 
     @property
     def user(self) -> str:
@@ -205,9 +191,7 @@ class LaunchpadClient:
             self._lp = self._login()
             return self._lp.load(url)
 
-    def _wait_for_build_request_acceptance(
-        self, build_id: str, build_request: Entry
-    ) -> None:
+    def _wait_for_build_request_acceptance(self, build_id: str, build_request: Entry) -> None:
         # Not to be confused with the actual build(s), this is
         # ensuring that Launchpad accepts the build request.
         while build_request.status == "Pending":
@@ -303,7 +287,7 @@ class LaunchpadClient:
         logger.info("Deleting source repository from Launchpad...")
         git_repo.lp_delete()
 
-    def _create_snap(self, name: str, force=False) -> Entry:
+    def _create_snap(self, name: str, architectures: Sequence[str] | None = None, force=False) -> Entry:
         """Create a snap recipe. Use force=true to replace existing snap."""
         git_url = self.get_git_https_url(name)
 
@@ -311,8 +295,8 @@ class LaunchpadClient:
             self._delete_snap(name)
 
         optional_kwargs = {}
-        if self._lp_processors:
-            optional_kwargs["processors"] = self._lp_processors
+        if architectures:
+            optional_kwargs["processors"] = _convert_architectures_to_lp_processors(architectures)
 
         logger.info("Registering snap job on Launchpad...")
         logger.debug(
@@ -352,9 +336,7 @@ class LaunchpadClient:
         build_request = self._issue_build_request(snap)
         self._wait_for_build_request_acceptance(build_id, build_request)
 
-    def monitor_build(
-        self, project_name: str, build_id: str, interval: int = _LP_POLL_INTERVAL
-    ) -> None:
+    def monitor_build(self, project_name: str, build_id: str, interval: int = _LP_POLL_INTERVAL) -> None:
         """Check build progress, and download artifacts when ready."""
         snap = self._get_snap(build_id)
 
