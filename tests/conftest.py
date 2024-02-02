@@ -16,7 +16,9 @@
 """Shared data for all craft-application tests."""
 from __future__ import annotations
 
+import os
 import pathlib
+import shutil
 from importlib import metadata
 from typing import TYPE_CHECKING, Any
 
@@ -113,6 +115,8 @@ def fake_build_plan() -> list[models.BuildInfo]:
 @pytest.fixture()
 def enable_overlay() -> Iterator[craft_parts.Features]:
     """Enable the overlay feature in craft_parts for the relevant test."""
+    if not os.getenv("CI") and not shutil.which("fuse-overlayfs"):
+        pytest.skip("fuse-overlayfs not installed, skipping overlay tests.")
     craft_parts.Features.reset()
     yield craft_parts.Features(enable_overlay=True)
     craft_parts.Features.reset()
