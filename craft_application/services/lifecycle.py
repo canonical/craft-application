@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 import contextlib
+import os
 import types
 from typing import TYPE_CHECKING, Any
 
@@ -169,6 +170,7 @@ class LifecycleService(base.ProjectService):
                 cache_dir=self._cache_dir,
                 work_dir=self._work_dir,
                 ignore_local_sources=self._app.source_ignore_patterns,
+                parallel_build_count=self._get_parallel_build_count(),
                 **self._manager_kwargs,
             )
         except PartsError as err:
@@ -265,3 +267,61 @@ class LifecycleService(base.ProjectService):
             f"{self.__class__.__name__}({self._app!r}, {self._project!r}, "
             f"{work_dir=}, {cache_dir=}, {build_for=}, **{self._manager_kwargs!r})"
         )
+
+    def _get_parallel_build_count(self) -> int:  # noqa: PLR0912
+        """Get the number of parallel builds to run."""
+        parallel_build_count = None
+        effect_env_name = "PARALLEL BUILD COUNT"
+
+        # fixed parallel build count environment variable
+        for env_name in [
+            (self._app.name + "_PARALLEL_BUILD_COUNT").upper(),
+            "CRAFT_PARALLEL_BUILD_COUNT",
+        ]:
+            if os.environ.get(env_name):
+                try:
+                    parallel_build_count = int(os.environ[env_name])
+                except ValueError as err:
+                    raise errors.InvalidParameterError(
+                        env_name, str(os.environ[env_name])
+                    ) from err
+
+                effect_env_name = env_name
+                break
+
+        # CPU count related max parallel build count environment variable
+        if parallel_build_count is None:
+            cpu_count = os.cpu_count()
+            if cpu_count:
+                for env_name in [
+                    (self._app.name + "_MAX_PARALLEL_BUILD_COUNT").upper(),
+                    "CRAFT_MAX_PARALLEL_BUILD_COUNT",
+                ]:
+                    if os.environ.get(env_name):
+                        try:
+                            parallel_build_count = min(
+                                int(os.environ[env_name]), cpu_count
+                            )
+                        except ValueError as err:
+                            raise errors.InvalidParameterError(
+                                env_name, str(os.environ[env_name])
+                            ) from err
+
+                        effect_env_name = env_name
+                        break
+
+                # Default to CPU count if no max environment variable is set
+                if parallel_build_count is None:
+                    parallel_build_count = cpu_count
+
+        # Default to 1 if no environment variable is set and CPU count is not available
+        if parallel_build_count is None:
+            return 1
+
+        # Ensure the value is valid positive integer
+        if parallel_build_count < 1:
+            raise errors.InvalidParameterError(
+                effect_env_name, str(parallel_build_count)
+            )
+
+        return parallel_build_count
