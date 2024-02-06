@@ -51,6 +51,18 @@ class ServiceFactory:
 
     def __post_init__(self) -> None:
         self._service_kwargs: dict[str, dict[str, Any]] = {}
+        if self.app.features.remote_build and self.RemoteBuildClass is None:
+            raise TypeError(
+                f"{self.__class__.__name__} requires RemoteBuildClass if remote_build "
+                "feature is enabled."
+            )
+        elif not self.app.features.remote_build and self.RemoteBuildClass is not None:
+            warnings.warn(
+                RuntimeWarning(
+                    "remote_build feature is disabled. RemoteBuildClass should not be set."
+                ),
+                stacklevel=2,
+            )
 
     def set_kwargs(
         self,
@@ -71,6 +83,14 @@ class ServiceFactory:
         instantiated service as an instance attribute, allowing the same service
         instance to be reused for the entire run of the application.
         """
+        if service in dir(self.app.features) and not getattr(
+            self.app.features, service
+        ):
+            raise AttributeError(
+                f"craft_application feature {service} not enabled",
+                name=service,
+                obj=self,
+            )
         service_cls_name = "".join(word.title() for word in service.split("_"))
         service_cls_name += "Class"
         classes = dataclasses.asdict(self)

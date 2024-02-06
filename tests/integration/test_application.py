@@ -38,6 +38,7 @@ class TestableApplication(craft_application.Application):
         if self.is_managed():
             self.project_dir = pathlib.Path.cwd()
 
+
 @pytest.fixture()
 def create_app(app_metadata, fake_package_service_class):
     def _inner():

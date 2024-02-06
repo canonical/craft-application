@@ -33,12 +33,12 @@ requires-python = ">=3.8"
 [project.optional-dependencies]
 remote = [
     # Support for remote-build is optional.
+    "keyring>=24.0",
+    "launchpadlib>=1.11.0",
     # Pygit2 and libgit2 need to match versions.
     # Further info: https://www.pygit2.org/install.html#version-numbers
     # TODO: loosen this restriction and make apps responsible for more specific restrictions
     "pygit2~=1.13.0",
-    # TODO: minimum launchpadlib version
-    "launchpadlib",
 ]
 dev = [
     "coverage[toml]==7.4.1",
