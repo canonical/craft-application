@@ -16,7 +16,10 @@
 """Tests for internal path utilities."""
 import pathlib
 
+import pytest
 from craft_application import util
+from craft_application.util.paths import get_filename_from_url_path
+from hypothesis import given, provisional
 
 
 def test_get_managed_logpath(app_metadata):
@@ -24,3 +27,20 @@ def test_get_managed_logpath(app_metadata):
 
     assert isinstance(logpath, pathlib.PosixPath)
     assert str(logpath) == "/tmp/testcraft.log"
+
+
+@given(url=provisional.urls())
+def test_get_filename_from_url_path(url):
+    """Test that it works with hypothesis-generated URLs"""
+    get_filename_from_url_path(url)
+
+
+@pytest.mark.parametrize(
+    ("url", "filename"),
+    [
+        ("http://localhost/some/file.html?thing=stuff#anchor", "file.html"),
+        ("http://localhost", ""),
+    ],
+)
+def test_get_filename_from_url_path_correct(url, filename):
+    assert get_filename_from_url_path(url) == filename
