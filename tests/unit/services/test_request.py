@@ -83,6 +83,7 @@ def test_download_with_progress(
     "downloads",
     [
         {
+            "http://example/empty.txt": b"",
             "http://example/file": b"abc",
             "https://localhost/file.py": b"#!/usr/bin/env python3\nprint('hi')",
         },
@@ -103,7 +104,8 @@ def test_download_files_with_progress(tmp_path, emitter, request_service, downlo
         sum(len(dl) for dl in downloads.values()),
     )
     for file in downloads.values():
-        assert call("advance", len(file)) in emitter.interactions
+        if len(file) > 0:  # Advance doesn't get called on empty files
+            assert call("advance", len(file)) in emitter.interactions
 
     for url, path in results.items():
         assert path.read_bytes() == downloads[url]
