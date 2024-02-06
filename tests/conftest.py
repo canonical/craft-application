@@ -16,7 +16,9 @@
 """Shared data for all craft-application tests."""
 from __future__ import annotations
 
+import os
 import pathlib
+import shutil
 from importlib import metadata
 from typing import TYPE_CHECKING, Any
 
@@ -88,18 +90,19 @@ def app_metadata(features) -> craft_application.AppMetadata:
 def fake_project() -> models.Project:
     arch = util.get_host_architecture()
     return models.Project(
-        name="full-project",  # pyright: ignore[reportGeneralTypeIssues]
-        title="A fully-defined project",  # pyright: ignore[reportGeneralTypeIssues]
+        name="full-project",  # pyright: ignore[reportArgumentType]
+        title="A fully-defined project",  # pyright: ignore[reportArgumentType]
         base="core24",
-        version="1.0.0.post64+git12345678",  # pyright: ignore[reportGeneralTypeIssues]
+        version="1.0.0.post64+git12345678",  # pyright: ignore[reportArgumentType]
         contact="author@project.org",
         issues="https://github.com/canonical/craft-application/issues",
-        source_code="https://github.com/canonical/craft-application",  # pyright: ignore[reportGeneralTypeIssues]
-        summary="A fully-defined craft-application project.",  # pyright: ignore[reportGeneralTypeIssues]
+        source_code="https://github.com/canonical/craft-application",  # pyright: ignore[reportArgumentType]
+        summary="A fully-defined craft-application project.",  # pyright: ignore[reportArgumentType]
         description="A fully-defined craft-application project. (description)",
         license="LGPLv3",
         parts={"my-part": {"plugin": "nil"}},
         platforms={"foo": Platform(build_on=arch, build_for=arch)},
+        package_repositories=None,
     )
 
 
@@ -112,6 +115,8 @@ def fake_build_plan() -> list[models.BuildInfo]:
 @pytest.fixture()
 def enable_overlay() -> Iterator[craft_parts.Features]:
     """Enable the overlay feature in craft_parts for the relevant test."""
+    if not os.getenv("CI") and not shutil.which("fuse-overlayfs"):
+        pytest.skip("fuse-overlayfs not installed, skipping overlay tests.")
     craft_parts.Features.reset()
     yield craft_parts.Features(enable_overlay=True)
     craft_parts.Features.reset()
@@ -136,6 +141,12 @@ def lifecycle_service(
     )
     service.setup()
     return service
+
+
+@pytest.fixture()
+def request_service(app_metadata, fake_services) -> services.RequestService:
+    """A working version of the requests service."""
+    return services.RequestService(app=app_metadata, services=fake_services)
 
 
 @pytest.fixture(params=list(EmitterMode))
