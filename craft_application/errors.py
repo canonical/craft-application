@@ -117,3 +117,38 @@ class InvalidPlatformError(CraftError):
         details = f"Valid platforms are: {', '.join(all_platforms)}."
 
         super().__init__(message=message, details=details)
+
+
+class RemoteBuildError(CraftError):
+    """Errors related to remote builds."""
+
+
+class CancelFailedError(RemoteBuildError):
+    """Builds could not be cancelled."""
+
+    def __init__(  # noqa: PLR0913 (too many arguments)
+        self,
+        builds: Sequence[str],
+        *,
+        resolution: str | None = None,
+        docs_url: str | None = None,
+        logpath_report: bool = True,
+        reportable: bool = True,
+        retcode: int = 1,
+    ) -> None:
+        if len(builds) == 1:
+            message = "Build could not be cancelled"
+        else:
+            message = f"{len(builds)} builds could not be cancelled."
+
+        details = "\n".join(builds)
+
+        super().__init__(
+            message,
+            details=details,
+            resolution=resolution,
+            docs_url=docs_url,
+            logpath_report=logpath_report,
+            reportable=reportable,
+            retcode=retcode,
+        )

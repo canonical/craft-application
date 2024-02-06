@@ -54,6 +54,39 @@ def test_correct_init(
     pytest_check.is_instance(factory.provider, services.ProviderService)
 
 
+@pytest.mark.enable_features("remote_build")
+def test_init_remote_build_enabled_error(
+    app_metadata, fake_project, fake_package_service_class
+):
+    """Ensure we require a RemoteBuildClass if remote build is enabled."""
+    with pytest.raises(
+        TypeError,
+        match="ServiceFactory requires RemoteBuildClass if remote_build feature is enabled.",
+    ) as exc_info:
+        services.ServiceFactory(
+            app_metadata,
+            project=fake_project,
+            PackageClass=fake_package_service_class,
+            # Explicitly missing a RemoteBuildClass
+        )
+
+
+def test_init_remote_build_disabled_warning(
+    app_metadata, fake_project, fake_package_service_class
+):
+    """Check for a warning when remote build feature is disabled but a class is set."""
+    with pytest.warns(
+        RuntimeWarning,
+        match="remote_build feature is disabled. RemoteBuildClass should not be set.",
+    ):
+        services.ServiceFactory(
+            app_metadata,
+            project=fake_project,
+            PackageClass=fake_package_service_class,
+            RemoteBuildClass="RemoteBuildClass",
+        )
+
+
 @pytest.mark.parametrize(
     "kwargs",
     [
@@ -125,6 +158,20 @@ def test_getattr_project_none(app_metadata, fake_package_service_class):
         match="^FakePackageService requires a project to be available before creation.$",
     ):
         _ = factory.package
+
+
+def test_getattr_remote_build_disabled(app_metadata, fake_package_service_class):
+    factory = services.ServiceFactory(
+        app_metadata, PackageClass=fake_package_service_class
+    )
+
+    with pytest.raises(
+        AttributeError, match="craft_application feature remote_build not enabled"
+    ) as exc_info:
+        _ = factory.remote_build
+
+    assert exc_info.value.name == "remote_build"
+    assert exc_info.value.obj == factory
 
 
 def test_service_setup(app_metadata, fake_project, fake_package_service_class, emitter):

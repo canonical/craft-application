@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 import importlib
+import importlib.util
 import os
 import pathlib
 import signal
@@ -49,6 +50,8 @@ DEFAULT_CLI_LOGGERS = frozenset(
     {"craft_archives", "craft_parts", "craft_providers", "craft_store"}
 )
 
+REMOTE_BUILD_LIBRARIES = ("pygit2", "launchpadlib")
+
 
 @dataclass(frozen=True)
 class AppFeatures:
@@ -56,6 +59,17 @@ class AppFeatures:
 
     build_secrets: bool = False
     """Support for build-time secrets."""
+    remote_build: bool = False
+    """Whether remote build is supported."""
+
+    def __post_init__(self) -> None:
+        if self.remote_build:
+            for module in REMOTE_BUILD_LIBRARIES:
+                if importlib.util.find_spec(module) is None:
+                    raise ModuleNotFoundError(
+                        "Ensure craft-application is installed with the 'remote' optional dependency.",
+                        name=module,
+                    )
 
 
 @final
@@ -116,6 +130,7 @@ class Application:
         self._global_arguments: list[craft_cli.GlobalArgument] = [GLOBAL_VERSION]
         self._cli_loggers = DEFAULT_CLI_LOGGERS | set(extra_loggers)
         self._build_plan: list[models.BuildInfo] = []
+
         # When build_secrets are enabled, this contains the secret info to pass to
         # managed instances.
         self._secrets: secrets.BuildSecrets | None = None
@@ -155,6 +170,13 @@ class Application:
 
         merged: dict[str, list[type[craft_cli.BaseCommand]]] = {}
         all_groups = [lifecycle_commands, other_commands, *self._command_groups]
+
+        if self.app.features.remote_build:
+            # Lazily imported to avoid importing remote-build dependencies if
+            # we don't use the feature.
+            from craft_application.commands import remote
+
+            all_groups.extend(remote.REMOTE_COMMAND_GROUPS)
 
         # Merge the default command groups with those provided by the application,
         # so that we don't get multiple groups with the same name.
@@ -216,8 +238,9 @@ class Application:
         self.services.set_kwargs(
             "provider",
             work_dir=self._work_dir,
-            build_plan=self._build_plan,
+            build_lan=self._build_plan,
         )
+        self.services.set_kwargs("remote_build", project_dir=self.project_dir)
 
     def _resolve_project_path(self, project_dir: pathlib.Path | None) -> pathlib.Path:
         """Find the project file for the current project.

@@ -16,7 +16,7 @@ import os
 import pytest
 
 
-@pytest.fixture
+@pytest.fixture()
 def new_dir(tmp_path):
     """Change to a new temporary directory."""
 

@@ -44,6 +44,30 @@ from craft_providers import bases
 EMPTY_COMMAND_GROUP = craft_cli.CommandGroup("FakeCommands", [])
 
 
+# region AppFeatures tests
+@pytest.mark.parametrize("library", application.REMOTE_BUILD_LIBRARIES)
+def test_app_features_needs_libraries_error(monkeypatch, library):
+    from importlib.util import find_spec
+
+    def fake_find_spec(name, package=None):
+        if name == library:
+            return None
+        return find_spec(name, package)
+
+    monkeypatch.setattr("importlib.util.find_spec", fake_find_spec)
+
+    with pytest.raises(
+        ModuleNotFoundError,
+        match="Ensure craft-application is installed with the 'remote' optional dependency",
+    ) as exc_info:
+        application.AppFeatures(remote_build=True)
+
+    assert exc_info.value.name == library
+
+
+# endregion
+
+
 @pytest.mark.parametrize("summary", ["A summary", None])
 def test_app_metadata_post_init_correct(summary):
     app = application.AppMetadata("craft-application", summary)

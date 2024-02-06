@@ -30,7 +30,9 @@ def mock_git_repo(mocker):
 @pytest.fixture(autouse=True)
 def mock_base_directory(mocker, new_dir):
     """Returns a mocked `xdg.BaseDirectory`."""
-    _mock_base_directory = mocker.patch("craft_application.remote.worktree.BaseDirectory")
+    _mock_base_directory = mocker.patch(
+        "craft_application.remote.worktree.BaseDirectory"
+    )
     _mock_base_directory.save_cache_path.return_value = new_dir
     return _mock_base_directory
 

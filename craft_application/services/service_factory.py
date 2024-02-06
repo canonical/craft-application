@@ -1,4 +1,4 @@
-# Copyright 2023 Canonical Ltd.
+# Copyright 2023-2024 Canonical Ltd.
 #
 # This program is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Lesser General Public License version 3, as
@@ -15,12 +15,14 @@
 from __future__ import annotations
 
 import dataclasses
+import warnings
 from typing import TYPE_CHECKING, Any
 
 from craft_application import models, services
 
 if TYPE_CHECKING:
     from craft_application.application import AppMetadata
+    from craft_application.services import remote_build
 
 
 @dataclasses.dataclass
@@ -39,6 +41,8 @@ class ServiceFactory:
     PackageClass: type[services.PackageService]
     LifecycleClass: type[services.LifecycleService] = services.LifecycleService
     ProviderClass: type[services.ProviderService] = services.ProviderService
+    RequestClass: type[services.RequestService] = services.RequestService
+    RemoteBuildClass: type[remote_build.RemoteBuildService] = None  # type: ignore[assignment]
 
     project: models.Project | None = None
 
@@ -48,6 +52,7 @@ class ServiceFactory:
         package: services.PackageService = None  # type: ignore[assignment]
         lifecycle: services.LifecycleService = None  # type: ignore[assignment]
         provider: services.ProviderService = None  # type: ignore[assignment]
+        remote_build: remote_build.RemoteBuildService = None  # type: ignore[assignment]
 
     def __post_init__(self) -> None:
         self._service_kwargs: dict[str, dict[str, Any]] = {}
