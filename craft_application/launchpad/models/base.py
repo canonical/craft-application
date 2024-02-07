@@ -1,0 +1,182 @@
+#  This file is part of craft-application.
+#
+#  Copyright 2024 Canonical Ltd.
+#
+#  This program is free software: you can redistribute it and/or modify it
+#  under the terms of the GNU Lesser General Public License version 3, as
+#  published by the Free Software Foundation.
+#
+#  This program is distributed in the hope that it will be useful, but WITHOUT
+#  ANY WARRANTY; without even the implied warranties of MERCHANTABILITY,
+#  SATISFACTORY QUALITY, or FITNESS FOR A PARTICULAR PURPOSE.
+#  See the GNU Lesser General Public License for more details.
+#
+#  You should have received a copy of the GNU Lesser General Public License
+#  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+"""Base LaunchpadObject."""
+
+from __future__ import annotations
+
+import abc
+import enum
+import inspect
+from collections.abc import Iterable, Mapping
+from typing import TYPE_CHECKING
+
+import lazr.restfulclient.errors
+from lazr.restfulclient.resource import Entry  # type: ignore[import-untyped]
+from typing_extensions import Any, Self
+
+from .. import errors, util
+
+if TYPE_CHECKING:
+    from ...launchpad import Launchpad
+
+
+class InformationType(enum.Enum):
+    """Type of information."""
+
+    PUBLIC = "Public"
+    PUBLIC_SECURITY = "Public Security"
+    PRIVATE = "Private"
+    PRIVATE_SECURITY = "Private Security"
+    PROPRIETARY = "Proprietary"
+    EMBARGOED = "Embargoed"
+
+
+class Pocket(enum.Enum):
+    """An Ubuntu archive pocket."""
+
+    RELEASE = "Release"
+    SECURITY = "Security"
+    UPDATES = "Updates"
+    PROPOSED = "Proposed"
+    BACKPORTS = "Backports"
+
+
+class LaunchpadObject(metaclass=abc.ABCMeta):
+    """A generic Launchpad object."""
+
+    _resource_types: enum.EnumMeta
+    _attr_map: Mapping[str, str] = {}
+    """Mapping of attributes for this object to their paths in Launchpad."""
+
+    _lp: Launchpad
+    _obj: Entry
+
+    def __init__(self, lp: Launchpad, lp_obj: Entry) -> None:
+        self._lp = lp
+
+        if not isinstance(lp_obj, Entry):
+            raise TypeError(
+                f"Cannot use type {lp_obj.__class__.__name__} for launchpad entries."
+            )
+
+        self._obj = lp_obj
+
+        try:
+            self._resource_types(self._resource_type)
+        except ValueError:
+            raise TypeError(
+                f"Launchpadlib entry not a valid resource type for {self.__class__.__name__}. "
+                f"type: {self._resource_type!r}, "
+                f"valid: {[t.value for t in self._resource_types]}",  # type: ignore[var-annotated]
+            ) from None
+
+    @classmethod
+    @abc.abstractmethod
+    def new(cls, *args: Any, **kwargs: Any) -> Self:
+        """Create a new launchpad object."""
+
+    @classmethod
+    @abc.abstractmethod
+    def get(cls, *args: Any, **kwargs: Any) -> Self:
+        """Get an existing launchpad object."""
+
+    @classmethod
+    def find(cls, *args: Any, **kwargs: Any) -> Iterable[Self]:
+        """Find existing Launchpad objects by various parameters."""
+        raise NotImplementedError(f"{cls.__name__} does not implement find.")
+
+    def delete(self) -> None:
+        """Delete this object from Launchpad."""
+        try:
+            self._obj.lp_delete()
+        except lazr.restfulclient.errors.ResponseError as exc:
+            raise errors.LaunchpadError("Object could not be deleted") from exc
+
+    @property
+    def _resource_type(self) -> str:
+        """The resource type of the Launchpad entry."""
+        return util.get_resource_type(self._obj)
+
+    def __dir__(self) -> list[str]:
+        """Get the attributes of this object, including Launchpad attrs and entries."""
+        return sorted(
+            {
+                *super().__dir__(),
+                *self._attr_map.keys(),
+                *self.__dict__.keys(),
+                *self._obj.lp_attributes,
+            }
+        )
+
+    def __getattr__(self, item: str) -> Any:  # noqa: ANN401
+        annotations = inspect.get_annotations(self.__class__, eval_str=True)
+        if item in annotations:
+            lp_obj = util.getattrs(self._obj, self._attr_map.get(item, item))
+            cls = annotations[item]
+            if isinstance(cls, type) and issubclass(cls, LaunchpadObject):
+                return cls(self._lp, lp_obj)
+            return cls(lp_obj)
+        if item in self._attr_map:
+            return util.getattrs(self._obj, self._attr_map[item])
+        if item in self._obj.lp_attributes:
+            return getattr(self._obj, item)
+        if item in (*self._obj.lp_entries, *self._obj.lp_collections):
+            raise NotImplementedError("Cannot yet return meta types")
+        raise AttributeError(f"{self.__class__.__name__!r} has no attribute {item!r}")
+
+    def __setattr__(self, key: str, value: Any) -> None:  # noqa: ANN401
+        if key in ("_lp", "_obj"):
+            self.__dict__[key] = value
+            return
+        annotations = inspect.get_annotations(self.__class__, eval_str=True)
+        if key in annotations:
+            attr_path = self._attr_map.get(key, default=key)
+            util.set_innermost_attr(self._obj, attr_path, value)
+        elif key in self._attr_map:
+            util.set_innermost_attr(self._obj, self._attr_map[key], value)
+        elif key in (
+            *self._obj.lp_attributes,
+            *self._obj.lp_entries,
+            *self._obj.lp_collections,
+        ):
+            setattr(self._obj, key, value)
+        else:
+            raise AttributeError(
+                f"{self.__class__.__name__!r} has no attribute {key!r}",
+            )
+
+    def __repr__(self) -> str:
+        """String of this Launchpad object."""
+        return f"{self.__class__.__name__}(lp={self._lp!r}, lp_obj={self._obj!r})"
+
+    def get_entry(self, item: str | None = None) -> Entry:
+        """Get the launchpadlib Entry object for an item.
+
+        :param item: The name of the entry to get, or None to get this object's entry.
+        :returns: The Entry requested.
+
+        This method essentially acts as a bail-out to directly access launchpadlib.
+        If you use it, please file an issue with your use case.
+        """
+        if item is None:
+            return self._obj
+        if item in self._obj.lp_entries:
+            return getattr(self._obj, item)
+        raise ValueError(f"Entry type {self.resource_type!r} has no entry {item!r}")
+
+    def lp_refresh(self) -> None:
+        """Refresh the underlying Launchpad object."""
+        self._obj.lp_refresh()
