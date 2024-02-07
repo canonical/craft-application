@@ -18,6 +18,7 @@ import hashlib
 from unittest.mock import call
 
 import pytest
+import pytest_check
 
 
 @pytest.mark.parametrize(
@@ -43,3 +44,28 @@ def test_get_real_file(tmp_path, emitter, request_service, url, checksum, size):
             call("progress_bar", f"Downloading {url}", size),
         ]
     )
+
+
+@pytest.mark.parametrize(
+    "files",
+    [
+        {
+            "https://github.com/canonical/craft-application/archive/refs/tags/1.2.1.tar.gz": "416db371643cc7a40efc5b5ca180c021e43025af7f73e93de82a4a0900121b99",
+            "https://github.com/canonical/craft-application/archive/refs/tags/1.2.1.zip": "4d6128bbf388009e80e27644eccc2393246eece745c6989374b693a5c5eaca9c",
+            "https://github.com/canonical/craft-application/archive/refs/tags/1.2.0.tar.gz": "5239d8e3402b4cef5fe7e8bd31fa507caa3ae62640d4309561ef12d1d2770e34",
+            "https://github.com/canonical/craft-application/archive/refs/tags/1.2.0.zip": "369a2fc5abb6593e6d677495af49cbf0b4fb25ad10973ffb3250f0c66cd7c570",
+            "https://github.com/canonical/craft-application/archive/refs/tags/1.1.0.tar.gz": "b70e4185b9b1b82a81dad968b97bc88f788f8112aa5271df0dbbd75121921acb",
+            "https://github.com/canonical/craft-application/archive/refs/tags/1.1.0.zip": "42eb28a319ba256f92df968b5978337e7cd0201beeb801f38c90766fd880ed47",
+            "https://github.com/canonical/craft-application/archive/refs/tags/1.0.0.tar.gz": "d731ab49e654a131d092529c2e5e023852819991df692a9297aafbb845325461",
+            "https://github.com/canonical/craft-application/archive/refs/tags/1.0.0.zip": "6f8204619669fe62ef4e6724ab4e2c8cbc05c874a38df9f8be30f98b0a487036",
+        },
+    ],
+)
+def test_get_real_files(tmp_path, request_service, files):
+    result = request_service.download_files_with_progress({f: tmp_path for f in files})
+
+    for url, path in result.items():
+        expected_hash = files[url]
+        actual_hash = hashlib.sha256(path.read_bytes()).hexdigest()
+
+        pytest_check.equal(actual_hash, expected_hash, url)
