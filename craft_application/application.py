@@ -22,7 +22,6 @@ import pathlib
 import signal
 import subprocess
 import sys
-import warnings
 from dataclasses import dataclass, field
 from functools import cached_property
 from importlib import metadata
@@ -232,7 +231,6 @@ class Application:
 
     def get_project(
         self,
-        project_dir: None = None,
         *,
         platform: str | None = None,
         build_for: str | None = None,
@@ -242,22 +240,14 @@ class Application:
         This only resolves and renders the project the first time it gets run.
         After that, it merely uses a cached project model.
 
-        :param project_dir: (deprecated) the base directory to traverse for finding the project file.
         :param platform: the platform name listed in the build plan.
         :param build_for: the architecture to build this project for.
         :returns: A transformed, loaded project model.
         """
         if self.__project is not None:
             return self.__project
-        if project_dir is not None:
-            warnings.warn(
-                "Passing project_dir to get_project will be deprecated in craft-application 2.0. "
-                "An Application has a project_dir property to use instead.",
-                category=PendingDeprecationWarning,
-                stacklevel=2,
-            )
 
-        project_path = self._resolve_project_path(project_dir)
+        project_path = self._resolve_project_path(self.project_dir)
         craft_cli.emit.debug(f"Loading project file '{project_path!s}'")
 
         with project_path.open() as file:
