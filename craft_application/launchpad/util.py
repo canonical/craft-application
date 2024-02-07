@@ -161,4 +161,13 @@ def get_annotations(obj: object) -> Dict[str, type]:
             ),
         )
 
-    return obj.__annotations__.copy()
+    annotations = obj.__annotations__.copy()
+    for item, value in annotations.items():
+        if isinstance(value, str):
+            # See: https://docs.python.org/3/howto/annotations.html#manually-un-stringizing-stringized-annotations
+            # It's okay to use eval here because the annotations are provided by
+            # the developer.
+            annotations[item] = eval(  # noqa: S307
+                value, sys.modules[obj.__module__].__dict__, dict(vars(obj))
+            )
+    return annotations
