@@ -29,7 +29,6 @@
 import enum
 
 import lazr.restfulclient.errors  # type: ignore[import-untyped]
-from overrides import override
 from typing_extensions import Self
 
 from .. import errors, util
@@ -104,13 +103,13 @@ class Build(LaunchpadObject):
     architecture: util.Architecture
 
     @classmethod
-    @override
     def new(cls) -> Self:  # pyright: ignore[reportIncompatibleMethodOverride]
+        """Do not create a build without a recipe."""
         raise NotImplementedError("Use a recipe's `build` method instead.")
 
     @classmethod
-    @override
     def get(cls) -> Self:  # pyright: ignore[reportIncompatibleMethodOverride]
+        """Do not try to get builds without a recipe."""
         raise NotImplementedError("Use a recipe's `get_builds` method instead.")
 
     def get_state(self) -> BuildState:
