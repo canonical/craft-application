@@ -14,16 +14,26 @@
 #  You should have received a copy of the GNU Lesser General Public License
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Base LaunchpadObject."""
-
+# This file relies heavily on dynamic features from launchpadlib that cause pyright
+# to complain a lot. As such, we're disabling several pyright checkers for this file
+# since in this case they generate more noise than utility.
+# pyright: reportUnknownMemberType=false
+# pyright: reportUnknownVariableType=false
+# pyright: reportUnknownArgumentType=false
+# pyright: reportOptionalMemberAccess=false
+# pyright: reportAttributeAccessIssue=false
+# pyright: reportOptionalCall=false
+# pyright: reportOptionalIterable=false
+# pyright: reportOptionalSubscript=false
+# pyright: reportIndexIssue=false
 from __future__ import annotations
 
 import abc
 import enum
-import inspect
 from collections.abc import Iterable, Mapping
 from typing import TYPE_CHECKING
 
-import lazr.restfulclient.errors
+import lazr.restfulclient.errors  # type: ignore[import-untyped]
 from lazr.restfulclient.resource import Entry  # type: ignore[import-untyped]
 from typing_extensions import Any, Self
 
@@ -61,13 +71,12 @@ class LaunchpadObject(metaclass=abc.ABCMeta):
     _attr_map: Mapping[str, str] = {}
     """Mapping of attributes for this object to their paths in Launchpad."""
 
-    _lp: Launchpad
-    _obj: Entry
-
     def __init__(self, lp: Launchpad, lp_obj: Entry) -> None:
         self._lp = lp
 
-        if not isinstance(lp_obj, Entry):
+        if not isinstance(
+            lp_obj, Entry
+        ):  # pyright: ignore[reportUnnecessaryIsInstance]
             raise TypeError(
                 f"Cannot use type {lp_obj.__class__.__name__} for launchpad entries."
             )
@@ -85,16 +94,22 @@ class LaunchpadObject(metaclass=abc.ABCMeta):
 
     @classmethod
     @abc.abstractmethod
-    def new(cls, *args: Any, **kwargs: Any) -> Self:
+    def new(
+        cls, *args: Any, **kwargs: Any  # noqa: ANN401 (Intentionally duck-typed)
+    ) -> Self:
         """Create a new launchpad object."""
 
     @classmethod
     @abc.abstractmethod
-    def get(cls, *args: Any, **kwargs: Any) -> Self:
+    def get(
+        cls, *args: Any, **kwargs: Any  # noqa: ANN401 (Intentionally duck-typed)
+    ) -> Self:
         """Get an existing launchpad object."""
 
     @classmethod
-    def find(cls, *args: Any, **kwargs: Any) -> Iterable[Self]:
+    def find(
+        cls, *args: Any, **kwargs: Any  # noqa: ANN401 (Intentionally duck-typed)
+    ) -> Iterable[Self]:
         """Find existing Launchpad objects by various parameters."""
         raise NotImplementedError(f"{cls.__name__} does not implement find.")
 
@@ -122,13 +137,14 @@ class LaunchpadObject(metaclass=abc.ABCMeta):
         )
 
     def __getattr__(self, item: str) -> Any:  # noqa: ANN401
-        annotations = inspect.get_annotations(self.__class__, eval_str=True)
+        annotations: dict[str, type] = util.get_annotations(self.__class__)
         if item in annotations:
             lp_obj = util.getattrs(self._obj, self._attr_map.get(item, item))
             cls = annotations[item]
             if isinstance(cls, type) and issubclass(cls, LaunchpadObject):
                 return cls(self._lp, lp_obj)
-            return cls(lp_obj)
+            # We expect that this class can take the object.
+            return cls(lp_obj)  # type: ignore[call-arg]
         if item in self._attr_map:
             return util.getattrs(self._obj, self._attr_map[item])
         if item in self._obj.lp_attributes:
@@ -141,7 +157,7 @@ class LaunchpadObject(metaclass=abc.ABCMeta):
         if key in ("_lp", "_obj"):
             self.__dict__[key] = value
             return
-        annotations = inspect.get_annotations(self.__class__, eval_str=True)
+        annotations = util.get_annotations(self.__class__)
         if key in annotations:
             attr_path = self._attr_map.get(key, default=key)
             util.set_innermost_attr(self._obj, attr_path, value)
@@ -159,7 +175,7 @@ class LaunchpadObject(metaclass=abc.ABCMeta):
             )
 
     def __repr__(self) -> str:
-        """String of this Launchpad object."""
+        # """Get a machine-readable string of this Launchpad object."""
         return f"{self.__class__.__name__}(lp={self._lp!r}, lp_obj={self._obj!r})"
 
     def get_entry(self, item: str | None = None) -> Entry:

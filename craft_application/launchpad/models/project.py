@@ -15,6 +15,19 @@
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Project class."""
 
+# This file relies heavily on dynamic features from launchpadlib that cause pyright
+# to complain a lot. As such, we're disabling several pyright checkers for this file
+# since in this case they generate more noise than utility.
+# pyright: reportUnknownMemberType=false
+# pyright: reportUnknownVariableType=false
+# pyright: reportUnknownArgumentType=false
+# pyright: reportOptionalMemberAccess=false
+# pyright: reportAttributeAccessIssue=false
+# pyright: reportOptionalCall=false
+# pyright: reportOptionalIterable=false
+# pyright: reportOptionalSubscript=false
+# pyright: reportIndexIssue=false
+
 from __future__ import annotations  # noqa: I001
 
 import enum
@@ -53,7 +66,7 @@ class Project(LaunchpadObject):
 
     @classmethod
     @override
-    def new(
+    def new(  # pyright: ignore[reportIncompatibleMethodOverride]
         cls,
         lp: Launchpad,
         title: str,
@@ -83,13 +96,17 @@ class Project(LaunchpadObject):
 
     @classmethod
     @override
-    def get(cls, lp: Launchpad, name: str) -> Self:
+    def get(  # pyright: ignore[reportIncompatibleMethodOverride]
+        cls, lp: Launchpad, name: str
+    ) -> Self:
         """Get an existing project."""
         return cls(lp, lp.lp.projects[name])
 
     @classmethod
     @override
-    def find(cls, lp: Launchpad, text: str) -> Iterable[Self]:
+    def find(  # pyright: ignore[reportIncompatibleMethodOverride]
+        cls, lp: Launchpad, text: str
+    ) -> Iterable[Self]:
         """Find projects by a search term."""
         for lp_project in lp.lp.projects.search(text):
             yield cls(lp, lp_project)

@@ -15,10 +15,22 @@
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Recipe classes."""
 
+# This file relies heavily on dynamic features from launchpadlib that cause pyright
+# to complain a lot. As such, we're disabling several pyright checkers for this file
+# since in this case they generate more noise than utility.
+# pyright: reportUnknownMemberType=false
+# pyright: reportUnknownVariableType=false
+# pyright: reportUnknownArgumentType=false
+# pyright: reportOptionalMemberAccess=false
+# pyright: reportAttributeAccessIssue=false
+# pyright: reportOptionalCall=false
+# pyright: reportOptionalIterable=false
+
 from __future__ import annotations
 
 import enum
 import time
+import typing
 from collections.abc import Collection, Iterable
 from typing import TYPE_CHECKING
 
@@ -89,7 +101,10 @@ class _BaseRecipe(LaunchpadObject):
 
     def get_builds(self) -> Collection[build.Build]:
         """Get the existing builds for a Recipe."""
-        return [build.Build(self._lp, b) for b in self._obj.builds]
+        return [
+            build.Build(self._lp, b)
+            for b in self._obj.builds  # pyright: ignore[reportGeneralTypeIssues]
+        ]
 
     def build(
         self,
@@ -99,7 +114,7 @@ class _BaseRecipe(LaunchpadObject):
         deadline: int | None = None,
     ) -> Collection[build.Build]:
         """Create a new set of builds for this recipe."""
-        request_build_kwargs = {
+        request_build_kwargs: dict[str, Any] = {
             "archive": archive,
             "pocket": pocket.value,
         }
@@ -148,7 +163,7 @@ class SnapRecipe(_StoreRecipe):
 
     @classmethod
     @override
-    def new(
+    def new(  # pyright: ignore[reportIncompatibleMethodOverride]
         cls,
         lp: Launchpad,
         name: str,
@@ -177,9 +192,7 @@ class SnapRecipe(_StoreRecipe):
         """
         kwargs: dict[str, Any] = {}
         if architectures:
-            kwargs["processors"] = [
-                util.get_architecture_name(arch) for arch in architectures
-            ]
+            kwargs["processors"] = [util.get_processor(arch) for arch in architectures]
         if description:
             kwargs["description"] = description
         if project:
@@ -212,7 +225,9 @@ class SnapRecipe(_StoreRecipe):
 
     @classmethod
     @override
-    def get(cls, lp: Launchpad, name: str, owner: str) -> Self:
+    def get(  # pyright: ignore[reportIncompatibleMethodOverride]
+        cls, lp: Launchpad, name: str, owner: str
+    ) -> Self:
         """Get an existing Snap recipe."""
         try:
             return cls(
@@ -226,13 +241,13 @@ class SnapRecipe(_StoreRecipe):
 
     @classmethod
     @override
-    def find(
+    def find(  # pyright: ignore[reportIncompatibleMethodOverride]
         cls,
         lp: Launchpad,
         owner: str | None = None,
         store_name: str | None = None,
     ) -> Iterable[Self]:
-        """Find Snap recipes"""
+        """Find Snap recipes."""
         owner = util.get_person_link(owner) if owner else None
         if store_name:
             if owner:
@@ -259,7 +274,7 @@ class CharmRecipe(_StoreRecipe):
 
     @classmethod
     @override
-    def new(
+    def new(  # pyright: ignore[reportIncompatibleMethodOverride]
         cls,
         lp: Launchpad,
         name: str,
@@ -301,7 +316,9 @@ class CharmRecipe(_StoreRecipe):
 
     @classmethod
     @override
-    def get(cls, lp: Launchpad, name: str, owner: str, project: str) -> Self:
+    def get(  # pyright: ignore[reportIncompatibleMethodOverride]
+        cls, lp: Launchpad, name: str, owner: str, project: str
+    ) -> Self:
         """Get a charm recipe."""
         try:
             return cls(
@@ -319,7 +336,9 @@ class CharmRecipe(_StoreRecipe):
 
     @classmethod
     @override
-    def find(cls, lp: Launchpad, owner: str, *, name: str = "") -> Iterable[Self]:
+    def find(  # pyright: ignore[reportIncompatibleMethodOverride]
+        cls, lp: Launchpad, owner: str, *, name: str = ""
+    ) -> Iterable[Self]:
         """Find a Charm recipe by the owner."""
         owner = util.get_person_link(owner)
         lp_recipes = lp.lp.charm_recipes.findByOwner(owner=util.get_person_link(owner))
@@ -329,4 +348,4 @@ class CharmRecipe(_StoreRecipe):
             yield cls(lp, recipe)
 
 
-Recipe = SnapRecipe | CharmRecipe
+Recipe = typing.Union[SnapRecipe, CharmRecipe]

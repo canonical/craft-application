@@ -14,13 +14,25 @@
 #  You should have received a copy of the GNU Lesser General Public License
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Source code repositories."""
+# This file relies heavily on dynamic features from launchpadlib that cause pyright
+# to complain a lot. As such, we're disabling several pyright checkers for this file
+# since in this case they generate more noise than utility.
+# pyright: reportUnknownMemberType=false
+# pyright: reportUnknownVariableType=false
+# pyright: reportUnknownArgumentType=false
+# pyright: reportOptionalMemberAccess=false
+# pyright: reportAttributeAccessIssue=false
+# pyright: reportOptionalCall=false
+# pyright: reportOptionalIterable=false
+# pyright: reportOptionalSubscript=false
+# pyright: reportIndexIssue=false
 from __future__ import annotations
 
 import datetime
 import enum
 from abc import ABCMeta
 from collections.abc import Collection
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from typing_extensions import Self
 
@@ -28,7 +40,7 @@ from .. import errors
 from .base import InformationType, LaunchpadObject
 
 if TYPE_CHECKING:
-    from launchpad_client.launchpad import Launchpad
+    from ..launchpad import Launchpad
 
 
 class _BaseRepository(LaunchpadObject, metaclass=ABCMeta):
@@ -41,9 +53,17 @@ class _BaseRepository(LaunchpadObject, metaclass=ABCMeta):
         expiry: datetime.datetime | None = None,
     ) -> str:
         """Get a personal access token for pushing to the repository over HTTPS."""
-        return self._obj.issueAccessToken(
-            description=description, scopes=scopes, date_expires=expiry
+        return str(
+            self._obj.issueAccessToken(
+                description=description, scopes=scopes, date_expires=expiry
+            )
         )
+
+
+class GitResourceTypes(enum.Enum):
+    """Resource types for a git repository."""
+
+    GIT_REPOSITORY = "git_repository"
 
 
 class GitRepository(_BaseRepository):
@@ -52,8 +72,7 @@ class GitRepository(_BaseRepository):
     https://api.launchpad.net/devel.html#git_repository
     """
 
-    class _resource_types(enum.Enum):
-        GIT_REPOSITORY = "git_repository"
+    _resource_types = GitResourceTypes
 
     date_created: datetime.date
     date_last_modified: datetime.date
@@ -83,7 +102,7 @@ class GitRepository(_BaseRepository):
         self._obj.information_type = value.value
 
     @classmethod
-    def get(
+    def get(  # pyright: ignore[reportIncompatibleMethodOverride]
         cls,
         lp: Launchpad,
         name: str | None = None,
@@ -111,7 +130,7 @@ class GitRepository(_BaseRepository):
         return cls(lp, lp_repo)
 
     @classmethod
-    def new(
+    def new(  # pyright: ignore[reportIncompatibleMethodOverride]
         cls,
         lp: Launchpad,
         name: str,
@@ -121,7 +140,7 @@ class GitRepository(_BaseRepository):
     ) -> Self:
         """Create a new git repository."""
         if owner is None:
-            owner = lp.lp.me
+            owner = cast(str, lp.lp.me.name)
         if target is None:
             target = owner
 

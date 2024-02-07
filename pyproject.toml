@@ -279,3 +279,9 @@ ignore = [
 classmethod-decorators = [
     "pydantic.validator",
 ]
+
+[tool.ruff.lint.pylint]
+max-args = 8
+
+[tool.ruff.lint.pydocstyle]
+ignore-decorators = ["typing.overload", "overrides.override", "typing.override"]

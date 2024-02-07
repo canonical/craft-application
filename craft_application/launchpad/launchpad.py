@@ -15,6 +15,13 @@
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Main Launchpad client."""
 
+# This file relies heavily on dynamic features from launchpadlib that cause pyright
+# to complain a lot. As such, we're disabling several pyright checkers for this file
+# since in this case they generate more noise than utility.
+# pyright: reportUnknownMemberType=false
+
+from __future__ import annotations
+
 import pathlib
 
 import launchpadlib.launchpad  # type: ignore[import-untyped]
@@ -65,7 +72,7 @@ class Launchpad:
         cache_dir: pathlib.Path | None = DEFAULT_CACHE_PATH,
         credentials_file: pathlib.Path | None = None,
         version: str = "devel",
-        **kwargs: Any,
+        **kwargs: Any,  # noqa: ANN401 (Intentionally duck-typed)
     ) -> Self:
         """Login to Launchpad."""
         return cls(
@@ -113,16 +120,16 @@ class Launchpad:
                 return models.CharmRecipe.get(self, name, owner, project)
             result = None
             for recipe in models.CharmRecipe.find(self, owner, name=name):
-                if recipe is not None:
+                if result is not None:
                     raise ValueError(
                         f"Multiple charm recipes for {name!r} found with owner {owner!r}",
                     )
                 result = recipe
-            if result is None:
-                raise ValueError(
-                    f"Could not find charm recipe {name!r} with owner {owner!r}",
-                )
-            return result
+            if result is not None:
+                return result
+            raise ValueError(
+                f"Could not find charm recipe {name!r} with owner {owner!r}",
+            )
 
         raise TypeError(f"Unknown recipe type: {type_}")
 

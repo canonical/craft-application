@@ -124,7 +124,7 @@ class LifecycleService(base.ProjectService):
         LifecycleManager on initialisation.
     """
 
-    def __init__(  # noqa: PLR0913 (too many arguments)
+    def __init__(  # (too many arguments)
         self,
         app: AppMetadata,
         services: ServiceFactory,

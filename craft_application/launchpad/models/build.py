@@ -14,10 +14,22 @@
 #  You should have received a copy of the GNU Lesser General Public License
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Launchpad builds."""
+# This file relies heavily on dynamic features from launchpadlib that cause pyright
+# to complain a lot. As such, we're disabling several pyright checkers for this file
+# since in this case they generate more noise than utility.
+# pyright: reportUnknownMemberType=false
+# pyright: reportUnknownVariableType=false
+# pyright: reportUnknownArgumentType=false
+# pyright: reportOptionalMemberAccess=false
+# pyright: reportAttributeAccessIssue=false
+# pyright: reportOptionalCall=false
+# pyright: reportOptionalIterable=false
+# pyright: reportOptionalSubscript=false
+# pyright: reportIndexIssue=false
 import enum
-from typing import Any
 
-import lazr.restfulclient.errors
+import lazr.restfulclient.errors  # type: ignore[import-untyped]
+from overrides import override
 from typing_extensions import Self
 
 from .. import errors, util
@@ -25,6 +37,11 @@ from .base import LaunchpadObject
 
 
 class BuildTypes(enum.Enum):
+    """Types of build in Launchpad.
+
+    There are more, but these are the only ones we currently support.
+    """
+
     SNAP_BUILD = "snap_build"
 
 
@@ -46,29 +63,29 @@ class BuildState(enum.Enum):
     @property
     def is_queued(self) -> bool:
         """Determine whether this state means the build is queued."""
-        return self in (self.PENDING, self.DEPENDENCY_WAIT)
+        return self in (BuildState.PENDING, BuildState.DEPENDENCY_WAIT)
 
     @property
     def is_running(self) -> bool:
         """Determine whether this state means the build is running."""
-        return self in (self.BUILDING, self.GATHERING_OUTPUT)
+        return self in (BuildState.BUILDING, BuildState.GATHERING_OUTPUT)
 
     @property
     def is_stopped(self) -> bool:
         """Determine whether this state means the build is done."""
         return self in (
-            self.SUCCESS,
-            self.FAILED,
-            self.UPLOAD_FAILED,
-            self.CHROOT_PROBLEM,
-            self.SUPERSEDED,
-            self.CANCELLED,
+            BuildState.SUCCESS,
+            BuildState.FAILED,
+            BuildState.UPLOAD_FAILED,
+            BuildState.CHROOT_PROBLEM,
+            BuildState.SUPERSEDED,
+            BuildState.CANCELLED,
         )
 
     @property
     def is_stopping_or_stopped(self) -> bool:
         """Return True if the build is stopping or stopped."""
-        return self == self.CANCELLING or self.is_stopped
+        return self == BuildState.CANCELLING or self.is_stopped
 
 
 class Build(LaunchpadObject):
@@ -87,12 +104,14 @@ class Build(LaunchpadObject):
     architecture: util.Architecture
 
     @classmethod
-    def new(cls, *args: Any, **kwargs: Any) -> Self:
-        raise NotImplementedError
+    @override
+    def new(cls) -> Self:  # pyright: ignore[reportIncompatibleMethodOverride]
+        raise NotImplementedError("Use a recipe's `build` method instead.")
 
     @classmethod
-    def get(cls, *args: Any, **kwargs: Any) -> Self:
-        raise NotImplementedError
+    @override
+    def get(cls) -> Self:  # pyright: ignore[reportIncompatibleMethodOverride]
+        raise NotImplementedError("Use a recipe's `get_builds` method instead.")
 
     def get_state(self) -> BuildState:
         """Get the current state of this build."""

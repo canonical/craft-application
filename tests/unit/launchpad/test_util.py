@@ -14,7 +14,7 @@
 #  You should have received a copy of the GNU Lesser General Public License
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Tests for utility functions."""
-
+import sys
 from unittest import mock
 
 import pytest
@@ -57,8 +57,9 @@ def test_getattrs_exception(obj, path, partial_path):
     with pytest.raises(AttributeError) as exc_info:
         util.getattrs(obj, path)
 
-    assert exc_info.value.name == partial_path
-    assert exc_info.value.obj == obj
+    if sys.version_info >= (3, 10):
+        assert exc_info.value.name == partial_path
+        assert exc_info.value.obj == obj
 
 
 @pytest.mark.parametrize("value", ["someone", "/~someone", "/~someone/+snaps"])
