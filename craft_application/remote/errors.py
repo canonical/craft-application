@@ -50,29 +50,6 @@ class GitError(RemoteBuildError):
         super().__init__(brief=brief, details=details)
 
 
-class RemoteBuildTimeoutError(RemoteBuildError):
-    """Remote-build timed out."""
-
-    def __init__(self, recovery_command: str) -> None:
-        brief = "Remote build command timed out."
-        details = (
-            "Build may still be running on Launchpad and can be recovered "
-            f"with {recovery_command!r}."
-        )
-
-        super().__init__(brief=brief, details=details)
-
-
-class LaunchpadHttpsError(RemoteBuildError):
-    """Launchpad connectivity error."""
-
-    def __init__(self) -> None:
-        brief = "Failed to connect to Launchpad API service."
-        details = "Verify connectivity to https://api.launchpad.net and retry build."
-
-        super().__init__(brief=brief, details=details)
-
-
 class UnsupportedArchitectureError(RemoteBuildError):
     """Unsupported architecture error."""
 
@@ -83,34 +60,6 @@ class UnsupportedArchitectureError(RemoteBuildError):
             f"{architectures}.\nPlease remove them from the "
             "architecture list and try again."
         )
-
-        super().__init__(brief=brief, details=details)
-
-
-class AcceptPublicUploadError(RemoteBuildError):
-    """Accept public upload error."""
-
-    def __init__(self) -> None:
-        brief = "Cannot upload data to build servers."
-        details = (
-            "Remote build needs explicit acknowledgement that data sent to build "
-            "servers is public.\n"
-            "In non-interactive runs, please use the option "
-            "`--launchpad-accept-public-upload`."
-        )
-
-        super().__init__(brief=brief, details=details)
-
-
-class RemoteBuildFailedError(RemoteBuildError):
-    """Remote build failed.
-
-    :param brief: Brief description of error.
-    :param details: Detailed information.
-    """
-
-    def __init__(self, details: str) -> None:
-        brief = "Remote build failed."
 
         super().__init__(brief=brief, details=details)
 
