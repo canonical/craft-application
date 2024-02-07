@@ -13,20 +13,21 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """Remote build utilities."""
+from __future__ import annotations
 
 import shutil
 import stat
 from functools import partial
 from hashlib import md5
 from pathlib import Path
-from typing import Iterable, List
+from typing import Any, Callable, Iterable
 
 from .errors import UnsupportedArchitectureError
 
 _SUPPORTED_ARCHS = ["amd64", "arm64", "armhf", "i386", "ppc64el", "riscv64", "s390x"]
 
 
-def validate_architectures(architectures: List[str]) -> None:
+def validate_architectures(architectures: list[str]) -> None:
     """Validate that architectures are supported for remote building.
 
     :param architectures: list of architectures to validate
@@ -34,7 +35,7 @@ def validate_architectures(architectures: List[str]) -> None:
     :raises UnsupportedArchitectureError: if any architecture in the list in not
     supported for remote building.
     """
-    unsupported_archs = []
+    unsupported_archs: list[str] = []
     for arch in architectures:
         if arch not in _SUPPORTED_ARCHS:
             unsupported_archs.append(arch)
@@ -84,11 +85,11 @@ def _compute_hash(directory: Path) -> str:
         )
 
     files = sorted([file for file in Path().glob("**/*") if file.is_file()])
-    hashes: List[str] = []
+    hashes: list[str] = []
 
     for file_path in files:
         md5_hash = md5()  # noqa: S324 (insecure-hash-function)
-        with open(file_path, "rb") as file:
+        with file_path.open("rb") as file:
             # read files in chunks in case they are large
             for block in iter(partial(file.read, 4096), b""):
                 md5_hash.update(block)
@@ -125,7 +126,7 @@ def humanize_list(
 
     humanized = ", ".join(quoted_items[:-1])
 
-    if len(quoted_items) > 2:
+    if len(quoted_items) > 2:  # noqa: PLR2004
         humanized += ","
 
     return f"{humanized} {conjunction} {quoted_items[-1]}"
@@ -139,7 +140,9 @@ def rmtree(directory: Path) -> None:
     shutil.rmtree(str(directory.resolve()), onerror=_remove_readonly)
 
 
-def _remove_readonly(func, filepath, _):
+def _remove_readonly(
+    func: Callable[..., Any], filepath: str, _: Any  # noqa: ANN401
+) -> None:
     """Shutil onerror function to make read-only files writable.
 
     Try setting file to writeable if error occurs during rmtree. Known to be required

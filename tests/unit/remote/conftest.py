@@ -12,15 +12,16 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import os
+import pathlib
 
 import pytest
 
 
-@pytest.fixture
+@pytest.fixture()
 def new_dir(tmp_path):
     """Change to a new temporary directory."""
 
-    cwd = os.getcwd()
+    cwd = pathlib.Path.cwd()
     os.chdir(tmp_path)
 
     yield tmp_path

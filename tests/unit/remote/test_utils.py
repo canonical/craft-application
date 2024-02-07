@@ -68,8 +68,8 @@ def test_validate_architectures_error(archs, expected_archs):
 
 
 @pytest.mark.parametrize(
-    "items,conjunction,expected",
-    (
+    ("items", "conjunction", "expected"),
+    [
         ([], "and", ""),
         (["foo"], "and", "'foo'"),
         (["foo", "bar"], "and", "'bar' and 'foo'"),
@@ -80,7 +80,7 @@ def test_validate_architectures_error(archs, expected_archs):
         (["foo", "bar"], "or", "'bar' or 'foo'"),
         (["foo", "bar", "baz"], "or", "'bar', 'baz', or 'foo'"),
         (["foo", "bar", "baz", "qux"], "or", "'bar', 'baz', 'foo', or 'qux'"),
-    ),
+    ],
 )
 def test_humanize_list(items, conjunction, expected):
     """Test humanize_list."""
@@ -194,7 +194,7 @@ def test_get_build_id_directory_is_not_a_directory_error():
 
 
 @pytest.fixture()
-def stub_directory_tree(new_dir):
+def stub_directory_tree():
     """Creates a tree of directories and files."""
     root_dir = Path("root-dir")
     (root_dir / "dir1/dir2").mkdir(parents=True, exist_ok=True)

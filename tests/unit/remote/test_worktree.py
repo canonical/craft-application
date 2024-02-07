@@ -30,7 +30,9 @@ def mock_git_repo(mocker):
 @pytest.fixture(autouse=True)
 def mock_base_directory(mocker, new_dir):
     """Returns a mocked `xdg.BaseDirectory`."""
-    _mock_base_directory = mocker.patch("craft_application.remote.worktree.BaseDirectory")
+    _mock_base_directory = mocker.patch(
+        "craft_application.remote.worktree.BaseDirectory"
+    )
     _mock_base_directory.save_cache_path.return_value = new_dir
     return _mock_base_directory
 
@@ -41,9 +43,8 @@ def mock_copytree(mocker):
     return mocker.patch("craft_application.remote.worktree.copytree")
 
 
-def test_worktree_init_clean(
-    mock_base_directory, mock_copytree, mock_git_repo, new_dir
-):
+@pytest.mark.usefixtures("new_dir", "mock_copytree")
+def test_worktree_init_clean(mock_base_directory, mock_git_repo):
     """Test initialization of a WorkTree with a clean git repository."""
     mock_git_repo.return_value.is_clean.return_value = True
 
@@ -60,9 +61,8 @@ def test_worktree_init_clean(
     ]
 
 
-def test_worktree_init_dirty(
-    mock_base_directory, mock_copytree, mock_git_repo, new_dir
-):
+@pytest.mark.usefixtures("new_dir", "mock_copytree")
+def test_worktree_init_dirty(mock_base_directory, mock_git_repo):
     """Test initialization of a WorkTree with a clean git repository."""
     mock_git_repo.return_value.is_clean.return_value = False
 
@@ -81,7 +81,8 @@ def test_worktree_init_dirty(
     ]
 
 
-def test_worktree_repo_dir(new_dir):
+@pytest.mark.usefixtures("new_dir")
+def test_worktree_repo_dir():
     """Verify the `repo_dir` property."""
     worktree = WorkTree(app_name="test-app", build_id="test-id", project_dir=Path())
 

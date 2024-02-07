@@ -49,6 +49,7 @@ dev = [
     "pytest-mock==3.12.0",
     "pytest-rerunfailures==13.0",
     "responses~=0.24.1",
+    "craft-application[remote]"
 ]
 lint = [
     "black~=24.0",

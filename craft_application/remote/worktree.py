@@ -17,7 +17,7 @@
 from pathlib import Path
 from shutil import copytree
 
-from xdg import BaseDirectory
+from xdg import BaseDirectory  # type: ignore[import-untyped]
 
 from .git import GitRepo
 from .utils import rmtree
@@ -59,7 +59,7 @@ class WorkTree:
             repo.add_all()
             repo.commit()
 
-    def clean_cache(self):
+    def clean_cache(self) -> None:
         """Clean the cache."""
         if self._base_dir.exists():
             rmtree(self._base_dir)
