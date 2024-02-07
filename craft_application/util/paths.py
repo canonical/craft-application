@@ -1,6 +1,6 @@
 # This file is part of craft_application.
 #
-# Copyright 2023 Canonical Ltd.
+# Copyright 2023-2024 Canonical Ltd.
 #
 # This program is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Lesser General Public License version 3, as
@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 import pathlib
+import urllib.parse
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -32,3 +33,8 @@ def get_managed_logpath(app: AppMetadata) -> pathlib.PosixPath:
     return pathlib.PosixPath(
         f"/tmp/{app.name}.log"  # noqa: S108 - only applies inside managed instance.
     )
+
+
+def get_filename_from_url_path(url: str) -> str:
+    """Get just the filename of a URL path."""
+    return pathlib.PurePosixPath(urllib.parse.urlparse(url).path).name

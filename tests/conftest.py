@@ -143,6 +143,12 @@ def lifecycle_service(
     return service
 
 
+@pytest.fixture()
+def request_service(app_metadata, fake_services) -> services.RequestService:
+    """A working version of the requests service."""
+    return services.RequestService(app=app_metadata, services=fake_services)
+
+
 @pytest.fixture(params=list(EmitterMode))
 def emitter_verbosity(request):
     reset_verbosity = emit.get_mode()
