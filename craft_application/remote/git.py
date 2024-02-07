@@ -13,6 +13,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """Git repository class and helper utilities."""
+from __future__ import annotations
 
 import logging
 import os
@@ -20,9 +21,8 @@ import subprocess
 import time
 from enum import Enum
 from pathlib import Path
-from typing import Optional
 
-import pygit2
+import pygit2  # type: ignore[import-untyped]
 
 from .errors import GitError, RemoteBuildInvalidGitRepoError
 
@@ -49,7 +49,11 @@ def is_repo(path: Path) -> bool:
     # `path.absolute().parent` prevents pygit2 from checking parent directories
     try:
         return bool(
-            pygit2.discover_repository(str(path), False, str(path.absolute().parent))
+            pygit2.discover_repository(
+                str(path),
+                False,  # noqa: FBT003 (pygit2 doesn't accept keyword args here)
+                str(path.absolute().parent),
+            )
         )
     except pygit2.GitError as error:
         raise GitError(
@@ -127,8 +131,8 @@ class GitRepo:
         logger.debug("Adding all changes.")
 
         try:
-            self._repo.index.add_all()
-            self._repo.index.write()
+            self._repo.index.add_all()  # pyright: ignore[reportUnknownMemberType]
+            self._repo.index.write()  # pyright: ignore[reportUnknownMemberType]
         except pygit2.GitError as error:
             raise GitError(
                 f"Could not add changes for the git repository in {str(self.path)!r}."
@@ -146,7 +150,9 @@ class GitRepo:
         logger.debug("Committing changes.")
 
         try:
-            tree = self._repo.index.write_tree()
+            tree = (
+                self._repo.index.write_tree()  # pyright: ignore[reportUnknownMemberType]
+            )
         except pygit2.GitError as error:
             raise GitError(
                 f"Could not create a tree for the git repository in {str(self.path)!r}."
@@ -190,7 +196,9 @@ class GitRepo:
         logger.debug("Initializing git repository in %r", str(self.path))
 
         try:
-            pygit2.init_repository(self.path)
+            pygit2.init_repository(  # pyright: ignore[reportUnknownMemberType]
+                self.path
+            )
         except pygit2.GitError as error:
             raise GitError(
                 f"Could not initialize a git repository in {str(self.path)!r}."
@@ -201,7 +209,7 @@ class GitRepo:
         remote_url: str,
         remote_branch: str,
         ref: str = "HEAD",
-        token: Optional[str] = None,
+        token: str | None = None,
         push_tags: bool = False,
     ) -> None:
         """Push a reference to a branch on a remote url.
@@ -218,10 +226,7 @@ class GitRepo:
         refspec = f"{resolved_ref}:refs/heads/{remote_branch}"
 
         # hide secret tokens embedded in a url
-        if token:
-            stripped_url = remote_url.replace(token, "<token>")
-        else:
-            stripped_url = remote_url
+        stripped_url = remote_url.replace(token, "<token>") if token else remote_url
 
         logger.debug(
             "Pushing %r to remote %r with refspec %r.", ref, stripped_url, refspec
@@ -234,7 +239,7 @@ class GitRepo:
         if push_tags:
             cmd.append("--tags")
 
-        git_proc: Optional[subprocess.Popen] = None
+        git_proc: subprocess.Popen[str] | None = None
         try:
             with subprocess.Popen(
                 cmd,
@@ -273,7 +278,7 @@ class GitRepo:
                         logger.info(git_stdout.rstrip())
                 if git_proc.stderr:
                     for git_stderr in git_proc.stderr.readlines():
-                        logger.error(git_stderr.rstrip())
+                        logger.error(git_stderr.rstrip())  # noqa: TRY400
 
             raise GitError(
                 f"Could not push {ref!r} to {stripped_url!r} with refspec {refspec!r} "
@@ -301,12 +306,12 @@ class GitRepo:
         raises GitError: if the name could not be resolved
         """
         try:
-            reference = self._repo.lookup_reference_dwim(ref).name
-            logger.debug("Resolved reference %r for name %r", reference, ref)
-            return reference
+            reference = str(self._repo.lookup_reference_dwim(ref).name)
         # raises a KeyError if the ref does not exist and a GitError for git errors
         except (pygit2.GitError, KeyError) as error:
             raise GitError(
                 f"Could not resolve reference {ref!r} for the git repository in "
                 f"{str(self.path)!r}."
             ) from error
+        logger.debug("Resolved reference %r for name %r", reference, ref)
+        return reference

@@ -93,7 +93,8 @@ def test_git_repo_type_shallow(new_dir):
     assert get_git_repo_type(git_shallow_path) == GitType.SHALLOW
 
 
-def test_is_repo_path_only(new_dir):
+@pytest.mark.usefixtures("new_dir")
+def test_is_repo_path_only():
     """Only look at the path for a repo."""
     Path("parent-repo/not-a-repo/child-repo").mkdir(parents=True)
     # create the parent and child repos
@@ -291,7 +292,8 @@ def test_is_clean_error(new_dir, mocker):
     )
 
 
-def test_push_url(new_dir):
+@pytest.mark.usefixtures("new_dir")
+def test_push_url():
     """Push the default ref (HEAD) to a remote branch."""
     # create a local repo and make a commit
     Path("local-repo").mkdir()
@@ -301,7 +303,7 @@ def test_push_url(new_dir):
     repo.commit()
     # create a bare remote repo
     Path("remote-repo").mkdir()
-    remote = pygit2.init_repository(Path("remote-repo"), True)
+    remote = pygit2.init_repository(Path("remote-repo"), bare=True)
 
     repo.push_url(
         remote_url=f"file://{str(Path('remote-repo').absolute())}",
@@ -324,7 +326,8 @@ def test_push_url(new_dir):
     assert blob.name == "test-file"
 
 
-def test_push_url_detached_head(new_dir):
+@pytest.mark.usefixtures("new_dir")
+def test_push_url_detached_head():
     """Push a detached HEAD to a remote branch."""
     # create a local repo and make two commits
     Path("local-repo").mkdir()
@@ -341,7 +344,7 @@ def test_push_url_detached_head(new_dir):
     repo._repo.set_head(first_commit.id)
     # create a bare remote repo
     Path("remote-repo").mkdir()
-    remote = pygit2.init_repository(Path("remote-repo"), True)
+    remote = pygit2.init_repository(Path("remote-repo"), bare=True)
 
     # push the detached HEAD to the remote
     repo.push_url(
@@ -365,7 +368,8 @@ def test_push_url_detached_head(new_dir):
     assert blob.name == "test-file-1"
 
 
-def test_push_url_branch(new_dir):
+@pytest.mark.usefixtures("new_dir")
+def test_push_url_branch():
     """Push a branch to a remote branch."""
     # create a local repo and make a commit
     Path("local-repo").mkdir()
@@ -375,7 +379,7 @@ def test_push_url_branch(new_dir):
     repo.commit()
     # create a bare remote repo
     Path("remote-repo").mkdir()
-    remote = pygit2.init_repository(Path("remote-repo"), True)
+    remote = pygit2.init_repository(Path("remote-repo"), bare=True)
 
     repo.push_url(
         remote_url=f"file://{str(Path('remote-repo').absolute())}",
@@ -400,7 +404,8 @@ def test_push_url_branch(new_dir):
     assert blob.name == "test-file"
 
 
-def test_push_tags(new_dir):
+@pytest.mark.usefixtures("new_dir")
+def test_push_tags():
     """Verify that tags are push by trying to ref them from the remote."""
     # create a local repo and make a commit
     Path("local-repo").mkdir()
@@ -412,7 +417,7 @@ def test_push_tags(new_dir):
     repo._repo.create_reference(f"refs/tags/{tag}", commit)
     # create a bare remote repo
     Path("remote-repo").mkdir()
-    remote = pygit2.init_repository(Path("remote-repo"), True)
+    remote = pygit2.init_repository(Path("remote-repo"), bare=True)
 
     repo.push_url(
         remote_url=f"file://{str(Path('remote-repo').absolute())}",
@@ -478,7 +483,7 @@ def test_push_url_hide_token(url, expected_url, mocker, new_dir):
         repo.push_url(
             remote_url=url,
             remote_branch="test-branch",
-            token="test-token",
+            token="test-token",  # noqa: S106
         )
 
     # token should be hidden in the log output
