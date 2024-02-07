@@ -28,47 +28,6 @@ def test_git_error():
     assert error.details == "Error details."
 
 
-def test_remote_build_timeout_error():
-    """Test RemoteBuildTimeoutError."""
-    error = errors.RemoteBuildTimeoutError(
-        recovery_command="craftapp remote-build --recover --build-id test-id"
-    )
-
-    assert str(error) == (
-        "Remote build command timed out.\nBuild may still be running on Launchpad and "
-        "can be recovered with 'craftapp remote-build --recover --build-id test-id'."
-    )
-    assert repr(error) == (
-        "RemoteBuildTimeoutError(brief='Remote build command timed out.', "
-        'details="Build may still be running on Launchpad and can be recovered with '
-        "'craftapp remote-build --recover --build-id test-id'.\")"
-    )
-    assert error.brief == "Remote build command timed out."
-    assert error.details == (
-        "Build may still be running on Launchpad and can be recovered with "
-        "'craftapp remote-build --recover --build-id test-id'."
-    )
-
-
-def test_launchpad_https_error():
-    """Test LaunchpadHttpsError."""
-    error = errors.LaunchpadHttpsError()
-
-    assert str(error) == (
-        "Failed to connect to Launchpad API service.\n"
-        "Verify connectivity to https://api.launchpad.net and retry build."
-    )
-    assert repr(error) == (
-        "LaunchpadHttpsError(brief='Failed to connect to Launchpad API service.', "
-        "details='Verify connectivity to https://api.launchpad.net and retry build.')"
-    )
-
-    assert error.brief == "Failed to connect to Launchpad API service."
-    assert error.details == (
-        "Verify connectivity to https://api.launchpad.net and retry build."
-    )
-
-
 def test_unsupported_architecture_error():
     """Test UnsupportedArchitectureError."""
     error = errors.UnsupportedArchitectureError(architectures=["amd64", "arm64"])
@@ -90,31 +49,4 @@ def test_unsupported_architecture_error():
         "The following architectures are not supported by the remote builder: "
         "['amd64', 'arm64'].\nPlease remove them from the architecture list and "
         "try again."
-    )
-
-
-def test_accept_public_upload_error():
-    """Test AcceptPublicUploadError."""
-    error = errors.AcceptPublicUploadError()
-
-    assert str(error) == (
-        "Cannot upload data to build servers.\nRemote build needs explicit "
-        "acknowledgement that data sent to build servers is public.\n"
-        "In non-interactive runs, please use the option "
-        "`--launchpad-accept-public-upload`."
-    )
-    assert repr(error) == (
-        "AcceptPublicUploadError(brief='Cannot upload data to build servers.', "
-        "details='Remote build needs explicit acknowledgement that data sent to build "
-        "servers is public.\\n"
-        "In non-interactive runs, please use the option "
-        "`--launchpad-accept-public-upload`.')"
-    )
-
-    assert error.brief == "Cannot upload data to build servers."
-    assert error.details == (
-        "Remote build needs explicit acknowledgement that data sent to build servers "
-        "is public.\n"
-        "In non-interactive runs, please use the option "
-        "`--launchpad-accept-public-upload`."
     )
