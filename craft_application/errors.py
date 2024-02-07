@@ -117,3 +117,12 @@ class InvalidPlatformError(CraftError):
         details = f"Valid platforms are: {', '.join(all_platforms)}."
 
         super().__init__(message=message, details=details)
+
+
+class InvalidParameterError(CraftError):
+    """Invalid parameter or environment variable."""
+
+    def __init__(self, parameter: str, value: str) -> None:
+        message = f"Value '{value}' is invalid for parameter {parameter!r}."
+
+        super().__init__(message=message)
