@@ -210,6 +210,7 @@ class GitRepo:
         remote_branch: str,
         ref: str = "HEAD",
         token: str | None = None,
+        *,
         push_tags: bool = False,
     ) -> None:
         """Push a reference to a branch on a remote url.

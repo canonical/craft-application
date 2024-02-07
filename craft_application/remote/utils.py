@@ -103,6 +103,7 @@ def humanize_list(
     items: Iterable[str],
     conjunction: str,
     item_format: str = "{!r}",
+    *,
     sort: bool = True,
 ) -> str:
     """Format a list into a human-readable string.
