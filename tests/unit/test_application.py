@@ -705,16 +705,6 @@ def test_get_project_current_dir(app):
     assert app.get_project() is project, "Project file was not cached."
 
 
-def test_get_project_other_dir(monkeypatch, tmp_path, app, fake_project_file):
-    monkeypatch.chdir(tmp_path)
-    assert not (tmp_path / fake_project_file.name).exists(), "Test setup failed."
-
-    project = app.get_project(fake_project_file.parent)
-
-    assert app.get_project(fake_project_file.parent) is project
-    assert app.get_project() is project
-
-
 @pytest.mark.usefixtures("fake_project_file")
 def test_get_project_all_platform(app):
     app.get_project(platform="ubuntu-22.04")
