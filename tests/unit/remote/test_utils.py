@@ -48,7 +48,7 @@ def test_validate_architectures(archs):
         # multiple invalid archs
         (["unknown1", "unknown2"], ["unknown1", "unknown2"]),
         # multiple valid and invalid archs
-        (["unknown1", "unknown2"], ["unknown1", "unknown2"]),
+        (["unknown1", "unknown2", "riscv64", "arm64"], ["unknown1", "unknown2"]),
     ],
 )
 def test_validate_architectures_error(archs, expected_archs):
