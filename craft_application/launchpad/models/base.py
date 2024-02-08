@@ -40,7 +40,7 @@ from typing_extensions import Any, Self
 from .. import errors, util
 
 if TYPE_CHECKING:
-    from ...launchpad import Launchpad
+    from ..launchpad import Launchpad
 
 
 class InformationType(enum.Enum):
@@ -175,7 +175,7 @@ class LaunchpadObject(metaclass=abc.ABCMeta):
             )
 
     def __repr__(self) -> str:
-        # """Get a machine-readable string of this Launchpad object."""
+        """Get a machine-readable string of this Launchpad object."""
         return f"{self.__class__.__name__}(lp={self._lp!r}, lp_obj={self._obj!r})"
 
     def get_entry(self, item: str | None = None) -> Entry:

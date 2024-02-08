@@ -53,7 +53,12 @@ class RecipeType(enum.Enum):
 
 
 class BuildChannels(TypedDict, total=False):
-    """Typed dictionary for the snap channels for recipe builds."""
+    """Typed dictionary for build dependency channels.
+
+    The values in this dictionary describe the channel from which to retrieve each
+    relevant snap for building. If not defined, the chosen channel will be the
+    snap's default channel.
+    """
 
     # Snaps and charms
     core: str
@@ -177,7 +182,6 @@ class SnapRecipe(_StoreRecipe):
         project: str | None = None,
         # Repository. Must be either a git repository or a Bazaar branch but not both.
         git_ref: str | None = None,
-        # Bazaar:
         bzr_branch: str | None = None,
         # Automatic build options.
         auto_build: bool = False,
@@ -190,6 +194,28 @@ class SnapRecipe(_StoreRecipe):
         """Create a new snap recipe.
 
         See: https://api.launchpad.net/devel.html#snaps-new
+
+        :param lp: The Launchpad client to use for this recipe.
+        :param name: The recipe name
+        :param owner: The username of the person or team who owns the recipe
+        :param architectures: A collection of architecture names to build the recipe.
+            If None, detects the architectures from `snapcraft.yaml`
+        :param description: (Optional) A description of the recipe.
+        :param project: (Optional) The name of the project to which to attach this recipe.
+        :param git_ref: A link to a git repository and branch from which to build.
+            Mutually exclusive with bzr_branch.
+        :param bzr_branch: A link to a bazaar branch from which to build.
+            Mutually exclusive with git_ref.
+        :param auto_build: Whether to automatically build on pushes to the branch.
+            (Defaults to False)
+        :param auto_build_archive: (Optional) If auto_build is True, the Ubuntu archive
+            to use as the base for automatic builds.
+        :param auto_build_pocket: (Optional) If auto_build is True, the Ubuntu pocket
+            to use as the base for automatic builds.
+        :param store_name: (Optional) The name in the store to which to upload this snap.
+        :param store_channels: (Optional) The channels onto which to publish the snap
+            if uploaded.
+        :returns: The Snap recipe.
 
         :raises: ValueError for invalid configurations
         """
@@ -296,6 +322,24 @@ class CharmRecipe(_StoreRecipe):
         """Create a new charm recipe.
 
         See: https://api.launchpad.net/devel.html#charm_recipes-new
+
+        :param lp: The Launchpad client to use for this recipe.
+        :param name: The recipe name
+        :param owner: The username of the person or team who owns the recipe
+        :param project: The name of the project to which this recipe should be attached.
+        :param build_path: (Optional) The path to the directory containing
+            charmcraft.yaml (if it's not the root directory).
+        :param git_ref: A link to a git repository and branch from which to build.
+            Mutually exclusive with bzr_branch.
+        :param auto_build: Whether to automatically build on pushes to the branch.
+            (Defaults to False)
+        :param auto_build_channels: (Optional) A dictionary of channels to use for
+            snaps installed in the build environment.
+        :param store_name: (Optional) The name in the store to which to upload this
+            charm.
+        :param store_channels: (Optional) The channels onto which to publish the charm
+            if uploaded.
+        :returns: The Charm recipe.
         """
         kwargs = {}
         if auto_build:
