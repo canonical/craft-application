@@ -55,7 +55,7 @@ class ProviderService(base.ProjectService):
 
     managed_mode_env_var = "CRAFT_MANAGED_MODE"
 
-    def __init__(  # noqa: PLR0913 (too many arguments)
+    def __init__(
         self,
         app: AppMetadata,
         services: ServiceFactory,
