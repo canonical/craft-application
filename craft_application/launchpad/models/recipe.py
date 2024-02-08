@@ -79,6 +79,9 @@ class _BaseRecipe(LaunchpadObject):
     _attr_map = {"owner_name": "owner.name"}
 
     def __repr__(self) -> str:
+        # This violates the normal convention for a __repr__, but it does so because
+        # the standard convention isn't particularly meaningful. We use `.get()` here
+        # to indicate that using `.get` as the constructor is the preferred method.
         return f"{self.__class__.__name__}.get(name={self.name!r}, owner={self.owner_name!r})"
 
     @staticmethod
