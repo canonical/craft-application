@@ -124,7 +124,7 @@ class LifecycleService(base.ProjectService):
         LifecycleManager on initialisation.
     """
 
-    def __init__(  # (too many arguments)
+    def __init__(
         self,
         app: AppMetadata,
         services: ServiceFactory,
