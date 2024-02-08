@@ -82,13 +82,14 @@ class LaunchpadObject(metaclass=abc.ABCMeta):
             )
 
         self._obj = lp_obj
+        resource_type = util.get_resource_type(lp_obj)
 
         try:
-            self._resource_types(self._resource_type)
+            self._resource_types(resource_type)
         except ValueError:
             raise TypeError(
                 f"Launchpadlib entry not a valid resource type for {self.__class__.__name__}. "
-                f"type: {self._resource_type!r}, "
+                f"type: {resource_type!r}, "
                 f"valid: {[t.value for t in self._resource_types]}",  # type: ignore[var-annotated]
             ) from None
 
@@ -144,7 +145,10 @@ class LaunchpadObject(metaclass=abc.ABCMeta):
             if isinstance(cls, type) and issubclass(cls, LaunchpadObject):
                 return cls(self._lp, lp_obj)
             # We expect that this class can take the object.
-            return cls(lp_obj)  # type: ignore[call-arg]
+            try:
+                return cls(lp_obj)  # type: ignore[call-arg]
+            except TypeError:
+                pass
         if item in self._attr_map:
             return util.getattrs(self._obj, self._attr_map[item])
         if item in self._obj.lp_attributes:

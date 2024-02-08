@@ -50,7 +50,7 @@ class FakeLaunchpadObject(LaunchpadObject):
 
 @pytest.mark.parametrize("resource_type", [t.value for t in Type])
 def test_init_success(resource_type):
-    mock_entry = mock.Mock(spec=Entry)
+    mock_entry = mock.Mock(spec=Entry, resource_type=resource_type)
     mock_entry.resource_type_link = f"https://localhost/#{resource_type}"
     mock_entry.lp_attributes = []
     mock_lp = mock.Mock(spec_set=Launchpad)
@@ -60,7 +60,7 @@ def test_init_success(resource_type):
 
 @pytest.mark.parametrize("resource_type", ["ThIs", "invalid_type", "NAME"])
 def test_invalid_resource_type(resource_type):
-    mock_entry = mock.Mock(spec=Entry)
+    mock_entry = mock.Mock(spec=Entry, resource_type=resource_type)
     mock_entry.resource_type_link = f"https://localhost/#{resource_type}"
     mock_entry.lp_attributes = []
     mock_lp = mock.Mock(spec_set=Launchpad)

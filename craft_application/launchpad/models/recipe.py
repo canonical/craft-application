@@ -74,7 +74,9 @@ class BuildChannels(TypedDict, total=False):
     snapd: str
 
 
-class _BaseRecipe(LaunchpadObject):
+class BaseRecipe(LaunchpadObject):
+    """A base class for recipe types."""
+
     name: str
     """The name of the recipe."""
     owner_name: str
@@ -144,7 +146,7 @@ class _BaseRecipe(LaunchpadObject):
         return [build.Build(self._lp, obj) for obj in build_request.builds]
 
 
-class _StoreRecipe(_BaseRecipe):
+class _StoreRecipe(BaseRecipe):
     """A recipe for an item that has a store entry."""
 
     store_name: str
@@ -255,7 +257,7 @@ class SnapRecipe(_StoreRecipe):
     @classmethod
     @override
     def get(  # pyright: ignore[reportIncompatibleMethodOverride]
-        cls, lp: Launchpad, name: str, owner: str
+        cls, lp: Launchpad, name: str, owner: str, project: Any = None
     ) -> Self:
         """Get an existing Snap recipe."""
         try:
