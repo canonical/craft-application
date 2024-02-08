@@ -106,8 +106,11 @@ class Launchpad:
         :returns: A Recipe object of the appropriate type.
         :raises: ValueError if the type requested is invalid.
 
-        A charm recipe requires a project. If none is given, the first charm matching
-        the owner and name is returned, even if multiple recipes exist.
+        Different recipe types may have different requirements. For example, a
+        snap recipe only requires a name and an owner. However, a charm requires
+        a project as well. If a charm recipe is requested and no project name is
+        provided, the first recipe matching the owner and name is returned, even
+        if multiple recipes exist.
         """
         if isinstance(type_, str):
             type_ = models.RecipeType.__members__.get(type_.upper(), type_)
