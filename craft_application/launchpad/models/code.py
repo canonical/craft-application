@@ -81,7 +81,7 @@ class GitRepository(_BaseRepository):
     default_branch: str
     description: str
     display_name: str
-    git_https_url: str | None
+    git_https_url: str
     git_ssh_url: str
     name: str
     owner_default: bool

@@ -32,12 +32,15 @@ from __future__ import annotations  # noqa: I001
 
 import enum
 from collections.abc import Iterable
+
+import launchpadlib.errors  # type: ignore[import-untyped]
 from typing_extensions import Self, Any
 from typing import TYPE_CHECKING
 
 from typing_extensions import override
 
 from ..models.base import LaunchpadObject
+from .. import errors
 
 if TYPE_CHECKING:
     from .. import Launchpad
@@ -100,7 +103,10 @@ class Project(LaunchpadObject):
         cls, lp: Launchpad, name: str
     ) -> Self:
         """Get an existing project."""
-        return cls(lp, lp.lp.projects[name])
+        try:
+            return cls(lp, lp.lp.projects[name])
+        except launchpadlib.errors.NotFound:
+            raise errors.NotFoundError("Could not find project")
 
     @classmethod
     @override

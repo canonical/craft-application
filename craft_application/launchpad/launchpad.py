@@ -19,6 +19,9 @@
 # to complain a lot. As such, we're disabling several pyright checkers for this file
 # since in this case they generate more noise than utility.
 # pyright: reportUnknownMemberType=false
+# pyright: reportAttributeAccessIssue=false
+# pyright: reportOptionalMemberAccess=false
+# pyright: reportUnknownArgumentType=false
 
 from __future__ import annotations
 
@@ -26,6 +29,7 @@ import pathlib
 
 import launchpadlib.launchpad  # type: ignore[import-untyped]
 import launchpadlib.uris  # type: ignore[import-untyped]
+import lazr.restfulclient.errors  # type: ignore[import-untyped]
 import platformdirs
 from typing_extensions import Any, Self
 
@@ -42,6 +46,10 @@ class Launchpad:
     ) -> None:
         self.app_name = app_name
         self.lp = launchpad
+        try:
+            self.username = str(self.lp.me.name)
+        except lazr.restfulclient.errors.Unauthorized:
+            self.username = "anonymous"
 
     @classmethod
     def anonymous(

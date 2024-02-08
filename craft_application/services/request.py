@@ -24,10 +24,11 @@ import craft_cli
 import requests
 
 from craft_application import util
-from craft_application.services import base, service_factory
+from craft_application.services import base
 
 if TYPE_CHECKING:
     from craft_application.application import AppMetadata
+    from craft_application.services import service_factory
 
 
 class RequestService(base.AppService):
