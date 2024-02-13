@@ -36,7 +36,7 @@ remote = [
     # Pygit2 and libgit2 need to match versions.
     # Further info: https://www.pygit2.org/install.html#version-numbers
     # TODO: loosen this restriction and make apps responsible for more specific restrictions
-    "pygit2~=1.13.0",
+    "pygit2~=1.14.1",
     "launchpadlib>=1.10.16",
 ]
 dev = [
