@@ -70,7 +70,9 @@ class AppMetadata:
     features: AppFeatures = AppFeatures()
 
     ProjectClass: type[models.Project] = models.Project
-    BuildPlannerClass: type[models.BuildPlanner] = models.BuildPlanner
+    BuildPlannerClass: type[models.BuildPlanner] = field(
+        default=NotImplementedError  # type: ignore[assignment,type-abstract]
+    )
 
     def __post_init__(self) -> None:
         setter = super().__setattr__

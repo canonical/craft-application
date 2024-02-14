@@ -723,13 +723,7 @@ def test_get_project_invalid_platform(app):
 
 
 @pytest.mark.usefixtures("fake_project_file")
-def test_get_project_build_plan(app):
-    with pytest.raises(NotImplementedError):
-        app.get_project(build_for="ubuntu-22.04").get_build_plan()
-
-
-@pytest.mark.usefixtures("fake_project_file")
-def test_get_project_propoery(app):
+def test_get_project_property(app):
     assert app.project == app.get_project()
 
 
