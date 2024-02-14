@@ -23,6 +23,7 @@ We use a large number of tools for our project. Most of these are installed for 
 - Pyright_ (it's recommended you install with ``snap install --classic pyright``)
 - ShellCheck_  (also available via snap: ``snap install shellcheck``)
 - pre-commit_
+- ruff_ (available via snap: ```snap install ruff``)
 
 Once you have all of those installed, you can install the necessary virtual environments for this repository using tox.
 
