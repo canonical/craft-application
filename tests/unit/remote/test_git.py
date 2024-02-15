@@ -21,6 +21,7 @@ from pathlib import Path
 from unittest.mock import ANY
 
 import pygit2
+import pygit2.enums
 import pytest
 from craft_application.remote import (
     GitError,
@@ -184,8 +185,8 @@ def test_add_all(new_dir):
     status = pygit2.Repository(new_dir).status()
 
     assert status == {
-        "foo": pygit2.GIT_STATUS_INDEX_NEW,
-        "bar": pygit2.GIT_STATUS_INDEX_NEW,
+        "foo": pygit2.enums.FileStatus.INDEX_NEW,
+        "bar": pygit2.enums.FileStatus.INDEX_NEW,
     }
 
 
