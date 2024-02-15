@@ -1,6 +1,9 @@
 {
   // Configuration file for RenovateBot: https://docs.renovatebot.com/configuration-options
   extends: ["config:base"],
+  ignoreDeps: [
+    "pygit2",  //This needs to be done manually. See pyproject.toml for more details.
+  ],
   labels: ["dependencies"],  // For convenient searching in GitHub
   pip_requirements: {
     fileMatch: ["^tox.ini$", "(^|/)requirements([\\w-]*)\\.txt$"]
