@@ -35,8 +35,12 @@ remote = [
     # Support for remote-build is optional.
     # Pygit2 and libgit2 need to match versions.
     # Further info: https://www.pygit2.org/install.html#version-numbers
-    # TODO: loosen this restriction and make apps responsible for more specific restrictions
-    "pygit2~=1.13.0",
+    # Minor versions of pygit2 can include breaking changes, so we need to check
+    # that they work with craft_application before we update to them. If we bump
+    # the minimum minor version here, that absolutely needs to go in the release
+    # notes.
+    # Pygit2 changelog: https://github.com/libgit2/pygit2/blob/master/CHANGELOG.md
+    "pygit2>=1.13.0,<1.15.0",
     "launchpadlib>=1.10.16",
 ]
 dev = [
