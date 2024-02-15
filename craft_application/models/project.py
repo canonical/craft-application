@@ -1,6 +1,6 @@
 # This file is part of craft-application.
 #
-# Copyright 2023 Canonical Ltd.
+# Copyright 2023-2024 Canonical Ltd.
 #
 # This program is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Lesser General Public License version 3, as
@@ -78,7 +78,7 @@ class Project(CraftBaseModel):
 
     name: ProjectName
     title: ProjectTitle | None
-    version: VersionStr
+    version: VersionStr | None
     summary: SummaryStr | None
     description: str | None
 
@@ -91,9 +91,17 @@ class Project(CraftBaseModel):
     source_code: AnyUrl | None
     license: str | None
 
+    adopt_info: Optional[str]
+
     parts: dict[str, dict[str, Any]]  # parts are handled by craft-parts
 
     package_repositories: list[dict[str, Any]] | None
+
+    @pydantic.root_validator(pre=True)
+    def _validate_version(cls, values: Dict[str, Any]) -> Dict[str, Any]:
+        if values.get("version") is None and values.get("adopt-info") is None:
+            raise ValueError("Required field 'version' is not set and 'adopt-info' not used")
+        return values
 
     @pydantic.validator(  # pyright: ignore[reportUnknownMemberType,reportUntypedFunctionDecorator]
         "parts", each_item=True
