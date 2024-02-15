@@ -35,8 +35,12 @@ remote = [
     # Support for remote-build is optional.
     # Pygit2 and libgit2 need to match versions.
     # Further info: https://www.pygit2.org/install.html#version-numbers
-    # TODO: loosen this restriction and make apps responsible for more specific restrictions
-    "pygit2~=1.13.0",
+    # Minor versions of pygit2 can include breaking changes, so we need to check
+    # that they work with craft_application before we update to them. If we bump
+    # the minimum minor version here, that absolutely needs to go in the release
+    # notes.
+    # Pygit2 changelog: https://github.com/libgit2/pygit2/blob/master/CHANGELOG.md
+    "pygit2>=1.13.0,<1.15.0",
     "launchpadlib>=1.10.16",
 ]
 dev = [
@@ -55,7 +59,7 @@ dev = [
 lint = [
     "black~=24.0",
     "codespell[toml]==2.2.6",
-    "ruff==0.2.0",
+    "ruff==0.2.1",
     "yamllint==1.34.0"
 ]
 types = [
@@ -191,7 +195,7 @@ extend-exclude = [
     "__pycache__",
 ]
 # Follow ST063 - Maintaining and updating linting specifications for updating these.
-select = [  # Base linting rule selections.
+lint.select = [  # Base linting rule selections.
     # See the internal document for discussion:
     # https://docs.google.com/document/d/1i1n8pDmFmWi4wTDpk-JfnWCVUThPJiggyPi2DYwBBu4/edit
     # All sections here are stable in ruff and shouldn't randomly introduce
@@ -228,7 +232,7 @@ select = [  # Base linting rule selections.
     "PL",  # Pylint
     "TRY",  # Cleaner try/except,
 ]
-extend-select = [
+lint.extend-select = [
     # Pyupgrade: https://github.com/charliermarsh/ruff#pyupgrade-up
     "UP00", "UP01", "UP02", "UP030", "UP032", "UP033",
     # "UP034",  # Very new, not yet enabled in ruff 0.0.227
@@ -253,7 +257,7 @@ extend-select = [
     "RUF008",  # Do not use mutable default values for dataclass attributes
     "RUF100",  # #noqa directive that doesn't flag anything
 ]
-ignore = [
+lint.ignore = [
     "ANN10",  # Type annotations for `self` and `cls`
     #"E203",  # Whitespace before ":"  -- Commented because ruff doesn't currently check E203
     "E501",  # Line too long (reason: black will automatically fix this for us)
@@ -270,7 +274,7 @@ ignore = [
     "TRY003",  # Avoid specifying long messages outside the exception class
 ]
 
-[tool.ruff.per-file-ignores]
+[tool.ruff.lint.per-file-ignores]
 "tests/**.py" = [  # Some things we want for the moin project are unnecessary in tests.
     "D",  # Ignore docstring rules in tests
     "ANN", # Ignore type annotations in tests
