@@ -26,7 +26,7 @@ jobs:
           echo "::group::Begin snap install"
           echo "Installing snaps in the background while running apt and pip..."
           sudo snap install --no-wait --classic pyright
-          sudo snap install --no-wait shellcheck
+          sudo snap install --no-wait ruff shellcheck
           echo "::endgroup::"
           echo "::group::apt-get"
           sudo apt update

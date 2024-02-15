@@ -33,7 +33,7 @@ class ProjectName(ConstrainedStr):
     max_length = 40
     strict = True
     strip_whitespace = True
-    regex = re.compile(r"^([a-z0-9][a-z0-9-]?)?[a-z]+([a-z0-9-]?[a-z0-9])*$")
+    regex = re.compile(r"^([a-z0-9][a-z0-9-]?)*[a-z]+([a-z0-9-]?[a-z0-9])*$")
 
 
 MESSAGE_INVALID_NAME = (

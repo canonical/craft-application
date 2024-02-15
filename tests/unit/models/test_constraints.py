@@ -88,6 +88,8 @@ def test_valid_project_name_hypothesis(name):
     [
         "purealpha",
         "0start-and-end-numeric9",
+        "0123start-with-multiple-digits",
+        "end-with-multiple-digits6789",
         *(
             pytest.param(letter, id=f"single-letter-{letter}")
             for letter in ascii_lowercase
