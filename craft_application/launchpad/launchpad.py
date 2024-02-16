@@ -31,7 +31,7 @@ import launchpadlib.launchpad  # type: ignore[import-untyped]
 import launchpadlib.uris  # type: ignore[import-untyped]
 import lazr.restfulclient.errors  # type: ignore[import-untyped]
 import platformdirs
-from typing_extensions import Any, Self
+from typing_extensions import Any, Literal, Self, overload
 
 from . import models
 
@@ -98,18 +98,33 @@ class Launchpad:
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}({self.app_name!r})"
 
+    @overload
+    def get_recipe(
+        self,
+        type_: Literal["snap", "SNAP", models.RecipeType.SNAP],
+        name: str,
+        owner: str | None,
+    ) -> models.SnapRecipe: ...
+    @overload
+    def get_recipe(
+        self,
+        type_: Literal["charm", "CHARM", models.RecipeType.CHARM],
+        name: str,
+        owner: str | None,
+        project: str,
+    ) -> models.CharmRecipe: ...
     def get_recipe(
         self,
         type_: models.RecipeType | str,
         name: str,
-        owner: str,
+        owner: str | None = None,
         project: str | None = None,
     ) -> models.Recipe:
         """Get a recipe.
 
         :param type_: The type of recipe to get.
-        :param owner: The owner of the recipe.
         :param name: The name of the recipe.
+        :param owner: (Optional) The owner of the recipe, defaults to oneself.
         :param project: (Optional) The project to which the recipe is attached
         :returns: A Recipe object of the appropriate type.
         :raises: ValueError if the type requested is invalid.
@@ -123,27 +138,94 @@ class Launchpad:
         if isinstance(type_, str):
             type_ = models.RecipeType.__members__.get(type_.upper(), type_)
             type_ = models.RecipeType(type_)
+        if owner is None:
+            owner = self.username
 
         if type_ is models.RecipeType.SNAP:
             return models.SnapRecipe.get(self, name, owner)
         if type_ is models.RecipeType.CHARM:
-            if project:
-                return models.CharmRecipe.get(self, name, owner, project)
-            result = None
-            for recipe in models.CharmRecipe.find(self, owner, name=name):
-                if result is not None:
-                    raise ValueError(
-                        f"Multiple charm recipes for {name!r} found with owner {owner!r}",
-                    )
-                result = recipe
-            if result is not None:
-                return result
-            raise ValueError(
-                f"Could not find charm recipe {name!r} with owner {owner!r}",
-            )
+            if not project:
+                raise ValueError("A charm recipe must be associated with a project.")
+            return models.CharmRecipe.get(self, name, owner, project)
 
         raise TypeError(f"Unknown recipe type: {type_}")
 
     def get_project(self, name: str) -> models.Project:
         """Get a project."""
         return models.Project.get(self, name)
+
+    def new_project(
+        self,
+        name: str,
+        *,
+        title: str,
+        display_name: str,
+        summary: str,
+        description: str | None = None,
+    ) -> models.Project:
+        """Create a new project."""
+        return models.Project.new(
+            self, title, name, display_name, summary, description=description
+        )
+
+    @overload
+    def get_repository(self, *, path: str) -> models.GitRepository: ...
+    @overload
+    def get_repository(
+        self, name: str, owner: str | None = None, project: str | None = None
+    ) -> models.GitRepository: ...
+    def get_repository(
+        self,
+        name: str | None = None,
+        owner: str | None = None,
+        project: str | None = None,
+        path: str | None = None,
+    ) -> models.GitRepository:
+        """Get an existing git repository.
+
+        :param name: The name of the repository.
+        :param owner: The owner of the repository. Optional, defaults to oneself.
+        :param project: (Optional) The project to which the repository is attached.
+        :param path: The full path of the repository. Mutually exclusive with other options.
+        :returns: A GitRepository matching this repository.
+        :raises: NotFoundError if the repository couldn't be found.
+        """
+        if path and (name or owner or project):
+            raise ValueError(
+                "Do not set repository name, owner or project when using a path."
+            )
+        if not name:
+            raise ValueError(
+                "Must specify either the name or the path of the repository."
+            )
+
+        if project and not owner:
+            path = f"{project}/+git/{name}"
+        else:
+            if not owner:
+                owner = self.username
+            if project:
+                path = f"~{owner}/{project}/+git/{name}"
+            else:
+                path = f"~{owner}/+git/{name}"
+
+        return models.GitRepository.get(self, path)
+
+    def new_repository(
+        self,
+        name: str,
+        owner: str | None = None,
+        project: str | models.Project | None = None,
+    ) -> models.GitRepository:
+        """Create a new git repository.
+
+        :param name: The name of the repository.
+        :param owner: (Optional) the username of the owner (defaults to oneself).
+        :param project: (Optional) the project to which the repository will be attached.
+        """
+        if isinstance(project, models.Project):
+            project = project.name
+        if owner is None:
+            owner = self.username
+
+        return models.GitRepository.new(self, name, owner, project)
