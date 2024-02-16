@@ -42,6 +42,13 @@ from craft_parts.plugins.plugins import PluginType
 from craft_providers import bases
 
 EMPTY_COMMAND_GROUP = craft_cli.CommandGroup("FakeCommands", [])
+BASIC_PROJECT_YAML = """
+name: myproject
+version: 1.0
+parts:
+  mypart:
+    plugin: nil
+"""
 
 
 @pytest.mark.parametrize("summary", ["A summary", None])
@@ -326,7 +333,13 @@ def test_get_dispatcher_error(
 
 
 def test_craft_lib_log_level(app_metadata, fake_services):
-    craft_libs = ["craft_archives", "craft_parts", "craft_providers", "craft_store"]
+    craft_libs = [
+        "craft_archives",
+        "craft_parts",
+        "craft_providers",
+        "craft_store",
+        "craft_application.remote",
+    ]
 
     # The logging module is stateful and global, so first lets clear the logging level
     # that another test might have already set.
@@ -341,6 +354,64 @@ def test_craft_lib_log_level(app_metadata, fake_services):
     for craft_lib in craft_libs:
         logger = logging.getLogger(craft_lib)
         assert logger.level == logging.DEBUG
+
+
+def test_gets_project(monkeypatch, tmp_path, app_metadata, fake_services):
+    project_file = tmp_path / "testcraft.yaml"
+    project_file.write_text(BASIC_PROJECT_YAML)
+    monkeypatch.setattr(sys, "argv", ["testcraft", "pull"])
+
+    app = FakeApplication(app_metadata, fake_services)
+    app.project_dir = tmp_path
+
+    fake_services.project = None
+
+    app.run()
+
+    assert fake_services.project is not None
+    assert app.project is not None
+
+
+def test_succeeds_without_project(
+    monkeypatch, emitter, tmp_path, app_metadata, fake_services
+):
+    monkeypatch.setattr(sys, "argv", ["testcraft", "try-load-project"])
+
+    app = FakeApplication(app_metadata, fake_services)
+    app.project_dir = tmp_path
+    fake_services.project = None
+
+    class TryLoadProject(commands.AppCommand):
+        """A command that tries to load the project but continues without it."""
+
+        name = "try-load-project"
+        help_msg = overview = "unimportant"
+        always_load_project = "try"
+
+        def run(self, parsed_args: argparse.Namespace) -> None:
+            _ = parsed_args
+
+    app.add_command_group("test", [TryLoadProject])
+
+    assert app.run() == 0
+
+    assert fake_services.project is None
+    emitter.assert_debug("Project not found. Continuing without.")
+
+
+def test_fails_without_project(
+    monkeypatch, capsys, tmp_path, app_metadata, fake_services
+):
+    monkeypatch.setattr(sys, "argv", ["testcraft", "prime"])
+
+    app = FakeApplication(app_metadata, fake_services)
+    app.project_dir = tmp_path
+
+    fake_services.project = None
+
+    assert app.run() == 1
+
+    assert capsys.readouterr().err.startswith("Could not load project.\n")
 
 
 @pytest.mark.parametrize(
@@ -573,17 +644,7 @@ def fake_project_file(monkeypatch, tmp_path):
     project_dir = tmp_path / "project"
     project_dir.mkdir()
     project_path = project_dir / "testcraft.yaml"
-    project_path.write_text(
-        dedent(
-            """
-        name: myproject
-        version: 1.0
-        parts:
-          mypart:
-            plugin: nil
-        """
-        )
-    )
+    project_path.write_text(BASIC_PROJECT_YAML)
     monkeypatch.chdir(project_dir)
 
     return project_path
