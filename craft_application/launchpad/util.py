@@ -148,7 +148,7 @@ def get_processor(name: str) -> str:
     return f"/+processors/{get_architecture(name).value}"
 
 
-def get_annotations(obj: object) -> Dict[str, type]:
+def get_annotations(obj: type) -> Dict[str, type]:
     """Get an object's annotations in a way that's friendly to pre-python 3.10.
 
     In Python 3.10 or later, this just wraps `inspect.get_annotations` with `eval_str=True`.

@@ -37,8 +37,6 @@ import launchpadlib.errors  # type: ignore[import-untyped]
 from typing_extensions import Self, Any
 from typing import TYPE_CHECKING
 
-from typing_extensions import override
-
 from ..models.base import LaunchpadObject
 from .. import errors
 
@@ -68,7 +66,6 @@ class Project(LaunchpadObject):
     description: str
 
     @classmethod
-    @override
     def new(  # pyright: ignore[reportIncompatibleMethodOverride]
         cls,
         lp: Launchpad,
@@ -78,7 +75,7 @@ class Project(LaunchpadObject):
         summary: str,
         *,
         description: str | None = None,
-        **kwargs: Any,
+        **kwargs: Any,  # noqa: ANN401
     ) -> Self:
         """Create a new project.
 
@@ -98,7 +95,6 @@ class Project(LaunchpadObject):
         )
 
     @classmethod
-    @override
     def get(  # pyright: ignore[reportIncompatibleMethodOverride]
         cls, lp: Launchpad, name: str
     ) -> Self:
@@ -109,7 +105,6 @@ class Project(LaunchpadObject):
             raise errors.NotFoundError("Could not find project")
 
     @classmethod
-    @override
     def find(  # pyright: ignore[reportIncompatibleMethodOverride]
         cls, lp: Launchpad, text: str
     ) -> Iterable[Self]:
