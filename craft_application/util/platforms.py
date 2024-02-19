@@ -19,6 +19,9 @@ from __future__ import annotations
 import functools
 import platform
 
+from craft_parts.utils import os_utils
+from craft_providers import bases
+
 
 @functools.lru_cache(maxsize=1)
 def get_host_architecture() -> str:
@@ -34,6 +37,15 @@ def convert_architecture_deb_to_platform(arch: str) -> str:
     :return: architecture in platform syntax
     """
     return _ARCH_TRANSLATIONS_DEB_TO_PLATFORM.get(arch, arch)
+
+
+@functools.lru_cache(maxsize=1)
+def get_host_base() -> bases.BaseName:
+    """Get the craft-providers base for the running host."""
+    release = os_utils.OsRelease()
+    os_id = release.id()
+    version_id = release.version_id()
+    return bases.BaseName(os_id, version_id)
 
 
 # architecture translations from the platform syntax to the deb/snap syntax

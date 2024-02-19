@@ -238,7 +238,7 @@ def test_run_managed_success(app, fake_project, fake_build_plan):
 
     assert (
         mock.call(
-            BuildInfo("foo", arch, arch, bases.BaseName("ubuntu", "22.04")),
+            fake_build_plan[0],
             work_dir=mock.ANY,
         )
         in mock_provider.instance.mock_calls
@@ -757,7 +757,7 @@ def test_get_project_current_dir(app):
 
 @pytest.mark.usefixtures("fake_project_file")
 def test_get_project_all_platform(app):
-    app.get_project(platform="ubuntu-22.04")
+    app.get_project(platform="foo")
 
 
 @pytest.mark.usefixtures("fake_project_file")

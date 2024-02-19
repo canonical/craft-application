@@ -36,7 +36,7 @@ from craft_parts import (
 from craft_parts.errors import CallbackRegistrationError
 from typing_extensions import override
 
-from craft_application import errors
+from craft_application import errors, models, util
 from craft_application.services import base
 from craft_application.util import convert_architecture_deb_to_platform, repositories
 
@@ -119,7 +119,8 @@ class LifecycleService(base.ProjectService):
     :param project: The Project object that describes this project.
     :param work_dir: The working directory for parts processing.
     :param cache_dir: The cache directory for parts processing.
-    :param build_for: The architecture or platform we are building for.
+    :param build_plan: The filtered build plan of platforms that are valid for
+        the running host.
     :param lifecycle_kwargs: Additional keyword arguments are passed through to the
         LifecycleManager on initialisation.
     """
@@ -132,13 +133,13 @@ class LifecycleService(base.ProjectService):
         project: Project,
         work_dir: Path | str,
         cache_dir: Path | str,
-        build_for: str,
+        build_plan: list[models.BuildInfo],
         **lifecycle_kwargs: Any,  # noqa: ANN401 - eventually used in an Any
     ) -> None:
         super().__init__(app, services, project=project)
         self._work_dir = work_dir
         self._cache_dir = cache_dir
-        self._build_for = build_for
+        self._build_plan = build_plan
         self._manager_kwargs = lifecycle_kwargs
         self._lcm: LifecycleManager = None  # type: ignore[assignment]
 
@@ -157,6 +158,13 @@ class LifecycleService(base.ProjectService):
         emit.debug(f"Initialising lifecycle manager in {self._work_dir}")
         emit.trace(f"Lifecycle: {repr(self)}")
 
+        host_arch = util.get_host_architecture()
+        # Note: we fallback to the host's architecture here if the build plan
+        # is empty just to be able to create the LifecycleManager; this will
+        # correctly fail later on when run() is called (but not necessarily when
+        # something else like clean() is called).
+        build_for = self._build_plan[0].build_for if self._build_plan else host_arch
+
         if self._project.package_repositories:
             self._manager_kwargs["package_repositories"] = (
                 self._project.package_repositories
@@ -174,7 +182,7 @@ class LifecycleService(base.ProjectService):
             return LifecycleManager(
                 {"parts": self._project.parts},
                 application_name=self._app.name,
-                arch=convert_architecture_deb_to_platform(self._build_for),
+                arch=convert_architecture_deb_to_platform(build_for),
                 cache_dir=self._cache_dir,
                 work_dir=self._work_dir,
                 ignore_local_sources=self._app.source_ignore_patterns,
@@ -200,6 +208,12 @@ class LifecycleService(base.ProjectService):
     def run(self, step_name: str | None, part_names: list[str] | None = None) -> None:
         """Run the lifecycle manager for the parts."""
         target_step = _get_step(step_name) if step_name else None
+
+        if not self._build_plan:
+            raise errors.EmptyBuildPlanError
+
+        if len(self._build_plan) > 1:
+            raise errors.MultipleBuildsError
 
         try:
             if self._project.package_repositories:
@@ -283,10 +297,10 @@ class LifecycleService(base.ProjectService):
     def __repr__(self) -> str:
         work_dir = self._work_dir
         cache_dir = self._cache_dir
-        build_for = self._build_for
+        plan = self._build_plan
         return (
             f"{self.__class__.__name__}({self._app!r}, {self._project!r}, "
-            f"{work_dir=}, {cache_dir=}, {build_for=}, **{self._manager_kwargs!r})"
+            f"{work_dir=}, {cache_dir=}, {plan=}, **{self._manager_kwargs!r})"
         )
 
     def _update_project_metadata(self) -> None:

@@ -120,6 +120,26 @@ class InvalidPlatformError(CraftError):
         super().__init__(message=message, details=details)
 
 
+class EmptyBuildPlanError(CraftError):
+    """The build plan filtered out all possible builds."""
+
+    def __init__(self) -> None:
+        message = "No build matches the current platform."
+        resolution = 'Check the "--platform" parameter.'
+
+        super().__init__(message=message, resolution=resolution)
+
+
+class MultipleBuildsError(CraftError):
+    """The build plan contains multiple possible builds."""
+
+    def __init__(self) -> None:
+        message = "Multiple builds match the current platform."
+        resolution = 'Check the "--platform" parameter.'
+
+        super().__init__(message=message, resolution=resolution)
+
+
 class InvalidParameterError(CraftError):
     """Invalid parameter or environment variable."""
 

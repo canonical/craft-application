@@ -40,19 +40,18 @@ class Platform(models.CraftBaseModel):
     build_for: str
 
 
+def _create_fake_build_plan(num_infos: int = 1) -> list[models.BuildInfo]:
+    """Create a build plan that is able to execute on the running system."""
+    arch = util.get_host_architecture()
+    base = util.get_host_base()
+    return [models.BuildInfo("foo", arch, arch, base)] * num_infos
+
+
 class MyBuildPlanner(models.BuildPlanner):
     """Build planner definition for tests."""
 
     def get_build_plan(self) -> list[models.BuildInfo]:
-        arch = util.get_host_architecture()
-        return [
-            models.BuildInfo(
-                "ubuntu-22.04", arch, arch, bases.BaseName("ubuntu", "22.04")
-            ),
-            models.BuildInfo(
-                "ubuntu-24.04", arch, arch, bases.BaseName("ubuntu", "24.04")
-            ),
-        ]
+        return _create_fake_build_plan()
 
 
 @pytest.fixture()
@@ -108,9 +107,29 @@ def fake_project() -> models.Project:
 
 
 @pytest.fixture()
-def fake_build_plan() -> list[models.BuildInfo]:
-    arch = util.get_host_architecture()
-    return [models.BuildInfo("foo", arch, arch, bases.BaseName("ubuntu", "22.04"))]
+def fake_build_plan(request) -> list[models.BuildInfo]:
+    num_infos = getattr(request, "param", 1)
+    return _create_fake_build_plan(num_infos)
+
+
+@pytest.fixture()
+def full_build_plan(mocker) -> list[models.BuildInfo]:
+    """A big build plan with multiple bases and build-for targets."""
+    host_arch = util.get_host_architecture()
+    build_plan = []
+    for release in ("20.04", "22.04", "24.04"):
+        for build_for in (host_arch, "s390x", "riscv64"):
+            build_plan.append(
+                models.BuildInfo(
+                    f"ubuntu-{release}-{build_for}",
+                    host_arch,
+                    build_for,
+                    bases.BaseName("ubuntu", release),
+                )
+            )
+
+    mocker.patch.object(MyBuildPlanner, "get_build_plan", return_value=build_plan)
+    return build_plan
 
 
 @pytest.fixture()
@@ -125,11 +144,10 @@ def enable_overlay() -> Iterator[craft_parts.Features]:
 
 @pytest.fixture()
 def lifecycle_service(
-    app_metadata, fake_project, fake_services, tmp_path
+    app_metadata, fake_project, fake_services, tmp_path, fake_build_plan
 ) -> services.LifecycleService:
     work_dir = tmp_path / "work"
     cache_dir = tmp_path / "cache"
-    build_for = util.get_host_architecture()
 
     service = services.LifecycleService(
         app_metadata,
@@ -138,7 +156,7 @@ def lifecycle_service(
         work_dir=work_dir,
         cache_dir=cache_dir,
         platform=None,
-        build_for=build_for,
+        build_plan=fake_build_plan,
     )
     service.setup()
     return service
@@ -198,7 +216,7 @@ def fake_package_service_class():
 
 
 @pytest.fixture()
-def fake_lifecycle_service_class(tmp_path):
+def fake_lifecycle_service_class(tmp_path, fake_build_plan):
     class FakeLifecycleService(services.LifecycleService):
         def __init__(
             self,
@@ -214,7 +232,7 @@ def fake_lifecycle_service_class(tmp_path):
                 work_dir=tmp_path / "work",
                 cache_dir=tmp_path / "cache",
                 platform=None,
-                build_for=util.get_host_architecture(),
+                build_plan=fake_build_plan,
                 **lifecycle_kwargs,
             )
 
