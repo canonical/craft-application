@@ -22,10 +22,11 @@ import pathlib
 import signal
 import subprocess
 import sys
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from functools import cached_property
 from importlib import metadata
-from typing import TYPE_CHECKING, Any, Iterable, cast, final
+from typing import TYPE_CHECKING, Any, cast, final
 
 import craft_cli
 import craft_parts
