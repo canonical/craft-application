@@ -18,7 +18,6 @@ import copy
 import pathlib
 import textwrap
 from textwrap import dedent
-from typing import Optional
 
 import pytest
 from craft_application import util
@@ -192,7 +191,7 @@ def test_effective_base_is_base(project):
 
 
 class FakeBuildBaseProject(Project):
-    build_base: Optional[str]
+    build_base: str | None
 
 
 # As above, we need to tell pyright to ignore several typing issues.

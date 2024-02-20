@@ -22,7 +22,24 @@ import time
 from enum import Enum
 from pathlib import Path
 
-import pygit2  # type: ignore[import-untyped]
+# Cannot catch the pygit2 error here raised by the global use of
+# pygit2.Settings on import. We would ideally use pygit2.Settings
+# for this
+try:
+    import pygit2  # type: ignore[import-untyped]
+except Exception:  # noqa: BLE001 (narrower types are provided by the import)
+    # This environment comes from ssl.get_default_verify_paths
+    _old_env = os.getenv("SSL_CERT_DIR")
+    # Needs updating when the base changes for applications' snap
+    os.environ["SSL_CERT_DIR"] = "/snap/core22/current/etc/ssl/certs"
+    import pygit2  # type: ignore[import-untyped]
+
+    # Restore the environment in case the application shells out and the
+    # environment that was setup is required.
+    if _old_env is not None:
+        os.environ["SSL_CERT_DIR"] = _old_env
+    else:
+        del os.environ["SSL_CERT_DIR"]
 
 from .errors import GitError, RemoteBuildInvalidGitRepoError
 

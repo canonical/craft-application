@@ -16,7 +16,8 @@
 """Utilities related to callbacks."""
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Callable, Iterable, Literal, overload
+from collections.abc import Callable, Iterable
+from typing import TYPE_CHECKING, Literal, overload
 
 if TYPE_CHECKING:  # pragma: no cover
     # Caution: Removing these from type checking will result in circular imports.

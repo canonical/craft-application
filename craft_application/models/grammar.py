@@ -15,7 +15,7 @@
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """Grammar-aware project for *craft applications."""
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import pydantic
 from craft_grammar.models import (  # type: ignore[import-untyped]
@@ -38,21 +38,21 @@ class _GrammarAwareModel(pydantic.BaseModel):
 
 
 class _GrammarAwarePart(_GrammarAwareModel):
-    source: Optional[GrammarStr]
-    build_environment: Optional[GrammarSingleEntryDictList]
-    build_packages: Optional[GrammarStrList]
-    stage_packages: Optional[GrammarStrList]
-    build_snaps: Optional[GrammarStrList]
-    stage_snaps: Optional[GrammarStrList]
-    parse_info: Optional[List[str]]
+    source: GrammarStr | None
+    build_environment: GrammarSingleEntryDictList | None
+    build_packages: GrammarStrList | None
+    stage_packages: GrammarStrList | None
+    build_snaps: GrammarStrList | None
+    stage_snaps: GrammarStrList | None
+    parse_info: list[str] | None
 
 
 class GrammarAwareProject(_GrammarAwareModel):
     """Project definition containing grammar-aware components."""
 
-    parts: "Dict[str, _GrammarAwarePart]"
+    parts: "dict[str, _GrammarAwarePart]"
 
     @classmethod
-    def validate_grammar(cls, data: Dict[str, Any]) -> None:
+    def validate_grammar(cls, data: dict[str, Any]) -> None:
         """Ensure grammar-enabled entries are syntactically valid."""
         cls(**data)
