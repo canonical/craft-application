@@ -18,8 +18,9 @@ import enum
 import inspect
 import sys
 import urllib.parse
+from collections.abc import Iterable, Sequence
 from types import MappingProxyType
-from typing import Dict, Iterable, Sequence, Union, cast
+from typing import cast
 
 from lazr.restfulclient.resource import Entry  # type: ignore[import-untyped]
 from typing_extensions import Any
@@ -63,35 +64,31 @@ def getattrs(obj: object, path: Iterable[str]) -> Any:  # noqa: ANN401
     except AttributeError as exc:
         # Name and obj attributes were only introduced in Python 3.10. Once we've
         # made that the minimum, we can simplify this.
-        if sys.version_info >= (3, 10):
-            raise AttributeError(
-                f"{obj.__class__.__name__!r} object has no attribute path {exc.name!r}",
-                name=exc.name,
-                obj=obj,
-            ) from None
-        raise
+        raise AttributeError(
+            f"{obj.__class__.__name__!r} object has no attribute path {exc.name!r}",
+            name=exc.name,
+            obj=obj,
+        ) from None
     try:
         return getattrs(inner, path)
     except AttributeError as exc:
         # Name and obj attributes were only introduced in Python 3.10. Once we've
         # made that the minimum, we can simplify this.
-        if sys.version_info >= (3, 10):
-            partial_path = f"{attr}.{exc.name}"
-            raise AttributeError(
-                f"{obj.__class__.__name__!r} object has no attribute path {partial_path!r}",
-                name=partial_path,
-                obj=obj,
-            ) from None
-        raise
+        partial_path = f"{attr}.{exc.name}"
+        raise AttributeError(
+            f"{obj.__class__.__name__!r} object has no attribute path {partial_path!r}",
+            name=partial_path,
+            obj=obj,
+        ) from None
 
 
 def set_innermost_attr(
     obj: object,
-    path: Union[Sequence[str], str],
+    path: Sequence[str] | str,
     value: Any,  # noqa: ANN401
 ) -> None:
     """Set the innermost attribute based on a path."""
-    parent_path: Union[Sequence[str], str]
+    parent_path: Sequence[str] | str
     if isinstance(path, str):
         parent_path, _, attr_name = path.rpartition(".")
     else:
@@ -110,7 +107,7 @@ def get_resource_type(entry: Entry) -> str:
     ).fragment
 
 
-def get_person_link(person: Union[str, Entry]) -> str:
+def get_person_link(person: str | Entry) -> str:
     """Get a link to a person or team.
 
     :param person: The person or team to link
@@ -148,14 +145,14 @@ def get_processor(name: str) -> str:
     return f"/+processors/{get_architecture(name).value}"
 
 
-def get_annotations(obj: type) -> Dict[str, type]:
-    """Get an object's annotations in a way that's friendly to pre-python 3.10.
+def get_annotations(obj: type) -> dict[str, type]:
+    """Get a type's annotations in a way that's friendly to pre-python 3.10.
 
     In Python 3.10 or later, this just wraps `inspect.get_annotations` with `eval_str=True`.
     """
     if hasattr(inspect, "get_annotations"):
         return cast(
-            Dict[str, type],
+            dict[str, type],
             inspect.get_annotations(  # pyright: ignore[reportUnknownMemberType,reportAttributeAccessIssue]
                 obj, eval_str=True
             ),

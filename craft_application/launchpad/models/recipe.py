@@ -30,7 +30,6 @@ from __future__ import annotations
 
 import enum
 import time
-import typing
 from collections.abc import Collection, Iterable
 from typing import TYPE_CHECKING
 
@@ -402,4 +401,4 @@ class CharmRecipe(_StoreRecipe):
             yield cls(lp, recipe)
 
 
-Recipe = typing.Union[SnapRecipe, CharmRecipe]
+Recipe = SnapRecipe | CharmRecipe

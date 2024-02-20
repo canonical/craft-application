@@ -14,7 +14,8 @@
 # You should have received a copy of the GNU Lesser General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Helper utilities for formatting error messages."""
-from typing import TYPE_CHECKING, Iterable, List, NamedTuple, Union
+from collections.abc import Iterable
+from typing import TYPE_CHECKING, NamedTuple
 
 if TYPE_CHECKING:  # pragma: no cover
     from pydantic.error_wrappers import ErrorDict
@@ -42,7 +43,7 @@ class FieldLocationTuple(NamedTuple):
         return cls(field, location)
 
 
-def format_pydantic_error(loc: Iterable[Union[str, int]], message: str) -> str:
+def format_pydantic_error(loc: Iterable[str | int], message: str) -> str:
     """Format a single pydantic ErrorDict as a string.
 
     :param loc: An iterable of strings and integers determining the error location.
@@ -88,9 +89,9 @@ def format_pydantic_errors(
     return "\n".join((f"Bad {file_name} content:", *messages))
 
 
-def _format_pydantic_error_location(loc: Iterable[Union[str, int]]) -> str:
+def _format_pydantic_error_location(loc: Iterable[str | int]) -> str:
     """Format location."""
-    loc_parts: List[str] = []
+    loc_parts: list[str] = []
     for loc_part in loc:
         if isinstance(loc_part, str):
             loc_parts.append(loc_part)

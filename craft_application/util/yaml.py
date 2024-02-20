@@ -17,7 +17,7 @@
 from __future__ import annotations
 
 import contextlib
-from typing import TYPE_CHECKING, Any, TextIO, Type, Union, cast, overload
+from typing import TYPE_CHECKING, Any, TextIO, cast, overload
 
 import yaml
 
@@ -129,9 +129,9 @@ def dump_yaml(data: Any, stream: TextIO | None = None, **kwargs: Any) -> str | N
     :param kwargs: Keyword arguments passed to pyyaml
     """
     yaml.add_representer(
-        str, _repr_str, Dumper=cast(Type[yaml.Dumper], yaml.SafeDumper)
+        str, _repr_str, Dumper=cast(type[yaml.Dumper], yaml.SafeDumper)
     )
     kwargs.setdefault("sort_keys", False)
     return cast(  # This cast is needed for pyright but not mypy
-        Union[str, None], yaml.dump(data, stream, Dumper=yaml.SafeDumper, **kwargs)
+        str | None, yaml.dump(data, stream, Dumper=yaml.SafeDumper, **kwargs)
     )
