@@ -26,12 +26,13 @@
 from __future__ import annotations
 
 import pathlib
+from typing import Any, Literal, overload
 
 import launchpadlib.launchpad  # type: ignore[import-untyped]
 import launchpadlib.uris  # type: ignore[import-untyped]
 import lazr.restfulclient.errors  # type: ignore[import-untyped]
 import platformdirs
-from typing_extensions import Any, Literal, Self, overload
+from typing_extensions import Self
 
 from . import models
 
