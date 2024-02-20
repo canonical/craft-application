@@ -408,7 +408,7 @@ def test_fails_without_project(
 
     fake_services.project = None
 
-    assert app.run() == 1
+    assert app.run() == 70
 
     assert capsys.readouterr().err.startswith("Could not load project.\n")
 
