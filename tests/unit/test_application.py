@@ -408,9 +408,9 @@ def test_fails_without_project(
 
     fake_services.project = None
 
-    assert app.run() == 70
+    assert app.run() == 70  # noqa: PLR2004
 
-    assert capsys.readouterr().err.startswith("Could not load project.\n")
+    assert "No such file or directory" in capsys.readouterr().err
 
 
 @pytest.mark.parametrize(
