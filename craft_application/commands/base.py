@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import abc
 import argparse
-from typing import Any, Optional, Protocol, final
+from typing import Any, Literal, Optional, Protocol, final
 
 from craft_cli import BaseCommand, emit
 from typing_extensions import Self
@@ -50,8 +50,12 @@ class RunCallback(Protocol):
 class AppCommand(BaseCommand):
     """Command for use with craft-application."""
 
-    always_load_project: bool = False
-    """The project is also loaded in non-managed mode."""
+    always_load_project: bool | Literal["try"] = False
+    """The project is also loaded in non-managed mode.
+
+    If the value is "try", the app will attempt to load the project but not error on
+    failure.
+    """
 
     def __init__(self, config: dict[str, Any] | None) -> None:
         if config is None:
