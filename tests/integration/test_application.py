@@ -211,7 +211,10 @@ def test_run_always_load_project(monkeypatch, app, cmd):
     monkeypatch.setenv("CRAFT_DEBUG", "1")
     monkeypatch.setattr("sys.argv", ["testcraft", cmd])
 
-    assert app.run() == 1
+    with pytest.raises(FileNotFoundError) as raised:
+        app.run()
+
+    assert str(raised.value).endswith("/testcraft.yaml'") is True
 
 
 @pytest.mark.parametrize("help_param", ["-h", "--help"])

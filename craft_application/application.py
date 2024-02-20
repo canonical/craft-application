@@ -447,7 +447,7 @@ class Application:
             if command.always_load_project == "try":
                 craft_cli.emit.debug("Project not found. Continuing without.")
             else:
-                raise craft_cli.CraftError("Could not load project.")
+                raise
 
     def run(self) -> int:  # noqa: PLR0912 (too many branches)
         """Bootstrap and run the application."""
