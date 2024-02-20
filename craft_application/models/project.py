@@ -17,6 +17,7 @@
 
 This defines the structure of the input file (e.g. snapcraft.yaml)
 """
+import abc
 import dataclasses
 from typing import Any
 
@@ -62,16 +63,14 @@ class BuildPlannerConfig(CraftBaseConfig):
     """The BuildPlanner model uses attributes from the project yaml."""
 
 
-class BuildPlanner(CraftBaseModel):
+class BuildPlanner(CraftBaseModel, metaclass=abc.ABCMeta):
     """The BuildPlanner obtains a build plan for the project."""
 
     Config = BuildPlannerConfig
 
+    @abc.abstractmethod
     def get_build_plan(self) -> list[BuildInfo]:
         """Obtain the list of architectures and bases from the project file."""
-        raise NotImplementedError(
-            f"{self.__class__.__name__!s} must implement get_build_plan"
-        )
 
 
 class Project(CraftBaseModel):
@@ -113,12 +112,6 @@ class Project(CraftBaseModel):
         if self.base is not None:
             return self.base
         raise RuntimeError("Could not determine effective base")
-
-    def get_build_plan(self) -> list[BuildInfo]:
-        """Obtain the list of architectures and bases from the project file."""
-        raise NotImplementedError(
-            f"{self.__class__.__name__!s} must implement get_build_plan"
-        )
 
     @override
     @classmethod

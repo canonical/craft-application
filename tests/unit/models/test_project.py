@@ -28,7 +28,6 @@ PROJECTS_DIR = pathlib.Path(__file__).parent / "project_models"
 PARTS_DICT = {"my-part": {"plugin": "nil"}}
 # pyright doesn't like these types and doesn't have a pydantic plugin like mypy.
 # Because of this, we need to silence several errors in these constants.
-BUILD_PLANNER = BuildPlanner()
 BASIC_PROJECT = Project(  # pyright: ignore[reportCallIssue]
     name="project-name",  # pyright: ignore[reportGeneralTypeIssues]
     version="1.0",  # pyright: ignore[reportGeneralTypeIssues]
@@ -110,10 +109,9 @@ def test_unmarshal_then_marshal(project_dict):
     assert Project.unmarshal(project_dict).marshal() == project_dict
 
 
-def test_build_plan_not_implemented():
-    build_planner = BUILD_PLANNER
-    with pytest.raises(NotImplementedError):
-        build_planner.get_build_plan()
+def test_build_planner_abstract():
+    with pytest.raises(TypeError):
+        BuildPlanner()  # type: ignore[type-abstract]
 
 
 @pytest.mark.parametrize(
