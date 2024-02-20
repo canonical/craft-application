@@ -19,7 +19,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.12'
           cache: 'pip'
       - name: Configure environment
         run: |
@@ -43,10 +43,11 @@ jobs:
           echo "::endgroup::"
       - name: Run Linters
         run: .tox/.tox/bin/tox run --skip-pkg-install --no-list-dependencies -m lint
-  tests:
+  unit-tests:
     strategy:
+      fail-fast: false
       matrix:
-        platform: [ubuntu-20.04, ubuntu-22.04]
+        platform: [ubuntu-22.04]
     runs-on: ${{ matrix.platform }}
     steps:
       - uses: actions/checkout@v4
@@ -56,10 +57,8 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: |
-            3.8
             3.10
-            3.11
-            3.12-dev
+            3.12
           cache: 'pip'
       - name: Setup LXD
         uses: canonical/setup-lxd@v0.1.1
@@ -76,14 +75,9 @@ jobs:
           echo "::endgroup::"
           mkdir -p results
       - name: Setup Tox environments
-        run: tox run -m tests --notest
+        run: tox run -m unit-tests --notest
       - name: Unit tests
         run: .tox/.tox/bin/tox run --skip-pkg-install --no-list-dependencies --result-json results/tox-${{ matrix.platform }}.json -m unit-tests
-        env:
-          PYTEST_ADDOPTS: "--no-header -vv -rN"
-      - name: Integration tests
-        if: '!cancelled()'
-        run: .tox/.tox/bin/tox run --skip-pkg-install --no-list-dependencies --result-json results/tox-${{ matrix.platform }}.json -m integration-tests
         env:
           PYTEST_ADDOPTS: "--no-header -vv -rN"
       - name: Upload code coverage
@@ -95,5 +89,54 @@ jobs:
         if: success() || failure()
         uses: actions/upload-artifact@v4
         with:
-          name: test-results-${{ matrix.platform }}
+          name: unit-test-results-${{ matrix.platform }}
+          path: results/
+  integration-tests:
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [ubuntu-22.04]
+        python: [py310, py312]
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Set up Python versions on ${{ matrix.platform }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: |
+            3.10
+            3.12
+          cache: 'pip'
+      - name: Setup LXD
+        uses: canonical/setup-lxd@v0.1.1
+        with:
+          channel: latest/stable
+      - name: Configure environment
+        run: |
+          echo "::group::apt-get"
+          sudo apt update
+          sudo apt-get install -y libapt-pkg-dev
+          echo "::endgroup::"
+          echo "::group::pip install"
+          python -m pip install tox
+          echo "::endgroup::"
+          mkdir -p results
+      - name: Setup Tox environments
+        run: tox run -e integration-${{ matrix.python }} --notest
+      - name: Integration tests
+        run: .tox/.tox/bin/tox run --skip-pkg-install --no-list-dependencies --result-json results/tox-${{ matrix.platform }}-${{ matrix.python }}.json -e integration-${{ matrix.python }}
+        env:
+          PYTEST_ADDOPTS: "--no-header -vv -rN"
+      - name: Upload code coverage
+        uses: codecov/codecov-action@v4
+        with:
+          directory: ./results/
+          files: coverage*.xml
+      - name: Upload test results
+        if: success() || failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-test-results-${{ matrix.platform }}-${{ matrix.python }}
           path: results/

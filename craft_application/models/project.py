@@ -18,7 +18,7 @@
 This defines the structure of the input file (e.g. snapcraft.yaml)
 """
 import dataclasses
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any
 
 import craft_parts
 import craft_providers.bases
@@ -67,7 +67,7 @@ class BuildPlanner(CraftBaseModel):
 
     Config = BuildPlannerConfig
 
-    def get_build_plan(self) -> List[BuildInfo]:
+    def get_build_plan(self) -> list[BuildInfo]:
         """Obtain the list of architectures and bases from the project file."""
         raise NotImplementedError(
             f"{self.__class__.__name__!s} must implement get_build_plan"
@@ -78,28 +78,28 @@ class Project(CraftBaseModel):
     """Craft Application project definition."""
 
     name: ProjectName
-    title: Optional[ProjectTitle]
+    title: ProjectTitle | None
     version: VersionStr
-    summary: Optional[SummaryStr]
-    description: Optional[str]
+    summary: SummaryStr | None
+    description: str | None
 
-    base: Optional[Any] = None
-    build_base: Optional[Any] = None
-    platforms: Optional[Dict[str, Any]] = None
+    base: Any | None = None
+    build_base: Any | None = None
+    platforms: dict[str, Any] | None = None
 
-    contact: Optional[Union[str, UniqueStrList]]
-    issues: Optional[Union[str, UniqueStrList]]
-    source_code: Optional[AnyUrl]
-    license: Optional[str]
+    contact: str | UniqueStrList | None
+    issues: str | UniqueStrList | None
+    source_code: AnyUrl | None
+    license: str | None
 
-    parts: Dict[str, Dict[str, Any]]  # parts are handled by craft-parts
+    parts: dict[str, dict[str, Any]]  # parts are handled by craft-parts
 
-    package_repositories: Optional[List[Dict[str, Any]]]
+    package_repositories: list[dict[str, Any]] | None
 
     @pydantic.validator(  # pyright: ignore[reportUnknownMemberType,reportUntypedFunctionDecorator]
         "parts", each_item=True
     )
-    def _validate_parts(cls, item: Dict[str, Any]) -> Dict[str, Any]:
+    def _validate_parts(cls, item: dict[str, Any]) -> dict[str, Any]:
         """Verify each part (craft-parts will re-validate this)."""
         craft_parts.validate_part(item)
         return item
@@ -114,7 +114,7 @@ class Project(CraftBaseModel):
             return self.base
         raise RuntimeError("Could not determine effective base")
 
-    def get_build_plan(self) -> List[BuildInfo]:
+    def get_build_plan(self) -> list[BuildInfo]:
         """Obtain the list of architectures and bases from the project file."""
         raise NotImplementedError(
             f"{self.__class__.__name__!s} must implement get_build_plan"
@@ -123,7 +123,7 @@ class Project(CraftBaseModel):
     @override
     @classmethod
     def transform_pydantic_error(cls, error: pydantic.ValidationError) -> None:
-        errors_to_messages: Dict[Tuple[str, str], str] = {
+        errors_to_messages: dict[tuple[str, str], str] = {
             ("version", "value_error.str.regex"): MESSAGE_INVALID_VERSION,
             ("name", "value_error.str.regex"): MESSAGE_INVALID_NAME,
         }
@@ -142,8 +142,8 @@ class Project(CraftBaseModel):
         "package_repositories", each_item=True
     )
     def _validate_package_repositories(
-        cls, repository: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        cls, repository: dict[str, Any]
+    ) -> dict[str, Any]:
         # This check is not always used, import it here to avoid unnecessary
         from craft_archives import repo  # type: ignore[import-untyped]
 

@@ -23,7 +23,6 @@ import re
 import subprocess
 import sys
 from textwrap import dedent
-from typing import Dict, List, Set
 from unittest import mock
 
 import craft_application
@@ -100,19 +99,19 @@ class FakePlugin(craft_parts.plugins.Plugin):
     def __init__(self, properties, part_info):
         pass
 
-    def get_build_commands(self) -> List[str]:
+    def get_build_commands(self) -> list[str]:
         return []
 
-    def get_build_snaps(self) -> Set[str]:
+    def get_build_snaps(self) -> set[str]:
         return set()
 
-    def get_build_packages(self) -> Set[str]:
+    def get_build_packages(self) -> set[str]:
         return set()
 
-    def get_build_environment(self) -> Dict[str, str]:
+    def get_build_environment(self) -> dict[str, str]:
         return {}
 
-    def get_build_sources(self) -> Set[str]:
+    def get_build_sources(self) -> set[str]:
         return set()
 
 
@@ -835,7 +834,7 @@ def test_register_plugins(mocker, app_metadata, fake_services):
     reg = mocker.patch("craft_parts.plugins.register")
 
     class FakeApplicationWithPlugins(FakeApplication):
-        def _get_app_plugins(self) -> Dict[str, PluginType]:
+        def _get_app_plugins(self) -> dict[str, PluginType]:
             return {"fake": FakePlugin}
 
     app = FakeApplicationWithPlugins(app_metadata, fake_services)
