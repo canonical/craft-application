@@ -69,7 +69,7 @@ class BuildPlanner(CraftBaseModel, metaclass=abc.ABCMeta):
     Config = BuildPlannerConfig
 
     @abc.abstractmethod
-    def get_build_plan(self) -> List[BuildInfo]:
+    def get_build_plan(self) -> list[BuildInfo]:
         """Obtain the list of architectures and bases from the project file."""
 
 
