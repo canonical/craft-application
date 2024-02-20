@@ -22,7 +22,8 @@ import json
 import os
 import re
 import subprocess
-from typing import Any, Mapping, cast
+from collections.abc import Mapping
+from typing import Any, cast
 
 from craft_application import errors
 
