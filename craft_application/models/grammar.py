@@ -52,6 +52,19 @@ class GrammarAwareProject(_GrammarAwareModel):
 
     parts: "dict[str, _GrammarAwarePart]"
 
+    @pydantic.root_validator(  # pyright: ignore[reportUntypedFunctionDecorator,reportUnknownMemberType]
+        pre=True
+    )
+    def _ensure_parts(cls, data: dict[str, Any]) -> dict[str, Any]:
+        """Ensure that the "parts" dictionary exists.
+
+        Some models (e.g. charmcraft) have this as optional. If there is no `parts`
+        item defined, set it to an empty dictionary. This is distinct from having
+        `parts` be invalid, which is not coerced here.
+        """
+        data.setdefault("parts", {})
+        return data
+
     @classmethod
     def validate_grammar(cls, data: dict[str, Any]) -> None:
         """Ensure grammar-enabled entries are syntactically valid."""
