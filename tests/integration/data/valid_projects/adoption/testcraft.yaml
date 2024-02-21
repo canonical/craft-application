@@ -1,5 +1,5 @@
 name: empty
-title: A most basic project
+title: A version adoption test project
 base: ["ubuntu", "22.04"]
 
 adopt-info: my-part
