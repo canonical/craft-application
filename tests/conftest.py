@@ -103,6 +103,7 @@ def fake_project() -> models.Project:
         parts={"my-part": {"plugin": "nil"}},
         platforms={"foo": Platform(build_on=arch, build_for=arch)},
         package_repositories=None,
+        adopt_info=None,
     )
 
 

@@ -25,7 +25,7 @@ import craft_parts
 import craft_parts.callbacks
 import pytest
 import pytest_check
-from craft_application import util
+from craft_application import models, util
 from craft_application.errors import (
     InvalidParameterError,
     PartsLifecycleError,
@@ -625,9 +625,14 @@ def test_lifecycle_project_variables(
     tmp_path,
 ):
     """Test that project variables are set after the lifecycle runs."""
+
+    class LocalProject(models.Project):
+        color: str | None
+
+    fake_project = LocalProject(**{"color": None, **fake_project.__dict__})
     work_dir = tmp_path / "work"
     app_metadata = dataclasses.replace(
-        app_metadata, project_variables=["version", "color"]
+        app_metadata, project_variables=["version", "color"], ProjectClass=LocalProject
     )
 
     service = lifecycle.LifecycleService(
