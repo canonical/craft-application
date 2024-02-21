@@ -1,6 +1,6 @@
 # This file is part of craft_application.
 #
-# Copyright 2023 Canonical Ltd.
+# Copyright 2023-2024 Canonical Ltd.
 #
 # This program is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Lesser General Public License version 3, as
@@ -565,22 +565,25 @@ class Application:
 
     def _expand_environment(self, yaml_data: dict[str, Any]) -> None:
         """Perform expansion of project environment variables."""
-        project_vars = self._project_vars(yaml_data)
+        environment_vars = self._get_project_vars(yaml_data)
         info = craft_parts.ProjectInfo(
             application_name=self.app.name,  # not used in environment expansion
             cache_dir=pathlib.Path(),  # not used in environment expansion
             project_name=yaml_data.get("name", ""),
             project_dirs=craft_parts.ProjectDirs(work_dir=self._work_dir),
-            project_vars=project_vars,
+            project_vars=environment_vars,
         )
 
         self._set_global_environment(info)
 
         craft_parts.expand_environment(yaml_data, info=info)
 
-    def _project_vars(self, yaml_data: dict[str, Any]) -> dict[str, str]:
-        """Return a dict with project-specific variables, for a craft_part.ProjectInfo."""
-        return {"version": cast(str, yaml_data["version"])}
+    def _get_project_vars(self, yaml_data: dict[str, Any]) -> dict[str, str]:
+        """Return a dict with project variables to be expanded."""
+        pvars: dict[str, str] = {}
+        for var in self.app.project_variables:
+            pvars[var] = yaml_data.get(var, "")
+        return pvars
 
     def _set_global_environment(self, info: craft_parts.ProjectInfo) -> None:
         """Populate the ProjectInfo's global environment."""

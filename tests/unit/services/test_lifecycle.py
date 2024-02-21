@@ -1,6 +1,6 @@
 # This file is part of craft_application.
 #
-# Copyright 2023 Canonical Ltd.
+# Copyright 2023-2024 Canonical Ltd.
 #
 # This program is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Lesser General Public License version 3, as
@@ -16,16 +16,21 @@
 """Unit tests for parts lifecycle."""
 from __future__ import annotations
 
+import dataclasses
 import re
 from pathlib import Path
+from typing import cast
 from unittest import mock
 
 import craft_parts
 import craft_parts.callbacks
 import pytest
 import pytest_check
-from craft_application import util
-from craft_application.errors import InvalidParameterError, PartsLifecycleError
+from craft_application import models, util
+from craft_application.errors import (
+    InvalidParameterError,
+    PartsLifecycleError,
+)
 from craft_application.services import lifecycle
 from craft_application.util import get_host_architecture, repositories
 from craft_parts import (
@@ -34,6 +39,7 @@ from craft_parts import (
     LifecycleManager,
     Part,
     PartInfo,
+    ProjectInfo,
     Step,
     StepInfo,
 )
@@ -47,7 +53,10 @@ class FakePartsLifecycle(lifecycle.LifecycleService):
     def _init_lifecycle_manager(self) -> LifecycleManager:
         mock_lcm = mock.Mock(spec=LifecycleManager)
         mock_aex = mock.MagicMock(spec=ExecutionContext)
+        mock_info = mock.MagicMock(spec=ProjectInfo)
+        mock_info.get_project_var = lambda _: "foo"
         mock_lcm.action_executor.return_value = mock_aex
+        mock_lcm.project_info = mock_info
         return mock_lcm
 
 
@@ -433,6 +442,8 @@ def test_lifecycle_package_repositories(
         build_for=get_host_architecture(),
     )
     service._lcm = mock.MagicMock(spec=LifecycleManager)
+    service._lcm.project_info = mock.MagicMock(spec=ProjectInfo)
+    service._lcm.project_info.get_project_var = lambda _: "foo"
 
     # Installation of repositories in the build instance
     mock_install = mocker.patch(

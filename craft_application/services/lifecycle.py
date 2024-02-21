@@ -1,6 +1,6 @@
 # This file is part of craft-application.
 #
-# Copyright 2023 Canonical Ltd.
+# Copyright 2023-2024 Canonical Ltd.
 #
 # This program is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Lesser General Public License version 3, as
@@ -162,6 +162,14 @@ class LifecycleService(base.ProjectService):
                 self._project.package_repositories
             )
 
+        pvars: dict[str, str] = {}
+        for var in self._app.project_variables:
+            pvars[var] = getattr(self._project, var) or ""
+        self._project_vars = pvars
+
+        emit.debug(f"Project vars: {self._project_vars}")
+        emit.debug(f"Adopting part: {self._project.adopt_info}")
+
         try:
             return LifecycleManager(
                 {"parts": self._project.parts},
@@ -171,6 +179,8 @@ class LifecycleService(base.ProjectService):
                 work_dir=self._work_dir,
                 ignore_local_sources=self._app.source_ignore_patterns,
                 parallel_build_count=self._get_parallel_build_count(),
+                project_vars_part_name=self._project.adopt_info,
+                project_vars=self._project_vars,
                 **self._manager_kwargs,
             )
         except PartsError as err:
@@ -213,6 +223,7 @@ class LifecycleService(base.ProjectService):
                     emit.progress(message)
                     with emit.open_stream() as stream:
                         aex.execute(action, stdout=stream, stderr=stream)
+
         except PartsError as err:
             raise errors.PartsLifecycleError.from_parts_error(err) from err
         except RuntimeError as err:

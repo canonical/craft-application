@@ -1,0 +1,12 @@
+name: empty
+title: A version adoption test project
+base: ["ubuntu", "22.04"]
+
+adopt-info: my-part
+
+parts:
+  my-part:
+    plugin: nil
+    override-build: |
+      craftctl default
+      craftctl set version=1.0
