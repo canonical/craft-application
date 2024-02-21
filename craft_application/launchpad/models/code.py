@@ -73,6 +73,7 @@ class GitRepository(_BaseRepository):
     """
 
     _resource_types = GitResourceTypes
+    _attr_map = {"owner_name": "owner.name"}
 
     date_created: datetime.date
     date_last_modified: datetime.date
@@ -86,6 +87,7 @@ class GitRepository(_BaseRepository):
     name: str
     owner_default: bool
     private: bool
+    owner_name: str
 
     @property
     def information_type(self) -> InformationType:

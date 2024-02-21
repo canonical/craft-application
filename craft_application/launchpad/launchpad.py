@@ -173,10 +173,11 @@ class Launchpad:
     def get_repository(self, *, path: str) -> models.GitRepository: ...
     @overload
     def get_repository(
-        self, name: str, owner: str | None = None, project: str | None = None
+        self, *, name: str, owner: str | None = None, project: str | None = None
     ) -> models.GitRepository: ...
     def get_repository(
         self,
+        *,
         name: str | None = None,
         owner: str | None = None,
         project: str | None = None,
@@ -195,14 +196,12 @@ class Launchpad:
             raise ValueError(
                 "Do not set repository name, owner or project when using a path."
             )
-        if not name:
+        if not path and not name:
             raise ValueError(
                 "Must specify either the name or the path of the repository."
             )
 
-        if project and not owner:
-            path = f"{project}/+git/{name}"
-        else:
+        if not path:
             if not owner:
                 owner = self.username
             if project:
@@ -210,7 +209,7 @@ class Launchpad:
             else:
                 path = f"~{owner}/+git/{name}"
 
-        return models.GitRepository.get(self, path)
+        return models.GitRepository.get(self, path=path)
 
     def new_repository(
         self,
