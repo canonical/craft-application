@@ -19,6 +19,7 @@ from __future__ import annotations
 import dataclasses
 import re
 from pathlib import Path
+from typing import cast
 from unittest import mock
 
 import craft_parts
@@ -618,18 +619,21 @@ def test_get_parallel_build_count_error(
 # region project variables
 
 
-def test_lifecycle_project_variables(
-    app_metadata,
-    fake_project,
-    fake_services,
-    tmp_path,
-):
+def test_lifecycle_project_variables(app_metadata, fake_services, tmp_path):
     """Test that project variables are set after the lifecycle runs."""
 
     class LocalProject(models.Project):
         color: str | None
 
-    fake_project = LocalProject(**{"color": None, **fake_project.__dict__})
+    fake_project = LocalProject.unmarshal(
+        {
+            "name": "project",
+            "base": "core24",
+            "version": "1.0.0.post64+git12345678",
+            "parts": {"my-part": {"plugin": "nil"}},
+            "adopt-info": "my-part",
+        }
+    )
     work_dir = tmp_path / "work"
     app_metadata = dataclasses.replace(
         app_metadata, project_variables=["version", "color"], ProjectClass=LocalProject
@@ -651,7 +655,7 @@ def test_lifecycle_project_variables(
     service.run("prime")
 
     assert service._project.version == "foo"
-    assert service._project.color == "foo"
+    assert cast(LocalProject, service._project).color == "foo"
 
 
 def test_lifecycle_project_variables_unset(
