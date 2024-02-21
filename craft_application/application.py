@@ -46,7 +46,13 @@ GLOBAL_VERSION = craft_cli.GlobalArgument(
 )
 
 DEFAULT_CLI_LOGGERS = frozenset(
-    {"craft_archives", "craft_parts", "craft_providers", "craft_store"}
+    {
+        "craft_archives",
+        "craft_parts",
+        "craft_providers",
+        "craft_store",
+        "craft_application.remote",
+    }
 )
 
 
@@ -431,6 +437,20 @@ class Application:
                 )
             self.project_dir = project_dir
 
+    def _try_load_project(
+        self, command: commands.AppCommand, platform: str | None, build_for: str | None
+    ) -> None:
+        """Try to load the project and fail as needed."""
+        try:
+            self.services.project = self.get_project(
+                platform=platform, build_for=build_for
+            )
+        except Exception:  # noqa: BLE001
+            if command.always_load_project == "try":
+                craft_cli.emit.debug("Project not found. Continuing without.")
+            else:
+                raise
+
     def run(self) -> int:  # noqa: PLR0912 (too many branches)
         """Bootstrap and run the application."""
         self._setup_logging()
@@ -454,9 +474,7 @@ class Application:
 
             managed_mode = command.run_managed(dispatcher.parsed_args())
             if managed_mode or command.always_load_project:
-                self.services.project = self.get_project(
-                    platform=platform, build_for=build_for
-                )
+                self._try_load_project(command, platform, build_for)
 
             self._configure_services(platform, build_for)
 

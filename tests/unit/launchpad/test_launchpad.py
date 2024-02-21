@@ -81,3 +81,21 @@ def test_get_recipe_charm_has_project(fake_launchpad):
         ValueError, match="A charm recipe must be associated with a project."
     ):
         fake_launchpad.get_recipe(models.RecipeType.CHARM, "my_recipe")
+
+
+@pytest.mark.parametrize(
+    ("name", "owner", "project", "path"),
+    [
+        ("name", "owner", "project", "~owner/project/+git/name"),
+        ("name", "owner", None, "~owner/+git/name"),
+    ],
+)
+def test_render_repository_path(
+    monkeypatch, fake_launchpad, name, owner, project, path
+):
+    mock_get = mock.Mock()
+    monkeypatch.setattr(models.GitRepository, "get", mock_get)
+
+    fake_launchpad.get_repository(name=name, owner=owner, project=project)
+
+    mock_get.assert_called_once_with(fake_launchpad, path=path)
