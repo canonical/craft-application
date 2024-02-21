@@ -29,7 +29,6 @@ from craft_application import util
 from craft_application.errors import (
     InvalidParameterError,
     PartsLifecycleError,
-    CraftValidationError,
 )
 from craft_application.services import lifecycle
 from craft_application.util import get_host_architecture, repositories
@@ -620,7 +619,10 @@ def test_get_parallel_build_count_error(
 
 
 def test_lifecycle_project_variables(
-    app_metadata, fake_project, fake_services, tmp_path, mocker
+    app_metadata,
+    fake_project,
+    fake_services,
+    tmp_path,
 ):
     """Test that project variables are set after the lifecycle runs."""
     work_dir = tmp_path / "work"
@@ -639,7 +641,7 @@ def test_lifecycle_project_variables(
     )
     service._lcm = mock.MagicMock(spec=LifecycleManager)
     service._lcm.project_info = mock.MagicMock(spec=ProjectInfo)
-    service._lcm.project_info.get_project_var = lambda x: "foo"
+    service._lcm.project_info.get_project_var = lambda _: "foo"
 
     service.run("prime")
 
@@ -648,7 +650,10 @@ def test_lifecycle_project_variables(
 
 
 def test_lifecycle_project_variables_unset(
-    app_metadata, fake_project, fake_services, tmp_path, mocker
+    app_metadata,
+    fake_project,
+    fake_services,
+    tmp_path,
 ):
     """Test that project variables must be set after the lifecycle runs."""
     work_dir = tmp_path / "work"

@@ -27,15 +27,13 @@ if TYPE_CHECKING:  # pragma: no cover
 @overload
 def get_unique_callbacks(
     cls: type, callback_name: Literal["_parse_callback"]
-) -> Iterable[ParserCallback]:
-    ...  # pragma: no cover
+) -> Iterable[ParserCallback]: ...  # pragma: no cover
 
 
 @overload
 def get_unique_callbacks(
     cls: type, callback_name: Literal["_prologue", "_epilogue"]
-) -> Iterable[RunCallback]:
-    ...  # pragma: no cover
+) -> Iterable[RunCallback]: ...  # pragma: no cover
 
 
 def get_unique_callbacks(  # pyright: ignore[reportUnknownParameterType]

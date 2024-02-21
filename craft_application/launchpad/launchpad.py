@@ -105,8 +105,7 @@ class Launchpad:
         type_: Literal["snap", "SNAP", models.RecipeType.SNAP],
         name: str,
         owner: str | None,
-    ) -> models.SnapRecipe:
-        ...
+    ) -> models.SnapRecipe: ...
 
     @overload
     def get_recipe(
@@ -115,8 +114,7 @@ class Launchpad:
         name: str,
         owner: str | None,
         project: str,
-    ) -> models.CharmRecipe:
-        ...
+    ) -> models.CharmRecipe: ...
 
     def get_recipe(
         self,
@@ -174,14 +172,12 @@ class Launchpad:
         )
 
     @overload
-    def get_repository(self, *, path: str) -> models.GitRepository:
-        ...
+    def get_repository(self, *, path: str) -> models.GitRepository: ...
 
     @overload
     def get_repository(
         self, *, name: str, owner: str | None = None, project: str | None = None
-    ) -> models.GitRepository:
-        ...
+    ) -> models.GitRepository: ...
 
     def get_repository(
         self,
