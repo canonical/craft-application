@@ -571,7 +571,7 @@ class Application:
 
     def _expand_environment(self, yaml_data: dict[str, Any]) -> None:
         """Perform expansion of project environment variables."""
-        environment_vars = self._environment_vars(yaml_data)
+        environment_vars = self._get_project_vars(yaml_data)
         info = craft_parts.ProjectInfo(
             application_name=self.app.name,  # not used in environment expansion
             cache_dir=pathlib.Path(),  # not used in environment expansion
@@ -584,7 +584,7 @@ class Application:
 
         craft_parts.expand_environment(yaml_data, info=info)
 
-    def _environment_vars(self, yaml_data: dict[str, Any]) -> dict[str, str]:
+    def _get_project_vars(self, yaml_data: dict[str, Any]) -> dict[str, str]:
         """Return a dict with project variables to be expanded."""
         pvars: dict[str, str] = {}
         for var in self.app.project_variables:
