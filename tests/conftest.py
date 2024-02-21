@@ -185,7 +185,7 @@ def fake_package_service_class():
             self, prime_dir: pathlib.Path, dest: pathlib.Path
         ) -> list[pathlib.Path]:
             assert prime_dir.exists()
-            pkg = dest / "package.tar.zst"
+            pkg = dest / f"package_{self._project.version}.tar.zst"
             pkg.touch()
             return [pkg]
 

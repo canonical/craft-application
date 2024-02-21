@@ -1,4 +1,4 @@
-# Copyright 2023 Canonical Ltd.
+# Copyright 2023-2024 Canonical Ltd.
 #
 # This program is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Lesser General Public License version 3, as
@@ -139,7 +139,7 @@ def test_project_managed(
 
     app.run()
 
-    assert (tmp_path / "package.tar.zst").exists()
+    assert (tmp_path / "package_1.0.tar.zst").exists()
     captured = capsys.readouterr()
     assert (
         captured.err.splitlines()[-1]
