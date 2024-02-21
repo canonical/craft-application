@@ -99,11 +99,18 @@ class Project(CraftBaseModel):
 
     @pydantic.root_validator(pre=True)  # pyright: ignore[reportUnknownMemberType,reportUntypedFunctionDecorator]
     @classmethod
-    def _validate_version(cls, values: dict[str, Any]) -> dict[str, Any]:
+    def _validate_adopt_info(cls, values: dict[str, Any]) -> dict[str, Any]:
         if values.get("version") is None and values.get("adopt-info") is None:
             raise ValueError(
-                "Required field 'version' is not set and 'adopt-info' not used"
+                "Required field 'version' is not set and 'adopt-info' not used."
             )
+
+        if values.get("adopt-info") is not None:
+            if values.get("adopt-info") not in values.get("parts", {}):
+                raise ValueError(
+                    "'adopt-info' does not reference a valid part."
+                )
+
         return values
 
     @pydantic.validator(  # pyright: ignore[reportUnknownMemberType,reportUntypedFunctionDecorator]
