@@ -282,7 +282,7 @@ def test_global_environment(
 
     assert variables["project_name"] == "environment-project"
     assert variables["project_dir"] == str(tmp_path)
-    assert variables["project_version"] == "1.2.3"
+    assert variables["project_version"] == "1.0"
 
 
 @pytest.fixture()
