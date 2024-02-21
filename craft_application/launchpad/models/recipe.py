@@ -90,6 +90,13 @@ class BaseRecipe(LaunchpadObject):
         # to indicate that using `.get` as the constructor is the preferred method.
         return f"{self.__class__.__name__}.get(name={self.name!r}, owner={self.owner_name!r})"
 
+    @classmethod
+    def get(
+        cls, lp: Launchpad, name: str, owner: str, project: str | None = None
+    ) -> Self:
+        """Get an existing recipe."""
+        raise NotImplementedError
+
     @staticmethod
     def _fill_repo_info(
         kwargs: dict[str, Any],
@@ -166,8 +173,7 @@ class SnapRecipe(_StoreRecipe):
     """
 
     @classmethod
-    @override
-    def new(  # pyright: ignore[reportIncompatibleMethodOverride]
+    def new(  # noqa: PLR0913
         cls,
         lp: Launchpad,
         name: str,
@@ -254,6 +260,7 @@ class SnapRecipe(_StoreRecipe):
         cls, lp: Launchpad, name: str, owner: str, project: Any = None
     ) -> Self:
         """Get an existing Snap recipe."""
+        _ = project  # project is unused, bot
         try:
             return cls(
                 lp,
@@ -265,7 +272,6 @@ class SnapRecipe(_StoreRecipe):
             ) from None
 
     @classmethod
-    @override
     def find(  # pyright: ignore[reportIncompatibleMethodOverride]
         cls,
         lp: Launchpad,
@@ -314,8 +320,7 @@ class CharmRecipe(_StoreRecipe):
     """
 
     @classmethod
-    @override
-    def new(  # pyright: ignore[reportIncompatibleMethodOverride]
+    def new(  # noqa: PLR0913
         cls,
         lp: Launchpad,
         name: str,
@@ -353,9 +358,11 @@ class CharmRecipe(_StoreRecipe):
             if uploaded.
         :returns: The Charm recipe.
         """
-        kwargs = {}
+        kwargs: dict[str, Any] = {}
         if auto_build:
             kwargs["auto_build_channels"] = auto_build_channels
+        if build_path:
+            kwargs["build_path"] = build_path
         cls._fill_store_info(
             kwargs,
             store_name=store_name,
@@ -374,9 +381,8 @@ class CharmRecipe(_StoreRecipe):
         return cls(lp, charm_entry)
 
     @classmethod
-    @override
     def get(  # pyright: ignore[reportIncompatibleMethodOverride]
-        cls, lp: Launchpad, name: str, owner: str, project: str
+        cls, lp: Launchpad, name: str, owner: str, project: str | None = None
     ) -> Self:
         """Get a charm recipe."""
         try:
@@ -394,7 +400,6 @@ class CharmRecipe(_StoreRecipe):
             ) from None
 
     @classmethod
-    @override
     def find(  # pyright: ignore[reportIncompatibleMethodOverride]
         cls, lp: Launchpad, owner: str, *, name: str = ""
     ) -> Iterable[Self]:

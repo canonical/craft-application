@@ -28,14 +28,13 @@
 # pyright: reportIndexIssue=false
 from __future__ import annotations
 
-import abc
 import enum
-from collections.abc import Iterable, Mapping
+from collections.abc import Mapping
 from typing import TYPE_CHECKING
 
 import lazr.restfulclient.errors  # type: ignore[import-untyped]
 from lazr.restfulclient.resource import Entry  # type: ignore[import-untyped]
-from typing_extensions import Any, Self
+from typing_extensions import Any
 
 from .. import errors, util
 
@@ -64,7 +63,7 @@ class Pocket(enum.Enum):
     BACKPORTS = "Backports"
 
 
-class LaunchpadObject(metaclass=abc.ABCMeta):
+class LaunchpadObject:
     """A generic Launchpad object."""
 
     _resource_types: enum.EnumMeta
@@ -93,27 +92,6 @@ class LaunchpadObject(metaclass=abc.ABCMeta):
                 f"valid: {[t.value for t in self._resource_types]}",  # type: ignore[var-annotated]
             ) from None
 
-    @classmethod
-    @abc.abstractmethod
-    def new(
-        cls, *args: Any, **kwargs: Any  # noqa: ANN401 (Intentionally duck-typed)
-    ) -> Self:
-        """Create a new launchpad object."""
-
-    @classmethod
-    @abc.abstractmethod
-    def get(
-        cls, *args: Any, **kwargs: Any  # noqa: ANN401 (Intentionally duck-typed)
-    ) -> Self:
-        """Get an existing launchpad object."""
-
-    @classmethod
-    def find(
-        cls, *args: Any, **kwargs: Any  # noqa: ANN401 (Intentionally duck-typed)
-    ) -> Iterable[Self]:
-        """Find existing Launchpad objects by various parameters."""
-        raise NotImplementedError(f"{cls.__name__} does not implement find.")
-
     def delete(self) -> None:
         """Delete this object from Launchpad."""
         try:
@@ -131,6 +109,7 @@ class LaunchpadObject(metaclass=abc.ABCMeta):
         return sorted(
             {
                 *super().__dir__(),
+                *util.get_annotations(self.__class__).keys(),
                 *self._attr_map.keys(),
                 *self.__dict__.keys(),
                 *self._obj.lp_attributes,
@@ -139,23 +118,24 @@ class LaunchpadObject(metaclass=abc.ABCMeta):
 
     def __getattr__(self, item: str) -> Any:  # noqa: ANN401
         annotations: dict[str, type] = util.get_annotations(self.__class__)
+        if item in self._attr_map:
+            lp_obj = util.getattrs(self._obj, self._attr_map[item])
+        elif item in (*annotations, *self._obj.lp_attributes):
+            lp_obj = getattr(self._obj, item)
+        elif item in (*self._obj.lp_entries, *self._obj.lp_collections):
+            raise NotImplementedError("Cannot yet return meta types")
+        else:
+            raise AttributeError(
+                f"{self.__class__.__name__!r} has no attribute {item!r}"
+            )
+
         if item in annotations:
-            lp_obj = util.getattrs(self._obj, self._attr_map.get(item, item))
             cls = annotations[item]
             if isinstance(cls, type) and issubclass(cls, LaunchpadObject):
                 return cls(self._lp, lp_obj)
             # We expect that this class can take the object.
-            try:
-                return cls(lp_obj)  # type: ignore[call-arg]
-            except TypeError:
-                pass
-        if item in self._attr_map:
-            return util.getattrs(self._obj, self._attr_map[item])
-        if item in self._obj.lp_attributes:
-            return getattr(self._obj, item)
-        if item in (*self._obj.lp_entries, *self._obj.lp_collections):
-            raise NotImplementedError("Cannot yet return meta types")
-        raise AttributeError(f"{self.__class__.__name__!r} has no attribute {item!r}")
+            return cls(lp_obj)  # type: ignore[call-arg]
+        return lp_obj
 
     def __setattr__(self, key: str, value: Any) -> None:  # noqa: ANN401
         if key in ("_lp", "_obj"):
