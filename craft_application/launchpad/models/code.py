@@ -142,14 +142,17 @@ class GitRepository(_BaseRepository):
         if owner is None:
             owner = cast(str, lp.lp.me.name)
         if target is None:
-            target = owner
-
-        return cls(
-            lp,
-            lp.lp.git_repositories.new(
+            repo = lp.lp.git_repositories.new(
                 name=name,
-                owner=owner,
-                target=target,
+                owner=f"/~{owner}",
                 information_type=information_type.value,
-            ),
-        )
+            )
+        else:
+            repo = lp.lp.git_repositories.new(
+                name=name,
+                owner=f"/~{owner}",
+                target=f"/{target}",
+                information_type=information_type.value,
+            )
+
+        return cls(lp, repo)
