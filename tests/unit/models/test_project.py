@@ -18,8 +18,8 @@ import copy
 import pathlib
 import textwrap
 from textwrap import dedent
-from typing import Optional
 
+import pydantic
 import pytest
 from craft_application import util
 from craft_application.errors import CraftValidationError
@@ -29,7 +29,6 @@ PROJECTS_DIR = pathlib.Path(__file__).parent / "project_models"
 PARTS_DICT = {"my-part": {"plugin": "nil"}}
 # pyright doesn't like these types and doesn't have a pydantic plugin like mypy.
 # Because of this, we need to silence several errors in these constants.
-BUILD_PLANNER = BuildPlanner()
 BASIC_PROJECT = Project(  # pyright: ignore[reportCallIssue]
     name="project-name",  # pyright: ignore[reportGeneralTypeIssues]
     version="1.0",  # pyright: ignore[reportGeneralTypeIssues]
@@ -111,10 +110,9 @@ def test_unmarshal_then_marshal(project_dict):
     assert Project.unmarshal(project_dict).marshal() == project_dict
 
 
-def test_build_plan_not_implemented():
-    build_planner = BUILD_PLANNER
-    with pytest.raises(NotImplementedError):
-        build_planner.get_build_plan()
+def test_build_planner_abstract():
+    with pytest.raises(TypeError):
+        BuildPlanner()  # type: ignore[type-abstract]
 
 
 @pytest.mark.parametrize(
@@ -194,7 +192,7 @@ def test_effective_base_is_base(project):
 
 
 class FakeBuildBaseProject(Project):
-    build_base: Optional[str]
+    build_base: str | None
 
 
 # As above, we need to tell pyright to ignore several typing issues.
@@ -225,6 +223,36 @@ def test_effective_base_unknown():
         _ = project.effective_base
 
     assert exc_info.match("Could not determine effective base")
+
+
+@pytest.mark.parametrize(
+    ("version", "adopter_part", "error"),
+    [
+        ("1", None, None),
+        ("1", "foo", None),
+        ("1", "bar", "'adopt-info' does not reference a valid part."),
+        (None, None, "Required field 'version' is not set and 'adopt-info' not used."),
+        (None, "bar", "'adopt-info' does not reference a valid part."),
+        (None, "foo", None),
+    ],
+)
+def test_adoptable_version(version, adopter_part, error):
+    def _project(version, adopter_part) -> Project:
+        return Project(  # pyright: ignore[reportCallIssue]
+            **{
+                "name": "project-name",  # pyright: ignore[reportGeneralTypeIssues]
+                "version": version,
+                "adopt-info": adopter_part,
+                "parts": {"foo": {"plugin": "nil"}},
+            }
+        )
+
+    if error:
+        with pytest.raises(pydantic.ValidationError) as exc_info:
+            _project(version, adopter_part)
+        assert exc_info.match(error)
+    else:
+        _project(version, adopter_part)
 
 
 @pytest.mark.parametrize(

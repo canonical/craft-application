@@ -1,6 +1,6 @@
 # This file is part of craft_application.
 #
-# Copyright 2023 Canonical Ltd.
+# Copyright 2023-2024 Canonical Ltd.
 #
 # This program is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Lesser General Public License version 3, as
@@ -22,10 +22,11 @@ import pathlib
 import signal
 import subprocess
 import sys
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from functools import cached_property
 from importlib import metadata
-from typing import TYPE_CHECKING, Any, Iterable, cast, final
+from typing import TYPE_CHECKING, Any, cast, final
 
 import craft_cli
 import craft_parts
@@ -45,7 +46,13 @@ GLOBAL_VERSION = craft_cli.GlobalArgument(
 )
 
 DEFAULT_CLI_LOGGERS = frozenset(
-    {"craft_archives", "craft_parts", "craft_providers", "craft_store"}
+    {
+        "craft_archives",
+        "craft_parts",
+        "craft_providers",
+        "craft_store",
+        "craft_application.remote",
+    }
 )
 
 
@@ -68,9 +75,12 @@ class AppMetadata:
     source_ignore_patterns: list[str] = field(default_factory=lambda: [])
     managed_instance_project_path = pathlib.PurePosixPath("/root/project")
     features: AppFeatures = AppFeatures()
+    project_variables: list[str] = field(default_factory=lambda: ["version"])
 
     ProjectClass: type[models.Project] = models.Project
-    BuildPlannerClass: type[models.BuildPlanner] = models.BuildPlanner
+    BuildPlannerClass: type[models.BuildPlanner] = field(
+        default=NotImplementedError  # type: ignore[assignment,type-abstract]
+    )
 
     def __post_init__(self) -> None:
         setter = super().__setattr__
@@ -428,6 +438,20 @@ class Application:
                 )
             self.project_dir = project_dir
 
+    def _try_load_project(
+        self, command: commands.AppCommand, platform: str | None, build_for: str | None
+    ) -> None:
+        """Try to load the project and fail as needed."""
+        try:
+            self.services.project = self.get_project(
+                platform=platform, build_for=build_for
+            )
+        except Exception:  # noqa: BLE001
+            if command.always_load_project == "try":
+                craft_cli.emit.debug("Project not found. Continuing without.")
+            else:
+                raise
+
     def run(self) -> int:  # noqa: PLR0912 (too many branches)
         """Bootstrap and run the application."""
         self._setup_logging()
@@ -451,9 +475,7 @@ class Application:
 
             managed_mode = command.run_managed(dispatcher.parsed_args())
             if managed_mode or command.always_load_project:
-                self.services.project = self.get_project(
-                    platform=platform, build_for=build_for
-                )
+                self._try_load_project(command, platform, build_for)
 
             self._configure_services(platform, build_for)
 
@@ -549,22 +571,25 @@ class Application:
 
     def _expand_environment(self, yaml_data: dict[str, Any]) -> None:
         """Perform expansion of project environment variables."""
-        project_vars = self._project_vars(yaml_data)
+        environment_vars = self._get_project_vars(yaml_data)
         info = craft_parts.ProjectInfo(
             application_name=self.app.name,  # not used in environment expansion
             cache_dir=pathlib.Path(),  # not used in environment expansion
             project_name=yaml_data.get("name", ""),
             project_dirs=craft_parts.ProjectDirs(work_dir=self._work_dir),
-            project_vars=project_vars,
+            project_vars=environment_vars,
         )
 
         self._set_global_environment(info)
 
         craft_parts.expand_environment(yaml_data, info=info)
 
-    def _project_vars(self, yaml_data: dict[str, Any]) -> dict[str, str]:
-        """Return a dict with project-specific variables, for a craft_part.ProjectInfo."""
-        return {"version": cast(str, yaml_data["version"])}
+    def _get_project_vars(self, yaml_data: dict[str, Any]) -> dict[str, str]:
+        """Return a dict with project variables to be expanded."""
+        pvars: dict[str, str] = {}
+        for var in self.app.project_variables:
+            pvars[var] = yaml_data.get(var, "")
+        return pvars
 
     def _set_global_environment(self, info: craft_parts.ProjectInfo) -> None:
         """Populate the ProjectInfo's global environment."""

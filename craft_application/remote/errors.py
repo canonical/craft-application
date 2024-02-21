@@ -15,7 +15,6 @@
 """Remote build errors."""
 
 from dataclasses import dataclass
-from typing import List, Optional
 
 
 @dataclass(repr=True)
@@ -27,7 +26,7 @@ class RemoteBuildError(Exception):
     """
 
     brief: str
-    details: Optional[str] = None
+    details: str | None = None
 
     def __str__(self) -> str:
         """Return the string representation of the error."""
@@ -53,7 +52,7 @@ class GitError(RemoteBuildError):
 class UnsupportedArchitectureError(RemoteBuildError):
     """Unsupported architecture error."""
 
-    def __init__(self, architectures: List[str]) -> None:
+    def __init__(self, architectures: list[str]) -> None:
         brief = "Architecture not supported by the remote builder."
         details = (
             "The following architectures are not supported by the remote builder: "

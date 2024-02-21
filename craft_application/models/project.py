@@ -1,6 +1,6 @@
 # This file is part of craft-application.
 #
-# Copyright 2023 Canonical Ltd.
+# Copyright 2023-2024 Canonical Ltd.
 #
 # This program is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Lesser General Public License version 3, as
@@ -17,8 +17,9 @@
 
 This defines the structure of the input file (e.g. snapcraft.yaml)
 """
+import abc
 import dataclasses
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any
 
 import craft_parts
 import craft_providers.bases
@@ -62,44 +63,60 @@ class BuildPlannerConfig(CraftBaseConfig):
     """The BuildPlanner model uses attributes from the project yaml."""
 
 
-class BuildPlanner(CraftBaseModel):
+class BuildPlanner(CraftBaseModel, metaclass=abc.ABCMeta):
     """The BuildPlanner obtains a build plan for the project."""
 
     Config = BuildPlannerConfig
 
-    def get_build_plan(self) -> List[BuildInfo]:
+    @abc.abstractmethod
+    def get_build_plan(self) -> list[BuildInfo]:
         """Obtain the list of architectures and bases from the project file."""
-        raise NotImplementedError(
-            f"{self.__class__.__name__!s} must implement get_build_plan"
-        )
 
 
 class Project(CraftBaseModel):
     """Craft Application project definition."""
 
     name: ProjectName
-    title: Optional[ProjectTitle]
-    version: VersionStr
-    summary: Optional[SummaryStr]
-    description: Optional[str]
+    title: ProjectTitle | None
+    version: VersionStr | None
+    summary: SummaryStr | None
+    description: str | None
 
-    base: Optional[Any] = None
-    build_base: Optional[Any] = None
-    platforms: Optional[Dict[str, Any]] = None
+    base: Any | None = None
+    build_base: Any | None = None
+    platforms: dict[str, Any] | None = None
 
-    contact: Optional[Union[str, UniqueStrList]]
-    issues: Optional[Union[str, UniqueStrList]]
-    source_code: Optional[AnyUrl]
-    license: Optional[str]
+    contact: str | UniqueStrList | None
+    issues: str | UniqueStrList | None
+    source_code: AnyUrl | None
+    license: str | None
 
-    parts: Dict[str, Dict[str, Any]]  # parts are handled by craft-parts
+    adopt_info: str | None
 
-    package_repositories: Optional[List[Dict[str, Any]]]
+    parts: dict[str, dict[str, Any]]  # parts are handled by craft-parts
+
+    package_repositories: list[dict[str, Any]] | None
+
+    @pydantic.root_validator(  # pyright: ignore[reportUnknownMemberType,reportUntypedFunctionDecorator]
+        pre=True
+    )
+    @classmethod
+    def _validate_adopt_info(cls, values: dict[str, Any]) -> dict[str, Any]:
+        if values.get("version") is None and values.get("adopt-info") is None:
+            raise ValueError(
+                "Required field 'version' is not set and 'adopt-info' not used."
+            )
+
+        adopted_part = values.get("adopt-info")
+        if adopted_part is not None and adopted_part not in values.get("parts", {}):
+            raise ValueError("'adopt-info' does not reference a valid part.")
+
+        return values
 
     @pydantic.validator(  # pyright: ignore[reportUnknownMemberType,reportUntypedFunctionDecorator]
         "parts", each_item=True
     )
-    def _validate_parts(cls, item: Dict[str, Any]) -> Dict[str, Any]:
+    def _validate_parts(cls, item: dict[str, Any]) -> dict[str, Any]:
         """Verify each part (craft-parts will re-validate this)."""
         craft_parts.validate_part(item)
         return item
@@ -114,16 +131,10 @@ class Project(CraftBaseModel):
             return self.base
         raise RuntimeError("Could not determine effective base")
 
-    def get_build_plan(self) -> List[BuildInfo]:
-        """Obtain the list of architectures and bases from the project file."""
-        raise NotImplementedError(
-            f"{self.__class__.__name__!s} must implement get_build_plan"
-        )
-
     @override
     @classmethod
     def transform_pydantic_error(cls, error: pydantic.ValidationError) -> None:
-        errors_to_messages: Dict[Tuple[str, str], str] = {
+        errors_to_messages: dict[tuple[str, str], str] = {
             ("version", "value_error.str.regex"): MESSAGE_INVALID_VERSION,
             ("name", "value_error.str.regex"): MESSAGE_INVALID_NAME,
         }
@@ -142,8 +153,8 @@ class Project(CraftBaseModel):
         "package_repositories", each_item=True
     )
     def _validate_package_repositories(
-        cls, repository: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        cls, repository: dict[str, Any]
+    ) -> dict[str, Any]:
         # This check is not always used, import it here to avoid unnecessary
         from craft_archives import repo  # type: ignore[import-untyped]
 

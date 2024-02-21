@@ -17,10 +17,11 @@ from __future__ import annotations
 
 import shutil
 import stat
+from collections.abc import Callable, Iterable
 from functools import partial
 from hashlib import md5
 from pathlib import Path
-from typing import Any, Callable, Iterable
+from typing import Any
 
 from .errors import UnsupportedArchitectureError
 

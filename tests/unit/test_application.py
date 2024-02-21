@@ -1,6 +1,6 @@
 # This file is part of craft_application.
 #
-# Copyright 2023 Canonical Ltd.
+# Copyright 2023-2024 Canonical Ltd.
 #
 # This program is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Lesser General Public License version 3, as
@@ -23,7 +23,6 @@ import re
 import subprocess
 import sys
 from textwrap import dedent
-from typing import Dict, List, Set
 from unittest import mock
 
 import craft_application
@@ -42,6 +41,13 @@ from craft_parts.plugins.plugins import PluginType
 from craft_providers import bases
 
 EMPTY_COMMAND_GROUP = craft_cli.CommandGroup("FakeCommands", [])
+BASIC_PROJECT_YAML = """
+name: myproject
+version: 1.0
+parts:
+  mypart:
+    plugin: nil
+"""
 
 
 @pytest.mark.parametrize("summary", ["A summary", None])
@@ -77,6 +83,11 @@ def test_app_metadata_dev():
     assert app.version == "dev"
 
 
+def test_app_metadata_default_project_variables():
+    app = application.AppMetadata(name="dummycraft_dev", summary="dummy craft")
+    assert app.project_variables == ["version"]
+
+
 class FakeApplication(application.Application):
     """An application class explicitly for testing. Adds some convenient test hooks."""
 
@@ -93,19 +104,19 @@ class FakePlugin(craft_parts.plugins.Plugin):
     def __init__(self, properties, part_info):
         pass
 
-    def get_build_commands(self) -> List[str]:
+    def get_build_commands(self) -> list[str]:
         return []
 
-    def get_build_snaps(self) -> Set[str]:
+    def get_build_snaps(self) -> set[str]:
         return set()
 
-    def get_build_packages(self) -> Set[str]:
+    def get_build_packages(self) -> set[str]:
         return set()
 
-    def get_build_environment(self) -> Dict[str, str]:
+    def get_build_environment(self) -> dict[str, str]:
         return {}
 
-    def get_build_sources(self) -> Set[str]:
+    def get_build_sources(self) -> set[str]:
         return set()
 
 
@@ -326,7 +337,13 @@ def test_get_dispatcher_error(
 
 
 def test_craft_lib_log_level(app_metadata, fake_services):
-    craft_libs = ["craft_archives", "craft_parts", "craft_providers", "craft_store"]
+    craft_libs = [
+        "craft_archives",
+        "craft_parts",
+        "craft_providers",
+        "craft_store",
+        "craft_application.remote",
+    ]
 
     # The logging module is stateful and global, so first lets clear the logging level
     # that another test might have already set.
@@ -341,6 +358,64 @@ def test_craft_lib_log_level(app_metadata, fake_services):
     for craft_lib in craft_libs:
         logger = logging.getLogger(craft_lib)
         assert logger.level == logging.DEBUG
+
+
+def test_gets_project(monkeypatch, tmp_path, app_metadata, fake_services):
+    project_file = tmp_path / "testcraft.yaml"
+    project_file.write_text(BASIC_PROJECT_YAML)
+    monkeypatch.setattr(sys, "argv", ["testcraft", "pull"])
+
+    app = FakeApplication(app_metadata, fake_services)
+    app.project_dir = tmp_path
+
+    fake_services.project = None
+
+    app.run()
+
+    assert fake_services.project is not None
+    assert app.project is not None
+
+
+def test_succeeds_without_project(
+    monkeypatch, emitter, tmp_path, app_metadata, fake_services
+):
+    monkeypatch.setattr(sys, "argv", ["testcraft", "try-load-project"])
+
+    app = FakeApplication(app_metadata, fake_services)
+    app.project_dir = tmp_path
+    fake_services.project = None
+
+    class TryLoadProject(commands.AppCommand):
+        """A command that tries to load the project but continues without it."""
+
+        name = "try-load-project"
+        help_msg = overview = "unimportant"
+        always_load_project = "try"
+
+        def run(self, parsed_args: argparse.Namespace) -> None:
+            _ = parsed_args
+
+    app.add_command_group("test", [TryLoadProject])
+
+    assert app.run() == 0
+
+    assert fake_services.project is None
+    emitter.assert_debug("Project not found. Continuing without.")
+
+
+def test_fails_without_project(
+    monkeypatch, capsys, tmp_path, app_metadata, fake_services
+):
+    monkeypatch.setattr(sys, "argv", ["testcraft", "prime"])
+
+    app = FakeApplication(app_metadata, fake_services)
+    app.project_dir = tmp_path
+
+    fake_services.project = None
+
+    assert app.run() == 70  # noqa: PLR2004
+
+    assert "No such file or directory" in capsys.readouterr().err
 
 
 @pytest.mark.parametrize(
@@ -573,17 +648,7 @@ def fake_project_file(monkeypatch, tmp_path):
     project_dir = tmp_path / "project"
     project_dir.mkdir()
     project_path = project_dir / "testcraft.yaml"
-    project_path.write_text(
-        dedent(
-            """
-        name: myproject
-        version: 1.0
-        parts:
-          mypart:
-            plugin: nil
-        """
-        )
-    )
+    project_path.write_text(BASIC_PROJECT_YAML)
     monkeypatch.chdir(project_dir)
 
     return project_path
@@ -723,13 +788,7 @@ def test_get_project_invalid_platform(app):
 
 
 @pytest.mark.usefixtures("fake_project_file")
-def test_get_project_build_plan(app):
-    with pytest.raises(NotImplementedError):
-        app.get_project(build_for="ubuntu-22.04").get_build_plan()
-
-
-@pytest.mark.usefixtures("fake_project_file")
-def test_get_project_propoery(app):
+def test_get_project_property(app):
     assert app.project == app.get_project()
 
 
@@ -774,7 +833,7 @@ def test_register_plugins(mocker, app_metadata, fake_services):
     reg = mocker.patch("craft_parts.plugins.register")
 
     class FakeApplicationWithPlugins(FakeApplication):
-        def _get_app_plugins(self) -> Dict[str, PluginType]:
+        def _get_app_plugins(self) -> dict[str, PluginType]:
             return {"fake": FakePlugin}
 
     app = FakeApplicationWithPlugins(app_metadata, fake_services)

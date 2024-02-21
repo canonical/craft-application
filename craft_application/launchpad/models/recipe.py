@@ -30,7 +30,6 @@ from __future__ import annotations
 
 import enum
 import time
-import typing
 from collections.abc import Collection, Iterable
 from typing import TYPE_CHECKING
 
@@ -91,6 +90,13 @@ class BaseRecipe(LaunchpadObject):
         # to indicate that using `.get` as the constructor is the preferred method.
         return f"{self.__class__.__name__}.get(name={self.name!r}, owner={self.owner_name!r})"
 
+    @classmethod
+    def get(
+        cls, lp: Launchpad, name: str, owner: str, project: str | None = None
+    ) -> Self:
+        """Get an existing recipe."""
+        raise NotImplementedError
+
     @staticmethod
     def _fill_repo_info(
         kwargs: dict[str, Any],
@@ -116,21 +122,16 @@ class BaseRecipe(LaunchpadObject):
             for b in self._obj.builds  # pyright: ignore[reportGeneralTypeIssues]
         ]
 
-    def build(
-        self,
-        archive: str = "/ubuntu/+archive/primary",
-        pocket: Pocket = Pocket.UPDATES,
-        channels: BuildChannels | None = None,
-        deadline: int | None = None,
-    ) -> Collection[build.Build]:
-        """Create a new set of builds for this recipe."""
-        request_build_kwargs: dict[str, Any] = {
-            "archive": archive,
-            "pocket": pocket.value,
-        }
-        if channels:
-            request_build_kwargs["channels"] = channels
-        build_request = self._obj.requestBuilds(**request_build_kwargs)
+    def _build(self, deadline: int | None, kwargs: dict[str, Any]) -> list[build.Build]:
+        """Get builds for this recipe.
+
+        :param deadline: The time (on Python's `monotonic_ns` clock) after which we time out.
+        :param kwargs: A dictionary of keyword arguments to pass to the requestBuilds
+            method of this recipe. Keyword arguments vary by recipe type.
+
+        See: https://api.launchpad.net/devel.html
+        """
+        build_request = self._obj.requestBuilds(**kwargs)
         sleep_time = 0.5
         while build_request.status == "Pending":
             # Check to see if we've run out of time.
@@ -172,8 +173,7 @@ class SnapRecipe(_StoreRecipe):
     """
 
     @classmethod
-    @override
-    def new(  # pyright: ignore[reportIncompatibleMethodOverride]
+    def new(  # noqa: PLR0913
         cls,
         lp: Launchpad,
         name: str,
@@ -260,6 +260,7 @@ class SnapRecipe(_StoreRecipe):
         cls, lp: Launchpad, name: str, owner: str, project: Any = None
     ) -> Self:
         """Get an existing Snap recipe."""
+        _ = project  # project is unused, bot
         try:
             return cls(
                 lp,
@@ -271,7 +272,6 @@ class SnapRecipe(_StoreRecipe):
             ) from None
 
     @classmethod
-    @override
     def find(  # pyright: ignore[reportIncompatibleMethodOverride]
         cls,
         lp: Launchpad,
@@ -296,6 +296,22 @@ class SnapRecipe(_StoreRecipe):
         for recipe in lp_recipes:
             yield cls(lp, recipe)
 
+    def build(
+        self,
+        archive: str = "/ubuntu/+archive/primary",
+        pocket: Pocket = Pocket.UPDATES,
+        channels: BuildChannels | None = None,
+        deadline: int | None = None,
+    ) -> Collection[build.Build]:
+        """Create a new set of builds for this recipe."""
+        request_build_kwargs: dict[str, Any] = {
+            "archive": archive,
+            "pocket": pocket.value,
+        }
+        if channels:
+            request_build_kwargs["channels"] = channels
+        return self._build(deadline, request_build_kwargs)
+
 
 class CharmRecipe(_StoreRecipe):
     """A recipe for a charm.
@@ -304,8 +320,7 @@ class CharmRecipe(_StoreRecipe):
     """
 
     @classmethod
-    @override
-    def new(  # pyright: ignore[reportIncompatibleMethodOverride]
+    def new(  # noqa: PLR0913
         cls,
         lp: Launchpad,
         name: str,
@@ -343,9 +358,11 @@ class CharmRecipe(_StoreRecipe):
             if uploaded.
         :returns: The Charm recipe.
         """
-        kwargs = {}
+        kwargs: dict[str, Any] = {}
         if auto_build:
             kwargs["auto_build_channels"] = auto_build_channels
+        if build_path:
+            kwargs["build_path"] = build_path
         cls._fill_store_info(
             kwargs,
             store_name=store_name,
@@ -364,9 +381,8 @@ class CharmRecipe(_StoreRecipe):
         return cls(lp, charm_entry)
 
     @classmethod
-    @override
     def get(  # pyright: ignore[reportIncompatibleMethodOverride]
-        cls, lp: Launchpad, name: str, owner: str, project: str
+        cls, lp: Launchpad, name: str, owner: str, project: str | None = None
     ) -> Self:
         """Get a charm recipe."""
         try:
@@ -375,7 +391,7 @@ class CharmRecipe(_StoreRecipe):
                 lp.lp.charm_recipes.getByName(
                     name=name,
                     owner=util.get_person_link(owner),
-                    project=project,
+                    project=f"/{project}",
                 ),
             )
         except lazr.restfulclient.errors.NotFound:
@@ -384,7 +400,6 @@ class CharmRecipe(_StoreRecipe):
             ) from None
 
     @classmethod
-    @override
     def find(  # pyright: ignore[reportIncompatibleMethodOverride]
         cls, lp: Launchpad, owner: str, *, name: str = ""
     ) -> Iterable[Self]:
@@ -396,5 +411,14 @@ class CharmRecipe(_StoreRecipe):
                 continue
             yield cls(lp, recipe)
 
+    def build(
+        self,
+        channels: BuildChannels | None = None,
+        deadline: int | None = None,
+    ) -> Collection[build.Build]:
+        """Create a new set of builds for this recipe."""
+        kwargs = {"channels": channels} if channels else {}
+        return self._build(deadline, kwargs)
 
-Recipe = typing.Union[SnapRecipe, CharmRecipe]
+
+Recipe = SnapRecipe | CharmRecipe
