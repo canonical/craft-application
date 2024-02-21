@@ -188,6 +188,23 @@ def test_grammar_aware_part_error(part):
                 },
             }
         ),
+        (
+            {  # No "parts" defined - gets coerced to an empty dict of parts.
+                "name": "empty",
+                "title": "A most basic project",
+                "version": "git",
+                "base": ["ubuntu", "22.04"],
+            }
+        ),
+        (
+            {  # Same as above, but without coercion.
+                "name": "empty",
+                "title": "A most basic project",
+                "version": "git",
+                "base": ["ubuntu", "22.04"],
+                "parts": {},
+            }
+        ),
     ],
 )
 def test_grammar_aware_project(project):
@@ -198,14 +215,6 @@ def test_grammar_aware_project(project):
 @pytest.mark.parametrize(
     ("project"),
     [
-        (
-            {
-                "name": "empty",
-                "title": "A most basic project",
-                "version": "git",
-                "base": ["ubuntu", "22.04"],
-            }
-        ),
         (
             {
                 "name": "empty",
