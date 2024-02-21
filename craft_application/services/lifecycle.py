@@ -290,13 +290,13 @@ class LifecycleService(base.ProjectService):
         """Replace project fields with values set using craftctl."""
         update_vars: dict[str, str] = {}
         for var in self._app.project_variables:
-            value = self._lcm.project_info.get_project_var(var)
+            value = self.project_info.get_project_var(var)
             if not value:
                 raise errors.PartsLifecycleError(f"Project field '{var}' was not set.")
             update_vars[var] = value
 
         emit.debug(f"Update project variables: {update_vars}")
-        self._project = self._project.copy(update=update_vars)
+        self._project.__dict__.update(update_vars)
 
     def _verify_parallel_build_count(
         self, env_name: str, parallel_build_count: int | str

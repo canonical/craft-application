@@ -91,14 +91,14 @@ class Project(CraftBaseModel):
     source_code: AnyUrl | None
     license: str | None
 
-    adopt_info: Optional[str]
+    adopt_info: str | None
 
     parts: dict[str, dict[str, Any]]  # parts are handled by craft-parts
 
     package_repositories: list[dict[str, Any]] | None
 
     @pydantic.root_validator(pre=True)
-    def _validate_version(cls, values: Dict[str, Any]) -> Dict[str, Any]:
+    def _validate_version(cls, values: dict[str, Any]) -> dict[str, Any]:
         if values.get("version") is None and values.get("adopt-info") is None:
             raise ValueError("Required field 'version' is not set and 'adopt-info' not used")
         return values
