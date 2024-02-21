@@ -115,21 +115,16 @@ class BaseRecipe(LaunchpadObject):
             for b in self._obj.builds  # pyright: ignore[reportGeneralTypeIssues]
         ]
 
-    def build(
-        self,
-        archive: str = "/ubuntu/+archive/primary",
-        pocket: Pocket = Pocket.UPDATES,
-        channels: BuildChannels | None = None,
-        deadline: int | None = None,
-    ) -> Collection[build.Build]:
-        """Create a new set of builds for this recipe."""
-        request_build_kwargs: dict[str, Any] = {
-            "archive": archive,
-            "pocket": pocket.value,
-        }
-        if channels:
-            request_build_kwargs["channels"] = channels
-        build_request = self._obj.requestBuilds(**request_build_kwargs)
+    def _build(self, deadline: int | None, kwargs: dict[str, Any]) -> list[build.Build]:
+        """Get builds for this recipe.
+
+        :param deadline: The time (on Python's `monotonic_ns` clock) after which we time out.
+        :param kwargs: A dictionary of keyword arguments to pass to the requestBuilds
+            method of this recipe. Keyword arguments vary by recipe type.
+
+        See: https://api.launchpad.net/devel.html
+        """
+        build_request = self._obj.requestBuilds(**kwargs)
         sleep_time = 0.5
         while build_request.status == "Pending":
             # Check to see if we've run out of time.
@@ -295,6 +290,22 @@ class SnapRecipe(_StoreRecipe):
         for recipe in lp_recipes:
             yield cls(lp, recipe)
 
+    def build(
+        self,
+        archive: str = "/ubuntu/+archive/primary",
+        pocket: Pocket = Pocket.UPDATES,
+        channels: BuildChannels | None = None,
+        deadline: int | None = None,
+    ) -> Collection[build.Build]:
+        """Create a new set of builds for this recipe."""
+        request_build_kwargs: dict[str, Any] = {
+            "archive": archive,
+            "pocket": pocket.value,
+        }
+        if channels:
+            request_build_kwargs["channels"] = channels
+        return self._build(deadline, request_build_kwargs)
+
 
 class CharmRecipe(_StoreRecipe):
     """A recipe for a charm.
@@ -374,7 +385,7 @@ class CharmRecipe(_StoreRecipe):
                 lp.lp.charm_recipes.getByName(
                     name=name,
                     owner=util.get_person_link(owner),
-                    project=project,
+                    project=f"/{project}",
                 ),
             )
         except lazr.restfulclient.errors.NotFound:
@@ -394,6 +405,15 @@ class CharmRecipe(_StoreRecipe):
             if name and recipe.name != name:
                 continue
             yield cls(lp, recipe)
+
+    def build(
+        self,
+        channels: BuildChannels | None = None,
+        deadline: int | None = None,
+    ) -> Collection[build.Build]:
+        """Create a new set of builds for this recipe."""
+        kwargs = {"channels": channels} if channels else {}
+        return self._build(deadline, kwargs)
 
 
 Recipe = SnapRecipe | CharmRecipe
