@@ -5,7 +5,6 @@ from craft_application.launchpad import models
 
 
 def test_get_basic_items(anonymous_lp):
-
     snapstore_server = anonymous_lp.get_project("snapstore-server")
     assert snapstore_server.name == "snapstore-server"
     assert snapstore_server.title == "Snap Store Server"

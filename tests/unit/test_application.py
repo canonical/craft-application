@@ -1,6 +1,6 @@
 # This file is part of craft_application.
 #
-# Copyright 2023 Canonical Ltd.
+# Copyright 2023-2024 Canonical Ltd.
 #
 # This program is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Lesser General Public License version 3, as
@@ -81,6 +81,11 @@ def test_app_metadata_importlib(tmp_path, monkeypatch, mocker):
 def test_app_metadata_dev():
     app = application.AppMetadata(name="dummycraft_dev", summary="dummy craft")
     assert app.version == "dev"
+
+
+def test_app_metadata_default_project_variables():
+    app = application.AppMetadata(name="dummycraft_dev", summary="dummy craft")
+    assert app.project_variables == ["version"]
 
 
 class FakeApplication(application.Application):

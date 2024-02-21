@@ -1,6 +1,6 @@
 # This file is part of craft-application.
 #
-# Copyright 2023 Canonical Ltd.
+# Copyright 2023-2024 Canonical Ltd.
 #
 # This program is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Lesser General Public License version 3, as
@@ -162,6 +162,14 @@ class LifecycleService(base.ProjectService):
                 self._project.package_repositories
             )
 
+        pvars: dict[str, str] = {}
+        for var in self._app.project_variables:
+            pvars[var] = getattr(self._project, var) or ""
+        self._project_vars = pvars
+
+        emit.debug(f"Project vars: {self._project_vars}")
+        emit.debug(f"Adopting part: {self._project.adopt_info}")
+
         try:
             return LifecycleManager(
                 {"parts": self._project.parts},
@@ -171,6 +179,8 @@ class LifecycleService(base.ProjectService):
                 work_dir=self._work_dir,
                 ignore_local_sources=self._app.source_ignore_patterns,
                 parallel_build_count=self._get_parallel_build_count(),
+                project_vars_part_name=self._project.adopt_info,
+                project_vars=self._project_vars,
                 **self._manager_kwargs,
             )
         except PartsError as err:
@@ -213,6 +223,7 @@ class LifecycleService(base.ProjectService):
                     emit.progress(message)
                     with emit.open_stream() as stream:
                         aex.execute(action, stdout=stream, stderr=stream)
+
         except PartsError as err:
             raise errors.PartsLifecycleError.from_parts_error(err) from err
         except RuntimeError as err:
@@ -221,6 +232,9 @@ class LifecycleService(base.ProjectService):
             raise errors.PartsLifecycleError.from_os_error(err) from err
         except Exception as err:  # noqa: BLE001 - Converting general error.
             raise errors.PartsLifecycleError(f"Unknown error: {str(err)}") from err
+
+        emit.progress("Updating project metadata")
+        self._update_project_metadata()
 
     def post_prime(self, step_info: StepInfo) -> bool:
         """Perform any necessary post-lifecycle modifications to the prime directory.
@@ -267,6 +281,22 @@ class LifecycleService(base.ProjectService):
             f"{self.__class__.__name__}({self._app!r}, {self._project!r}, "
             f"{work_dir=}, {cache_dir=}, {build_for=}, **{self._manager_kwargs!r})"
         )
+
+    def _update_project_metadata(self) -> None:
+        """Replace project fields with values adopted during the lifecycle."""
+        self._update_project_variables()
+
+    def _update_project_variables(self) -> None:
+        """Replace project fields with values set using craftctl."""
+        update_vars: dict[str, str] = {}
+        for var in self._app.project_variables:
+            value = self.project_info.get_project_var(var)
+            if not value:
+                raise errors.PartsLifecycleError(f"Project field '{var}' was not set.")
+            update_vars[var] = value
+
+        emit.debug(f"Update project variables: {update_vars}")
+        self._project.__dict__.update(update_vars)
 
     def _verify_parallel_build_count(
         self, env_name: str, parallel_build_count: int | str
