@@ -42,6 +42,7 @@ class BuildTypes(enum.Enum):
     """
 
     SNAP_BUILD = "snap_build"
+    CHARM_BUILD = "charm_recipe_build"
 
 
 class BuildState(enum.Enum):
@@ -51,6 +52,7 @@ class BuildState(enum.Enum):
     DEPENDENCY_WAIT = "Dependency wait"
     SUCCESS = "Successfully built"
     FAILED = "Failed to build"
+    UPLOADING = "Uploading"
     UPLOAD_FAILED = "Failed to upload"
     CHROOT_PROBLEM = "Chroot problem"
     SUPERSEDED = "Build for superseded Source"
