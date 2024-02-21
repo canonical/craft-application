@@ -160,7 +160,7 @@ def test_project_destructive(
     app._build_plan = fake_build_plan
     app.run()
 
-    assert (tmp_path / "package.tar.zst").exists()
+    assert (tmp_path / "package_1.0.tar.zst").exists()
     captured = capsys.readouterr()
     assert (
         captured.err.splitlines()[-1]
