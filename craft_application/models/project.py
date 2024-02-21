@@ -97,7 +97,7 @@ class Project(CraftBaseModel):
 
     package_repositories: list[dict[str, Any]] | None
 
-    @pydantic.root_validator(pre=True)
+    @pydantic.root_validator(pre=True)  # pyright: ignore[reportUnknownMemberType,reportUntypedFunctionDecorator]
     @classmethod
     def _validate_version(cls, values: dict[str, Any]) -> dict[str, Any]:
         if values.get("version") is None and values.get("adopt-info") is None:

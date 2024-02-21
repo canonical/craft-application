@@ -672,8 +672,8 @@ def test_lifecycle_project_variables_unset(
     )
     service._lcm = mock.MagicMock(spec=LifecycleManager)
     service._lcm.project_info = mock.MagicMock(spec=ProjectInfo)
-    service._lcm.project_info.get_project_var = (
-        lambda x: "foo" if x == "version" else None
+    service._lcm.project_info.get_project_var = lambda x: (
+        "foo" if x == "version" else None
     )
 
     with pytest.raises(PartsLifecycleError) as exc_info:
