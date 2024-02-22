@@ -1,6 +1,6 @@
 name: empty
 title: A most basic project
-version: 1.0
+version: git
 base: ["ubuntu", "22.04"]
 
 parts:
