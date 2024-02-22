@@ -31,9 +31,19 @@ import craft_application.errors
 import craft_cli
 import craft_parts
 import craft_providers
+import pydantic
 import pytest
 import pytest_check
-from craft_application import application, commands, errors, secrets, services, util
+import yaml.error
+from craft_application import (
+    application,
+    commands,
+    errors,
+    models,
+    secrets,
+    services,
+    util,
+)
 from craft_application.models import BuildInfo
 from craft_application.util import (
     get_host_architecture,  # pyright: ignore[reportGeneralTypeIssues]
@@ -395,31 +405,82 @@ def test_gets_project(monkeypatch, tmp_path, app_metadata, fake_services):
     assert app.project is not None
 
 
-def test_succeeds_without_project(
+class TryLoadProject(commands.AppCommand):
+    """A command that tries to load the project but continues without it."""
+
+    name = "try-load-project"
+    help_msg = overview = "unimportant"
+    always_load_project = "try"
+
+    def run(self, parsed_args: argparse.Namespace) -> None:
+        _ = parsed_args
+
+
+def test_try_load_succeeds_without_project(
     monkeypatch, emitter, tmp_path, app_metadata, fake_services
 ):
     monkeypatch.setattr(sys, "argv", ["testcraft", "try-load-project"])
 
     app = FakeApplication(app_metadata, fake_services)
+    monkeypatch.setattr(app, "get_project", mock.Mock(side_effect=FileNotFoundError))
     app.project_dir = tmp_path
     fake_services.project = None
 
-    class TryLoadProject(commands.AppCommand):
-        """A command that tries to load the project but continues without it."""
-
-        name = "try-load-project"
-        help_msg = overview = "unimportant"
-        always_load_project = "try"
-
-        def run(self, parsed_args: argparse.Namespace) -> None:
-            _ = parsed_args
-
     app.add_command_group("test", [TryLoadProject])
 
-    assert app.run() == 0
+    app._try_load_project(TryLoadProject(None), None, None)
 
     assert fake_services.project is None
     emitter.assert_debug("Project not found. Continuing without.")
+
+
+@pytest.mark.parametrize(
+    "error",
+    [
+        yaml.error.YAMLError(),
+        pydantic.ValidationError("error", models.Project),
+        ValueError(),
+    ],
+)
+def test_try_load_logs_error_in_project(
+    monkeypatch, emitter, tmp_path, app_metadata, fake_services, error
+):
+    monkeypatch.setattr(sys, "argv", ["testcraft", "try-load-project"])
+
+    app = FakeApplication(app_metadata, fake_services)
+    monkeypatch.setattr(app, "get_project", mock.Mock(side_effect=error))
+    app.project_dir = tmp_path
+    fake_services.project = None
+
+    app.add_command_group("test", [TryLoadProject])
+
+    app._try_load_project(TryLoadProject(None), None, None)
+
+    assert fake_services.project is None
+    emitter.assert_progress(
+        "Error loading project. Attempting to continue without a project.",
+        permanent=True,
+    )
+    emitter.assert_debug(error)
+
+
+@pytest.mark.parametrize("error", [Exception(), errors.CraftError("err"), Warning()])
+def test_try_load_fails_on_general_error(
+    monkeypatch, tmp_path, app_metadata, fake_services, error
+):
+    monkeypatch.setattr(sys, "argv", ["testcraft", "try-load-project"])
+
+    app = FakeApplication(app_metadata, fake_services)
+    monkeypatch.setattr(app, "get_project", mock.Mock(side_effect=error))
+    app.project_dir = tmp_path
+    fake_services.project = None
+
+    app.add_command_group("test", [TryLoadProject])
+
+    with pytest.raises(error.__class__):
+        app._try_load_project(TryLoadProject(None), None, None)
+
+    assert fake_services.project is None
 
 
 def test_fails_without_project(

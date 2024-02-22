@@ -31,6 +31,8 @@ from typing import TYPE_CHECKING, Any, cast, final
 import craft_cli
 import craft_parts
 import craft_providers
+import pydantic
+import yaml.error
 from craft_parts.plugins.plugins import PluginType
 from platformdirs import user_cache_path
 
@@ -446,11 +448,18 @@ class Application:
             self.services.project = self.get_project(
                 platform=platform, build_for=build_for
             )
-        except Exception:  # noqa: BLE001
+        except FileNotFoundError:
             if command.always_load_project == "try":
                 craft_cli.emit.debug("Project not found. Continuing without.")
             else:
                 raise
+        except (pydantic.ValidationError, ValueError, yaml.error.YAMLError) as exc:
+            if command.always_load_project == "try":
+                craft_cli.emit.progress(
+                    "Error loading project. Attempting to continue without a project.",
+                    permanent=True,
+                )
+                craft_cli.emit.debug(exc)
 
     def run(self) -> int:  # noqa: PLR0912 (too many branches)
         """Bootstrap and run the application."""
