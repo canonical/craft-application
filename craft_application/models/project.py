@@ -102,13 +102,15 @@ class Project(CraftBaseModel):
     )
     @classmethod
     def _validate_adopt_info(cls, values: dict[str, Any]) -> dict[str, Any]:
-        if values.get("version") is None and values.get("adopt-info") is None:
+        # pydantic 1.x seems to inconsistently validate fields by alias or name?
+        adopting_part = values.get("adopt-info") or values.get("adopt_info")
+
+        if not values.get("version") and not adopting_part:
             raise ValueError(
                 "Required field 'version' is not set and 'adopt-info' not used."
             )
 
-        adopted_part = values.get("adopt-info")
-        if adopted_part is not None and adopted_part not in values.get("parts", {}):
+        if adopting_part and adopting_part not in values.get("parts", {}):
             raise ValueError("'adopt-info' does not reference a valid part.")
 
         return values
