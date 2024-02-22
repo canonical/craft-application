@@ -234,6 +234,10 @@ def test_effective_base_unknown():
         (None, None, "Required field 'version' is not set and 'adopt-info' not used."),
         (None, "bar", "'adopt-info' does not reference a valid part."),
         (None, "foo", None),
+        ("", None, "Required field 'version' is not set and 'adopt-info' not used."),
+        ("", "bar", "'adopt-info' does not reference a valid part."),
+        ("", "foo", "string does not match regex"),
+        (None, "", "Required field 'version' is not set and 'adopt-info' not used."),
     ],
 )
 def test_adoptable_version(version, adopter_part, error):
