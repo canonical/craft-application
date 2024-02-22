@@ -363,7 +363,7 @@ def test_craft_lib_log_level(app_metadata, fake_services):
 def test_gets_project(monkeypatch, tmp_path, app_metadata, fake_services):
     project_file = tmp_path / "testcraft.yaml"
     project_file.write_text(BASIC_PROJECT_YAML)
-    monkeypatch.setattr(sys, "argv", ["testcraft", "pull"])
+    monkeypatch.setattr(sys, "argv", ["testcraft", "pull", "--destructive-mode"])
 
     app = FakeApplication(app_metadata, fake_services)
     app.project_dir = tmp_path
