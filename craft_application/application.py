@@ -423,20 +423,13 @@ class Application:
         if self.is_managed():
             self.project_dir = pathlib.Path("/root/project")
         elif project_dir := getattr(dispatcher.parsed_args(), "project_dir", None):
-            project_dir = pathlib.Path(project_dir)
-            if not project_dir.exists():
-                raise errors.ProjectFileMissingError(
-                    "Provided project directory does not exist.",
-                    details=f"Directory not found: {project_dir}",
-                    resolution="Ensure the path entered is correct.",
-                )
-            if not project_dir.is_dir():
+            self.project_dir = pathlib.Path(project_dir).expanduser().resolve()
+            if self.project_dir.exists() and not self.project_dir.is_dir():
                 raise errors.ProjectFileMissingError(
                     "Provided project directory is not a directory.",
                     details=f"Not a directory: {project_dir}",
                     resolution="Ensure the path entered is correct.",
                 )
-            self.project_dir = project_dir
 
     def _try_load_project(
         self, command: commands.AppCommand, platform: str | None, build_for: str | None
