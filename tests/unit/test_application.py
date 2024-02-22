@@ -23,6 +23,7 @@ import re
 import subprocess
 import sys
 from textwrap import dedent
+from typing import Any
 from unittest import mock
 
 import craft_application
@@ -32,13 +33,14 @@ import craft_parts
 import craft_providers
 import pytest
 import pytest_check
-from craft_application import application, commands, errors, secrets, services
+from craft_application import application, commands, errors, secrets, services, util
 from craft_application.models import BuildInfo
 from craft_application.util import (
     get_host_architecture,  # pyright: ignore[reportGeneralTypeIssues]
 )
 from craft_parts.plugins.plugins import PluginType
 from craft_providers import bases
+from overrides import override
 
 EMPTY_COMMAND_GROUP = craft_cli.CommandGroup("FakeCommands", [])
 BASIC_PROJECT_YAML = """
@@ -91,8 +93,25 @@ def test_app_metadata_default_project_variables():
 class FakeApplication(application.Application):
     """An application class explicitly for testing. Adds some convenient test hooks."""
 
+    platform: str = "unknown-platform"
+    build_on: str = "unknown-build-on"
+    build_for: str | None = "unknown-build-for"
+
     def set_project(self, project):
         self._Application__project = project
+
+    @override
+    def _extra_yaml_transform(
+        self,
+        yaml_data: dict[str, Any],
+        *,
+        build_on: str,
+        build_for: str | None,
+    ) -> dict[str, Any]:
+        self.build_on = build_on
+        self.build_for = build_for
+
+        return yaml_data
 
 
 @pytest.fixture()
@@ -854,3 +873,15 @@ def test_register_plugins_default(mocker, app_metadata, fake_services):
         app.run()
 
     assert reg.call_count == 0
+
+
+def test_extra_yaml_transform(tmp_path, app_metadata, fake_services):
+    project_file = tmp_path / "testcraft.yaml"
+    project_file.write_text(BASIC_PROJECT_YAML)
+
+    app = FakeApplication(app_metadata, fake_services)
+    app.project_dir = tmp_path
+    _ = app.get_project(build_for="fake-build-for")
+
+    assert app.build_on == util.get_host_architecture()
+    assert app.build_for == "fake-build-for"
