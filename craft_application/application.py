@@ -560,7 +560,9 @@ class Application:
             )
 
         # Perform extra, application-specific transformations.
-        return self._extra_yaml_transform(yaml_data)
+        return self._extra_yaml_transform(
+            yaml_data, build_on=build_on, build_for=build_for
+        )
 
     def _expand_environment(self, yaml_data: dict[str, Any]) -> None:
         """Perform expansion of project environment variables."""
@@ -605,7 +607,13 @@ class Application:
 
         self._secrets = secret_values
 
-    def _extra_yaml_transform(self, yaml_data: dict[str, Any]) -> dict[str, Any]:
+    def _extra_yaml_transform(
+        self,
+        yaml_data: dict[str, Any],
+        *,
+        build_on: str,  # noqa: ARG002 (Unused method argument)
+        build_for: str | None,  # noqa: ARG002 (Unused method argument)
+    ) -> dict[str, Any]:
         """Perform additional transformations on a project's yaml data.
 
         Note: subclasses should return a new dict and keep the parameter unmodified.
