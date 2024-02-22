@@ -669,7 +669,7 @@ def test_lifecycle_project_variables_unset(
     app_metadata = dataclasses.replace(
         app_metadata,
         project_variables=["version", "color"],
-        mandatory_adoptable_fields=["version", "color"]
+        mandatory_adoptable_fields=["version", "color"],
     )
 
     service = lifecycle.LifecycleService(
@@ -704,7 +704,7 @@ def test_lifecycle_project_variables_optional(
     app_metadata = dataclasses.replace(
         app_metadata,
         project_variables=["version", "color"],
-        mandatory_adoptable_fields=["version"]
+        mandatory_adoptable_fields=["version"],
     )
 
     service = lifecycle.LifecycleService(
@@ -725,5 +725,6 @@ def test_lifecycle_project_variables_optional(
     service.run("prime")
 
     assert service._project.version == "foo"
+
 
 # endregion

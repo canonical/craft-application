@@ -90,7 +90,10 @@ class ServiceFactory:
                     f"{cls.__name__} requires a project to be available before creation."
                 )
             for field in self.app.mandatory_adoptable_fields:
-                if not getattr(self.project, field, None) and not self.project.adopt_info:
+                if (
+                    not getattr(self.project, field, None)
+                    and not self.project.adopt_info
+                ):
                     raise errors.CraftValidationError(
                         f"Required field '{field}' is not set and 'adopt-info' not used."
                     )

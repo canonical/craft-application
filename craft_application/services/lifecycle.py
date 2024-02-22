@@ -238,7 +238,9 @@ class LifecycleService(base.ProjectService):
 
         for field in self._app.mandatory_adoptable_fields:
             if not getattr(self._project, field):
-                raise errors.PartsLifecycleError(f"Project field '{field}' was not set.")
+                raise errors.PartsLifecycleError(
+                    f"Project field '{field}' was not set."
+                )
 
     def post_prime(self, step_info: StepInfo) -> bool:
         """Perform any necessary post-lifecycle modifications to the prime directory.
