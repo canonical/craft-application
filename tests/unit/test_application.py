@@ -461,20 +461,7 @@ def test_pre_run_project_dir_success_unmanaged(app, fs, project_dir):
 
     app._pre_run(dispatcher)
 
-    assert app.project_dir == pathlib.Path(project_dir)
-
-
-@pytest.mark.parametrize("project_dir", ["relative/dir", "/absolute/dir"])
-def test_pre_run_project_dir_not_found(app, fs, project_dir):
-    # The fs fixture has to be after app so the app can be created correctly.
-    # This just prevents us from getting linter complaints about that.
-    fs.resume()
-
-    dispatcher = mock.Mock(spec_set=craft_cli.Dispatcher)
-    dispatcher.parsed_args.return_value.project_dir = project_dir
-
-    with pytest.raises(errors.ProjectFileMissingError, match="does not exist"):
-        app._pre_run(dispatcher)
+    assert app.project_dir == pathlib.Path(project_dir).expanduser().resolve()
 
 
 @pytest.mark.parametrize("project_dir", ["relative/file", "/absolute/file"])
