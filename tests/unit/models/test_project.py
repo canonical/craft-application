@@ -255,7 +255,7 @@ def test_adoptable_version(unmarshal, version, adopter_part, error):
                 }
             )
 
-        return Project(
+        return Project(  # pyright: ignore[reportCallIssue]
             name="project-name",
             version=version,
             adopt_info=adopter_part,
