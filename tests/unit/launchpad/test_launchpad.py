@@ -35,8 +35,8 @@ def flatten_enum(e: type[enum.Enum]) -> list:
     "cache_path",
     [
         launchpad.launchpad.DEFAULT_CACHE_PATH,
-        pathlib.Path("/cache"),
-        pathlib.Path("/some/cache/directory"),
+        "/cache",
+        "some/cache/directory",
     ],
 )
 @pytest.mark.parametrize(
@@ -44,6 +44,9 @@ def flatten_enum(e: type[enum.Enum]) -> list:
 )
 @pytest.mark.usefixtures("fs")  # Fake filesystem
 def test_anonymous_login_with_cache(mocker, cache_path, root):
+    # Workaround for Python 3.10's interaction with pyfakefs.
+    cache_path = pathlib.Path(str(cache_path))
+
     assert not cache_path.exists()
     mock_login = mocker.patch.object(
         launchpadlib.launchpad.Launchpad, "login_anonymously"
@@ -56,7 +59,7 @@ def test_anonymous_login_with_cache(mocker, cache_path, root):
     mock_login.assert_called_once_with(
         consumer_name="craft-application-tests",
         service_root=root,
-        launchpadlib_dir=cache_path,
+        launchpadlib_dir=cache_path.expanduser().resolve(),
         version="devel",
         timeout=None,
     )
@@ -84,7 +87,7 @@ def test_anonymous_login_no_cache(mocker):
     [
         launchpad.launchpad.DEFAULT_CACHE_PATH,
         pathlib.Path("/cache"),
-        pathlib.Path("/some/cache/directory"),
+        pathlib.Path("some/cache/directory"),
     ],
 )
 @pytest.mark.parametrize(
@@ -94,12 +97,15 @@ def test_anonymous_login_no_cache(mocker):
     "credentials_file",
     [
         pathlib.Path("/creds"),
-        pathlib.Path("/some/credentials/file"),
+        pathlib.Path("some/credentials/file"),
         pathlib.Path("~/.config/launchpad-credentials"),
     ],
 )
 @pytest.mark.usefixtures("fs")  # Fake filesystem
 def test_login_with_cache_and_credentials(mocker, cache_path, root, credentials_file):
+    # Workaround for Python 3.10's interaction with pyfakefs.
+    cache_path = pathlib.Path(cache_path.as_posix())
+
     assert not cache_path.exists()
     assert not credentials_file.exists()
     mock_login = mocker.patch.object(launchpadlib.launchpad.Launchpad, "login_with")
