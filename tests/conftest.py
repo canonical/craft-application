@@ -103,7 +103,6 @@ def fake_project() -> models.Project:
         parts={"my-part": {"plugin": "nil"}},
         platforms={"foo": Platform(build_on=arch, build_for=arch)},
         package_repositories=None,
-        adopt_info=None,
     )
 
 
@@ -186,7 +185,7 @@ def fake_package_service_class():
             self, prime_dir: pathlib.Path, dest: pathlib.Path
         ) -> list[pathlib.Path]:
             assert prime_dir.exists()
-            pkg = dest / f"package_{self._project.version}.tar.zst"
+            pkg = dest / "package.tar.zst"
             pkg.touch()
             return [pkg]
 

@@ -1,6 +1,6 @@
 name: environment-project
 summary: A project with environment variables
-version: 1.0
+version: 1.2.3
 base: ["ubuntu", "22.04"]
 
 parts:

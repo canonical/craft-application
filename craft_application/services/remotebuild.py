@@ -33,6 +33,7 @@ from craft_application.remote import GitRepo, WorkTree, utils
 from craft_application.services import base
 
 if TYPE_CHECKING:  # pragma: no cover
+
     from craft_application import AppMetadata, ServiceFactory
 
 DEFAULT_POLL_INTERVAL = 30
