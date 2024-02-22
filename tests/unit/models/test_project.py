@@ -225,6 +225,7 @@ def test_effective_base_unknown():
     assert exc_info.match("Could not determine effective base")
 
 
+@pytest.mark.parametrize(("unmarshal"), [True, False])
 @pytest.mark.parametrize(
     ("version", "adopter_part", "error"),
     [
@@ -240,15 +241,25 @@ def test_effective_base_unknown():
         (None, "", "Required field 'version' is not set and 'adopt-info' not used."),
     ],
 )
-def test_adoptable_version(version, adopter_part, error):
+def test_adoptable_version(unmarshal, version, adopter_part, error):
     def _project(version, adopter_part) -> Project:
-        return Project(  # pyright: ignore[reportCallIssue]
-            **{
-                "name": "project-name",  # pyright: ignore[reportGeneralTypeIssues]
-                "version": version,
-                "adopt-info": adopter_part,
-                "parts": {"foo": {"plugin": "nil"}},
-            }
+        # pydantic 1.x validates differently according to the way the model
+        # is created, so we create it both ways.
+        if unmarshal:
+            return Project.unmarshal(
+                {
+                    "name": "project-name",  # pyright: ignore[reportGeneralTypeIssues]
+                    "version": version,
+                    "adopt-info": adopter_part,
+                    "parts": {"foo": {"plugin": "nil"}},
+                }
+            )
+
+        return Project(
+            name="project-name",
+            version=version,
+            adopt_info=adopter_part,
+            parts={"foo": {"plugin": "nil"}},
         )
 
     if error:
