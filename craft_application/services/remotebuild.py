@@ -199,7 +199,7 @@ class RemoteBuildService(base.AppService):
         with craft_cli.emit.pause():
             return launchpad.Launchpad.login(
                 f"{self._app.name}/{self._app.version}",
-                service_root=_get_launchpad_instance(),
+                root=_get_launchpad_instance(),
                 credentials_file=platformdirs.user_data_path(self._app.name)
                 / "launchpad-credentials",
             )
