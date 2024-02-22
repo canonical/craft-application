@@ -85,6 +85,16 @@ def test_app_metadata_dev():
     assert app.version == "dev"
 
 
+def test_app_metadata_default_project_variables():
+    app = application.AppMetadata(name="dummycraft_dev", summary="dummy craft")
+    assert app.project_variables == ["version"]
+
+
+def test_app_metadata_default_mandatory_adoptable_fields():
+    app = application.AppMetadata(name="dummycraft_dev", summary="dummy craft")
+    assert app.mandatory_adoptable_fields == ["version"]
+
+
 class FakeApplication(application.Application):
     """An application class explicitly for testing. Adds some convenient test hooks."""
 

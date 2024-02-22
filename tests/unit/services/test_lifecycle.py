@@ -615,3 +615,115 @@ def test_get_parallel_build_count_error(
 
 
 # endregion
+
+# region project variables
+
+
+def test_lifecycle_project_variables(app_metadata, fake_services, tmp_path):
+    """Test that project variables are set after the lifecycle runs."""
+
+    class LocalProject(models.Project):
+        color: str | None
+
+    fake_project = LocalProject.unmarshal(
+        {
+            "name": "project",
+            "base": "core24",
+            "version": "1.0.0.post64+git12345678",
+            "parts": {"my-part": {"plugin": "nil"}},
+            "adopt-info": "my-part",
+        }
+    )
+    work_dir = tmp_path / "work"
+    app_metadata = dataclasses.replace(
+        app_metadata, project_variables=["version", "color"], ProjectClass=LocalProject
+    )
+
+    service = lifecycle.LifecycleService(
+        app_metadata,
+        fake_services,
+        project=fake_project,
+        work_dir=work_dir,
+        cache_dir=tmp_path / "cache",
+        platform=None,
+        build_for=get_host_architecture(),
+    )
+    service._lcm = mock.MagicMock(spec=LifecycleManager)
+    service._lcm.project_info = mock.MagicMock(spec=ProjectInfo)
+    service._lcm.project_info.get_project_var = lambda _: "foo"
+
+    service.run("prime")
+
+    assert service._project.version == "foo"
+    assert cast(LocalProject, service._project).color == "foo"
+
+
+def test_lifecycle_project_variables_unset(
+    app_metadata,
+    fake_project,
+    fake_services,
+    tmp_path,
+):
+    """Test that project variables must be set after the lifecycle runs."""
+    work_dir = tmp_path / "work"
+    app_metadata = dataclasses.replace(
+        app_metadata,
+        project_variables=["version", "color"],
+        mandatory_adoptable_fields=["version", "color"]
+    )
+
+    service = lifecycle.LifecycleService(
+        app_metadata,
+        fake_services,
+        project=fake_project,
+        work_dir=work_dir,
+        cache_dir=tmp_path / "cache",
+        platform=None,
+        build_for=get_host_architecture(),
+    )
+    service._lcm = mock.MagicMock(spec=LifecycleManager)
+    service._lcm.project_info = mock.MagicMock(spec=ProjectInfo)
+    service._lcm.project_info.get_project_var = lambda x: (
+        "foo" if x == "version" else None
+    )
+
+    with pytest.raises(PartsLifecycleError) as exc_info:
+        service.run("prime")
+
+    assert str(exc_info.value) == "Project field 'color' was not set."
+
+
+def test_lifecycle_project_variables_optional(
+    app_metadata,
+    fake_project,
+    fake_services,
+    tmp_path,
+):
+    """Test that project variables must be set after the lifecycle runs."""
+    work_dir = tmp_path / "work"
+    app_metadata = dataclasses.replace(
+        app_metadata,
+        project_variables=["version", "color"],
+        mandatory_adoptable_fields=["version"]
+    )
+
+    service = lifecycle.LifecycleService(
+        app_metadata,
+        fake_services,
+        project=fake_project,
+        work_dir=work_dir,
+        cache_dir=tmp_path / "cache",
+        platform=None,
+        build_for=get_host_architecture(),
+    )
+    service._lcm = mock.MagicMock(spec=LifecycleManager)
+    service._lcm.project_info = mock.MagicMock(spec=ProjectInfo)
+    service._lcm.project_info.get_project_var = lambda x: (
+        "foo" if x == "version" else None
+    )
+
+    service.run("prime")
+
+    assert service._project.version == "foo"
+
+# endregion

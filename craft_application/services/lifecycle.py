@@ -233,6 +233,13 @@ class LifecycleService(base.ProjectService):
         except Exception as err:  # noqa: BLE001 - Converting general error.
             raise errors.PartsLifecycleError(f"Unknown error: {str(err)}") from err
 
+        emit.progress("Updating project metadata")
+        self._update_project_metadata()
+
+        for field in self._app.mandatory_adoptable_fields:
+            if not getattr(self._project, field):
+                raise errors.PartsLifecycleError(f"Project field '{field}' was not set.")
+
     def post_prime(self, step_info: StepInfo) -> bool:
         """Perform any necessary post-lifecycle modifications to the prime directory.
 
@@ -278,6 +285,19 @@ class LifecycleService(base.ProjectService):
             f"{self.__class__.__name__}({self._app!r}, {self._project!r}, "
             f"{work_dir=}, {cache_dir=}, {build_for=}, **{self._manager_kwargs!r})"
         )
+
+    def _update_project_metadata(self) -> None:
+        """Replace project fields with values adopted during the lifecycle."""
+        self._update_project_variables()
+
+    def _update_project_variables(self) -> None:
+        """Replace project fields with values set using craftctl."""
+        update_vars: dict[str, str] = {}
+        for var in self._app.project_variables:
+            update_vars[var] = self.project_info.get_project_var(var)
+
+        emit.debug(f"Update project variables: {update_vars}")
+        self._project.__dict__.update(update_vars)
 
     def _verify_parallel_build_count(
         self, env_name: str, parallel_build_count: int | str

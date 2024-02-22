@@ -75,6 +75,8 @@ class AppMetadata:
     source_ignore_patterns: list[str] = field(default_factory=lambda: [])
     managed_instance_project_path = pathlib.PurePosixPath("/root/project")
     features: AppFeatures = AppFeatures()
+    project_variables: list[str] = field(default_factory=lambda: ["version"])
+    mandatory_adoptable_fields: list[str] = field(default_factory=lambda: ["version"])
 
     ProjectClass: type[models.Project] = models.Project
     BuildPlannerClass: type[models.BuildPlanner] = field(
