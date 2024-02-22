@@ -17,14 +17,125 @@
 from __future__ import annotations
 
 import enum
+import pathlib
 from unittest import mock
 
+import launchpadlib.launchpad
+import launchpadlib.uris
 import pytest
+from craft_application import launchpad
 from craft_application.launchpad import models
 
 
 def flatten_enum(e: type[enum.Enum]) -> list:
     return [*e, *(val.name for val in e), *(val.value for val in e)]
+
+
+@pytest.mark.parametrize(
+    "cache_path",
+    [
+        launchpad.launchpad.DEFAULT_CACHE_PATH,
+        pathlib.Path("/cache"),
+        pathlib.Path("/some/cache/directory"),
+    ],
+)
+@pytest.mark.parametrize(
+    "root", [launchpadlib.uris.LPNET_SERVICE_ROOT, "production", "staging"]
+)
+@pytest.mark.usefixtures("fs")  # Fake filesystem
+def test_anonymous_login_with_cache(mocker, cache_path, root):
+    assert not cache_path.exists()
+    mock_login = mocker.patch.object(
+        launchpadlib.launchpad.Launchpad, "login_anonymously"
+    )
+    launchpad.Launchpad.anonymous(
+        "craft-application-tests", cache_dir=cache_path, root=root
+    )
+
+    assert cache_path.exists()
+    mock_login.assert_called_once_with(
+        consumer_name="craft-application-tests",
+        service_root=root,
+        launchpadlib_dir=cache_path,
+        version="devel",
+        timeout=None,
+    )
+
+
+@pytest.mark.usefixtures("fs")
+def test_anonymous_login_no_cache(mocker):
+    mock_login = mocker.patch.object(
+        launchpadlib.launchpad.Launchpad, "login_anonymously"
+    )
+
+    launchpad.Launchpad.anonymous("craft-application-tests", cache_dir=None)
+
+    mock_login.assert_called_once_with(
+        consumer_name="craft-application-tests",
+        service_root=launchpadlib.uris.LPNET_SERVICE_ROOT,
+        launchpadlib_dir=None,
+        version="devel",
+        timeout=None,
+    )
+
+
+@pytest.mark.parametrize(
+    "cache_path",
+    [
+        launchpad.launchpad.DEFAULT_CACHE_PATH,
+        pathlib.Path("/cache"),
+        pathlib.Path("/some/cache/directory"),
+    ],
+)
+@pytest.mark.parametrize(
+    "root", [launchpadlib.uris.LPNET_SERVICE_ROOT, "production", "staging"]
+)
+@pytest.mark.parametrize(
+    "credentials_file",
+    [
+        pathlib.Path("/creds"),
+        pathlib.Path("/some/credentials/file"),
+        pathlib.Path("~/.config/launchpad-credentials"),
+    ],
+)
+@pytest.mark.usefixtures("fs")  # Fake filesystem
+def test_login_with_cache_and_credentials(mocker, cache_path, root, credentials_file):
+    assert not cache_path.exists()
+    assert not credentials_file.exists()
+    mock_login = mocker.patch.object(launchpadlib.launchpad.Launchpad, "login_with")
+    launchpad.Launchpad.login(
+        "craft-application-tests",
+        cache_dir=cache_path,
+        credentials_file=credentials_file,
+        root=root,
+    )
+
+    assert cache_path.is_dir()
+    assert credentials_file.parent.is_dir()
+    mock_login.assert_called_once_with(
+        application_name="craft-application-tests",
+        service_root=root,
+        launchpadlib_dir=cache_path,
+        credentials_file=credentials_file,
+        version="devel",
+    )
+
+
+@pytest.mark.usefixtures("fs")
+def test_anonymous_login_no_cache_or_credentials(mocker):
+    mock_login = mocker.patch.object(launchpadlib.launchpad.Launchpad, "login_with")
+
+    launchpad.Launchpad.login(
+        "craft-application-tests", cache_dir=None, credentials_file=None
+    )
+
+    mock_login.assert_called_once_with(
+        application_name="craft-application-tests",
+        service_root=launchpadlib.uris.LPNET_SERVICE_ROOT,
+        launchpadlib_dir=None,
+        credentials_file=None,
+        version="devel",
+    )
 
 
 def test_set_username_logged_in(fake_launchpad):

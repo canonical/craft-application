@@ -62,6 +62,9 @@ class Launchpad:
         timeout: int | None = None,
     ) -> Self:
         """Get an anonymous Launchpad client."""
+        if cache_dir:
+            cache_dir = cache_dir.expanduser().resolve()
+            cache_dir.expanduser().resolve().mkdir(exist_ok=True, parents=True)
         return cls(
             app_name,
             launchpadlib.launchpad.Launchpad.login_anonymously(
@@ -84,6 +87,12 @@ class Launchpad:
         **kwargs: Any,  # noqa: ANN401 (Intentionally duck-typed)
     ) -> Self:
         """Login to Launchpad."""
+        if cache_dir:
+            cache_dir.expanduser().resolve()
+            cache_dir.mkdir(exist_ok=True, parents=True)
+        if credentials_file:
+            credentials_file.expanduser().resolve()
+            credentials_file.parent.mkdir(mode=0o700, exist_ok=True, parents=True)
         return cls(
             app_name,
             launchpadlib.launchpad.Launchpad.login_with(
