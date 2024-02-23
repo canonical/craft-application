@@ -31,8 +31,8 @@ import enum
 import lazr.restfulclient.errors  # type: ignore[import-untyped]
 from typing_extensions import Self
 
-from . import distro
 from .. import errors, util
+from . import distro
 from .base import LaunchpadObject
 
 
@@ -140,4 +140,4 @@ class Build(LaunchpadObject):
 
     def get_artifact_urls(self) -> list[str]:
         """Get the URLs of build artifacts."""
-        return self._obj.getFileUrls()
+        return list(self._obj.getFileUrls())

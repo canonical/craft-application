@@ -28,8 +28,6 @@ import enum
 # pyright: reportOptionalIterable=false
 # pyright: reportOptionalSubscript=false
 # pyright: reportIndexIssue=false
-
-
 from .base import LaunchpadObject
 
 
@@ -67,9 +65,7 @@ class DistroSeries(LaunchpadObject):
     """
 
     _resource_types = DistroSeriesTypes
-    _attr_map = {
-        "display_name": "displayname"
-    }
+    _attr_map = {"display_name": "displayname"}
 
     display_name: str
     name: str
