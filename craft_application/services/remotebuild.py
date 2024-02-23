@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 import datetime
+import itertools
 import os
 import pathlib
 import time
@@ -293,7 +294,11 @@ class RemoteBuildService(base.AppService):
 
     def _get_artifact_urls(self) -> Collection[str]:
         """Get the locations of all build artifacts."""
-        return [*(build.get_entity().getFileUrls() for build in self._builds)]
+        return list(
+            itertools.chain.from_iterable(
+                build.get_artifact_urls() for build in self._builds
+            )
+        )
 
     # endregion
 
