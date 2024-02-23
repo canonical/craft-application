@@ -122,8 +122,10 @@ class LaunchpadObject:
             lp_obj = util.getattrs(self._obj, self._attr_map[item])
         elif item in (*annotations, *self._obj.lp_attributes):
             lp_obj = getattr(self._obj, item)
-        elif item in (*self._obj.lp_entries, *self._obj.lp_collections):
-            raise NotImplementedError("Cannot yet return meta types")
+        elif item in self._obj.lp_collections:
+            raise NotImplementedError("Cannot yet return collections")
+        elif item in self._obj.lp_entries and item not in annotations:
+            raise NotImplementedError("Cannot get this item type.")
         else:
             raise AttributeError(
                 f"{self.__class__.__name__!r} has no attribute {item!r}"
