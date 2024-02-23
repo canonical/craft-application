@@ -53,7 +53,7 @@ class BuildState(enum.Enum):
     DEPENDENCY_WAIT = "Dependency wait"
     SUCCESS = "Successfully built"
     FAILED = "Failed to build"
-    UPLOADING = "Uploading"
+    UPLOADING = "Uploading build"
     UPLOAD_FAILED = "Failed to upload"
     CHROOT_PROBLEM = "Chroot problem"
     SUPERSEDED = "Build for superseded Source"
