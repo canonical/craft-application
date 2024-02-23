@@ -32,6 +32,7 @@ import lazr.restfulclient.errors  # type: ignore[import-untyped]
 from typing_extensions import Self
 
 from .. import errors, util
+from . import distro
 from .base import LaunchpadObject
 
 
@@ -52,7 +53,7 @@ class BuildState(enum.Enum):
     DEPENDENCY_WAIT = "Dependency wait"
     SUCCESS = "Successfully built"
     FAILED = "Failed to build"
-    UPLOADING = "Uploading"
+    UPLOADING = "Uploading build"
     UPLOAD_FAILED = "Failed to upload"
     CHROOT_PROBLEM = "Chroot problem"
     SUPERSEDED = "Build for superseded Source"
@@ -103,6 +104,8 @@ class Build(LaunchpadObject):
     resource_type_link: str
     build_log_url: str
     architecture: util.Architecture
+    distribution: distro.Distribution
+    distro_series: distro.DistroSeries
 
     @classmethod
     def new(cls) -> Self:  # pyright: ignore[reportIncompatibleMethodOverride]
@@ -134,3 +137,7 @@ class Build(LaunchpadObject):
             self._obj.retry()
         except lazr.restfulclient.errors.BadRequest as exc:
             raise errors.BuildError(exc.content.decode()) from exc
+
+    def get_artifact_urls(self) -> list[str]:
+        """Get the URLs of build artifacts."""
+        return list(self._obj.getFileUrls())
