@@ -15,6 +15,7 @@
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Unit tests for craft-application app classes."""
 import argparse
+import dataclasses
 import importlib
 import importlib.metadata
 import logging
@@ -850,3 +851,23 @@ def test_extra_yaml_transform(tmp_path, app_metadata, fake_services):
 
     assert app.build_on == util.get_host_architecture()
     assert app.build_for == "fake-build-for"
+
+
+def test_mandatory_adoptable_fields(tmp_path, app_metadata, fake_services):
+    """Verify if mandatory adoptable fields are defined if not using adopt-info."""
+    project_file = tmp_path / "testcraft.yaml"
+    project_file.write_text(BASIC_PROJECT_YAML)
+    app_metadata = dataclasses.replace(
+        app_metadata, mandatory_adoptable_fields=["license"]
+    )
+
+    app = application.Application(app_metadata, fake_services)
+    app.project_dir = tmp_path
+
+    with pytest.raises(errors.CraftValidationError) as exc_info:
+        _ = app.get_project(build_for=get_host_architecture())
+
+    assert (
+        str(exc_info.value)
+        == "Required field 'license' is not set and 'adopt-info' not used."
+    )

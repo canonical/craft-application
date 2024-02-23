@@ -280,6 +280,17 @@ class Application:
         build_on = util.get_host_architecture()
         yaml_data = self._transform_project_yaml(yaml_data, build_on, build_for)
         self.__project = self.app.ProjectClass.from_yaml_data(yaml_data, project_path)
+
+        # check if mandatory adoptable fields exist if adopt-info not used
+        for name in self.app.mandatory_adoptable_fields:
+            if (
+                not getattr(self.__project, name, None)
+                and not self.__project.adopt_info
+            ):
+                raise errors.CraftValidationError(
+                    f"Required field '{name}' is not set and 'adopt-info' not used."
+                )
+
         return self.__project
 
     @cached_property

@@ -18,7 +18,7 @@ from unittest import mock
 
 import pytest
 import pytest_check
-from craft_application import AppMetadata, errors, services
+from craft_application import AppMetadata, services
 from craft_cli import emit
 
 
@@ -161,29 +161,3 @@ def test_mandatory_adoptable_field(
     )
 
     _ = factory.lifecycle
-
-
-def test_mandatory_adoptable_field_missing(
-    fake_project, fake_lifecycle_service_class, fake_package_service_class
-):
-    app_metadata = AppMetadata(
-        "testcraft",
-        "A fake app for testing craft-application",
-        mandatory_adoptable_fields=["license"],
-    )
-    fake_project.license = None
-
-    factory = services.ServiceFactory(
-        app_metadata,
-        project=fake_project,
-        PackageClass=fake_package_service_class,
-        LifecycleClass=fake_lifecycle_service_class,
-    )
-
-    with pytest.raises(errors.CraftValidationError) as exc_info:
-        _ = factory.lifecycle
-
-    assert (
-        str(exc_info.value)
-        == "Required field 'license' is not set and 'adopt-info' not used."
-    )

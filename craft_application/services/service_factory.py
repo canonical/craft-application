@@ -17,7 +17,7 @@ from __future__ import annotations
 import dataclasses
 from typing import TYPE_CHECKING, Any
 
-from craft_application import errors, models, services
+from craft_application import models, services
 
 if TYPE_CHECKING:
     from craft_application.application import AppMetadata
@@ -89,15 +89,6 @@ class ServiceFactory:
                 raise ValueError(
                     f"{cls.__name__} requires a project to be available before creation."
                 )
-            for field in self.app.mandatory_adoptable_fields:
-                if (
-                    not getattr(self.project, field, None)
-                    and not self.project.adopt_info
-                ):
-                    raise errors.CraftValidationError(
-                        f"Required field '{field}' is not set and 'adopt-info' not used."
-                    )
-
             kwargs.setdefault("project", self.project)
 
         instance: services.AppService = cls(app=self.app, services=self, **kwargs)
