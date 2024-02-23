@@ -1,6 +1,6 @@
 # This file is part of craft-application.
 #
-# Copyright 2023-2024 Canonical Ltd.
+# Copyright 2023 Canonical Ltd.
 #
 # This program is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Lesser General Public License version 3, as
@@ -78,7 +78,7 @@ class Project(CraftBaseModel):
 
     name: ProjectName
     title: ProjectTitle | None
-    version: VersionStr | None
+    version: VersionStr
     summary: SummaryStr | None
     description: str | None
 
@@ -91,29 +91,9 @@ class Project(CraftBaseModel):
     source_code: AnyUrl | None
     license: str | None
 
-    adopt_info: str | None
-
     parts: dict[str, dict[str, Any]]  # parts are handled by craft-parts
 
     package_repositories: list[dict[str, Any]] | None
-
-    @pydantic.root_validator(  # pyright: ignore[reportUnknownMemberType,reportUntypedFunctionDecorator]
-        pre=True
-    )
-    @classmethod
-    def _validate_adopt_info(cls, values: dict[str, Any]) -> dict[str, Any]:
-        # pydantic 1.x seems to inconsistently validate fields by alias or name?
-        adopting_part = values.get("adopt-info") or values.get("adopt_info")
-
-        if not values.get("version") and not adopting_part:
-            raise ValueError(
-                "Required field 'version' is not set and 'adopt-info' not used."
-            )
-
-        if adopting_part and adopting_part not in values.get("parts", {}):
-            raise ValueError("'adopt-info' does not reference a valid part.")
-
-        return values
 
     @pydantic.validator(  # pyright: ignore[reportUnknownMemberType,reportUntypedFunctionDecorator]
         "parts", each_item=True
