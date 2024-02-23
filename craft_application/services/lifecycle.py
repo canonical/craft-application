@@ -181,6 +181,7 @@ class LifecycleService(base.ProjectService):
                 parallel_build_count=self._get_parallel_build_count(),
                 project_vars_part_name=self._project.adopt_info,
                 project_vars=self._project_vars,
+                track_stage_packages=True,
                 **self._manager_kwargs,
             )
         except PartsError as err:
