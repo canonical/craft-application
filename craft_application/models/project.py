@@ -1,6 +1,6 @@
 # This file is part of craft-application.
 #
-# Copyright 2023 Canonical Ltd.
+# Copyright 2023-2024 Canonical Ltd.
 #
 # This program is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Lesser General Public License version 3, as
@@ -78,7 +78,7 @@ class Project(CraftBaseModel):
 
     name: ProjectName
     title: ProjectTitle | None
-    version: VersionStr
+    version: VersionStr | None
     summary: SummaryStr | None
     description: str | None
 
@@ -90,6 +90,8 @@ class Project(CraftBaseModel):
     issues: str | UniqueStrList | None
     source_code: AnyUrl | None
     license: str | None
+
+    adopt_info: str | None
 
     parts: dict[str, dict[str, Any]]  # parts are handled by craft-parts
 
