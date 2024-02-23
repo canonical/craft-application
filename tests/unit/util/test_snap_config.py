@@ -20,11 +20,7 @@ from unittest.mock import MagicMock
 
 import pytest
 from craft_application.errors import CraftValidationError
-from craft_application.util.snap_config import (
-    SnapConfig,
-    get_snap_config,
-    is_running_from_snap,
-)
+from craft_application.util import SnapConfig, get_snap_config, is_running_from_snap
 from snaphelpers import SnapCtlError
 
 
