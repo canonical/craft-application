@@ -141,6 +141,13 @@ class ProviderService(base.ProjectService):
         use base names that don't align to a "distro:version" naming convention.
         """
         alias = bases.get_base_alias(base_name)
+        if type(alias) == bases.ubuntu.BuilddBaseAlias:
+            # These packages are required on the base system (provider) for
+            # the Package Repositories feature from Craft Archives to work.
+            # This is only doable here where we have access to the base, as
+            # this only applies to our Buildd images (i.e.; Ubuntu)
+            self.packages.extend(["gpg", "dirmngr"])
+
         base_class = bases.get_base_from_alias(alias)
         return base_class(
             alias=alias,
