@@ -233,7 +233,8 @@ class RemoteBuildService(base.AppService):
 
         token = lp_repository.get_access_token(
             f"{self._app.name} {self._app.version} remote build",
-            expiry=datetime.datetime.now() + datetime.timedelta(seconds=60),
+            expiry=datetime.datetime.now(tz=datetime.timezone.utc)
+            + datetime.timedelta(seconds=300),
         )
         repo_url = parse.urlparse(str(lp_repository.git_https_url))
         push_url = repo_url._replace(
