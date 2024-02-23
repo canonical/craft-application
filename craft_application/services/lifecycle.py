@@ -171,6 +171,7 @@ class LifecycleService(base.ProjectService):
                 work_dir=self._work_dir,
                 ignore_local_sources=self._app.source_ignore_patterns,
                 parallel_build_count=self._get_parallel_build_count(),
+                track_stage_packages=True,
                 **self._manager_kwargs,
             )
         except PartsError as err:
