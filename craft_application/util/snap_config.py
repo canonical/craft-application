@@ -15,17 +15,28 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """Snap config file definitions and helpers."""
-from typing import Any, Dict, Literal, Optional
-
 import os
+from typing import Any, Literal
+
 import pydantic
 from craft_cli import emit
 from snaphelpers import SnapConfigOptions, SnapCtlError
 
+from craft_application.errors import CraftValidationError
 
-def is_snapcraft_running_from_snap() -> bool:
-    """Check if snapcraft is running from the snap."""
-    return os.getenv("SNAP_NAME") == "snapcraft" and os.getenv("SNAP") is not None
+
+def is_running_from_snap(app_name: str) -> bool:
+    """Check if the app is running from the snap.
+
+    Matches against the snap name to avoid false positives. For example, if the
+    application is not running as a snap but is inside a snapped terminal,
+    `SNAP_NAME` will exist but be set to the terminal snap's name.
+
+    :param app_name: The name of the application.
+
+    :returns: True if the app is running from the snap.
+    """
+    return os.getenv("SNAP_NAME") == app_name and os.getenv("SNAP") is not None
 
 
 class SnapConfig(pydantic.BaseModel, extra=pydantic.Extra.forbid):
@@ -34,16 +45,18 @@ class SnapConfig(pydantic.BaseModel, extra=pydantic.Extra.forbid):
     :param provider: provider to use. Valid values are 'lxd' and 'multipass'.
     """
 
-    provider: Optional[Literal["lxd", "multipass"]] = None
+    provider: Literal["lxd", "multipass"] | None = None
 
-    @pydantic.validator("provider", pre=True)
+    @pydantic.validator(  # pyright: ignore[reportUnknownMemberType,reportUntypedFunctionDecorator]
+        "provider", pre=True
+    )
     @classmethod
-    def convert_to_lower(cls, provider):
-        """Convert provider value to lowercase."""
-        return provider.lower()
+    def normalize(cls, provider: str) -> str:
+        """Normalize provider name."""
+        return provider.lower().strip()
 
     @classmethod
-    def unmarshal(cls, data: Dict[str, Any]) -> "SnapConfig":
+    def unmarshal(cls, data: dict[str, Any]) -> "SnapConfig":
         """Create and populate a new ``SnapConfig`` object from dictionary data.
 
         The unmarshal method validates entries in the input dictionary, populating
@@ -56,26 +69,29 @@ class SnapConfig(pydantic.BaseModel, extra=pydantic.Extra.forbid):
         :raise TypeError: If data is not a dictionary.
         :raise ValueError: If data is invalid.
         """
-        if not isinstance(data, dict):
+        if not isinstance(data, dict):  # pyright: ignore[reportUnnecessaryIsInstance]
             raise TypeError("snap config data is not a dictionary")
 
         try:
             snap_config = cls(**data)
-        except pydantic.ValidationError as error:
-            # TODO: use `_format_pydantic_errors()` from project.py
-            raise ValueError(f"error parsing snap config: {error}") from error
+        except pydantic.ValidationError as err:
+            raise CraftValidationError.from_pydantic(
+                err, file_name="snap config"
+            ) from None
 
         return snap_config
 
 
-def get_snap_config() -> Optional[SnapConfig]:
+def get_snap_config(app_name: str) -> SnapConfig | None:
     """Get validated snap configuration.
+
+    :param app_name: The name of the application.
 
     :return: SnapConfig. If not running as a snap, return None.
     """
-    if not is_snapcraft_running_from_snap():
+    if not is_running_from_snap(app_name):
         emit.debug(
-            "Not loading snap config because snapcraft is not running as a snap."
+            f"Not loading snap config because {app_name} is not running as a snap."
         )
         return None
 

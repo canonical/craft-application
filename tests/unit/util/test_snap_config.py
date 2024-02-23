@@ -14,40 +14,48 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-"""Unit tests for SnapConfig class."""
-from unittest.mock import MagicMock, patch
+"""Unit tests for snap config model and helpers."""
+
+from unittest.mock import MagicMock
 
 import pytest
+from craft_application.errors import CraftValidationError
+from craft_application.util.snap_config import (
+    SnapConfig,
+    get_snap_config,
+    is_running_from_snap,
+)
 from snaphelpers import SnapCtlError
 
-from snapcraft.snap_config import SnapConfig, get_snap_config, is_snapcraft_running_from_snap
 
-
-@pytest.fixture
-def mock_config():
-    with patch(
-        "snapcraft.snap_config.SnapConfigOptions", autospec=True
-    ) as mock_snap_config:
-        yield mock_snap_config
+@pytest.fixture()
+def mock_config(mocker):
+    return mocker.patch(
+        "craft_application.util.snap_config.SnapConfigOptions", autospec=True
+    )
 
 
 @pytest.fixture()
 def mock_is_running_from_snap(mocker):
-    yield mocker.patch(
-        "snapcraft.snap_config.is_snapcraft_running_from_snap", return_value=True
+    return mocker.patch(
+        "craft_application.util.snap_config.is_running_from_snap",
+        return_value=True,
     )
 
 
 @pytest.mark.parametrize(
-    "snap_name,snap,result",
+    ("snap_name", "snap", "result"),
     [
         (None, None, False),
-        (None, "/snap/snapcraft/x1", False),
-        ("snapcraft", None, False),
-        ("snapcraft", "/snap/snapcraft/x1", True),
+        (None, "/snap/testcraft/x1", False),
+        ("testcraft", None, False),
+        ("testcraft", "/snap/testcraft/x1", True),
+        # test to avoid false positives
+        ("my-snapped-terminal", "/snap/my-snapped-terminal/x1", False),
     ],
 )
-def test_is_snapcraft_running_from_snap(monkeypatch, snap_name, snap, result):
+def test_is_running_from_snap(monkeypatch, snap_name, snap, result):
+    """Test `is_running_from_snap()` function."""
     if snap_name is None:
         monkeypatch.delenv("SNAP_NAME", raising=False)
     else:
@@ -58,7 +66,7 @@ def test_is_snapcraft_running_from_snap(monkeypatch, snap_name, snap, result):
     else:
         monkeypatch.setenv("SNAP", snap)
 
-    assert is_snapcraft_running_from_snap() == result
+    assert is_running_from_snap(app_name="testcraft") == result
 
 
 def test_unmarshal():
@@ -71,57 +79,56 @@ def test_unmarshal():
 def test_unmarshal_not_a_dictionary():
     """Verify unmarshalling with data that is not a dictionary raises an error."""
     with pytest.raises(TypeError) as raised:
-        SnapConfig.unmarshal("provider=lxd")  # type: ignore
+        SnapConfig.unmarshal("provider=lxd")  # pyright: ignore[reportArgumentType]
 
     assert str(raised.value) == "snap config data is not a dictionary"
 
 
 def test_unmarshal_invalid_provider_error():
     """Verify unmarshalling with an invalid provider raises an error."""
-    with pytest.raises(ValueError) as raised:
+    with pytest.raises(CraftValidationError) as raised:
         SnapConfig.unmarshal({"provider": "invalid-value"})
 
     assert str(raised.value) == (
-        "error parsing snap config: 1 validation error for SnapConfig\n"
-        "provider\n"
-        "  unexpected value; permitted: 'lxd', 'multipass' "
-        "(type=value_error.const; given=invalid-value; permitted=('lxd', 'multipass'))"
+        "Bad snap config content:\n"
+        "- unexpected value; permitted: 'lxd', 'multipass' (in field 'provider')"
     )
 
 
 def test_unmarshal_extra_data_error():
     """Verify unmarshalling with extra data raises an error."""
-    with pytest.raises(ValueError) as raised:
+    with pytest.raises(CraftValidationError) as raised:
         SnapConfig.unmarshal({"provider": "lxd", "test": "test"})
 
     assert str(raised.value) == (
-        "error parsing snap config: 1 validation error for SnapConfig\n"
-        "test\n"
-        "  extra fields not permitted (type=value_error.extra)"
+        "Bad snap config content:\n"
+        "- extra field 'test' not permitted in top-level configuration"
     )
 
 
 @pytest.mark.parametrize("provider", ["lxd", "multipass"])
-def test_get_snap_config(mock_config, mock_is_running_from_snap, provider):
+@pytest.mark.usefixtures("mock_is_running_from_snap")
+def test_get_snap_config(mock_config, provider):
     """Verify getting a valid snap config."""
 
     def fake_as_dict():
         return {"provider": provider}
 
     mock_config.return_value.as_dict.side_effect = fake_as_dict
-    config = get_snap_config()
+    config = get_snap_config(app_name="testcraft")
 
     assert config == SnapConfig(provider=provider)
 
 
-def test_get_snap_config_empty(mock_config, mock_is_running_from_snap):
+@pytest.mark.usefixtures("mock_is_running_from_snap")
+def test_get_snap_config_empty(mock_config):
     """Verify getting an empty config returns a default SnapConfig."""
 
     def fake_as_dict():
         return {}
 
     mock_config.return_value.as_dict.side_effect = fake_as_dict
-    config = get_snap_config()
+    config = get_snap_config(app_name="testcraft")
 
     assert config == SnapConfig()
 
@@ -130,24 +137,22 @@ def test_get_snap_config_not_from_snap(mock_is_running_from_snap):
     """Verify None is returned when snapcraft is not running from a snap."""
     mock_is_running_from_snap.return_value = False
 
-    assert get_snap_config() is None
+    assert get_snap_config(app_name="testcraft") is None
 
 
 @pytest.mark.parametrize("error", [AttributeError, SnapCtlError(process=MagicMock())])
-def test_get_snap_config_handle_init_error(
-    error, mock_config, mock_is_running_from_snap
-):
+@pytest.mark.usefixtures("mock_is_running_from_snap")
+def test_get_snap_config_handle_init_error(error, mock_config):
     """An error when initializing the snap config object should return None."""
     mock_config.side_effect = error
 
-    assert get_snap_config() is None
+    assert get_snap_config(app_name="testcraft") is None
 
 
 @pytest.mark.parametrize("error", [AttributeError, SnapCtlError(process=MagicMock())])
-def test_get_snap_config_handle_fetch_error(
-    error, mock_config, mock_is_running_from_snap
-):
+@pytest.mark.usefixtures("mock_is_running_from_snap")
+def test_get_snap_config_handle_fetch_error(error, mock_config):
     """An error when fetching the snap config should return None."""
     mock_config.return_value.fetch.side_effect = error
 
-    assert get_snap_config() is None
+    assert get_snap_config(app_name="testcraft") is None
