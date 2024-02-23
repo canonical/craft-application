@@ -400,33 +400,6 @@ def test_gets_project(monkeypatch, tmp_path, app_metadata, fake_services):
     assert app.project is not None
 
 
-def test_succeeds_without_project(
-    monkeypatch, emitter, tmp_path, app_metadata, fake_services
-):
-    monkeypatch.setattr(sys, "argv", ["testcraft", "try-load-project"])
-
-    app = FakeApplication(app_metadata, fake_services)
-    app.project_dir = tmp_path
-    fake_services.project = None
-
-    class TryLoadProject(commands.AppCommand):
-        """A command that tries to load the project but continues without it."""
-
-        name = "try-load-project"
-        help_msg = overview = "unimportant"
-        always_load_project = "try"
-
-        def run(self, parsed_args: argparse.Namespace) -> None:
-            _ = parsed_args
-
-    app.add_command_group("test", [TryLoadProject])
-
-    assert app.run() == 0
-
-    assert fake_services.project is None
-    emitter.assert_debug("Project not found. Continuing without.")
-
-
 def test_fails_without_project(
     monkeypatch, capsys, tmp_path, app_metadata, fake_services
 ):

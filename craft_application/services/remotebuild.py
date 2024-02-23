@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 import datetime
+import itertools
 import os
 import pathlib
 import time
@@ -231,7 +232,8 @@ class RemoteBuildService(base.AppService):
 
         token = lp_repository.get_access_token(
             f"{self._app.name} {self._app.version} remote build",
-            expiry=datetime.datetime.now() + datetime.timedelta(seconds=60),
+            expiry=datetime.datetime.now(tz=datetime.timezone.utc)
+            + datetime.timedelta(seconds=300),
         )
         repo_url = parse.urlparse(str(lp_repository.git_https_url))
         push_url = repo_url._replace(
@@ -291,7 +293,11 @@ class RemoteBuildService(base.AppService):
 
     def _get_artifact_urls(self) -> Collection[str]:
         """Get the locations of all build artifacts."""
-        return [*(build.get_entity().getFileUrls() for build in self._builds)]
+        return list(
+            itertools.chain.from_iterable(
+                build.get_artifact_urls() for build in self._builds
+            )
+        )
 
     # endregion
 

@@ -14,6 +14,7 @@
 #  You should have received a copy of the GNU Lesser General Public License
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Tests for the remote build service."""
+import datetime
 import pathlib
 from unittest import mock
 
@@ -56,7 +57,16 @@ def test_ensure_project_new(remote_build_service):
     remote_build_service._ensure_project()
 
 
-def test_new_repository(tmp_path, remote_build_service, mock_lp_project, mock_push_url):
+def test_new_repository(
+    monkeypatch, tmp_path, remote_build_service, mock_lp_project, mock_push_url
+):
+    wrapped_repository = mock.Mock(
+        spec=launchpad.models.GitRepository,
+        git_https_url="https://git.launchpad.net/~user/+git/my_repo",
+        **{"get_access_token.return_value": "super_secret_token"},
+    )
+    repository_new = mock.Mock(return_value=wrapped_repository)
+    monkeypatch.setattr(launchpad.models.GitRepository, "new", repository_new)
     sentinel = tmp_path / "sentinel_file"
     sentinel.write_text("I am a sentinel file.")
     remote_build_service._lp_project = mock_lp_project
@@ -65,8 +75,18 @@ def test_new_repository(tmp_path, remote_build_service, mock_lp_project, mock_pu
 
     assert (work_tree.repo_dir / "sentinel_file").read_text() == sentinel.read_text()
     mock_push_url.assert_called_once_with(
-        "https://craft_test_user:super_secret_token@git.launchpad.net/", "main"
+        "https://craft_test_user:super_secret_token@git.launchpad.net/~user/+git/my_repo",
+        "main",
     )
+    expiry = wrapped_repository.get_access_token.call_args.kwargs["expiry"]
+
+    # Ensure that we're getting a timezone-aware object in the method.
+    # This is here as a regression test because if you're in a timezone behind UTC
+    # the expiry time sent to Launchpad will have already expired and Launchpad
+    # does not catch that. So instead we make sure thot even when using the easternmost
+    # time zone the expiry time is still in the future.
+    tz = datetime.timezone(datetime.timedelta(hours=14))
+    assert expiry > datetime.datetime.now(tz=tz)
 
 
 def test_not_setup(remote_build_service):
