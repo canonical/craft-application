@@ -1,6 +1,6 @@
 # This file is part of craft_application.
 #
-# Copyright 2023 Canonical Ltd.
+# Copyright 2023-2024 Canonical Ltd.
 #
 # This program is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Lesser General Public License version 3, as
@@ -22,6 +22,11 @@ from craft_application.util.platforms import (
     get_host_architecture,
     convert_architecture_deb_to_platform,
 )
+from craft_application.util.snap_config import (
+    SnapConfig,
+    get_snap_config,
+    is_running_from_snap,
+)
 from craft_application.util.yaml import dump_yaml, safe_yaml_load
 
 __all__ = [
@@ -31,6 +36,9 @@ __all__ = [
     "get_managed_logpath",
     "get_host_architecture",
     "convert_architecture_deb_to_platform",
+    "get_snap_config",
+    "is_running_from_snap",
+    "SnapConfig",
     "dump_yaml",
     "safe_yaml_load",
 ]
