@@ -21,7 +21,7 @@ import craft_application
 import craft_cli
 import pytest
 import pytest_check
-from craft_application import secrets
+from craft_application import secrets, util
 from craft_application.util import yaml
 from typing_extensions import override
 
@@ -124,9 +124,7 @@ def test_special_inputs(capsys, monkeypatch, app, argv, stdout, stderr, exit_cod
 
 
 @pytest.mark.parametrize("project", (d.name for d in VALID_PROJECTS_DIR.iterdir()))
-def test_project_managed(
-    capsys, monkeypatch, tmp_path, project, create_app, fake_build_plan
-):
+def test_project_managed(capsys, monkeypatch, tmp_path, project, create_app):
     monkeypatch.setenv("CRAFT_DEBUG", "1")
     monkeypatch.setenv("CRAFT_MANAGED_MODE", "1")
     monkeypatch.setattr("sys.argv", ["testcraft", "pack"])
@@ -135,7 +133,6 @@ def test_project_managed(
 
     app = create_app()
     app._work_dir = tmp_path
-    app._build_plan = fake_build_plan
 
     app.run()
 
@@ -147,17 +144,28 @@ def test_project_managed(
     )
 
 
+@pytest.mark.usefixtures("full_build_plan")
 @pytest.mark.parametrize("project", (d.name for d in VALID_PROJECTS_DIR.iterdir()))
 def test_project_destructive(
-    capsys, monkeypatch, tmp_path, project, create_app, fake_build_plan
+    capsys,
+    monkeypatch,
+    tmp_path,
+    project,
+    create_app,
 ):
     monkeypatch.chdir(tmp_path)
     shutil.copytree(VALID_PROJECTS_DIR / project, tmp_path, dirs_exist_ok=True)
 
+    build_for = util.get_host_architecture()
+    release = util.get_host_base().version
+    platform = f"ubuntu-{release}-{build_for}"
+
     # Run pack in destructive mode
-    monkeypatch.setattr("sys.argv", ["testcraft", "pack", "--destructive-mode"])
+    monkeypatch.setattr(
+        "sys.argv",
+        ["testcraft", "pack", "--destructive-mode", "--platform", platform],
+    )
     app = create_app()
-    app._build_plan = fake_build_plan
     app.run()
 
     assert (tmp_path / "package_1.0.tar.zst").exists()

@@ -26,13 +26,10 @@ import craft_parts
 import craft_parts.callbacks
 import pytest
 import pytest_check
-from craft_application import models, util
-from craft_application.errors import (
-    InvalidParameterError,
-    PartsLifecycleError,
-)
+from craft_application import errors, models
+from craft_application.errors import InvalidParameterError, PartsLifecycleError
 from craft_application.services import lifecycle
-from craft_application.util import get_host_architecture, repositories
+from craft_application.util import repositories
 from craft_parts import (
     Action,
     ActionType,
@@ -61,17 +58,18 @@ class FakePartsLifecycle(lifecycle.LifecycleService):
 
 
 @pytest.fixture()
-def fake_parts_lifecycle(app_metadata, fake_project, fake_services, tmp_path):
+def fake_parts_lifecycle(
+    app_metadata, fake_project, fake_services, tmp_path, fake_build_plan
+):
     work_dir = tmp_path / "work"
     cache_dir = tmp_path / "cache"
-    build_for = util.get_host_architecture()
     fake_service = FakePartsLifecycle(
         app_metadata,
         fake_services,
         project=fake_project,
         work_dir=work_dir,
         cache_dir=cache_dir,
-        build_for=build_for,
+        build_plan=fake_build_plan,
     )
     fake_service.setup()
     return fake_service
@@ -229,7 +227,9 @@ def test_get_step_failure(step_name):
 
 # endregion
 # region PartsLifecycle tests
-def test_init_success(app_metadata, fake_project, fake_services, tmp_path):
+def test_init_success(
+    app_metadata, fake_project, fake_services, tmp_path, fake_build_plan
+):
     service = lifecycle.LifecycleService(
         app_metadata,
         fake_services,
@@ -237,7 +237,7 @@ def test_init_success(app_metadata, fake_project, fake_services, tmp_path):
         work_dir=tmp_path,
         cache_dir=tmp_path,
         platform=None,
-        build_for=util.get_host_architecture(),
+        build_plan=fake_build_plan,
     )
     assert service._lcm is None
     service.setup()
@@ -258,7 +258,14 @@ def test_init_success(app_metadata, fake_project, fake_services, tmp_path):
     ],
 )
 def test_init_parts_error(
-    monkeypatch, app_metadata, fake_project, fake_services, tmp_path, error, expected
+    monkeypatch,
+    app_metadata,
+    fake_project,
+    fake_services,
+    tmp_path,
+    error,
+    expected,
+    fake_build_plan,
 ):
     mock_lifecycle = mock.Mock(side_effect=error)
     monkeypatch.setattr(lifecycle, "LifecycleManager", mock_lifecycle)
@@ -270,7 +277,7 @@ def test_init_parts_error(
         work_dir=tmp_path,
         cache_dir=tmp_path,
         platform=None,
-        build_for=util.get_host_architecture(),
+        build_plan=fake_build_plan,
     )
 
     with pytest.raises(type(expected)) as exc_info:
@@ -280,7 +287,7 @@ def test_init_parts_error(
 
 
 def test_init_with_feature_package_repositories(
-    app_metadata, fake_project, fake_services, tmp_path
+    app_metadata, fake_project, fake_services, tmp_path, fake_build_plan
 ):
     package_repositories = [{"type": "apt", "ppa": "ppa/ppa"}]
     fake_project.package_repositories = package_repositories.copy()
@@ -291,7 +298,7 @@ def test_init_with_feature_package_repositories(
         work_dir=tmp_path,
         cache_dir=tmp_path,
         platform=None,
-        build_for=util.get_host_architecture(),
+        build_plan=fake_build_plan,
     )
     assert service._lcm is None
     service.setup()
@@ -389,7 +396,7 @@ def test_repr(fake_parts_lifecycle, app_metadata, fake_project):
         re.fullmatch(
             r"FakePartsLifecycle\(.+, work_dir=(Posix|Windows)Path\('.+'\), "
             r"cache_dir=(Posix|Windows)Path\('.+'\), "
-            r"build_for='.+', \*\*{}\)",
+            r"plan=\[BuildInfo\(.+\)], \*\*{}\)",
             actual,
         )
     )
@@ -425,7 +432,7 @@ def test_post_prime_wrong_step(fake_parts_lifecycle, step):
 
 
 def test_lifecycle_package_repositories(
-    app_metadata, fake_project, fake_services, tmp_path, mocker
+    app_metadata, fake_project, fake_services, tmp_path, mocker, fake_build_plan
 ):
     """Test that package repositories installation is called in the lifecycle."""
     fake_repositories = [{"type": "apt", "ppa": "ppa/ppa"}]
@@ -439,7 +446,7 @@ def test_lifecycle_package_repositories(
         work_dir=work_dir,
         cache_dir=tmp_path / "cache",
         platform=None,
-        build_for=get_host_architecture(),
+        build_plan=fake_build_plan,
     )
     service._lcm = mock.MagicMock(spec=LifecycleManager)
     service._lcm.project_info = mock.MagicMock(spec=ProjectInfo)
@@ -615,11 +622,12 @@ def test_get_parallel_build_count_error(
 
 
 # endregion
-
 # region project variables
 
 
-def test_lifecycle_project_variables(app_metadata, fake_services, tmp_path):
+def test_lifecycle_project_variables(
+    app_metadata, fake_services, tmp_path, fake_build_plan
+):
     """Test that project variables are set after the lifecycle runs."""
 
     class LocalProject(models.Project):
@@ -646,7 +654,7 @@ def test_lifecycle_project_variables(app_metadata, fake_services, tmp_path):
         work_dir=work_dir,
         cache_dir=tmp_path / "cache",
         platform=None,
-        build_for=get_host_architecture(),
+        build_plan=fake_build_plan,
     )
     service._lcm = mock.MagicMock(spec=LifecycleManager)
     service._lcm.project_info = mock.MagicMock(spec=ProjectInfo)
@@ -659,10 +667,7 @@ def test_lifecycle_project_variables(app_metadata, fake_services, tmp_path):
 
 
 def test_lifecycle_project_variables_unset(
-    app_metadata,
-    fake_project,
-    fake_services,
-    tmp_path,
+    app_metadata, fake_project, fake_services, tmp_path, fake_build_plan
 ):
     """Test that project variables must be set after the lifecycle runs."""
     work_dir = tmp_path / "work"
@@ -679,7 +684,7 @@ def test_lifecycle_project_variables_unset(
         work_dir=work_dir,
         cache_dir=tmp_path / "cache",
         platform=None,
-        build_for=get_host_architecture(),
+        build_plan=fake_build_plan,
     )
     service._lcm = mock.MagicMock(spec=LifecycleManager)
     service._lcm.project_info = mock.MagicMock(spec=ProjectInfo)
@@ -698,6 +703,7 @@ def test_lifecycle_project_variables_optional(
     fake_project,
     fake_services,
     tmp_path,
+    fake_build_plan,
 ):
     """Test that project variables must be set after the lifecycle runs."""
     work_dir = tmp_path / "work"
@@ -714,7 +720,7 @@ def test_lifecycle_project_variables_optional(
         work_dir=work_dir,
         cache_dir=tmp_path / "cache",
         platform=None,
-        build_for=get_host_architecture(),
+        build_plan=fake_build_plan,
     )
     service._lcm = mock.MagicMock(spec=LifecycleManager)
     service._lcm.project_info = mock.MagicMock(spec=ProjectInfo)
@@ -728,3 +734,17 @@ def test_lifecycle_project_variables_optional(
 
 
 # endregion
+
+
+@pytest.mark.parametrize("fake_build_plan", [0], indirect=True)
+def test_no_builds_error(fake_parts_lifecycle):
+    """Build plan has no items."""
+    with pytest.raises(errors.EmptyBuildPlanError):
+        fake_parts_lifecycle.run("prime")
+
+
+@pytest.mark.parametrize("fake_build_plan", [2, 3, 4], indirect=True)
+def test_multiple_builds_error(fake_parts_lifecycle):
+    """Build plan contains more than 1 item."""
+    with pytest.raises(errors.MultipleBuildsError):
+        fake_parts_lifecycle.run("prime")

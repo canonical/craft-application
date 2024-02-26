@@ -210,7 +210,7 @@ class Application:
     def _configure_services(
         self,
         platform: str | None,  # noqa: ARG002 (Unused method argument)
-        build_for: str | None,
+        build_for: str | None,  # noqa: ARG002 (Unused method argument)
     ) -> None:
         """Configure additional keyword arguments for any service classes.
 
@@ -221,7 +221,7 @@ class Application:
             "lifecycle",
             cache_dir=self.cache_dir,
             work_dir=self._work_dir,
-            build_for=build_for,
+            build_plan=self._build_plan,
         )
         self.services.set_kwargs(
             "provider",
@@ -637,7 +637,9 @@ class Application:
 
 
 def _filter_plan(
-    build_plan: list[BuildInfo], platform: str | None, build_for: str | None
+    build_plan: list[BuildInfo],
+    platform: str | None,
+    build_for: str | None,
 ) -> list[BuildInfo]:
     """Filter out builds not matching build-on and build-for."""
     host_arch = util.get_host_architecture()

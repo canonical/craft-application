@@ -21,6 +21,7 @@ from craft_application.util.paths import get_filename_from_url_path, get_managed
 from craft_application.util.platforms import (
     get_host_architecture,
     convert_architecture_deb_to_platform,
+    get_host_base,
 )
 from craft_application.util.snap_config import (
     SnapConfig,
@@ -39,6 +40,7 @@ __all__ = [
     "get_snap_config",
     "is_running_from_snap",
     "SnapConfig",
+    "get_host_base",
     "dump_yaml",
     "safe_yaml_load",
 ]
