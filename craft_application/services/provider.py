@@ -1,6 +1,6 @@
 #  This file is part of craft-application.
 #
-#  Copyright 2023 Canonical Ltd.
+#  Copyright 2023-2024 Canonical Ltd.
 #
 #  This program is free software: you can redistribute it and/or modify it
 #  under the terms of the GNU Lesser General Public License version 3, as
@@ -33,7 +33,7 @@ from craft_providers.multipass import MultipassProvider
 
 from craft_application import util
 from craft_application.services import base
-from craft_application.util import platforms
+from craft_application.util import platforms, snap_config
 
 if TYPE_CHECKING:  # pragma: no cover
     from collections.abc import Generator
@@ -157,18 +157,65 @@ class ProviderService(base.ProjectService):
 
         :param name: if set, uses the given provider name.
 
+        The provider is determined in the following order:
+        (1) use provider specified in the function argument,
+        (2) get the provider from the environment (CRAFT_BUILD_ENVIRONMENT),
+        (3) use provider specified with snap configuration,
+        (4) default to platform default (LXD on Linux, otherwise Multipass).
+
+        :returns: The Provider to use.
+
+        :raises CraftError: If already running in managed mode.
         """
         if self._provider is not None:
             return self._provider
+
         if self.is_managed():
             raise CraftError("Cannot nest managed environments.")
-        if name is None:
-            emit.debug("Using default provider")
-            self._provider = self._get_default_provider()
-            return self._provider
-        emit.debug(f"Using provider {name!r}")
-        self._provider = self._get_provider_by_name(name)
+
+        # (1) use provider specified in the function argument,
+        if name:
+            emit.debug(f"Using provider {name!r} passed as an argument.")
+            chosen_provider: str = name
+
+        # (2) get the provider from the environment (CRAFT_BUILD_ENVIRONMENT),
+        elif env_provider := os.getenv("CRAFT_BUILD_ENVIRONMENT"):
+            emit.debug(f"Using provider {env_provider!r} from environment.")
+            chosen_provider = env_provider
+
+        # (3) use provider specified with snap configuration,
+        elif snap_provider := self._get_provider_from_snap_config():
+            emit.debug(f"Using provider {snap_provider!r} from snap config.")
+            chosen_provider = snap_provider
+
+        # (4) default to platform default (LXD on Linux, otherwise Multipass)
+        elif sys.platform == "linux":
+            emit.debug("Using default provider 'lxd' on linux system.")
+            chosen_provider = "lxd"
+        else:
+            emit.debug("Using default provider 'multipass' on non-linux system.")
+            chosen_provider = "multipass"
+
+        self._provider = self._get_provider_by_name(chosen_provider)
         return self._provider
+
+    def _get_provider_from_snap_config(self) -> str | None:
+        """Get the provider stored in the snap config.
+
+        :returns: The provider name or None if the app doesn't support a snap
+        config or doesn't have a provider set in the snap config.
+        """
+        config = snap_config.get_snap_config(app_name=self._app.name)
+
+        if config is None:
+            emit.debug("No snap config found.")
+            return None
+
+        try:
+            return config.provider
+        except AttributeError:
+            emit.debug("Provider not set in snap config.")
+            return None
 
     def clean_instances(self) -> None:
         """Clean all existing managed instances related to the project."""
@@ -197,22 +244,14 @@ class ProviderService(base.ProjectService):
             f"for-{build_info.build_for}-{work_dir_inode}"
         )
 
-    def _get_default_provider(self) -> craft_providers.Provider:
-        """Get the default provider class to use for this application.
-
-        :returns: An instance of the default Provider class.
-        """
-        if sys.platform == "linux":
-            emit.trace("Linux detected, using LXD.")
-            return self._get_lxd_provider()
-        emit.trace("Non-linux platform. Using Multipass.")
-        return self._get_multipass_provider()
-
     def _get_provider_by_name(self, name: str) -> craft_providers.Provider:
         """Get a provider by its name."""
-        if name == "lxd":
+        # normalize the name
+        normalized_name = name.lower().strip()
+
+        if normalized_name == "lxd":
             return self._get_lxd_provider()
-        if name == "multipass":
+        if normalized_name == "multipass":
             return self._get_multipass_provider()
         raise RuntimeError(f"Unknown provider: {name!r}")
 
