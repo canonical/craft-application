@@ -23,7 +23,6 @@ import craft_parts.overlays
 import pytest
 import pytest_check
 from craft_application.services.lifecycle import LifecycleService
-from craft_application.util import get_host_architecture
 
 
 @pytest.fixture(
@@ -35,7 +34,9 @@ from craft_application.util import get_host_architecture
         ),
     ]
 )
-def parts_lifecycle(app_metadata, fake_project, fake_services, tmp_path, request):
+def parts_lifecycle(
+    app_metadata, fake_project, fake_services, tmp_path, request, fake_build_plan
+):
     fake_project.parts = request.param
 
     service = LifecycleService(
@@ -45,7 +46,7 @@ def parts_lifecycle(app_metadata, fake_project, fake_services, tmp_path, request
         work_dir=tmp_path / "work",
         cache_dir=tmp_path / "cache",
         platform=None,
-        build_for=get_host_architecture(),
+        build_plan=fake_build_plan,
     )
     service.setup()
     return service
@@ -104,7 +105,7 @@ def test_lifecycle_messages_no_duplicates(parts_lifecycle, request, capsys):
 
 @pytest.mark.usefixtures("enable_overlay")
 def test_package_repositories_in_overlay(
-    app_metadata, fake_project, fake_services, tmp_path, mocker
+    app_metadata, fake_project, fake_services, tmp_path, mocker, fake_build_plan
 ):
     # Mock overlay-related calls that need root; we won't be actually installing
     # any packages, just checking that the repositories are correctly installed
@@ -151,7 +152,7 @@ def test_package_repositories_in_overlay(
         work_dir=work_dir,
         cache_dir=tmp_path / "cache",
         platform=None,
-        build_for=get_host_architecture(),
+        build_plan=fake_build_plan,
         base_layer_dir=base_layer_dir,
         base_layer_hash=b"deadbeef",
     )
