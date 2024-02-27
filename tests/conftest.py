@@ -144,7 +144,7 @@ def enable_overlay() -> Iterator[craft_parts.Features]:
 
 @pytest.fixture()
 def lifecycle_service(
-    app_metadata, fake_project, fake_services, tmp_path, fake_build_plan
+    app_metadata, fake_project, fake_services, fake_build_plan, mocker, tmp_path
 ) -> services.LifecycleService:
     work_dir = tmp_path / "work"
     cache_dir = tmp_path / "cache"
@@ -159,6 +159,16 @@ def lifecycle_service(
         build_plan=fake_build_plan,
     )
     service.setup()
+    mocker.patch.object(
+        service._lcm,
+        "get_pull_assets",
+        new=lambda **p: {"foo": "bar"} if p["part_name"] == "my-part" else {},
+    )
+    mocker.patch.object(
+        service._lcm,
+        "get_primed_stage_packages",
+        new=lambda **p: ["pkg1", "pkg2"] if p["part_name"] == "my-part" else {},
+    )
     return service
 
 
