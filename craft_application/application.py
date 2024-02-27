@@ -432,14 +432,18 @@ class Application:
         # Some commands might have a project_dir parameter. Those commands and
         # only those commands should get a project directory, but only when
         # not managed.
+        cmdline_project_dir = getattr(dispatcher.parsed_args(), "project_dir", None)
         if self.is_managed():
             self.project_dir = pathlib.Path("/root/project")
-        elif project_dir := getattr(dispatcher.parsed_args(), "project_dir", None):
-            self.project_dir = pathlib.Path(project_dir).expanduser().resolve()
+            if cmdline_project_dir:
+                # Should be emit.message?  Or some warning mechanism?
+                craft_cli.emit.verbose("In managed mode, ignoring --project-dir")
+        elif cmdline_project_dir:
+            self.project_dir = pathlib.Path(cmdline_project_dir).expanduser().resolve()
             if self.project_dir.exists() and not self.project_dir.is_dir():
                 raise errors.ProjectFileMissingError(
                     "Provided project directory is not a directory.",
-                    details=f"Not a directory: {project_dir}",
+                    details=f"Not a directory: {cmdline_project_dir}",
                     resolution="Ensure the path entered is correct.",
                 )
 
