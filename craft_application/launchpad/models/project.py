@@ -101,8 +101,8 @@ class Project(LaunchpadObject):
         """Get an existing project."""
         try:
             return cls(lp, lp.lp.projects[name])
-        except launchpadlib.errors.NotFound:
-            raise errors.NotFoundError("Could not find project")
+        except (launchpadlib.errors.NotFound, KeyError):
+            raise errors.NotFoundError(f"Could not find project {name}")
 
     @classmethod
     def find(  # pyright: ignore[reportIncompatibleMethodOverride]
