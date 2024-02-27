@@ -45,9 +45,11 @@ DEBUG_PARAMS = [
     ({"debug": False}, []),
     ({"debug": True}, ["--debug"]),
 ]
-DESTRUCTIVE_PARAMS = [
-    ({"destructive_mode": False}, []),
-    ({"destructive_mode": True}, ["--destructive-mode"]),
+# --destructive-mode and --use-lxd are mutually exclusive
+BUILD_ENV_COMMANDS = [
+    ({"destructive_mode": False, "use_lxd": False}, []),
+    ({"destructive_mode": True, "use_lxd": False}, ["--destructive-mode"]),
+    ({"destructive_mode": False, "use_lxd": True}, ["--use-lxd"]),
 ]
 STEP_NAMES = [step.name.lower() for step in craft_parts.Step]
 MANAGED_LIFECYCLE_COMMANDS = {
@@ -104,10 +106,14 @@ def test_get_lifecycle_command_group(enable_overlay, commands):
     Features.reset()
 
 
-@pytest.mark.parametrize("destructive_arg", [True, False])
+@pytest.mark.parametrize(("build_env_dict", "build_env_args"), BUILD_ENV_COMMANDS)
 @pytest.mark.parametrize("parts_args", PARTS_LISTS)
 def test_parts_command_fill_parser(
-    app_metadata, fake_services, destructive_arg, parts_args
+    app_metadata,
+    fake_services,
+    build_env_dict,
+    build_env_args,
+    parts_args,
 ):
     cls = get_fake_command_class(LifecyclePartsCommand, managed=True)
     parser = argparse.ArgumentParser("parts_command")
@@ -115,15 +121,8 @@ def test_parts_command_fill_parser(
 
     command.fill_parser(parser)
 
-    args = []
-
-    if destructive_arg:
-        args.append("--destructive-mode")
-
-    args.extend(parts_args)
-
-    args_dict = vars(parser.parse_args(args))
-    assert args_dict == {"parts": parts_args, "destructive_mode": destructive_arg}
+    args_dict = vars(parser.parse_args([*parts_args, *build_env_args]))
+    assert args_dict == {"parts": parts_args, **build_env_dict}
 
 
 @pytest.mark.parametrize("parts", PARTS_LISTS)
@@ -147,7 +146,7 @@ def test_parts_command_get_managed_cmd(
     assert actual == expected
 
 
-@pytest.mark.parametrize(("destructive_dict", "destructive_args"), DESTRUCTIVE_PARAMS)
+@pytest.mark.parametrize(("build_env_dict", "build_env_args"), BUILD_ENV_COMMANDS)
 @pytest.mark.parametrize(("debug_dict", "debug_args"), DEBUG_PARAMS)
 @pytest.mark.parametrize(("shell_dict", "shell_args"), SHELL_PARAMS)
 @pytest.mark.parametrize("parts_args", PARTS_LISTS)
@@ -155,8 +154,8 @@ def test_step_command_fill_parser(
     app_metadata,
     fake_services,
     parts_args,
-    destructive_dict,
-    destructive_args,
+    build_env_dict,
+    build_env_args,
     debug_dict,
     debug_args,
     shell_args,
@@ -170,14 +169,14 @@ def test_step_command_fill_parser(
         "build_for": None,
         **shell_dict,
         **debug_dict,
-        **destructive_dict,
+        **build_env_dict,
     }
     command = cls({"app": app_metadata, "services": fake_services})
 
     command.fill_parser(parser)
 
     args_dict = vars(
-        parser.parse_args([*destructive_args, *shell_args, *debug_args, *parts_args])
+        parser.parse_args([*build_env_args, *shell_args, *debug_args, *parts_args])
     )
     assert args_dict == expected
 
@@ -351,15 +350,15 @@ def test_clean_run_managed(
     assert command.run_managed(parsed_args) == expected_run_managed
 
 
-@pytest.mark.parametrize(("destructive_dict", "destructive_args"), DESTRUCTIVE_PARAMS)
+@pytest.mark.parametrize(("build_env_dict", "build_env_args"), BUILD_ENV_COMMANDS)
 @pytest.mark.parametrize(("debug_dict", "debug_args"), DEBUG_PARAMS)
 @pytest.mark.parametrize("parts_args", PARTS_LISTS)
 @pytest.mark.parametrize("output_arg", [".", "/"])
 def test_pack_fill_parser(
     app_metadata,
     mock_services,
-    destructive_dict,
-    destructive_args,
+    build_env_dict,
+    build_env_args,
     debug_dict,
     debug_args,
     parts_args,
@@ -372,7 +371,7 @@ def test_pack_fill_parser(
         "build_for": None,
         "output": pathlib.Path(output_arg),
         **debug_dict,
-        **destructive_dict,
+        **build_env_dict,
     }
     command = PackCommand({"app": app_metadata, "services": mock_services})
 
@@ -380,7 +379,7 @@ def test_pack_fill_parser(
 
     args_dict = vars(
         parser.parse_args(
-            [*destructive_args, *parts_args, *debug_args, f"--output={output_arg}"]
+            [*build_env_args, *parts_args, *debug_args, f"--output={output_arg}"]
         )
     )
     assert args_dict == expected

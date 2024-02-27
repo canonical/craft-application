@@ -268,7 +268,11 @@ def test_instance(
     mocker,
 ):
     mock_provider = mock.MagicMock(spec=craft_providers.Provider)
-    monkeypatch.setattr(provider_service, "get_provider", lambda: mock_provider)
+    monkeypatch.setattr(
+        provider_service,
+        "get_provider",
+        lambda name: mock_provider,  # noqa: ARG005 (unused argument)
+    )
     spy_pause = mocker.spy(provider.emit, "pause")
     arch = util.get_host_architecture()
     build_info = models.BuildInfo("foo", arch, arch, base_name)
@@ -333,7 +337,11 @@ def test_load_bashrc_missing(
 ):
     """Test that we handle the case where the bashrc file is missing."""
     mock_provider = mock.MagicMock(spec=craft_providers.Provider)
-    monkeypatch.setattr(provider_service, "get_provider", lambda: mock_provider)
+    monkeypatch.setattr(
+        provider_service,
+        "get_provider",
+        lambda name: mock_provider,  # noqa: ARG005 (unused argument)
+    )
     arch = util.get_host_architecture()
     build_info = models.BuildInfo("foo", arch, arch, base_name)
 
@@ -357,7 +365,11 @@ def setup_fetch_logs_provider(monkeypatch, provider_service, tmp_path):
           should exist (True) or not (False).
         """
         mock_provider = mock.MagicMock(spec=craft_providers.Provider)
-        monkeypatch.setattr(provider_service, "get_provider", lambda: mock_provider)
+        monkeypatch.setattr(
+            provider_service,
+            "get_provider",
+            lambda name: mock_provider,  # noqa: ARG005 (unused argument)
+        )
 
         # This ugly call is to mock the "instance" returned by the "launched_environment"
         # context manager.

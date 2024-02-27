@@ -63,6 +63,7 @@ class ProviderService(base.ProjectService):
         project: models.Project,
         work_dir: pathlib.Path,
         build_plan: list[models.BuildInfo],
+        provider_name: str | None = None,
         install_snap: bool = True,
     ) -> None:
         super().__init__(app, services, project=project)
@@ -74,6 +75,9 @@ class ProviderService(base.ProjectService):
             self.snaps.append(Snap(name=app.name, channel=None, classic=True))
         self.environment: dict[str, str | None] = {self.managed_mode_env_var: "1"}
         self.packages: list[str] = []
+        # this is a private attribute because it may not reflect the actual
+        # provider name. Instead, self._provider.name should be used.
+        self.__provider_name: str | None = provider_name
 
     @classmethod
     def is_managed(cls) -> bool:
@@ -100,7 +104,7 @@ class ProviderService(base.ProjectService):
         emit.debug(f"Preparing managed instance {instance_name!r}")
         base_name = build_info.base
         base = self.get_base(base_name, instance_name=instance_name, **kwargs)
-        provider = self.get_provider()
+        provider = self.get_provider(name=self.__provider_name)
 
         emit.progress(f"Launching managed {base_name[0]} {base_name[1]} instance...")
         with provider.launched_environment(
@@ -219,7 +223,7 @@ class ProviderService(base.ProjectService):
 
     def clean_instances(self) -> None:
         """Clean all existing managed instances related to the project."""
-        provider = self.get_provider()
+        provider = self.get_provider(name=self.__provider_name)
 
         current_arch = platforms.get_host_architecture()
         build_plan = [

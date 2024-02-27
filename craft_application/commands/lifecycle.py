@@ -1,4 +1,4 @@
-# Copyright 2023 Canonical Ltd.
+# Copyright 2023-2024 Canonical Ltd.
 #
 # This program is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Lesser General Public License version 3, as
@@ -74,10 +74,16 @@ class LifecyclePartsCommand(_LifecycleCommand):
             nargs="*",
             help="Optional list of parts to process",
         )
-        parser.add_argument(
+        group = parser.add_mutually_exclusive_group()
+        group.add_argument(
             "--destructive-mode",
             action="store_true",
             help="Build in the current host",
+        )
+        group.add_argument(
+            "--use-lxd",
+            action="store_true",
+            help="Build in a LXD container.",
         )
 
     @override
@@ -95,6 +101,10 @@ class LifecycleStepCommand(LifecyclePartsCommand):
     @override
     def run_managed(self, parsed_args: argparse.Namespace) -> bool:
         return not parsed_args.destructive_mode
+
+    @override
+    def provider_name(self, parsed_args: argparse.Namespace) -> str | None:
+        return "lxd" if parsed_args.use_lxd else None
 
     @override
     def _fill_parser(self, parser: argparse.ArgumentParser) -> None:
@@ -359,6 +369,10 @@ class CleanCommand(LifecyclePartsCommand):
         # "clean" should run managed if cleaning specific parts.
         # otherwise, should run on the host to clean the build provider.
         return not self._should_clean_instances(parsed_args)
+
+    @override
+    def provider_name(self, parsed_args: argparse.Namespace) -> str | None:
+        return "lxd" if parsed_args.use_lxd else None
 
     @staticmethod
     def _should_clean_instances(parsed_args: argparse.Namespace) -> bool:

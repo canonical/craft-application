@@ -211,6 +211,7 @@ class Application:
         self,
         platform: str | None,  # noqa: ARG002 (Unused method argument)
         build_for: str | None,  # noqa: ARG002 (Unused method argument)
+        provider_name: str | None,
     ) -> None:
         """Configure additional keyword arguments for any service classes.
 
@@ -227,6 +228,7 @@ class Application:
             "provider",
             work_dir=self._work_dir,
             build_plan=self._build_plan,
+            provider_name=provider_name,
         )
 
     def _resolve_project_path(self, project_dir: pathlib.Path | None) -> pathlib.Path:
@@ -458,6 +460,9 @@ class Application:
             )
             platform = getattr(dispatcher.parsed_args(), "platform", None)
             build_for = getattr(dispatcher.parsed_args(), "build_for", None)
+            provider_name = (
+                "lxd" if getattr(dispatcher.parsed_args(), "use_lxd", None) else None
+            )
 
             craft_cli.emit.debug(
                 f"Build plan: platform={platform}, build_for={build_for}"
@@ -470,7 +475,7 @@ class Application:
                     platform=platform, build_for=build_for
                 )
 
-            self._configure_services(platform, build_for)
+            self._configure_services(platform, build_for, provider_name)
 
             if not managed_mode:
                 # command runs in the outer instance
