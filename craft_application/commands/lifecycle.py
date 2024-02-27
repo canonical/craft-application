@@ -100,7 +100,12 @@ class LifecycleStepCommand(LifecyclePartsCommand):
 
     @override
     def run_managed(self, parsed_args: argparse.Namespace) -> bool:
-        return not parsed_args.destructive_mode
+        """Return whether the command should run in managed mode or not.
+
+        The command will run in managed mode unless the `--destructive-mode` flag
+        is passed OR `CRAFT_BUILD_ENVIRONMENT` is set to `host`.
+        """
+        return _run_managed(parsed_args.destructive_mode)
 
     @override
     def provider_name(self, parsed_args: argparse.Namespace) -> str | None:
@@ -350,24 +355,36 @@ class CleanCommand(LifecyclePartsCommand):
 
     @override
     def _run(self, parsed_args: argparse.Namespace, **kwargs: Any) -> None:
-        """Run the clean command."""
+        """Run the clean command.
+
+        The project's work directory will be cleaned if:
+        - the `--destructive-mode` flag is provided OR
+        - `CRAFT_BUILD_ENVIRONMENT` is set to `host` OR
+        - no list of specific parts to clean is provided
+
+        Otherwise, it will clean an instance.
+        """
         super()._run(parsed_args)
 
-        if parsed_args.destructive_mode or not self._should_clean_instances(
-            parsed_args
-        ):
+        if not _run_managed(
+            parsed_args.destructive_mode
+        ) or not self._should_clean_instances(parsed_args):
             self._services.lifecycle.clean(parsed_args.parts)
         else:
             self._services.provider.clean_instances()
 
     @override
     def run_managed(self, parsed_args: argparse.Namespace) -> bool:
-        if parsed_args.destructive_mode:
-            # In destructive mode, always run on the host.
+        """Return whether the command should run in managed mode or not.
+
+        Clean will run in managed mode unless:
+        - the `--destructive-mode` flag is provided OR
+        - `CRAFT_BUILD_ENVIRONMENT` is set to `host` OR
+        - a list of specific parts to clean is provided
+        """
+        if not _run_managed(parsed_args.destructive_mode):
             return False
 
-        # "clean" should run managed if cleaning specific parts.
-        # otherwise, should run on the host to clean the build provider.
         return not self._should_clean_instances(parsed_args)
 
     @override
@@ -384,3 +401,23 @@ def _launch_shell() -> None:
     emit.progress("Launching shell on build environment...", permanent=True)
     with emit.pause():
         subprocess.run(["bash"], check=False)
+
+
+def _run_managed(destructive_mode: str | None) -> bool:
+    """Return whether the command should run in managed mode or not.
+
+    The command will run in managed mode unless the `--destructive-mode` flag
+    is passed OR `CRAFT_BUILD_ENVIRONMENT` is set to `host`.
+    """
+    if destructive_mode:
+        emit.debug("Not running managed mode because `--destructive-mode` was passed")
+        return False
+
+    build_env = os.getenv("CRAFT_BUILD_ENVIRONMENT")
+    if build_env and build_env.lower().strip() == "host":
+        emit.debug(
+            f"Not running managed mode because CRAFT_BUILD_ENVIRONMENT={build_env!r}"
+        )
+        return False
+
+    return True
