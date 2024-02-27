@@ -205,6 +205,22 @@ class LifecycleService(base.ProjectService):
         """The lifecycle's ProjectInfo."""
         return self._lcm.project_info
 
+    def get_pull_assets(self, *, part_name: str) -> dict[str, Any] | None:
+        """Obtain the part's pull state assets.
+
+        :param part_name: The name of the part to get assets from.
+        :return: The dictionary of the part's pull assets, or None if no state found.
+        """
+        return self._lcm.get_pull_assets(part_name=part_name)
+
+    def get_primed_stage_packages(self, *, part_name: str) -> list[str] | None:
+        """Obtain the list of primed stage packages.
+
+        :param part_name: The name of the part to get primed stage packages from.
+        :return: The sorted list of primed stage packages, or None if no state found.
+        """
+        return self._lcm.get_primed_stage_packages(part_name=part_name)
+
     def run(self, step_name: str | None, part_names: list[str] | None = None) -> None:
         """Run the lifecycle manager for the parts."""
         target_step = _get_step(step_name) if step_name else None
