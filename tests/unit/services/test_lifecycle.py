@@ -319,6 +319,18 @@ def test_project_info(lifecycle_service):
     assert info.application_name == "testcraft"
 
 
+def test_get_pull_assets(lifecycle_service):
+    assets = lifecycle_service.get_pull_assets(part_name="my-part")
+
+    assert assets == {"foo": "bar"}
+
+
+def test_get_primed_stage_packages(lifecycle_service):
+    pkgs = lifecycle_service.get_primed_stage_packages(part_name="my-part")
+
+    assert pkgs == ["pkg1", "pkg2"]
+
+
 @pytest.mark.parametrize(
     "actions",
     [
