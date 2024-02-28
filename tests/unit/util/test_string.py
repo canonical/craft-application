@@ -72,7 +72,7 @@ def test_strtobool(data, expected):
         ("-"),
         ("!"),
         ("*"),
-        (b'yes'),
+        (b"yes"),
     ],
 )
 def test_strtobool_error(data):
