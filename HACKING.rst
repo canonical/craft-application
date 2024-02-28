@@ -13,6 +13,7 @@ Dependencies
 
 Ensure you have ``python-apt`` installed in your development environment.
 On Ubuntu, the correct source package for your distro can be found at https://launchpad.net/ubuntu/+source/python-apt
+To get the required version into your preexisting ``venv`` at ``VENV_LOC``, run ``tox devenv $VENV_LOC``.  Alternatively, ``pip install`` the ``python-apt`` version at the URL listed in the ``tox.ini`` section ``[test]``.  After that, you can run ``pytest`` as normal.
 
 Tooling
 =======
