@@ -16,7 +16,7 @@
 """Tests for internal str autilities."""
 
 import pytest
-from craft_application.util import str_utils
+from craft_application.util import string
 
 
 @pytest.mark.parametrize(
@@ -54,7 +54,7 @@ from craft_application.util import str_utils
     ],
 )
 def test_strtobool(data, expected):
-    actual = str_utils.strtobool(data)
+    actual = string.strtobool(data)
 
     assert actual == expected
 
@@ -72,8 +72,9 @@ def test_strtobool(data, expected):
         ("-"),
         ("!"),
         ("*"),
+        (b'yes'),
     ],
 )
 def test_strtobool_error(data):
     with pytest.raises((ValueError, TypeError), match="Invalid"):
-        str_utils.strtobool(data)
+        string.strtobool(data)

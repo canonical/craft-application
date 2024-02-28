@@ -17,9 +17,13 @@
 
 
 def strtobool(value: str) -> bool:
-    """Convert a string to a boolean."""
+    """Try to convert a string to a boolean.
+
+    If the value is not a string, a TypeError is raised.
+    If the value is not a valid boolean value, a ValueError is raised.
+    """
     if not isinstance(value, str):  # type: ignore[reportUnnecessaryIsInstance]
-        raise TypeError("Invalid str value: %r" % value)
+        raise TypeError(f"Invalid str value: {str(value)}")
 
     value = value.strip().lower()
     if value in {"true", "t", "yes", "y", "on", "1"}:
