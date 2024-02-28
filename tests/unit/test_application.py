@@ -450,6 +450,18 @@ def test_pre_run_project_dir_managed(app):
     assert app.project_dir == pathlib.Path("/root/project")
 
 
+def test_pre_run_project_dir_managed_arg_ignored(monkeypatch, app, check, emitter):
+    monkeypatch.setattr(sys, "argv", ["testcraft", "init", "--project-dir=/tmp"])
+    app.is_managed = lambda: True
+    dispatcher = mock.Mock(spec_set=craft_cli.Dispatcher)
+
+    app._pre_run(dispatcher)
+
+    assert app.project_dir == pathlib.Path("/root/project")
+    with check:
+        emitter.assert_verbose("In managed mode, ignoring --project-dir")
+
+
 @pytest.mark.parametrize("project_dir", ["/", ".", "relative/dir", "/absolute/dir"])
 def test_pre_run_project_dir_success_unmanaged(app, fs, project_dir):
     fs.create_dir(project_dir)
@@ -470,6 +482,39 @@ def test_pre_run_project_dir_not_a_directory(app, fs, project_dir):
 
     with pytest.raises(errors.ProjectFileMissingError, match="not a directory"):
         app._pre_run(dispatcher)
+
+
+def test_run_project_dir_not_allowed(app, fake_project, mocker, fs, capfd):
+    project_dir = "foo"
+    fs.create_dir(project_dir)
+
+    mocker.patch.object(app, "get_project", return_value=fake_project)
+    app.is_managed = lambda: False
+
+    dispatcher = mock.Mock(spec_set=craft_cli.Dispatcher)
+    dispatcher.parsed_args.return_value.project_dir = project_dir
+    mocker.patch.object(app, "_get_dispatcher", return_value=dispatcher)
+
+    pytest_check.equal(app.run(), 64)
+    assert (
+        "Only the 'init' and 'pack' commands support --project-dir"
+        in capfd.readouterr().err
+    )
+
+
+def test_run_project_dir_allowed(app, fake_project, mocker, fs):
+    project_dir = "foo"
+    fs.create_dir(project_dir)
+
+    mocker.patch.object(app, "get_project", return_value=fake_project)
+    app.is_managed = lambda: False
+
+    dispatcher = mock.Mock(spec_set=craft_cli.Dispatcher)
+    dispatcher.parsed_args.return_value.project_dir = project_dir
+    dispatcher.load_command.return_value.name = "init"
+    mocker.patch.object(app, "_get_dispatcher", return_value=dispatcher)
+
+    pytest_check.equal(app.run(), 0)
 
 
 @pytest.mark.parametrize("load_project", [True, False])

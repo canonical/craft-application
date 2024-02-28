@@ -463,7 +463,9 @@ class Application:
             platform = getattr(dispatcher.parsed_args(), "platform", None)
             build_for = getattr(dispatcher.parsed_args(), "build_for", None)
 
-            if "project-dir" in dispatcher.parsed_args() and command.name not in (
+            if getattr(
+                dispatcher.parsed_args(), "project_dir", False
+            ) and command.name not in (
                 "init",
                 "pack",
             ):
