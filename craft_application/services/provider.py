@@ -142,6 +142,12 @@ class ProviderService(base.ProjectService):
         """
         alias = bases.get_base_alias(base_name)
         base_class = bases.get_base_from_alias(alias)
+        if base_class is bases.BuilddBase:
+            # These packages are required on the base system (provider) for
+            # the Package Repositories feature from Craft Archives to work.
+            # This is only doable here where we have access to the base, as
+            # this only applies to our Buildd images (i.e.; Ubuntu)
+            self.packages.extend(["gpg", "dirmngr"])
         return base_class(
             alias=alias,
             compatibility_tag=f"{self._app.name}-{base_class.compatibility_tag}",
