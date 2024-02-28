@@ -134,7 +134,9 @@ def test_get_existing_provider(provider_service):
         (("ubuntu", "22.04"), bases.BuilddBase, bases.BuilddBaseAlias.JAMMY),
     ],
 )
-def test_get_base_buildd(check, provider_service, base_name, base_class, alias, environment):
+def test_get_base_buildd(
+    check, provider_service, base_name, base_class, alias, environment
+):
     """Check that a BuilddBase is properly retrieved for Ubuntu-like bases."""
     provider_service.environment = environment
 
