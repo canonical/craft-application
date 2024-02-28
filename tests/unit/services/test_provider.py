@@ -134,7 +134,10 @@ def test_get_existing_provider(provider_service):
         (("ubuntu", "22.04"), bases.BuilddBase, bases.BuilddBaseAlias.JAMMY),
     ],
 )
-def test_get_base(check, provider_service, base_name, base_class, alias, environment):
+def test_get_base_buildd(
+    check, provider_service, base_name, base_class, alias, environment
+):
+    """Check that a BuilddBase is properly retrieved for Ubuntu-like bases."""
     provider_service.environment = environment
 
     base = provider_service.get_base(base_name, instance_name="test")
@@ -143,6 +146,11 @@ def test_get_base(check, provider_service, base_name, base_class, alias, environ
     check.equal(base.alias, alias)
     check.equal(base.compatibility_tag, f"testcraft-{base_class.compatibility_tag}")
     check.equal(base._environment, environment)
+
+    # Verify that the two packages we care about in order to support Craft Archives
+    # on Buildd bases are listed to be provisioned.
+    assert "gpg" in base._packages
+    assert "dirmngr" in base._packages
 
 
 def test_get_base_packages(provider_service):
