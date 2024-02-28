@@ -463,6 +463,8 @@ class Application:
             platform = getattr(dispatcher.parsed_args(), "platform", None)
             build_for = getattr(dispatcher.parsed_args(), "build_for", None)
 
+            # This check might logically be a better fit in _pre_run, but the command
+            # name is not available there.
             if getattr(
                 dispatcher.parsed_args(), "project_dir", False
             ) and command.name not in (
