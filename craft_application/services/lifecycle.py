@@ -225,11 +225,8 @@ class LifecycleService(base.ProjectService):
         """Run the lifecycle manager for the parts."""
         target_step = _get_step(step_name) if step_name else None
 
-        if not self._build_plan:
-            raise errors.EmptyBuildPlanError
-
-        if len(self._build_plan) > 1:
-            raise errors.MultipleBuildsError
+        # Now that we are actually going to run we can validate what we're building.
+        _validate_build_plan(self._build_plan)
 
         try:
             if self._project.package_repositories:
@@ -395,3 +392,18 @@ class LifecycleService(base.ProjectService):
                 )
 
         return parallel_build_count
+
+
+def _validate_build_plan(build_plan: list[models.BuildInfo]) -> None:
+    """Check that the build plan has exactly 1 compatible build info."""
+    if not build_plan:
+        raise errors.EmptyBuildPlanError
+
+    if len(build_plan) > 1:
+        raise errors.MultipleBuildsError
+
+    build_info = build_plan[0]
+    host_base = util.get_host_base()
+
+    if build_info.base != host_base:
+        raise errors.IncompatibleBaseError(host_base, build_info.base)

@@ -25,7 +25,7 @@ import craft_parts
 import craft_parts.callbacks
 import pytest
 import pytest_check
-from craft_application import errors, models
+from craft_application import errors, models, util
 from craft_application.errors import InvalidParameterError, PartsLifecycleError
 from craft_application.services import lifecycle
 from craft_application.util import repositories
@@ -42,6 +42,7 @@ from craft_parts import (
 from craft_parts.executor import (
     ExecutionContext,  # pyright: ignore[reportPrivateImportUsage]
 )
+from craft_providers import bases
 
 
 # region Local fixtures
@@ -692,4 +693,21 @@ def test_no_builds_error(fake_parts_lifecycle):
 def test_multiple_builds_error(fake_parts_lifecycle):
     """Build plan contains more than 1 item."""
     with pytest.raises(errors.MultipleBuildsError):
+        fake_parts_lifecycle.run("prime")
+
+
+@pytest.mark.parametrize("fake_build_plan", [1], indirect=True)
+def test_invalid_base_error(fake_parts_lifecycle, fake_build_plan, mocker):
+    """BuildInfo has a different base than the running environment."""
+    fake_host = bases.BaseName(name="ubuntu", version="24.04")
+    mocker.patch.object(
+        util,
+        "get_host_base",
+        return_value=fake_host,
+    )
+    fake_build_plan[0].base = bases.BaseName(name="centos", version="6")
+
+    expected_message = '"Ubuntu 24.04" builds cannot be performed on "Centos 6".'
+
+    with pytest.raises(errors.IncompatibleBaseError, match=expected_message):
         fake_parts_lifecycle.run("prime")

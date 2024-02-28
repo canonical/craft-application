@@ -23,6 +23,7 @@ from collections.abc import Sequence
 from typing import TYPE_CHECKING
 
 from craft_cli import CraftError
+from craft_providers import bases
 
 from craft_application.util.error_formatting import format_pydantic_errors
 
@@ -138,6 +139,18 @@ class MultipleBuildsError(CraftError):
         resolution = 'Check the "--platform" parameter.'
 
         super().__init__(message=message, resolution=resolution)
+
+
+class IncompatibleBaseError(CraftError):
+    """The build plan's base is incompatible with the host environment."""
+
+    def __init__(self, host_base: bases.BaseName, build_base: bases.BaseName) -> None:
+        host_pretty = f"{host_base.name.title()} {host_base.version}"
+        build_pretty = f"{build_base.name.title()} {build_base.version}"
+
+        message = f'"{host_pretty}" builds cannot be performed on "{build_pretty}".'
+
+        super().__init__(message=message)
 
 
 class InvalidParameterError(CraftError):
