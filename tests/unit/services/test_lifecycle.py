@@ -25,7 +25,7 @@ import craft_parts
 import craft_parts.callbacks
 import pytest
 import pytest_check
-from craft_application import errors, models
+from craft_application import errors, models, util
 from craft_application.errors import InvalidParameterError, PartsLifecycleError
 from craft_application.services import lifecycle
 from craft_application.util import repositories
@@ -42,6 +42,7 @@ from craft_parts import (
 from craft_parts.executor import (
     ExecutionContext,  # pyright: ignore[reportPrivateImportUsage]
 )
+from craft_providers import bases
 
 
 # region Local fixtures
@@ -693,3 +694,52 @@ def test_multiple_builds_error(fake_parts_lifecycle):
     """Build plan contains more than 1 item."""
     with pytest.raises(errors.MultipleBuildsError):
         fake_parts_lifecycle.run("prime")
+
+
+@pytest.mark.parametrize(
+    ("system_name", "system_version", "expected_pretty"),
+    [
+        ("ubuntu", "22.04", "Ubuntu 22.04"),
+        ("centos", "6", "Centos 6"),
+        ("centos", "devel", "Centos devel"),
+    ],
+)
+@pytest.mark.parametrize("fake_build_plan", [1], indirect=True)
+def test_invalid_base_error(
+    fake_parts_lifecycle,
+    fake_build_plan,
+    mocker,
+    system_name,
+    system_version,
+    expected_pretty,
+):
+    """BuildInfo has a different base than the running environment."""
+    fake_host = bases.BaseName(name="ubuntu", version="24.04")
+    mocker.patch.object(
+        util,
+        "get_host_base",
+        return_value=fake_host,
+    )
+    fake_build_plan[0].base = bases.BaseName(name=system_name, version=system_version)
+
+    expected = (
+        f'"{expected_pretty}" builds cannot be performed on this "Ubuntu 24.04" system.'
+    )
+
+    with pytest.raises(errors.IncompatibleBaseError, match=expected):
+        fake_parts_lifecycle.run("prime")
+
+
+@pytest.mark.parametrize("fake_build_plan", [1], indirect=True)
+def test_devel_base_no_error(fake_parts_lifecycle, fake_build_plan, mocker):
+    """BuildInfo has a 'devel' build-base but the system is the same."""
+    fake_host = bases.BaseName(name="ubuntu", version="24.04")
+    mocker.patch.object(
+        util,
+        "get_host_base",
+        return_value=fake_host,
+    )
+    fake_build_plan[0].base = bases.BaseName(name="ubuntu", version="devel")
+
+    # Pass None as the step to ensure validation but skip the actual lifecycle run
+    _ = fake_parts_lifecycle.run(None)
