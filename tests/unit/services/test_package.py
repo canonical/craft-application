@@ -59,9 +59,11 @@ def test_update_project_variable_unset(app_metadata, fake_project, fake_services
         fake_services,
         project=fake_project,
     )
-    service._services.lifecycle.project_info.get_project_var = lambda x: (
-        "foo" if x == "version" else None
-    )
+
+    def _get_project_var(name: str, *, raw_read: bool = False) -> str:  # noqa: ARG001
+        return "foo" if name == "version" else ""
+
+    service._services.lifecycle.project_info.get_project_var = _get_project_var
 
     with pytest.raises(errors.PartsLifecycleError) as exc_info:
         service.update_project()
@@ -86,9 +88,11 @@ def test_update_project_variable_optional(
         fake_services,
         project=fake_project,
     )
-    service._services.lifecycle.project_info.get_project_var = lambda x: (
-        "foo" if x == "version" else None
-    )
+
+    def _get_project_var(name: str, *, raw_read: bool = False) -> str:  # noqa: ARG001
+        return "foo" if name == "version" else ""
+
+    service._services.lifecycle.project_info.get_project_var = _get_project_var
 
     service.update_project()
 
