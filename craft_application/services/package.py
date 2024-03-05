@@ -21,7 +21,7 @@ from typing import TYPE_CHECKING
 
 from craft_cli import emit
 
-from craft_application import errors
+from craft_application import errors, util
 from craft_application.services import base
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -57,11 +57,19 @@ class PackageService(base.ProjectService):
         emit.debug(f"Update project variables: {update_vars}")
         self._project.__dict__.update(update_vars)
 
-        for field in self._app.mandatory_adoptable_fields:
-            if not getattr(self._project, field):
-                raise errors.PartsLifecycleError(
-                    f"Project field '{field}' was not set."
-                )
+        unset_fields = [
+            field
+            for field in self._app.mandatory_adoptable_fields
+            if not getattr(self._project, field)
+        ]
+
+        if unset_fields:
+            fields = util.humanize_list(unset_fields, "and", sort=False)
+            raise errors.PartsLifecycleError(
+                f"Project fields {fields} were not set."
+                if len(unset_fields) > 1
+                else f"Project field {fields} was not set."
+            )
 
     def write_metadata(self, path: pathlib.Path) -> None:
         """Write the project metadata to metadata.yaml in the given directory.

@@ -46,12 +46,21 @@ def test_write_metadata(tmp_path, app_metadata, fake_project, fake_services):
     assert metadata == service.metadata
 
 
-def test_update_project_variable_unset(app_metadata, fake_project, fake_services):
+@pytest.mark.parametrize(
+    ("fields", "result"),
+    [
+        (["color"], "Project field 'color' was not set."),
+        (["color", "size"], "Project fields 'color' and 'size' were not set."),
+    ],
+)
+def test_update_project_variable_unset(
+    app_metadata, fake_project, fake_services, fields, result
+):
     """Test project variables that must be set after the lifecycle runs."""
     app_metadata = dataclasses.replace(
         app_metadata,
-        project_variables=["version", "color"],
-        mandatory_adoptable_fields=["version", "color"],
+        project_variables=["version", *fields],
+        mandatory_adoptable_fields=["version", *fields],
     )
 
     service = FakePackageService(
@@ -68,7 +77,7 @@ def test_update_project_variable_unset(app_metadata, fake_project, fake_services
     with pytest.raises(errors.PartsLifecycleError) as exc_info:
         service.update_project()
 
-    assert str(exc_info.value) == "Project field 'color' was not set."
+    assert str(exc_info.value) == result
 
 
 def test_update_project_variable_optional(
