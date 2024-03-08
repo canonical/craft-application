@@ -16,6 +16,7 @@
 """Unit tests for provider service"""
 import pathlib
 import pkgutil
+import uuid
 from unittest import mock
 
 import craft_providers
@@ -60,6 +61,22 @@ def test_is_managed(managed_value, expected, monkeypatch):
     )
 
     assert provider.ProviderService.is_managed() == expected
+
+
+def test_forward_environment_variables(monkeypatch, provider_service):
+    var_contents = uuid.uuid4().hex
+    for var in provider.DEFAULT_FORWARD_ENVIRONMENT_VARIABLES:
+        monkeypatch.setenv(var, f"{var}__{var_contents}")
+
+    provider_service.setup()
+
+    assert provider_service.environment == {
+        provider_service.managed_mode_env_var: "1",
+        **{
+            var: f"{var}__{var_contents}"
+            for var in provider.DEFAULT_FORWARD_ENVIRONMENT_VARIABLES
+        },
+    }
 
 
 @pytest.mark.parametrize("lxd_remote", ["local", "something-else"])
