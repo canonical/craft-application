@@ -73,3 +73,47 @@ def test_provider_lifecycle(
 
     assert (snap_safe_tmp_path / "test").exists()
     assert proc_result.stdout.startswith("#!/bin/bash")
+
+
+@pytest.mark.parametrize("base", [bases.BaseName("ubuntu", "22.04")])
+@pytest.mark.parametrize(
+    "proxy_vars",
+    [
+        {
+            "http_proxy": "http://craft-application-test.local:0",
+            "https_proxy": "https://craft-application-test.local:0",
+            "no_proxy": "::1,127.0.0.1,0.0.0.0,canonical.com",
+        },
+    ],
+)
+@pytest.mark.parametrize("provider_name", [pytest.param("lxd", marks=pytest.mark.lxd)])
+def test_proxy_variables_forwarded(
+    monkeypatch, snap_safe_tmp_path, provider_service, base, proxy_vars, provider_name
+):
+    for var, content in proxy_vars.items():
+        monkeypatch.setenv(var, content)
+    arch = get_host_architecture()
+    build_info = BuildInfo("foo", arch, arch, base)
+    provider_service.get_provider(provider_name)
+    executor = None
+
+    provider_service.setup()
+    try:
+        with provider_service.instance(
+            build_info, work_dir=snap_safe_tmp_path
+        ) as executor:
+            proc_result = executor.execute_run(
+                ["env"], text=True, stdout=subprocess.PIPE, check=True
+            )
+    finally:
+        if executor is not None:
+            with contextlib.suppress(craft_providers.ProviderError):
+                executor.delete()
+
+    instance_env = {}
+    for line in proc_result.stdout.splitlines():
+        name, value = line.split("=", maxsplit=1)
+        instance_env[name] = value
+
+    for var, content in proxy_vars.items():
+        assert instance_env.get(var) == content
