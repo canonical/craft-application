@@ -460,9 +460,7 @@ class Application:
             )
             platform = getattr(dispatcher.parsed_args(), "platform", None)
             build_for = getattr(dispatcher.parsed_args(), "build_for", None)
-            provider_name = (
-                "lxd" if getattr(dispatcher.parsed_args(), "use_lxd", None) else None
-            )
+            provider_name = command.provider_name(dispatcher.parsed_args())
 
             craft_cli.emit.debug(
                 f"Build plan: platform={platform}, build_for={build_for}"
