@@ -27,14 +27,13 @@ from .git import (
     get_git_repo_type,
     is_repo,
 )
-from .utils import get_build_id, humanize_list, rmtree, validate_architectures
+from .utils import get_build_id, rmtree, validate_architectures
 from .worktree import WorkTree
 
 __all__ = [
     "check_git_repo_for_remote_build",
     "get_build_id",
     "get_git_repo_type",
-    "humanize_list",
     "is_repo",
     "rmtree",
     "validate_architectures",

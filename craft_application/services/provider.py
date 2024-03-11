@@ -45,6 +45,9 @@ if TYPE_CHECKING:  # pragma: no cover
     from craft_application.services import ServiceFactory
 
 
+DEFAULT_FORWARD_ENVIRONMENT_VARIABLES = ("http_proxy", "https_proxy", "no_proxy")
+
+
 class ProviderService(base.ProjectService):
     """Manager for craft_providers in an application.
 
@@ -83,6 +86,13 @@ class ProviderService(base.ProjectService):
     def is_managed(cls) -> bool:
         """Determine whether we're running in managed mode."""
         return os.getenv(cls.managed_mode_env_var) == "1"
+
+    def setup(self) -> None:
+        """Application-specific service setup."""
+        super().setup()
+        for name in DEFAULT_FORWARD_ENVIRONMENT_VARIABLES:
+            if name in os.environ:
+                self.environment[name] = os.getenv(name)
 
     @contextlib.contextmanager
     def instance(
@@ -146,6 +156,12 @@ class ProviderService(base.ProjectService):
         """
         alias = bases.get_base_alias(base_name)
         base_class = bases.get_base_from_alias(alias)
+        if base_class is bases.BuilddBase:
+            # These packages are required on the base system (provider) for
+            # the Package Repositories feature from Craft Archives to work.
+            # This is only doable here where we have access to the base, as
+            # this only applies to our Buildd images (i.e.; Ubuntu)
+            self.packages.extend(["gpg", "dirmngr"])
         return base_class(
             alias=alias,
             compatibility_tag=f"{self._app.name}-{base_class.compatibility_tag}",

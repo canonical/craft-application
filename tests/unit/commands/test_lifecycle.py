@@ -509,6 +509,9 @@ def test_shell(
 ):
     parsed_args = argparse.Namespace(parts=None, shell=True)
     mock_lifecycle_run = mocker.patch.object(fake_services.lifecycle, "run")
+    mocker.patch.object(
+        fake_services.lifecycle.project_info, "execution_finished", return_value=True
+    )
     command = command_cls(
         {
             "app": app_metadata,
@@ -527,6 +530,9 @@ def test_shell_after(
 ):
     parsed_args = argparse.Namespace(parts=None, shell_after=True)
     mock_lifecycle_run = mocker.patch.object(fake_services.lifecycle, "run")
+    mocker.patch.object(
+        fake_services.lifecycle.project_info, "execution_finished", return_value=True
+    )
     command = command_cls(
         {
             "app": app_metadata,

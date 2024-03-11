@@ -22,7 +22,11 @@ from hypothesis import given, strategies
 from lazr.restfulclient.resource import Entry
 
 
-@given(path=strategies.iterables(strategies.text()))
+@given(
+    path=strategies.iterables(
+        strategies.text().filter(lambda x: not x.startswith("__"))  # no mangled names
+    )
+)
 def test_getattrs_success(path):
     obj = mock.Mock()
 

@@ -28,6 +28,7 @@ from craft_application.util.snap_config import (
     get_snap_config,
     is_running_from_snap,
 )
+from craft_application.util.string import humanize_list, strtobool
 from craft_application.util.yaml import dump_yaml, safe_yaml_load
 
 __all__ = [
@@ -40,6 +41,8 @@ __all__ = [
     "get_snap_config",
     "is_running_from_snap",
     "SnapConfig",
+    "humanize_list",
+    "strtobool",
     "get_host_base",
     "dump_yaml",
     "safe_yaml_load",
