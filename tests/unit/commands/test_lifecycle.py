@@ -45,9 +45,11 @@ DEBUG_PARAMS = [
     ({"debug": False}, []),
     ({"debug": True}, ["--debug"]),
 ]
-DESTRUCTIVE_PARAMS = [
-    ({"destructive_mode": False}, []),
-    ({"destructive_mode": True}, ["--destructive-mode"]),
+# --destructive-mode and --use-lxd are mutually exclusive
+BUILD_ENV_COMMANDS = [
+    ({"destructive_mode": False, "use_lxd": False}, []),
+    ({"destructive_mode": True, "use_lxd": False}, ["--destructive-mode"]),
+    ({"destructive_mode": False, "use_lxd": True}, ["--use-lxd"]),
 ]
 STEP_NAMES = [step.name.lower() for step in craft_parts.Step]
 MANAGED_LIFECYCLE_COMMANDS = {
@@ -104,10 +106,14 @@ def test_get_lifecycle_command_group(enable_overlay, commands):
     Features.reset()
 
 
-@pytest.mark.parametrize("destructive_arg", [True, False])
+@pytest.mark.parametrize(("build_env_dict", "build_env_args"), BUILD_ENV_COMMANDS)
 @pytest.mark.parametrize("parts_args", PARTS_LISTS)
 def test_parts_command_fill_parser(
-    app_metadata, fake_services, destructive_arg, parts_args
+    app_metadata,
+    fake_services,
+    build_env_dict,
+    build_env_args,
+    parts_args,
 ):
     cls = get_fake_command_class(LifecyclePartsCommand, managed=True)
     parser = argparse.ArgumentParser("parts_command")
@@ -115,15 +121,8 @@ def test_parts_command_fill_parser(
 
     command.fill_parser(parser)
 
-    args = []
-
-    if destructive_arg:
-        args.append("--destructive-mode")
-
-    args.extend(parts_args)
-
-    args_dict = vars(parser.parse_args(args))
-    assert args_dict == {"parts": parts_args, "destructive_mode": destructive_arg}
+    args_dict = vars(parser.parse_args([*parts_args, *build_env_args]))
+    assert args_dict == {"parts": parts_args, **build_env_dict}
 
 
 @pytest.mark.parametrize("parts", PARTS_LISTS)
@@ -147,7 +146,38 @@ def test_parts_command_get_managed_cmd(
     assert actual == expected
 
 
-@pytest.mark.parametrize(("destructive_dict", "destructive_args"), DESTRUCTIVE_PARAMS)
+@pytest.mark.parametrize(
+    ("destructive", "build_env", "expected_run_managed"),
+    [
+        # Destructive mode or CRAFT_BUILD_ENV=host should not run managed
+        (False, "host", False),
+        (True, "host", False),
+        (True, "lxd", False),
+        # Non-destructive mode and CRAFT_BUILD_ENV!=host should run managed
+        (False, "lxd", True),
+    ],
+)
+@pytest.mark.parametrize("parts", PARTS_LISTS)
+# clean command has different logic for `run_managed()`
+@pytest.mark.parametrize("command_cls", ALL_LIFECYCLE_COMMANDS - {CleanCommand})
+def test_parts_command_run_managed(
+    app_metadata,
+    mock_services,
+    destructive,
+    build_env,
+    expected_run_managed,
+    parts,
+    command_cls,
+    monkeypatch,
+):
+    monkeypatch.setenv("CRAFT_BUILD_ENVIRONMENT", build_env)
+    parsed_args = argparse.Namespace(parts=parts, destructive_mode=destructive)
+    command = command_cls({"app": app_metadata, "services": mock_services})
+
+    assert command.run_managed(parsed_args) == expected_run_managed
+
+
+@pytest.mark.parametrize(("build_env_dict", "build_env_args"), BUILD_ENV_COMMANDS)
 @pytest.mark.parametrize(("debug_dict", "debug_args"), DEBUG_PARAMS)
 @pytest.mark.parametrize(("shell_dict", "shell_args"), SHELL_PARAMS)
 @pytest.mark.parametrize("parts_args", PARTS_LISTS)
@@ -155,8 +185,8 @@ def test_step_command_fill_parser(
     app_metadata,
     fake_services,
     parts_args,
-    destructive_dict,
-    destructive_args,
+    build_env_dict,
+    build_env_args,
     debug_dict,
     debug_args,
     shell_args,
@@ -170,14 +200,14 @@ def test_step_command_fill_parser(
         "build_for": None,
         **shell_dict,
         **debug_dict,
-        **destructive_dict,
+        **build_env_dict,
     }
     command = cls({"app": app_metadata, "services": fake_services})
 
     command.fill_parser(parser)
 
     args_dict = vars(
-        parser.parse_args([*destructive_args, *shell_args, *debug_args, *parts_args])
+        parser.parse_args([*build_env_args, *shell_args, *debug_args, *parts_args])
     )
     assert args_dict == expected
 
@@ -301,10 +331,14 @@ def test_clean_run_with_parts(app_metadata, parts, tmp_path, mock_services):
 
 
 @pytest.mark.parametrize(
-    ("destructive_mode", "expected_lifecycle", "expected_provider"),
+    ("destructive_mode", "build_env", "expected_lifecycle", "expected_provider"),
     [
-        (True, True, False),
-        (False, False, True),
+        # destructive mode or CRAFT_BUILD_ENV==host should clean on host
+        (False, "host", True, False),
+        (True, "lxd", True, False),
+        (True, "host", True, False),
+        # destructive mode==False and CRAFT_BUILD_ENV!=host should clean instances
+        (False, "lxd", False, True),
     ],
 )
 def test_clean_run_without_parts(
@@ -312,9 +346,12 @@ def test_clean_run_without_parts(
     tmp_path,
     mock_services,
     destructive_mode,
+    build_env,
     expected_lifecycle,
     expected_provider,
+    monkeypatch,
 ):
+    monkeypatch.setenv("CRAFT_BUILD_ENVIRONMENT", build_env)
     parts = []
     parsed_args = argparse.Namespace(
         parts=parts, output=tmp_path, destructive_mode=destructive_mode
@@ -328,38 +365,51 @@ def test_clean_run_without_parts(
 
 
 @pytest.mark.parametrize(
-    ("destructive", "parts", "expected_run_managed"),
+    ("destructive", "build_env", "parts", "expected_run_managed"),
     [
-        # Destructive mode, shouldn't run managed
-        (True, ["part1"], False),
-        (True, ["part1", "part2"], False),
-        (True, [], False),
-        # Non-destructive mode: depends on "parts"
-        # Clean specific parts: should run managed
-        (False, ["part1"], True),
-        (False, ["part1", "part2"], True),
+        # destructive mode or CRAFT_BUILD_ENV==host should not run managed
+        (True, "lxd", [], False),
+        (True, "host", [], False),
+        (False, "host", [], False),
+        (True, "lxd", ["part1"], False),
+        (True, "host", ["part1"], False),
+        (False, "host", ["part1"], False),
+        (True, "lxd", ["part1", "part2"], False),
+        (True, "host", ["part1", "part2"], False),
+        (False, "host", ["part1", "part2"], False),
+        # destructive mode==False and CRAFT_BUILD_ENV!=host: depends on "parts"
+        # clean specific parts: should run managed
+        (False, "lxd", ["part1"], True),
+        (False, "lxd", ["part1", "part2"], True),
         # "part-less" clean: shouldn't run managed
-        (False, [], False),
+        (False, "lxd", [], False),
     ],
 )
 def test_clean_run_managed(
-    app_metadata, mock_services, destructive, parts, expected_run_managed
+    app_metadata,
+    mock_services,
+    destructive,
+    build_env,
+    parts,
+    expected_run_managed,
+    monkeypatch,
 ):
+    monkeypatch.setenv("CRAFT_BUILD_ENVIRONMENT", build_env)
     parsed_args = argparse.Namespace(parts=parts, destructive_mode=destructive)
     command = CleanCommand({"app": app_metadata, "services": mock_services})
 
     assert command.run_managed(parsed_args) == expected_run_managed
 
 
-@pytest.mark.parametrize(("destructive_dict", "destructive_args"), DESTRUCTIVE_PARAMS)
+@pytest.mark.parametrize(("build_env_dict", "build_env_args"), BUILD_ENV_COMMANDS)
 @pytest.mark.parametrize(("debug_dict", "debug_args"), DEBUG_PARAMS)
 @pytest.mark.parametrize("parts_args", PARTS_LISTS)
 @pytest.mark.parametrize("output_arg", [".", "/"])
 def test_pack_fill_parser(
     app_metadata,
     mock_services,
-    destructive_dict,
-    destructive_args,
+    build_env_dict,
+    build_env_args,
     debug_dict,
     debug_args,
     parts_args,
@@ -372,7 +422,7 @@ def test_pack_fill_parser(
         "build_for": None,
         "output": pathlib.Path(output_arg),
         **debug_dict,
-        **destructive_dict,
+        **build_env_dict,
     }
     command = PackCommand({"app": app_metadata, "services": mock_services})
 
@@ -380,7 +430,7 @@ def test_pack_fill_parser(
 
     args_dict = vars(
         parser.parse_args(
-            [*destructive_args, *parts_args, *debug_args, f"--output={output_arg}"]
+            [*build_env_args, *parts_args, *debug_args, f"--output={output_arg}"]
         )
     )
     assert args_dict == expected

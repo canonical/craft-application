@@ -1,6 +1,6 @@
 #  This file is part of craft-application.
 #
-#  Copyright 2023 Canonical Ltd.
+#  Copyright 2023-2024 Canonical Ltd.
 #
 #  This program is free software: you can redistribute it and/or modify it
 #  under the terms of the GNU Lesser General Public License version 3, as
@@ -75,6 +75,17 @@ class AppCommand(BaseCommand):
         including by inspecting the arguments in `parsed_args`.
         """
         return False
+
+    def provider_name(
+        self,
+        parsed_args: argparse.Namespace,  # noqa: ARG002 (the unused argument is for subclasses)
+    ) -> str | None:
+        """Name of the provider where the command should be run inside of.
+
+        By default returns None. Subclasses can override this method to change this,
+        including by inspecting the arguments in `parsed_args`.
+        """
+        return None
 
     def get_managed_cmd(
         self,
