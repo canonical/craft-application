@@ -723,7 +723,7 @@ def test_invalid_base_error(
     fake_build_plan[0].base = bases.BaseName(name=system_name, version=system_version)
 
     expected = (
-        f'"{expected_pretty}" builds cannot be performed on this "Ubuntu 24.04" system.'
+        f"{expected_pretty} builds cannot be performed on this Ubuntu 24.04 system."
     )
 
     with pytest.raises(errors.IncompatibleBaseError, match=expected):

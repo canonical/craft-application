@@ -148,9 +148,20 @@ class IncompatibleBaseError(CraftError):
         host_pretty = f"{host_base.name.title()} {host_base.version}"
         build_pretty = f"{build_base.name.title()} {build_base.version}"
 
-        message = f'"{build_pretty}" builds cannot be performed on this "{host_pretty}" system.'
+        message = (
+            f"{build_pretty} builds cannot be performed on this {host_pretty} system."
+        )
+        details = (
+            "Builds must be performed on a specific system to ensure that the "
+            "final artefact's binaries are compatible with the intended execution "
+            "environment."
+        )
+        resolution = "Run a managed build, or run on a compatible host."
+        retcode = 78  # "configuration error" from sysexits.h
 
-        super().__init__(message=message)
+        super().__init__(
+            message=message, details=details, resolution=resolution, retcode=retcode
+        )
 
 
 class InvalidParameterError(CraftError):
