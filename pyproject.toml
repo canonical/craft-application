@@ -45,10 +45,10 @@ remote = [
     "launchpadlib>=1.10.16",
 ]
 dev = [
-    "coverage[toml]==7.4.1",
+    "coverage[toml]==7.4.3",
     "hypothesis>=6.0",
     "pyfakefs~=5.3",
-    "pytest==8.0.0",
+    "pytest==8.1.1",
     "pytest-check==2.3.1",
     "pytest-cov==4.1.0",
     "pytest-mock==3.12.0",
@@ -63,7 +63,7 @@ lint = [
     "yamllint==1.35.1"
 ]
 types = [
-    "mypy[reports]==1.8.0",
+    "mypy[reports]==1.9.0",
     "pyright==1.1.353",
     "types-requests",
     "types-urllib3",
