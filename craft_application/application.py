@@ -207,12 +207,7 @@ class Application:
                 f"Unable to create/access cache directory: {err.strerror}"
             ) from err
 
-    def _configure_services(
-        self,
-        platform: str | None,  # noqa: ARG002 (Unused method argument)
-        build_for: str | None,  # noqa: ARG002 (Unused method argument)
-        provider_name: str | None,
-    ) -> None:
+    def _configure_services(self, provider_name: str | None) -> None:
         """Configure additional keyword arguments for any service classes.
 
         Any child classes that override this must either call this directly or must
@@ -473,7 +468,7 @@ class Application:
                     platform=platform, build_for=build_for
                 )
 
-            self._configure_services(platform, build_for, provider_name)
+            self._configure_services(provider_name)
 
             if not managed_mode:
                 # command runs in the outer instance
