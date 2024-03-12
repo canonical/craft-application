@@ -1,4 +1,4 @@
-# Copyright 2023 Canonical Ltd.
+# Copyright 2023-2024 Canonical Ltd.
 #
 # This program is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Lesser General Public License version 3, as
@@ -74,10 +74,16 @@ class LifecyclePartsCommand(_LifecycleCommand):
             nargs="*",
             help="Optional list of parts to process",
         )
-        parser.add_argument(
+        group = parser.add_mutually_exclusive_group()
+        group.add_argument(
             "--destructive-mode",
             action="store_true",
             help="Build in the current host",
+        )
+        group.add_argument(
+            "--use-lxd",
+            action="store_true",
+            help="Build in a LXD container.",
         )
 
     @override
@@ -88,13 +94,35 @@ class LifecyclePartsCommand(_LifecycleCommand):
 
         return cmd
 
-
-class LifecycleStepCommand(LifecyclePartsCommand):
-    """An actual lifecycle step."""
+    @override
+    def provider_name(self, parsed_args: argparse.Namespace) -> str | None:
+        return "lxd" if parsed_args.use_lxd else None
 
     @override
     def run_managed(self, parsed_args: argparse.Namespace) -> bool:
-        return not parsed_args.destructive_mode
+        """Return whether the command should run in managed mode or not.
+
+        The command will run in managed mode unless the `--destructive-mode` flag
+        is passed OR `CRAFT_BUILD_ENVIRONMENT` is set to `host`.
+        """
+        if parsed_args.destructive_mode:
+            emit.debug(
+                "Not running managed mode because `--destructive-mode` was passed"
+            )
+            return False
+
+        build_env = os.getenv("CRAFT_BUILD_ENVIRONMENT")
+        if build_env and build_env.lower().strip() == "host":
+            emit.debug(
+                f"Not running managed mode because CRAFT_BUILD_ENVIRONMENT={build_env}"
+            )
+            return False
+
+        return True
+
+
+class LifecycleStepCommand(LifecyclePartsCommand):
+    """An actual lifecycle step."""
 
     @override
     def _fill_parser(self, parser: argparse.ArgumentParser) -> None:
@@ -341,10 +369,18 @@ class CleanCommand(LifecyclePartsCommand):
 
     @override
     def _run(self, parsed_args: argparse.Namespace, **kwargs: Any) -> None:
-        """Run the clean command."""
+        """Run the clean command.
+
+        The project's work directory will be cleaned if:
+        - the `--destructive-mode` flag is provided OR
+        - `CRAFT_BUILD_ENVIRONMENT` is set to `host` OR
+        - no list of specific parts to clean is provided
+
+        Otherwise, it will clean an instance.
+        """
         super()._run(parsed_args)
 
-        if parsed_args.destructive_mode or not self._should_clean_instances(
+        if not super().run_managed(parsed_args) or not self._should_clean_instances(
             parsed_args
         ):
             self._services.lifecycle.clean(parsed_args.parts)
@@ -353,12 +389,16 @@ class CleanCommand(LifecyclePartsCommand):
 
     @override
     def run_managed(self, parsed_args: argparse.Namespace) -> bool:
-        if parsed_args.destructive_mode:
-            # In destructive mode, always run on the host.
+        """Return whether the command should run in managed mode or not.
+
+        Clean will run in managed mode unless:
+        - the `--destructive-mode` flag is provided OR
+        - `CRAFT_BUILD_ENVIRONMENT` is set to `host` OR
+        - a list of specific parts to clean is provided
+        """
+        if not super().run_managed(parsed_args):
             return False
 
-        # "clean" should run managed if cleaning specific parts.
-        # otherwise, should run on the host to clean the build provider.
         return not self._should_clean_instances(parsed_args)
 
     @staticmethod

@@ -207,7 +207,7 @@ class Application:
                 f"Unable to create/access cache directory: {err.strerror}"
             ) from err
 
-    def _configure_services(self) -> None:
+    def _configure_services(self, provider_name: str | None) -> None:
         """Configure additional keyword arguments for any service classes.
 
         Any child classes that override this must either call this directly or must
@@ -223,6 +223,7 @@ class Application:
             "provider",
             work_dir=self._work_dir,
             build_plan=self._build_plan,
+            provider_name=provider_name,
         )
 
     def _resolve_project_path(self, project_dir: pathlib.Path | None) -> pathlib.Path:
@@ -454,6 +455,7 @@ class Application:
             )
             platform = getattr(dispatcher.parsed_args(), "platform", None)
             build_for = getattr(dispatcher.parsed_args(), "build_for", None)
+            provider_name = command.provider_name(dispatcher.parsed_args())
 
             craft_cli.emit.debug(
                 f"Build plan: platform={platform}, build_for={build_for}"
@@ -466,7 +468,7 @@ class Application:
                     platform=platform, build_for=build_for
                 )
 
-            self._configure_services()
+            self._configure_services(provider_name)
 
             if not managed_mode:
                 # command runs in the outer instance
