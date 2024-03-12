@@ -225,11 +225,8 @@ class LifecycleService(base.ProjectService):
         """Run the lifecycle manager for the parts."""
         target_step = _get_step(step_name) if step_name else None
 
-        if not self._build_plan:
-            raise errors.EmptyBuildPlanError
-
-        if len(self._build_plan) > 1:
-            raise errors.MultipleBuildsError
+        # Now that we are actually going to run we can validate what we're building.
+        _validate_build_plan(self._build_plan)
 
         try:
             if self._project.package_repositories:
@@ -395,3 +392,24 @@ class LifecycleService(base.ProjectService):
                 )
 
         return parallel_build_count
+
+
+def _validate_build_plan(build_plan: list[models.BuildInfo]) -> None:
+    """Check that the build plan has exactly 1 compatible build info."""
+    if not build_plan:
+        raise errors.EmptyBuildPlanError
+
+    if len(build_plan) > 1:
+        raise errors.MultipleBuildsError
+
+    build_base = build_plan[0].base
+    host_base = util.get_host_base()
+
+    if build_base.version == "devel":
+        # If the build base is "devel", we don't try to match the specific
+        # version as that is a moving target; Just ensure the systems are the
+        # same.
+        if build_base.name != host_base.name:
+            raise errors.IncompatibleBaseError(host_base, build_base)
+    elif build_base != host_base:
+        raise errors.IncompatibleBaseError(host_base, build_base)
