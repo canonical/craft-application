@@ -191,8 +191,8 @@ def test_add_all(new_dir):
         }
     else:
         expected = {
-            "foo": pygit2.enums.FileStatus.INDEX_NEW,
-            "bar": pygit2.enums.FileStatus.INDEX_NEW,
+            "foo": pygit2.enums.FileStatus.INDEX_NEW,  # pyright: ignore[reportAttributeAccessIssue]
+            "bar": pygit2.enums.FileStatus.INDEX_NEW,  # pyright: ignore[reportAttributeAccessIssue]
         }
 
     assert status == expected
