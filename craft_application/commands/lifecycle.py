@@ -269,6 +269,7 @@ class PrimeCommand(LifecycleStepCommand):
         """Run the prime command."""
         super()._run(parsed_args, step_name=step_name)
 
+        self._services.package.update_project()
         self._services.package.write_metadata(self._services.lifecycle.prime_dir)
 
 
