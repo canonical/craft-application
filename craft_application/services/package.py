@@ -57,6 +57,9 @@ class PackageService(base.ProjectService):
         emit.debug(f"Update project variables: {update_vars}")
         self._project.__dict__.update(update_vars)
 
+        # Give subclasses a chance to update the project with their own logic
+        self._extra_project_updates()
+
         unset_fields = [
             field
             for field in self._app.mandatory_adoptable_fields
@@ -78,3 +81,6 @@ class PackageService(base.ProjectService):
         """
         path.mkdir(parents=True, exist_ok=True)
         self.metadata.to_yaml_file(path / "metadata.yaml")
+
+    def _extra_project_updates(self) -> None:
+        """Perform domain-specific updates to the project before packing."""
