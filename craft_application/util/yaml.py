@@ -132,6 +132,7 @@ def dump_yaml(data: Any, stream: TextIO | None = None, **kwargs: Any) -> str | N
         str, _repr_str, Dumper=cast(type[yaml.Dumper], yaml.SafeDumper)
     )
     kwargs.setdefault("sort_keys", False)
+    kwargs.setdefault("allow_unicode", True)
     return cast(  # This cast is needed for pyright but not mypy
         str | None, yaml.dump(data, stream, Dumper=yaml.SafeDumper, **kwargs)
     )
