@@ -125,6 +125,7 @@ class Application:
         self._command_groups: list[craft_cli.CommandGroup] = []
         self._global_arguments: list[craft_cli.GlobalArgument] = [GLOBAL_VERSION]
         self._cli_loggers = DEFAULT_CLI_LOGGERS | set(extra_loggers)
+        self._full_build_plan: list[models.BuildInfo] = []
         self._build_plan: list[models.BuildInfo] = []
         # When build_secrets are enabled, this contains the secret info to pass to
         # managed instances.
@@ -262,11 +263,11 @@ class Application:
             yaml_data = util.safe_yaml_load(file)
 
         build_planner = self.app.BuildPlannerClass.unmarshal(yaml_data)
-        full_build_plan = build_planner.get_build_plan()
-        self._build_plan = _filter_plan(full_build_plan, platform, build_for)
+        self._full_build_plan = build_planner.get_build_plan()
+        self._build_plan = _filter_plan(self._full_build_plan, platform, build_for)
 
         if platform:
-            all_platforms = {b.platform: b for b in full_build_plan}
+            all_platforms = {b.platform: b for b in self._full_build_plan}
             if platform not in all_platforms:
                 raise errors.InvalidPlatformError(platform, list(all_platforms.keys()))
             build_for = all_platforms[platform].build_for
