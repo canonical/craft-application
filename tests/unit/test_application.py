@@ -600,6 +600,8 @@ def test_run_error_debug(monkeypatch, mock_dispatcher, app, fake_project, error)
 _base = bases.BaseName("", "")
 _on_a_for_a = BuildInfo("p1", "a", "a", _base)
 _on_a_for_b = BuildInfo("p2", "a", "b", _base)
+_on_p3_for_p3 = BuildInfo("p3", "p3", "p3", _base)
+_on_p4_for_p3 = BuildInfo("p4", "p3", "p3", _base)
 
 
 @pytest.mark.parametrize(
@@ -621,6 +623,27 @@ _on_a_for_b = BuildInfo("p2", "a", "b", _base)
         ([_on_a_for_a, _on_a_for_b], "p2", None, "b", []),
         ([_on_a_for_a, _on_a_for_b], None, None, "a", [_on_a_for_a, _on_a_for_b]),
         ([_on_a_for_a, _on_a_for_b], "p2", None, "a", [_on_a_for_b]),
+        ([_on_a_for_a, _on_p3_for_p3], None, "p3", "p3", [_on_p3_for_p3]),
+        ([_on_a_for_a, _on_p3_for_p3], "p3", None, "p3", [_on_p3_for_p3]),
+        ([_on_a_for_a, _on_p3_for_p3], "p3", "p3", "p3", [_on_p3_for_p3]),
+        ([_on_a_for_a, _on_p4_for_p3], None, "p3", "p3", [_on_p4_for_p3]),
+        ([_on_a_for_a, _on_p4_for_p3], "p3", None, "p3", []),
+        (
+            [_on_a_for_a, _on_p3_for_p3, _on_p4_for_p3],
+            None,
+            "p3",
+            "p3",
+            [_on_p3_for_p3],
+        ),
+        ([_on_a_for_a, _on_p4_for_p3], "p4", "p3", "p3", [_on_p4_for_p3]),
+        (
+            [_on_a_for_a, _on_p3_for_p3, _on_p4_for_p3],
+            "p4",
+            "p3",
+            "p3",
+            [_on_p4_for_p3],
+        ),
+        ([_on_a_for_a, _on_p3_for_p3], None, "p4", "p3", []),
     ],
 )
 def test_filter_plan(mocker, plan, platform, build_for, host_arch, result):
