@@ -270,12 +270,10 @@ class Application:
         )
 
         if platform and not build_for:
-            if self._build_plan:
-                build_for = self._build_plan[0].build_for
-            else:
-                raise errors.InvalidPlatformError(
-                    platform, list({p.platform for p in self._full_build_plan})
-                )
+            all_platforms = {b.platform: b for b in self._full_build_plan}
+            if platform not in all_platforms:
+                raise errors.InvalidPlatformError(platform, list(all_platforms.keys()))
+            build_for = all_platforms[platform].build_for
 
         # validate project grammar
         GrammarAwareProject.validate_grammar(yaml_data)
