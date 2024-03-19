@@ -411,7 +411,7 @@ def test_fails_without_project(
 
     fake_services.project = None
 
-    assert app.run() == 1
+    assert app.run() == 66
 
     assert "Project file 'testcraft.yaml' not found in" in capsys.readouterr().err
 
