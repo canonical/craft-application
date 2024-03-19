@@ -237,18 +237,7 @@ class Application:
         if project_dir is None:
             project_dir = self.project_dir
 
-        project_file_path = project_dir / f"{self.app.name}.yaml"
-
-        try:
-            project_file = project_file_path.resolve(strict=True)
-        except FileNotFoundError as err:
-            raise errors.ProjectFileMissingError(
-                f"Project file '{str(project_file_path)}' not found.",
-                details="The project file could not be found.",
-                resolution="Ensure the project file exists.",
-            ) from err
-
-        return project_file
+        return (project_dir / f"{self.app.name}.yaml").resolve(strict=True)
 
     def get_project(
         self,
@@ -268,7 +257,15 @@ class Application:
         if self.__project is not None:
             return self.__project
 
-        project_path = self._resolve_project_path(self.project_dir)
+        try:
+            project_path = self._resolve_project_path(self.project_dir)
+        except FileNotFoundError as err:
+            raise errors.ProjectFileMissingError(
+                f"Project file '{self.app.name}.yaml' not found in '{self.project_dir}'.",
+                details="The project file could not be found.",
+                resolution="Ensure the project file exists.",
+                retcode=66,  # EX_NOINPUT from sysexits.h
+            ) from err
         craft_cli.emit.debug(f"Loading project file '{project_path!s}'")
 
         with project_path.open() as file:

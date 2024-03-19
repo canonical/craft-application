@@ -413,10 +413,7 @@ def test_fails_without_project(
 
     assert app.run() == 1
 
-    assert (
-        f"Project file '{app.project_dir}/testcraft.yaml' not found"
-        in capsys.readouterr().err
-    )
+    assert "Project file 'testcraft.yaml' not found in" in capsys.readouterr().err
 
 
 @pytest.mark.parametrize(
