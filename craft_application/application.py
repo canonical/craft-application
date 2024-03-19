@@ -236,7 +236,19 @@ class Application:
         """
         if project_dir is None:
             project_dir = self.project_dir
-        return (project_dir / f"{self.app.name}.yaml").resolve(strict=True)
+
+        project_file_path = project_dir / f"{self.app.name}.yaml"
+
+        try:
+            project_file = project_file_path.resolve(strict=True)
+        except FileNotFoundError as err:
+            raise errors.ProjectFileMissingError(
+                f"Project file '{str(project_file_path)}' not found.",
+                details="The project file could not be found.",
+                resolution="Ensure the project file exists.",
+            ) from err
+
+        return project_file
 
     def get_project(
         self,

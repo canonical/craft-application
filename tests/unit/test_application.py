@@ -411,9 +411,12 @@ def test_fails_without_project(
 
     fake_services.project = None
 
-    assert app.run() == 70  # noqa: PLR2004
+    assert app.run() == 1
 
-    assert "No such file or directory" in capsys.readouterr().err
+    assert (
+        f"Project file '{app.project_dir}/testcraft.yaml' not found"
+        in capsys.readouterr().err
+    )
 
 
 @pytest.mark.parametrize(
