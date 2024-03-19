@@ -219,7 +219,7 @@ def test_run_always_load_project(capsys, monkeypatch, app, cmd):
     monkeypatch.setenv("CRAFT_DEBUG", "1")
     monkeypatch.setattr("sys.argv", ["testcraft", cmd])
 
-    assert app.run() == 66
+    assert app.run() == 66  # noqa: PLR2004
 
     captured = capsys.readouterr()
     assert "/testcraft.yaml' not found." in captured.err
