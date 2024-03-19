@@ -262,9 +262,12 @@ class Application:
         with project_path.open() as file:
             yaml_data = util.safe_yaml_load(file)
 
+        host_arch = util.get_host_architecture()
         build_planner = self.app.BuildPlannerClass.unmarshal(yaml_data)
         self._full_build_plan = build_planner.get_build_plan()
-        self._build_plan = _filter_plan(self._full_build_plan, platform, build_for)
+        self._build_plan = _filter_plan(
+            self._full_build_plan, platform, build_for, host_arch
+        )
 
         if platform and not build_for:
             if self._build_plan:
@@ -277,7 +280,7 @@ class Application:
         # validate project grammar
         GrammarAwareProject.validate_grammar(yaml_data)
 
-        build_on = util.get_host_architecture()
+        build_on = host_arch
         yaml_data = self._transform_project_yaml(yaml_data, build_on, build_for)
         self.__project = self.app.ProjectClass.from_yaml_data(yaml_data, project_path)
 
@@ -641,10 +644,12 @@ def _filter_plan(
     build_plan: list[BuildInfo],
     platform: str | None,
     build_for: str | None,
+    host_arch: str | None,
 ) -> list[BuildInfo]:
-    """Filter out builds not matching build-on, build-for, and platform."""
-    host_arch = util.get_host_architecture()
+    """Filter out build plans that are not matching build-on, build-for, and platform.
 
+    If the host_arch is None, ignore the build-on check for remote builds.
+    """
     new_plan_matched_build_for: list[BuildInfo] = []
     new_plan_matched_platform_name: list[BuildInfo] = []
 
@@ -652,7 +657,7 @@ def _filter_plan(
         if platform and build_info.platform != platform:
             continue
 
-        if build_info.build_on != host_arch:
+        if host_arch and build_info.build_on != host_arch:
             continue
 
         if build_for and build_info.build_for != build_for:

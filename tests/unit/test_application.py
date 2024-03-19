@@ -602,6 +602,7 @@ _on_a_for_a = BuildInfo("p1", "a", "a", _base)
 _on_a_for_b = BuildInfo("p2", "a", "b", _base)
 _on_p3_for_p3 = BuildInfo("p3", "p3", "p3", _base)
 _on_p4_for_p3 = BuildInfo("p4", "p3", "p3", _base)
+_on_p4_for_p4 = BuildInfo("p4", "p4", "p4", _base)
 
 
 @pytest.mark.parametrize(
@@ -644,11 +645,41 @@ _on_p4_for_p3 = BuildInfo("p4", "p3", "p3", _base)
             [_on_p4_for_p3],
         ),
         ([_on_a_for_a, _on_p3_for_p3], None, "p4", "p3", []),
+        ([_on_a_for_a, _on_p4_for_p3, _on_p4_for_p4], "p3", None, "p3", []),
+        ([_on_a_for_a, _on_p4_for_p3, _on_p4_for_p4], "p3", None, "p4", []),
+        (
+            [_on_a_for_a, _on_p4_for_p3, _on_p4_for_p4],
+            "p4",
+            None,
+            "p3",
+            [_on_p4_for_p3],
+        ),
+        (
+            [_on_a_for_a, _on_p4_for_p3, _on_p4_for_p4],
+            "p4",
+            None,
+            "p4",
+            [_on_p4_for_p4],
+        ),
+        (
+            [_on_a_for_a, _on_p4_for_p3, _on_p4_for_p4],
+            None,
+            "p4",
+            "p4",
+            [_on_p4_for_p4],
+        ),
+        (
+            [_on_a_for_a, _on_p4_for_p3, _on_p4_for_p4],
+            "p4",
+            None,
+            None,
+            [_on_p4_for_p3, _on_p4_for_p4],
+        ),
     ],
 )
 def test_filter_plan(mocker, plan, platform, build_for, host_arch, result):
     mocker.patch("craft_application.util.get_host_architecture", return_value=host_arch)
-    assert application._filter_plan(plan, platform, build_for) == result
+    assert application._filter_plan(plan, platform, build_for, host_arch) == result
 
 
 @pytest.fixture()
