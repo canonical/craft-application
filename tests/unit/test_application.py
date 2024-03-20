@@ -563,6 +563,11 @@ def test_run_success_managed_inside_managed(
             64,
             "Argument parsing error\n",
         ),
+        (
+            craft_cli.CraftError("Arbitrary return code", retcode=69),
+            69,
+            "Arbitrary return code\n",
+        ),
     ],
 )
 def test_run_error(
