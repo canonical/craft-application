@@ -494,6 +494,7 @@ class Application:
             return_code = 128 + signal.SIGINT
         except craft_cli.CraftError as err:
             self._emit_error(err)
+            return_code = err.retcode
         except craft_parts.PartsError as err:
             self._emit_error(
                 craft_cli.CraftError(
