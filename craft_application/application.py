@@ -364,12 +364,7 @@ class Application:
 
         :returns: A ready-to-run Dispatcher object
         """
-        dispatcher = craft_cli.Dispatcher(
-            self.app.name,
-            self.command_groups,
-            summary=str(self.app.summary),
-            extra_global_args=self._global_arguments,
-        )
+        dispatcher = self._create_dispatcher()
 
         try:
             craft_cli.emit.trace("pre-parsing arguments...")
@@ -412,6 +407,19 @@ class Application:
         self.configure(global_args)
 
         return dispatcher
+
+    def _create_dispatcher(self) -> craft_cli.Dispatcher:
+        """Create the Dispatcher that will run the application's command.
+
+        Subclasses can override this if they need to create a Dispatcher with
+        different parameters.
+        """
+        return craft_cli.Dispatcher(
+            self.app.name,
+            self.command_groups,
+            summary=str(self.app.summary),
+            extra_global_args=self._global_arguments,
+        )
 
     def _get_app_plugins(self) -> dict[str, PluginType]:
         """Get the plugins for this application.
