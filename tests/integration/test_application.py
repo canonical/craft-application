@@ -222,7 +222,7 @@ def test_run_always_load_project(capsys, monkeypatch, app, cmd):
     assert app.run() == 66  # noqa: PLR2004
 
     captured = capsys.readouterr()
-    assert "/testcraft.yaml' not found." in captured.err
+    assert "'testcraft.yaml' not found" in captured.err
 
 
 @pytest.mark.parametrize("help_param", ["-h", "--help"])
