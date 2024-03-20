@@ -430,14 +430,13 @@ def test_fails_without_project(
     "argv",
     [["testcraft", "--version"], ["testcraft", "-V"], ["testcraft", "pull", "-V"]],
 )
-def test_run_outputs_version(monkeypatch, capsys, app, argv):
+def test_run_outputs_version(monkeypatch, emitter, app, argv):
     monkeypatch.setattr(sys, "argv", argv)
 
     with pytest.raises(SystemExit):
         app._get_dispatcher()
 
-    out, _ = capsys.readouterr()
-    assert out == "testcraft 3.14159\n"
+    emitter.assert_message("testcraft 3.14159")
 
 
 def test_show_app_name_and_version(monkeypatch, capsys, app):

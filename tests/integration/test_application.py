@@ -103,7 +103,7 @@ INVALID_PROJECTS_DIR = TEST_DATA_DIR / "invalid_projects"
         (["-h"], "", BASIC_USAGE, 0),
         (["--version"], VERSION_INFO, "", 0),
         (["-V"], VERSION_INFO, "", 0),
-        (["-q", "--version"], VERSION_INFO, "", 0),
+        (["-q", "--version"], "", "", 0),
         (["--invalid-parameter"], "", BASIC_USAGE, 64),
         (["non-command"], "", INVALID_COMMAND, 64),
     ],
