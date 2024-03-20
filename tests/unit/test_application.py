@@ -613,34 +613,218 @@ def test_run_error_debug(monkeypatch, mock_dispatcher, app, fake_project, error)
 
 
 _base = bases.BaseName("", "")
-_on_a_for_a = BuildInfo("p1", "a", "a", _base)
-_on_a_for_b = BuildInfo("p2", "a", "b", _base)
+_pc_on_amd64_for_amd64 = BuildInfo(
+    platform="pc", build_on="amd64", build_for="amd64", base=_base
+)
+_pc_on_amd64_for_i386 = BuildInfo(
+    platform="legacy-pc", build_on="amd64", build_for="i386", base=_base
+)
+_amd64_on_amd64_for_amd64 = BuildInfo(
+    platform="amd64", build_on="amd64", build_for="amd64", base=_base
+)
+_i386_on_amd64_for_i386 = BuildInfo(
+    platform="i386", build_on="amd64", build_for="i386", base=_base
+)
+_i386_on_i386_for_i386 = BuildInfo(
+    platform="i386", build_on="i386", build_for="i386", base=_base
+)
 
 
 @pytest.mark.parametrize(
-    ("plan", "platform", "build_for", "host_arch", "result"),
+    ("_id", "plan", "platform", "build_for", "host_arch", "result"),
     [
-        ([_on_a_for_a], None, None, "a", [_on_a_for_a]),
-        ([_on_a_for_a], "p1", None, "a", [_on_a_for_a]),
-        ([_on_a_for_a], "p2", None, "a", []),
-        ([_on_a_for_a], None, "a", "a", [_on_a_for_a]),
-        ([_on_a_for_a], "p1", "a", "a", [_on_a_for_a]),
-        ([_on_a_for_a], "p2", "a", "a", []),
-        ([_on_a_for_a], None, "b", "a", []),
-        ([_on_a_for_a], None, "a", "b", []),
-        ([_on_a_for_a, _on_a_for_b], None, "b", "a", [_on_a_for_b]),
-        ([_on_a_for_a, _on_a_for_b], "p1", "b", "a", []),
-        ([_on_a_for_a, _on_a_for_b], "p2", "b", "a", [_on_a_for_b]),
-        ([_on_a_for_a, _on_a_for_b], None, "b", "b", []),
-        ([_on_a_for_a, _on_a_for_b], None, None, "b", []),
-        ([_on_a_for_a, _on_a_for_b], "p2", None, "b", []),
-        ([_on_a_for_a, _on_a_for_b], None, None, "a", [_on_a_for_a, _on_a_for_b]),
-        ([_on_a_for_a, _on_a_for_b], "p2", None, "a", [_on_a_for_b]),
+        (0, [_pc_on_amd64_for_amd64], None, None, "amd64", [_pc_on_amd64_for_amd64]),
+        (1, [_pc_on_amd64_for_amd64], "pc", None, "amd64", [_pc_on_amd64_for_amd64]),
+        (2, [_pc_on_amd64_for_amd64], "legacy-pc", None, "amd64", []),
+        (3, [_pc_on_amd64_for_amd64], None, "amd64", "amd64", [_pc_on_amd64_for_amd64]),
+        (4, [_pc_on_amd64_for_amd64], "pc", "amd64", "amd64", [_pc_on_amd64_for_amd64]),
+        (5, [_pc_on_amd64_for_amd64], "legacy-pc", "amd64", "amd64", []),
+        (6, [_pc_on_amd64_for_amd64], None, "i386", "amd64", []),
+        (7, [_pc_on_amd64_for_amd64], None, "amd64", "i386", []),
+        (
+            8,
+            [_pc_on_amd64_for_amd64, _pc_on_amd64_for_i386],
+            None,
+            "i386",
+            "amd64",
+            [_pc_on_amd64_for_i386],
+        ),
+        (
+            9,
+            [_pc_on_amd64_for_amd64, _pc_on_amd64_for_i386],
+            "pc",
+            "amd64",
+            "i386",
+            [],
+        ),
+        (
+            10,
+            [_pc_on_amd64_for_amd64, _pc_on_amd64_for_i386],
+            "legacy-pc",
+            "i386",
+            "amd64",
+            [_pc_on_amd64_for_i386],
+        ),
+        (11, [_pc_on_amd64_for_amd64, _pc_on_amd64_for_i386], None, "i386", "i386", []),
+        (12, [_pc_on_amd64_for_amd64, _pc_on_amd64_for_i386], None, None, "i386", []),
+        (
+            13,
+            [_pc_on_amd64_for_amd64, _pc_on_amd64_for_i386],
+            "legacy-pc",
+            None,
+            "i386",
+            [],
+        ),
+        (
+            14,
+            [_pc_on_amd64_for_amd64, _pc_on_amd64_for_i386],
+            None,
+            None,
+            "amd64",
+            [_pc_on_amd64_for_amd64, _pc_on_amd64_for_i386],
+        ),
+        (
+            15,
+            [_pc_on_amd64_for_amd64, _pc_on_amd64_for_i386],
+            "legacy-pc",
+            None,
+            "amd64",
+            [_pc_on_amd64_for_i386],
+        ),
+        (
+            16,
+            [_pc_on_amd64_for_amd64, _amd64_on_amd64_for_amd64],
+            None,
+            "amd64",
+            "amd64",
+            [_amd64_on_amd64_for_amd64],
+        ),
+        (
+            17,
+            [_pc_on_amd64_for_amd64, _amd64_on_amd64_for_amd64],
+            "amd64",
+            None,
+            "amd64",
+            [_amd64_on_amd64_for_amd64],
+        ),
+        (
+            18,
+            [_pc_on_amd64_for_amd64, _amd64_on_amd64_for_amd64],
+            "amd64",
+            "amd64",
+            "amd64",
+            [_amd64_on_amd64_for_amd64],
+        ),
+        (
+            19,
+            [_pc_on_amd64_for_amd64, _i386_on_amd64_for_i386],
+            None,
+            "i386",
+            "amd64",
+            [_i386_on_amd64_for_i386],
+        ),
+        (
+            20,
+            [_pc_on_amd64_for_amd64, _i386_on_amd64_for_i386],
+            "amd64",
+            None,
+            "amd64",
+            [],
+        ),
+        (
+            21,
+            [
+                _pc_on_amd64_for_amd64,
+                _amd64_on_amd64_for_amd64,
+                _i386_on_amd64_for_i386,
+            ],
+            None,
+            "amd64",
+            "amd64",
+            [_amd64_on_amd64_for_amd64],
+        ),
+        (
+            22,
+            [_pc_on_amd64_for_amd64, _i386_on_amd64_for_i386],
+            "i386",
+            "i386",
+            "amd64",
+            [_i386_on_amd64_for_i386],
+        ),
+        (
+            23,
+            [
+                _pc_on_amd64_for_amd64,
+                _amd64_on_amd64_for_amd64,
+                _i386_on_amd64_for_i386,
+            ],
+            None,
+            "i386",
+            "amd64",
+            [_i386_on_amd64_for_i386],
+        ),
+        (
+            24,
+            [_pc_on_amd64_for_amd64, _amd64_on_amd64_for_amd64],
+            None,
+            "i386",
+            "amd64",
+            [],
+        ),
+        (
+            25,
+            [_pc_on_amd64_for_amd64, _i386_on_amd64_for_i386, _i386_on_i386_for_i386],
+            "amd64",
+            None,
+            "amd64",
+            [],
+        ),
+        (
+            26,
+            [_pc_on_amd64_for_amd64, _i386_on_amd64_for_i386, _i386_on_i386_for_i386],
+            "amd64",
+            None,
+            "i386",
+            [],
+        ),
+        (
+            27,
+            [_pc_on_amd64_for_amd64, _i386_on_amd64_for_i386, _i386_on_i386_for_i386],
+            "i386",
+            None,
+            "amd64",
+            [_i386_on_amd64_for_i386],
+        ),
+        (
+            28,
+            [_pc_on_amd64_for_amd64, _i386_on_amd64_for_i386, _i386_on_i386_for_i386],
+            "i386",
+            None,
+            "i386",
+            [_i386_on_i386_for_i386],
+        ),
+        (
+            29,
+            [_pc_on_amd64_for_amd64, _i386_on_amd64_for_i386, _i386_on_i386_for_i386],
+            None,
+            "i386",
+            "i386",
+            [_i386_on_i386_for_i386],
+        ),
+        (
+            30,
+            [_pc_on_amd64_for_amd64, _i386_on_amd64_for_i386, _i386_on_i386_for_i386],
+            "i386",
+            None,
+            None,
+            [_i386_on_amd64_for_i386, _i386_on_i386_for_i386],
+        ),
     ],
 )
+@pytest.mark.usefixtures("_id")
 def test_filter_plan(mocker, plan, platform, build_for, host_arch, result):
     mocker.patch("craft_application.util.get_host_architecture", return_value=host_arch)
-    assert application._filter_plan(plan, platform, build_for) == result
+    assert application._filter_plan(plan, platform, build_for, host_arch) == result
 
 
 @pytest.fixture()
