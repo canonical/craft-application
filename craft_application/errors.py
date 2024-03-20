@@ -126,7 +126,7 @@ class EmptyBuildPlanError(CraftError):
 
     def __init__(self) -> None:
         message = "No build matches the current platform."
-        resolution = 'Check the "--platform" parameter.'
+        resolution = 'Check the "--platform" and "--build-for" parameters.'
 
         super().__init__(message=message, resolution=resolution)
 
@@ -136,7 +136,7 @@ class MultipleBuildsError(CraftError):
 
     def __init__(self) -> None:
         message = "Multiple builds match the current platform."
-        resolution = 'Check the "--platform" parameter.'
+        resolution = 'Check the "--platform" and "--bulld-for" parameters.'
 
         super().__init__(message=message, resolution=resolution)
 
