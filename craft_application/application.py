@@ -554,7 +554,20 @@ class Application:
             self._render_secrets(yaml_data)
 
         # Expand grammar.
-        if build_for and "parts" in yaml_data:
+        if "parts" in yaml_data:
+            if not build_for:
+                # At the moment there is no perfect solution for what do to do
+                # resolve the grammar if there's no explicitly-provided target
+                # arch. However, we must resolve it with *something* otherwise
+                # we might have an invalid parts definition full of grammar
+                # declarations.
+                if self._build_plan:
+                    # If we have a build plan use one of its items, because
+                    # it's likely contemplated on the grammar.
+                    build_for = self._build_plan[0].build_for
+                else:
+                    # As a last resort, default to the same arch as the host.
+                    build_for = build_on
             craft_cli.emit.debug(f"Processing grammar (on {build_on} for {build_for})")
             yaml_data["parts"] = grammar.process_parts(
                 parts_yaml_data=yaml_data["parts"],

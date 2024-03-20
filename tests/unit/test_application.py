@@ -34,7 +34,15 @@ import craft_parts
 import craft_providers
 import pytest
 import pytest_check
-from craft_application import application, commands, errors, secrets, services, util
+from craft_application import (
+    application,
+    commands,
+    errors,
+    models,
+    secrets,
+    services,
+    util,
+)
 from craft_application.models import BuildInfo
 from craft_application.util import (
     get_host_architecture,  # pyright: ignore[reportGeneralTypeIssues]
@@ -42,6 +50,8 @@ from craft_application.util import (
 from craft_parts.plugins.plugins import PluginType
 from craft_providers import bases
 from overrides import override
+
+from tests.conftest import MyBuildPlanner
 
 EMPTY_COMMAND_GROUP = craft_cli.CommandGroup("FakeCommands", [])
 BASIC_PROJECT_YAML = """
@@ -1060,3 +1070,81 @@ def test_mandatory_adoptable_fields(tmp_path, app_metadata, fake_services):
         str(exc_info.value)
         == "Required field 'license' is not set and 'adopt-info' not used."
     )
+
+
+@pytest.fixture()
+def grammar_project(tmp_path):
+    """A project that builds on amd64 to riscv64 and s390x."""
+    contents = dedent(
+        """\
+    name: myproject
+    version: 1.0
+    parts:
+      mypart:
+        plugin: nil
+        source:
+        - on amd64 to riscv64: on-amd64-to-riscv64
+        - on amd64 to s390x: on-amd64-to-s390x
+    """
+    )
+    project_file = tmp_path / "testcraft.yaml"
+    project_file.write_text(contents)
+
+
+@pytest.fixture()
+def grammar_build_plan(mocker):
+    """A build plan to build on amd64 to riscv64 and s390x."""
+    host_arch = "amd64"
+    base = util.get_host_base()
+    build_plan = []
+    for build_for in ("riscv64", "s390x"):
+        build_plan.append(
+            models.BuildInfo(
+                f"platform-{build_for}",
+                host_arch,
+                build_for,
+                base,
+            )
+        )
+
+    mocker.patch.object(MyBuildPlanner, "get_build_plan", return_value=build_plan)
+
+
+@pytest.fixture()
+def grammar_app(
+    tmp_path,
+    grammar_project,  # noqa: ARG001
+    grammar_build_plan,  # noqa: ARG001
+    app_metadata,
+    fake_services,
+):
+    app = application.Application(app_metadata, fake_services)
+    app.project_dir = tmp_path
+
+    return app
+
+
+def test_process_grammar_build_for(grammar_app):
+    """Test that a provided build-for is used to process the grammar."""
+    project = grammar_app.get_project(build_for="s390x")
+    assert project.parts["mypart"]["source"] == "on-amd64-to-s390x"
+
+
+def test_process_grammar_platform(grammar_app):
+    """Test that a provided platform is used to process the grammar."""
+    project = grammar_app.get_project(platform="platform-riscv64")
+    assert project.parts["mypart"]["source"] == "on-amd64-to-riscv64"
+
+
+def test_process_grammar_default(grammar_app):
+    """Test that if nothing is provided the first BuildInfo is used by the grammar."""
+    project = grammar_app.get_project()
+    assert project.parts["mypart"]["source"] == "on-amd64-to-riscv64"
+
+
+def test_process_grammar_no_match(grammar_app, mocker):
+    """Test that if the build plan is empty, the grammar uses the host as target arch."""
+    mocker.patch("craft_application.util.get_host_architecture", return_value="i386")
+    project = grammar_app.get_project()
+    # "source" is empty because "i386" doesn't match any of the grammar statements.
+    assert project.parts["mypart"]["source"] is None
