@@ -384,8 +384,8 @@ class Application:
                 global_args = dispatcher.pre_parse_args(sys.argv[1:])
 
             if global_args.get("version"):
+                craft_cli.emit.message(f"{self.app.name} {self.app.version}")
                 craft_cli.emit.ended_ok()
-                print(f"{self.app.name} {self.app.version}")
                 sys.exit(0)
         except craft_cli.ProvideHelpException as err:
             print(err, file=sys.stderr)  # to stderr, as argparse normally does
