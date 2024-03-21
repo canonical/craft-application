@@ -259,6 +259,9 @@ class Application:
 
         try:
             project_path = self._resolve_project_path(self.project_dir)
+        except errors.ProjectFileMissingError:
+            # pass through the ProjectFileMissingError in case it got overridden
+            raise
         except FileNotFoundError as err:
             raise errors.ProjectFileMissingError(
                 f"Project file '{self.app.name}.yaml' not found in '{self.project_dir}'.",

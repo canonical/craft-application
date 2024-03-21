@@ -426,6 +426,25 @@ def test_fails_without_project(
     assert "Project file 'testcraft.yaml' not found in" in capsys.readouterr().err
 
 
+def test_fails_without_project_error_override(
+    mocker, monkeypatch, capsys, tmp_path, app_metadata, fake_services
+):
+    monkeypatch.setattr(sys, "argv", ["testcraft", "prime"])
+
+    app = FakeApplication(app_metadata, fake_services)
+    app.project_dir = tmp_path
+    mocker.patch(
+        "craft_application.application.Application._resolve_project_path",
+        side_effect=errors.ProjectFileMissingError("testcraft2.yaml", retcode=67),
+    )
+
+    fake_services.project = None
+
+    assert app.run() == 67  # noqa: PLR2004
+
+    assert "testcraft2.yaml" in capsys.readouterr().err
+
+
 @pytest.mark.parametrize(
     "argv",
     [["testcraft", "--version"], ["testcraft", "-V"], ["testcraft", "pull", "-V"]],
