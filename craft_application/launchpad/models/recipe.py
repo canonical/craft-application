@@ -34,6 +34,7 @@ from collections.abc import Collection, Iterable
 from typing import TYPE_CHECKING
 
 import lazr.restfulclient.errors  # type: ignore[import-untyped]
+from craft_cli import emit
 from typing_extensions import Any, Self, TypedDict, override
 
 from .. import errors, util
@@ -249,6 +250,9 @@ class SnapRecipe(_StoreRecipe):
         snap_entry = None
 
         for attempt in range(_ATTEMPT_COUNT):
+            emit.debug(
+                f"Trying to create snap recipe {name!r} (attempt {attempt + 1}/{_ATTEMPT_COUNT})"
+            )
             try:
                 snap_entry = lp.lp.snaps.new(
                     name=name,
@@ -257,7 +261,8 @@ class SnapRecipe(_StoreRecipe):
                     auto_build=auto_build,
                     **kwargs,
                 )
-            except lazr.restfulclient.errors.BadRequest:
+            except lazr.restfulclient.errors.BadRequest as err:
+                emit.debug(str(err))
                 if attempt >= _ATTEMPT_COUNT - 1:
                     raise
                 time.sleep(3)
@@ -389,6 +394,9 @@ class CharmRecipe(_StoreRecipe):
         charm_entry = None
 
         for attempt in range(_ATTEMPT_COUNT):
+            emit.debug(
+                f"Trying to create charm recipe {name!r} (attempt {attempt + 1}/{_ATTEMPT_COUNT})"
+            )
             try:
                 charm_entry = lp.lp.charm_recipes.new(
                     name=name,
@@ -397,7 +405,8 @@ class CharmRecipe(_StoreRecipe):
                     auto_build=auto_build,
                     **kwargs,
                 )
-            except lazr.restfulclient.errors.BadRequest:
+            except lazr.restfulclient.errors.BadRequest as err:
+                emit.debug(str(err))
                 if attempt >= _ATTEMPT_COUNT - 1:
                     raise
                 time.sleep(3)
