@@ -824,7 +824,7 @@ _i386_on_i386_for_i386 = BuildInfo(
 @pytest.mark.usefixtures("_id")
 def test_filter_plan(mocker, plan, platform, build_for, host_arch, result):
     mocker.patch("craft_application.util.get_host_architecture", return_value=host_arch)
-    assert application._filter_plan(plan, platform, build_for, host_arch) == result
+    assert application.filter_plan(plan, platform, build_for, host_arch) == result
 
 
 @pytest.fixture()

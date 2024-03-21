@@ -274,7 +274,7 @@ class Application:
         host_arch = util.get_host_architecture()
         build_planner = self.app.BuildPlannerClass.unmarshal(yaml_data)
         self._full_build_plan = build_planner.get_build_plan()
-        self._build_plan = _filter_plan(
+        self._build_plan = filter_plan(
             self._full_build_plan, platform, build_for, host_arch
         )
 
@@ -661,7 +661,7 @@ class Application:
         )
 
 
-def _filter_plan(
+def filter_plan(
     build_plan: list[BuildInfo],
     platform: str | None,
     build_for: str | None,
