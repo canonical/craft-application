@@ -421,23 +421,22 @@ def test_fails_without_project(
 
     fake_services.project = None
 
-    assert app.run() == 70  # noqa: PLR2004
+    assert app.run() == 66  # noqa: PLR2004
 
-    assert "No such file or directory" in capsys.readouterr().err
+    assert "Project file 'testcraft.yaml' not found in" in capsys.readouterr().err
 
 
 @pytest.mark.parametrize(
     "argv",
     [["testcraft", "--version"], ["testcraft", "-V"], ["testcraft", "pull", "-V"]],
 )
-def test_run_outputs_version(monkeypatch, capsys, app, argv):
+def test_run_outputs_version(monkeypatch, emitter, app, argv):
     monkeypatch.setattr(sys, "argv", argv)
 
     with pytest.raises(SystemExit):
         app._get_dispatcher()
 
-    out, _ = capsys.readouterr()
-    assert out == "testcraft 3.14159\n"
+    emitter.assert_message("testcraft 3.14159")
 
 
 def test_show_app_name_and_version(monkeypatch, capsys, app):
@@ -824,7 +823,7 @@ _i386_on_i386_for_i386 = BuildInfo(
 @pytest.mark.usefixtures("_id")
 def test_filter_plan(mocker, plan, platform, build_for, host_arch, result):
     mocker.patch("craft_application.util.get_host_architecture", return_value=host_arch)
-    assert application._filter_plan(plan, platform, build_for, host_arch) == result
+    assert application.filter_plan(plan, platform, build_for, host_arch) == result
 
 
 @pytest.fixture()

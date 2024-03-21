@@ -236,6 +236,7 @@ class Application:
         """
         if project_dir is None:
             project_dir = self.project_dir
+
         return (project_dir / f"{self.app.name}.yaml").resolve(strict=True)
 
     def get_project(
@@ -256,7 +257,15 @@ class Application:
         if self.__project is not None:
             return self.__project
 
-        project_path = self._resolve_project_path(self.project_dir)
+        try:
+            project_path = self._resolve_project_path(self.project_dir)
+        except FileNotFoundError as err:
+            raise errors.ProjectFileMissingError(
+                f"Project file '{self.app.name}.yaml' not found in '{self.project_dir}'.",
+                details="The project file could not be found.",
+                resolution="Ensure the project file exists.",
+                retcode=66,  # EX_NOINPUT from sysexits.h
+            ) from err
         craft_cli.emit.debug(f"Loading project file '{project_path!s}'")
 
         with project_path.open() as file:
@@ -265,7 +274,7 @@ class Application:
         host_arch = util.get_host_architecture()
         build_planner = self.app.BuildPlannerClass.unmarshal(yaml_data)
         self._full_build_plan = build_planner.get_build_plan()
-        self._build_plan = _filter_plan(
+        self._build_plan = filter_plan(
             self._full_build_plan, platform, build_for, host_arch
         )
 
@@ -355,12 +364,7 @@ class Application:
 
         :returns: A ready-to-run Dispatcher object
         """
-        dispatcher = craft_cli.Dispatcher(
-            self.app.name,
-            self.command_groups,
-            summary=str(self.app.summary),
-            extra_global_args=self._global_arguments,
-        )
+        dispatcher = self._create_dispatcher()
 
         try:
             craft_cli.emit.trace("pre-parsing arguments...")
@@ -375,8 +379,8 @@ class Application:
                 global_args = dispatcher.pre_parse_args(sys.argv[1:])
 
             if global_args.get("version"):
+                craft_cli.emit.message(f"{self.app.name} {self.app.version}")
                 craft_cli.emit.ended_ok()
-                print(f"{self.app.name} {self.app.version}")
                 sys.exit(0)
         except craft_cli.ProvideHelpException as err:
             print(err, file=sys.stderr)  # to stderr, as argparse normally does
@@ -403,6 +407,19 @@ class Application:
         self.configure(global_args)
 
         return dispatcher
+
+    def _create_dispatcher(self) -> craft_cli.Dispatcher:
+        """Create the Dispatcher that will run the application's command.
+
+        Subclasses can override this if they need to create a Dispatcher with
+        different parameters.
+        """
+        return craft_cli.Dispatcher(
+            self.app.name,
+            self.command_groups,
+            summary=str(self.app.summary),
+            extra_global_args=self._global_arguments,
+        )
 
     def _get_app_plugins(self) -> dict[str, PluginType]:
         """Get the plugins for this application.
@@ -652,7 +669,7 @@ class Application:
         )
 
 
-def _filter_plan(
+def filter_plan(
     build_plan: list[BuildInfo],
     platform: str | None,
     build_for: str | None,
