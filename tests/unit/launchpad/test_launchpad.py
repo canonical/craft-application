@@ -22,9 +22,11 @@ from unittest import mock
 
 import launchpadlib.launchpad
 import launchpadlib.uris
+import lazr.restfulclient.errors
 import pytest
 from craft_application import launchpad
 from craft_application.launchpad import models
+from lazr.restfulclient.resource import Entry
 
 
 def flatten_enum(e: type[enum.Enum]) -> list:
@@ -180,6 +182,36 @@ def test_get_recipe_snap(fake_launchpad, type_, owner):
     )
 
 
+def test_recipe_snap_new_retry(emitter, mocker):
+    """Test that a SnapRecipe is retried when it fails to create."""
+    mocker.patch("time.sleep")
+    response = mocker.Mock(
+        status=400, reason="Bad Request", items=mocker.Mock(return_value=[])
+    )
+    mock_launchpad = mock.Mock()
+
+    mock_entry = mock.Mock(spec=Entry)
+    mock_entry.resource_type_link = "http://blah/#snap"
+    mock_entry.name = "test-snap"
+
+    mock_launchpad.lp.snaps.new = mock.Mock(
+        side_effect=[
+            lazr.restfulclient.errors.BadRequest(response=response, content=""),
+            mock_entry,
+        ]
+    )
+
+    recipe = launchpad.models.SnapRecipe.new(
+        mock_launchpad, "my_recipe", "test_user", git_ref="my_ref"
+    )
+
+    assert isinstance(recipe, models.SnapRecipe)
+    assert mock_launchpad.lp.snaps.new.call_count == 2  # noqa: PLR2004
+
+    emitter.assert_debug("Trying to create snap recipe 'my_recipe' (attempt 1/4)")
+    emitter.assert_debug("Trying to create snap recipe 'my_recipe' (attempt 2/4)")
+
+
 @pytest.mark.parametrize("type_", ["charm", "Charm", models.RecipeType.CHARM])
 def test_get_recipe_charm(fake_launchpad, type_):
     with mock.patch("craft_application.launchpad.models.CharmRecipe.get") as mock_get:
@@ -198,6 +230,36 @@ def test_get_recipe_charm_has_project(fake_launchpad):
         ValueError, match="A charm recipe must be associated with a project."
     ):
         fake_launchpad.get_recipe(models.RecipeType.CHARM, "my_recipe")
+
+
+def test_recipe_charm_new_retry(emitter, mocker):
+    """Test that a CharmRecipe is retried when it fails to create."""
+    mocker.patch("time.sleep")
+    response = mocker.Mock(
+        status=400, reason="Bad Request", items=mocker.Mock(return_value=[])
+    )
+
+    mock_entry = mock.Mock(spec=Entry)
+    mock_entry.resource_type_link = "http://whatever/#charm_recipe"
+    mock_entry.name = "test-charm"
+
+    mock_launchpad = mock.Mock()
+    mock_launchpad.lp.charm_recipes.new = mock.Mock(
+        side_effect=[
+            lazr.restfulclient.errors.BadRequest(response=response, content=""),
+            mock_entry,
+        ]
+    )
+
+    recipe = launchpad.models.CharmRecipe.new(
+        mock_launchpad, "my_recipe", "test_user", "test_project", git_ref="my_ref"
+    )
+
+    assert isinstance(recipe, models.CharmRecipe)
+    assert mock_launchpad.lp.charm_recipes.new.call_count == 2  # noqa: PLR2004
+
+    emitter.assert_debug("Trying to create charm recipe 'my_recipe' (attempt 1/4)")
+    emitter.assert_debug("Trying to create charm recipe 'my_recipe' (attempt 2/4)")
 
 
 @pytest.mark.parametrize(
