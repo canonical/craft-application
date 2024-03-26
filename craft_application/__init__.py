@@ -32,7 +32,7 @@ except ImportError:  # pragma: no cover
     from importlib.metadata import version, PackageNotFoundError
 
     try:
-        __version__ = version("craft-archives")
+        __version__ = version("craft-application")
     except PackageNotFoundError:
         __version__ = "dev"
 
