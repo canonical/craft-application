@@ -237,11 +237,12 @@ def test_log_path(monkeypatch, app, provider_managed, expected):
     assert actual == expected
 
 
-def test_run_managed_success(app, fake_project, fake_build_plan):
+def test_run_managed_success(mocker, app, fake_project, fake_build_plan):
     mock_provider = mock.MagicMock(spec_set=services.ProviderService)
     app.services.provider = mock_provider
     app.project = fake_project
     app._build_plan = fake_build_plan
+    mock_pause = mocker.spy(craft_cli.emit, "pause")
     arch = get_host_architecture()
 
     app.run_managed(None, arch)
@@ -253,6 +254,7 @@ def test_run_managed_success(app, fake_project, fake_build_plan):
         )
         in mock_provider.instance.mock_calls
     )
+    mock_pause.assert_called_once()
 
 
 def test_run_managed_failure(app, fake_project, fake_build_plan):
