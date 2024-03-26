@@ -344,14 +344,19 @@ class Application:
             with self.services.provider.instance(
                 build_info, work_dir=self._work_dir
             ) as instance:
+                cmd = [self.app.name, *sys.argv[1:]]
+                craft_cli.emit.debug(
+                    f"Executing {cmd} in instance location {instance_path} with {extra_args}."
+                )
                 try:
-                    # Pyright doesn't fully understand craft_providers's CompletedProcess.
-                    instance.execute_run(  # pyright: ignore[reportUnknownMemberType,reportUnknownVariableType]
-                        [self.app.name, *sys.argv[1:]],
-                        cwd=instance_path,
-                        check=True,
-                        **extra_args,
-                    )
+                    with craft_cli.emit.pause():
+                        # Pyright doesn't fully understand craft_providers's CompletedProcess.
+                        instance.execute_run(  # pyright: ignore[reportUnknownMemberType,reportUnknownVariableType]
+                            cmd,
+                            cwd=instance_path,
+                            check=True,
+                            **extra_args,
+                        )
                 except subprocess.CalledProcessError as exc:
                     raise craft_providers.ProviderError(
                         f"Failed to execute {self.app.name} in instance."
