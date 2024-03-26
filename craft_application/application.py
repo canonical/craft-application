@@ -323,7 +323,10 @@ class Application:
             if build_for and build_for != build_info.build_for:
                 continue
 
-            env = {"CRAFT_PLATFORM": build_info.platform}
+            env = {
+                "CRAFT_PLATFORM": build_info.platform,
+                "CRAFT_VERBOSITY_LEVEL": craft_cli.emit.get_mode().name,
+            }
 
             if self.app.features.build_secrets:
                 # If using build secrets, put them in the environment of the managed
