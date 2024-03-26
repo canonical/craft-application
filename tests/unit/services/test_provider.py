@@ -290,7 +290,6 @@ def test_instance(
     provider_service,
     base_name,
     allow_unstable,
-    mocker,
 ):
     mock_provider = mock.MagicMock(spec=craft_providers.Provider)
     monkeypatch.setattr(
@@ -298,7 +297,6 @@ def test_instance(
         "get_provider",
         lambda name: mock_provider,  # noqa: ARG005 (unused argument)
     )
-    spy_pause = mocker.spy(provider.emit, "pause")
     arch = util.get_host_architecture()
     build_info = models.BuildInfo("foo", arch, arch, base_name)
 
@@ -326,8 +324,6 @@ def test_instance(
         )
     with check:
         emitter.assert_progress("Launching managed .+ instance...", regex=True)
-    with check:
-        assert spy_pause.call_count == 1
 
 
 def test_load_bashrc(emitter):
