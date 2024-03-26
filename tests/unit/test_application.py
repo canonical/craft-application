@@ -450,6 +450,41 @@ def test_show_app_name_and_version(monkeypatch, capsys, app):
     assert f"Starting testcraft, version {app.app.version}" in err
 
 
+@pytest.mark.parametrize("verbosity", list(craft_cli.EmitterMode))
+@pytest.mark.parametrize(
+    "env_name", ["CRAFT_VERBOSITY_LEVEL", "TESTCRAFT_VERBOSITY_LEVEL"]
+)
+def test_set_verbosity_from_env(monkeypatch, capsys, app, verbosity, env_name):
+    """Test that the emitter verbosity is set from the environment."""
+    monkeypatch.setattr(sys, "argv", ["testcraft"])
+    monkeypatch.setenv(env_name, verbosity.name)
+
+    with pytest.raises(SystemExit):
+        app.run()
+
+    _, err = capsys.readouterr()
+    assert "testcraft [help]" in err
+    assert craft_cli.emit._mode == verbosity
+
+
+@pytest.mark.parametrize(
+    "env_name", ["CRAFT_VERBOSITY_LEVEL", "TESTCRAFT_VERBOSITY_LEVEL"]
+)
+def test_set_verbosity_from_env_incorrect(monkeypatch, capsys, app, env_name):
+    """Test that the emitter verbosity is using the default level when invalid."""
+    monkeypatch.setattr(sys, "argv", ["testcraft"])
+    monkeypatch.setenv(env_name, "incorrect")
+
+    with pytest.raises(SystemExit):
+        app.run()
+
+    _, err = capsys.readouterr()
+    assert "testcraft [help]" in err
+    assert "Invalid verbosity level 'incorrect'" in err
+    assert "Valid levels are: QUIET, BRIEF, VERBOSE, DEBUG, TRACE" in err
+    assert craft_cli.emit._mode == craft_cli.EmitterMode.BRIEF
+
+
 def test_pre_run_project_dir_managed(app):
     app.is_managed = lambda: True
     dispatcher = mock.Mock(spec_set=craft_cli.Dispatcher)

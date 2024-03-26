@@ -658,15 +658,37 @@ class Application:
         # Set the logging level to DEBUG for all craft-libraries. This is OK even if
         # the specific application doesn't use a specific library, the call does not
         # import the package.
+        emitter_mode: craft_cli.EmitterMode = craft_cli.EmitterMode.BRIEF
+        invaild_emitter_level = False
         util.setup_loggers(*self._cli_loggers)
 
+        # environment variable takes precedence over the default
+        emitter_verbosity_level_env = os.environ.get(
+            f"{self.app.name.upper()}_VERBOSITY_LEVEL", None
+        ) or os.environ.get("CRAFT_VERBOSITY_LEVEL", None)
+
+        if emitter_verbosity_level_env:
+            try:
+                emitter_mode = craft_cli.EmitterMode[
+                    emitter_verbosity_level_env.strip().upper()
+                ]
+            except KeyError:
+                invaild_emitter_level = True
+
         craft_cli.emit.init(
-            mode=craft_cli.EmitterMode.BRIEF,
+            mode=emitter_mode,
             appname=self.app.name,
             greeting=f"Starting {self.app.name}, version {self.app.version}",
             log_filepath=self.log_path,
             streaming_brief=True,
         )
+
+        if invaild_emitter_level:
+            craft_cli.emit.progress(
+                f"Invalid verbosity level '{emitter_verbosity_level_env}', using default 'BRIEF'.\n"
+                f"Valid levels are: {', '.join(emitter.name for emitter in craft_cli.EmitterMode)}",
+                permanent=True,
+            )
 
 
 def filter_plan(
