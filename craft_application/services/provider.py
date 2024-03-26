@@ -133,8 +133,7 @@ class ProviderService(base.ProjectService):
             emit.debug("Instance launched and working directory mounted")
             self._setup_instance_bashrc(instance)
             try:
-                with emit.pause():
-                    yield instance
+                yield instance
             finally:
                 self._capture_logs_from_instance(instance)
 
