@@ -323,7 +323,10 @@ class Application:
             if build_for and build_for != build_info.build_for:
                 continue
 
-            env = {"CRAFT_PLATFORM": build_info.platform}
+            env = {
+                "CRAFT_PLATFORM": build_info.platform,
+                "CRAFT_VERBOSITY_LEVEL": craft_cli.emit.get_mode().name,
+            }
 
             if self.app.features.build_secrets:
                 # If using build secrets, put them in the environment of the managed
@@ -658,15 +661,37 @@ class Application:
         # Set the logging level to DEBUG for all craft-libraries. This is OK even if
         # the specific application doesn't use a specific library, the call does not
         # import the package.
+        emitter_mode: craft_cli.EmitterMode = craft_cli.EmitterMode.BRIEF
+        invalid_emitter_level = False
         util.setup_loggers(*self._cli_loggers)
 
+        # environment variable takes precedence over the default
+        emitter_verbosity_level_env = os.environ.get("CRAFT_VERBOSITY_LEVEL", None)
+
+        if emitter_verbosity_level_env:
+            try:
+                emitter_mode = craft_cli.EmitterMode[
+                    emitter_verbosity_level_env.strip().upper()
+                ]
+            except KeyError:
+                invalid_emitter_level = True
+
         craft_cli.emit.init(
-            mode=craft_cli.EmitterMode.BRIEF,
+            mode=emitter_mode,
             appname=self.app.name,
             greeting=f"Starting {self.app.name}, version {self.app.version}",
             log_filepath=self.log_path,
             streaming_brief=True,
         )
+
+        craft_cli.emit.debug(f"Log verbosity level set to {emitter_mode.name}")
+
+        if invalid_emitter_level:
+            craft_cli.emit.progress(
+                f"Invalid verbosity level '{emitter_verbosity_level_env}', using default 'BRIEF'.\n"
+                f"Valid levels are: {', '.join(emitter.name for emitter in craft_cli.EmitterMode)}",
+                permanent=True,
+            )
 
 
 def filter_plan(
