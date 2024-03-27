@@ -461,7 +461,7 @@ def test_set_verbosity_from_env(monkeypatch, capsys, app, verbosity):
 
     _, err = capsys.readouterr()
     assert "testcraft [help]" in err
-    assert craft_cli.emit.get_mode() == verbosity
+    assert craft_cli.emit._mode == verbosity
 
 
 def test_set_verbosity_from_env_incorrect(monkeypatch, capsys, app):
@@ -476,7 +476,7 @@ def test_set_verbosity_from_env_incorrect(monkeypatch, capsys, app):
     assert "testcraft [help]" in err
     assert "Invalid verbosity level 'incorrect'" in err
     assert "Valid levels are: QUIET, BRIEF, VERBOSE, DEBUG, TRACE" in err
-    assert craft_cli.emit.get_mode() == craft_cli.EmitterMode.BRIEF
+    assert craft_cli.emit._mode == craft_cli.EmitterMode.BRIEF
 
 
 def test_pre_run_project_dir_managed(app):
