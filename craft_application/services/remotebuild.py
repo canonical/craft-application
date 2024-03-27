@@ -70,16 +70,27 @@ class RemoteBuildService(base.AppService):
 
     # region Public API
     # Commands will call a subset of these methods, generally in order.
-    def set_project_name(self, name: str) -> None:
+    def set_project(self, name: str) -> None:
         """Set the name of the project to use."""
         if self._is_setup:
             raise RuntimeError("Project name may only be set before starting or resuming builds.")
         self._project_name = name
+        try:
+            self._lp_project = self.lp.get_project(self._project_name)
+        except launchpad.errors.NotFoundError:
+            raise errors.CraftError(
+                message=f"Could not find project on Launchpad: {self._project_name}",
+                resolution="Ensure the project exists and that you have access to it.",
+                retcode=77,  # EX_NOPERM from sysexits.h
+                reportable=False,
+                logpath_report=False,
+            )
 
-    def is_project_private(self, name: str) -> bool:
+    def is_project_private(self) -> bool:
         """Check whether the named project is private."""
-        project = self.lp.get_project(name=name)
-        return project.information_type not in (
+        if not self._lp_project:
+            raise RuntimeError("Cannot check if the project is private before setting its name.")
+        return self._lp_project.information_type not in (
             launchpad.models.InformationType.PUBLIC, launchpad.models.InformationType.PUBLIC_SECURITY,
         )
 
@@ -221,17 +232,8 @@ class RemoteBuildService(base.AppService):
 
     def _ensure_project(self) -> launchpad.models.Project:
         """Ensure that the user's remote build project exists."""
-        if self._project_name:
-            try:
-                return self.lp.get_project(self._project_name)
-            except launchpad.errors.NotFoundError:
-                raise errors.CraftError(
-                    message=f"Could not find project on Launchpad: {self._project_name}",
-                    resolution="Ensure the project exists and that you have access to it.",
-                    retcode=77,  # EX_NOPERM from sysexits.h
-                    reportable=False,
-                    logpath_report=False,
-                ) from None
+        if self._lp_project:
+            return self._lp_project
         try:
             return self.lp.get_project(f"{self.lp.username}-craft-remote-build")
         except launchpad.errors.NotFoundError:
