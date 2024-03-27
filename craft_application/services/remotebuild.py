@@ -62,6 +62,7 @@ class RemoteBuildService(base.AppService):
         self._repository: launchpad.models.GitRepository = None  # type: ignore[assignment]
         self._recipe: launchpad.models.recipe.BaseRecipe = None  # type: ignore[assignment]
         self._builds: Collection[launchpad.models.Build] = []
+        self._project_name: str | None = None
 
     def setup(self) -> None:
         """Set up the remote builder."""
@@ -69,6 +70,12 @@ class RemoteBuildService(base.AppService):
 
     # region Public API
     # Commands will call a subset of these methods, generally in order.
+    def set_project_name(self, name: str) -> None:
+        """Set the name of the project to use."""
+        if self._is_setup:
+            raise RuntimeError("Project name may only be set before starting or resuming builds.")
+        self._project_name = name
+
     def set_timeout(self, seconds_in_future: int) -> None:
         """Set the deadline to a certain number of seconds in the future."""
         self._deadline = time.monotonic_ns() + (seconds_in_future * 10**9)
@@ -207,17 +214,25 @@ class RemoteBuildService(base.AppService):
 
     def _ensure_project(self) -> launchpad.models.Project:
         """Ensure that the user's remote build project exists."""
+        if self._project_name:
+            try:
+                return self.lp.get_project(self._project_name)
+            except launchpad.errors.NotFoundError:
+                raise errors.CraftError(
+                    message=f"Could not find project on Launchpad: {self._project_name}",
+                    resolution="Ensure the project exists and that you have access to it.",
+                    retcode=77,  # EX_NOPERM from sysexits.h
+                    reportable=False,
+                    logpath_report=False,
+                ) from None
         try:
-            return launchpad.models.Project.get(
-                self.lp, f"{self.lp.username}-craft-remote-build"
-            )
+            return self.lp.get_project(f"{self.lp.username}-craft-remote-build")
         except launchpad.errors.NotFoundError:
-            return launchpad.models.Project.new(
-                self.lp,
-                f"*craft remote builds for {self.lp.username}",
-                f"{self.lp.username}-craft-remote-build",
-                f"{self.lp.username} remote builds",
-                f"Automatically-generated project for housing {self.lp.username}'s remote builds in snapcraft, charmcraft, etc.",
+            return self.lp.new_project(
+                name=f"{self.lp.username}-craft-remote-build",
+                title=f"*craft remote builds for {self.lp.username}",
+                display_name=f"{self.lp.username} remote builds",
+                summary=f"Automatically-generated project for housing {self.lp.username}'s remote builds in snapcraft, charmcraft, etc.",
             )
 
     def _new_repository(

@@ -21,7 +21,7 @@ from unittest import mock
 import lazr.restfulclient.errors
 import lazr.restfulclient.resource
 import pytest
-from craft_application import launchpad
+from craft_application import errors, launchpad, services
 from craft_application.remote import git
 
 from tests.unit.services.conftest import (
@@ -39,6 +39,32 @@ def mock_push_url(monkeypatch):
 @pytest.fixture()
 def mock_lp_project(fake_launchpad, mock_project_entry):
     return launchpad.models.Project(fake_launchpad, mock_project_entry)
+
+
+@pytest.mark.parametrize("name", ["some-project", "another-project"])
+def test_set_project_name_success(remote_build_service, mock_project_entry, name):
+    mock_project_entry.name = name
+    remote_build_service.lp.lp.projects = {name: mock_project_entry}
+
+    remote_build_service.set_project_name(name)
+    project = remote_build_service._ensure_project()
+
+    assert project.name == name
+
+
+@pytest.mark.parametrize("name", ["some-project", "another-project"])
+def test_set_project_name_error(remote_build_service, mock_project_entry, name):
+    mock_project_entry.name = name
+    remote_build_service.lp.lp.projects.__getitem__.side_effect = (
+        lazr.restfulclient.errors.NotFound("yo", "dawg")
+    )
+
+    remote_build_service.set_project_name(name)
+    with pytest.raises(errors.CraftError, match=f"Could not find project on Launchpad: {name}") as exc_info:
+        remote_build_service._ensure_project()
+
+    assert exc_info.value.resolution == "Ensure the project exists and that you have access to it."
+
 
 
 def test_ensure_project_existing(remote_build_service, mock_project_entry):
