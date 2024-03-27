@@ -662,7 +662,7 @@ class Application:
         # the specific application doesn't use a specific library, the call does not
         # import the package.
         emitter_mode: craft_cli.EmitterMode = craft_cli.EmitterMode.BRIEF
-        invaild_emitter_level = False
+        invalid_emitter_level = False
         util.setup_loggers(*self._cli_loggers)
 
         # environment variable takes precedence over the default
@@ -674,7 +674,7 @@ class Application:
                     emitter_verbosity_level_env.strip().upper()
                 ]
             except KeyError:
-                invaild_emitter_level = True
+                invalid_emitter_level = True
 
         craft_cli.emit.init(
             mode=emitter_mode,
@@ -686,7 +686,7 @@ class Application:
 
         craft_cli.emit.debug(f"Log verbosity level set to {emitter_mode.name}")
 
-        if invaild_emitter_level:
+        if invalid_emitter_level:
             craft_cli.emit.progress(
                 f"Invalid verbosity level '{emitter_verbosity_level_env}', using default 'BRIEF'.\n"
                 f"Valid levels are: {', '.join(emitter.name for emitter in craft_cli.EmitterMode)}",
