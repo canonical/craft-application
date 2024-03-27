@@ -37,7 +37,7 @@ import launchpadlib.errors  # type: ignore[import-untyped]
 from typing_extensions import Self, Any
 from typing import TYPE_CHECKING
 
-from ..models.base import LaunchpadObject
+from ..models.base import InformationType, LaunchpadObject
 from .. import errors
 
 if TYPE_CHECKING:
@@ -64,6 +64,7 @@ class Project(LaunchpadObject):
     display_name: str
     summary: str
     description: str
+    information_type: InformationType
 
     @classmethod
     def new(  # pyright: ignore[reportIncompatibleMethodOverride]

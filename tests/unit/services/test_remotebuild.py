@@ -26,6 +26,7 @@ from craft_application.remote import git
 
 from tests.unit.services.conftest import (
     get_mock_callable,
+    mock_project_entry,
 )
 
 
@@ -81,6 +82,26 @@ def test_ensure_project_new(remote_build_service):
     )
 
     remote_build_service._ensure_project()
+
+
+@pytest.mark.parametrize(
+    ("information_type", "expected"),
+    [
+        (launchpad.models.InformationType.PUBLIC, False),
+        (launchpad.models.InformationType.PUBLIC_SECURITY, False),
+        (launchpad.models.InformationType.PRIVATE, True),
+        (launchpad.models.InformationType.PRIVATE_SECURITY, True),
+        (launchpad.models.InformationType.PROPRIETARY, True),
+        (launchpad.models.InformationType.EMBARGOED, True),
+    ]
+)
+def test_is_project_private(remote_build_service, mock_project_entry, information_type, expected):
+    mock_project_entry.information_type = str(information_type.value)
+    remote_build_service.lp.lp.projects = {
+        "test-project": mock_project_entry
+    }
+
+    assert remote_build_service.is_project_private("test-project") == expected
 
 
 def test_new_repository(

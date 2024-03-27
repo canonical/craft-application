@@ -72,6 +72,18 @@ def features(request) -> dict[str, bool]:
     return features
 
 
+@pytest.fixture(scope="session")
+def default_app_metadata() -> craft_application.AppMetadata:
+    with pytest.MonkeyPatch.context() as m:
+        m.setattr(metadata, "version", lambda _: "3.14159")
+        return craft_application.AppMetadata(
+            "testcraft",
+            "A fake app for testing craft-application",
+            BuildPlannerClass=MyBuildPlanner,
+            source_ignore_patterns=["*.snap", "*.charm", "*.starcraft"],
+        )
+
+
 @pytest.fixture()
 def app_metadata(features) -> craft_application.AppMetadata:
     with pytest.MonkeyPatch.context() as m:

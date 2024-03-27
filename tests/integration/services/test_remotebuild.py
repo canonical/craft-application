@@ -20,12 +20,17 @@ import pytest
 from craft_application import errors, launchpad
 
 
-def test_use_public_project(anonymous_remote_build_service):
+@pytest.fixture(scope="module", params=["charmcraft", "coreutils", "dpkg", "sudo"])
+def public_project_name(request):
+    return request.param
+
+
+def test_use_public_project(anonymous_remote_build_service, public_project_name):
     """Test that we can get a real (public) project using an anonymous client."""
-    anonymous_remote_build_service.set_project_name("charmcraft")
+    anonymous_remote_build_service.set_project_name(public_project_name)
     project: launchpad.models.Project = anonymous_remote_build_service._ensure_project()
 
-    assert project.name == "charmcraft"
+    assert project.name == public_project_name
 
 
 def test_error_with_nonexistent_project(anonymous_remote_build_service):
@@ -36,3 +41,7 @@ def test_error_with_nonexistent_project(anonymous_remote_build_service):
     with pytest.raises(errors.CraftError, match="Could not find project on Launchpad"):
         anonymous_remote_build_service._ensure_project()
 
+
+def test_project_is_public(anonymous_remote_build_service, public_project_name):
+    """Test that the given project is public."""
+    assert not anonymous_remote_build_service.is_project_private(public_project_name)
