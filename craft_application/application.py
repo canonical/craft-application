@@ -684,6 +684,8 @@ class Application:
             streaming_brief=True,
         )
 
+        craft_cli.emit.debug(f"Log verbosity level set to {emitter_mode.name}")
+
         if invaild_emitter_level:
             craft_cli.emit.progress(
                 f"Invalid verbosity level '{emitter_verbosity_level_env}', using default 'BRIEF'.\n"
