@@ -132,13 +132,25 @@ def full_build_plan(mocker) -> list[models.BuildInfo]:
     return build_plan
 
 
+@pytest.fixture
+def enable_partitions() -> Iterator[craft_parts.Features]:
+    """Enable the partitions feature in craft_parts for the relevant test."""
+    enable_overlay = craft_parts.Features().enable_overlay
+
+    craft_parts.Features.reset()
+    yield craft_parts.Features(enable_overlay=enable_overlay, enable_partitions=True)
+    craft_parts.Features.reset()
+
+
 @pytest.fixture()
 def enable_overlay() -> Iterator[craft_parts.Features]:
     """Enable the overlay feature in craft_parts for the relevant test."""
     if not os.getenv("CI") and not shutil.which("fuse-overlayfs"):
         pytest.skip("fuse-overlayfs not installed, skipping overlay tests.")
+
+    enable_partitions = craft_parts.Features().enable_partitions
     craft_parts.Features.reset()
-    yield craft_parts.Features(enable_overlay=True)
+    yield craft_parts.Features(enable_overlay=True, enable_partitions=enable_partitions)
     craft_parts.Features.reset()
 
 

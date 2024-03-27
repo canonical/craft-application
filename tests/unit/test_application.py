@@ -1178,3 +1178,64 @@ def test_process_grammar_no_match(grammar_app, mocker):
     project = grammar_app.get_project()
     # "source" is empty because "i386" doesn't match any of the grammar statements.
     assert project.parts["mypart"]["source"] is None
+
+
+class FakePartitionsApplication(FakeApplication):
+    """A partition using FakeApplication."""
+
+    @override
+    def _setup_partitions(self, yaml_data) -> list[str]:
+        _ = yaml_data
+        return ["default", "mypartition"]
+
+
+@pytest.fixture()
+def environment_partitions_project(monkeypatch, tmp_path):
+    project_dir = tmp_path / "project"
+    project_dir.mkdir()
+    project_path = project_dir / "testcraft.yaml"
+    project_path.write_text(
+        dedent(
+            """
+        name: myproject
+        version: 1.2.3
+        parts:
+          mypart:
+            plugin: nil
+            source-tag: v$CRAFT_PROJECT_VERSION
+            override-stage: |
+              touch $CRAFT_STAGE/default
+              touch $CRAFT_MYPARTITION_STAGE/partition
+            override-prime: |
+              touch $CRAFT_PRIME/default
+              touch $CRAFT_MYPARTITION_PRIME/partition
+        """
+        )
+    )
+    monkeypatch.chdir(project_dir)
+
+    return project_path
+
+
+@pytest.mark.usefixtures("enable_partitions")
+@pytest.mark.usefixtures("environment_partitions_project")
+def test_partition_application_expand_environment(app_metadata, fake_services):
+    app = FakePartitionsApplication(app_metadata, fake_services)
+    project = app.get_project(build_for=get_host_architecture())
+
+    assert craft_parts.Features().enable_partitions is True
+    # Make sure the project is loaded correctly (from the cwd)
+    assert project is not None
+    assert project.parts["mypart"]["source-tag"] == "v1.2.3"
+    assert project.parts["mypart"]["override-stage"] == dedent(
+        f"""\
+        touch {app.project_dir}/stage/default
+        touch {app.project_dir}/partitions/mypartition/stage/partition
+    """
+    )
+    assert project.parts["mypart"]["override-prime"] == dedent(
+        f"""\
+        touch {app.project_dir}/prime/default
+        touch {app.project_dir}/partitions/mypartition/prime/partition
+    """
+    )

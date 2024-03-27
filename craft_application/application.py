@@ -130,6 +130,7 @@ class Application:
         # When build_secrets are enabled, this contains the secret info to pass to
         # managed instances.
         self._secrets: secrets.BuildSecrets | None = None
+        self._partitions: list[str] | None = None
         # Cached project object, allows only the first time we load the project
         # to specify things like the project directory.
         # This is set as a private attribute in order to discourage real application
@@ -219,6 +220,7 @@ class Application:
             cache_dir=self.cache_dir,
             work_dir=self._work_dir,
             build_plan=self._build_plan,
+            partitions=self._partitions,
         )
         self.services.set_kwargs(
             "provider",
@@ -288,6 +290,9 @@ class Application:
         GrammarAwareProject.validate_grammar(yaml_data)
 
         build_on = host_arch
+
+        # Setup partitions, some projects require the yaml data, most will not
+        self._partitions = self._setup_partitions(yaml_data)
         yaml_data = self._transform_project_yaml(yaml_data, build_on, build_for)
         self.__project = self.app.ProjectClass.from_yaml_data(yaml_data, project_path)
 
@@ -608,17 +613,31 @@ class Application:
     def _expand_environment(self, yaml_data: dict[str, Any]) -> None:
         """Perform expansion of project environment variables."""
         environment_vars = self._get_project_vars(yaml_data)
+        project_dirs = craft_parts.ProjectDirs(
+            work_dir=self._work_dir, partitions=self._partitions
+        )
+
         info = craft_parts.ProjectInfo(
             application_name=self.app.name,  # not used in environment expansion
             cache_dir=pathlib.Path(),  # not used in environment expansion
             project_name=yaml_data.get("name", ""),
-            project_dirs=craft_parts.ProjectDirs(work_dir=self._work_dir),
+            project_dirs=project_dirs,
             project_vars=environment_vars,
+            partitions=self._partitions,
         )
 
         self._set_global_environment(info)
 
         craft_parts.expand_environment(yaml_data, info=info)
+
+    def _setup_partitions(self, yaml_data: dict[str, Any]) -> list[str] | None:
+        """Return partitions to be used.
+
+        When returning you will also need to ensure that the feature is enabled
+        on Application instantiation craft_parts.Features(partitions_enabled=True)
+        """
+        _ = yaml_data
+        return None
 
     def _get_project_vars(self, yaml_data: dict[str, Any]) -> dict[str, str]:
         """Return a dict with project variables to be expanded."""
