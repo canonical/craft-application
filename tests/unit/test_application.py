@@ -451,13 +451,10 @@ def test_show_app_name_and_version(monkeypatch, capsys, app):
 
 
 @pytest.mark.parametrize("verbosity", list(craft_cli.EmitterMode))
-@pytest.mark.parametrize(
-    "env_name", ["CRAFT_VERBOSITY_LEVEL", "TESTCRAFT_VERBOSITY_LEVEL"]
-)
-def test_set_verbosity_from_env(monkeypatch, capsys, app, verbosity, env_name):
+def test_set_verbosity_from_env(monkeypatch, capsys, app, verbosity):
     """Test that the emitter verbosity is set from the environment."""
     monkeypatch.setattr(sys, "argv", ["testcraft"])
-    monkeypatch.setenv(env_name, verbosity.name)
+    monkeypatch.setenv("CRAFT_VERBOSITY_LEVEL", verbosity.name)
 
     with pytest.raises(SystemExit):
         app.run()
@@ -467,13 +464,10 @@ def test_set_verbosity_from_env(monkeypatch, capsys, app, verbosity, env_name):
     assert craft_cli.emit._mode == verbosity
 
 
-@pytest.mark.parametrize(
-    "env_name", ["CRAFT_VERBOSITY_LEVEL", "TESTCRAFT_VERBOSITY_LEVEL"]
-)
-def test_set_verbosity_from_env_incorrect(monkeypatch, capsys, app, env_name):
+def test_set_verbosity_from_env_incorrect(monkeypatch, capsys, app):
     """Test that the emitter verbosity is using the default level when invalid."""
     monkeypatch.setattr(sys, "argv", ["testcraft"])
-    monkeypatch.setenv(env_name, "incorrect")
+    monkeypatch.setenv("CRAFT_VERBOSITY_LEVEL", "incorrect")
 
     with pytest.raises(SystemExit):
         app.run()

@@ -666,9 +666,7 @@ class Application:
         util.setup_loggers(*self._cli_loggers)
 
         # environment variable takes precedence over the default
-        emitter_verbosity_level_env = os.environ.get(
-            f"{self.app.name.upper()}_VERBOSITY_LEVEL", None
-        ) or os.environ.get("CRAFT_VERBOSITY_LEVEL", None)
+        emitter_verbosity_level_env = os.environ.get("CRAFT_VERBOSITY_LEVEL", None)
 
         if emitter_verbosity_level_env:
             try:
