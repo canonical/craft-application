@@ -16,9 +16,11 @@
 """Configuration for craft-application integration tests."""
 import os
 import pathlib
+import subprocess
 import sys
 import tempfile
 
+import craft_providers
 import pytest
 from craft_application.services import provider
 from craft_providers import lxd, multipass
@@ -30,11 +32,11 @@ def pytest_configure(config: pytest.Config):
 
 
 def pytest_runtest_setup(item: pytest.Item):
-    if sys.platform != "linux":
-        if any(item.iter_markers("lxd")):
+    if any(item.iter_markers("lxd")):
+        if sys.platform != "linux":
             pytest.skip("lxd tests only run on Linux")
-    elif not lxd.is_installed() and any(item.iter_markers("lxd")):
-        pytest.skip("lxd not installed")
+        elif not lxd.is_installed():
+            pytest.skip("lxd not installed")
 
     if not multipass.is_installed() and any(item.iter_markers("multipass")):
         pytest.skip("multipass not installed")
@@ -75,3 +77,46 @@ def snap_safe_tmp_path():
         dir=directory or pathlib.Path.home(),
     ) as temp_dir:
         yield pathlib.Path(temp_dir)
+
+
+@pytest.fixture(scope="session", autouse=True)
+def cleanup_lxd():
+    """Ensure that we don't leave random containers around in lxd."""
+    yield
+    if not lxd.is_installed():
+        return
+    machines_proc = subprocess.run(
+        ["lxc", "list", "--project=testcraft", "--format=csv", "--columns=ns"],
+        text=True,
+        capture_output=True,
+    )
+    machines = machines_proc.stdout.splitlines(keepends=False)
+    machine_states = [m.split(",", maxsplit=1) for m in machines]
+    delete_machines = set()
+    for machine, state in machine_states:
+        # Remove all testcraft instances, even if they are stopped.
+        if machine.startswith("testcraft-"):
+            delete_machines.add(machine)
+        elif state.lower() != "stopped":
+            # Remove any instances that aren't stopped, including bases.
+            delete_machines.add(machine)
+    subprocess.run(
+        ["lxc", "delete", "--project=testcraft", "--force", *machines]
+    )
+
+
+@pytest.fixture(scope="session", autouse=True)
+def cleanup_multipass():
+    """Ensure that we don't leave randum Multipass VMs around."""
+    yield
+    if not multipass.is_installed():
+        return
+    machines_proc = subprocess.run(
+        ["multipass", "list", "--format=csv"], text=True, capture_output=True
+    )
+    machines = [
+        m.partition(",")[0]
+        for m in machines_proc.stdout.splitlines(keepends=False)
+        if m.startswith("testcraft-")
+    ]
+    subprocess.run(["multipass", "delete", "--purge", *machines])

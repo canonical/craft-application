@@ -133,8 +133,11 @@ line_length = 88
 minversion = "7.0"
 testpaths = "tests"
 xfail_strict = true
+addopts = "--strict-markers"
 markers = [
     "enable_features: Tests that require specific features",
+    "lxd: Tests that launch lxd containers",
+    "multipass: Tests that launch multipass VMs."
 ]
 
 [tool.coverage.run]
