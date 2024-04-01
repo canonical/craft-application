@@ -132,7 +132,7 @@ def full_build_plan(mocker) -> list[models.BuildInfo]:
     return build_plan
 
 
-@pytest.fixture
+@pytest.fixture()
 def enable_partitions() -> Iterator[craft_parts.Features]:
     """Enable the partitions feature in craft_parts for the relevant test."""
     enable_overlay = craft_parts.Features().enable_overlay
