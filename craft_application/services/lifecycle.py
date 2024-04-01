@@ -134,12 +134,14 @@ class LifecycleService(base.ProjectService):
         work_dir: Path | str,
         cache_dir: Path | str,
         build_plan: list[models.BuildInfo],
+        partitions: list[str] | None = None,
         **lifecycle_kwargs: Any,  # noqa: ANN401 - eventually used in an Any
     ) -> None:
         super().__init__(app, services, project=project)
         self._work_dir = work_dir
         self._cache_dir = cache_dir
         self._build_plan = build_plan
+        self._partitions = partitions
         self._manager_kwargs = lifecycle_kwargs
         self._lcm: LifecycleManager = None  # type: ignore[assignment]
 
@@ -190,6 +192,7 @@ class LifecycleService(base.ProjectService):
                 project_vars_part_name=self._project.adopt_info,
                 project_vars=self._project_vars,
                 track_stage_packages=True,
+                partitions=self._partitions,
                 **self._manager_kwargs,
             )
         except PartsError as err:

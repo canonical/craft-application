@@ -130,6 +130,7 @@ class Application:
         # When build_secrets are enabled, this contains the secret info to pass to
         # managed instances.
         self._secrets: secrets.BuildSecrets | None = None
+        self._partitions: list[str] | None = None
         # Cached project object, allows only the first time we load the project
         # to specify things like the project directory.
         # This is set as a private attribute in order to discourage real application
@@ -219,6 +220,7 @@ class Application:
             cache_dir=self.cache_dir,
             work_dir=self._work_dir,
             build_plan=self._build_plan,
+            partitions=self._partitions,
         )
         self.services.set_kwargs(
             "provider",
@@ -288,6 +290,9 @@ class Application:
         GrammarAwareProject.validate_grammar(yaml_data)
 
         build_on = host_arch
+
+        # Setup partitions, some projects require the yaml data, most will not
+        self._partitions = self._setup_partitions(yaml_data)
         yaml_data = self._transform_project_yaml(yaml_data, build_on, build_for)
         self.__project = self.app.ProjectClass.from_yaml_data(yaml_data, project_path)
 
@@ -323,7 +328,10 @@ class Application:
             if build_for and build_for != build_info.build_for:
                 continue
 
-            env = {"CRAFT_PLATFORM": build_info.platform}
+            env = {
+                "CRAFT_PLATFORM": build_info.platform,
+                "CRAFT_VERBOSITY_LEVEL": craft_cli.emit.get_mode().name,
+            }
 
             if self.app.features.build_secrets:
                 # If using build secrets, put them in the environment of the managed
@@ -341,14 +349,19 @@ class Application:
             with self.services.provider.instance(
                 build_info, work_dir=self._work_dir
             ) as instance:
+                cmd = [self.app.name, *sys.argv[1:]]
+                craft_cli.emit.debug(
+                    f"Executing {cmd} in instance location {instance_path} with {extra_args}."
+                )
                 try:
-                    # Pyright doesn't fully understand craft_providers's CompletedProcess.
-                    instance.execute_run(  # pyright: ignore[reportUnknownMemberType,reportUnknownVariableType]
-                        [self.app.name, *sys.argv[1:]],
-                        cwd=instance_path,
-                        check=True,
-                        **extra_args,
-                    )
+                    with craft_cli.emit.pause():
+                        # Pyright doesn't fully understand craft_providers's CompletedProcess.
+                        instance.execute_run(  # pyright: ignore[reportUnknownMemberType,reportUnknownVariableType]
+                            cmd,
+                            cwd=instance_path,
+                            check=True,
+                            **extra_args,
+                        )
                 except subprocess.CalledProcessError as exc:
                     raise craft_providers.ProviderError(
                         f"Failed to execute {self.app.name} in instance."
@@ -600,17 +613,31 @@ class Application:
     def _expand_environment(self, yaml_data: dict[str, Any]) -> None:
         """Perform expansion of project environment variables."""
         environment_vars = self._get_project_vars(yaml_data)
+        project_dirs = craft_parts.ProjectDirs(
+            work_dir=self._work_dir, partitions=self._partitions
+        )
+
         info = craft_parts.ProjectInfo(
             application_name=self.app.name,  # not used in environment expansion
             cache_dir=pathlib.Path(),  # not used in environment expansion
             project_name=yaml_data.get("name", ""),
-            project_dirs=craft_parts.ProjectDirs(work_dir=self._work_dir),
+            project_dirs=project_dirs,
             project_vars=environment_vars,
+            partitions=self._partitions,
         )
 
         self._set_global_environment(info)
 
         craft_parts.expand_environment(yaml_data, info=info)
+
+    def _setup_partitions(self, yaml_data: dict[str, Any]) -> list[str] | None:
+        """Return partitions to be used.
+
+        When returning you will also need to ensure that the feature is enabled
+        on Application instantiation craft_parts.Features(partitions_enabled=True)
+        """
+        _ = yaml_data
+        return None
 
     def _get_project_vars(self, yaml_data: dict[str, Any]) -> dict[str, str]:
         """Return a dict with project variables to be expanded."""
@@ -658,15 +685,37 @@ class Application:
         # Set the logging level to DEBUG for all craft-libraries. This is OK even if
         # the specific application doesn't use a specific library, the call does not
         # import the package.
+        emitter_mode: craft_cli.EmitterMode = craft_cli.EmitterMode.BRIEF
+        invalid_emitter_level = False
         util.setup_loggers(*self._cli_loggers)
 
+        # environment variable takes precedence over the default
+        emitter_verbosity_level_env = os.environ.get("CRAFT_VERBOSITY_LEVEL", None)
+
+        if emitter_verbosity_level_env:
+            try:
+                emitter_mode = craft_cli.EmitterMode[
+                    emitter_verbosity_level_env.strip().upper()
+                ]
+            except KeyError:
+                invalid_emitter_level = True
+
         craft_cli.emit.init(
-            mode=craft_cli.EmitterMode.BRIEF,
+            mode=emitter_mode,
             appname=self.app.name,
             greeting=f"Starting {self.app.name}, version {self.app.version}",
             log_filepath=self.log_path,
             streaming_brief=True,
         )
+
+        craft_cli.emit.debug(f"Log verbosity level set to {emitter_mode.name}")
+
+        if invalid_emitter_level:
+            craft_cli.emit.progress(
+                f"Invalid verbosity level '{emitter_verbosity_level_env}', using default 'BRIEF'.\n"
+                f"Valid levels are: {', '.join(emitter.name for emitter in craft_cli.EmitterMode)}",
+                permanent=True,
+            )
 
 
 def filter_plan(

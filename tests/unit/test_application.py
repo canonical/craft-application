@@ -237,11 +237,12 @@ def test_log_path(monkeypatch, app, provider_managed, expected):
     assert actual == expected
 
 
-def test_run_managed_success(app, fake_project, fake_build_plan):
+def test_run_managed_success(mocker, app, fake_project, fake_build_plan):
     mock_provider = mock.MagicMock(spec_set=services.ProviderService)
     app.services.provider = mock_provider
     app.project = fake_project
     app._build_plan = fake_build_plan
+    mock_pause = mocker.spy(craft_cli.emit, "pause")
     arch = get_host_architecture()
 
     app.run_managed(None, arch)
@@ -253,6 +254,7 @@ def test_run_managed_success(app, fake_project, fake_build_plan):
         )
         in mock_provider.instance.mock_calls
     )
+    mock_pause.assert_called_once()
 
 
 def test_run_managed_failure(app, fake_project, fake_build_plan):
@@ -448,6 +450,35 @@ def test_show_app_name_and_version(monkeypatch, capsys, app):
 
     _, err = capsys.readouterr()
     assert f"Starting testcraft, version {app.app.version}" in err
+
+
+@pytest.mark.parametrize("verbosity", list(craft_cli.EmitterMode))
+def test_set_verbosity_from_env(monkeypatch, capsys, app, verbosity):
+    """Test that the emitter verbosity is set from the environment."""
+    monkeypatch.setattr(sys, "argv", ["testcraft"])
+    monkeypatch.setenv("CRAFT_VERBOSITY_LEVEL", verbosity.name)
+
+    with pytest.raises(SystemExit):
+        app.run()
+
+    _, err = capsys.readouterr()
+    assert "testcraft [help]" in err
+    assert craft_cli.emit._mode == verbosity
+
+
+def test_set_verbosity_from_env_incorrect(monkeypatch, capsys, app):
+    """Test that the emitter verbosity is using the default level when invalid."""
+    monkeypatch.setattr(sys, "argv", ["testcraft"])
+    monkeypatch.setenv("CRAFT_VERBOSITY_LEVEL", "incorrect")
+
+    with pytest.raises(SystemExit):
+        app.run()
+
+    _, err = capsys.readouterr()
+    assert "testcraft [help]" in err
+    assert "Invalid verbosity level 'incorrect'" in err
+    assert "Valid levels are: QUIET, BRIEF, VERBOSE, DEBUG, TRACE" in err
+    assert craft_cli.emit._mode == craft_cli.EmitterMode.BRIEF
 
 
 def test_pre_run_project_dir_managed(app):
@@ -1147,3 +1178,64 @@ def test_process_grammar_no_match(grammar_app, mocker):
     project = grammar_app.get_project()
     # "source" is empty because "i386" doesn't match any of the grammar statements.
     assert project.parts["mypart"]["source"] is None
+
+
+class FakePartitionsApplication(FakeApplication):
+    """A partition using FakeApplication."""
+
+    @override
+    def _setup_partitions(self, yaml_data) -> list[str]:
+        _ = yaml_data
+        return ["default", "mypartition"]
+
+
+@pytest.fixture()
+def environment_partitions_project(monkeypatch, tmp_path):
+    project_dir = tmp_path / "project"
+    project_dir.mkdir()
+    project_path = project_dir / "testcraft.yaml"
+    project_path.write_text(
+        dedent(
+            """
+        name: myproject
+        version: 1.2.3
+        parts:
+          mypart:
+            plugin: nil
+            source-tag: v$CRAFT_PROJECT_VERSION
+            override-stage: |
+              touch $CRAFT_STAGE/default
+              touch $CRAFT_MYPARTITION_STAGE/partition
+            override-prime: |
+              touch $CRAFT_PRIME/default
+              touch $CRAFT_MYPARTITION_PRIME/partition
+        """
+        )
+    )
+    monkeypatch.chdir(project_dir)
+
+    return project_path
+
+
+@pytest.mark.usefixtures("enable_partitions")
+@pytest.mark.usefixtures("environment_partitions_project")
+def test_partition_application_expand_environment(app_metadata, fake_services):
+    app = FakePartitionsApplication(app_metadata, fake_services)
+    project = app.get_project(build_for=get_host_architecture())
+
+    assert craft_parts.Features().enable_partitions is True
+    # Make sure the project is loaded correctly (from the cwd)
+    assert project is not None
+    assert project.parts["mypart"]["source-tag"] == "v1.2.3"
+    assert project.parts["mypart"]["override-stage"] == dedent(
+        f"""\
+        touch {app.project_dir}/stage/default
+        touch {app.project_dir}/partitions/mypartition/stage/partition
+    """
+    )
+    assert project.parts["mypart"]["override-prime"] == dedent(
+        f"""\
+        touch {app.project_dir}/prime/default
+        touch {app.project_dir}/partitions/mypartition/prime/partition
+    """
+    )
