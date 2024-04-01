@@ -76,17 +76,17 @@ class RemoteBuildService(base.AppService):
             raise RuntimeError(
                 "Project name may only be set before starting or resuming builds."
             )
-        self._project_name = name
         try:
-            self._lp_project = self.lp.get_project(self._project_name)
+            self._lp_project = self.lp.get_project(name)
         except launchpad.errors.NotFoundError:
             raise errors.CraftError(
-                message=f"Could not find project on Launchpad: {self._project_name}",
+                message=f"Could not find project on Launchpad: {name}",
                 resolution="Ensure the project exists and that you have access to it.",
                 retcode=77,  # EX_NOPERM from sysexits.h
                 reportable=False,
                 logpath_report=False,
             )
+        self._project_name = name
 
     def is_project_private(self) -> bool:
         """Check whether the named project is private."""

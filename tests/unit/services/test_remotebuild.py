@@ -42,7 +42,7 @@ def mock_lp_project(fake_launchpad, mock_project_entry):
 
 
 @pytest.mark.parametrize("name", ["some-project", "another-project"])
-def test_set_project__success(remote_build_service, mock_project_entry, name):
+def test_set_project_success(remote_build_service, mock_project_entry, name):
     mock_project_entry.name = name
     remote_build_service.lp.lp.projects = {name: mock_project_entry}
 
