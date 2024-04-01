@@ -16,8 +16,7 @@
 """Tests for the remote build service."""
 
 import pytest
-
-from craft_application import errors, launchpad
+from craft_application import errors
 
 
 @pytest.fixture(scope="module", params=["charmcraft", "coreutils", "dpkg", "sudo"])
@@ -36,7 +35,9 @@ def test_error_with_nonexistent_project(anonymous_remote_build_service):
     """Test failing gracefully with a nonexistent project."""
     name = "this launchpad project does not exist!"
 
-    with pytest.raises(errors.CraftError, match=f"Could not find project on Launchpad: {name}"):
+    with pytest.raises(
+        errors.CraftError, match=f"Could not find project on Launchpad: {name}"
+    ):
         anonymous_remote_build_service.set_project(name)
 
 

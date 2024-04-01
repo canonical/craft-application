@@ -73,7 +73,9 @@ class RemoteBuildService(base.AppService):
     def set_project(self, name: str) -> None:
         """Set the name of the project to use."""
         if self._is_setup:
-            raise RuntimeError("Project name may only be set before starting or resuming builds.")
+            raise RuntimeError(
+                "Project name may only be set before starting or resuming builds."
+            )
         self._project_name = name
         try:
             self._lp_project = self.lp.get_project(self._project_name)
@@ -89,9 +91,12 @@ class RemoteBuildService(base.AppService):
     def is_project_private(self) -> bool:
         """Check whether the named project is private."""
         if not self._lp_project:
-            raise RuntimeError("Cannot check if the project is private before setting its name.")
+            raise RuntimeError(
+                "Cannot check if the project is private before setting its name."
+            )
         return self._lp_project.information_type not in (
-            launchpad.models.InformationType.PUBLIC, launchpad.models.InformationType.PUBLIC_SECURITY,
+            launchpad.models.InformationType.PUBLIC,
+            launchpad.models.InformationType.PUBLIC_SECURITY,
         )
 
     def set_timeout(self, seconds_in_future: int) -> None:
