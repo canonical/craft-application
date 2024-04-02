@@ -18,6 +18,7 @@ import datetime
 import pathlib
 from unittest import mock
 
+import launchpadlib.errors
 import lazr.restfulclient.errors
 import lazr.restfulclient.resource
 import pytest
@@ -57,7 +58,7 @@ def test_ensure_project_new(remote_build_service):
     remote_build_service._ensure_project()
 
 
-def test_new_repository(
+def test_ensure_repository_creation(
     monkeypatch, tmp_path, remote_build_service, mock_lp_project, mock_push_url
 ):
     wrapped_repository = mock.Mock(
@@ -71,7 +72,45 @@ def test_new_repository(
     sentinel.write_text("I am a sentinel file.")
     remote_build_service._lp_project = mock_lp_project
 
-    work_tree, lp_repository = remote_build_service._new_repository(tmp_path)
+    work_tree, lp_repository = remote_build_service._ensure_repository(tmp_path)
+
+    assert (work_tree.repo_dir / "sentinel_file").read_text() == sentinel.read_text()
+    mock_push_url.assert_called_once_with(
+        "https://craft_test_user:super_secret_token@git.launchpad.net/~user/+git/my_repo",
+        "main",
+    )
+    expiry = wrapped_repository.get_access_token.call_args.kwargs["expiry"]
+
+    # Ensure that we're getting a timezone-aware object in the method.
+    # This is here as a regression test because if you're in a timezone behind UTC
+    # the expiry time sent to Launchpad will have already expired and Launchpad
+    # does not catch that. So instead we make sure thot even when using the easternmost
+    # time zone the expiry time is still in the future.
+    tz = datetime.timezone(datetime.timedelta(hours=14))
+    assert expiry > datetime.datetime.now(tz=tz)
+
+
+def test_ensure_repository_already_exists(
+    monkeypatch, tmp_path, remote_build_service, mock_lp_project, mock_push_url
+):
+    monkeypatch.setattr(
+        launchpad.models.GitRepository,
+        "new",
+        mock.Mock(side_effect=launchpadlib.errors.Conflict("nope", "broken")),
+    )
+    wrapped_repository = mock.Mock(
+        spec=launchpad.models.GitRepository,
+        git_https_url="https://git.launchpad.net/~user/+git/my_repo",
+        **{"get_access_token.return_value": "super_secret_token"},
+    )
+    repository_get = mock.Mock(return_value=wrapped_repository)
+    monkeypatch.setattr(launchpad.models.GitRepository, "get", repository_get)
+    sentinel = tmp_path / "sentinel_file"
+    sentinel.write_text("I am a sentinel file.")
+    remote_build_service._lp_project = mock_lp_project
+    remote_build_service._name = "some-repo-name"
+
+    work_tree, lp_repository = remote_build_service._ensure_repository(tmp_path)
 
     assert (work_tree.repo_dir / "sentinel_file").read_text() == sentinel.read_text()
     mock_push_url.assert_called_once_with(
