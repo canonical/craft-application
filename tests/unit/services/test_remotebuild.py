@@ -21,7 +21,7 @@ from unittest import mock
 import lazr.restfulclient.errors
 import lazr.restfulclient.resource
 import pytest
-from craft_application import launchpad
+from craft_application import errors, launchpad
 from craft_application.remote import git
 
 from tests.unit.services.conftest import (
@@ -41,6 +41,35 @@ def mock_lp_project(fake_launchpad, mock_project_entry):
     return launchpad.models.Project(fake_launchpad, mock_project_entry)
 
 
+@pytest.mark.parametrize("name", ["some-project", "another-project"])
+def test_set_project_success(remote_build_service, mock_project_entry, name):
+    mock_project_entry.name = name
+    remote_build_service.lp.lp.projects = {name: mock_project_entry}
+
+    remote_build_service.set_project(name)
+    project = remote_build_service._ensure_project()
+
+    assert project.name == name
+
+
+@pytest.mark.parametrize("name", ["some-project", "another-project"])
+def test_set_project_name_error(remote_build_service, mock_project_entry, name):
+    mock_project_entry.name = name
+    remote_build_service.lp.lp.projects.__getitem__.side_effect = (
+        lazr.restfulclient.errors.NotFound("yo", "dawg")
+    )
+
+    with pytest.raises(
+        errors.CraftError, match=f"Could not find project on Launchpad: {name}"
+    ) as exc_info:
+        remote_build_service.set_project(name)
+
+    assert (
+        exc_info.value.resolution
+        == "Ensure the project exists and that you have access to it."
+    )
+
+
 def test_ensure_project_existing(remote_build_service, mock_project_entry):
     remote_build_service.lp.lp.projects = {
         "craft_test_user-craft-remote-build": mock_project_entry
@@ -55,6 +84,35 @@ def test_ensure_project_new(remote_build_service):
     )
 
     remote_build_service._ensure_project()
+
+
+@pytest.mark.parametrize(
+    ("information_type", "expected"),
+    [
+        (launchpad.models.InformationType.PUBLIC, False),
+        (launchpad.models.InformationType.PUBLIC_SECURITY, False),
+        (launchpad.models.InformationType.PRIVATE, True),
+        (launchpad.models.InformationType.PRIVATE_SECURITY, True),
+        (launchpad.models.InformationType.PROPRIETARY, True),
+        (launchpad.models.InformationType.EMBARGOED, True),
+    ],
+)
+def test_is_project_private(
+    remote_build_service, mock_project_entry, information_type, expected
+):
+    mock_project_entry.information_type = str(information_type.value)
+    remote_build_service.lp.lp.projects = {"test-project": mock_project_entry}
+
+    remote_build_service.set_project("test-project")
+    assert remote_build_service.is_project_private() == expected
+
+
+def test_is_project_private_error(remote_build_service):
+    with pytest.raises(
+        RuntimeError,
+        match="Cannot check if the project is private before setting its name.",
+    ):
+        remote_build_service.is_project_private()
 
 
 def test_new_repository(
