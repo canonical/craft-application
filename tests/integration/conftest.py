@@ -18,9 +18,11 @@ import os
 import pathlib
 import sys
 import tempfile
+from unittest import mock
 
 import pytest
-from craft_application.services import provider
+from craft_application import launchpad
+from craft_application.services import provider, remotebuild
 from craft_providers import lxd, multipass
 
 
@@ -51,6 +53,14 @@ def provider_service(app_metadata, fake_project, fake_build_plan, fake_services)
         build_plan=fake_build_plan,
         install_snap=False,
     )
+
+
+@pytest.fixture(scope="session")
+def anonymous_remote_build_service(default_app_metadata):
+    """Provider service with install snap disabled for integration tests"""
+    service = remotebuild.RemoteBuildService(default_app_metadata, services=mock.Mock())
+    service.lp = launchpad.Launchpad.anonymous("testcraft")
+    return service
 
 
 @pytest.fixture()
