@@ -17,7 +17,11 @@
 
 from typing import Any, cast
 
+import craft_cli
 from craft_grammar import GrammarProcessor  # type: ignore[import-untyped]
+from craft_grammar.errors import GrammarSyntaxError  # type: ignore[import-untyped]
+
+from craft_application.errors import CraftValidationError
 
 # Values that should return as a single object / list / dict.
 _NON_SCALAR_VALUES = [
@@ -49,6 +53,7 @@ def process_part(
     """Process grammar for a given part."""
     for key in part_yaml_data:
         unprocessed_grammar = part_yaml_data[key]
+        craft_cli.emit.debug(f"Processing grammar for {key}: {unprocessed_grammar}")
 
         # grammar aware models can only be a string or list of dict, skip any other type.
         if isinstance(unprocessed_grammar, list):
@@ -62,7 +67,12 @@ def process_part(
         else:
             continue
 
-        processed_grammar = processor.process(grammar=unprocessed_grammar)
+        try:
+            processed_grammar = processor.process(grammar=unprocessed_grammar)
+        except GrammarSyntaxError as e:
+            raise CraftValidationError(
+                f"Invalid grammar syntax when process '{key}' in '{part_yaml_data}': {e}"
+            ) from e
 
         # special cases
         # scalar values should return as a single object, not in a list.

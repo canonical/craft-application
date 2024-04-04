@@ -68,7 +68,7 @@ version: 1.0
 parts:
   mypart:
     plugin: nil
-    source: on-amd64-to-riscv64
+    source: non-grammar-source
     source-checksum: on-amd64-to-riscv64-checksum
     source-branch: riscv64-branch
     source-commit: riscv64-commit
@@ -1369,16 +1369,15 @@ def non_grammar_build_plan(mocker):
     """A build plan to build on amd64 to riscv64."""
     host_arch = "amd64"
     base = util.get_host_base()
-    build_plan = []
-    for build_for in ("riscv64",):
-        build_plan.append(
-            models.BuildInfo(
-                f"platform-{build_for}",
-                host_arch,
-                build_for,
-                base,
-            )
+    build_plan = [
+        models.BuildInfo(
+            f"platform-{build_for}",
+            host_arch,
+            build_for,
+            base,
         )
+        for build_for in ("riscv64",)
+    ]
 
     mocker.patch.object(MyBuildPlanner, "get_build_plan", return_value=build_plan)
 
@@ -1388,16 +1387,15 @@ def grammar_build_plan(mocker):
     """A build plan to build on amd64 to riscv64 and s390x."""
     host_arch = "amd64"
     base = util.get_host_base()
-    build_plan = []
-    for build_for in ("riscv64", "s390x"):
-        build_plan.append(
-            models.BuildInfo(
-                f"platform-{build_for}",
-                host_arch,
-                build_for,
-                base,
-            )
+    build_plan = [
+        models.BuildInfo(
+            f"platform-{build_for}",
+            host_arch,
+            build_for,
+            base,
         )
+        for build_for in ("riscv64", "s390x")
+    ]
 
     mocker.patch.object(MyBuildPlanner, "get_build_plan", return_value=build_plan)
 
