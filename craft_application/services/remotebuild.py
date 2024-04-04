@@ -258,7 +258,9 @@ class RemoteBuildService(base.AppService):
         work_tree = WorkTree(self._app.name, self._name, project_dir)
         work_tree.init_repo()
         try:
-            lp_repository = self.lp.new_repository(self._name, self._lp_project.name)
+            lp_repository = self.lp.new_repository(
+                self._name, project=self._lp_project.name
+            )
         except launchpadlib.errors.HTTPError:
             lp_repository = self.lp.get_repository(
                 name=self._name, project=self._lp_project.name
@@ -289,21 +291,29 @@ class RemoteBuildService(base.AppService):
         repository: launchpad.models.GitRepository,
         **kwargs: Any,  # noqa: ANN401
     ) -> launchpad.models.Recipe:
-        """Create a new recipe."""
-        # There are 3 different ways this can fail in expected ways, all of them HTTPErrors:
-        #
-        # 1. Recipe doesn't exist (or you don't have access to see it)
-        # 2. You don't have access to delete the recipe
-        # 3. There is an ongoing build with the recipep
-        #
-        # In case 1, we don't care and are about to make the new recipe anyway.
-        # In the other cases, the errors from `new()` end up being more useful.
-        with contextlib.suppress(launchpadlib.errors.HTTPError):
+        """Get a recipe or create it if it doesn't exist."""
+        with contextlib.suppress(ValueError):  # Recipe doesn't exist
             recipe = self._get_recipe()
             recipe.delete()
 
+        return self._new_recipe(name, repository, **kwargs)
+
+    def _new_recipe(
+        self,
+        name: str,
+        repository: launchpad.models.GitRepository,
+        **kwargs: Any,  # noqa: ANN401
+    ) -> launchpad.models.Recipe:
+        """Create a new recipe for the given repository."""
+        repository.lp_refresh()  # Prevents a race condition on new repositories.
+        git_ref = parse.urlparse(str(repository.git_https_url)).path + "/+ref/main"
         return self.RecipeClass.new(
-            self.lp, name, self.lp.username, git_ref=repository.git_https_url, **kwargs
+            self.lp,
+            name,
+            self.lp.username,
+            git_ref=git_ref,
+            project=self._lp_project.name,
+            **kwargs,
         )
 
     def _get_recipe(self) -> launchpad.models.Recipe:
