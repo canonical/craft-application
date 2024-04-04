@@ -94,6 +94,16 @@ def fake_launchpad(app_metadata, mock_git_repository, mock_project_entry):
                     ),
                 )
             ),
+            getByName=get_mock_callable(
+                return_value=get_mock_lazr_entry(
+                    "snap",
+                    requestBuilds=get_mock_callable(
+                        return_value=get_mock_lazr_collection(
+                            [], status="Completed", builds=[]
+                        )
+                    ),
+                ),
+            ),
         ),
     )
     return launchpad.Launchpad(app_metadata.name, lp)

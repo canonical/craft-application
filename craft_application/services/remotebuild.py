@@ -16,6 +16,7 @@
 """Service class for remote build commands."""
 from __future__ import annotations
 
+import contextlib
 import datetime
 import itertools
 import os
@@ -27,6 +28,7 @@ from typing import TYPE_CHECKING, Any, cast
 from urllib import parse
 
 import craft_cli
+import launchpadlib.errors  # type: ignore[import-untyped]
 import platformdirs
 
 from craft_application import errors, launchpad, models
@@ -117,8 +119,8 @@ class RemoteBuildService(base.AppService):
 
         self._name = utils.get_build_id(self._app.name, project.name, project_dir)
         self._lp_project = self._ensure_project()
-        _, self._repository = self._new_repository(project_dir)
-        self._recipe = self._new_recipe(
+        _, self._repository = self._ensure_repository(project_dir)
+        self._recipe = self._ensure_recipe(
             self._name, self._repository, architectures=architectures
         )
         self._check_timeout()
@@ -249,15 +251,20 @@ class RemoteBuildService(base.AppService):
                 summary=f"Automatically-generated project for housing {self.lp.username}'s remote builds in snapcraft, charmcraft, etc.",
             )
 
-    def _new_repository(
+    def _ensure_repository(
         self, project_dir: pathlib.Path
     ) -> tuple[WorkTree, launchpad.models.GitRepository]:
-        """Create a repository on the local machine and on Launchpad."""
+        """Create a repository on the local machine and ensure it's on Launchpad."""
         work_tree = WorkTree(self._app.name, self._name, project_dir)
         work_tree.init_repo()
-        lp_repository = launchpad.models.GitRepository.new(
-            self.lp, self._name, target=self._lp_project.name
-        )
+        try:
+            lp_repository = self.lp.new_repository(
+                self._name, project=self._lp_project.name
+            )
+        except launchpadlib.errors.HTTPError:
+            lp_repository = self.lp.get_repository(
+                name=self._name, project=self._lp_project.name
+            )
 
         token = lp_repository.get_access_token(
             f"{self._app.name} {self._app.version} remote build",
@@ -276,9 +283,20 @@ class RemoteBuildService(base.AppService):
 
     def _get_repository(self) -> launchpad.models.GitRepository:
         """Get an existing repository on Launchpad."""
-        return launchpad.models.GitRepository.get(
-            self.lp, name=self._name, owner=self.lp.username
-        )
+        return self.lp.get_repository(name=self._name, owner=self.lp.username)
+
+    def _ensure_recipe(
+        self,
+        name: str,
+        repository: launchpad.models.GitRepository,
+        **kwargs: Any,  # noqa: ANN401
+    ) -> launchpad.models.Recipe:
+        """Get a recipe or create it if it doesn't exist."""
+        with contextlib.suppress(ValueError):  # Recipe doesn't exist
+            recipe = self._get_recipe()
+            recipe.delete()
+
+        return self._new_recipe(name, repository, **kwargs)
 
     def _new_recipe(
         self,
@@ -286,9 +304,16 @@ class RemoteBuildService(base.AppService):
         repository: launchpad.models.GitRepository,
         **kwargs: Any,  # noqa: ANN401
     ) -> launchpad.models.Recipe:
-        """Create a new recipe."""
+        """Create a new recipe for the given repository."""
+        repository.lp_refresh()  # Prevents a race condition on new repositories.
+        git_ref = parse.urlparse(str(repository.git_https_url)).path + "/+ref/main"
         return self.RecipeClass.new(
-            self.lp, name, self.lp.username, git_ref=repository.git_https_url, **kwargs
+            self.lp,
+            name,
+            self.lp.username,
+            git_ref=git_ref,
+            project=self._lp_project.name,
+            **kwargs,
         )
 
     def _get_recipe(self) -> launchpad.models.Recipe:

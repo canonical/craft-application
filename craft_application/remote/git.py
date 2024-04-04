@@ -253,7 +253,10 @@ class GitRepo:
         # temporarily call git directly due to libgit2 bug that unable to push
         # large repos using https. See https://github.com/libgit2/libgit2/issues/6385
         # and https://github.com/snapcore/snapcraft/issues/4478
-        cmd: list[str] = ["git", "push", remote_url, refspec, "--progress"]
+        # Force push in case this repository already exists. The repository is always
+        # going to exist solely for remote builds, so the only potential issue here is a
+        # race condition with multiple remote builds on the same machine.
+        cmd: list[str] = ["git", "push", "--force", remote_url, refspec, "--progress"]
         if push_tags:
             cmd.append("--tags")
 
