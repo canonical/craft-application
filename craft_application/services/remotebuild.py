@@ -290,6 +290,14 @@ class RemoteBuildService(base.AppService):
         **kwargs: Any,  # noqa: ANN401
     ) -> launchpad.models.Recipe:
         """Create a new recipe."""
+        # There are 3 different ways this can fail in expected ways, all of them HTTPErrors:
+        #
+        # 1. Recipe doesn't exist (or you don't have access to see it)
+        # 2. You don't have access to delete the recipe
+        # 3. There is an ongoing build with the recipep
+        #
+        # In case 1, we don't care and are about to make the new recipe anyway.
+        # In the other cases, the errors from `new()` end up being more useful.
         with contextlib.suppress(launchpadlib.errors.HTTPError):
             recipe = self._get_recipe()
             recipe.delete()
