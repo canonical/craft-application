@@ -1538,7 +1538,7 @@ def test_process_non_grammar_full(non_grammar_app_full):
     """
     project = non_grammar_app_full.get_project()
     assert project.parts["mypart"]["plugin"] == "nil"
-    assert project.parts["mypart"]["source"] == "on-amd64-to-riscv64"
+    assert project.parts["mypart"]["source"] == "non-grammar-source"
     assert project.parts["mypart"]["source-checksum"] == "on-amd64-to-riscv64-checksum"
     assert project.parts["mypart"]["source-branch"] == "riscv64-branch"
     assert project.parts["mypart"]["source-commit"] == "riscv64-commit"
