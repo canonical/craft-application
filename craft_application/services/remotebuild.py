@@ -292,7 +292,6 @@ class RemoteBuildService(base.AppService):
         **kwargs: Any,  # noqa: ANN401
     ) -> launchpad.models.Recipe:
         """Get a recipe or create it if it doesn't exist."""
-
         with contextlib.suppress(ValueError):  # Recipe doesn't exist
             recipe = self._get_recipe()
             recipe.delete()
@@ -305,7 +304,7 @@ class RemoteBuildService(base.AppService):
         repository: launchpad.models.GitRepository,
         **kwargs: Any,  # noqa: ANN401
     ) -> launchpad.models.Recipe:
-        """Create a new recipe for the given repository"""
+        """Create a new recipe for the given repository."""
         repository.lp_refresh()  # Prevents a race condition on new repositories.
         git_ref = parse.urlparse(str(repository.git_https_url)).path + "/+ref/main"
         return self.RecipeClass.new(
