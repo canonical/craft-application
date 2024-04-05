@@ -1371,12 +1371,11 @@ def non_grammar_build_plan(mocker):
     base = util.get_host_base()
     build_plan = [
         models.BuildInfo(
-            f"platform-{build_for}",
+            "platform-riscv64",
             host_arch,
-            build_for,
+            "riscv64",
             base,
         )
-        for build_for in ("riscv64",)
     ]
 
     mocker.patch.object(MyBuildPlanner, "get_build_plan", return_value=build_plan)

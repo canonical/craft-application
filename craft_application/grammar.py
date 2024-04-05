@@ -71,7 +71,7 @@ def process_part(
             processed_grammar = processor.process(grammar=unprocessed_grammar)
         except GrammarSyntaxError as e:
             raise CraftValidationError(
-                f"Invalid grammar syntax when process '{key}' in '{part_yaml_data}': {e}"
+                f"Invalid grammar syntax while processing '{key}' in '{part_yaml_data}': {e}"
             ) from e
 
         # special cases
