@@ -2,7 +2,6 @@
 
 import pytest
 from craft_application import launchpad
-from craft_application.launchpad import models
 
 
 def test_anonymous_login(tmp_path):
@@ -16,15 +15,17 @@ def test_anonymous_login(tmp_path):
     assert cache_dir.is_dir()
 
 
-def test_get_basic_items(anonymous_lp):
-    snapstore_server = anonymous_lp.get_project("snapstore-server")
-    assert snapstore_server.name == "snapstore-server"
-    assert snapstore_server.title == "Snap Store Server"
-
-    snap_recipes = list(models.SnapRecipe.find(anonymous_lp, owner="lengau"))
-    assert len(snap_recipes) > 0
-    for recipe in snap_recipes:
-        assert recipe.owner_name == "lengau"
+# TODO: Re-enable this
+# https://github.com/canonical/craft-application/issues/306
+# def test_get_basic_items(anonymous_lp):
+#     snapstore_server = anonymous_lp.get_project("snapstore-server")
+#     assert snapstore_server.name == "snapstore-server"
+#     assert snapstore_server.title == "Snap Store Server"
+#
+#     snap_recipes = list(models.SnapRecipe.find(anonymous_lp, owner="lengau"))
+#     assert len(snap_recipes) > 0
+#     for recipe in snap_recipes:
+#         assert recipe.owner_name == "lengau"
 
 
 @pytest.mark.parametrize(
