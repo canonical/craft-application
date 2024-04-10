@@ -78,7 +78,7 @@ class AppMetadata:
     project_variables: list[str] = field(default_factory=lambda: ["version"])
     mandatory_adoptable_fields: list[str] = field(default_factory=lambda: ["version"])
 
-    ProjectClass: type[models.Project] = models.Project
+    ProjectClass: type[models.Project] = models.Project  # type: ignore[type-abstract]
     BuildPlannerClass: type[models.BuildPlanner] = field(
         default=NotImplementedError  # type: ignore[assignment,type-abstract]
     )

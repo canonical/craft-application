@@ -24,7 +24,6 @@ from typing import Any
 import craft_parts
 import craft_providers.bases
 import pydantic
-from craft_cli import emit
 from pydantic import AnyUrl
 from typing_extensions import override
 
@@ -40,12 +39,11 @@ from craft_application.models.constraints import (
     VersionStr,
 )
 
-CURRENT_DEVEL_BASE = craft_providers.bases.ubuntu.BuilddBaseAlias.NOBLE
-DEVEL_BASE_WARNING = (
-    "The development build-base should only be used for testing purposes, "
-    "as its contents are bound to change with the opening of new Ubuntu releases, "
-    "suddenly and without warning."
-)
+# The Ubuntu base that the 'devel' alias currently points to
+# TODO: This should point to 24.10, which is not available yet
+CURRENT_DEVEL_BASE = craft_providers.bases.ubuntu.BuilddBaseAlias.DEVEL
+
+DEVEL_BASE = craft_providers.bases.ubuntu.BuilddBaseAlias.DEVEL
 
 
 @dataclasses.dataclass
@@ -125,17 +123,16 @@ class Project(CraftBaseModel):
         raise RuntimeError("Could not determine effective base")
 
     @classmethod
+    @abc.abstractmethod
     def _providers_base(
-        cls, base: str | None  # noqa: ARG003 (unused class method argument)
+        cls, base: str | None
     ) -> craft_providers.bases.BaseAlias | None:
-        """Get a BaseAlias from an application's base.
+        """Get a BaseAlias from the application's base.
 
-        Applications should override this method to convert an application-specific
-        base to a BaseAlias.
+        :param base: The application-specific base name.
 
         :returns: The BaseAlias for the base or None if not found.
         """
-        return None
 
     @pydantic.root_validator(  # pyright: ignore[reportUnknownMemberType,reportUntypedFunctionDecorator]
         pre=False
@@ -144,19 +141,12 @@ class Project(CraftBaseModel):
         """Validate the build-base is 'devel' for the current devel base."""
         base = values.get("base")
         base_alias = cls._providers_base(base)
+        build_base_alias = cls._providers_base(values.get("build_base"))
 
-        # i may need to pass this through `cls._provider_base()` to normalize it because:
-        # charmcraft uses `build-base: ubuntu@devel`
-        # snapcraft and rockcraft use `build-base: devel`
-        build_base = values.get("build_base")
-
-        if base_alias == CURRENT_DEVEL_BASE:
-            if build_base and "devel" in build_base:
-                emit.message(DEVEL_BASE_WARNING)
-            else:
-                raise errors.CraftValidationError(
-                    f"build-base must be 'devel' when base is {base!r}"
-                )
+        if base_alias == CURRENT_DEVEL_BASE and build_base_alias != DEVEL_BASE:
+            raise errors.CraftValidationError(
+                f"build-base must be 'devel' when base is {base!r}"
+            )
 
         return values
 

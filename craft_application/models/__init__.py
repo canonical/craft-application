@@ -1,6 +1,6 @@
 # This file is part of craft_application.
 #
-# Copyright 2023 Canonical Ltd.
+# Copyright 2023-2024 Canonical Ltd.
 #
 # This program is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Lesser General Public License version 3, as
@@ -27,7 +27,7 @@ from craft_application.models.grammar import GrammarAwareProject
 from craft_application.models.metadata import BaseMetadata
 from craft_application.models.project import (
     CURRENT_DEVEL_BASE,
-    DEVEL_BASE_WARNING,
+    DEVEL_BASE,
     BuildInfo,
     BuildPlanner,
     Project,
@@ -38,7 +38,7 @@ __all__ = [
     "BaseMetadata",
     "BuildInfo",
     "CURRENT_DEVEL_BASE",
-    "DEVEL_BASE_WARNING",
+    "DEVEL_BASE",
     "CraftBaseConfig",
     "CraftBaseModel",
     "GrammarAwareProject",
