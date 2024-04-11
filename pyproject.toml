@@ -286,6 +286,9 @@ lint.ignore = [
 ]
 # isort leaves init files alone by default, this makes ruff ignore them too.
 "__init__.py" = ["I001"]
+# TODO: Revert this
+# https://github.com/canonical/craft-application/issues/306
+"tests/integration/launchpad/test_anonymous_access.py" = ["ERA001"]
 
 [tool.ruff.lint.pep8-naming]
 classmethod-decorators = [
