@@ -141,7 +141,9 @@ class Project(CraftBaseModel):
         """Validate the build-base is 'devel' for the current devel base."""
         base = values.get("base")
         base_alias = cls._providers_base(base)
-        build_base_alias = cls._providers_base(values.get("build_base"))
+
+        build_base = values.get("build_base") or base
+        build_base_alias = cls._providers_base(build_base)
 
         if base_alias == CURRENT_DEVEL_BASE and build_base_alias != DEVEL_BASE:
             raise errors.CraftValidationError(

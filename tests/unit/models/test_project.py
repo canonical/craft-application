@@ -241,19 +241,20 @@ class FakeBuildBaseProject(Project):
             return None
 
 
-# As above, we need to tell pyright to ignore several typing issues.
-BUILD_BASE_PROJECT = FakeBuildBaseProject(  # pyright: ignore[reportCallIssue]
-    name="project-name",  # pyright: ignore[reportGeneralTypeIssues]
-    version="1.0",  # pyright: ignore[reportGeneralTypeIssues]
-    parts={},
-    base="incorrect",
-    build_base="correct",
-)
+def test_effective_base_is_build_base():
+    base = craft_providers.bases.ubuntu.BuilddBaseAlias.JAMMY.value
+    build_base = craft_providers.bases.ubuntu.BuilddBaseAlias.NOBLE.value
 
+    # As above, we need to tell pyright to ignore several typing issues.
+    project = FakeBuildBaseProject(  # pyright: ignore[reportCallIssue]
+        name="project-name",  # pyright: ignore[reportGeneralTypeIssues]
+        version="1.0",  # pyright: ignore[reportGeneralTypeIssues]
+        parts={},
+        base=base,
+        build_base=build_base,
+    )
 
-@pytest.mark.parametrize("project", [BUILD_BASE_PROJECT])
-def test_effective_base_is_build_base(project):
-    assert project.effective_base == project.build_base
+    assert project.effective_base == build_base
 
 
 def test_effective_base_unknown():
@@ -271,14 +272,24 @@ def test_effective_base_unknown():
     assert exc_info.match("Could not determine effective base")
 
 
-def test_devel_base():
-    """Base can be 'devel' only when the build-base is 'devel'."""
+def test_devel_base_devel_build_base():
+    """Base can be 'devel' when the build-base is 'devel'."""
     _ = FakeBuildBaseProject(  # pyright: ignore[reportCallIssue]
         name="project-name",  # pyright: ignore[reportGeneralTypeIssues]
         version="1.0",  # pyright: ignore[reportGeneralTypeIssues]
         parts={},
         base=CURRENT_DEVEL_BASE.value,
         build_base=DEVEL_BASE.value,
+    )
+
+
+def test_devel_base_no_build_base():
+    """Base can be 'devel' if the build-base is not set."""
+    _ = FakeBuildBaseProject(  # pyright: ignore[reportCallIssue]
+        name="project-name",  # pyright: ignore[reportGeneralTypeIssues]
+        version="1.0",  # pyright: ignore[reportGeneralTypeIssues]
+        parts={},
+        base=CURRENT_DEVEL_BASE.value,
     )
 
 
@@ -290,6 +301,7 @@ def test_devel_base_error():
             version="1.0",  # pyright: ignore[reportGeneralTypeIssues]
             parts={},
             base=CURRENT_DEVEL_BASE.value,
+            build_base=craft_providers.bases.ubuntu.BuilddBaseAlias.JAMMY.value,
         )
 
     assert exc_info.match(

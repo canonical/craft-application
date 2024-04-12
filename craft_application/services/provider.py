@@ -32,6 +32,7 @@ from craft_providers.lxd import LXDProvider
 from craft_providers.multipass import MultipassProvider
 
 from craft_application import util
+from craft_application.models import DEVEL_BASE
 from craft_application.services import base
 from craft_application.util import platforms, snap_config
 
@@ -105,7 +106,7 @@ class ProviderService(base.ProjectService):
     ) -> Generator[craft_providers.Executor, None, None]:
         """Context manager for getting a provider instance.
 
-        :param base_name: A craft_providers capable base name (tuple of name, version)
+        :param build_info: Build information for the instance.
         :param work_dir: Local path to mount inside the provider instance.
         :param allow_unstable: Whether to allow the use of unstable images.
         :returns: a context manager of the provider instance.
@@ -115,6 +116,13 @@ class ProviderService(base.ProjectService):
         base_name = build_info.base
         base = self.get_base(base_name, instance_name=instance_name, **kwargs)
         provider = self.get_provider(name=self.__provider_name)
+
+        if base.alias == DEVEL_BASE:
+            emit.message(
+                "The development build-base should only be used for testing purposes, "
+                "as its contents are bound to change with the opening of new Ubuntu "
+                "releases, suddenly and without warning."
+            )
 
         emit.progress(f"Launching managed {base_name[0]} {base_name[1]} instance...")
         with provider.launched_environment(
