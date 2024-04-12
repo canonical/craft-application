@@ -71,38 +71,58 @@ def test_app_metadata_post_init_correct(summary):
     pytest_check.is_not_none(app.summary)
 
 
-def test_app_metadata_version_attribute(tmp_path, monkeypatch):
+def test_app_metadata_version_attribute(tmp_path, monkeypatch, fake_project_class):
     """Set the AppMetadata version from the main app package."""
     monkeypatch.syspath_prepend(tmp_path)
     (tmp_path / "dummycraft_version.py").write_text("__version__ = '1.2.3'")
 
-    app = application.AppMetadata(name="dummycraft_version", summary="dummy craft")
+    app = application.AppMetadata(
+        name="dummycraft_version",
+        ProjectClass=fake_project_class,
+        summary="dummy craft",
+    )
     assert app.version == "1.2.3"
 
 
-def test_app_metadata_importlib(tmp_path, monkeypatch, mocker):
+def test_app_metadata_importlib(tmp_path, monkeypatch, mocker, fake_project_class):
     """Set the AppMetadata version via importlib."""
     monkeypatch.syspath_prepend(tmp_path)
     (tmp_path / "dummycraft_importlib.py").write_text("print('hi')")
 
     mocker.patch.object(importlib.metadata, "version", return_value="4.5.6")
 
-    app = application.AppMetadata(name="dummycraft_importlib", summary="dummy craft")
+    app = application.AppMetadata(
+        name="dummycraft_importlib",
+        ProjectClass=fake_project_class,
+        summary="dummy craft",
+    )
     assert app.version == "4.5.6"
 
 
-def test_app_metadata_dev():
-    app = application.AppMetadata(name="dummycraft_dev", summary="dummy craft")
+def test_app_metadata_dev(fake_project_class):
+    app = application.AppMetadata(
+        name="dummycraft_dev",
+        ProjectClass=fake_project_class,
+        summary="dummy craft",
+    )
     assert app.version == "dev"
 
 
-def test_app_metadata_default_project_variables():
-    app = application.AppMetadata(name="dummycraft_dev", summary="dummy craft")
+def test_app_metadata_default_project_variables(fake_project_class):
+    app = application.AppMetadata(
+        name="dummycraft_dev",
+        ProjectClass=fake_project_class,
+        summary="dummy craft",
+    )
     assert app.project_variables == ["version"]
 
 
-def test_app_metadata_default_mandatory_adoptable_fields():
-    app = application.AppMetadata(name="dummycraft_dev", summary="dummy craft")
+def test_app_metadata_default_mandatory_adoptable_fields(fake_project_class):
+    app = application.AppMetadata(
+        name="dummycraft_dev",
+        ProjectClass=fake_project_class,
+        summary="dummy craft",
+    )
     assert app.mandatory_adoptable_fields == ["version"]
 
 
