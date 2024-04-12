@@ -24,6 +24,7 @@ import lazr.restfulclient.resource
 import pytest
 from craft_application import errors, launchpad
 from craft_application.remote import git
+from craft_application.remote.errors import RemoteBuildInvalidGitRepoError
 
 from tests.unit.services.conftest import (
     get_mock_callable,
@@ -302,8 +303,17 @@ def test_new_build(
     remote_build_service,
     architectures,
 ):
+    git.GitRepo(tmp_path)
     remote_build_service.start_builds(tmp_path, architectures)
     remote_build_service.monitor_builds()
     remote_build_service.fetch_logs(tmp_path)
     remote_build_service.fetch_artifacts(tmp_path)
     remote_build_service.cleanup()
+
+
+def test_new_build_not_git_repo(
+    tmp_path,
+    remote_build_service,
+):
+    with pytest.raises(RemoteBuildInvalidGitRepoError):
+        remote_build_service.start_builds(tmp_path, None)
