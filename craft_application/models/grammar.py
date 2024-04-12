@@ -19,6 +19,10 @@ from typing import Any
 
 import pydantic
 from craft_grammar.models import (  # type: ignore[import-untyped]
+    GrammarBool,
+    GrammarDict,
+    GrammarDictList,
+    GrammarInt,
     GrammarSingleEntryDictList,
     GrammarStr,
     GrammarStrList,
@@ -38,13 +42,36 @@ class _GrammarAwareModel(pydantic.BaseModel):
 
 
 class _GrammarAwarePart(_GrammarAwareModel):
+    plugin: GrammarStr | None
     source: GrammarStr | None
-    build_environment: GrammarSingleEntryDictList | None
-    build_packages: GrammarStrList | None
+    source_checksum: GrammarStr | None
+    source_branch: GrammarStr | None
+    source_commit: GrammarStr | None
+    source_depth: GrammarInt | None
+    source_subdir: GrammarStr | None
+    source_submodules: GrammarStrList | None
+    source_tag: GrammarStr | None
+    source_type: GrammarStr | None
+    disable_parallel: GrammarBool | None
+    after: GrammarStrList | None
+    overlay_packages: GrammarStrList | None
+    stage_snaps: GrammarStrList | None
     stage_packages: GrammarStrList | None
     build_snaps: GrammarStrList | None
-    stage_snaps: GrammarStrList | None
-    parse_info: list[str] | None
+    build_packages: GrammarStrList | None
+    build_environment: GrammarSingleEntryDictList | None
+    build_attributes: GrammarStrList | None
+    organize_files: GrammarDict | None
+    overlay_files: GrammarStrList | None
+    stage_files: GrammarStrList | None
+    prime_files: GrammarStrList | None
+    override_pull: GrammarStr | None
+    overlay_script: GrammarStr | None
+    override_build: GrammarStr | None
+    override_stage: GrammarStr | None
+    override_prime: GrammarStr | None
+    permissions: GrammarDictList | None
+    parse_info: GrammarStrList | None
 
 
 class GrammarAwareProject(_GrammarAwareModel):
