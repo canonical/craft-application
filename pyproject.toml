@@ -52,7 +52,7 @@ dev = [
     "pytest-check==2.3.1",
     "pytest-cov==5.0.0",
     "pytest-mock==3.14.0",
-    "pytest-rerunfailures==13.0",
+    "pytest-rerunfailures==14.0",
     "pytest-time>=0.3.1",
     "responses~=0.25.0",
     "craft-application[remote]"
@@ -64,7 +64,7 @@ lint = [
 ]
 types = [
     "mypy[reports]==1.9.0",
-    "pyright==1.1.356",
+    "pyright==1.1.358",
     "types-requests",
     "types-urllib3",
 ]
@@ -84,7 +84,7 @@ apt = [
 
 [build-system]
 requires = [
-    "setuptools==69.1.1",
+    "setuptools==69.4.0",
     "setuptools_scm[toml]>=7.1"
 ]
 build-backend = "setuptools.build_meta"
@@ -286,6 +286,9 @@ lint.ignore = [
 ]
 # isort leaves init files alone by default, this makes ruff ignore them too.
 "__init__.py" = ["I001"]
+# TODO: Revert this
+# https://github.com/canonical/craft-application/issues/306
+"tests/integration/launchpad/test_anonymous_access.py" = ["ERA001"]
 
 [tool.ruff.lint.pep8-naming]
 classmethod-decorators = [
