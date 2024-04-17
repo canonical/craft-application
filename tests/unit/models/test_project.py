@@ -278,7 +278,21 @@ def test_devel_base_devel_build_base():
 
 
 def test_devel_base_no_base():
-    """Do not validate if base can be devel if the base is not set."""
+    """Do not validate the build-base if there is no base."""
+    _ = FakeBuildBaseProject(  # pyright: ignore[reportCallIssue]
+        name="project-name",  # pyright: ignore[reportGeneralTypeIssues]
+        version="1.0",  # pyright: ignore[reportGeneralTypeIssues]
+        parts={},
+    )
+
+
+def test_devel_base_no_base_alias(mocker):
+    """Do not validate the build base if there is no base alias."""
+    mocker.patch(
+        "tests.unit.models.test_project.FakeBuildBaseProject._providers_base",
+        return_value=None
+    )
+
     _ = FakeBuildBaseProject(  # pyright: ignore[reportCallIssue]
         name="project-name",  # pyright: ignore[reportGeneralTypeIssues]
         version="1.0",  # pyright: ignore[reportGeneralTypeIssues]

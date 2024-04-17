@@ -139,12 +139,13 @@ class Project(CraftBaseModel):
 
     @classmethod
     @abc.abstractmethod
-    def _providers_base(cls, base: str) -> craft_providers.bases.BaseAlias:
+    def _providers_base(cls, base: str) -> craft_providers.bases.BaseAlias | None:
         """Get a BaseAlias from the application's base.
 
         :param base: The application-specific base name.
 
-        :returns: The BaseAlias for the base.
+        :returns: The BaseAlias for the base or None if the base does not map to
+          a BaseAlias.
 
         :raises CraftValidationError: If the project's base cannot be determined.
         """
@@ -155,12 +156,16 @@ class Project(CraftBaseModel):
     def _validate_devel(cls, values: dict[str, Any]) -> dict[str, Any]:
         """Validate the build-base is 'devel' for the current devel base."""
         base = values.get("base")
-
-        # if base is None, we do not need to validate the build-base
+        # if there is no base, do not validate the build-base
         if not base:
             return values
 
         base_alias = cls._providers_base(base)
+
+        # if the base does not map to a base alias, do not validate the build-base
+        if not base_alias:
+            return values
+
         build_base = values.get("build_base") or base
         build_base_alias = cls._providers_base(build_base)
 
