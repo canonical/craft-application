@@ -47,7 +47,7 @@ def test_get_real_repository_by_path(anonymous_lp, name, path):
     [
         ("python-apt", "deity", "python-apt"),
         ("charmcraft", "charmcraft-team", "charmcraft"),
-        ("snapcraft", "sergiusens", "snapcraft"),
+        ("snapcraft", "canonical-starcraft", "snapcraft"),
     ],
 )
 def test_get_real_repository_by_name(anonymous_lp, name, owner, project):
