@@ -290,7 +290,7 @@ def test_devel_base_no_base_alias(mocker):
     """Do not validate the build base if there is no base alias."""
     mocker.patch(
         "tests.unit.models.test_project.FakeBuildBaseProject._providers_base",
-        return_value=None
+        return_value=None,
     )
 
     _ = FakeBuildBaseProject(  # pyright: ignore[reportCallIssue]
