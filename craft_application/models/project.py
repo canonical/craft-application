@@ -39,11 +39,26 @@ from craft_application.models.constraints import (
     VersionStr,
 )
 
-# The Ubuntu base that the 'devel' alias currently points to
-# TODO: This should point to 24.10, which is not available yet
-CURRENT_DEVEL_BASE = craft_providers.bases.ubuntu.BuilddBaseAlias.DEVEL
 
-DEVEL_BASE = craft_providers.bases.ubuntu.BuilddBaseAlias.DEVEL
+@dataclasses.dataclass
+class DevelBaseInfo:
+    """Devel base information for an OS."""
+
+    current_devel_base: craft_providers.bases.BaseAlias
+    """The base that the 'devel' alias currently points to."""
+
+    devel_base: craft_providers.bases.BaseAlias
+    """The devel base."""
+
+
+# A list of DevelBaseInfo objects that define an OS's current devel base and devel base.
+DEVEL_BASE_INFOS = [
+    DevelBaseInfo(
+        # TODO: current_devel_base should point to 24.10, which is not available yet
+        current_devel_base=craft_providers.bases.ubuntu.BuilddBaseAlias.DEVEL,
+        devel_base=craft_providers.bases.ubuntu.BuilddBaseAlias.DEVEL,
+    ),
+]
 
 
 @dataclasses.dataclass
@@ -124,14 +139,14 @@ class Project(CraftBaseModel):
 
     @classmethod
     @abc.abstractmethod
-    def _providers_base(
-        cls, base: str | None
-    ) -> craft_providers.bases.BaseAlias | None:
+    def _providers_base(cls, base: str) -> craft_providers.bases.BaseAlias:
         """Get a BaseAlias from the application's base.
 
         :param base: The application-specific base name.
 
-        :returns: The BaseAlias for the base or None if not found.
+        :returns: The BaseAlias for the base.
+
+        :raises CraftValidationError: If the project's base cannot be determined.
         """
 
     @pydantic.root_validator(  # pyright: ignore[reportUnknownMemberType,reportUntypedFunctionDecorator]
@@ -140,15 +155,23 @@ class Project(CraftBaseModel):
     def _validate_devel(cls, values: dict[str, Any]) -> dict[str, Any]:
         """Validate the build-base is 'devel' for the current devel base."""
         base = values.get("base")
-        base_alias = cls._providers_base(base)
 
+        # if base is None, we do not need to validate the build-base
+        if not base:
+            return values
+
+        base_alias = cls._providers_base(base)
         build_base = values.get("build_base") or base
         build_base_alias = cls._providers_base(build_base)
 
-        if base_alias == CURRENT_DEVEL_BASE and build_base_alias != DEVEL_BASE:
-            raise errors.CraftValidationError(
-                f"build-base must be 'devel' when base is {base!r}"
-            )
+        for devel_base_info in DEVEL_BASE_INFOS:
+            if (
+                base_alias == devel_base_info.current_devel_base
+                and build_base_alias != devel_base_info.devel_base
+            ):
+                raise errors.CraftValidationError(
+                    f"build-base must be 'devel' when base is {base!r}"
+                )
 
         return values
 

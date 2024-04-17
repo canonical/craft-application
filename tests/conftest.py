@@ -105,8 +105,8 @@ class FakeProject(models.Project):
 
     @override
     @classmethod
-    def _providers_base(cls, base: str | None) -> bases.BaseAlias | None:
-        return None
+    def _providers_base(cls, base: str) -> bases.BaseAlias:
+        return bases.get_base_alias(("ubuntu", "24.04"))
 
 
 @pytest.fixture()

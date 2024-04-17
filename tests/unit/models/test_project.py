@@ -24,8 +24,7 @@ import pytest
 from craft_application import util
 from craft_application.errors import CraftValidationError
 from craft_application.models import (
-    CURRENT_DEVEL_BASE,
-    DEVEL_BASE,
+    DEVEL_BASE_INFOS,
     BuildPlanner,
     Project,
     constraints,
@@ -228,17 +227,12 @@ class FakeBuildBaseProject(Project):
 
     @override
     @classmethod
-    def _providers_base(
-        cls, base: str | None
-    ) -> craft_providers.bases.BaseAlias | None:
+    def _providers_base(cls, base: str) -> craft_providers.bases.BaseAlias:
         """Get a BaseAlias from the application's base."""
-        if not base:
-            return None
-
         try:
             return craft_providers.bases.get_base_alias(("ubuntu", base))
-        except craft_providers.errors.BaseConfigurationError:
-            return None
+        except craft_providers.errors.BaseConfigurationError as err:
+            raise CraftValidationError(f"Unknown base {base!r}") from err
 
 
 def test_effective_base_is_build_base():
@@ -278,8 +272,17 @@ def test_devel_base_devel_build_base():
         name="project-name",  # pyright: ignore[reportGeneralTypeIssues]
         version="1.0",  # pyright: ignore[reportGeneralTypeIssues]
         parts={},
-        base=CURRENT_DEVEL_BASE.value,
-        build_base=DEVEL_BASE.value,
+        base=DEVEL_BASE_INFOS[0].current_devel_base.value,
+        build_base=DEVEL_BASE_INFOS[0].current_devel_base.value,
+    )
+
+
+def test_devel_base_no_base():
+    """Do not validate if base can be devel if the base is not set."""
+    _ = FakeBuildBaseProject(  # pyright: ignore[reportCallIssue]
+        name="project-name",  # pyright: ignore[reportGeneralTypeIssues]
+        version="1.0",  # pyright: ignore[reportGeneralTypeIssues]
+        parts={},
     )
 
 
@@ -289,7 +292,7 @@ def test_devel_base_no_build_base():
         name="project-name",  # pyright: ignore[reportGeneralTypeIssues]
         version="1.0",  # pyright: ignore[reportGeneralTypeIssues]
         parts={},
-        base=CURRENT_DEVEL_BASE.value,
+        base=DEVEL_BASE_INFOS[0].current_devel_base.value,
     )
 
 
@@ -300,12 +303,12 @@ def test_devel_base_error():
             name="project-name",  # pyright: ignore[reportGeneralTypeIssues]
             version="1.0",  # pyright: ignore[reportGeneralTypeIssues]
             parts={},
-            base=CURRENT_DEVEL_BASE.value,
+            base=DEVEL_BASE_INFOS[0].current_devel_base.value,
             build_base=craft_providers.bases.ubuntu.BuilddBaseAlias.JAMMY.value,
         )
 
     assert exc_info.match(
-        f"build-base must be 'devel' when base is '{CURRENT_DEVEL_BASE.value}'"
+        f"build-base must be 'devel' when base is '{DEVEL_BASE_INFOS[0].current_devel_base.value}'"
     )
 
 
