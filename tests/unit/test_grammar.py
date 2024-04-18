@@ -101,7 +101,7 @@ def test_grammar_aware_part(part):
         ),
         (
             {
-                "build-environment": [{"MESSAGE": "A", "NAME": "B"}],
+                "build-environment": ["NOT", "A", "DICT"],
             }
         ),
         (
@@ -224,7 +224,7 @@ def test_grammar_aware_project(project):
                 "parts": {
                     "my-part": {
                         "source": ".",
-                        "build-environment": [{"MESSAGE": "A", "NAME": "B"}],
+                        "build-environment": ["NOT", "A", "DICT"],
                         "build-packages": ["C", "D"],
                         "stage-packages": ["E", "F"],
                         "build-snaps": ["G", "H"],

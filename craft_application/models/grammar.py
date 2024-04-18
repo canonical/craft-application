@@ -18,15 +18,7 @@
 from typing import Any
 
 import pydantic
-from craft_grammar.models import (  # type: ignore[import-untyped]
-    GrammarBool,
-    GrammarDict,
-    GrammarDictList,
-    GrammarInt,
-    GrammarSingleEntryDictList,
-    GrammarStr,
-    GrammarStrList,
-)
+from craft_grammar.models import Grammar
 
 from craft_application.models.base import alias_generator
 
@@ -42,36 +34,40 @@ class _GrammarAwareModel(pydantic.BaseModel):
 
 
 class _GrammarAwarePart(_GrammarAwareModel):
-    plugin: GrammarStr | None
-    source: GrammarStr | None
-    source_checksum: GrammarStr | None
-    source_branch: GrammarStr | None
-    source_commit: GrammarStr | None
-    source_depth: GrammarInt | None
-    source_subdir: GrammarStr | None
-    source_submodules: GrammarStrList | None
-    source_tag: GrammarStr | None
-    source_type: GrammarStr | None
-    disable_parallel: GrammarBool | None
-    after: GrammarStrList | None
-    overlay_packages: GrammarStrList | None
-    stage_snaps: GrammarStrList | None
-    stage_packages: GrammarStrList | None
-    build_snaps: GrammarStrList | None
-    build_packages: GrammarStrList | None
-    build_environment: GrammarSingleEntryDictList | None
-    build_attributes: GrammarStrList | None
-    organize_files: GrammarDict | None = pydantic.Field(alias="organize")
-    overlay_files: GrammarStrList | None = pydantic.Field(alias="overlay")
-    stage_files: GrammarStrList | None = pydantic.Field(alias="stage")
-    prime_files: GrammarStrList | None = pydantic.Field(alias="prime")
-    override_pull: GrammarStr | None
-    overlay_script: GrammarStr | None
-    override_build: GrammarStr | None
-    override_stage: GrammarStr | None
-    override_prime: GrammarStr | None
-    permissions: GrammarDictList | None
-    parse_info: GrammarStrList | None
+    plugin: Grammar[str] | None
+    source: Grammar[str] | None
+    source_checksum: Grammar[str] | None
+    source_branch: Grammar[str] | None
+    source_commit: Grammar[str] | None
+    source_depth: Grammar[int] | None
+    source_subdir: Grammar[str] | None
+    source_submodules: Grammar[list[str]] | None
+    source_tag: Grammar[str] | None
+    source_type: Grammar[str] | None
+    disable_parallel: Grammar[bool] | None
+    after: Grammar[list[str]] | None
+    overlay_packages: Grammar[list[str]] | None
+    stage_snaps: Grammar[list[str]] | None
+    stage_packages: Grammar[list[str]] | None
+    build_snaps: Grammar[list[str]] | None
+    build_packages: Grammar[list[str]] | None
+    build_environment: (
+        Grammar[list[dict]] | None  # pyright: ignore[reportMissingTypeArgument]
+    )
+    build_attributes: Grammar[list[str]] | None
+    organize_files: Grammar[dict[str, str]] | None = pydantic.Field(alias="organize")
+    overlay_files: Grammar[list[str]] | None = pydantic.Field(alias="overlay")
+    stage_files: Grammar[list[str]] | None = pydantic.Field(alias="stage")
+    prime_files: Grammar[list[str]] | None = pydantic.Field(alias="prime")
+    override_pull: Grammar[str] | None
+    overlay_script: Grammar[str] | None
+    override_build: Grammar[str] | None
+    override_stage: Grammar[str] | None
+    override_prime: Grammar[str] | None
+    permissions: (
+        Grammar[list[dict]] | None  # pyright: ignore[reportMissingTypeArgument]
+    )
+    parse_info: Grammar[list[str]] | None
 
 
 def get_grammar_aware_part_keywords() -> list[str]:
