@@ -24,6 +24,7 @@ from typing import Any
 import craft_parts
 import craft_providers.bases
 import pydantic
+from craft_cli import emit
 from pydantic import AnyUrl
 from typing_extensions import override
 
@@ -59,6 +60,12 @@ DEVEL_BASE_INFOS = [
         devel_base=craft_providers.bases.ubuntu.BuilddBaseAlias.DEVEL,
     ),
 ]
+
+DEVEL_BASE_WARNING = (
+    "The development build-base should only be used for testing purposes, "
+    "as its contents are bound to change with the opening of new Ubuntu releases, "
+    "suddenly and without warning."
+)
 
 
 @dataclasses.dataclass
@@ -169,14 +176,16 @@ class Project(CraftBaseModel):
         build_base = values.get("build_base") or base
         build_base_alias = cls._providers_base(build_base)
 
+        # warn if a devel build-base is being used, error if a devel build-base is not
+        # used for a devel base
         for devel_base_info in DEVEL_BASE_INFOS:
-            if (
-                base_alias == devel_base_info.current_devel_base
-                and build_base_alias != devel_base_info.devel_base
-            ):
-                raise errors.CraftValidationError(
-                    f"build-base must be 'devel' when base is {base!r}"
-                )
+            if base_alias == devel_base_info.current_devel_base:
+                if build_base_alias == devel_base_info.devel_base:
+                    emit.message(DEVEL_BASE_WARNING)
+                else:
+                    raise errors.CraftValidationError(
+                        f"A development build-base must be used when base is {base!r}"
+                    )
 
         return values
 

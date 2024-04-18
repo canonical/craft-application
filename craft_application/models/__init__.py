@@ -27,6 +27,7 @@ from craft_application.models.grammar import GrammarAwareProject
 from craft_application.models.metadata import BaseMetadata
 from craft_application.models.project import (
     DEVEL_BASE_INFOS,
+    DEVEL_BASE_WARNING,
     BuildInfo,
     BuildPlanner,
     Project,
@@ -37,6 +38,7 @@ __all__ = [
     "BaseMetadata",
     "BuildInfo",
     "DEVEL_BASE_INFOS",
+    "DEVEL_BASE_WARNING",
     "CraftBaseConfig",
     "CraftBaseModel",
     "GrammarAwareProject",

@@ -32,7 +32,6 @@ from craft_providers.lxd import LXDProvider
 from craft_providers.multipass import MultipassProvider
 
 from craft_application import util
-from craft_application.models import DEVEL_BASE_INFOS
 from craft_application.services import base
 from craft_application.util import platforms, snap_config
 
@@ -116,16 +115,6 @@ class ProviderService(base.ProjectService):
         base_name = build_info.base
         base = self.get_base(base_name, instance_name=instance_name, **kwargs)
         provider = self.get_provider(name=self.__provider_name)
-
-        devel_bases = {
-            devel_base_info.devel_base for devel_base_info in DEVEL_BASE_INFOS
-        }
-        if base.alias in devel_bases:
-            emit.message(
-                "The development build-base should only be used for testing purposes, "
-                "as its contents are bound to change with the opening of new Ubuntu "
-                "releases, suddenly and without warning."
-            )
 
         emit.progress(f"Launching managed {base_name[0]} {base_name[1]} instance...")
         with provider.launched_environment(

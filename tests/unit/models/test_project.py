@@ -25,6 +25,7 @@ from craft_application import util
 from craft_application.errors import CraftValidationError
 from craft_application.models import (
     DEVEL_BASE_INFOS,
+    DEVEL_BASE_WARNING,
     BuildPlanner,
     Project,
     constraints,
@@ -266,7 +267,7 @@ def test_effective_base_unknown():
     assert exc_info.match("Could not determine effective base")
 
 
-def test_devel_base_devel_build_base():
+def test_devel_base_devel_build_base(emitter):
     """Base can be 'devel' when the build-base is 'devel'."""
     _ = FakeBuildBaseProject(  # pyright: ignore[reportCallIssue]
         name="project-name",  # pyright: ignore[reportGeneralTypeIssues]
@@ -275,6 +276,8 @@ def test_devel_base_devel_build_base():
         base=DEVEL_BASE_INFOS[0].current_devel_base.value,
         build_base=DEVEL_BASE_INFOS[0].current_devel_base.value,
     )
+
+    emitter.assert_message(DEVEL_BASE_WARNING)
 
 
 def test_devel_base_no_base():
@@ -322,7 +325,7 @@ def test_devel_base_error():
         )
 
     assert exc_info.match(
-        f"build-base must be 'devel' when base is '{DEVEL_BASE_INFOS[0].current_devel_base.value}'"
+        f"A development build-base must be used when base is '{DEVEL_BASE_INFOS[0].current_devel_base.value}'"
     )
 
 

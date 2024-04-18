@@ -324,13 +324,6 @@ def test_instance(
         )
     with check:
         emitter.assert_progress("Launching managed .+ instance...", regex=True)
-    with check:
-        if base_name == ("ubuntu", "devel"):
-            emitter.assert_message(
-                "The development build-base should only be used for testing purposes, "
-                "as its contents are bound to change with the opening of new Ubuntu "
-                "releases, suddenly and without warning."
-            )
 
 
 def test_load_bashrc(emitter):
