@@ -25,7 +25,7 @@ import craft_parts
 import craft_parts.callbacks
 import pytest
 import pytest_check
-from craft_application import errors, models, util
+from craft_application import errors, util
 from craft_application.errors import InvalidParameterError, PartsLifecycleError
 from craft_application.services import lifecycle
 from craft_application.util import repositories
@@ -659,11 +659,11 @@ def test_get_parallel_build_count_error(
 
 
 def test_lifecycle_project_variables(
-    app_metadata, fake_services, tmp_path, fake_build_plan
+    app_metadata, fake_services, tmp_path, fake_build_plan, fake_project_class
 ):
     """Test that project variables are set after the lifecycle runs."""
 
-    class LocalProject(models.Project):
+    class LocalProject(fake_project_class):
         color: str | None
 
     fake_project = LocalProject.unmarshal(
