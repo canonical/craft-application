@@ -224,7 +224,7 @@ def test_effective_base_is_base(full_project):
 
 
 class FakeBuildBaseProject(Project):
-    build_base: str | None
+    build_base: str | None  # pyright: ignore[reportGeneralTypeIssues]
 
     @override
     @classmethod
