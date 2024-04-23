@@ -1662,3 +1662,18 @@ def test_process_grammar_full(grammar_app_full):
         {"path": "riscv64-perm-1", "owner": 123, "group": 123, "mode": "777"},
         {"path": "riscv64-perm-2", "owner": 456, "group": 456, "mode": "666"},
     ]
+
+
+class ApplicationWithLocalKeys(FakeApplication):
+    @override
+    def _get_local_keys_path(self) -> pathlib.Path | None:
+        return pathlib.Path("my/keys")
+
+
+def test_local_keys_path(app_metadata, fake_services):
+    """Test that the path to local keys is passed to the lifecycle service."""
+
+    app = ApplicationWithLocalKeys(app_metadata, fake_services)
+    app._configure_services(None)
+    lifecycle = fake_services.lifecycle
+    assert lifecycle._local_keys_path == pathlib.Path("my/keys")

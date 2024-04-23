@@ -463,8 +463,18 @@ def test_post_prime_wrong_step(fake_parts_lifecycle, step):
 # region Feature package repositories tests
 
 
+@pytest.mark.parametrize(
+    "local_keys_path",
+    [None, Path("my/keys")],
+)
 def test_lifecycle_package_repositories(
-    app_metadata, fake_project, fake_services, tmp_path, mocker, fake_build_plan
+    app_metadata,
+    fake_project,
+    fake_services,
+    tmp_path,
+    mocker,
+    fake_build_plan,
+    local_keys_path,
 ):
     """Test that package repositories installation is called in the lifecycle."""
     fake_repositories = [{"type": "apt", "ppa": "ppa/ppa"}]
@@ -479,6 +489,7 @@ def test_lifecycle_package_repositories(
         cache_dir=tmp_path / "cache",
         platform=None,
         build_plan=fake_build_plan,
+        local_keys_path=local_keys_path,
     )
     service._lcm = mock.MagicMock(spec=LifecycleManager)
     service._lcm.project_info = mock.MagicMock(spec=ProjectInfo)
@@ -495,7 +506,9 @@ def test_lifecycle_package_repositories(
 
     service.run("prime")
 
-    mock_install.assert_called_once_with(fake_repositories, service._lcm)
+    mock_install.assert_called_once_with(
+        fake_repositories, service._lcm, local_keys_path=local_keys_path
+    )
     mock_callback.assert_called_once_with(repositories.install_overlay_repositories)
 
 

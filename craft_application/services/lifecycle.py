@@ -121,11 +121,13 @@ class LifecycleService(base.ProjectService):
     :param cache_dir: The cache directory for parts processing.
     :param build_plan: The filtered build plan of platforms that are valid for
         the running host.
+    :param local_keys_path: The optional local directory containing public
+      keys (for repositories that don't use the keyserver).
     :param lifecycle_kwargs: Additional keyword arguments are passed through to the
         LifecycleManager on initialisation.
     """
 
-    def __init__(
+    def __init__(  # noqa: PLR0913 (too many arguments)
         self,
         app: AppMetadata,
         services: ServiceFactory,
@@ -135,6 +137,7 @@ class LifecycleService(base.ProjectService):
         cache_dir: Path | str,
         build_plan: list[models.BuildInfo],
         partitions: list[str] | None = None,
+        local_keys_path: Path | None = None,
         **lifecycle_kwargs: Any,  # noqa: ANN401 - eventually used in an Any
     ) -> None:
         super().__init__(app, services, project=project)
@@ -142,6 +145,7 @@ class LifecycleService(base.ProjectService):
         self._cache_dir = cache_dir
         self._build_plan = build_plan
         self._partitions = partitions
+        self._local_keys_path = local_keys_path
         self._manager_kwargs = lifecycle_kwargs
         self._lcm: LifecycleManager = None  # type: ignore[assignment]
 
@@ -235,7 +239,9 @@ class LifecycleService(base.ProjectService):
             if self._project.package_repositories:
                 emit.trace("Installing package repositories")
                 repositories.install_package_repositories(
-                    self._project.package_repositories, self._lcm
+                    self._project.package_repositories,
+                    self._lcm,
+                    local_keys_path=self._local_keys_path,
                 )
                 with contextlib.suppress(CallbackRegistrationError):
                     callbacks.register_configure_overlay(
