@@ -19,6 +19,8 @@ from __future__ import annotations
 from collections.abc import Callable, Iterable
 from typing import TYPE_CHECKING, Literal, overload
 
+import craft_parts
+
 if TYPE_CHECKING:  # pragma: no cover
     # Caution: Removing these from type checking will result in circular imports.
     from craft_application.commands.base import ParserCallback, RunCallback
@@ -56,3 +58,12 @@ def get_unique_callbacks(  # pyright: ignore[reportUnknownParameterType]
         if callback is not None and callback not in callbacks:
             callbacks.append(callback)  # pyright: ignore[reportUnknownMemberType]
     return callbacks  # pyright: ignore[reportUnknownVariableType]
+
+
+def set_global_environment(info: craft_parts.ProjectInfo) -> None:
+    """Populate the ProjectInfo's global environment."""
+    info.global_environment.update(
+        {
+            "CRAFT_PROJECT_VERSION": info.get_project_var("version", raw_read=True),
+        }
+    )

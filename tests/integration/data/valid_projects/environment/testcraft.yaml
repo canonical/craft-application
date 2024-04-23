@@ -1,5 +1,5 @@
 name: environment-project
-summary: A project with environment variables
+summary: A project with project variables and environment variables
 version: 1.0
 base: ["ubuntu", "22.04"]
 
@@ -9,6 +9,13 @@ parts:
     override-build: |
         target_file=${CRAFT_PART_INSTALL}/variables.yaml
         touch $target_file
+
+        # project variables are evaluated within the yaml file
         echo "project_name:    \"${CRAFT_PROJECT_NAME}\""    >> $target_file
         echo "project_dir:     \"${CRAFT_PROJECT_DIR}\""     >> $target_file
         echo "project_version: \"${CRAFT_PROJECT_VERSION}\"" >> $target_file
+
+        # project variables are available in the build environment
+        echo "env_project_name:    $(env | grep '^CRAFT_PROJECT_NAME=' | cut -d '=' -f 2)"    >> $target_file
+        echo "env_project_dir:     $(env | grep '^CRAFT_PROJECT_DIR=' | cut -d '=' -f 2)"     >> $target_file
+        echo "env_project_version: $(env | grep '^CRAFT_PROJECT_VERSION=' | cut -d '=' -f 2)" >> $target_file

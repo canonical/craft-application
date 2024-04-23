@@ -288,9 +288,15 @@ def test_global_environment(
     with variables_yaml.open() as file:
         variables = yaml.safe_yaml_load(file)
 
+    # project variables should be evaluated within the project's yaml file
     assert variables["project_name"] == "environment-project"
     assert variables["project_dir"] == str(tmp_path)
     assert variables["project_version"] == "1.0"
+
+    # project variables should be set in the build environment
+    assert variables["env_project_name"] == "environment-project"
+    assert variables["env_project_dir"] == str(tmp_path)
+    assert str(variables["env_project_version"]) == "1.0"
 
 
 @pytest.fixture()

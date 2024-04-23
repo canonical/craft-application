@@ -648,11 +648,7 @@ class Application:
 
     def _set_global_environment(self, info: craft_parts.ProjectInfo) -> None:
         """Populate the ProjectInfo's global environment."""
-        info.global_environment.update(
-            {
-                "CRAFT_PROJECT_VERSION": info.get_project_var("version", raw_read=True),
-            }
-        )
+        util.set_global_environment(info)
 
     def _render_secrets(self, yaml_data: dict[str, Any]) -> None:
         """Render build-secrets, in-place."""

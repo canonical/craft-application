@@ -27,10 +27,16 @@ import craft_parts
 import pytest
 from craft_application import application, models, services, util
 from craft_cli import EmitterMode, emit
+from craft_parts import callbacks
 from craft_providers import bases
 
 if TYPE_CHECKING:  # pragma: no cover
     from collections.abc import Iterator
+
+
+@pytest.fixture(autouse=True)
+def unregister_callbacks():
+    callbacks.unregister_all()
 
 
 class Platform(models.CraftBaseModel):

@@ -149,6 +149,7 @@ class LifecycleService(base.ProjectService):
     def setup(self) -> None:
         """Initialize the LifecycleManager with previously-set arguments."""
         self._lcm = self._init_lifecycle_manager()
+        callbacks.register_prologue(util.set_global_environment)
         callbacks.register_post_step(self.post_prime, step_list=[Step.PRIME])
 
     def _init_lifecycle_manager(self) -> LifecycleManager:
@@ -189,6 +190,7 @@ class LifecycleService(base.ProjectService):
                 work_dir=self._work_dir,
                 ignore_local_sources=self._app.source_ignore_patterns,
                 parallel_build_count=self._get_parallel_build_count(),
+                project_name=self._project.name,
                 project_vars_part_name=self._project.adopt_info,
                 project_vars=self._project_vars,
                 track_stage_packages=True,
