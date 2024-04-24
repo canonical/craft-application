@@ -583,6 +583,12 @@ class Application:
         if self.app.features.build_secrets:
             self._render_secrets(yaml_data)
 
+        # apply application-specific transformations before expanding grammar
+        # because an application may add advanced grammar to the yaml
+        yaml_data = self._extra_yaml_transform(
+            yaml_data, build_on=build_on, build_for=build_for
+        )
+
         # Expand grammar.
         if "parts" in yaml_data:
             if not build_for:
@@ -605,10 +611,7 @@ class Application:
                 target_arch=build_for,
             )
 
-        # Perform extra, application-specific transformations.
-        return self._extra_yaml_transform(
-            yaml_data, build_on=build_on, build_for=build_for
-        )
+        return yaml_data
 
     def _expand_environment(self, yaml_data: dict[str, Any]) -> None:
         """Perform expansion of project environment variables."""
