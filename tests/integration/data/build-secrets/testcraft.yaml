@@ -1,7 +1,7 @@
 name: build-secrets
 description: A project with build-time secrets
 version: git
-base: ["ubuntu", "22.04"]
+base: "ubuntu@22.04"
 
 parts:
   my-part:

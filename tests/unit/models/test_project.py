@@ -30,17 +30,16 @@ from craft_application.models import (
     Project,
     constraints,
 )
-from typing_extensions import override
 
 PROJECTS_DIR = pathlib.Path(__file__).parent / "project_models"
 PARTS_DICT = {"my-part": {"plugin": "nil"}}
 
 
 @pytest.fixture()
-def basic_project(fake_project_class):
+def basic_project():
     # pyright doesn't like these types and doesn't have a pydantic plugin like mypy.
     # Because of this, we need to silence several errors in these constants.
-    return fake_project_class(  # pyright: ignore[reportCallIssue]
+    return Project(  # pyright: ignore[reportCallIssue]
         name="project-name",  # pyright: ignore[reportGeneralTypeIssues]
         version="1.0",  # pyright: ignore[reportGeneralTypeIssues]
         parts=PARTS_DICT,
@@ -55,11 +54,11 @@ BASIC_PROJECT_DICT = {
 
 
 @pytest.fixture()
-def full_project(fake_project_class):
-    return fake_project_class(  # pyright: ignore[reportCallIssue]
+def full_project():
+    return Project(  # pyright: ignore[reportCallIssue]
         name="full-project",  # pyright: ignore[reportGeneralTypeIssues]
         title="A fully-defined project",  # pyright: ignore[reportGeneralTypeIssues]
-        base="core24",
+        base="ubuntu@24.04",
         version="1.0.0.post64+git12345678",  # pyright: ignore[reportGeneralTypeIssues]
         contact="author@project.org",
         issues="https://github.com/canonical/craft-application/issues",
@@ -72,7 +71,7 @@ def full_project(fake_project_class):
 
 
 FULL_PROJECT_DICT = {
-    "base": "core24",
+    "base": "ubuntu@24.04",
     "contact": "author@project.org",
     "description": dedent(
         """\
@@ -111,28 +110,28 @@ def test_marshal(project_fixture, project_dict, request):
     ("project_fixture", "project_dict"),
     [("basic_project", BASIC_PROJECT_DICT), ("full_project", FULL_PROJECT_DICT)],
 )
-def test_unmarshal_success(project_fixture, project_dict, fake_project_class, request):
+def test_unmarshal_success(project_fixture, project_dict, request):
     project = request.getfixturevalue(project_fixture)
 
-    assert fake_project_class.unmarshal(project_dict) == project
+    assert Project.unmarshal(project_dict) == project
 
 
 @pytest.mark.parametrize("data", [None, [], (), 0, ""])
-def test_unmarshal_error(data, fake_project_class):
+def test_unmarshal_error(data):
     with pytest.raises(TypeError):
-        fake_project_class.unmarshal(data)
+        Project.unmarshal(data)
 
 
 @pytest.mark.parametrize("project_fixture", ["basic_project", "full_project"])
-def test_marshal_then_unmarshal(project_fixture, fake_project_class, request):
+def test_marshal_then_unmarshal(project_fixture, request):
     project = request.getfixturevalue(project_fixture)
 
-    assert fake_project_class.unmarshal(project.marshal()) == project
+    assert Project.unmarshal(project.marshal()) == project
 
 
 @pytest.mark.parametrize("project_dict", [BASIC_PROJECT_DICT, FULL_PROJECT_DICT])
-def test_unmarshal_then_marshal(project_dict, fake_project_class):
-    assert fake_project_class.unmarshal(project_dict).marshal() == project_dict
+def test_unmarshal_then_marshal(project_dict):
+    assert Project.unmarshal(project_dict).marshal() == project_dict
 
 
 def test_build_planner_abstract():
@@ -147,13 +146,11 @@ def test_build_planner_abstract():
         (PROJECTS_DIR / "full_project.yaml", "full_project"),
     ],
 )
-def test_from_yaml_file_success(
-    project_file, expected_fixture, fake_project_class, request
-):
+def test_from_yaml_file_success(project_file, expected_fixture, request):
     expected = request.getfixturevalue(expected_fixture)
 
     with project_file.open():
-        actual = fake_project_class.from_yaml_file(project_file)
+        actual = Project.from_yaml_file(project_file)
 
     assert expected == actual
 
@@ -165,9 +162,9 @@ def test_from_yaml_file_success(
         (PROJECTS_DIR / "invalid_project.yaml", CraftValidationError),
     ],
 )
-def test_from_yaml_file_failure(project_file, error_class, fake_project_class):
+def test_from_yaml_file_failure(project_file, error_class):
     with pytest.raises(error_class):
-        fake_project_class.from_yaml_file(project_file)
+        Project.from_yaml_file(project_file)
 
 
 @pytest.mark.parametrize(
@@ -177,14 +174,12 @@ def test_from_yaml_file_failure(project_file, error_class, fake_project_class):
         (PROJECTS_DIR / "full_project.yaml", "full_project"),
     ],
 )
-def test_from_yaml_data_success(
-    project_file, expected_fixture, fake_project_class, request
-):
+def test_from_yaml_data_success(project_file, expected_fixture, request):
     expected = request.getfixturevalue(expected_fixture)
     with project_file.open() as file:
         data = util.safe_yaml_load(file)
 
-    actual = fake_project_class.from_yaml_data(data, project_file)
+    actual = Project.from_yaml_data(data, project_file)
 
     assert expected == actual
 
@@ -195,12 +190,12 @@ def test_from_yaml_data_success(
         (PROJECTS_DIR / "invalid_project.yaml", CraftValidationError),
     ],
 )
-def test_from_yaml_data_failure(project_file, error_class, fake_project_class):
+def test_from_yaml_data_failure(project_file, error_class):
     with project_file.open() as file:
         data = util.safe_yaml_load(file)
 
     with pytest.raises(error_class):
-        fake_project_class.from_yaml_data(data, project_file)
+        Project.from_yaml_data(data, project_file)
 
 
 @pytest.mark.parametrize(
@@ -226,30 +221,18 @@ def test_effective_base_is_base(full_project):
 class FakeBuildBaseProject(Project):
     build_base: str | None  # pyright: ignore[reportGeneralTypeIssues]
 
-    @override
-    @classmethod
-    def _providers_base(cls, base: str) -> craft_providers.bases.BaseAlias:
-        """Get a BaseAlias from the application's base."""
-        try:
-            return craft_providers.bases.get_base_alias(("ubuntu", base))
-        except craft_providers.errors.BaseConfigurationError as err:
-            raise CraftValidationError(f"Unknown base {base!r}") from err
-
 
 def test_effective_base_is_build_base():
-    base = craft_providers.bases.ubuntu.BuilddBaseAlias.JAMMY.value
-    build_base = craft_providers.bases.ubuntu.BuilddBaseAlias.NOBLE.value
-
     # As above, we need to tell pyright to ignore several typing issues.
     project = FakeBuildBaseProject(  # pyright: ignore[reportCallIssue]
         name="project-name",  # pyright: ignore[reportGeneralTypeIssues]
         version="1.0",  # pyright: ignore[reportGeneralTypeIssues]
         parts={},
-        base=base,
-        build_base=build_base,
+        base="ubuntu@22.04",
+        build_base="ubuntu@24.04",
     )
 
-    assert project.effective_base == build_base
+    assert project.effective_base == "ubuntu@24.04"
 
 
 def test_effective_base_unknown():
@@ -273,8 +256,8 @@ def test_devel_base_devel_build_base(emitter):
         name="project-name",  # pyright: ignore[reportGeneralTypeIssues]
         version="1.0",  # pyright: ignore[reportGeneralTypeIssues]
         parts={},
-        base=DEVEL_BASE_INFOS[0].current_devel_base.value,
-        build_base=DEVEL_BASE_INFOS[0].current_devel_base.value,
+        base=f"ubuntu@{DEVEL_BASE_INFOS[0].current_devel_base.value}",
+        build_base=f"ubuntu@{DEVEL_BASE_INFOS[0].current_devel_base.value}",
     )
 
     emitter.assert_message(DEVEL_BASE_WARNING)
@@ -309,7 +292,7 @@ def test_devel_base_no_build_base():
         name="project-name",  # pyright: ignore[reportGeneralTypeIssues]
         version="1.0",  # pyright: ignore[reportGeneralTypeIssues]
         parts={},
-        base=DEVEL_BASE_INFOS[0].current_devel_base.value,
+        base=f"ubuntu@{DEVEL_BASE_INFOS[0].current_devel_base.value}",
     )
 
 
@@ -320,12 +303,12 @@ def test_devel_base_error():
             name="project-name",  # pyright: ignore[reportGeneralTypeIssues]
             version="1.0",  # pyright: ignore[reportGeneralTypeIssues]
             parts={},
-            base=DEVEL_BASE_INFOS[0].current_devel_base.value,
-            build_base=craft_providers.bases.ubuntu.BuilddBaseAlias.JAMMY.value,
+            base=f"ubuntu@{DEVEL_BASE_INFOS[0].current_devel_base.value}",
+            build_base=f"ubuntu@{craft_providers.bases.ubuntu.BuilddBaseAlias.JAMMY.value}",
         )
 
     assert exc_info.match(
-        f"A development build-base must be used when base is '{DEVEL_BASE_INFOS[0].current_devel_base.value}'"
+        f"A development build-base must be used when base is 'ubuntu@{DEVEL_BASE_INFOS[0].current_devel_base.value}'"
     )
 
 
@@ -344,14 +327,14 @@ def test_devel_base_error():
     ],
 )
 def test_invalid_field_message(
-    full_project_dict, field_name, invalid_value, expected_message, fake_project_class
+    full_project_dict, field_name, invalid_value, expected_message
 ):
     """Test that invalid regex-based fields generate expected messages."""
     full_project_dict[field_name] = invalid_value
     project_path = pathlib.Path("myproject.yaml")
 
     with pytest.raises(CraftValidationError) as exc:
-        fake_project_class.from_yaml_data(full_project_dict, project_path)
+        Project.from_yaml_data(full_project_dict, project_path)
 
     full_expected_message = textwrap.dedent(
         f"""
@@ -364,44 +347,44 @@ def test_invalid_field_message(
     assert message == full_expected_message
 
 
-def test_unmarshal_repositories(full_project_dict, fake_project_class):
+def test_unmarshal_repositories(full_project_dict):
     """Test that package-repositories are allowed in Project with package repositories feature."""
     full_project_dict["package-repositories"] = [{"ppa": "ppa/ppa", "type": "apt"}]
     project_path = pathlib.Path("myproject.yaml")
-    project = fake_project_class.from_yaml_data(full_project_dict, project_path)
+    project = Project.from_yaml_data(full_project_dict, project_path)
 
     assert project.package_repositories == [{"ppa": "ppa/ppa", "type": "apt"}]
 
 
-def test_unmarshal_no_repositories(full_project_dict, fake_project_class):
+def test_unmarshal_no_repositories(full_project_dict):
     """Test that package-repositories are allowed to be None in Project with package repositories feature."""
     full_project_dict["package-repositories"] = None
     project_path = pathlib.Path("myproject.yaml")
 
-    project = fake_project_class.from_yaml_data(full_project_dict, project_path)
+    project = Project.from_yaml_data(full_project_dict, project_path)
 
     assert project.package_repositories is None
 
 
-def test_unmarshal_undefined_repositories(full_project_dict, fake_project_class):
+def test_unmarshal_undefined_repositories(full_project_dict):
     """Test that package-repositories are allowed to not exist in Project with package repositories feature."""
     if "package-repositories" in full_project_dict:
         del full_project_dict["package-repositories"]
 
     project_path = pathlib.Path("myproject.yaml")
 
-    project = fake_project_class.from_yaml_data(full_project_dict, project_path)
+    project = Project.from_yaml_data(full_project_dict, project_path)
 
     assert project.package_repositories is None
 
 
-def test_unmarshal_invalid_repositories(full_project_dict, fake_project_class):
+def test_unmarshal_invalid_repositories(full_project_dict):
     """Test that package-repositories are validated in Project with package repositories feature."""
     full_project_dict["package-repositories"] = [[]]
     project_path = pathlib.Path("myproject.yaml")
 
     with pytest.raises(CraftValidationError) as error:
-        fake_project_class.from_yaml_data(full_project_dict, project_path)
+        Project.from_yaml_data(full_project_dict, project_path)
 
     assert error.value.args[0] == (
         "Bad myproject.yaml content:\n"

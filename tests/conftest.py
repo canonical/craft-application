@@ -1,6 +1,6 @@
 # This file is part of craft_application.
 #
-# Copyright 2023 Canonical Ltd.
+# Copyright 2023-2024 Canonical Ltd.
 #
 # This program is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Lesser General Public License version 3, as
@@ -28,7 +28,6 @@ import pytest
 from craft_application import application, models, services, util
 from craft_cli import EmitterMode, emit
 from craft_providers import bases
-from typing_extensions import override
 
 if TYPE_CHECKING:  # pragma: no cover
     from collections.abc import Iterator
@@ -79,7 +78,6 @@ def default_app_metadata() -> craft_application.AppMetadata:
         m.setattr(metadata, "version", lambda _: "3.14159")
         return craft_application.AppMetadata(
             "testcraft",
-            FakeProject,
             "A fake app for testing craft-application",
             BuildPlannerClass=MyBuildPlanner,
             source_ignore_patterns=["*.snap", "*.charm", "*.starcraft"],
@@ -87,12 +85,11 @@ def default_app_metadata() -> craft_application.AppMetadata:
 
 
 @pytest.fixture()
-def app_metadata(features, fake_project_class) -> craft_application.AppMetadata:
+def app_metadata(features) -> craft_application.AppMetadata:
     with pytest.MonkeyPatch.context() as m:
         m.setattr(metadata, "version", lambda _: "3.14159")
         return craft_application.AppMetadata(
             "testcraft",
-            fake_project_class,
             "A fake app for testing craft-application",
             BuildPlannerClass=MyBuildPlanner,
             source_ignore_patterns=["*.snap", "*.charm", "*.starcraft"],
@@ -100,27 +97,13 @@ def app_metadata(features, fake_project_class) -> craft_application.AppMetadata:
         )
 
 
-class FakeProject(models.Project):
-    """A fake project for testing."""
-
-    @override
-    @classmethod
-    def _providers_base(cls, base: str) -> bases.BaseAlias:
-        return bases.get_base_alias(("ubuntu", "24.04"))
-
-
 @pytest.fixture()
-def fake_project_class() -> type[models.Project]:
-    return FakeProject
-
-
-@pytest.fixture()
-def fake_project(fake_project_class) -> models.Project:
+def fake_project() -> models.Project:
     arch = util.get_host_architecture()
-    return fake_project_class(
+    return models.Project(
         name="full-project",  # pyright: ignore[reportArgumentType]
         title="A fully-defined project",  # pyright: ignore[reportArgumentType]
-        base="core24",
+        base="ubuntu@24.04",
         version="1.0.0.post64+git12345678",  # pyright: ignore[reportArgumentType]
         contact="author@project.org",
         issues="https://github.com/canonical/craft-application/issues",
