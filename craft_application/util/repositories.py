@@ -30,15 +30,25 @@ from craft_parts import (
 def install_package_repositories(
     package_repositories: list[dict[str, Any]] | None,
     lifecycle_manager: LifecycleManager,
+    local_keys_path: Path | None = None,
 ) -> None:
-    """Install package repositories in the environment."""
+    """Install package repositories in the environment.
+
+    :param package_repositories: The definition of the repositories.
+    :param lifecycle_manager: The lifecycle manager whose packages will be
+      refreshed if repositories are installed.
+    :param local_keys_path: The optional local directory containing public
+      keys (for repositories that don't use the keyserver).
+    """
     from craft_archives import repo  # type: ignore[import-untyped]
 
     if not package_repositories:
         emit.debug("No package repositories specified, none to install.")
         return
 
-    refresh_required = repo.install(package_repositories, key_assets=Path("/dev/null"))
+    key_assets = local_keys_path if local_keys_path else Path("/dev/null")
+
+    refresh_required = repo.install(package_repositories, key_assets=key_assets)
     if refresh_required:
         emit.progress("Refreshing repositories")
         lifecycle_manager.refresh_packages_list()

@@ -18,20 +18,27 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
 from craft_application.util import repositories
 
 
-def test_repo_install_package_repositories(emitter, mocker, lifecycle_service):
+@pytest.mark.parametrize(
+    ("local_keys_path", "expected_key_assets"),
+    [(None, Path("/dev/null")), (Path("my/keys"), Path("my/keys"))],
+)
+def test_repo_install_package_repositories(
+    emitter, mocker, lifecycle_service, local_keys_path, expected_key_assets
+):
     package_repositories = [{"type": "apt", "ppa": "ppa/ppa"}]
 
     repo_install = mocker.patch("craft_archives.repo.install", return_value=False)
 
     repositories.install_package_repositories(
-        package_repositories, lifecycle_service._lcm
+        package_repositories, lifecycle_service._lcm, local_keys_path=local_keys_path
     )
 
     repo_install.assert_called_once_with(
-        package_repositories, key_assets=Path("/dev/null")
+        package_repositories, key_assets=expected_key_assets
     )
 
     emitter.assert_progress("Package repositories installed")
