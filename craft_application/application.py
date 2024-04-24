@@ -221,7 +221,6 @@ class Application:
             work_dir=self._work_dir,
             build_plan=self._build_plan,
             partitions=self._partitions,
-            local_keys_path=self._get_local_keys_path(),
         )
         self.services.set_kwargs(
             "provider",
@@ -717,14 +716,6 @@ class Application:
                 f"Valid levels are: {', '.join(emitter.name for emitter in craft_cli.EmitterMode)}",
                 permanent=True,
             )
-
-    def _get_local_keys_path(self) -> pathlib.Path | None:
-        """Return a directory with public keys for package-repositories.
-
-        This default implementation does not support local keys; it should be
-        overridden by subclasses that do.
-        """
-        return None
 
 
 def filter_plan(

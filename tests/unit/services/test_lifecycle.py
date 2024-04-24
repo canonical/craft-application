@@ -489,8 +489,9 @@ def test_lifecycle_package_repositories(
         cache_dir=tmp_path / "cache",
         platform=None,
         build_plan=fake_build_plan,
-        local_keys_path=local_keys_path,
     )
+    mocker.patch.object(service, "_get_local_keys_path", return_value=local_keys_path)
+
     service._lcm = mock.MagicMock(spec=LifecycleManager)
     service._lcm.project_info = mock.MagicMock(spec=ProjectInfo)
     service._lcm.project_info.get_project_var = lambda _: "foo"
