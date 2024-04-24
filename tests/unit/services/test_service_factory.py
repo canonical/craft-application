@@ -144,9 +144,11 @@ def test_mandatory_adoptable_field(
     fake_project,
     fake_lifecycle_service_class,
     fake_package_service_class,
+    fake_project_class,
 ):
     app_metadata = AppMetadata(
         "testcraft",
+        fake_project_class,
         "A fake app for testing craft-application",
         mandatory_adoptable_fields=["license"],
     )

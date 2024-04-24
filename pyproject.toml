@@ -64,7 +64,7 @@ lint = [
 ]
 types = [
     "mypy[reports]==1.9.0",
-    "pyright==1.1.358",
+    "pyright==1.1.359",
     "types-requests",
     "types-urllib3",
 ]
@@ -84,7 +84,7 @@ apt = [
 
 [build-system]
 requires = [
-    "setuptools==69.4.0",
+    "setuptools==69.5.1",
     "setuptools_scm[toml]>=7.1"
 ]
 build-backend = "setuptools.build_meta"
