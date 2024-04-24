@@ -15,6 +15,7 @@
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Unit tests for craft-application app classes."""
 import argparse
+import copy
 import dataclasses
 import importlib
 import importlib.metadata
@@ -1465,6 +1466,44 @@ def test_process_grammar_no_match(grammar_app_mini, mocker):
     project = grammar_app_mini.get_project()
     # "source" is empty because "i386" doesn't match any of the grammar statements.
     assert project.parts["mypart"]["source"] is None
+
+
+class FakeApplicationWithYamlTransform(FakeApplication):
+    """Application class that adds advanced grammar in `_extra_yaml_transform`."""
+
+    @override
+    def _extra_yaml_transform(
+        self,
+        yaml_data: dict[str, Any],
+        *,
+        build_on: str,  # noqa: ARG002 (Unused method argument)
+        build_for: str | None,  # noqa: ARG002 (Unused method argument)
+    ) -> dict[str, Any]:
+        # do not modify the dict passed in
+        new_yaml_data = copy.deepcopy(yaml_data)
+        new_yaml_data["parts"] = {
+            "mypart": {
+                "plugin": "nil",
+                "source": [
+                    {"to riscv64": "to-riscv64"},
+                    {"to s390x": "to-s390x"},
+                ],
+            }
+        }
+
+        return new_yaml_data
+
+
+def test_process_grammar_from_extra_transform(app_metadata, fake_services, tmp_path):
+    """Test that grammar is applied on data from `_extra_yaml_transform`."""
+    project_file = tmp_path / "testcraft.yaml"
+    project_file.write_text(BASIC_PROJECT_YAML)
+
+    app = FakeApplicationWithYamlTransform(app_metadata, fake_services)
+    app.project_dir = tmp_path
+
+    project = app.get_project(build_for="riscv64")
+    assert project.parts["mypart"]["source"] == "to-riscv64"
 
 
 class FakePartitionsApplication(FakeApplication):
