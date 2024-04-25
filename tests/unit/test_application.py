@@ -52,12 +52,11 @@ from craft_parts.plugins.plugins import PluginType
 from craft_providers import bases
 from overrides import override
 
-from tests.conftest import MyBuildPlanner
-
 EMPTY_COMMAND_GROUP = craft_cli.CommandGroup("FakeCommands", [])
 BASIC_PROJECT_YAML = """
 name: myproject
 version: 1.0
+base: ubuntu@24.04
 parts:
   mypart:
     plugin: nil
@@ -66,6 +65,7 @@ parts:
 FULL_PROJECT_YAML = """
 name: myproject
 version: 1.0
+base: ubuntu@24.04
 parts:
   mypart:
     plugin: nil
@@ -135,6 +135,7 @@ parts:
 FULL_GRAMMAR_PROJECT_YAML = """
 name: myproject
 version: 1.0
+base: ubuntu@24.04
 parts:
   mypart:
     plugin:
@@ -1154,6 +1155,7 @@ def environment_project(monkeypatch, tmp_path):
             """
         name: myproject
         version: 1.2.3
+        base: ubuntu@24.04
         parts:
           mypart:
             plugin: nil
@@ -1167,7 +1169,7 @@ def environment_project(monkeypatch, tmp_path):
 
 
 @pytest.mark.usefixtures("environment_project")
-def test_applcation_expand_environment(app_metadata, fake_services):
+def test_application_expand_environment(app_metadata, fake_services):
     app = application.Application(app_metadata, fake_services)
     project = app.get_project(build_for=get_host_architecture())
 
@@ -1186,6 +1188,7 @@ def build_secrets_project(monkeypatch, tmp_path):
             """
         name: myproject
         version: 1.2.3
+        base: ubuntu@24.04
         parts:
           mypart:
             plugin: nil
@@ -1231,7 +1234,7 @@ def test_get_project_current_dir(app):
 
 @pytest.mark.usefixtures("fake_project_file")
 def test_get_project_all_platform(app):
-    app.get_project(platform="foo")
+    app.get_project(platform=get_host_architecture())
 
 
 @pytest.mark.usefixtures("fake_project_file")
@@ -1354,6 +1357,7 @@ def grammar_project_mini(tmp_path):
         """\
     name: myproject
     version: 1.0
+    base: ubuntu@24.04
     parts:
       mypart:
         plugin: nil
@@ -1394,7 +1398,7 @@ def non_grammar_build_plan(mocker):
         )
     ]
 
-    mocker.patch.object(MyBuildPlanner, "get_build_plan", return_value=build_plan)
+    mocker.patch.object(models.BuildPlanner, "get_build_plan", return_value=build_plan)
 
 
 @pytest.fixture()
@@ -1412,7 +1416,7 @@ def grammar_build_plan(mocker):
         for build_for in ("riscv64", "s390x")
     ]
 
-    mocker.patch.object(MyBuildPlanner, "get_build_plan", return_value=build_plan)
+    mocker.patch.object(models.BuildPlanner, "get_build_plan", return_value=build_plan)
 
 
 @pytest.fixture()
@@ -1540,6 +1544,7 @@ def environment_partitions_project(monkeypatch, tmp_path):
             """
         name: myproject
         version: 1.2.3
+        base: ubuntu@24.04
         parts:
           mypart:
             plugin: nil

@@ -33,25 +33,11 @@ if TYPE_CHECKING:  # pragma: no cover
     from collections.abc import Iterator
 
 
-class Platform(models.CraftBaseModel):
-    """Platform definition."""
-
-    build_on: str
-    build_for: str
-
-
 def _create_fake_build_plan(num_infos: int = 1) -> list[models.BuildInfo]:
     """Create a build plan that is able to execute on the running system."""
     arch = util.get_host_architecture()
     base = util.get_host_base()
     return [models.BuildInfo("foo", arch, arch, base)] * num_infos
-
-
-class MyBuildPlanner(models.BuildPlanner):
-    """Build planner definition for tests."""
-
-    def get_build_plan(self) -> list[models.BuildInfo]:
-        return _create_fake_build_plan()
 
 
 @pytest.fixture()
@@ -79,7 +65,6 @@ def default_app_metadata() -> craft_application.AppMetadata:
         return craft_application.AppMetadata(
             "testcraft",
             "A fake app for testing craft-application",
-            BuildPlannerClass=MyBuildPlanner,
             source_ignore_patterns=["*.snap", "*.charm", "*.starcraft"],
         )
 
@@ -91,7 +76,6 @@ def app_metadata(features) -> craft_application.AppMetadata:
         return craft_application.AppMetadata(
             "testcraft",
             "A fake app for testing craft-application",
-            BuildPlannerClass=MyBuildPlanner,
             source_ignore_patterns=["*.snap", "*.charm", "*.starcraft"],
             features=craft_application.AppFeatures(**features),
         )
@@ -112,7 +96,7 @@ def fake_project() -> models.Project:
         description="A fully-defined craft-application project. (description)",
         license="LGPLv3",
         parts={"my-part": {"plugin": "nil"}},
-        platforms={"foo": Platform(build_on=arch, build_for=arch)},
+        platforms={"foo": models.Platform(build_on=[arch], build_for=[arch])},
         package_repositories=None,
         adopt_info=None,
     )
@@ -140,7 +124,7 @@ def full_build_plan(mocker) -> list[models.BuildInfo]:
                 )
             )
 
-    mocker.patch.object(MyBuildPlanner, "get_build_plan", return_value=build_plan)
+    mocker.patch.object(models.BuildPlanner, "get_build_plan", return_value=build_plan)
     return build_plan
 
 

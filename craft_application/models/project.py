@@ -19,12 +19,14 @@ This defines the structure of the input file (e.g. snapcraft.yaml)
 """
 import abc
 import dataclasses
+from collections.abc import Mapping
 from typing import Any
 
 import craft_parts
 import craft_providers.bases
 import pydantic
 from craft_cli import emit
+from craft_providers import bases
 from craft_providers.errors import BaseConfigurationError
 from pydantic import AnyUrl
 from typing_extensions import override
@@ -40,6 +42,7 @@ from craft_application.models.constraints import (
     UniqueStrList,
     VersionStr,
 )
+from craft_application.util import get_host_architecture
 
 
 @dataclasses.dataclass
@@ -93,14 +96,81 @@ class BuildPlannerConfig(CraftBaseConfig):
     """The BuildPlanner model uses attributes from the project yaml."""
 
 
+class Platform(CraftBaseModel):
+    """Project platform definition."""
+
+    build_on: list[str] | None = pydantic.Field(min_items=1, unique_items=True)
+    build_for: list[str] | None = pydantic.Field(
+        min_items=1, max_items=1, unique_items=True
+    )
+
+    @pydantic.root_validator(  # pyright: ignore[reportUntypedFunctionDecorator,reportUnknownMemberType]
+        skip_on_failure=True
+    )
+    @classmethod
+    def _validate_platform_set(cls, values: Mapping[str, Any]) -> Mapping[str, Any]:
+        """If build_for is provided, then build_on must also be."""
+        if not values.get("build_on") and values.get("build_for"):
+            raise errors.CraftValidationError(
+                "'build_for' expects 'build_on' to also be provided."
+            )
+
+        return values
+
+
 class BuildPlanner(CraftBaseModel, metaclass=abc.ABCMeta):
     """The BuildPlanner obtains a build plan for the project."""
 
+    platforms: dict[str, Platform | None] = {
+        get_host_architecture(): Platform(
+            build_on=[get_host_architecture()],
+            build_for=[get_host_architecture()],
+        )
+    }
+    base: str | None
+    build_base: str | None
+
     Config = BuildPlannerConfig
 
-    @abc.abstractmethod
+    @property
+    def effective_base(self) -> bases.BaseName:
+        """Get the Base name for craft-providers."""
+        base = self.build_base if self.build_base else self.base
+
+        if not base:
+            raise errors.CraftValidationError("Could not determine effective base")
+
+        name, _, channel = base.partition("@")
+
+        return bases.BaseName(name, channel)
+
     def get_build_plan(self) -> list[BuildInfo]:
-        """Obtain the list of architectures and bases from the project file."""
+        """Obtain the list of architectures and bases from the Project."""
+        build_infos: list[BuildInfo] = []
+
+        for platform_entry, platform in self.platforms.items():
+            if platform:
+                for build_for in platform.build_for or [platform_entry]:
+                    for build_on in platform.build_on or [platform_entry]:
+                        build_infos.append(
+                            BuildInfo(
+                                platform=platform_entry,
+                                build_on=build_on,
+                                build_for=build_for,
+                                base=self.effective_base,
+                            )
+                        )
+            else:
+                build_infos.append(
+                    BuildInfo(
+                        platform=platform_entry,
+                        build_on=platform_entry,
+                        build_for=platform_entry,
+                        base=self.effective_base,
+                    )
+                )
+
+        return build_infos
 
 
 class Project(CraftBaseModel):
@@ -114,7 +184,7 @@ class Project(CraftBaseModel):
 
     base: Any | None = None
     build_base: Any | None = None
-    platforms: dict[str, Any] | None = None
+    platforms: dict[str, Platform] | None = None
 
     contact: str | UniqueStrList | None
     issues: str | UniqueStrList | None

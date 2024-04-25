@@ -79,9 +79,7 @@ class AppMetadata:
     mandatory_adoptable_fields: list[str] = field(default_factory=lambda: ["version"])
 
     ProjectClass: type[models.Project] = models.Project
-    BuildPlannerClass: type[models.BuildPlanner] = field(
-        default=NotImplementedError  # type: ignore[assignment,type-abstract]
-    )
+    BuildPlannerClass: type[models.BuildPlanner] = models.BuildPlanner
 
     def __post_init__(self) -> None:
         setter = super().__setattr__

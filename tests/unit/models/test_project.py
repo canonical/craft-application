@@ -26,7 +26,6 @@ from craft_application.errors import CraftValidationError
 from craft_application.models import (
     DEVEL_BASE_INFOS,
     DEVEL_BASE_WARNING,
-    BuildPlanner,
     Project,
     constraints,
 )
@@ -132,11 +131,6 @@ def test_marshal_then_unmarshal(project_fixture, request):
 @pytest.mark.parametrize("project_dict", [BASIC_PROJECT_DICT, FULL_PROJECT_DICT])
 def test_unmarshal_then_marshal(project_dict):
     assert Project.unmarshal(project_dict).marshal() == project_dict
-
-
-def test_build_planner_abstract():
-    with pytest.raises(TypeError):
-        BuildPlanner()  # type: ignore[type-abstract]
 
 
 @pytest.mark.parametrize(
