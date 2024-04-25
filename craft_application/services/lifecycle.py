@@ -235,7 +235,9 @@ class LifecycleService(base.ProjectService):
             if self._project.package_repositories:
                 emit.trace("Installing package repositories")
                 repositories.install_package_repositories(
-                    self._project.package_repositories, self._lcm
+                    self._project.package_repositories,
+                    self._lcm,
+                    local_keys_path=self._get_local_keys_path(),
                 )
                 with contextlib.suppress(CallbackRegistrationError):
                     callbacks.register_configure_overlay(
@@ -395,6 +397,14 @@ class LifecycleService(base.ProjectService):
                 )
 
         return parallel_build_count
+
+    def _get_local_keys_path(self) -> Path | None:
+        """Return a directory with public keys for package-repositories.
+
+        This default implementation does not support local keys; it should be
+        overridden by subclasses that do.
+        """
+        return None
 
 
 def _validate_build_plan(build_plan: list[models.BuildInfo]) -> None:

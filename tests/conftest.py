@@ -274,17 +274,18 @@ def fake_lifecycle_service_class(tmp_path, fake_build_plan):
             app: application.AppMetadata,
             project: models.Project,
             services: services.ServiceFactory,
-            **lifecycle_kwargs: Any,
+            **kwargs: Any,
         ):
+            kwargs.pop("build_plan", None)  # We'll use ours
             super().__init__(
                 app,
                 services,
                 project=project,
-                work_dir=tmp_path / "work",
-                cache_dir=tmp_path / "cache",
+                work_dir=kwargs.pop("work_dir", tmp_path / "work"),
+                cache_dir=kwargs.pop("cache_dir", tmp_path / "cache"),
                 platform=None,
                 build_plan=fake_build_plan,
-                **lifecycle_kwargs,
+                **kwargs,
             )
 
     return FakeLifecycleService
