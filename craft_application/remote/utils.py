@@ -85,7 +85,7 @@ def _compute_hash(directory: Path) -> str:
             "a directory."
         )
 
-    files = sorted([file for file in Path().glob("**/*") if file.is_file()])
+    files = sorted(file for file in directory.glob("**/*") if file.is_file())
     hashes: list[str] = []
 
     for file_path in files:
