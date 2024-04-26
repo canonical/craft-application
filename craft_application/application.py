@@ -70,7 +70,6 @@ class AppMetadata:
     """Metadata about a *craft application."""
 
     name: str
-    ProjectClass: type[models.Project]
     summary: str | None = None
     version: str = field(init=False)
     source_ignore_patterns: list[str] = field(default_factory=lambda: [])
@@ -79,6 +78,7 @@ class AppMetadata:
     project_variables: list[str] = field(default_factory=lambda: ["version"])
     mandatory_adoptable_fields: list[str] = field(default_factory=lambda: ["version"])
 
+    ProjectClass: type[models.Project] = models.Project
     BuildPlannerClass: type[models.BuildPlanner] = field(
         default=NotImplementedError  # type: ignore[assignment,type-abstract]
     )

@@ -25,6 +25,7 @@ import craft_parts
 import craft_providers.bases
 import pydantic
 from craft_cli import emit
+from craft_providers.errors import BaseConfigurationError
 from pydantic import AnyUrl
 from typing_extensions import override
 
@@ -145,17 +146,24 @@ class Project(CraftBaseModel):
         raise RuntimeError("Could not determine effective base")
 
     @classmethod
-    @abc.abstractmethod
     def _providers_base(cls, base: str) -> craft_providers.bases.BaseAlias | None:
-        """Get a BaseAlias from the application's base.
+        """Get a BaseAlias from the Project base.
 
-        :param base: The application-specific base name.
+        The default naming convention for a base is 'name@channel'. This method
+        should be overridden for applications with a different naming convention.
+
+        :param base: The base name.
 
         :returns: The BaseAlias for the base or None if the base does not map to
           a BaseAlias.
 
         :raises CraftValidationError: If the project's base cannot be determined.
         """
+        try:
+            name, channel = base.split("@")
+            return craft_providers.bases.get_base_alias((name, channel))
+        except (ValueError, BaseConfigurationError) as err:
+            raise errors.CraftValidationError(f"Unknown base {base!r}") from err
 
     @pydantic.root_validator(  # pyright: ignore[reportUnknownMemberType,reportUntypedFunctionDecorator]
         pre=False

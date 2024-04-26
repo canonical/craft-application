@@ -1,4 +1,4 @@
-# Copyright 2023 Canonical Ltd.
+# Copyright 2023-2024 Canonical Ltd.
 #
 # This program is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Lesser General Public License version 3, as
@@ -144,11 +144,9 @@ def test_mandatory_adoptable_field(
     fake_project,
     fake_lifecycle_service_class,
     fake_package_service_class,
-    fake_project_class,
 ):
     app_metadata = AppMetadata(
         "testcraft",
-        fake_project_class,
         "A fake app for testing craft-application",
         mandatory_adoptable_fields=["license"],
     )

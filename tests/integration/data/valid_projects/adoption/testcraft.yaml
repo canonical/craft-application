@@ -1,6 +1,6 @@
 name: empty
 title: A version adoption test project
-base: ["ubuntu", "22.04"]
+base: "ubuntu@22.04"
 
 adopt-info: my-part
 
