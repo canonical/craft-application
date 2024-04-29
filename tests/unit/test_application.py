@@ -1341,12 +1341,13 @@ def grammar_project_mini(tmp_path):
     version: 1.0
     parts:
       mypart:
-        plugin: nil
+        plugin: meson
 
         # grammar-only string
         source:
         - on amd64 to riscv64: on-amd64-to-riscv64
         - on amd64 to s390x: on-amd64-to-s390x
+        - else: other
 
         # list of grammar and non-grammar data
         build-packages:
@@ -1355,6 +1356,11 @@ def grammar_project_mini(tmp_path):
           - on-amd64-to-riscv64
         - on amd64 to s390x:
           - on-amd64-to-s390x
+
+        # non-grammar data in a non-grammar keyword
+        meson-parameters:
+        - foo
+        - bar
     """
     )
     project_file = tmp_path / "testcraft.yaml"
@@ -1487,8 +1493,7 @@ def test_process_grammar_no_match(grammar_app_mini, mocker):
     mocker.patch("craft_application.util.get_host_architecture", return_value="i386")
     project = grammar_app_mini.get_project()
 
-    # "source" is empty because "i386" doesn't match any of the grammar statements.
-    assert project.parts["mypart"]["source"] is None
+    assert project.parts["mypart"]["source"] == "other"
     assert project.parts["mypart"]["build-packages"] == ["test-package"]
 
 
