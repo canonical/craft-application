@@ -55,15 +55,19 @@ def process_part(
         unprocessed_grammar = part_yaml_data[key]
         craft_cli.emit.debug(f"Processing grammar for {key}: {unprocessed_grammar}")
 
-        # grammar aware models can only be a string or list of dict, skip any other type.
+        # grammar aware models can be strings or list of dicts and strings
         if isinstance(unprocessed_grammar, list):
-            if any(not isinstance(d, dict) for d in unprocessed_grammar):  # type: ignore[reportUnknownVariableType]
+            # all items in the list must be a dict or a string
+            if any(not isinstance(d, dict | str) for d in unprocessed_grammar):  # type: ignore[reportUnknownVariableType]
                 continue
-            if any(not isinstance(k, str) for d in unprocessed_grammar for k in d):  # type: ignore[reportUnknownVariableType]
+            # all keys in the dictionary must be a string
+            if any(not isinstance(key, str) for d in unprocessed_grammar for key in d):  # type: ignore[reportUnknownVariableType]
                 continue
-            unprocessed_grammar = cast(list[dict[str, Any]], unprocessed_grammar)
+            unprocessed_grammar = cast(list[dict[str, Any] | str], unprocessed_grammar)
+        # grammar aware models can be a string
         elif isinstance(unprocessed_grammar, str):
             unprocessed_grammar = [unprocessed_grammar]
+        # skip all other data types
         else:
             continue
 
