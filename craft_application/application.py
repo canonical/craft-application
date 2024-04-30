@@ -583,7 +583,10 @@ class Application:
         )
 
         # Perform variable expansion.
-        self._expand_environment(yaml_data)
+        self._expand_environment(
+            yaml_data=yaml_data,
+            build_for=build_for or util.get_host_architecture(),
+        )
 
         # Handle build secrets.
         if self.app.features.build_secrets:
@@ -613,8 +616,12 @@ class Application:
 
         return yaml_data
 
-    def _expand_environment(self, yaml_data: dict[str, Any]) -> None:
-        """Perform expansion of project environment variables."""
+    def _expand_environment(self, yaml_data: dict[str, Any], build_for: str) -> None:
+        """Perform expansion of project environment variables.
+
+        :param yaml_data: The project's yaml data.
+        :param build_for: The architecture to build for.
+        """
         environment_vars = self._get_project_vars(yaml_data)
         project_dirs = craft_parts.ProjectDirs(
             work_dir=self._work_dir, partitions=self._partitions
@@ -623,6 +630,7 @@ class Application:
         info = craft_parts.ProjectInfo(
             application_name=self.app.name,  # not used in environment expansion
             cache_dir=pathlib.Path(),  # not used in environment expansion
+            arch=util.convert_architecture_deb_to_platform(build_for),
             project_name=yaml_data.get("name", ""),
             project_dirs=project_dirs,
             project_vars=environment_vars,

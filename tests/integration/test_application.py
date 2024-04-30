@@ -21,7 +21,7 @@ import craft_application
 import craft_cli
 import pytest
 import pytest_check
-from craft_application import secrets, util
+from craft_application import models, secrets, util
 from craft_application.util import yaml
 from typing_extensions import override
 
@@ -269,6 +269,7 @@ def test_invalid_command_argument(monkeypatch, capsys, app):
 
 def test_global_environment(
     create_app,
+    mocker,
     monkeypatch,
     tmp_path,
 ):
@@ -276,8 +277,23 @@ def test_global_environment(
     monkeypatch.chdir(tmp_path)
     shutil.copytree(VALID_PROJECTS_DIR / "environment", tmp_path, dirs_exist_ok=True)
 
+    # a build plan that builds for s390x (a cross-compiling scenario unless on s390x)
+    mocker.patch(
+        "tests.conftest.MyBuildPlanner.get_build_plan",
+        return_value=[
+            models.BuildInfo(
+                platform="s390x",
+                build_on=util.get_host_architecture(),
+                build_for="s390x",
+                base=util.get_host_base(),
+            ),
+        ],
+    )
+
     # Run in destructive mode
-    monkeypatch.setattr("sys.argv", ["testcraft", "prime", "--destructive-mode"])
+    monkeypatch.setattr(
+        "sys.argv", ["testcraft", "prime", "--destructive-mode", "--build-for", "s390x"]
+    )
     app = create_app()
     app.run()
 
@@ -291,6 +307,13 @@ def test_global_environment(
     assert variables["project_name"] == "environment-project"
     assert variables["project_dir"] == str(tmp_path)
     assert variables["project_version"] == "1.0"
+    assert variables["arch_build_for"] == "s390x"
+    assert variables["arch_triplet_build_for"] == "s390x-linux-gnu"
+    assert variables["arch_build_on"] == "amd64"
+    # craft-application doesn't have utility for getting arch triplets
+    assert variables["arch_triplet_build_on"].startswith(
+        util.convert_architecture_deb_to_platform(util.get_host_architecture())
+    )
 
 
 @pytest.fixture()

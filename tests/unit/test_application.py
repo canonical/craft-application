@@ -1306,10 +1306,10 @@ def test_extra_yaml_transform(tmp_path, app_metadata, fake_services):
 
     app = FakeApplication(app_metadata, fake_services)
     app.project_dir = tmp_path
-    _ = app.get_project(build_for="fake-build-for")
+    _ = app.get_project(build_for="s390x")
 
     assert app.build_on == util.get_host_architecture()
-    assert app.build_for == "fake-build-for"
+    assert app.build_for == "s390x"
 
 
 def test_mandatory_adoptable_fields(tmp_path, app_metadata, fake_services):
