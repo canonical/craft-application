@@ -576,18 +576,18 @@ class Application:
         Performs task such as environment expansion. Note that this transforms
         ``yaml_data`` in-place.
         """
+        # apply application-specific transformations first because an application may
+        # add advanced grammar, project variables, or secrets to the yaml
+        yaml_data = self._extra_yaml_transform(
+            yaml_data, build_on=build_on, build_for=build_for
+        )
+
         # Perform variable expansion.
         self._expand_environment(yaml_data)
 
         # Handle build secrets.
         if self.app.features.build_secrets:
             self._render_secrets(yaml_data)
-
-        # apply application-specific transformations before expanding grammar
-        # because an application may add advanced grammar to the yaml
-        yaml_data = self._extra_yaml_transform(
-            yaml_data, build_on=build_on, build_for=build_for
-        )
 
         # Expand grammar.
         if "parts" in yaml_data:
