@@ -1505,7 +1505,7 @@ def test_process_grammar_no_match(grammar_app_mini, mocker):
 
 
 class FakeApplicationWithYamlTransform(FakeApplication):
-    """Application class that adds advanced grammar in `_extra_yaml_transform`."""
+    """Application class that adds data in `_extra_yaml_transform`."""
 
     @override
     def _extra_yaml_transform(
@@ -1520,9 +1520,17 @@ class FakeApplicationWithYamlTransform(FakeApplication):
         new_yaml_data["parts"] = {
             "mypart": {
                 "plugin": "nil",
-                "source": [
-                    {"to riscv64": "to-riscv64"},
-                    {"to s390x": "to-s390x"},
+                # advanced grammar
+                "build-packages": [
+                    "test-package",
+                    {"to riscv64": "riscv64-package"},
+                    {"to s390x": "s390x-package"},
+                ],
+                "build-environment": [
+                    # project variables
+                    {"hello": "$CRAFT_ARCH_BUILD_ON"},
+                    # build secrets
+                    {"MY_VAR": "$(HOST_SECRET:echo ${SECRET_VAR})"},
                 ],
             }
         }
@@ -1530,16 +1538,30 @@ class FakeApplicationWithYamlTransform(FakeApplication):
         return new_yaml_data
 
 
-def test_process_grammar_from_extra_transform(app_metadata, fake_services, tmp_path):
+@pytest.mark.enable_features("build_secrets")
+def test_process_yaml_from_extra_transform(
+    app_metadata, fake_services, tmp_path, monkeypatch
+):
     """Test that grammar is applied on data from `_extra_yaml_transform`."""
+    monkeypatch.setenv("SECRET_VAR", "secret-value")
     project_file = tmp_path / "testcraft.yaml"
     project_file.write_text(BASIC_PROJECT_YAML)
 
     app = FakeApplicationWithYamlTransform(app_metadata, fake_services)
     app.project_dir = tmp_path
-
     project = app.get_project(build_for="riscv64")
-    assert project.parts["mypart"]["source"] == "to-riscv64"
+
+    # process grammar
+    assert project.parts["mypart"]["build-packages"] == [
+        "test-package",
+        "riscv64-package",
+    ]
+    assert project.parts["mypart"]["build-environment"] == [
+        # evaluate project variables
+        {"hello": get_host_architecture()},
+        # render secrets
+        {"MY_VAR": "secret-value"},
+    ]
 
 
 class FakePartitionsApplication(FakeApplication):
