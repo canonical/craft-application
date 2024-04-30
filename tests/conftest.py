@@ -1,6 +1,6 @@
 # This file is part of craft_application.
 #
-# Copyright 2023 Canonical Ltd.
+# Copyright 2023-2024 Canonical Ltd.
 #
 # This program is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Lesser General Public License version 3, as
@@ -103,7 +103,7 @@ def fake_project() -> models.Project:
     return models.Project(
         name="full-project",  # pyright: ignore[reportArgumentType]
         title="A fully-defined project",  # pyright: ignore[reportArgumentType]
-        base="core24",
+        base="ubuntu@24.04",
         version="1.0.0.post64+git12345678",  # pyright: ignore[reportArgumentType]
         contact="author@project.org",
         issues="https://github.com/canonical/craft-application/issues",

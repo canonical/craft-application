@@ -683,7 +683,7 @@ def test_lifecycle_project_variables(
     fake_project = LocalProject.unmarshal(
         {
             "name": "project",
-            "base": "core24",
+            "base": "ubuntu@24.04",
             "version": "1.0.0.post64+git12345678",
             "parts": {"my-part": {"plugin": "nil"}},
             "adopt-info": "my-part",

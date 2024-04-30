@@ -105,7 +105,7 @@ class ProviderService(base.ProjectService):
     ) -> Generator[craft_providers.Executor, None, None]:
         """Context manager for getting a provider instance.
 
-        :param base_name: A craft_providers capable base name (tuple of name, version)
+        :param build_info: Build information for the instance.
         :param work_dir: Local path to mount inside the provider instance.
         :param allow_unstable: Whether to allow the use of unstable images.
         :returns: a context manager of the provider instance.

@@ -306,7 +306,10 @@ def test_app_metadata_version_attribute(tmp_path, monkeypatch):
     monkeypatch.syspath_prepend(tmp_path)
     (tmp_path / "dummycraft_version.py").write_text("__version__ = '1.2.3'")
 
-    app = application.AppMetadata(name="dummycraft_version", summary="dummy craft")
+    app = application.AppMetadata(
+        name="dummycraft_version",
+        summary="dummy craft",
+    )
     assert app.version == "1.2.3"
 
 
@@ -317,22 +320,34 @@ def test_app_metadata_importlib(tmp_path, monkeypatch, mocker):
 
     mocker.patch.object(importlib.metadata, "version", return_value="4.5.6")
 
-    app = application.AppMetadata(name="dummycraft_importlib", summary="dummy craft")
+    app = application.AppMetadata(
+        name="dummycraft_importlib",
+        summary="dummy craft",
+    )
     assert app.version == "4.5.6"
 
 
 def test_app_metadata_dev():
-    app = application.AppMetadata(name="dummycraft_dev", summary="dummy craft")
+    app = application.AppMetadata(
+        name="dummycraft_dev",
+        summary="dummy craft",
+    )
     assert app.version == "dev"
 
 
 def test_app_metadata_default_project_variables():
-    app = application.AppMetadata(name="dummycraft_dev", summary="dummy craft")
+    app = application.AppMetadata(
+        name="dummycraft_dev",
+        summary="dummy craft",
+    )
     assert app.project_variables == ["version"]
 
 
 def test_app_metadata_default_mandatory_adoptable_fields():
-    app = application.AppMetadata(name="dummycraft_dev", summary="dummy craft")
+    app = application.AppMetadata(
+        name="dummycraft_dev",
+        summary="dummy craft",
+    )
     assert app.mandatory_adoptable_fields == ["version"]
 
 
