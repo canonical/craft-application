@@ -263,7 +263,7 @@ class LifecycleService(base.ProjectService):
             raise RuntimeError(f"Parts processing internal error: {err}") from err
         except OSError as err:
             raise errors.PartsLifecycleError.from_os_error(err) from err
-        except Exception as err:  # noqa: BLE001 - Converting general error.
+        except Exception as err:
             raise errors.PartsLifecycleError(f"Unknown error: {str(err)}") from err
 
     def post_prime(self, step_info: StepInfo) -> bool:
