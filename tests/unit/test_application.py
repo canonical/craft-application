@@ -1356,10 +1356,26 @@ def grammar_project_mini(tmp_path):
     version: 1.0
     parts:
       mypart:
-        plugin: nil
+        plugin: meson
+
+        # grammar-only string
         source:
         - on amd64 to riscv64: on-amd64-to-riscv64
         - on amd64 to s390x: on-amd64-to-s390x
+        - else: other
+
+        # list of grammar and non-grammar data
+        build-packages:
+        - test-package
+        - on amd64 to riscv64:
+          - on-amd64-to-riscv64
+        - on amd64 to s390x:
+          - on-amd64-to-s390x
+
+        # non-grammar data in a non-grammar keyword
+        meson-parameters:
+        - foo
+        - bar
     """
     )
     project_file = tmp_path / "testcraft.yaml"
@@ -1461,26 +1477,46 @@ def test_process_grammar_build_for(grammar_app_mini):
     """Test that a provided build-for is used to process the grammar."""
     project = grammar_app_mini.get_project(build_for="s390x")
     assert project.parts["mypart"]["source"] == "on-amd64-to-s390x"
+    assert project.parts["mypart"]["build-packages"] == [
+        "test-package",
+        "on-amd64-to-s390x",
+    ]
 
 
 def test_process_grammar_platform(grammar_app_mini):
     """Test that a provided platform is used to process the grammar."""
     project = grammar_app_mini.get_project(platform="platform-riscv64")
     assert project.parts["mypart"]["source"] == "on-amd64-to-riscv64"
+    assert project.parts["mypart"]["build-packages"] == [
+        "test-package",
+        "on-amd64-to-riscv64",
+    ]
+
+
+def test_process_grammar_non_grammar(grammar_app_mini):
+    """Non-grammar keywords should not be modified."""
+    project = grammar_app_mini.get_project(platform="platform-riscv64")
+
+    assert project.parts["mypart"]["meson-parameters"] == ["foo", "bar"]
 
 
 def test_process_grammar_default(grammar_app_mini):
     """Test that if nothing is provided the first BuildInfo is used by the grammar."""
     project = grammar_app_mini.get_project()
     assert project.parts["mypart"]["source"] == "on-amd64-to-riscv64"
+    assert project.parts["mypart"]["build-packages"] == [
+        "test-package",
+        "on-amd64-to-riscv64",
+    ]
 
 
 def test_process_grammar_no_match(grammar_app_mini, mocker):
     """Test that if the build plan is empty, the grammar uses the host as target arch."""
     mocker.patch("craft_application.util.get_host_architecture", return_value="i386")
     project = grammar_app_mini.get_project()
-    # "source" is empty because "i386" doesn't match any of the grammar statements.
-    assert project.parts["mypart"]["source"] is None
+
+    assert project.parts["mypart"]["source"] == "other"
+    assert project.parts["mypart"]["build-packages"] == ["test-package"]
 
 
 class FakeApplicationWithYamlTransform(FakeApplication):
