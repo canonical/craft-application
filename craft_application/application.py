@@ -280,11 +280,18 @@ class Application:
             self._full_build_plan, platform, build_for, host_arch
         )
 
-        if platform and not build_for:
-            all_platforms = {b.platform: b for b in self._full_build_plan}
-            if platform not in all_platforms:
-                raise errors.InvalidPlatformError(platform, list(all_platforms.keys()))
-            build_for = all_platforms[platform].build_for
+        if not build_for:
+            # get the build-for arch from the platform
+            if platform:
+                all_platforms = {b.platform: b for b in self._full_build_plan}
+                if platform not in all_platforms:
+                    raise errors.InvalidPlatformError(
+                        platform, list(all_platforms.keys())
+                    )
+                build_for = all_platforms[platform].build_for
+            # otherwise get the build-for arch from the build plan
+            elif self._build_plan:
+                build_for = self._build_plan[0].build_for
 
         # validate project grammar
         GrammarAwareProject.validate_grammar(yaml_data)
@@ -582,11 +589,16 @@ class Application:
             yaml_data, build_on=build_on, build_for=build_for
         )
 
+        # At the moment there is no perfect solution for what do to do
+        # expand project variables or to resolve the grammar if there's
+        # no explicitly-provided target arch. However, we must resolve
+        # it with *something* otherwise we might have an invalid parts
+        # definition full of grammar declarations and incorrect build_for
+        # architectures.
+        build_for = build_for or build_on
+
         # Perform variable expansion.
-        self._expand_environment(
-            yaml_data=yaml_data,
-            build_for=build_for or util.get_host_architecture(),
-        )
+        self._expand_environment(yaml_data=yaml_data, build_for=build_for)
 
         # Handle build secrets.
         if self.app.features.build_secrets:
@@ -594,19 +606,6 @@ class Application:
 
         # Expand grammar.
         if "parts" in yaml_data:
-            if not build_for:
-                # At the moment there is no perfect solution for what do to do
-                # resolve the grammar if there's no explicitly-provided target
-                # arch. However, we must resolve it with *something* otherwise
-                # we might have an invalid parts definition full of grammar
-                # declarations.
-                if self._build_plan:
-                    # If we have a build plan use one of its items, because
-                    # it's likely contemplated on the grammar.
-                    build_for = self._build_plan[0].build_for
-                else:
-                    # As a last resort, default to the same arch as the host.
-                    build_for = build_on
             craft_cli.emit.debug(f"Processing grammar (on {build_on} for {build_for})")
             yaml_data["parts"] = grammar.process_parts(
                 parts_yaml_data=yaml_data["parts"],

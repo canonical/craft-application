@@ -25,6 +25,8 @@ from craft_application import models, secrets, util
 from craft_application.util import yaml
 from typing_extensions import override
 
+from tests.conftest import MyBuildPlanner
+
 
 class TestableApplication(craft_application.Application):
     """An application modified for integration tests.
@@ -267,7 +269,16 @@ def test_invalid_command_argument(monkeypatch, capsys, app):
     assert stderr == expected_stderr
 
 
+@pytest.mark.parametrize(
+    "arguments",
+    [
+        [],
+        ["--build-for", "s390x"],
+        ["--platform", "my-platform"],
+    ],
+)
 def test_global_environment(
+    arguments,
     create_app,
     mocker,
     monkeypatch,
@@ -278,11 +289,12 @@ def test_global_environment(
     shutil.copytree(VALID_PROJECTS_DIR / "environment", tmp_path, dirs_exist_ok=True)
 
     # a build plan that builds for s390x (a cross-compiling scenario unless on s390x)
-    mocker.patch(
-        "tests.conftest.MyBuildPlanner.get_build_plan",
+    mocker.patch.object(
+        MyBuildPlanner,
+        "get_build_plan",
         return_value=[
             models.BuildInfo(
-                platform="s390x",
+                platform="my-platform",
                 build_on=util.get_host_architecture(),
                 build_for="s390x",
                 base=util.get_host_base(),
@@ -292,7 +304,7 @@ def test_global_environment(
 
     # Run in destructive mode
     monkeypatch.setattr(
-        "sys.argv", ["testcraft", "prime", "--destructive-mode", "--build-for", "s390x"]
+        "sys.argv", ["testcraft", "prime", "--destructive-mode", *arguments]
     )
     app = create_app()
     app.run()
