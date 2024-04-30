@@ -1478,6 +1478,13 @@ def test_process_grammar_platform(grammar_app_mini):
     ]
 
 
+def test_process_grammar_non_grammar(grammar_app_mini):
+    """Non-grammar keywords should not be modified."""
+    project = grammar_app_mini.get_project(platform="platform-riscv64")
+
+    assert project.parts["mypart"]["meson-parameters"] == ["foo", "bar"]
+
+
 def test_process_grammar_default(grammar_app_mini):
     """Test that if nothing is provided the first BuildInfo is used by the grammar."""
     project = grammar_app_mini.get_project()

@@ -54,12 +54,15 @@ def process_part(
     """Process grammar for a given part."""
     for key in part_yaml_data:
         unprocessed_grammar = part_yaml_data[key]
-        craft_cli.emit.debug(f"Processing grammar for {key}: {unprocessed_grammar}")
 
         # ignore non-grammar keywords
         if key not in get_grammar_aware_part_keywords():
+            craft_cli.emit.debug(
+                f"Not processing grammar for non-grammar enabled keyword {key}"
+            )
             continue
 
+        craft_cli.emit.debug(f"Processing grammar for {key}: {unprocessed_grammar}")
         # grammar aware models can be strings or list of dicts and strings
         if isinstance(unprocessed_grammar, list):
             # all items in the list must be a dict or a string
