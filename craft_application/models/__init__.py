@@ -23,7 +23,10 @@ from craft_application.models.constraints import (
     UniqueStrList,
     VersionStr,
 )
-from craft_application.models.grammar import GrammarAwareProject
+from craft_application.models.grammar import (
+    GrammarAwareProject,
+    get_grammar_aware_part_keywords,
+)
 from craft_application.models.metadata import BaseMetadata
 from craft_application.models.project import (
     DEVEL_BASE_INFOS,
@@ -41,6 +44,7 @@ __all__ = [
     "DEVEL_BASE_WARNING",
     "CraftBaseConfig",
     "CraftBaseModel",
+    "get_grammar_aware_part_keywords",
     "GrammarAwareProject",
     "Project",
     "BuildPlanner",

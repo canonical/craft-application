@@ -96,7 +96,7 @@ def test_get_parts_action_message_run(step: Step, message: str):
 
     actual = lifecycle._get_parts_action_message(action)
 
-    assert actual == message, "Unexpected %r" % actual
+    assert actual == message, f"Unexpected {actual!r}"
 
 
 @pytest.mark.parametrize(
@@ -118,7 +118,7 @@ def test_get_parts_re_action_message_run(step: Step, message: str):
 
     actual = lifecycle._get_parts_action_message(action)
 
-    assert actual == message, "Unexpected %r" % actual
+    assert actual == message, f"Unexpected {actual!r}"
 
 
 @pytest.mark.parametrize(
@@ -140,7 +140,7 @@ def test_get_parts_skip_action_message_run(step: Step, message: str):
 
     actual = lifecycle._get_parts_action_message(action)
 
-    assert actual == message, "Unexpected %r" % actual
+    assert actual == message, f"Unexpected {actual!r}"
 
 
 @pytest.mark.parametrize(
@@ -160,7 +160,7 @@ def test_get_parts_update_action_message_run(step: Step, message: str):
 
     actual = lifecycle._get_parts_action_message(action)
 
-    assert actual == message, "Unexpected %r" % actual
+    assert actual == message, f"Unexpected {actual!r}"
 
 
 @pytest.mark.parametrize(
@@ -178,7 +178,7 @@ def get_parts_action_message_with_reason(step: Step, message: str):
 
     actual = lifecycle._get_parts_action_message(action)
 
-    assert actual == message, "Unexpected %r" % actual
+    assert actual == message, f"Unexpected {actual!r}"
 
 
 def test_progress_messages(fake_parts_lifecycle, emitter):

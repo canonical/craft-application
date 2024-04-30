@@ -1,6 +1,6 @@
 # This file is part of craft_application.
 #
-# Copyright 2023 Canonical Ltd.
+# Copyright 2023-2024 Canonical Ltd.
 #
 # This program is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Lesser General Public License version 3, as
@@ -61,10 +61,10 @@ class _GrammarAwarePart(_GrammarAwareModel):
     build_packages: GrammarStrList | None
     build_environment: GrammarSingleEntryDictList | None
     build_attributes: GrammarStrList | None
-    organize_files: GrammarDict | None
-    overlay_files: GrammarStrList | None
-    stage_files: GrammarStrList | None
-    prime_files: GrammarStrList | None
+    organize_files: GrammarDict | None = pydantic.Field(alias="organize")
+    overlay_files: GrammarStrList | None = pydantic.Field(alias="overlay")
+    stage_files: GrammarStrList | None = pydantic.Field(alias="stage")
+    prime_files: GrammarStrList | None = pydantic.Field(alias="prime")
     override_pull: GrammarStr | None
     overlay_script: GrammarStr | None
     override_build: GrammarStr | None
@@ -72,6 +72,12 @@ class _GrammarAwarePart(_GrammarAwareModel):
     override_prime: GrammarStr | None
     permissions: GrammarDictList | None
     parse_info: GrammarStrList | None
+
+
+def get_grammar_aware_part_keywords() -> list[str]:
+    """Return all supported grammar keywords for a part."""
+    keywords: list[str] = [item.alias for item in _GrammarAwarePart.__fields__.values()]
+    return keywords
 
 
 class GrammarAwareProject(_GrammarAwareModel):
