@@ -15,6 +15,7 @@ parts:
       - on amd64 to arm64:
           hello.txt: hello-arm64.txt
     build-environment:
+      - HELLO: hello
       - on amd64 to amd64:
           - MY_VAR: amd64
       - on amd64 to arm64:
