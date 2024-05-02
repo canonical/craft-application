@@ -26,6 +26,7 @@ from craft_application.models.constraints import (
 from craft_application.models.grammar import (
     GrammarAwareProject,
     get_grammar_aware_part_keywords,
+    get_grammar_aware_repository_keywords,
 )
 from craft_application.models.metadata import BaseMetadata
 from craft_application.models.project import (
@@ -45,6 +46,7 @@ __all__ = [
     "CraftBaseConfig",
     "CraftBaseModel",
     "get_grammar_aware_part_keywords",
+    "get_grammar_aware_repository_keywords",
     "GrammarAwareProject",
     "Project",
     "BuildPlanner",

@@ -18,9 +18,9 @@
 from textwrap import dedent
 
 import pytest
-from craft_application import application, models, util
+from craft_application import application, grammar, models, util
 
-from tests.conftest import MyBuildPlanner
+from tests.conftest import GRAMMAR_PACKAGE_REPOSITORIES, MyBuildPlanner
 
 FULL_PROJECT_YAML = """
 name: myproject
@@ -558,3 +558,24 @@ def test_process_grammar_full(grammar_app_full):
         {"path": "riscv64-perm-1", "owner": 123, "group": 123, "mode": "777"},
         {"path": "riscv64-perm-2", "owner": 456, "group": 456, "mode": "666"},
     ]
+
+
+def test_process_grammar_package_repositories():
+    project = util.safe_yaml_load(GRAMMAR_PACKAGE_REPOSITORIES)
+
+    grammar.process_project(yaml_data=project, arch="amd64", target_arch="riscv64")
+
+    apt_repo = project["package-repositories"][0]
+    assert apt_repo["architectures"] == ["amd64", "i386"]
+    assert apt_repo["components"] == ["main", "restricted"]
+    assert apt_repo["key-server"] == "keyserver.ubuntu.com"
+    assert apt_repo["url"] == "on-amd.to-riscv.com"
+    assert apt_repo["suites"] == ["xenial"]
+    assert apt_repo["formats"] == ["deb", "deb-src"]
+
+    ppa_repo = project["package-repositories"][1]
+    assert ppa_repo["ppa"] == "snappy-dev/snapcraft-daily"
+
+    uca_repo = project["package-repositories"][2]
+    assert uca_repo["cloud"] == "antelope"
+    assert uca_repo["pocket"] == "proposed"

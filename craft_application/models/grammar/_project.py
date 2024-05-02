@@ -21,12 +21,14 @@ import pydantic
 
 from ._base import _GrammarAwareModel
 from ._parts import _GrammarAwarePart
+from ._repo import _GrammarRepositoryTypes
 
 
 class GrammarAwareProject(_GrammarAwareModel):
     """Project definition containing grammar-aware components."""
 
     parts: "dict[str, _GrammarAwarePart]"
+    package_repositories: list[_GrammarRepositoryTypes] | None = None
 
     @pydantic.root_validator(  # pyright: ignore[reportUntypedFunctionDecorator,reportUnknownMemberType]
         pre=True

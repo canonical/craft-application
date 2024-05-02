@@ -18,7 +18,10 @@
 
 import pydantic
 import pytest
+from craft_application import util
 from craft_application.models.grammar import GrammarAwareProject
+
+from tests.conftest import GRAMMAR_PACKAGE_REPOSITORIES
 
 
 @pytest.mark.parametrize(
@@ -216,6 +219,11 @@ def test_grammar_aware_part_error(part):
 )
 def test_grammar_aware_project(project):
     """Test the grammar-aware part should be able to parse the input data."""
+    GrammarAwareProject.validate_grammar(project)
+
+
+def test_grammar_aware_package_repositories():
+    project = util.safe_yaml_load(GRAMMAR_PACKAGE_REPOSITORIES)
     GrammarAwareProject.validate_grammar(project)
 
 

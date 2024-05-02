@@ -17,6 +17,11 @@
 
 from ._parts import get_grammar_aware_part_keywords
 from ._project import GrammarAwareProject
+from ._repo import get_grammar_aware_repository_keywords
 
 
-__all__ = ["GrammarAwareProject", "get_grammar_aware_part_keywords"]
+__all__ = [
+    "GrammarAwareProject",
+    "get_grammar_aware_part_keywords",
+    "get_grammar_aware_repository_keywords",
+]
