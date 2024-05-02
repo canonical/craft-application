@@ -18,10 +18,7 @@
 
 import pydantic
 import pytest
-from craft_application.models.grammar import (
-    GrammarAwareProject,
-    _GrammarAwarePart,
-)
+from craft_application.models.grammar import GrammarAwareProject
 
 
 @pytest.mark.parametrize(
@@ -88,7 +85,12 @@ from craft_application.models.grammar import (
 )
 def test_grammar_aware_part(part):
     """Test the grammar-aware part should be able to parse the input data."""
-    _GrammarAwarePart(**part)
+    project = {
+        "parts": {
+            "my-part": part,
+        }
+    }
+    GrammarAwareProject.validate_grammar(project)
 
 
 @pytest.mark.parametrize(
@@ -118,8 +120,13 @@ def test_grammar_aware_part(part):
 )
 def test_grammar_aware_part_error(part):
     """Test the grammar-aware part should be able to report error."""
+    project = {
+        "parts": {
+            "my-part": part,
+        }
+    }
     with pytest.raises(pydantic.ValidationError):
-        _GrammarAwarePart(**part)
+        GrammarAwareProject.validate_grammar(project)
 
 
 @pytest.mark.parametrize(

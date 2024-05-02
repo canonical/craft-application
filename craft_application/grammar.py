@@ -125,3 +125,10 @@ def process_parts(
         )
 
     return parts_yaml_data
+
+
+def process_project(*, yaml_data: dict[str, Any], arch: str, target_arch: str) -> None:
+    if "parts" in yaml_data:
+        process_parts(
+            parts_yaml_data=yaml_data["parts"], arch=arch, target_arch=target_arch
+        )

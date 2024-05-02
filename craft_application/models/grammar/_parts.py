@@ -14,23 +14,12 @@
 # You should have received a copy of the GNU Lesser General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-"""Grammar-aware project for *craft applications."""
-from typing import Any
+"""Grammar-aware craft-parts Part."""
 
 import pydantic
 from craft_grammar.models import Grammar
 
-from craft_application.models.base import alias_generator
-
-
-class _GrammarAwareModel(pydantic.BaseModel):
-    class Config:
-        """Default configuration for grammar-aware models."""
-
-        validate_assignment = True
-        extra = pydantic.Extra.allow  # verify only grammar-aware parts
-        alias_generator = alias_generator
-        allow_population_by_field_name = True
+from ._base import _GrammarAwareModel
 
 
 class _GrammarAwarePart(_GrammarAwareModel):
@@ -74,27 +63,3 @@ def get_grammar_aware_part_keywords() -> list[str]:
     """Return all supported grammar keywords for a part."""
     keywords: list[str] = [item.alias for item in _GrammarAwarePart.__fields__.values()]
     return keywords
-
-
-class GrammarAwareProject(_GrammarAwareModel):
-    """Project definition containing grammar-aware components."""
-
-    parts: "dict[str, _GrammarAwarePart]"
-
-    @pydantic.root_validator(  # pyright: ignore[reportUntypedFunctionDecorator,reportUnknownMemberType]
-        pre=True
-    )
-    def _ensure_parts(cls, data: dict[str, Any]) -> dict[str, Any]:
-        """Ensure that the "parts" dictionary exists.
-
-        Some models (e.g. charmcraft) have this as optional. If there is no `parts`
-        item defined, set it to an empty dictionary. This is distinct from having
-        `parts` be invalid, which is not coerced here.
-        """
-        data.setdefault("parts", {})
-        return data
-
-    @classmethod
-    def validate_grammar(cls, data: dict[str, Any]) -> None:
-        """Ensure grammar-enabled entries are syntactically valid."""
-        cls(**data)
