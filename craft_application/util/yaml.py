@@ -93,10 +93,12 @@ class _SafeYamlLoader(yaml.SafeLoader):
         )
 
 
-def safe_yaml_load(stream: TextIO) -> Any:  # noqa: ANN401 - The YAML could be anything
+def safe_yaml_load(
+    stream: TextIO | str,
+) -> Any:  # noqa: ANN401 - The YAML could be anything
     """Equivalent to pyyaml's safe_load function, but constraining duplicate keys.
 
-    :param stream: Any text-like IO object.
+    :param stream: Any text-like IO object, or a raw string.
     :returns: A dict object mapping the yaml.
     """
     # Silencing S506 ("probable use of unsafe loader") because we override it by using
