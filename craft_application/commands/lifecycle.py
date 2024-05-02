@@ -25,24 +25,33 @@ from craft_parts.features import Features
 from typing_extensions import override
 
 from craft_application.commands import base
+from craft_application.services import PackageService
 
 if TYPE_CHECKING:  # pragma: no cover
     import argparse
 
 
-def get_lifecycle_command_group() -> CommandGroup:
-    """Return the lifecycle related command group."""
-    commands: list[type[_LifecycleCommand]] = [
+def get_lifecycle_command_group(*, pack_directory: bool = False) -> CommandGroup:
+    """Return the lifecycle related command group.
+
+    :param pack_directory: Allow the application to pack a primed directory without
+        running the lifecycle.
+    """
+    commands: list[type[_LifecycleBaseCommand]] = [
         CleanCommand,
         PullCommand,
         OverlayCommand,
         BuildCommand,
         StageCommand,
         PrimeCommand,
-        PackCommand,
     ]
     if not Features().enable_overlay:
         commands.remove(OverlayCommand)
+
+    if pack_directory:
+        commands.append(PackDirectoryCommand)
+    else:
+        commands.append(PackCommand)
 
     return CommandGroup(
         "Lifecycle",
@@ -50,40 +59,26 @@ def get_lifecycle_command_group() -> CommandGroup:
     )
 
 
-class _LifecycleCommand(base.ExtensibleCommand):
+class _LifecycleBaseCommand(base.ExtensibleCommand):
     """Lifecycle-related commands."""
 
     @override
     def _run(self, parsed_args: argparse.Namespace, **kwargs: Any) -> None:
         emit.trace(f"lifecycle command: {self.name!r}, arguments: {parsed_args!r}")
 
-
-class LifecyclePartsCommand(_LifecycleCommand):
-    """A lifecycle command that uses parts."""
-
-    # All lifecycle-related commands need a project to work
-    always_load_project = True
-
     @override
     def _fill_parser(self, parser: argparse.ArgumentParser) -> None:
-        super()._fill_parser(parser)  # type: ignore[arg-type]
-        parser.add_argument(
-            "parts",
-            metavar="part-name",
-            type=str,
-            nargs="*",
-            help="Optional list of parts to process",
-        )
+        super()._fill_parser(parser)
         group = parser.add_mutually_exclusive_group()
         group.add_argument(
             "--destructive-mode",
             action="store_true",
-            help="Build in the current host",
+            help="Run command on the current host",
         )
         group.add_argument(
             "--use-lxd",
             action="store_true",
-            help="Build in a LXD container.",
+            help="Run command in a LXD container",
         )
 
     @override
@@ -121,13 +116,12 @@ class LifecyclePartsCommand(_LifecycleCommand):
         return True
 
 
-class LifecycleStepCommand(LifecyclePartsCommand):
-    """An actual lifecycle step."""
+class LifecycleCommand(_LifecycleBaseCommand):
+    """A lifecycle command."""
 
     @override
     def _fill_parser(self, parser: argparse.ArgumentParser) -> None:
-        super()._fill_parser(parser)
-
+        super()._fill_parser(parser)  # type: ignore[arg-type]
         if self._should_add_shell_args():
             group = parser.add_mutually_exclusive_group()
             group.add_argument(
@@ -180,6 +174,29 @@ class LifecycleStepCommand(LifecyclePartsCommand):
 
         return cmd
 
+    @staticmethod
+    def _should_add_shell_args() -> bool:
+        return True
+
+
+class LifecycleStepCommand(LifecycleCommand):
+    """An actual lifecycle step."""
+
+    # All lifecycle step-related commands need a project to work
+    always_load_project = True
+
+    @override
+    def _fill_parser(self, parser: argparse.ArgumentParser) -> None:
+        super()._fill_parser(parser)
+
+        parser.add_argument(
+            "parts",
+            metavar="part-name",
+            type=str,
+            nargs="*",
+            help=f"Optional list of parts to {self.name}",
+        )
+
     @override
     def _run(
         self,
@@ -214,10 +231,6 @@ class LifecycleStepCommand(LifecyclePartsCommand):
 
         if shell_after:
             _launch_shell()
-
-    @staticmethod
-    def _should_add_shell_args() -> bool:
-        return True
 
 
 class PullCommand(LifecycleStepCommand):
@@ -301,8 +314,8 @@ class PrimeCommand(LifecycleStepCommand):
         self._services.package.write_metadata(self._services.lifecycle.prime_dir)
 
 
-class PackCommand(PrimeCommand):
-    """Command to pack the final artifact."""
+class PackCommand(LifecycleCommand):
+    """Command to run the lifecycle and pack the final artifact."""
 
     name = "pack"
     help_msg = "Create the final artifact"
@@ -328,26 +341,22 @@ class PackCommand(PrimeCommand):
     def _run(
         self,
         parsed_args: argparse.Namespace,
-        step_name: str | None = None,
         **kwargs: Any,
     ) -> None:
         """Run the pack command."""
-        if step_name not in ("pack", None):
-            raise RuntimeError(f"Step name {step_name} passed to pack command.")
-        super()._run(parsed_args, step_name="prime")
+        try:
+            self._services.lifecycle.run(step_name="prime")
+        except Exception as err:
+            if parsed_args.debug:
+                emit.progress(str(err), permanent=True)
+                _launch_shell()
+            raise
 
-        emit.progress("Packing...")
-        packages = self._services.package.pack(
-            self._services.lifecycle.prime_dir, parsed_args.output
+        _pack_artifact(
+            package_service=self._services.package,
+            input_dir=self._services.lifecycle.prime_dir,
+            output_dir=parsed_args.output,
         )
-
-        if not packages:
-            emit.progress("No packages created.", permanent=True)
-        elif len(packages) == 1:
-            emit.progress(f"Packed {packages[0].name}", permanent=True)
-        else:
-            package_names = ", ".join(pkg.name for pkg in packages)
-            emit.progress(f"Packed: {package_names}", permanent=True)
 
     @staticmethod
     @override
@@ -355,7 +364,49 @@ class PackCommand(PrimeCommand):
         return False
 
 
-class CleanCommand(LifecyclePartsCommand):
+class PackDirectoryCommand(PackCommand):
+    """Command to pack a directory with or without running the lifecycle."""
+
+    always_load_project = True
+
+    overview = textwrap.dedent(
+        """
+        Process parts and create the final artifact. If a directory is provided,
+        pack its contents instead.
+        """
+    )
+
+    @override
+    def _fill_parser(self, parser: argparse.ArgumentParser) -> None:
+        super()._fill_parser(parser)
+
+        parser.add_argument(
+            "directory",
+            metavar="directory",
+            type=str,
+            nargs="?",
+            default=None,
+            help="Directory to pack",
+        )
+
+    @override
+    def _run(
+        self,
+        parsed_args: argparse.Namespace,
+        **kwargs: Any,
+    ) -> None:
+        """Run the pack command."""
+        if parsed_args.directory:
+            _pack_artifact(
+                package_service=self._services.package,
+                input_dir=self._services.lifecycle.prime_dir,
+                output_dir=parsed_args.output,
+            )
+        else:
+            super().run(parsed_args)
+
+
+class CleanCommand(_LifecycleBaseCommand):
     """Command to remove part assets."""
 
     name = "clean"
@@ -366,6 +417,18 @@ class CleanCommand(LifecyclePartsCommand):
         remove the packing environment.
         """
     )
+
+    @override
+    def _fill_parser(self, parser: argparse.ArgumentParser) -> None:
+        super()._fill_parser(parser)
+
+        parser.add_argument(
+            "parts",
+            metavar="part-name",
+            type=str,
+            nargs="*",
+            help="Optional list of parts to clean",
+        )
 
     @override
     def _run(self, parsed_args: argparse.Namespace, **kwargs: Any) -> None:
@@ -411,3 +474,26 @@ def _launch_shell() -> None:
     emit.progress("Launching shell on build environment...", permanent=True)
     with emit.pause():
         subprocess.run(["bash"], check=False)
+
+
+def _pack_artifact(
+    *,
+    package_service: PackageService,
+    input_dir: pathlib.Path,
+    output_dir: pathlib.Path,
+) -> None:
+    """Pack artifacts from a directory.
+
+    :param input_dir: The directory to pack.
+    :param output_dir: The directory to place the packed artifacts.
+    """
+    emit.progress("Packing...")
+    packages = package_service.pack(input_dir, output_dir or pathlib.Path())
+
+    if not packages:
+        emit.progress("No packages created.", permanent=True)
+    elif len(packages) == 1:
+        emit.progress(f"Packed {packages[0].name}", permanent=True)
+    else:
+        package_names = ", ".join(pkg.name for pkg in packages)
+        emit.progress(f"Packed: {package_names}", permanent=True)

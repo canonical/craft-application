@@ -23,7 +23,7 @@ import pytest
 from craft_application.commands.lifecycle import (
     BuildCommand,
     CleanCommand,
-    LifecyclePartsCommand,
+    LifecycleCommand,
     LifecycleStepCommand,
     OverlayCommand,
     PackCommand,
@@ -115,7 +115,7 @@ def test_parts_command_fill_parser(
     build_env_args,
     parts_args,
 ):
-    cls = get_fake_command_class(LifecyclePartsCommand, managed=True)
+    cls = get_fake_command_class(LifecycleCommand, managed=True)
     parser = argparse.ArgumentParser("parts_command")
     command = cls({"app": app_metadata, "services": fake_services})
 
@@ -129,7 +129,7 @@ def test_parts_command_fill_parser(
 def test_parts_command_get_managed_cmd(
     app_metadata, fake_services, parts, emitter_verbosity
 ):
-    cls = get_fake_command_class(LifecyclePartsCommand, managed=True)
+    cls = get_fake_command_class(LifecycleCommand, managed=True)
 
     expected = [
         app_metadata.name,
