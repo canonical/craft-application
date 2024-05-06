@@ -18,10 +18,10 @@
 
 import pydantic
 import pytest
-from craft_application.models.grammar import (
-    GrammarAwareProject,
-    _GrammarAwarePart,
-)
+from craft_application import util
+from craft_application.models.grammar import GrammarAwareProject
+
+from tests.conftest import GRAMMAR_PACKAGE_REPOSITORIES
 
 
 @pytest.mark.parametrize(
@@ -88,7 +88,12 @@ from craft_application.models.grammar import (
 )
 def test_grammar_aware_part(part):
     """Test the grammar-aware part should be able to parse the input data."""
-    _GrammarAwarePart(**part)
+    project = {
+        "parts": {
+            "my-part": part,
+        }
+    }
+    GrammarAwareProject.validate_grammar(project)
 
 
 @pytest.mark.parametrize(
@@ -101,7 +106,7 @@ def test_grammar_aware_part(part):
         ),
         (
             {
-                "build-environment": [{"MESSAGE": "A", "NAME": "B"}],
+                "build-environment": ["NOT", "A", "DICT"],
             }
         ),
         (
@@ -118,8 +123,13 @@ def test_grammar_aware_part(part):
 )
 def test_grammar_aware_part_error(part):
     """Test the grammar-aware part should be able to report error."""
+    project = {
+        "parts": {
+            "my-part": part,
+        }
+    }
     with pytest.raises(pydantic.ValidationError):
-        _GrammarAwarePart(**part)
+        GrammarAwareProject.validate_grammar(project)
 
 
 @pytest.mark.parametrize(
@@ -212,6 +222,11 @@ def test_grammar_aware_project(project):
     GrammarAwareProject.validate_grammar(project)
 
 
+def test_grammar_aware_package_repositories():
+    project = util.safe_yaml_load(GRAMMAR_PACKAGE_REPOSITORIES)
+    GrammarAwareProject.validate_grammar(project)
+
+
 @pytest.mark.parametrize(
     ("project"),
     [
@@ -224,7 +239,7 @@ def test_grammar_aware_project(project):
                 "parts": {
                     "my-part": {
                         "source": ".",
-                        "build-environment": [{"MESSAGE": "A", "NAME": "B"}],
+                        "build-environment": ["NOT", "A", "DICT"],
                         "build-packages": ["C", "D"],
                         "stage-packages": ["E", "F"],
                         "build-snaps": ["G", "H"],

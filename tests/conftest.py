@@ -20,6 +20,7 @@ import os
 import pathlib
 import shutil
 from importlib import metadata
+from textwrap import dedent
 from typing import TYPE_CHECKING, Any
 
 import craft_application
@@ -284,3 +285,46 @@ def fake_services(
         PackageClass=fake_package_service_class,
         LifecycleClass=fake_lifecycle_service_class,
     )
+
+
+GRAMMAR_PACKAGE_REPOSITORIES = dedent(
+    """\
+package-repositories:
+  # Regular Apt repo
+  - type: apt
+    key-id: DEADBEEF
+    architectures:
+      - on amd64: ["amd64", "i386"]
+      - on arm64: ["arm64", "armhf"]
+    components:
+      - on amd64 to riscv64: ["main"]
+      - on amd64 to armhf: ["multiverse"]
+      - restricted
+    key-server:
+      - on i386: "amd64.ubuntu.com"
+      - else: "keyserver.ubuntu.com"
+    url:
+      - on amd64 to riscv64: "on-amd.to-riscv.com"
+      - else: fail
+    suites:
+      - on amd64 to riscv64: ["xenial"]
+      - on amd64 to armhf: ["xenial-updates"]
+    formats:
+      - on amd64 to riscv64: ["deb", "deb-src"]
+      - on amd64 to armhf: ["deb"]
+
+  # PPA repo
+  - type: apt
+    ppa:
+      - on amd64: snappy-dev/snapcraft-daily
+      - else: fail
+
+  # UCA repo
+  - type: apt
+    cloud:
+      - on amd64: antelope
+      - else: zed
+    pocket:
+      - on amd64 to riscv64: proposed
+"""
+)

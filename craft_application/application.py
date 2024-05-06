@@ -605,13 +605,9 @@ class Application:
             self._render_secrets(yaml_data)
 
         # Expand grammar.
-        if "parts" in yaml_data:
-            craft_cli.emit.debug(f"Processing grammar (on {build_on} for {build_for})")
-            yaml_data["parts"] = grammar.process_parts(
-                parts_yaml_data=yaml_data["parts"],
-                arch=build_on,
-                target_arch=build_for,
-            )
+        grammar.process_project(
+            yaml_data=yaml_data, arch=build_on, target_arch=build_for
+        )
 
         return yaml_data
 
