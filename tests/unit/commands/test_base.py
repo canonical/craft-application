@@ -78,6 +78,14 @@ def test_without_config(emitter):
     assert not hasattr(command, "_services")
 
 
+@pytest.mark.parametrize("always_load_project", [True, False])
+def test_needs_project(fake_command, always_load_project):
+    """`needs_project()` defaults to `always_load_project`."""
+    fake_command.always_load_project = always_load_project
+
+    assert fake_command.needs_project(argparse.Namespace()) is always_load_project
+
+
 # region Tests for ExtensibleCommand
 @pytest.fixture()
 def fake_extensible_cls():
