@@ -1,6 +1,6 @@
 # This file is part of craft-application.
 #
-# Copyright 2023 Canonical Ltd.
+# Copyright 2023-2024 Canonical Ltd.
 #
 # This program is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Lesser General Public License version 3, as
@@ -23,8 +23,8 @@ import pytest
 from craft_application.commands.lifecycle import (
     BuildCommand,
     CleanCommand,
+    LifecycleCommand,
     LifecyclePartsCommand,
-    LifecycleStepCommand,
     OverlayCommand,
     PackCommand,
     PrimeCommand,
@@ -107,22 +107,33 @@ def test_get_lifecycle_command_group(enable_overlay, commands):
 
 
 @pytest.mark.parametrize(("build_env_dict", "build_env_args"), BUILD_ENV_COMMANDS)
-@pytest.mark.parametrize("parts_args", PARTS_LISTS)
-def test_parts_command_fill_parser(
+@pytest.mark.parametrize(("debug_dict", "debug_args"), DEBUG_PARAMS)
+@pytest.mark.parametrize(("shell_dict", "shell_args"), SHELL_PARAMS)
+def test_lifecycle_command_fill_parser(
     app_metadata,
     fake_services,
     build_env_dict,
     build_env_args,
-    parts_args,
+    debug_dict,
+    debug_args,
+    shell_dict,
+    shell_args,
 ):
-    cls = get_fake_command_class(LifecyclePartsCommand, managed=True)
+    cls = get_fake_command_class(LifecycleCommand, managed=True)
     parser = argparse.ArgumentParser("parts_command")
     command = cls({"app": app_metadata, "services": fake_services})
+    expected = {
+        "platform": None,
+        "build_for": None,
+        **shell_dict,
+        **debug_dict,
+        **build_env_dict,
+    }
 
     command.fill_parser(parser)
 
-    args_dict = vars(parser.parse_args([*parts_args, *build_env_args]))
-    assert args_dict == {"parts": parts_args, **build_env_dict}
+    args_dict = vars(parser.parse_args([*build_env_args, *debug_args, *shell_args]))
+    assert args_dict == expected
 
 
 @pytest.mark.parametrize("parts", PARTS_LISTS)
@@ -192,7 +203,7 @@ def test_step_command_fill_parser(
     shell_args,
     shell_dict,
 ):
-    cls = get_fake_command_class(LifecycleStepCommand, managed=True)
+    cls = get_fake_command_class(LifecyclePartsCommand, managed=True)
     parser = argparse.ArgumentParser("step_command")
     expected = {
         "parts": parts_args,
@@ -217,7 +228,7 @@ def test_step_command_fill_parser(
 def test_step_command_get_managed_cmd(
     app_metadata, fake_services, parts, emitter_verbosity, shell_params, shell_opts
 ):
-    cls = get_fake_command_class(LifecycleStepCommand, managed=True)
+    cls = get_fake_command_class(LifecyclePartsCommand, managed=True)
 
     expected = [
         app_metadata.name,
@@ -239,7 +250,7 @@ def test_step_command_get_managed_cmd(
 @pytest.mark.parametrize("step_name", STEP_NAMES)
 @pytest.mark.parametrize("parts", PARTS_LISTS)
 def test_step_command_run_explicit_step(app_metadata, mock_services, parts, step_name):
-    cls = get_fake_command_class(LifecycleStepCommand, managed=True)
+    cls = get_fake_command_class(LifecyclePartsCommand, managed=True)
 
     parsed_args = argparse.Namespace(parts=parts)
     command = cls({"app": app_metadata, "services": mock_services})
