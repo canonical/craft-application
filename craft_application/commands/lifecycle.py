@@ -329,8 +329,10 @@ class PrimeCommand(LifecyclePartsCommand):
         self._services.package.write_metadata(self._services.lifecycle.prime_dir)
 
 
-class PackCommand(PrimeCommand):
+class PackCommand(LifecycleCommand):
     """Command to pack the final artifact."""
+
+    always_load_project = True
 
     name = "pack"
     help_msg = "Create the final artifact"
@@ -363,6 +365,9 @@ class PackCommand(PrimeCommand):
         if step_name not in ("pack", None):
             raise RuntimeError(f"Step name {step_name} passed to pack command.")
         super()._run(parsed_args, step_name="prime")
+
+        self._services.package.update_project()
+        self._services.package.write_metadata(self._services.lifecycle.prime_dir)
 
         emit.progress("Packing...")
         packages = self._services.package.pack(
