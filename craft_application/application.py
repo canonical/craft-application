@@ -481,7 +481,9 @@ class Application:
                     resolution="Ensure the path entered is correct.",
                 )
 
-    def run(self) -> int:  # noqa: PLR0912 (too many branches)
+    def run(  # noqa: PLR0912,PLR0915  (too many branches, too many statements)
+        self,
+    ) -> int:
         """Bootstrap and run the application."""
         self._setup_logging()
         self._register_default_plugins()
@@ -496,6 +498,15 @@ class Application:
             )
             platform = getattr(dispatcher.parsed_args(), "platform", None)
             build_for = getattr(dispatcher.parsed_args(), "build_for", None)
+
+            # Some commands (e.g. remote build) can allow multiple platforms
+            # or build-fors, comma-separated. In these cases, we create the
+            # project using the first defined platform.
+            if platform and "," in platform:
+                platform = platform.split(",", maxsplit=1)[0]
+            if build_for and "," in build_for:
+                build_for = build_for.split(",", maxsplit=1)[0]
+
             provider_name = command.provider_name(dispatcher.parsed_args())
 
             craft_cli.emit.debug(
