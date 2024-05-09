@@ -414,7 +414,6 @@ def test_clean_run_managed(
 
 @pytest.mark.parametrize(("build_env_dict", "build_env_args"), BUILD_ENV_COMMANDS)
 @pytest.mark.parametrize(("debug_dict", "debug_args"), DEBUG_PARAMS)
-@pytest.mark.parametrize("parts_args", PARTS_LISTS)
 @pytest.mark.parametrize("output_arg", [".", "/"])
 def test_pack_fill_parser(
     app_metadata,
@@ -423,12 +422,10 @@ def test_pack_fill_parser(
     build_env_args,
     debug_dict,
     debug_args,
-    parts_args,
     output_arg,
 ):
     parser = argparse.ArgumentParser("step_command")
     expected = {
-        "parts": parts_args,
         "platform": None,
         "build_for": None,
         "output": pathlib.Path(output_arg),
@@ -440,9 +437,7 @@ def test_pack_fill_parser(
     command.fill_parser(parser)
 
     args_dict = vars(
-        parser.parse_args(
-            [*build_env_args, *parts_args, *debug_args, f"--output={output_arg}"]
-        )
+        parser.parse_args([*build_env_args, *debug_args, f"--output={output_arg}"])
     )
     assert args_dict == expected
 

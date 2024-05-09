@@ -215,6 +215,11 @@ class LifecycleCommand(_BaseLifecycleCommand):
         """Run the lifecycle."""
         self._services.lifecycle.run(step_name=step_name)
 
+    def _run_post_prime_steps(self) -> None:
+        """Run post-prime steps."""
+        self._services.package.update_project()
+        self._services.package.write_metadata(self._services.lifecycle.prime_dir)
+
     @staticmethod
     def _should_add_shell_args() -> bool:
         return True
@@ -324,13 +329,13 @@ class PrimeCommand(LifecyclePartsCommand):
     ) -> None:
         """Run the prime command."""
         super()._run(parsed_args, step_name=step_name)
-
-        self._services.package.update_project()
-        self._services.package.write_metadata(self._services.lifecycle.prime_dir)
+        self._run_post_prime_steps()
 
 
-class PackCommand(PrimeCommand):
+class PackCommand(LifecycleCommand):
     """Command to pack the final artifact."""
+
+    always_load_project = True
 
     name = "pack"
     help_msg = "Create the final artifact"
@@ -363,6 +368,7 @@ class PackCommand(PrimeCommand):
         if step_name not in ("pack", None):
             raise RuntimeError(f"Step name {step_name} passed to pack command.")
         super()._run(parsed_args, step_name="prime")
+        self._run_post_prime_steps()
 
         emit.progress("Packing...")
         packages = self._services.package.pack(
