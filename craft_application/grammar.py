@@ -22,6 +22,7 @@ from craft_grammar import GrammarProcessor  # type: ignore[import-untyped]
 from craft_grammar.errors import GrammarSyntaxError  # type: ignore[import-untyped]
 
 from craft_application.errors import CraftValidationError
+from craft_application.models import get_grammar_aware_part_keywords
 
 # Values that should return as a single object / list / dict.
 _NON_SCALAR_VALUES = [
@@ -53,17 +54,33 @@ def process_part(
     """Process grammar for a given part."""
     for key in part_yaml_data:
         unprocessed_grammar = part_yaml_data[key]
-        craft_cli.emit.debug(f"Processing grammar for {key}: {unprocessed_grammar}")
 
-        # grammar aware models can only be a string or list of dict, skip any other type.
+        # ignore non-grammar keywords
+        if key not in get_grammar_aware_part_keywords():
+            craft_cli.emit.debug(
+                f"Not processing grammar for non-grammar enabled keyword {key}"
+            )
+            continue
+
+        craft_cli.emit.debug(f"Processing grammar for {key}: {unprocessed_grammar}")
+        # grammar aware models can be strings or list of dicts and strings
         if isinstance(unprocessed_grammar, list):
-            if any(not isinstance(d, dict) for d in unprocessed_grammar):  # type: ignore[reportUnknownVariableType]
+            # all items in the list must be a dict or a string
+            if any(not isinstance(d, dict | str) for d in unprocessed_grammar):  # type: ignore[reportUnknownVariableType]
                 continue
-            if any(not isinstance(k, str) for d in unprocessed_grammar for k in d):  # type: ignore[reportUnknownVariableType]
-                continue
-            unprocessed_grammar = cast(list[dict[str, Any]], unprocessed_grammar)
+
+            # all keys in the dictionary must be a string
+            for item in unprocessed_grammar:  # type: ignore[reportUnknownVariableType]
+                if isinstance(item, dict) and any(
+                    not isinstance(key, str) for key in item  # type: ignore[reportUnknownVariableType]
+                ):
+                    continue
+
+            unprocessed_grammar = cast(list[dict[str, Any] | str], unprocessed_grammar)
+        # grammar aware models can be a string
         elif isinstance(unprocessed_grammar, str):
             unprocessed_grammar = [unprocessed_grammar]
+        # skip all other data types
         else:
             continue
 
@@ -74,9 +91,9 @@ def process_part(
                 f"Invalid grammar syntax while processing '{key}' in '{part_yaml_data}': {e}"
             ) from e
 
-        # special cases
-        # scalar values should return as a single object, not in a list.
-        # dict values should return as a dict, not in a list.
+        # special cases:
+        # - scalar values should return as a single object, not in a list.
+        # - dict values should return as a dict, not in a list.
         if key not in _NON_SCALAR_VALUES or key in _DICT_ONLY_VALUES:
             processed_grammar = processed_grammar[0] if processed_grammar else None
 

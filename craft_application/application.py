@@ -278,11 +278,18 @@ class Application:
             self._full_build_plan, platform, build_for, host_arch
         )
 
-        if platform and not build_for:
-            all_platforms = {b.platform: b for b in self._full_build_plan}
-            if platform not in all_platforms:
-                raise errors.InvalidPlatformError(platform, list(all_platforms.keys()))
-            build_for = all_platforms[platform].build_for
+        if not build_for:
+            # get the build-for arch from the platform
+            if platform:
+                all_platforms = {b.platform: b for b in self._full_build_plan}
+                if platform not in all_platforms:
+                    raise errors.InvalidPlatformError(
+                        platform, list(all_platforms.keys())
+                    )
+                build_for = all_platforms[platform].build_for
+            # otherwise get the build-for arch from the build plan
+            elif self._build_plan:
+                build_for = self._build_plan[0].build_for
 
         # validate project grammar
         GrammarAwareProject.validate_grammar(yaml_data)
@@ -495,7 +502,7 @@ class Application:
             self._pre_run(dispatcher)
 
             managed_mode = command.run_managed(dispatcher.parsed_args())
-            if managed_mode or command.always_load_project:
+            if managed_mode or command.needs_project(dispatcher.parsed_args()):
                 self.services.project = self.get_project(
                     platform=platform, build_for=build_for
                 )
@@ -574,34 +581,29 @@ class Application:
         Performs task such as environment expansion. Note that this transforms
         ``yaml_data`` in-place.
         """
+        # apply application-specific transformations first because an application may
+        # add advanced grammar, project variables, or secrets to the yaml
+        yaml_data = self._extra_yaml_transform(
+            yaml_data, build_on=build_on, build_for=build_for
+        )
+
+        # At the moment there is no perfect solution for what do to do
+        # expand project variables or to resolve the grammar if there's
+        # no explicitly-provided target arch. However, we must resolve
+        # it with *something* otherwise we might have an invalid parts
+        # definition full of grammar declarations and incorrect build_for
+        # architectures.
+        build_for = build_for or build_on
+
         # Perform variable expansion.
-        self._expand_environment(yaml_data)
+        self._expand_environment(yaml_data=yaml_data, build_for=build_for)
 
         # Handle build secrets.
         if self.app.features.build_secrets:
             self._render_secrets(yaml_data)
 
-        # apply application-specific transformations before expanding grammar
-        # because an application may add advanced grammar to the yaml
-        yaml_data = self._extra_yaml_transform(
-            yaml_data, build_on=build_on, build_for=build_for
-        )
-
         # Expand grammar.
         if "parts" in yaml_data:
-            if not build_for:
-                # At the moment there is no perfect solution for what do to do
-                # resolve the grammar if there's no explicitly-provided target
-                # arch. However, we must resolve it with *something* otherwise
-                # we might have an invalid parts definition full of grammar
-                # declarations.
-                if self._build_plan:
-                    # If we have a build plan use one of its items, because
-                    # it's likely contemplated on the grammar.
-                    build_for = self._build_plan[0].build_for
-                else:
-                    # As a last resort, default to the same arch as the host.
-                    build_for = build_on
             craft_cli.emit.debug(f"Processing grammar (on {build_on} for {build_for})")
             yaml_data["parts"] = grammar.process_parts(
                 parts_yaml_data=yaml_data["parts"],
@@ -611,8 +613,12 @@ class Application:
 
         return yaml_data
 
-    def _expand_environment(self, yaml_data: dict[str, Any]) -> None:
-        """Perform expansion of project environment variables."""
+    def _expand_environment(self, yaml_data: dict[str, Any], build_for: str) -> None:
+        """Perform expansion of project environment variables.
+
+        :param yaml_data: The project's yaml data.
+        :param build_for: The architecture to build for.
+        """
         environment_vars = self._get_project_vars(yaml_data)
         project_dirs = craft_parts.ProjectDirs(
             work_dir=self._work_dir, partitions=self._partitions
@@ -621,6 +627,7 @@ class Application:
         info = craft_parts.ProjectInfo(
             application_name=self.app.name,  # not used in environment expansion
             cache_dir=pathlib.Path(),  # not used in environment expansion
+            arch=util.convert_architecture_deb_to_platform(build_for),
             project_name=yaml_data.get("name", ""),
             project_dirs=project_dirs,
             project_vars=environment_vars,

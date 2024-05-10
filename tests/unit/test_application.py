@@ -1324,10 +1324,10 @@ def test_extra_yaml_transform(tmp_path, app_metadata, fake_services):
 
     app = FakeApplication(app_metadata, fake_services)
     app.project_dir = tmp_path
-    _ = app.get_project(build_for="fake-build-for")
+    _ = app.get_project(build_for="s390x")
 
     assert app.build_on == util.get_host_architecture()
-    assert app.build_for == "fake-build-for"
+    assert app.build_for == "s390x"
 
 
 def test_mandatory_adoptable_fields(tmp_path, app_metadata, fake_services):
@@ -1360,10 +1360,26 @@ def grammar_project_mini(tmp_path):
     base: ubuntu@24.04
     parts:
       mypart:
-        plugin: nil
+        plugin: meson
+
+        # grammar-only string
         source:
         - on amd64 to riscv64: on-amd64-to-riscv64
         - on amd64 to s390x: on-amd64-to-s390x
+        - else: other
+
+        # list of grammar and non-grammar data
+        build-packages:
+        - test-package
+        - on amd64 to riscv64:
+          - on-amd64-to-riscv64
+        - on amd64 to s390x:
+          - on-amd64-to-s390x
+
+        # non-grammar data in a non-grammar keyword
+        meson-parameters:
+        - foo
+        - bar
     """
     )
     project_file = tmp_path / "testcraft.yaml"
@@ -1465,30 +1481,50 @@ def test_process_grammar_build_for(grammar_app_mini):
     """Test that a provided build-for is used to process the grammar."""
     project = grammar_app_mini.get_project(build_for="s390x")
     assert project.parts["mypart"]["source"] == "on-amd64-to-s390x"
+    assert project.parts["mypart"]["build-packages"] == [
+        "test-package",
+        "on-amd64-to-s390x",
+    ]
 
 
 def test_process_grammar_platform(grammar_app_mini):
     """Test that a provided platform is used to process the grammar."""
     project = grammar_app_mini.get_project(platform="platform-riscv64")
     assert project.parts["mypart"]["source"] == "on-amd64-to-riscv64"
+    assert project.parts["mypart"]["build-packages"] == [
+        "test-package",
+        "on-amd64-to-riscv64",
+    ]
+
+
+def test_process_grammar_non_grammar(grammar_app_mini):
+    """Non-grammar keywords should not be modified."""
+    project = grammar_app_mini.get_project(platform="platform-riscv64")
+
+    assert project.parts["mypart"]["meson-parameters"] == ["foo", "bar"]
 
 
 def test_process_grammar_default(grammar_app_mini):
     """Test that if nothing is provided the first BuildInfo is used by the grammar."""
     project = grammar_app_mini.get_project()
     assert project.parts["mypart"]["source"] == "on-amd64-to-riscv64"
+    assert project.parts["mypart"]["build-packages"] == [
+        "test-package",
+        "on-amd64-to-riscv64",
+    ]
 
 
 def test_process_grammar_no_match(grammar_app_mini, mocker):
     """Test that if the build plan is empty, the grammar uses the host as target arch."""
     mocker.patch("craft_application.util.get_host_architecture", return_value="i386")
     project = grammar_app_mini.get_project()
-    # "source" is empty because "i386" doesn't match any of the grammar statements.
-    assert project.parts["mypart"]["source"] is None
+
+    assert project.parts["mypart"]["source"] == "other"
+    assert project.parts["mypart"]["build-packages"] == ["test-package"]
 
 
 class FakeApplicationWithYamlTransform(FakeApplication):
-    """Application class that adds advanced grammar in `_extra_yaml_transform`."""
+    """Application class that adds data in `_extra_yaml_transform`."""
 
     @override
     def _extra_yaml_transform(
@@ -1503,9 +1539,17 @@ class FakeApplicationWithYamlTransform(FakeApplication):
         new_yaml_data["parts"] = {
             "mypart": {
                 "plugin": "nil",
-                "source": [
-                    {"to riscv64": "to-riscv64"},
-                    {"to s390x": "to-s390x"},
+                # advanced grammar
+                "build-packages": [
+                    "test-package",
+                    {"to riscv64": "riscv64-package"},
+                    {"to s390x": "s390x-package"},
+                ],
+                "build-environment": [
+                    # project variables
+                    {"hello": "$CRAFT_ARCH_BUILD_ON"},
+                    # build secrets
+                    {"MY_VAR": "$(HOST_SECRET:echo ${SECRET_VAR})"},
                 ],
             }
         }
@@ -1513,16 +1557,30 @@ class FakeApplicationWithYamlTransform(FakeApplication):
         return new_yaml_data
 
 
-def test_process_grammar_from_extra_transform(app_metadata, fake_services, tmp_path):
+@pytest.mark.enable_features("build_secrets")
+def test_process_yaml_from_extra_transform(
+    app_metadata, fake_services, tmp_path, monkeypatch
+):
     """Test that grammar is applied on data from `_extra_yaml_transform`."""
+    monkeypatch.setenv("SECRET_VAR", "secret-value")
     project_file = tmp_path / "testcraft.yaml"
     project_file.write_text(BASIC_PROJECT_YAML)
 
     app = FakeApplicationWithYamlTransform(app_metadata, fake_services)
     app.project_dir = tmp_path
-
     project = app.get_project(build_for="riscv64")
-    assert project.parts["mypart"]["source"] == "to-riscv64"
+
+    # process grammar
+    assert project.parts["mypart"]["build-packages"] == [
+        "test-package",
+        "riscv64-package",
+    ]
+    assert project.parts["mypart"]["build-environment"] == [
+        # evaluate project variables
+        {"hello": get_host_architecture()},
+        # render secrets
+        {"MY_VAR": "secret-value"},
+    ]
 
 
 class FakePartitionsApplication(FakeApplication):
