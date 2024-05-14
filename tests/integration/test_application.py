@@ -1,4 +1,4 @@
-# Copyright 2023 Canonical Ltd.
+# Copyright 2023-2024 Canonical Ltd.
 #
 # This program is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Lesser General Public License version 3, as
@@ -21,9 +21,24 @@ import craft_application
 import craft_cli
 import pytest
 import pytest_check
-from craft_application import secrets
+from craft_application import models, secrets, util
 from craft_application.util import yaml
 from typing_extensions import override
+
+from tests.conftest import MyBuildPlanner
+
+
+class TestableApplication(craft_application.Application):
+    """An application modified for integration tests.
+
+    Modifications are:
+    * Overrides the use of "/root/project" as project_dir when managed
+    """
+
+    def _pre_run(self, dispatcher: craft_cli.Dispatcher) -> None:
+        super()._pre_run(dispatcher)
+        if self.is_managed():
+            self.project_dir = pathlib.Path.cwd()
 
 
 @pytest.fixture()
@@ -34,7 +49,7 @@ def create_app(app_metadata, fake_package_service_class):
         services = craft_application.ServiceFactory(
             app_metadata, PackageClass=fake_package_service_class
         )
-        return craft_application.Application(app_metadata, services)
+        return TestableApplication(app_metadata, services)
 
     return _inner
 
@@ -90,7 +105,7 @@ INVALID_PROJECTS_DIR = TEST_DATA_DIR / "invalid_projects"
         (["-h"], "", BASIC_USAGE, 0),
         (["--version"], VERSION_INFO, "", 0),
         (["-V"], VERSION_INFO, "", 0),
-        (["-q", "--version"], VERSION_INFO, "", 0),
+        (["-q", "--version"], "", "", 0),
         (["--invalid-parameter"], "", BASIC_USAGE, 64),
         (["non-command"], "", INVALID_COMMAND, 64),
     ],
@@ -123,7 +138,7 @@ def test_project_managed(capsys, monkeypatch, tmp_path, project, create_app):
 
     app.run()
 
-    assert (tmp_path / "package.tar.zst").exists()
+    assert (tmp_path / "package_1.0.tar.zst").exists()
     captured = capsys.readouterr()
     assert (
         captured.err.splitlines()[-1]
@@ -131,17 +146,31 @@ def test_project_managed(capsys, monkeypatch, tmp_path, project, create_app):
     )
 
 
+@pytest.mark.usefixtures("full_build_plan")
 @pytest.mark.parametrize("project", (d.name for d in VALID_PROJECTS_DIR.iterdir()))
-def test_project_destructive(capsys, monkeypatch, tmp_path, project, create_app):
+def test_project_destructive(
+    capsys,
+    monkeypatch,
+    tmp_path,
+    project,
+    create_app,
+):
     monkeypatch.chdir(tmp_path)
     shutil.copytree(VALID_PROJECTS_DIR / project, tmp_path, dirs_exist_ok=True)
 
+    build_for = util.get_host_architecture()
+    release = util.get_host_base().version
+    platform = f"ubuntu-{release}-{build_for}"
+
     # Run pack in destructive mode
-    monkeypatch.setattr("sys.argv", ["testcraft", "pack", "--destructive-mode"])
+    monkeypatch.setattr(
+        "sys.argv",
+        ["testcraft", "pack", "--destructive-mode", "--platform", platform],
+    )
     app = create_app()
     app.run()
 
-    assert (tmp_path / "package.tar.zst").exists()
+    assert (tmp_path / "package_1.0.tar.zst").exists()
     captured = capsys.readouterr()
     assert (
         captured.err.splitlines()[-1]
@@ -187,15 +216,15 @@ def test_non_lifecycle_command_does_not_require_project(monkeypatch, app):
 
 
 @pytest.mark.parametrize("cmd", ["clean", "pull", "build", "stage", "prime", "pack"])
-def test_run_always_load_project(monkeypatch, app, cmd):
+def test_run_always_load_project(capsys, monkeypatch, app, cmd):
     """Run a lifecycle command without having a project shall fail."""
     monkeypatch.setenv("CRAFT_DEBUG", "1")
     monkeypatch.setattr("sys.argv", ["testcraft", cmd])
 
-    with pytest.raises(FileNotFoundError) as raised:
-        app.run()
+    assert app.run() == 66  # noqa: PLR2004
 
-    assert str(raised.value).endswith("/testcraft.yaml'") is True
+    captured = capsys.readouterr()
+    assert "'testcraft.yaml' not found" in captured.err
 
 
 @pytest.mark.parametrize("help_param", ["-h", "--help"])
@@ -240,8 +269,18 @@ def test_invalid_command_argument(monkeypatch, capsys, app):
     assert stderr == expected_stderr
 
 
+@pytest.mark.parametrize(
+    "arguments",
+    [
+        [],
+        ["--build-for", "s390x"],
+        ["--platform", "my-platform"],
+    ],
+)
 def test_global_environment(
+    arguments,
     create_app,
+    mocker,
     monkeypatch,
     tmp_path,
 ):
@@ -249,8 +288,24 @@ def test_global_environment(
     monkeypatch.chdir(tmp_path)
     shutil.copytree(VALID_PROJECTS_DIR / "environment", tmp_path, dirs_exist_ok=True)
 
+    # a build plan that builds for s390x (a cross-compiling scenario unless on s390x)
+    mocker.patch.object(
+        MyBuildPlanner,
+        "get_build_plan",
+        return_value=[
+            models.BuildInfo(
+                platform="my-platform",
+                build_on=util.get_host_architecture(),
+                build_for="s390x",
+                base=util.get_host_base(),
+            ),
+        ],
+    )
+
     # Run in destructive mode
-    monkeypatch.setattr("sys.argv", ["testcraft", "prime", "--destructive-mode"])
+    monkeypatch.setattr(
+        "sys.argv", ["testcraft", "prime", "--destructive-mode", *arguments]
+    )
     app = create_app()
     app.run()
 
@@ -263,7 +318,14 @@ def test_global_environment(
 
     assert variables["project_name"] == "environment-project"
     assert variables["project_dir"] == str(tmp_path)
-    assert variables["project_version"] == "1.2.3"
+    assert variables["project_version"] == "1.0"
+    assert variables["arch_build_for"] == "s390x"
+    assert variables["arch_triplet_build_for"] == "s390x-linux-gnu"
+    assert variables["arch_build_on"] == "amd64"
+    # craft-application doesn't have utility for getting arch triplets
+    assert variables["arch_triplet_build_on"].startswith(
+        util.convert_architecture_deb_to_platform(util.get_host_architecture())
+    )
 
 
 @pytest.fixture()
@@ -329,7 +391,7 @@ def test_build_secrets_managed(
     app = setup_secrets_project(destructive_mode=False)
 
     monkeypatch.setenv("CRAFT_MANAGED_MODE", "1")
-    assert app.is_managed
+    assert app.is_managed()
     app._work_dir = tmp_path
 
     # Before running the application, configure its environment "as if" the host app

@@ -1,6 +1,6 @@
 # This file is part of craft_application.
 #
-# Copyright 2023 Canonical Ltd.
+# Copyright 2023-2024 Canonical Ltd.
 #
 # This program is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Lesser General Public License version 3, as
@@ -22,19 +22,21 @@ import pathlib
 import signal
 import subprocess
 import sys
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from functools import cached_property
 from importlib import metadata
-from typing import TYPE_CHECKING, Any, Iterable, cast, final
+from typing import TYPE_CHECKING, Any, cast, final
 
 import craft_cli
 import craft_parts
 import craft_providers
+from craft_parts.plugins.plugins import PluginType
 from platformdirs import user_cache_path
 
-from craft_application import commands, models, secrets, util
+from craft_application import commands, errors, grammar, models, secrets, util
 from craft_application.errors import PathInvalidError
-from craft_application.models import BuildInfo
+from craft_application.models import BuildInfo, GrammarAwareProject
 
 if TYPE_CHECKING:
     from craft_application.services import service_factory
@@ -44,7 +46,13 @@ GLOBAL_VERSION = craft_cli.GlobalArgument(
 )
 
 DEFAULT_CLI_LOGGERS = frozenset(
-    {"craft_archives", "craft_parts", "craft_providers", "craft_store"}
+    {
+        "craft_archives",
+        "craft_parts",
+        "craft_providers",
+        "craft_store",
+        "craft_application.remote",
+    }
 )
 
 
@@ -67,8 +75,13 @@ class AppMetadata:
     source_ignore_patterns: list[str] = field(default_factory=lambda: [])
     managed_instance_project_path = pathlib.PurePosixPath("/root/project")
     features: AppFeatures = AppFeatures()
+    project_variables: list[str] = field(default_factory=lambda: ["version"])
+    mandatory_adoptable_fields: list[str] = field(default_factory=lambda: ["version"])
 
     ProjectClass: type[models.Project] = models.Project
+    BuildPlannerClass: type[models.BuildPlanner] = field(
+        default=NotImplementedError  # type: ignore[assignment,type-abstract]
+    )
 
     def __post_init__(self) -> None:
         setter = super().__setattr__
@@ -112,16 +125,21 @@ class Application:
         self._command_groups: list[craft_cli.CommandGroup] = []
         self._global_arguments: list[craft_cli.GlobalArgument] = [GLOBAL_VERSION]
         self._cli_loggers = DEFAULT_CLI_LOGGERS | set(extra_loggers)
-
+        self._full_build_plan: list[models.BuildInfo] = []
+        self._build_plan: list[models.BuildInfo] = []
         # When build_secrets are enabled, this contains the secret info to pass to
         # managed instances.
         self._secrets: secrets.BuildSecrets | None = None
+        self._partitions: list[str] | None = None
         # Cached project object, allows only the first time we load the project
         # to specify things like the project directory.
         # This is set as a private attribute in order to discourage real application
         # implementations from accessing it directly. They should always use
         # ``get_project`` to access the project.
         self.__project: models.Project | None = None
+        # Set a globally usable project directory for the application.
+        # This may be overridden by specific application implementations.
+        self.project_dir = pathlib.Path.cwd()
 
         if self.is_managed():
             self._work_dir = pathlib.Path("/root")
@@ -191,11 +209,7 @@ class Application:
                 f"Unable to create/access cache directory: {err.strerror}"
             ) from err
 
-    def _configure_services(
-        self,
-        platform: str | None,  # noqa: ARG002 (Unused method argument)
-        build_for: str | None,
-    ) -> None:
+    def _configure_services(self, provider_name: str | None) -> None:
         """Configure additional keyword arguments for any service classes.
 
         Any child classes that override this must either call this directly or must
@@ -205,11 +219,14 @@ class Application:
             "lifecycle",
             cache_dir=self.cache_dir,
             work_dir=self._work_dir,
-            build_for=build_for,
+            build_plan=self._build_plan,
+            partitions=self._partitions,
         )
         self.services.set_kwargs(
             "provider",
             work_dir=self._work_dir,
+            build_plan=self._build_plan,
+            provider_name=provider_name,
         )
 
     def _resolve_project_path(self, project_dir: pathlib.Path | None) -> pathlib.Path:
@@ -220,30 +237,82 @@ class Application:
          in multiple places within the project directory.
         """
         if project_dir is None:
-            project_dir = pathlib.Path.cwd()
+            project_dir = self.project_dir
+
         return (project_dir / f"{self.app.name}.yaml").resolve(strict=True)
 
-    def get_project(self, project_dir: pathlib.Path | None = None) -> models.Project:
+    def get_project(
+        self,
+        *,
+        platform: str | None = None,
+        build_for: str | None = None,
+    ) -> models.Project:
         """Get the project model.
 
         This only resolves and renders the project the first time it gets run.
         After that, it merely uses a cached project model.
 
-        :param project_dir: the base directory to traverse for finding the project file.
+        :param platform: the platform name listed in the build plan.
+        :param build_for: the architecture to build this project for.
         :returns: A transformed, loaded project model.
         """
         if self.__project is not None:
             return self.__project
 
-        project_path = self._resolve_project_path(project_dir)
+        try:
+            project_path = self._resolve_project_path(self.project_dir)
+        except FileNotFoundError as err:
+            raise errors.ProjectFileMissingError(
+                f"Project file '{self.app.name}.yaml' not found in '{self.project_dir}'.",
+                details="The project file could not be found.",
+                resolution="Ensure the project file exists.",
+                retcode=66,  # EX_NOINPUT from sysexits.h
+            ) from err
         craft_cli.emit.debug(f"Loading project file '{project_path!s}'")
 
         with project_path.open() as file:
             yaml_data = util.safe_yaml_load(file)
 
-        yaml_data = self._transform_project_yaml(yaml_data)
+        host_arch = util.get_host_architecture()
+        build_planner = self.app.BuildPlannerClass.unmarshal(yaml_data)
+        self._full_build_plan = build_planner.get_build_plan()
+        self._build_plan = filter_plan(
+            self._full_build_plan, platform, build_for, host_arch
+        )
 
+        if not build_for:
+            # get the build-for arch from the platform
+            if platform:
+                all_platforms = {b.platform: b for b in self._full_build_plan}
+                if platform not in all_platforms:
+                    raise errors.InvalidPlatformError(
+                        platform, list(all_platforms.keys())
+                    )
+                build_for = all_platforms[platform].build_for
+            # otherwise get the build-for arch from the build plan
+            elif self._build_plan:
+                build_for = self._build_plan[0].build_for
+
+        # validate project grammar
+        GrammarAwareProject.validate_grammar(yaml_data)
+
+        build_on = host_arch
+
+        # Setup partitions, some projects require the yaml data, most will not
+        self._partitions = self._setup_partitions(yaml_data)
+        yaml_data = self._transform_project_yaml(yaml_data, build_on, build_for)
         self.__project = self.app.ProjectClass.from_yaml_data(yaml_data, project_path)
+
+        # check if mandatory adoptable fields exist if adopt-info not used
+        for name in self.app.mandatory_adoptable_fields:
+            if (
+                not getattr(self.__project, name, None)
+                and not self.__project.adopt_info
+            ):
+                raise errors.CraftValidationError(
+                    f"Required field '{name}' is not set and 'adopt-info' not used."
+                )
+
         return self.__project
 
     @cached_property
@@ -259,11 +328,17 @@ class Application:
         """Run the application in a managed instance."""
         extra_args: dict[str, Any] = {}
 
-        build_plan = self.get_project().get_build_plan()
-        build_plan = _filter_plan(build_plan, platform, build_for)
+        for build_info in self._build_plan:
+            if platform and platform != build_info.platform:
+                continue
 
-        for build_info in build_plan:
-            env = {"CRAFT_PLATFORM": build_info.platform}
+            if build_for and build_for != build_info.build_for:
+                continue
+
+            env = {
+                "CRAFT_PLATFORM": build_info.platform,
+                "CRAFT_VERBOSITY_LEVEL": craft_cli.emit.get_mode().name,
+            }
 
             if self.app.features.build_secrets:
                 # If using build secrets, put them in the environment of the managed
@@ -281,14 +356,19 @@ class Application:
             with self.services.provider.instance(
                 build_info, work_dir=self._work_dir
             ) as instance:
+                cmd = [self.app.name, *sys.argv[1:]]
+                craft_cli.emit.debug(
+                    f"Executing {cmd} in instance location {instance_path} with {extra_args}."
+                )
                 try:
-                    # Pyright doesn't fully understand craft_providers's CompletedProcess.
-                    instance.execute_run(  # pyright: ignore[reportUnknownMemberType,reportUnknownVariableType]
-                        [self.app.name, *sys.argv[1:]],
-                        cwd=instance_path,
-                        check=True,
-                        **extra_args,
-                    )
+                    with craft_cli.emit.pause():
+                        # Pyright doesn't fully understand craft_providers's CompletedProcess.
+                        instance.execute_run(  # pyright: ignore[reportUnknownMemberType,reportUnknownVariableType]
+                            cmd,
+                            cwd=instance_path,
+                            check=True,
+                            **extra_args,
+                        )
                 except subprocess.CalledProcessError as exc:
                     raise craft_providers.ProviderError(
                         f"Failed to execute {self.app.name} in instance."
@@ -304,25 +384,7 @@ class Application:
 
         :returns: A ready-to-run Dispatcher object
         """
-        # Set the logging level to DEBUG for all craft-libraries. This is OK even if
-        # the specific application doesn't use a specific library, the call does not
-        # import the package.
-        util.setup_loggers(*self._cli_loggers)
-
-        craft_cli.emit.init(
-            mode=craft_cli.EmitterMode.BRIEF,
-            appname=self.app.name,
-            greeting=f"Starting {self.app.name}, version {self.app.version}",
-            log_filepath=self.log_path,
-            streaming_brief=True,
-        )
-
-        dispatcher = craft_cli.Dispatcher(
-            self.app.name,
-            self.command_groups,
-            summary=str(self.app.summary),
-            extra_global_args=self._global_arguments,
-        )
+        dispatcher = self._create_dispatcher()
 
         try:
             craft_cli.emit.trace("pre-parsing arguments...")
@@ -337,8 +399,8 @@ class Application:
                 global_args = dispatcher.pre_parse_args(sys.argv[1:])
 
             if global_args.get("version"):
+                craft_cli.emit.message(f"{self.app.name} {self.app.version}")
                 craft_cli.emit.ended_ok()
-                print(f"{self.app.name} {self.app.version}")
                 sys.exit(0)
         except craft_cli.ProvideHelpException as err:
             print(err, file=sys.stderr)  # to stderr, as argparse normally does
@@ -361,15 +423,70 @@ class Application:
                 raise
             sys.exit(70)  # EX_SOFTWARE from sysexits.h
 
-        craft_cli.emit.trace("Preparing application...")
+        craft_cli.emit.debug("Configuring application...")
         self.configure(global_args)
 
         return dispatcher
 
-    def run(self) -> int:  # noqa: PLR0912 (too many branches due to error handling)
+    def _create_dispatcher(self) -> craft_cli.Dispatcher:
+        """Create the Dispatcher that will run the application's command.
+
+        Subclasses can override this if they need to create a Dispatcher with
+        different parameters.
+        """
+        return craft_cli.Dispatcher(
+            self.app.name,
+            self.command_groups,
+            summary=str(self.app.summary),
+            extra_global_args=self._global_arguments,
+        )
+
+    def _get_app_plugins(self) -> dict[str, PluginType]:
+        """Get the plugins for this application.
+
+        Should be overridden by applications that need to register plugins at startup.
+        """
+        return {}
+
+    def register_plugins(self, plugins: dict[str, PluginType]) -> None:
+        """Register plugins for this application."""
+        if not plugins:
+            return
+
+        craft_cli.emit.trace("Registering plugins...")
+        craft_cli.emit.trace(f"Plugins: {', '.join(plugins.keys())}")
+        craft_parts.plugins.register(plugins)
+
+    def _register_default_plugins(self) -> None:
+        """Register per application plugins when initializing."""
+        self.register_plugins(self._get_app_plugins())
+
+    def _pre_run(self, dispatcher: craft_cli.Dispatcher) -> None:
+        """Do any final setup before running the command.
+
+        At the time this is run, the command is loaded in the dispatcher, but
+        the project has not yet been loaded.
+        """
+        # Some commands might have a project_dir parameter. Those commands and
+        # only those commands should get a project directory, but only when
+        # not managed.
+        if self.is_managed():
+            self.project_dir = pathlib.Path("/root/project")
+        elif project_dir := getattr(dispatcher.parsed_args(), "project_dir", None):
+            self.project_dir = pathlib.Path(project_dir).expanduser().resolve()
+            if self.project_dir.exists() and not self.project_dir.is_dir():
+                raise errors.ProjectFileMissingError(
+                    "Provided project directory is not a directory.",
+                    details=f"Not a directory: {project_dir}",
+                    resolution="Ensure the path entered is correct.",
+                )
+
+    def run(self) -> int:  # noqa: PLR0912 (too many branches)
         """Bootstrap and run the application."""
+        self._setup_logging()
+        self._register_default_plugins()
         dispatcher = self._get_dispatcher()
-        craft_cli.emit.trace("Preparing application...")
+        craft_cli.emit.debug("Preparing application...")
 
         return_code = 1  # General error
         try:
@@ -379,22 +496,31 @@ class Application:
             )
             platform = getattr(dispatcher.parsed_args(), "platform", None)
             build_for = getattr(dispatcher.parsed_args(), "build_for", None)
-            self._configure_services(platform, build_for)
+            provider_name = command.provider_name(dispatcher.parsed_args())
 
-            if not command.run_managed(dispatcher.parsed_args()):
+            craft_cli.emit.debug(
+                f"Build plan: platform={platform}, build_for={build_for}"
+            )
+            self._pre_run(dispatcher)
+
+            managed_mode = command.run_managed(dispatcher.parsed_args())
+            if managed_mode or command.needs_project(dispatcher.parsed_args()):
+                self.services.project = self.get_project(
+                    platform=platform, build_for=build_for
+                )
+
+            self._configure_services(provider_name)
+
+            if not managed_mode:
                 # command runs in the outer instance
                 craft_cli.emit.debug(f"Running {self.app.name} {command.name} on host")
-                if command.always_load_project:
-                    self.services.project = self.get_project()
                 return_code = dispatcher.run() or 0
             elif not self.is_managed():
                 # command runs in inner instance, but this is the outer instance
-                self.services.project = self.get_project()
                 self.run_managed(platform, build_for)
                 return_code = 0
             else:
                 # command runs in inner instance
-                self.services.project = self.get_project()
                 return_code = dispatcher.run() or 0
         except craft_cli.ArgumentParsingError as err:
             print(err, file=sys.stderr)  # to stderr, as argparse normally does
@@ -405,6 +531,7 @@ class Application:
             return_code = 128 + signal.SIGINT
         except craft_cli.CraftError as err:
             self._emit_error(err)
+            return_code = err.retcode
         except craft_parts.PartsError as err:
             self._emit_error(
                 craft_cli.CraftError(
@@ -448,41 +575,86 @@ class Application:
 
         craft_cli.emit.error(error)
 
-    def _transform_project_yaml(self, yaml_data: dict[str, Any]) -> dict[str, Any]:
+    def _transform_project_yaml(
+        self, yaml_data: dict[str, Any], build_on: str, build_for: str | None
+    ) -> dict[str, Any]:
         """Update the project's yaml data with runtime properties.
 
         Performs task such as environment expansion. Note that this transforms
         ``yaml_data`` in-place.
         """
+        # apply application-specific transformations first because an application may
+        # add advanced grammar, project variables, or secrets to the yaml
+        yaml_data = self._extra_yaml_transform(
+            yaml_data, build_on=build_on, build_for=build_for
+        )
+
+        # At the moment there is no perfect solution for what do to do
+        # expand project variables or to resolve the grammar if there's
+        # no explicitly-provided target arch. However, we must resolve
+        # it with *something* otherwise we might have an invalid parts
+        # definition full of grammar declarations and incorrect build_for
+        # architectures.
+        build_for = build_for or build_on
+
         # Perform variable expansion.
-        self._expand_environment(yaml_data)
+        self._expand_environment(yaml_data=yaml_data, build_for=build_for)
 
         # Handle build secrets.
         if self.app.features.build_secrets:
             self._render_secrets(yaml_data)
 
-        # Perform extra, application-specific transformations.
-        return self._extra_yaml_transform(yaml_data)
+        # Expand grammar.
+        if "parts" in yaml_data:
+            craft_cli.emit.debug(f"Processing grammar (on {build_on} for {build_for})")
+            yaml_data["parts"] = grammar.process_parts(
+                parts_yaml_data=yaml_data["parts"],
+                arch=build_on,
+                target_arch=build_for,
+            )
 
-    def _expand_environment(self, yaml_data: dict[str, Any]) -> None:
-        """Perform expansion of project environment variables."""
-        project_vars = self._project_vars(yaml_data)
+        return yaml_data
+
+    def _expand_environment(self, yaml_data: dict[str, Any], build_for: str) -> None:
+        """Perform expansion of project environment variables.
+
+        :param yaml_data: The project's yaml data.
+        :param build_for: The architecture to build for.
+        """
+        environment_vars = self._get_project_vars(yaml_data)
+        project_dirs = craft_parts.ProjectDirs(
+            work_dir=self._work_dir, partitions=self._partitions
+        )
 
         info = craft_parts.ProjectInfo(
             application_name=self.app.name,  # not used in environment expansion
             cache_dir=pathlib.Path(),  # not used in environment expansion
+            arch=util.convert_architecture_deb_to_platform(build_for),
             project_name=yaml_data.get("name", ""),
-            project_dirs=craft_parts.ProjectDirs(work_dir=self._work_dir),
-            project_vars=project_vars,
+            project_dirs=project_dirs,
+            project_vars=environment_vars,
+            partitions=self._partitions,
         )
 
         self._set_global_environment(info)
 
         craft_parts.expand_environment(yaml_data, info=info)
 
-    def _project_vars(self, yaml_data: dict[str, Any]) -> dict[str, str]:
-        """Return a dict with project-specific variables, for a craft_part.ProjectInfo."""
-        return {"version": cast(str, yaml_data["version"])}
+    def _setup_partitions(self, yaml_data: dict[str, Any]) -> list[str] | None:
+        """Return partitions to be used.
+
+        When returning you will also need to ensure that the feature is enabled
+        on Application instantiation craft_parts.Features(partitions_enabled=True)
+        """
+        _ = yaml_data
+        return None
+
+    def _get_project_vars(self, yaml_data: dict[str, Any]) -> dict[str, str]:
+        """Return a dict with project variables to be expanded."""
+        pvars: dict[str, str] = {}
+        for var in self.app.project_variables:
+            pvars[var] = yaml_data.get(var, "")
+        return pvars
 
     def _set_global_environment(self, info: craft_parts.ProjectInfo) -> None:
         """Populate the ProjectInfo's global environment."""
@@ -505,27 +677,87 @@ class Application:
 
         self._secrets = secret_values
 
-    def _extra_yaml_transform(self, yaml_data: dict[str, Any]) -> dict[str, Any]:
+    def _extra_yaml_transform(
+        self,
+        yaml_data: dict[str, Any],
+        *,
+        build_on: str,  # noqa: ARG002 (Unused method argument)
+        build_for: str | None,  # noqa: ARG002 (Unused method argument)
+    ) -> dict[str, Any]:
         """Perform additional transformations on a project's yaml data.
 
         Note: subclasses should return a new dict and keep the parameter unmodified.
         """
         return yaml_data
 
+    def _setup_logging(self) -> None:
+        """Initialize the logging system."""
+        # Set the logging level to DEBUG for all craft-libraries. This is OK even if
+        # the specific application doesn't use a specific library, the call does not
+        # import the package.
+        emitter_mode: craft_cli.EmitterMode = craft_cli.EmitterMode.BRIEF
+        invalid_emitter_level = False
+        util.setup_loggers(*self._cli_loggers)
 
-def _filter_plan(
-    build_plan: list[BuildInfo], platform: str | None, build_for: str | None
+        # environment variable takes precedence over the default
+        emitter_verbosity_level_env = os.environ.get("CRAFT_VERBOSITY_LEVEL", None)
+
+        if emitter_verbosity_level_env:
+            try:
+                emitter_mode = craft_cli.EmitterMode[
+                    emitter_verbosity_level_env.strip().upper()
+                ]
+            except KeyError:
+                invalid_emitter_level = True
+
+        craft_cli.emit.init(
+            mode=emitter_mode,
+            appname=self.app.name,
+            greeting=f"Starting {self.app.name}, version {self.app.version}",
+            log_filepath=self.log_path,
+            streaming_brief=True,
+        )
+
+        craft_cli.emit.debug(f"Log verbosity level set to {emitter_mode.name}")
+
+        if invalid_emitter_level:
+            craft_cli.emit.progress(
+                f"Invalid verbosity level '{emitter_verbosity_level_env}', using default 'BRIEF'.\n"
+                f"Valid levels are: {', '.join(emitter.name for emitter in craft_cli.EmitterMode)}",
+                permanent=True,
+            )
+
+
+def filter_plan(
+    build_plan: list[BuildInfo],
+    platform: str | None,
+    build_for: str | None,
+    host_arch: str | None,
 ) -> list[BuildInfo]:
-    """Filter out builds not matching build-on and build-for."""
-    host_arch = util.get_host_architecture()
+    """Filter out build plans that are not matching build-on, build-for, and platform.
 
-    plan: list[BuildInfo] = []
+    If the host_arch is None, ignore the build-on check for remote builds.
+    """
+    new_plan_matched_build_for: list[BuildInfo] = []
+    new_plan_matched_platform_name: list[BuildInfo] = []
+
     for build_info in build_plan:
-        platform_matches = not platform or build_info.platform == platform
-        build_on_matches = build_info.build_on == host_arch
-        build_for_matches = not build_for or build_info.build_for == build_for
+        if platform and build_info.platform != platform:
+            continue
 
-        if platform_matches and build_on_matches and build_for_matches:
-            plan.append(build_info)
+        if host_arch and build_info.build_on != host_arch:
+            continue
 
-    return plan
+        if build_for and build_info.build_for != build_for:
+            continue
+
+        if build_for and build_info.platform == build_for:
+            # prioritize platform name if matched build_for
+            new_plan_matched_platform_name.append(build_info)
+            continue
+
+        new_plan_matched_build_for.append(build_info)
+
+    if new_plan_matched_platform_name:
+        return new_plan_matched_platform_name
+    return new_plan_matched_build_for

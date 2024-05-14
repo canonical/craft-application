@@ -1,6 +1,6 @@
 # This file is part of craft_application.
 #
-# Copyright 2023 Canonical Ltd.
+# Copyright 2023-2024 Canonical Ltd.
 #
 # This program is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Lesser General Public License version 3, as
@@ -16,28 +16,33 @@
 """Unit tests for parts lifecycle."""
 from __future__ import annotations
 
+import dataclasses
 import re
 from pathlib import Path
 from unittest import mock
 
-import craft_parts.errors
+import craft_parts
+import craft_parts.callbacks
 import pytest
 import pytest_check
-from craft_application import util
-from craft_application.errors import PartsLifecycleError
+from craft_application import errors, models, util
+from craft_application.errors import InvalidParameterError, PartsLifecycleError
 from craft_application.services import lifecycle
+from craft_application.util import repositories
 from craft_parts import (
     Action,
     ActionType,
     LifecycleManager,
     Part,
     PartInfo,
+    ProjectInfo,
     Step,
     StepInfo,
 )
 from craft_parts.executor import (
     ExecutionContext,  # pyright: ignore[reportPrivateImportUsage]
 )
+from craft_providers import bases
 
 
 # region Local fixtures
@@ -45,22 +50,26 @@ class FakePartsLifecycle(lifecycle.LifecycleService):
     def _init_lifecycle_manager(self) -> LifecycleManager:
         mock_lcm = mock.Mock(spec=LifecycleManager)
         mock_aex = mock.MagicMock(spec=ExecutionContext)
+        mock_info = mock.MagicMock(spec=ProjectInfo)
+        mock_info.get_project_var = lambda _: "foo"
         mock_lcm.action_executor.return_value = mock_aex
+        mock_lcm.project_info = mock_info
         return mock_lcm
 
 
 @pytest.fixture()
-def fake_parts_lifecycle(app_metadata, fake_project, fake_services, tmp_path):
+def fake_parts_lifecycle(
+    app_metadata, fake_project, fake_services, tmp_path, fake_build_plan
+):
     work_dir = tmp_path / "work"
     cache_dir = tmp_path / "cache"
-    build_for = util.get_host_architecture()
     fake_service = FakePartsLifecycle(
         app_metadata,
         fake_services,
         project=fake_project,
         work_dir=work_dir,
         cache_dir=cache_dir,
-        build_for=build_for,
+        build_plan=fake_build_plan,
     )
     fake_service.setup()
     return fake_service
@@ -87,7 +96,7 @@ def test_get_parts_action_message_run(step: Step, message: str):
 
     actual = lifecycle._get_parts_action_message(action)
 
-    assert actual == message, "Unexpected %r" % actual
+    assert actual == message, f"Unexpected {actual!r}"
 
 
 @pytest.mark.parametrize(
@@ -109,7 +118,7 @@ def test_get_parts_re_action_message_run(step: Step, message: str):
 
     actual = lifecycle._get_parts_action_message(action)
 
-    assert actual == message, "Unexpected %r" % actual
+    assert actual == message, f"Unexpected {actual!r}"
 
 
 @pytest.mark.parametrize(
@@ -131,7 +140,7 @@ def test_get_parts_skip_action_message_run(step: Step, message: str):
 
     actual = lifecycle._get_parts_action_message(action)
 
-    assert actual == message, "Unexpected %r" % actual
+    assert actual == message, f"Unexpected {actual!r}"
 
 
 @pytest.mark.parametrize(
@@ -151,7 +160,7 @@ def test_get_parts_update_action_message_run(step: Step, message: str):
 
     actual = lifecycle._get_parts_action_message(action)
 
-    assert actual == message, "Unexpected %r" % actual
+    assert actual == message, f"Unexpected {actual!r}"
 
 
 @pytest.mark.parametrize(
@@ -169,7 +178,7 @@ def get_parts_action_message_with_reason(step: Step, message: str):
 
     actual = lifecycle._get_parts_action_message(action)
 
-    assert actual == message, "Unexpected %r" % actual
+    assert actual == message, f"Unexpected {actual!r}"
 
 
 def test_progress_messages(fake_parts_lifecycle, emitter):
@@ -218,7 +227,9 @@ def test_get_step_failure(step_name):
 
 # endregion
 # region PartsLifecycle tests
-def test_init_success(app_metadata, fake_project, fake_services, tmp_path):
+def test_init_success(
+    app_metadata, fake_project, fake_services, tmp_path, fake_build_plan
+):
     service = lifecycle.LifecycleService(
         app_metadata,
         fake_services,
@@ -226,7 +237,7 @@ def test_init_success(app_metadata, fake_project, fake_services, tmp_path):
         work_dir=tmp_path,
         cache_dir=tmp_path,
         platform=None,
-        build_for=util.get_host_architecture(),
+        build_plan=fake_build_plan,
     )
     assert service._lcm is None
     service.setup()
@@ -247,7 +258,14 @@ def test_init_success(app_metadata, fake_project, fake_services, tmp_path):
     ],
 )
 def test_init_parts_error(
-    monkeypatch, app_metadata, fake_project, fake_services, tmp_path, error, expected
+    monkeypatch,
+    app_metadata,
+    fake_project,
+    fake_services,
+    tmp_path,
+    error,
+    expected,
+    fake_build_plan,
 ):
     mock_lifecycle = mock.Mock(side_effect=error)
     monkeypatch.setattr(lifecycle, "LifecycleManager", mock_lifecycle)
@@ -259,13 +277,53 @@ def test_init_parts_error(
         work_dir=tmp_path,
         cache_dir=tmp_path,
         platform=None,
-        build_for=util.get_host_architecture(),
+        build_plan=fake_build_plan,
     )
 
     with pytest.raises(type(expected)) as exc_info:
         service.setup()
 
     assert exc_info.value.args == expected.args
+
+
+def test_init_with_feature_package_repositories(
+    app_metadata, fake_project, fake_services, tmp_path, fake_build_plan
+):
+    package_repositories = [{"type": "apt", "ppa": "ppa/ppa"}]
+    fake_project.package_repositories = package_repositories.copy()
+    service = lifecycle.LifecycleService(
+        app_metadata,
+        fake_services,
+        project=fake_project,
+        work_dir=tmp_path,
+        cache_dir=tmp_path,
+        platform=None,
+        build_plan=fake_build_plan,
+    )
+    assert service._lcm is None
+    service.setup()
+    assert service._lcm is not None
+    assert service._lcm._project_info.package_repositories == package_repositories
+
+
+@pytest.mark.usefixtures("enable_partitions")
+def test_init_with_partitions(
+    app_metadata, fake_project, fake_services, tmp_path, fake_build_plan
+):
+    service = lifecycle.LifecycleService(
+        app_metadata,
+        fake_services,
+        project=fake_project,
+        work_dir=tmp_path,
+        cache_dir=tmp_path,
+        platform=None,
+        build_plan=fake_build_plan,
+        partitions=["default", "mypartition"],
+    )
+    assert service._lcm is None
+    service.setup()
+    assert service._lcm is not None
+    assert service._lcm._project_info.partitions == ["default", "mypartition"]
 
 
 def test_prime_dir(lifecycle_service, tmp_path):
@@ -279,6 +337,18 @@ def test_project_info(lifecycle_service):
     info = lifecycle_service.project_info
 
     assert info.application_name == "testcraft"
+
+
+def test_get_pull_assets(lifecycle_service):
+    assets = lifecycle_service.get_pull_assets(part_name="my-part")
+
+    assert assets == {"foo": "bar"}
+
+
+def test_get_primed_stage_packages(lifecycle_service):
+    pkgs = lifecycle_service.get_primed_stage_packages(part_name="my-part")
+
+    assert pkgs == ["pkg1", "pkg2"]
 
 
 @pytest.mark.parametrize(
@@ -358,7 +428,7 @@ def test_repr(fake_parts_lifecycle, app_metadata, fake_project):
         re.fullmatch(
             r"FakePartsLifecycle\(.+, work_dir=(Posix|Windows)Path\('.+'\), "
             r"cache_dir=(Posix|Windows)Path\('.+'\), "
-            r"build_for='.+', \*\*{}\)",
+            r"plan=\[BuildInfo\(.+\)], \*\*{}\)",
             actual,
         )
     )
@@ -390,3 +460,320 @@ def test_post_prime_wrong_step(fake_parts_lifecycle, step):
 
 
 # endregion
+# region Feature package repositories tests
+
+
+@pytest.mark.parametrize(
+    "local_keys_path",
+    [None, Path("my/keys")],
+)
+def test_lifecycle_package_repositories(
+    app_metadata,
+    fake_project,
+    fake_services,
+    tmp_path,
+    mocker,
+    fake_build_plan,
+    local_keys_path,
+):
+    """Test that package repositories installation is called in the lifecycle."""
+    fake_repositories = [{"type": "apt", "ppa": "ppa/ppa"}]
+    fake_project.package_repositories = fake_repositories.copy()
+    work_dir = tmp_path / "work"
+
+    service = lifecycle.LifecycleService(
+        app_metadata,
+        fake_services,
+        project=fake_project,
+        work_dir=work_dir,
+        cache_dir=tmp_path / "cache",
+        platform=None,
+        build_plan=fake_build_plan,
+    )
+    mocker.patch.object(service, "_get_local_keys_path", return_value=local_keys_path)
+
+    service._lcm = mock.MagicMock(spec=LifecycleManager)
+    service._lcm.project_info = mock.MagicMock(spec=ProjectInfo)
+    service._lcm.project_info.get_project_var = lambda _: "foo"
+
+    # Installation of repositories in the build instance
+    mock_install = mocker.patch(
+        "craft_application.util.repositories.install_package_repositories"
+    )
+    # Installation of repositories in overlays
+    mock_callback = mocker.patch.object(
+        craft_parts.callbacks, "register_configure_overlay"
+    )
+
+    service.run("prime")
+
+    mock_install.assert_called_once_with(
+        fake_repositories, service._lcm, local_keys_path=local_keys_path
+    )
+    mock_callback.assert_called_once_with(repositories.install_overlay_repositories)
+
+
+# endregion
+
+# region parallel build count tests
+
+
+@pytest.mark.parametrize(
+    ("env_dict", "cpu_count", "expected"),
+    [
+        (
+            {},
+            None,
+            1,
+        ),
+        (
+            {},
+            100,
+            100,
+        ),
+        (
+            {"TESTCRAFT_PARALLEL_BUILD_COUNT": "100"},
+            1,
+            100,
+        ),
+        (
+            {"CRAFT_PARALLEL_BUILD_COUNT": "200"},
+            1,
+            200,
+        ),
+        (
+            {
+                "TESTCRAFT_MAX_PARALLEL_BUILD_COUNT": "100",
+            },
+            50,
+            50,
+        ),
+        (
+            {
+                "CRAFT_MAX_PARALLEL_BUILD_COUNT": "100",
+            },
+            80,
+            80,
+        ),
+        (
+            {
+                "TESTCRAFT_PARALLEL_BUILD_COUNT": "100",
+                "CRAFT_PARALLEL_BUILD_COUNT": "200",
+            },
+            1,
+            100,
+        ),
+        (
+            {
+                "TESTCRAFT_MAX_PARALLEL_BUILD_COUNT": "100",
+                "CRAFT_MAX_PARALLEL_BUILD_COUNT": "200",
+            },
+            150,
+            100,
+        ),
+        (
+            {
+                "TESTCRAFT_MAX_PARALLEL_BUILD_COUNT": "100",
+                "CRAFT_MAX_PARALLEL_BUILD_COUNT": "200",
+            },
+            None,
+            1,
+        ),
+        (
+            {
+                "TESTCRAFT_PARALLEL_BUILD_COUNT": "100",
+                "CRAFT_PARALLEL_BUILD_COUNT": "200",
+                "TESTCRAFT_MAX_PARALLEL_BUILD_COUNT": "300",
+                "CRAFT_MAX_PARALLEL_BUILD_COUNT": "400",
+            },
+            150,
+            100,
+        ),
+    ],
+)
+def test_get_parallel_build_count(
+    monkeypatch, mocker, fake_parts_lifecycle, env_dict, cpu_count, expected
+):
+    mocker.patch("os.cpu_count", return_value=cpu_count)
+    for env_dict_key, env_dict_value in env_dict.items():
+        monkeypatch.setenv(env_dict_key, env_dict_value)
+
+    assert fake_parts_lifecycle._get_parallel_build_count() == expected
+
+
+@pytest.mark.parametrize(
+    ("env_dict", "cpu_count"),
+    [
+        (
+            {
+                "TESTCRAFT_PARALLEL_BUILD_COUNT": "abc",
+            },
+            1,
+        ),
+        (
+            {
+                "CRAFT_PARALLEL_BUILD_COUNT": "-",
+            },
+            1,
+        ),
+        (
+            {
+                "TESTCRAFT_MAX_PARALLEL_BUILD_COUNT": "*",
+            },
+            1,
+        ),
+        (
+            {
+                "CRAFT_MAX_PARALLEL_BUILD_COUNT": "$COUNT",
+            },
+            1,
+        ),
+        (
+            {
+                "TESTCRAFT_PARALLEL_BUILD_COUNT": "0",
+            },
+            1,
+        ),
+        (
+            {
+                "CRAFT_PARALLEL_BUILD_COUNT": "-1",
+            },
+            1,
+        ),
+        (
+            {
+                "TESTCRAFT_MAX_PARALLEL_BUILD_COUNT": "5.6",
+            },
+            1,
+        ),
+        (
+            {
+                "CRAFT_MAX_PARALLEL_BUILD_COUNT": "inf",
+            },
+            1,
+        ),
+    ],
+)
+def test_get_parallel_build_count_error(
+    monkeypatch, mocker, fake_parts_lifecycle, env_dict, cpu_count
+):
+    mocker.patch("os.cpu_count", return_value=cpu_count)
+    for env_dict_key, env_dict_value in env_dict.items():
+        monkeypatch.setenv(env_dict_key, env_dict_value)
+
+    with pytest.raises(
+        InvalidParameterError, match=r"^Value '.*' is invalid for parameter '.*'.$"
+    ):
+        fake_parts_lifecycle._get_parallel_build_count()
+
+
+# endregion
+
+# region project variables
+
+
+def test_lifecycle_project_variables(
+    app_metadata, fake_services, tmp_path, fake_build_plan
+):
+    """Test that project variables are set after the lifecycle runs."""
+
+    class LocalProject(models.Project):
+        color: str | None
+
+    fake_project = LocalProject.unmarshal(
+        {
+            "name": "project",
+            "base": "ubuntu@24.04",
+            "version": "1.0.0.post64+git12345678",
+            "parts": {"my-part": {"plugin": "nil"}},
+            "adopt-info": "my-part",
+        }
+    )
+    work_dir = tmp_path / "work"
+    app_metadata = dataclasses.replace(
+        app_metadata, project_variables=["version", "color"], ProjectClass=LocalProject
+    )
+
+    service = lifecycle.LifecycleService(
+        app_metadata,
+        fake_services,
+        project=fake_project,
+        work_dir=work_dir,
+        cache_dir=tmp_path / "cache",
+        platform=None,
+        build_plan=fake_build_plan,
+    )
+    service._lcm = mock.MagicMock(spec=LifecycleManager)
+    service._lcm.project_info = mock.MagicMock(spec=ProjectInfo)
+    service._lcm.project_info.get_project_var = lambda _: "foo"
+
+    service.run("prime")
+
+    assert service.project_info.get_project_var("version") == "foo"
+    assert service.project_info.get_project_var("color") == "foo"
+
+
+# endregion
+
+
+@pytest.mark.parametrize("fake_build_plan", [0], indirect=True)
+def test_no_builds_error(fake_parts_lifecycle):
+    """Build plan has no items."""
+    with pytest.raises(errors.EmptyBuildPlanError):
+        fake_parts_lifecycle.run("prime")
+
+
+@pytest.mark.parametrize("fake_build_plan", [2, 3, 4], indirect=True)
+def test_multiple_builds_error(fake_parts_lifecycle):
+    """Build plan contains more than 1 item."""
+    with pytest.raises(errors.MultipleBuildsError):
+        fake_parts_lifecycle.run("prime")
+
+
+@pytest.mark.parametrize(
+    ("system_name", "system_version", "expected_pretty"),
+    [
+        ("ubuntu", "22.04", "Ubuntu 22.04"),
+        ("centos", "6", "Centos 6"),
+        ("centos", "devel", "Centos devel"),
+    ],
+)
+@pytest.mark.parametrize("fake_build_plan", [1], indirect=True)
+def test_invalid_base_error(
+    fake_parts_lifecycle,
+    fake_build_plan,
+    mocker,
+    system_name,
+    system_version,
+    expected_pretty,
+):
+    """BuildInfo has a different base than the running environment."""
+    fake_host = bases.BaseName(name="ubuntu", version="24.04")
+    mocker.patch.object(
+        util,
+        "get_host_base",
+        return_value=fake_host,
+    )
+    fake_build_plan[0].base = bases.BaseName(name=system_name, version=system_version)
+
+    expected = (
+        f"{expected_pretty} builds cannot be performed on this Ubuntu 24.04 system."
+    )
+
+    with pytest.raises(errors.IncompatibleBaseError, match=expected):
+        fake_parts_lifecycle.run("prime")
+
+
+@pytest.mark.parametrize("fake_build_plan", [1], indirect=True)
+def test_devel_base_no_error(fake_parts_lifecycle, fake_build_plan, mocker):
+    """BuildInfo has a 'devel' build-base but the system is the same."""
+    fake_host = bases.BaseName(name="ubuntu", version="24.04")
+    mocker.patch.object(
+        util,
+        "get_host_base",
+        return_value=fake_host,
+    )
+    fake_build_plan[0].base = bases.BaseName(name="ubuntu", version="devel")
+
+    # Pass None as the step to ensure validation but skip the actual lifecycle run
+    _ = fake_parts_lifecycle.run(None)

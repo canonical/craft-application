@@ -1,0 +1,22 @@
+name: empty
+title: A most basic project
+version: 1.0
+base: "ubuntu@22.04"
+
+parts:
+  hello-world:
+    plugin: dump
+    source:
+      - on amd64 to amd64: src/on-amd64-to-amd64
+      - on amd64 to arm64: src/on-amd64-to-arm64
+    organize:
+      - on amd64 to amd64:
+          hello.txt: hello-amd64.txt
+      - on amd64 to arm64:
+          hello.txt: hello-arm64.txt
+    build-environment:
+      - HELLO: hello
+      - on amd64 to amd64:
+          - MY_VAR: amd64
+      - on amd64 to arm64:
+          - MY_VAR: arm64

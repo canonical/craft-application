@@ -1,6 +1,6 @@
 # This file is part of craft_application.
 #
-# Copyright 2023 Canonical Ltd.
+# Copyright 2023-2024 Canonical Ltd.
 #
 # This program is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Lesser General Public License version 3, as
@@ -15,6 +15,8 @@
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Unit tests for craft-application app classes."""
 import argparse
+import copy
+import dataclasses
 import importlib
 import importlib.metadata
 import logging
@@ -23,22 +25,272 @@ import re
 import subprocess
 import sys
 from textwrap import dedent
+from typing import Any
 from unittest import mock
 
 import craft_application
+import craft_application.errors
 import craft_cli
 import craft_parts
 import craft_providers
 import pytest
 import pytest_check
-from craft_application import application, commands, secrets, services
+from craft_application import (
+    application,
+    commands,
+    errors,
+    models,
+    secrets,
+    services,
+    util,
+)
 from craft_application.models import BuildInfo
 from craft_application.util import (
     get_host_architecture,  # pyright: ignore[reportGeneralTypeIssues]
 )
+from craft_parts.plugins.plugins import PluginType
 from craft_providers import bases
+from overrides import override
+
+from tests.conftest import MyBuildPlanner
 
 EMPTY_COMMAND_GROUP = craft_cli.CommandGroup("FakeCommands", [])
+BASIC_PROJECT_YAML = """
+name: myproject
+version: 1.0
+parts:
+  mypart:
+    plugin: nil
+"""
+
+FULL_PROJECT_YAML = """
+name: myproject
+version: 1.0
+parts:
+  mypart:
+    plugin: nil
+    source: non-grammar-source
+    source-checksum: on-amd64-to-riscv64-checksum
+    source-branch: riscv64-branch
+    source-commit: riscv64-commit
+    source-depth: 1
+    source-subdir: riscv64-subdir
+    source-submodules:
+      - riscv64-submodules-1
+      - riscv64-submodules-2
+    source-tag: riscv64-tag
+    source-type: riscv64-type
+    disable-parallel: true
+    after:
+      - riscv64-after
+    organize:
+      riscv64-organize-1: riscv64-organize-2
+      riscv64-organize-3: riscv64-organize-4
+    overlay:
+      - riscv64-overlay-1
+      - riscv64-overlay-2
+    overlay-packages:
+      - riscv64-overlay-1
+      - riscv64-overlay-2
+    overlay-script: riscv64-overlay-script
+    stage:
+      - riscv64-stage-1
+      - riscv64-stage-2
+    stage-snaps:
+      - riscv64-snap-1
+      - riscv64-snap-2
+    stage-packages:
+      - riscv64-package-1
+      - riscv64-package-2
+    prime:
+      - riscv64-prime-1
+      - riscv64-prime-2
+    build-snaps:
+      - riscv64-snap-1
+      - riscv64-snap-2
+    build-packages:
+      - riscv64-package-1
+      - riscv64-package-2
+    build-environment:
+      - MY_VAR: riscv64-value
+      - MY_VAR2: riscv64-value2
+    build-attributes:
+      - rifcv64-attr-1
+      - rifcv64-attr-2
+    override-pull: riscv64-override-pull
+    override-build: riscv64-override-build
+    override-stage: riscv64-override-stage
+    override-prime: riscv64-override-prime
+    permissions:
+      - path: riscv64-perm-1
+        owner: 123
+        group: 123
+        mode: "777"
+      - path: riscv64-perm-2
+        owner: 456
+        group: 456
+        mode: "666"
+"""
+
+FULL_GRAMMAR_PROJECT_YAML = """
+name: myproject
+version: 1.0
+parts:
+  mypart:
+    plugin:
+      - on amd64 to riscv64: nil
+      - on amd64 to s390x: dump
+    source:
+      - on amd64 to s390x: on-amd64-to-s390x
+      - on amd64 to riscv64: on-amd64-to-riscv64
+    source-checksum:
+      - on amd64 to riscv64: on-amd64-to-riscv64-checksum
+      - on amd64 to s390x: on-amd64-to-s390x-checksum
+    source-branch:
+      - on amd64 to s390x: s390x-branch
+      - on amd64 to riscv64: riscv64-branch
+    source-commit:
+      - on amd64 to riscv64: riscv64-commit
+      - on amd64 to s390x: s390x-commit
+    source-depth:
+      - on amd64 to s390x: 2
+      - on amd64 to riscv64: 1
+    source-subdir:
+      - on amd64 to riscv64: riscv64-subdir
+      - on amd64 to s390x: s390x-subdir
+    source-submodules:
+      - on amd64 to s390x:
+          - s390x-submodules-1
+          - s390x-submodules-2
+      - on amd64 to riscv64:
+          - riscv64-submodules-1
+          - riscv64-submodules-2
+    source-tag:
+      - on amd64 to riscv64: riscv64-tag
+      - on amd64 to s390x: s390x-tag
+    source-type:
+      - on amd64 to s390x: s390x-type
+      - on amd64 to riscv64: riscv64-type
+    disable-parallel:
+      - on amd64 to riscv64: true
+      - on amd64 to s390x: false
+    after:
+      - on amd64 to s390x:
+        - s390x-after
+      - on amd64 to riscv64:
+        - riscv64-after
+    organize:
+        - on amd64 to riscv64:
+            riscv64-organize-1: riscv64-organize-2
+            riscv64-organize-3: riscv64-organize-4
+        - on amd64 to s390x:
+            s390x-organize-1: s390x-organize-2
+            s390x-organize-3: s390x-organize-4
+    overlay:
+      - on amd64 to s390x:
+        - s390x-overlay-1
+        - s390x-overlay-2
+      - on amd64 to riscv64:
+        - riscv64-overlay-1
+        - riscv64-overlay-2
+    overlay-packages:
+      - on amd64 to riscv64:
+        - riscv64-overlay-1
+        - riscv64-overlay-2
+      - on amd64 to s390x:
+        - s390x-overlay-1
+        - s390x-overlay-2
+    overlay-script:
+        - on amd64 to s390x: s390x-overlay-script
+        - on amd64 to riscv64: riscv64-overlay-script
+    stage:
+      - on amd64 to riscv64:
+        - riscv64-stage-1
+        - riscv64-stage-2
+      - on amd64 to s390x:
+        - s390x-stage-1
+        - s390x-stage-2
+    stage-snaps:
+      - on amd64 to s390x:
+        - s390x-snap-1
+        - s390x-snap-2
+      - on amd64 to riscv64:
+        - riscv64-snap-1
+        - riscv64-snap-2
+    stage-packages:
+      - on amd64 to riscv64:
+        - riscv64-package-1
+        - riscv64-package-2
+      - on amd64 to s390x:
+        - s390x-package-1
+        - s390x-package-2
+    prime:
+      - on amd64 to s390x:
+        - s390x-prime-1
+        - s390x-prime-2
+      - on amd64 to riscv64:
+        - riscv64-prime-1
+        - riscv64-prime-2
+    build-snaps:
+      - on amd64 to riscv64:
+        - riscv64-snap-1
+        - riscv64-snap-2
+      - on amd64 to s390x:
+        - s390x-snap-1
+        - s390x-snap-2
+    build-packages:
+      - on amd64 to s390x:
+        - s390x-package-1
+        - s390x-package-2
+      - on amd64 to riscv64:
+        - riscv64-package-1
+        - riscv64-package-2
+    build-environment:
+      - on amd64 to riscv64:
+          - MY_VAR: riscv64-value
+          - MY_VAR2: riscv64-value2
+      - on amd64 to s390x:
+          - MY_VAR: s390x-value
+          - MY_VAR2: s390x-value2
+    build-attributes:
+      - on amd64 to s390x:
+        - s390x-attr-1
+        - s390x-attr-2
+      - on amd64 to riscv64:
+        - rifcv64-attr-1
+        - rifcv64-attr-2
+    override-pull:
+      - on amd64 to riscv64: riscv64-override-pull
+      - on amd64 to s390x: s390x-override-pull
+    override-build:
+      - on amd64 to s390x: s390x-override-build
+      - on amd64 to riscv64: riscv64-override-build
+    override-stage:
+      - on amd64 to riscv64: riscv64-override-stage
+      - on amd64 to s390x: s390x-override-stage
+    override-prime:
+      - on amd64 to s390x: s390x-override-prime
+      - on amd64 to riscv64: riscv64-override-prime
+    permissions:
+      - on amd64 to riscv64:
+        - path: riscv64-perm-1
+          owner: 123
+          group: 123
+          mode: "777"
+        - path: riscv64-perm-2
+          owner: 456
+          group: 456
+          mode: "666"
+      - on amd64 to s390x:
+        - path: s390x-perm-1
+          owner: 123
+          group: 123
+          mode: "666"
+        - path: s390x-perm-2
+          owner: 456
+          group: 456
+          mode: "777"
+"""
 
 
 @pytest.mark.parametrize("summary", ["A summary", None])
@@ -54,7 +306,10 @@ def test_app_metadata_version_attribute(tmp_path, monkeypatch):
     monkeypatch.syspath_prepend(tmp_path)
     (tmp_path / "dummycraft_version.py").write_text("__version__ = '1.2.3'")
 
-    app = application.AppMetadata(name="dummycraft_version", summary="dummy craft")
+    app = application.AppMetadata(
+        name="dummycraft_version",
+        summary="dummy craft",
+    )
     assert app.version == "1.2.3"
 
 
@@ -65,25 +320,89 @@ def test_app_metadata_importlib(tmp_path, monkeypatch, mocker):
 
     mocker.patch.object(importlib.metadata, "version", return_value="4.5.6")
 
-    app = application.AppMetadata(name="dummycraft_importlib", summary="dummy craft")
+    app = application.AppMetadata(
+        name="dummycraft_importlib",
+        summary="dummy craft",
+    )
     assert app.version == "4.5.6"
 
 
 def test_app_metadata_dev():
-    app = application.AppMetadata(name="dummycraft_dev", summary="dummy craft")
+    app = application.AppMetadata(
+        name="dummycraft_dev",
+        summary="dummy craft",
+    )
     assert app.version == "dev"
+
+
+def test_app_metadata_default_project_variables():
+    app = application.AppMetadata(
+        name="dummycraft_dev",
+        summary="dummy craft",
+    )
+    assert app.project_variables == ["version"]
+
+
+def test_app_metadata_default_mandatory_adoptable_fields():
+    app = application.AppMetadata(
+        name="dummycraft_dev",
+        summary="dummy craft",
+    )
+    assert app.mandatory_adoptable_fields == ["version"]
 
 
 class FakeApplication(application.Application):
     """An application class explicitly for testing. Adds some convenient test hooks."""
 
+    platform: str = "unknown-platform"
+    build_on: str = "unknown-build-on"
+    build_for: str | None = "unknown-build-for"
+
     def set_project(self, project):
         self._Application__project = project
+
+    @override
+    def _extra_yaml_transform(
+        self,
+        yaml_data: dict[str, Any],
+        *,
+        build_on: str,
+        build_for: str | None,
+    ) -> dict[str, Any]:
+        self.build_on = build_on
+        self.build_for = build_for
+
+        return yaml_data
 
 
 @pytest.fixture()
 def app(app_metadata, fake_services):
     return FakeApplication(app_metadata, fake_services)
+
+
+class FakePlugin(craft_parts.plugins.Plugin):
+    def __init__(self, properties, part_info):
+        pass
+
+    def get_build_commands(self) -> list[str]:
+        return []
+
+    def get_build_snaps(self) -> set[str]:
+        return set()
+
+    def get_build_packages(self) -> set[str]:
+        return set()
+
+    def get_build_environment(self) -> dict[str, str]:
+        return {}
+
+    def get_build_sources(self) -> set[str]:
+        return set()
+
+
+@pytest.fixture()
+def fake_plugin(app_metadata, fake_services):
+    return FakePlugin(app_metadata, fake_services)
 
 
 @pytest.fixture()
@@ -163,29 +482,33 @@ def test_log_path(monkeypatch, app, provider_managed, expected):
     assert actual == expected
 
 
-def test_run_managed_success(app, fake_project):
+def test_run_managed_success(mocker, app, fake_project, fake_build_plan):
     mock_provider = mock.MagicMock(spec_set=services.ProviderService)
     app.services.provider = mock_provider
-    app.set_project(fake_project)
-
+    app.project = fake_project
+    app._build_plan = fake_build_plan
+    mock_pause = mocker.spy(craft_cli.emit, "pause")
     arch = get_host_architecture()
+
     app.run_managed(None, arch)
 
     assert (
         mock.call(
-            BuildInfo("foo", "amd64", "amd64", bases.BaseName("ubuntu", "22.04")),
+            fake_build_plan[0],
             work_dir=mock.ANY,
         )
         in mock_provider.instance.mock_calls
     )
+    mock_pause.assert_called_once()
 
 
-def test_run_managed_failure(app, fake_project):
+def test_run_managed_failure(app, fake_project, fake_build_plan):
     mock_provider = mock.MagicMock(spec_set=services.ProviderService)
     instance = mock_provider.instance.return_value.__enter__.return_value
     instance.execute_run.side_effect = subprocess.CalledProcessError(1, [])
     app.services.provider = mock_provider
-    app.set_project(fake_project)
+    app.project = fake_project
+    app._build_plan = fake_build_plan
 
     with pytest.raises(craft_providers.ProviderError) as exc_info:
         app.run_managed(None, get_host_architecture())
@@ -194,12 +517,13 @@ def test_run_managed_failure(app, fake_project):
 
 
 @pytest.mark.enable_features("build_secrets")
-def test_run_managed_secrets(app, fake_project):
+def test_run_managed_secrets(app, fake_project, fake_build_plan):
     mock_provider = mock.MagicMock(spec_set=services.ProviderService)
     instance = mock_provider.instance.return_value.__enter__.return_value
     mock_execute = instance.execute_run
     app.services.provider = mock_provider
-    app.set_project(fake_project)
+    app.project = fake_project
+    app._build_plan = fake_build_plan
 
     fake_encoded_environment = {
         "CRAFT_TEST": "banana",
@@ -218,7 +542,7 @@ def test_run_managed_secrets(app, fake_project):
     assert execute_env["CRAFT_TEST"] == "banana"
 
 
-def test_run_managed_multiple(app, fake_project, monkeypatch):
+def test_run_managed_multiple(app, fake_project):
     mock_provider = mock.MagicMock(spec_set=services.ProviderService)
     app.services.provider = mock_provider
     app.set_project(fake_project)
@@ -226,19 +550,15 @@ def test_run_managed_multiple(app, fake_project, monkeypatch):
     arch = get_host_architecture()
     info1 = BuildInfo("a1", arch, "arch1", bases.BaseName("base", "1"))
     info2 = BuildInfo("a2", arch, "arch2", bases.BaseName("base", "2"))
+    app._build_plan = [info1, info2]
 
-    monkeypatch.setattr(
-        app.get_project().__class__,
-        "get_build_plan",
-        lambda _: [info1, info2],
-    )
     app.run_managed(None, None)
 
     assert mock.call(info2, work_dir=mock.ANY) in mock_provider.instance.mock_calls
     assert mock.call(info1, work_dir=mock.ANY) in mock_provider.instance.mock_calls
 
 
-def test_run_managed_specified_arch(app, fake_project, monkeypatch):
+def test_run_managed_specified_arch(app, fake_project):
     mock_provider = mock.MagicMock(spec_set=services.ProviderService)
     app.services.provider = mock_provider
     app.set_project(fake_project)
@@ -246,19 +566,15 @@ def test_run_managed_specified_arch(app, fake_project, monkeypatch):
     arch = get_host_architecture()
     info1 = BuildInfo("a1", arch, "arch1", bases.BaseName("base", "1"))
     info2 = BuildInfo("a2", arch, "arch2", bases.BaseName("base", "2"))
+    app._build_plan = [info1, info2]
 
-    monkeypatch.setattr(
-        app.get_project().__class__,
-        "get_build_plan",
-        lambda _: [info1, info2],
-    )
     app.run_managed(None, "arch2")
 
     assert mock.call(info2, work_dir=mock.ANY) in mock_provider.instance.mock_calls
     assert mock.call(info1, work_dir=mock.ANY) not in mock_provider.instance.mock_calls
 
 
-def test_run_managed_specified_platform(app, fake_project, monkeypatch):
+def test_run_managed_specified_platform(app, fake_project):
     mock_provider = mock.MagicMock(spec_set=services.ProviderService)
     app.services.provider = mock_provider
     app.set_project(fake_project)
@@ -266,12 +582,8 @@ def test_run_managed_specified_platform(app, fake_project, monkeypatch):
     arch = get_host_architecture()
     info1 = BuildInfo("a1", arch, "arch1", bases.BaseName("base", "1"))
     info2 = BuildInfo("a2", arch, "arch2", bases.BaseName("base", "2"))
+    app._build_plan = [info1, info2]
 
-    monkeypatch.setattr(
-        app.get_project().__class__,
-        "get_build_plan",
-        lambda _: [info1, info2],
-    )
     app.run_managed("a2", None)
 
     assert mock.call(info2, work_dir=mock.ANY) in mock_provider.instance.mock_calls
@@ -306,8 +618,14 @@ def test_get_dispatcher_error(
     check.is_true(re.fullmatch(message, captured.err), captured.err)
 
 
-def test_craft_lib_log_level(app):
-    craft_libs = ["craft_archives", "craft_parts", "craft_providers", "craft_store"]
+def test_craft_lib_log_level(app_metadata, fake_services):
+    craft_libs = [
+        "craft_archives",
+        "craft_parts",
+        "craft_providers",
+        "craft_store",
+        "craft_application.remote",
+    ]
 
     # The logging module is stateful and global, so first lets clear the logging level
     # that another test might have already set.
@@ -315,26 +633,57 @@ def test_craft_lib_log_level(app):
         logger = logging.getLogger(craft_lib)
         logger.setLevel(logging.NOTSET)
 
+    app = FakeApplication(app_metadata, fake_services)
     with pytest.raises(SystemExit):
-        app._get_dispatcher()
+        app.run()
 
     for craft_lib in craft_libs:
         logger = logging.getLogger(craft_lib)
         assert logger.level == logging.DEBUG
 
 
+def test_gets_project(monkeypatch, tmp_path, app_metadata, fake_services):
+    project_file = tmp_path / "testcraft.yaml"
+    project_file.write_text(BASIC_PROJECT_YAML)
+    monkeypatch.setattr(sys, "argv", ["testcraft", "pull", "--destructive-mode"])
+
+    app = FakeApplication(app_metadata, fake_services)
+    app.project_dir = tmp_path
+
+    fake_services.project = None
+
+    app.run()
+
+    assert fake_services.project is not None
+    assert app.project is not None
+
+
+def test_fails_without_project(
+    monkeypatch, capsys, tmp_path, app_metadata, fake_services
+):
+    monkeypatch.setattr(sys, "argv", ["testcraft", "prime"])
+
+    app = FakeApplication(app_metadata, fake_services)
+    app.project_dir = tmp_path
+
+    fake_services.project = None
+
+    assert app.run() == 66  # noqa: PLR2004
+
+    assert "Project file 'testcraft.yaml' not found in" in capsys.readouterr().err
+
+
 @pytest.mark.parametrize(
     "argv",
     [["testcraft", "--version"], ["testcraft", "-V"], ["testcraft", "pull", "-V"]],
 )
-def test_run_outputs_version(monkeypatch, capsys, app, argv):
+def test_run_outputs_version(monkeypatch, emitter, app, argv):
     monkeypatch.setattr(sys, "argv", argv)
 
     with pytest.raises(SystemExit):
         app._get_dispatcher()
 
-    out, _ = capsys.readouterr()
-    assert out == "testcraft 3.14159\n"
+    emitter.assert_message("testcraft 3.14159")
 
 
 def test_show_app_name_and_version(monkeypatch, capsys, app):
@@ -342,10 +691,70 @@ def test_show_app_name_and_version(monkeypatch, capsys, app):
     monkeypatch.setattr(sys, "argv", ["testcraft", "--verbosity=trace"])
 
     with pytest.raises(SystemExit):
-        app._get_dispatcher()
+        app.run()
 
     _, err = capsys.readouterr()
     assert f"Starting testcraft, version {app.app.version}" in err
+
+
+@pytest.mark.parametrize("verbosity", list(craft_cli.EmitterMode))
+def test_set_verbosity_from_env(monkeypatch, capsys, app, verbosity):
+    """Test that the emitter verbosity is set from the environment."""
+    monkeypatch.setattr(sys, "argv", ["testcraft"])
+    monkeypatch.setenv("CRAFT_VERBOSITY_LEVEL", verbosity.name)
+
+    with pytest.raises(SystemExit):
+        app.run()
+
+    _, err = capsys.readouterr()
+    assert "testcraft [help]" in err
+    assert craft_cli.emit._mode == verbosity
+
+
+def test_set_verbosity_from_env_incorrect(monkeypatch, capsys, app):
+    """Test that the emitter verbosity is using the default level when invalid."""
+    monkeypatch.setattr(sys, "argv", ["testcraft"])
+    monkeypatch.setenv("CRAFT_VERBOSITY_LEVEL", "incorrect")
+
+    with pytest.raises(SystemExit):
+        app.run()
+
+    _, err = capsys.readouterr()
+    assert "testcraft [help]" in err
+    assert "Invalid verbosity level 'incorrect'" in err
+    assert "Valid levels are: QUIET, BRIEF, VERBOSE, DEBUG, TRACE" in err
+    assert craft_cli.emit._mode == craft_cli.EmitterMode.BRIEF
+
+
+def test_pre_run_project_dir_managed(app):
+    app.is_managed = lambda: True
+    dispatcher = mock.Mock(spec_set=craft_cli.Dispatcher)
+
+    app._pre_run(dispatcher)
+
+    assert app.project_dir == pathlib.Path("/root/project")
+
+
+@pytest.mark.parametrize("project_dir", ["/", ".", "relative/dir", "/absolute/dir"])
+def test_pre_run_project_dir_success_unmanaged(app, fs, project_dir):
+    fs.create_dir(project_dir)
+    app.is_managed = lambda: False
+    dispatcher = mock.Mock(spec_set=craft_cli.Dispatcher)
+    dispatcher.parsed_args.return_value.project_dir = project_dir
+
+    app._pre_run(dispatcher)
+
+    assert app.project_dir == pathlib.Path(project_dir).expanduser().resolve()
+
+
+@pytest.mark.parametrize("project_dir", ["relative/file", "/absolute/file"])
+def test_pre_run_project_dir_not_a_directory(app, fs, project_dir):
+    fs.create_file(project_dir)
+    dispatcher = mock.Mock(spec_set=craft_cli.Dispatcher)
+    dispatcher.parsed_args.return_value.project_dir = project_dir
+
+    with pytest.raises(errors.ProjectFileMissingError, match="not a directory"):
+        app._pre_run(dispatcher)
 
 
 @pytest.mark.parametrize("load_project", [True, False])
@@ -369,13 +778,13 @@ def test_run_success_unmanaged(
 
     check.equal(app.run(), return_code or 0)
     with check:
-        emitter.assert_trace("Preparing application...")
+        emitter.assert_debug("Preparing application...")
     with check:
         emitter.assert_debug("Running testcraft pass on host")
 
 
-def test_run_success_managed(monkeypatch, app, fake_project):
-    app.set_project(fake_project)
+def test_run_success_managed(monkeypatch, app, fake_project, mocker):
+    mocker.patch.object(app, "get_project", return_value=fake_project)
     app.run_managed = mock.Mock()
     monkeypatch.setattr(sys, "argv", ["testcraft", "pull"])
 
@@ -384,19 +793,19 @@ def test_run_success_managed(monkeypatch, app, fake_project):
     app.run_managed.assert_called_once_with(None, None)  # --build-for not used
 
 
-def test_run_success_managed_with_arch(monkeypatch, app, fake_project):
-    app.set_project(fake_project)
+def test_run_success_managed_with_arch(monkeypatch, app, fake_project, mocker):
+    mocker.patch.object(app, "get_project", return_value=fake_project)
     app.run_managed = mock.Mock()
     arch = get_host_architecture()
     monkeypatch.setattr(sys, "argv", ["testcraft", "pull", f"--build-for={arch}"])
 
     pytest_check.equal(app.run(), 0)
 
-    app.run_managed.assert_called_once_with(None, arch)
+    app.run_managed.assert_called_once()
 
 
-def test_run_success_managed_with_platform(monkeypatch, app, fake_project):
-    app.set_project(fake_project)
+def test_run_success_managed_with_platform(monkeypatch, app, fake_project, mocker):
+    mocker.patch.object(app, "get_project", return_value=fake_project)
     app.run_managed = mock.Mock()
     monkeypatch.setattr(sys, "argv", ["testcraft", "pull", "--platform=foo"])
 
@@ -407,9 +816,12 @@ def test_run_success_managed_with_platform(monkeypatch, app, fake_project):
 
 @pytest.mark.parametrize("return_code", [None, 0, 1])
 def test_run_success_managed_inside_managed(
-    monkeypatch, check, app, fake_project, mock_dispatcher, return_code
+    monkeypatch, check, app, fake_project, mock_dispatcher, return_code, mocker
 ):
-    app.set_project(fake_project)
+    mocker.patch.object(app, "get_project", return_value=fake_project)
+    mocker.patch.object(
+        mock_dispatcher, "parsed_args", return_value={"platform": "foo"}
+    )
     app.run_managed = mock.Mock()
     mock_dispatcher.run.return_value = return_code
     mock_dispatcher.pre_parse_args.return_value = {}
@@ -435,6 +847,11 @@ def test_run_success_managed_inside_managed(
             craft_cli.ArgumentParsingError("Argument parsing error"),
             64,
             "Argument parsing error\n",
+        ),
+        (
+            craft_cli.CraftError("Arbitrary return code", retcode=69),
+            69,
+            "Arbitrary return code\n",
         ),
     ],
 )
@@ -471,34 +888,218 @@ def test_run_error_debug(monkeypatch, mock_dispatcher, app, fake_project, error)
 
 
 _base = bases.BaseName("", "")
-_on_a_for_a = BuildInfo("p1", "a", "a", _base)
-_on_a_for_b = BuildInfo("p2", "a", "b", _base)
+_pc_on_amd64_for_amd64 = BuildInfo(
+    platform="pc", build_on="amd64", build_for="amd64", base=_base
+)
+_pc_on_amd64_for_i386 = BuildInfo(
+    platform="legacy-pc", build_on="amd64", build_for="i386", base=_base
+)
+_amd64_on_amd64_for_amd64 = BuildInfo(
+    platform="amd64", build_on="amd64", build_for="amd64", base=_base
+)
+_i386_on_amd64_for_i386 = BuildInfo(
+    platform="i386", build_on="amd64", build_for="i386", base=_base
+)
+_i386_on_i386_for_i386 = BuildInfo(
+    platform="i386", build_on="i386", build_for="i386", base=_base
+)
 
 
 @pytest.mark.parametrize(
-    ("plan", "platform", "build_for", "host_arch", "result"),
+    ("_id", "plan", "platform", "build_for", "host_arch", "result"),
     [
-        ([_on_a_for_a], None, None, "a", [_on_a_for_a]),
-        ([_on_a_for_a], "p1", None, "a", [_on_a_for_a]),
-        ([_on_a_for_a], "p2", None, "a", []),
-        ([_on_a_for_a], None, "a", "a", [_on_a_for_a]),
-        ([_on_a_for_a], "p1", "a", "a", [_on_a_for_a]),
-        ([_on_a_for_a], "p2", "a", "a", []),
-        ([_on_a_for_a], None, "b", "a", []),
-        ([_on_a_for_a], None, "a", "b", []),
-        ([_on_a_for_a, _on_a_for_b], None, "b", "a", [_on_a_for_b]),
-        ([_on_a_for_a, _on_a_for_b], "p1", "b", "a", []),
-        ([_on_a_for_a, _on_a_for_b], "p2", "b", "a", [_on_a_for_b]),
-        ([_on_a_for_a, _on_a_for_b], None, "b", "b", []),
-        ([_on_a_for_a, _on_a_for_b], None, None, "b", []),
-        ([_on_a_for_a, _on_a_for_b], "p2", None, "b", []),
-        ([_on_a_for_a, _on_a_for_b], None, None, "a", [_on_a_for_a, _on_a_for_b]),
-        ([_on_a_for_a, _on_a_for_b], "p2", None, "a", [_on_a_for_b]),
+        (0, [_pc_on_amd64_for_amd64], None, None, "amd64", [_pc_on_amd64_for_amd64]),
+        (1, [_pc_on_amd64_for_amd64], "pc", None, "amd64", [_pc_on_amd64_for_amd64]),
+        (2, [_pc_on_amd64_for_amd64], "legacy-pc", None, "amd64", []),
+        (3, [_pc_on_amd64_for_amd64], None, "amd64", "amd64", [_pc_on_amd64_for_amd64]),
+        (4, [_pc_on_amd64_for_amd64], "pc", "amd64", "amd64", [_pc_on_amd64_for_amd64]),
+        (5, [_pc_on_amd64_for_amd64], "legacy-pc", "amd64", "amd64", []),
+        (6, [_pc_on_amd64_for_amd64], None, "i386", "amd64", []),
+        (7, [_pc_on_amd64_for_amd64], None, "amd64", "i386", []),
+        (
+            8,
+            [_pc_on_amd64_for_amd64, _pc_on_amd64_for_i386],
+            None,
+            "i386",
+            "amd64",
+            [_pc_on_amd64_for_i386],
+        ),
+        (
+            9,
+            [_pc_on_amd64_for_amd64, _pc_on_amd64_for_i386],
+            "pc",
+            "amd64",
+            "i386",
+            [],
+        ),
+        (
+            10,
+            [_pc_on_amd64_for_amd64, _pc_on_amd64_for_i386],
+            "legacy-pc",
+            "i386",
+            "amd64",
+            [_pc_on_amd64_for_i386],
+        ),
+        (11, [_pc_on_amd64_for_amd64, _pc_on_amd64_for_i386], None, "i386", "i386", []),
+        (12, [_pc_on_amd64_for_amd64, _pc_on_amd64_for_i386], None, None, "i386", []),
+        (
+            13,
+            [_pc_on_amd64_for_amd64, _pc_on_amd64_for_i386],
+            "legacy-pc",
+            None,
+            "i386",
+            [],
+        ),
+        (
+            14,
+            [_pc_on_amd64_for_amd64, _pc_on_amd64_for_i386],
+            None,
+            None,
+            "amd64",
+            [_pc_on_amd64_for_amd64, _pc_on_amd64_for_i386],
+        ),
+        (
+            15,
+            [_pc_on_amd64_for_amd64, _pc_on_amd64_for_i386],
+            "legacy-pc",
+            None,
+            "amd64",
+            [_pc_on_amd64_for_i386],
+        ),
+        (
+            16,
+            [_pc_on_amd64_for_amd64, _amd64_on_amd64_for_amd64],
+            None,
+            "amd64",
+            "amd64",
+            [_amd64_on_amd64_for_amd64],
+        ),
+        (
+            17,
+            [_pc_on_amd64_for_amd64, _amd64_on_amd64_for_amd64],
+            "amd64",
+            None,
+            "amd64",
+            [_amd64_on_amd64_for_amd64],
+        ),
+        (
+            18,
+            [_pc_on_amd64_for_amd64, _amd64_on_amd64_for_amd64],
+            "amd64",
+            "amd64",
+            "amd64",
+            [_amd64_on_amd64_for_amd64],
+        ),
+        (
+            19,
+            [_pc_on_amd64_for_amd64, _i386_on_amd64_for_i386],
+            None,
+            "i386",
+            "amd64",
+            [_i386_on_amd64_for_i386],
+        ),
+        (
+            20,
+            [_pc_on_amd64_for_amd64, _i386_on_amd64_for_i386],
+            "amd64",
+            None,
+            "amd64",
+            [],
+        ),
+        (
+            21,
+            [
+                _pc_on_amd64_for_amd64,
+                _amd64_on_amd64_for_amd64,
+                _i386_on_amd64_for_i386,
+            ],
+            None,
+            "amd64",
+            "amd64",
+            [_amd64_on_amd64_for_amd64],
+        ),
+        (
+            22,
+            [_pc_on_amd64_for_amd64, _i386_on_amd64_for_i386],
+            "i386",
+            "i386",
+            "amd64",
+            [_i386_on_amd64_for_i386],
+        ),
+        (
+            23,
+            [
+                _pc_on_amd64_for_amd64,
+                _amd64_on_amd64_for_amd64,
+                _i386_on_amd64_for_i386,
+            ],
+            None,
+            "i386",
+            "amd64",
+            [_i386_on_amd64_for_i386],
+        ),
+        (
+            24,
+            [_pc_on_amd64_for_amd64, _amd64_on_amd64_for_amd64],
+            None,
+            "i386",
+            "amd64",
+            [],
+        ),
+        (
+            25,
+            [_pc_on_amd64_for_amd64, _i386_on_amd64_for_i386, _i386_on_i386_for_i386],
+            "amd64",
+            None,
+            "amd64",
+            [],
+        ),
+        (
+            26,
+            [_pc_on_amd64_for_amd64, _i386_on_amd64_for_i386, _i386_on_i386_for_i386],
+            "amd64",
+            None,
+            "i386",
+            [],
+        ),
+        (
+            27,
+            [_pc_on_amd64_for_amd64, _i386_on_amd64_for_i386, _i386_on_i386_for_i386],
+            "i386",
+            None,
+            "amd64",
+            [_i386_on_amd64_for_i386],
+        ),
+        (
+            28,
+            [_pc_on_amd64_for_amd64, _i386_on_amd64_for_i386, _i386_on_i386_for_i386],
+            "i386",
+            None,
+            "i386",
+            [_i386_on_i386_for_i386],
+        ),
+        (
+            29,
+            [_pc_on_amd64_for_amd64, _i386_on_amd64_for_i386, _i386_on_i386_for_i386],
+            None,
+            "i386",
+            "i386",
+            [_i386_on_i386_for_i386],
+        ),
+        (
+            30,
+            [_pc_on_amd64_for_amd64, _i386_on_amd64_for_i386, _i386_on_i386_for_i386],
+            "i386",
+            None,
+            None,
+            [_i386_on_amd64_for_i386, _i386_on_i386_for_i386],
+        ),
     ],
 )
+@pytest.mark.usefixtures("_id")
 def test_filter_plan(mocker, plan, platform, build_for, host_arch, result):
     mocker.patch("craft_application.util.get_host_architecture", return_value=host_arch)
-    assert application._filter_plan(plan, platform, build_for) == result
+    assert application.filter_plan(plan, platform, build_for, host_arch) == result
 
 
 @pytest.fixture()
@@ -506,17 +1107,7 @@ def fake_project_file(monkeypatch, tmp_path):
     project_dir = tmp_path / "project"
     project_dir.mkdir()
     project_path = project_dir / "testcraft.yaml"
-    project_path.write_text(
-        dedent(
-            """
-        name: myproject
-        version: 1.0
-        parts:
-          mypart:
-            plugin: nil
-        """
-        )
-    )
+    project_path.write_text(BASIC_PROJECT_YAML)
     monkeypatch.chdir(project_dir)
 
     return project_path
@@ -529,9 +1120,12 @@ def test_work_dir_project_non_managed(monkeypatch, app_metadata, fake_services):
     app = application.Application(app_metadata, fake_services)
     assert app._work_dir == pathlib.Path.cwd()
 
+    project = app.get_project(build_for=get_host_architecture())
+
     # Make sure the project is loaded correctly (from the cwd)
-    assert app.get_project().name == "myproject"
-    assert app.get_project().version == "1.0"
+    assert project is not None
+    assert project.name == "myproject"
+    assert project.version == "1.0"
 
 
 @pytest.mark.usefixtures("fake_project_file")
@@ -541,9 +1135,13 @@ def test_work_dir_project_managed(monkeypatch, app_metadata, fake_services):
     app = application.Application(app_metadata, fake_services)
     assert app._work_dir == pathlib.PosixPath("/root")
 
+    project = app.get_project(build_for=get_host_architecture())
+
     # Make sure the project is loaded correctly (from the cwd)
-    assert app.get_project().name == "myproject"
-    assert app.get_project().version == "1.0"
+    assert project is not None
+
+    assert project.name == "myproject"
+    assert project.version == "1.0"
 
 
 @pytest.fixture()
@@ -569,10 +1167,12 @@ def environment_project(monkeypatch, tmp_path):
 
 
 @pytest.mark.usefixtures("environment_project")
-def test_application_expand_environment(app_metadata, fake_services):
+def test_applcation_expand_environment(app_metadata, fake_services):
     app = application.Application(app_metadata, fake_services)
-    project = app.get_project()
+    project = app.get_project(build_for=get_host_architecture())
 
+    # Make sure the project is loaded correctly (from the cwd)
+    assert project is not None
     assert project.parts["mypart"]["source-tag"] == "v1.2.3"
 
 
@@ -608,7 +1208,10 @@ def test_application_build_secrets(app_metadata, fake_services, monkeypatch, moc
     spied_set_secrets = mocker.spy(craft_cli.emit, "set_secrets")
 
     app = application.Application(app_metadata, fake_services)
-    project = app.get_project()
+    project = app.get_project(build_for=get_host_architecture())
+
+    # Make sure the project is loaded correctly (from the cwd)
+    assert project is not None
 
     mypart = project.parts["mypart"]
     assert mypart["source"] == "source-folder/project"
@@ -626,14 +1229,26 @@ def test_get_project_current_dir(app):
     assert app.get_project() is project, "Project file was not cached."
 
 
-def test_get_project_other_dir(monkeypatch, tmp_path, app, fake_project_file):
-    monkeypatch.chdir(tmp_path)
-    assert not (tmp_path / fake_project_file.name).exists(), "Test setup failed."
+@pytest.mark.usefixtures("fake_project_file")
+def test_get_project_all_platform(app):
+    app.get_project(platform="foo")
 
-    project = app.get_project(fake_project_file.parent)
 
-    assert app.get_project(fake_project_file.parent) is project
-    assert app.get_project() is project
+@pytest.mark.usefixtures("fake_project_file")
+def test_get_project_invalid_platform(app):
+    # Load a project file from the current directory
+
+    with pytest.raises(errors.InvalidPlatformError) as raised:
+        app.get_project(platform="invalid")
+
+    assert (
+        str(raised.value) == "Platform 'invalid' not found in the project definition."
+    )
+
+
+@pytest.mark.usefixtures("fake_project_file")
+def test_get_project_property(app):
+    assert app.project == app.get_project()
 
 
 def test_get_cache_dir(tmp_path, app):
@@ -670,3 +1285,492 @@ def test_get_cache_dir_parent_read_only(tmp_path, app):
             match="Unable to create/access cache directory: Permission denied",
         ):
             assert app.cache_dir == tmp_path / "cache" / "testcraft"
+
+
+def test_register_plugins(mocker, app_metadata, fake_services):
+    """Test that the App registers plugins when initialing."""
+    reg = mocker.patch("craft_parts.plugins.register")
+
+    class FakeApplicationWithPlugins(FakeApplication):
+        def _get_app_plugins(self) -> dict[str, PluginType]:
+            return {"fake": FakePlugin}
+
+    app = FakeApplicationWithPlugins(app_metadata, fake_services)
+
+    with pytest.raises(SystemExit):
+        app.run()
+
+    assert reg.call_count == 1
+    assert reg.call_args[0][0] == {"fake": FakePlugin}
+
+
+def test_register_plugins_default(mocker, app_metadata, fake_services):
+    """Test that the App registers default plugins when initialing."""
+    reg = mocker.patch("craft_parts.plugins.register")
+
+    app = FakeApplication(app_metadata, fake_services)
+    with pytest.raises(SystemExit):
+        app.run()
+
+    assert reg.call_count == 0
+
+
+def test_extra_yaml_transform(tmp_path, app_metadata, fake_services):
+    project_file = tmp_path / "testcraft.yaml"
+    project_file.write_text(BASIC_PROJECT_YAML)
+
+    app = FakeApplication(app_metadata, fake_services)
+    app.project_dir = tmp_path
+    _ = app.get_project(build_for="s390x")
+
+    assert app.build_on == util.get_host_architecture()
+    assert app.build_for == "s390x"
+
+
+def test_mandatory_adoptable_fields(tmp_path, app_metadata, fake_services):
+    """Verify if mandatory adoptable fields are defined if not using adopt-info."""
+    project_file = tmp_path / "testcraft.yaml"
+    project_file.write_text(BASIC_PROJECT_YAML)
+    app_metadata = dataclasses.replace(
+        app_metadata, mandatory_adoptable_fields=["license"]
+    )
+
+    app = application.Application(app_metadata, fake_services)
+    app.project_dir = tmp_path
+
+    with pytest.raises(errors.CraftValidationError) as exc_info:
+        _ = app.get_project(build_for=get_host_architecture())
+
+    assert (
+        str(exc_info.value)
+        == "Required field 'license' is not set and 'adopt-info' not used."
+    )
+
+
+@pytest.fixture()
+def grammar_project_mini(tmp_path):
+    """A project that builds on amd64 to riscv64 and s390x."""
+    contents = dedent(
+        """\
+    name: myproject
+    version: 1.0
+    parts:
+      mypart:
+        plugin: meson
+
+        # grammar-only string
+        source:
+        - on amd64 to riscv64: on-amd64-to-riscv64
+        - on amd64 to s390x: on-amd64-to-s390x
+        - else: other
+
+        # list of grammar and non-grammar data
+        build-packages:
+        - test-package
+        - on amd64 to riscv64:
+          - on-amd64-to-riscv64
+        - on amd64 to s390x:
+          - on-amd64-to-s390x
+
+        # non-grammar data in a non-grammar keyword
+        meson-parameters:
+        - foo
+        - bar
+    """
+    )
+    project_file = tmp_path / "testcraft.yaml"
+    project_file.write_text(contents)
+
+
+@pytest.fixture()
+def non_grammar_project_full(tmp_path):
+    """A project that builds on amd64 to riscv64."""
+    project_file = tmp_path / "testcraft.yaml"
+    project_file.write_text(FULL_PROJECT_YAML)
+
+
+@pytest.fixture()
+def grammar_project_full(tmp_path):
+    """A project that builds on amd64 to riscv64 and s390x."""
+    project_file = tmp_path / "testcraft.yaml"
+    project_file.write_text(FULL_GRAMMAR_PROJECT_YAML)
+
+
+@pytest.fixture()
+def non_grammar_build_plan(mocker):
+    """A build plan to build on amd64 to riscv64."""
+    host_arch = "amd64"
+    base = util.get_host_base()
+    build_plan = [
+        models.BuildInfo(
+            "platform-riscv64",
+            host_arch,
+            "riscv64",
+            base,
+        )
+    ]
+
+    mocker.patch.object(MyBuildPlanner, "get_build_plan", return_value=build_plan)
+
+
+@pytest.fixture()
+def grammar_build_plan(mocker):
+    """A build plan to build on amd64 to riscv64 and s390x."""
+    host_arch = "amd64"
+    base = util.get_host_base()
+    build_plan = [
+        models.BuildInfo(
+            f"platform-{build_for}",
+            host_arch,
+            build_for,
+            base,
+        )
+        for build_for in ("riscv64", "s390x")
+    ]
+
+    mocker.patch.object(MyBuildPlanner, "get_build_plan", return_value=build_plan)
+
+
+@pytest.fixture()
+def grammar_app_mini(
+    tmp_path,
+    grammar_project_mini,  # noqa: ARG001
+    grammar_build_plan,  # noqa: ARG001
+    app_metadata,
+    fake_services,
+):
+    app = application.Application(app_metadata, fake_services)
+    app.project_dir = tmp_path
+
+    return app
+
+
+@pytest.fixture()
+def non_grammar_app_full(
+    tmp_path,
+    non_grammar_project_full,  # noqa: ARG001
+    non_grammar_build_plan,  # noqa: ARG001
+    app_metadata,
+    fake_services,
+):
+    app = application.Application(app_metadata, fake_services)
+    app.project_dir = tmp_path
+
+    return app
+
+
+@pytest.fixture()
+def grammar_app_full(
+    tmp_path,
+    grammar_project_full,  # noqa: ARG001
+    grammar_build_plan,  # noqa: ARG001
+    app_metadata,
+    fake_services,
+):
+    app = application.Application(app_metadata, fake_services)
+    app.project_dir = tmp_path
+
+    return app
+
+
+def test_process_grammar_build_for(grammar_app_mini):
+    """Test that a provided build-for is used to process the grammar."""
+    project = grammar_app_mini.get_project(build_for="s390x")
+    assert project.parts["mypart"]["source"] == "on-amd64-to-s390x"
+    assert project.parts["mypart"]["build-packages"] == [
+        "test-package",
+        "on-amd64-to-s390x",
+    ]
+
+
+def test_process_grammar_platform(grammar_app_mini):
+    """Test that a provided platform is used to process the grammar."""
+    project = grammar_app_mini.get_project(platform="platform-riscv64")
+    assert project.parts["mypart"]["source"] == "on-amd64-to-riscv64"
+    assert project.parts["mypart"]["build-packages"] == [
+        "test-package",
+        "on-amd64-to-riscv64",
+    ]
+
+
+def test_process_grammar_non_grammar(grammar_app_mini):
+    """Non-grammar keywords should not be modified."""
+    project = grammar_app_mini.get_project(platform="platform-riscv64")
+
+    assert project.parts["mypart"]["meson-parameters"] == ["foo", "bar"]
+
+
+def test_process_grammar_default(grammar_app_mini):
+    """Test that if nothing is provided the first BuildInfo is used by the grammar."""
+    project = grammar_app_mini.get_project()
+    assert project.parts["mypart"]["source"] == "on-amd64-to-riscv64"
+    assert project.parts["mypart"]["build-packages"] == [
+        "test-package",
+        "on-amd64-to-riscv64",
+    ]
+
+
+def test_process_grammar_no_match(grammar_app_mini, mocker):
+    """Test that if the build plan is empty, the grammar uses the host as target arch."""
+    mocker.patch("craft_application.util.get_host_architecture", return_value="i386")
+    project = grammar_app_mini.get_project()
+
+    assert project.parts["mypart"]["source"] == "other"
+    assert project.parts["mypart"]["build-packages"] == ["test-package"]
+
+
+class FakeApplicationWithYamlTransform(FakeApplication):
+    """Application class that adds data in `_extra_yaml_transform`."""
+
+    @override
+    def _extra_yaml_transform(
+        self,
+        yaml_data: dict[str, Any],
+        *,
+        build_on: str,  # noqa: ARG002 (Unused method argument)
+        build_for: str | None,  # noqa: ARG002 (Unused method argument)
+    ) -> dict[str, Any]:
+        # do not modify the dict passed in
+        new_yaml_data = copy.deepcopy(yaml_data)
+        new_yaml_data["parts"] = {
+            "mypart": {
+                "plugin": "nil",
+                # advanced grammar
+                "build-packages": [
+                    "test-package",
+                    {"to riscv64": "riscv64-package"},
+                    {"to s390x": "s390x-package"},
+                ],
+                "build-environment": [
+                    # project variables
+                    {"hello": "$CRAFT_ARCH_BUILD_ON"},
+                    # build secrets
+                    {"MY_VAR": "$(HOST_SECRET:echo ${SECRET_VAR})"},
+                ],
+            }
+        }
+
+        return new_yaml_data
+
+
+@pytest.mark.enable_features("build_secrets")
+def test_process_yaml_from_extra_transform(
+    app_metadata, fake_services, tmp_path, monkeypatch
+):
+    """Test that grammar is applied on data from `_extra_yaml_transform`."""
+    monkeypatch.setenv("SECRET_VAR", "secret-value")
+    project_file = tmp_path / "testcraft.yaml"
+    project_file.write_text(BASIC_PROJECT_YAML)
+
+    app = FakeApplicationWithYamlTransform(app_metadata, fake_services)
+    app.project_dir = tmp_path
+    project = app.get_project(build_for="riscv64")
+
+    # process grammar
+    assert project.parts["mypart"]["build-packages"] == [
+        "test-package",
+        "riscv64-package",
+    ]
+    assert project.parts["mypart"]["build-environment"] == [
+        # evaluate project variables
+        {"hello": get_host_architecture()},
+        # render secrets
+        {"MY_VAR": "secret-value"},
+    ]
+
+
+class FakePartitionsApplication(FakeApplication):
+    """A partition using FakeApplication."""
+
+    @override
+    def _setup_partitions(self, yaml_data) -> list[str]:
+        _ = yaml_data
+        return ["default", "mypartition"]
+
+
+@pytest.fixture()
+def environment_partitions_project(monkeypatch, tmp_path):
+    project_dir = tmp_path / "project"
+    project_dir.mkdir()
+    project_path = project_dir / "testcraft.yaml"
+    project_path.write_text(
+        dedent(
+            """
+        name: myproject
+        version: 1.2.3
+        parts:
+          mypart:
+            plugin: nil
+            source-tag: v$CRAFT_PROJECT_VERSION
+            override-stage: |
+              touch $CRAFT_STAGE/default
+              touch $CRAFT_MYPARTITION_STAGE/partition
+            override-prime: |
+              touch $CRAFT_PRIME/default
+              touch $CRAFT_MYPARTITION_PRIME/partition
+        """
+        )
+    )
+    monkeypatch.chdir(project_dir)
+
+    return project_path
+
+
+@pytest.mark.usefixtures("enable_partitions")
+@pytest.mark.usefixtures("environment_partitions_project")
+def test_partition_application_expand_environment(app_metadata, fake_services):
+    app = FakePartitionsApplication(app_metadata, fake_services)
+    project = app.get_project(build_for=get_host_architecture())
+
+    assert craft_parts.Features().enable_partitions is True
+    # Make sure the project is loaded correctly (from the cwd)
+    assert project is not None
+    assert project.parts["mypart"]["source-tag"] == "v1.2.3"
+    assert project.parts["mypart"]["override-stage"] == dedent(
+        f"""\
+        touch {app.project_dir}/stage/default
+        touch {app.project_dir}/partitions/mypartition/stage/partition
+    """
+    )
+    assert project.parts["mypart"]["override-prime"] == dedent(
+        f"""\
+        touch {app.project_dir}/prime/default
+        touch {app.project_dir}/partitions/mypartition/prime/partition
+    """
+    )
+
+
+@pytest.mark.usefixtures("enable_overlay")
+def test_process_non_grammar_full(non_grammar_app_full):
+    """Test that the non-grammar project is processed correctly.
+
+    The following fields are not included due to not able to be tested in this context:
+    - parse-info
+    """
+    project = non_grammar_app_full.get_project()
+    assert project.parts["mypart"]["plugin"] == "nil"
+    assert project.parts["mypart"]["source"] == "non-grammar-source"
+    assert project.parts["mypart"]["source-checksum"] == "on-amd64-to-riscv64-checksum"
+    assert project.parts["mypart"]["source-branch"] == "riscv64-branch"
+    assert project.parts["mypart"]["source-commit"] == "riscv64-commit"
+    assert project.parts["mypart"]["source-depth"] == 1
+    assert project.parts["mypart"]["source-subdir"] == "riscv64-subdir"
+    assert project.parts["mypart"]["source-submodules"] == [
+        "riscv64-submodules-1",
+        "riscv64-submodules-2",
+    ]
+    assert project.parts["mypart"]["source-tag"] == "riscv64-tag"
+    assert project.parts["mypart"]["source-type"] == "riscv64-type"
+    assert project.parts["mypart"]["disable-parallel"] is True
+    assert project.parts["mypart"]["after"] == ["riscv64-after"]
+    assert project.parts["mypart"]["organize"] == {
+        "riscv64-organize-1": "riscv64-organize-2",
+        "riscv64-organize-3": "riscv64-organize-4",
+    }
+    assert project.parts["mypart"]["overlay"] == [
+        "riscv64-overlay-1",
+        "riscv64-overlay-2",
+    ]
+    assert project.parts["mypart"]["overlay-script"] == "riscv64-overlay-script"
+    assert project.parts["mypart"]["stage"] == ["riscv64-stage-1", "riscv64-stage-2"]
+    assert project.parts["mypart"]["stage-snaps"] == [
+        "riscv64-snap-1",
+        "riscv64-snap-2",
+    ]
+    assert project.parts["mypart"]["stage-packages"] == [
+        "riscv64-package-1",
+        "riscv64-package-2",
+    ]
+    assert project.parts["mypart"]["prime"] == ["riscv64-prime-1", "riscv64-prime-2"]
+    assert project.parts["mypart"]["build-snaps"] == [
+        "riscv64-snap-1",
+        "riscv64-snap-2",
+    ]
+    assert project.parts["mypart"]["build-packages"] == [
+        "riscv64-package-1",
+        "riscv64-package-2",
+    ]
+    assert project.parts["mypart"]["build-environment"] == [
+        {"MY_VAR": "riscv64-value"},
+        {"MY_VAR2": "riscv64-value2"},
+    ]
+    assert project.parts["mypart"]["build-attributes"] == [
+        "rifcv64-attr-1",
+        "rifcv64-attr-2",
+    ]
+    assert project.parts["mypart"]["override-pull"] == "riscv64-override-pull"
+    assert project.parts["mypart"]["override-build"] == "riscv64-override-build"
+    assert project.parts["mypart"]["override-stage"] == "riscv64-override-stage"
+    assert project.parts["mypart"]["override-prime"] == "riscv64-override-prime"
+    assert project.parts["mypart"]["permissions"] == [
+        {"path": "riscv64-perm-1", "owner": 123, "group": 123, "mode": "777"},
+        {"path": "riscv64-perm-2", "owner": 456, "group": 456, "mode": "666"},
+    ]
+
+
+@pytest.mark.usefixtures("enable_overlay")
+def test_process_grammar_full(grammar_app_full):
+    """Test that the nearly all grammar is processed correctly.
+
+    The following fields are not included due to not able to be tested in this context:
+    - parse-info
+    """
+    project = grammar_app_full.get_project()
+    assert project.parts["mypart"]["plugin"] == "nil"
+    assert project.parts["mypart"]["source"] == "on-amd64-to-riscv64"
+    assert project.parts["mypart"]["source-checksum"] == "on-amd64-to-riscv64-checksum"
+    assert project.parts["mypart"]["source-branch"] == "riscv64-branch"
+    assert project.parts["mypart"]["source-commit"] == "riscv64-commit"
+    assert project.parts["mypart"]["source-depth"] == 1
+    assert project.parts["mypart"]["source-subdir"] == "riscv64-subdir"
+    assert project.parts["mypart"]["source-submodules"] == [
+        "riscv64-submodules-1",
+        "riscv64-submodules-2",
+    ]
+    assert project.parts["mypart"]["source-tag"] == "riscv64-tag"
+    assert project.parts["mypart"]["source-type"] == "riscv64-type"
+    assert project.parts["mypart"]["disable-parallel"] is True
+    assert project.parts["mypart"]["after"] == ["riscv64-after"]
+    assert project.parts["mypart"]["organize"] == {
+        "riscv64-organize-1": "riscv64-organize-2",
+        "riscv64-organize-3": "riscv64-organize-4",
+    }
+    assert project.parts["mypart"]["overlay"] == [
+        "riscv64-overlay-1",
+        "riscv64-overlay-2",
+    ]
+    assert project.parts["mypart"]["overlay-script"] == "riscv64-overlay-script"
+    assert project.parts["mypart"]["stage"] == ["riscv64-stage-1", "riscv64-stage-2"]
+    assert project.parts["mypart"]["stage-snaps"] == [
+        "riscv64-snap-1",
+        "riscv64-snap-2",
+    ]
+    assert project.parts["mypart"]["stage-packages"] == [
+        "riscv64-package-1",
+        "riscv64-package-2",
+    ]
+    assert project.parts["mypart"]["prime"] == ["riscv64-prime-1", "riscv64-prime-2"]
+    assert project.parts["mypart"]["build-snaps"] == [
+        "riscv64-snap-1",
+        "riscv64-snap-2",
+    ]
+    assert project.parts["mypart"]["build-packages"] == [
+        "riscv64-package-1",
+        "riscv64-package-2",
+    ]
+    assert project.parts["mypart"]["build-environment"] == [
+        {"MY_VAR": "riscv64-value"},
+        {"MY_VAR2": "riscv64-value2"},
+    ]
+    assert project.parts["mypart"]["build-attributes"] == [
+        "rifcv64-attr-1",
+        "rifcv64-attr-2",
+    ]
+    assert project.parts["mypart"]["override-pull"] == "riscv64-override-pull"
+    assert project.parts["mypart"]["override-build"] == "riscv64-override-build"
+    assert project.parts["mypart"]["override-stage"] == "riscv64-override-stage"
+    assert project.parts["mypart"]["override-prime"] == "riscv64-override-prime"
+    assert project.parts["mypart"]["permissions"] == [
+        {"path": "riscv64-perm-1", "owner": 123, "group": 123, "mode": "777"},
+        {"path": "riscv64-perm-2", "owner": 456, "group": 456, "mode": "666"},
+    ]

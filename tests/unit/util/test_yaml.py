@@ -81,6 +81,16 @@ def test_dump_yaml_to_string(data, kwargs, expected):
             {"sort_keys": True},
             "comes_first: true\nordered: 'yes'\n",
         ),
+        (
+            {"ordered": "no", "comes_first": False, "long_key": "123\n456\n789"},
+            {},
+            "ordered: 'no'\ncomes_first: false\nlong_key: |-\n  123\n  456\n  789\n",
+        ),
+        (
+            {"ordered": "no", "comes_first": False, "unicode": "👍"},
+            {},
+            "ordered: 'no'\ncomes_first: false\nunicode: 👍\n",
+        ),
     ],
 )
 def test_dump_yaml_to_stream(data, kwargs, expected):

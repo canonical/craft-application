@@ -33,7 +33,7 @@ class ProjectName(ConstrainedStr):
     max_length = 40
     strict = True
     strip_whitespace = True
-    regex = re.compile(r"^([a-z0-9][a-z0-9-]?)?[a-z]+([a-z0-9-]?[a-z0-9])*$")
+    regex = re.compile(r"^([a-z0-9][a-z0-9-]?)*[a-z]+([a-z0-9-]?[a-z0-9])*$")
 
 
 MESSAGE_INVALID_NAME = (
@@ -70,7 +70,13 @@ class UniqueStrList(ConstrainedList):
 
 
 class VersionStr(ConstrainedStr):
-    """A valid version string."""
+    """A valid version string.
+
+    Should match snapd valid versions:
+    https://github.com/snapcore/snapd/blame/a39482ead58bf06cddbc0d3ffad3c17dfcf39913/snap/validate.go#L96
+    Applications may use a different set of constraints if necessary, but
+    ideally they will retain this same constraint.
+    """
 
     max_length = 32
     strip_whitespace = True

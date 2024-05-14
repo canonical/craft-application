@@ -1,6 +1,6 @@
 #  This file is part of craft-application.
 #
-#  Copyright 2023 Canonical Ltd.
+#  Copyright 2023-2024 Canonical Ltd.
 #
 #  This program is free software: you can redistribute it and/or modify it
 #  under the terms of the GNU Lesser General Public License version 3, as
@@ -65,6 +65,20 @@ class AppCommand(BaseCommand):
         self._app: application.AppMetadata = config["app"]
         self._services: service_factory.ServiceFactory = config["services"]
 
+    def needs_project(
+        self,
+        parsed_args: argparse.Namespace,  # noqa: ARG002 (unused argument is for subclasses)
+    ) -> bool:
+        """Property to determine if the command needs a project loaded.
+
+        Defaults to `self.always_load_project`. Subclasses can override this property
+
+        :param parsed_args: Parsed arguments for the command.
+
+        :returns: True if the command needs a project loaded, False otherwise.
+        """
+        return self.always_load_project
+
     def run_managed(
         self,
         parsed_args: argparse.Namespace,  # noqa: ARG002 (the unused argument is for subclasses)
@@ -75,6 +89,17 @@ class AppCommand(BaseCommand):
         including by inspecting the arguments in `parsed_args`.
         """
         return False
+
+    def provider_name(
+        self,
+        parsed_args: argparse.Namespace,  # noqa: ARG002 (the unused argument is for subclasses)
+    ) -> str | None:
+        """Name of the provider where the command should be run inside of.
+
+        By default returns None. Subclasses can override this method to change this,
+        including by inspecting the arguments in `parsed_args`.
+        """
+        return None
 
     def get_managed_cmd(
         self,

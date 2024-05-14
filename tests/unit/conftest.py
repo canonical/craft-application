@@ -23,9 +23,15 @@ from craft_application import services
 
 
 @pytest.fixture()
-def provider_service(app_metadata, fake_project, fake_services, tmp_path):
+def provider_service(
+    app_metadata, fake_project, fake_build_plan, fake_services, tmp_path
+):
     return services.ProviderService(
-        app_metadata, fake_services, project=fake_project, work_dir=tmp_path
+        app_metadata,
+        fake_services,
+        project=fake_project,
+        work_dir=tmp_path,
+        build_plan=fake_build_plan,
     )
 
 
@@ -37,4 +43,5 @@ def mock_services(app_metadata, fake_project, fake_package_service_class):
     factory.lifecycle = mock.Mock(spec=services.LifecycleService)
     factory.package = mock.Mock(spec=services.PackageService)
     factory.provider = mock.Mock(spec=services.ProviderService)
+    factory.remote_build = mock.Mock(spec_set=services.RemoteBuildService)
     return factory

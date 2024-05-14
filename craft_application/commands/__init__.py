@@ -17,13 +17,17 @@
 
 from craft_application.commands.base import AppCommand, ExtensibleCommand
 from craft_application.commands import lifecycle
-from craft_application.commands.lifecycle import get_lifecycle_command_group
+from craft_application.commands.lifecycle import (
+    get_lifecycle_command_group,
+    LifecycleCommand,
+)
 from craft_application.commands.other import get_other_command_group
 
 __all__ = [
     "AppCommand",
     "ExtensibleCommand",
     "lifecycle",
+    "LifecycleCommand",
     "get_lifecycle_command_group",
     "get_other_command_group",
 ]

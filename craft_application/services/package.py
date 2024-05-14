@@ -19,6 +19,9 @@ from __future__ import annotations
 import abc
 from typing import TYPE_CHECKING
 
+from craft_cli import emit
+
+from craft_application import errors, util
 from craft_application.services import base
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -44,6 +47,33 @@ class PackageService(base.ProjectService):
     def metadata(self) -> models.BaseMetadata:
         """The metadata model for this project."""
 
+    def update_project(self) -> None:
+        """Update project fields with dynamic values set during the lifecycle."""
+        update_vars: dict[str, str] = {}
+        project_info = self._services.lifecycle.project_info
+        for var in self._app.project_variables:
+            update_vars[var] = project_info.get_project_var(var)
+
+        emit.debug(f"Update project variables: {update_vars}")
+        self._project.__dict__.update(update_vars)
+
+        # Give subclasses a chance to update the project with their own logic
+        self._extra_project_updates()
+
+        unset_fields = [
+            field
+            for field in self._app.mandatory_adoptable_fields
+            if not getattr(self._project, field)
+        ]
+
+        if unset_fields:
+            fields = util.humanize_list(unset_fields, "and", sort=False)
+            raise errors.PartsLifecycleError(
+                f"Project fields {fields} were not set."
+                if len(unset_fields) > 1
+                else f"Project field {fields} was not set."
+            )
+
     def write_metadata(self, path: pathlib.Path) -> None:
         """Write the project metadata to metadata.yaml in the given directory.
 
@@ -51,3 +81,6 @@ class PackageService(base.ProjectService):
         """
         path.mkdir(parents=True, exist_ok=True)
         self.metadata.to_yaml_file(path / "metadata.yaml")
+
+    def _extra_project_updates(self) -> None:
+        """Perform domain-specific updates to the project before packing."""

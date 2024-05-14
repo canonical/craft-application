@@ -1,0 +1,52 @@
+#!/bin/bash
+
+env_file="$HOME/environment.sh"
+
+# save default environment on first login
+if [[ ! -e $env_file ]]; then
+    env > "$env_file"
+    sed -i 's/^/export /' "$env_file"      # prefix 'export' to variables
+    sed -i 's/=/="/; s/$/"/' "$env_file"   # surround values with quotes
+    sed -i '1i#! /bin/bash\\n' "$env_file" # add shebang
+    fi
+    previous_pwd=$PWD
+
+function set_environment {
+    # only update the environment when the directory changes
+    if [[ ! $PWD = "$previous_pwd" ]]; then
+        # set part's environment when inside a part's build directory
+        if [[ "$PWD" =~ $HOME/parts/.*/build ]] && [[ -e "${PWD/build*/run/environment.sh}" ]] ; then
+            part_name=$(echo "${PWD#$"HOME"}" | cut -d "/" -f 3)
+            echo "build environment set for part '$part_name'"
+            # shellcheck disable=SC1090
+            source "${PWD/build*/run/environment.sh}"
+
+        # else clear and set the default environment
+        else
+            # shellcheck disable=SC2046
+            unset $(/usr/bin/env | /usr/bin/cut -d= -f1)
+            # shellcheck disable=SC1090
+            source "$env_file"
+            PWD="$(pwd)"
+            export PWD
+        fi
+    fi
+    previous_pwd=$PWD
+}
+
+function set_prompt {
+    # do not show path in HOME directory
+    if [[ "$PWD" = "$HOME" ]]; then
+        export PS1="\\h # "
+
+    # show relative path inside a subdirectory of HOME
+    elif [[ "$PWD" =~ ^$HOME/* ]]; then
+        export PS1="\\h ..${PWD/$HOME/}# "
+
+    # show full path outside the home directory
+    else
+        export PS1="\\h $PWD# "
+    fi
+}
+
+PROMPT_COMMAND="set_environment; set_prompt"

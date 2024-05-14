@@ -39,6 +39,8 @@ class ServiceFactory:
     PackageClass: type[services.PackageService]
     LifecycleClass: type[services.LifecycleService] = services.LifecycleService
     ProviderClass: type[services.ProviderService] = services.ProviderService
+    RemoteBuildClass: type[services.RemoteBuildService] = services.RemoteBuildService
+    RequestClass: type[services.RequestService] = services.RequestService
 
     project: models.Project | None = None
 
@@ -48,6 +50,8 @@ class ServiceFactory:
         package: services.PackageService = None  # type: ignore[assignment]
         lifecycle: services.LifecycleService = None  # type: ignore[assignment]
         provider: services.ProviderService = None  # type: ignore[assignment]
+        remote_build: services.RemoteBuildService = None  # type: ignore[assignment]
+        request: services.RequestService = None  # type: ignore[assignment]
 
     def __post_init__(self) -> None:
         self._service_kwargs: dict[str, dict[str, Any]] = {}

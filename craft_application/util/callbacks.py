@@ -16,7 +16,8 @@
 """Utilities related to callbacks."""
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Callable, Iterable, Literal, overload
+from collections.abc import Callable, Iterable
+from typing import TYPE_CHECKING, Literal, overload
 
 if TYPE_CHECKING:  # pragma: no cover
     # Caution: Removing these from type checking will result in circular imports.
@@ -26,15 +27,13 @@ if TYPE_CHECKING:  # pragma: no cover
 @overload
 def get_unique_callbacks(
     cls: type, callback_name: Literal["_parse_callback"]
-) -> Iterable[ParserCallback]:
-    ...  # pragma: no cover
+) -> Iterable[ParserCallback]: ...  # pragma: no cover
 
 
 @overload
 def get_unique_callbacks(
     cls: type, callback_name: Literal["_prologue", "_epilogue"]
-) -> Iterable[RunCallback]:
-    ...  # pragma: no cover
+) -> Iterable[RunCallback]: ...  # pragma: no cover
 
 
 def get_unique_callbacks(  # pyright: ignore[reportUnknownParameterType]

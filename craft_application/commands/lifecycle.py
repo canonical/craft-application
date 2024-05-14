@@ -1,4 +1,4 @@
-# Copyright 2023 Canonical Ltd.
+# Copyright 2023-2024 Canonical Ltd.
 #
 # This program is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Lesser General Public License version 3, as
@@ -32,7 +32,7 @@ if TYPE_CHECKING:  # pragma: no cover
 
 def get_lifecycle_command_group() -> CommandGroup:
     """Return the lifecycle related command group."""
-    commands: list[type[_LifecycleCommand]] = [
+    commands: list[type[_BaseLifecycleCommand]] = [
         CleanCommand,
         PullCommand,
         OverlayCommand,
@@ -50,34 +50,31 @@ def get_lifecycle_command_group() -> CommandGroup:
     )
 
 
-class _LifecycleCommand(base.ExtensibleCommand):
-    """Lifecycle-related commands."""
+class _BaseLifecycleCommand(base.ExtensibleCommand):
+    """Base class for lifecycle-related commands.
+
+    All lifecycle commands must know where to execute (locally or in a build
+    environment) but do not have to provide shell access into the environment.
+    """
 
     @override
     def _run(self, parsed_args: argparse.Namespace, **kwargs: Any) -> None:
         emit.trace(f"lifecycle command: {self.name!r}, arguments: {parsed_args!r}")
 
-
-class LifecyclePartsCommand(_LifecycleCommand):
-    """A lifecycle command that uses parts."""
-
-    # All lifecycle-related commands need a project to work
-    always_load_project = True
-
     @override
     def _fill_parser(self, parser: argparse.ArgumentParser) -> None:
         super()._fill_parser(parser)  # type: ignore[arg-type]
-        parser.add_argument(
-            "parts",
-            metavar="part-name",
-            type=str,
-            nargs="*",
-            help="Optional list of parts to process",
-        )
-        parser.add_argument(
+
+        group = parser.add_mutually_exclusive_group()
+        group.add_argument(
             "--destructive-mode",
             action="store_true",
             help="Build in the current host",
+        )
+        group.add_argument(
+            "--use-lxd",
+            action="store_true",
+            help="Build in a LXD container.",
         )
 
     @override
@@ -88,13 +85,39 @@ class LifecyclePartsCommand(_LifecycleCommand):
 
         return cmd
 
-
-class LifecycleStepCommand(LifecyclePartsCommand):
-    """An actual lifecycle step."""
+    @override
+    def provider_name(self, parsed_args: argparse.Namespace) -> str | None:
+        return "lxd" if parsed_args.use_lxd else None
 
     @override
     def run_managed(self, parsed_args: argparse.Namespace) -> bool:
-        return not parsed_args.destructive_mode
+        """Return whether the command should run in managed mode or not.
+
+        The command will run in managed mode unless the `--destructive-mode` flag
+        is passed OR `CRAFT_BUILD_ENVIRONMENT` is set to `host`.
+        """
+        if parsed_args.destructive_mode:
+            emit.debug(
+                "Not running managed mode because `--destructive-mode` was passed"
+            )
+            return False
+
+        build_env = os.getenv("CRAFT_BUILD_ENVIRONMENT")
+        if build_env and build_env.lower().strip() == "host":
+            emit.debug(
+                f"Not running managed mode because CRAFT_BUILD_ENVIRONMENT={build_env}"
+            )
+            return False
+
+        return True
+
+
+class LifecycleCommand(_BaseLifecycleCommand):
+    """A command that will run the lifecycle and can shell into the environment.
+
+    LifecycleCommands do not require a part. For example 'pack' will run
+    the lifecycle but cannot be run on a specific part.
+    """
 
     @override
     def _fill_parser(self, parser: argparse.ArgumentParser) -> None:
@@ -174,10 +197,7 @@ class LifecycleStepCommand(LifecyclePartsCommand):
             shell_after = True
 
         try:
-            self._services.lifecycle.run(
-                step_name=step_name,
-                part_names=parsed_args.parts,
-            )
+            self._run_lifecycle(parsed_args, step_name)
         except Exception as err:
             if debug:
                 emit.progress(str(err), permanent=True)
@@ -187,12 +207,53 @@ class LifecycleStepCommand(LifecyclePartsCommand):
         if shell_after:
             _launch_shell()
 
+    def _run_lifecycle(
+        self,
+        parsed_args: argparse.Namespace,  # noqa: ARG002 (unused argument is for subclasses)
+        step_name: str | None = None,
+    ) -> None:
+        """Run the lifecycle."""
+        self._services.lifecycle.run(step_name=step_name)
+
+    def _run_post_prime_steps(self) -> None:
+        """Run post-prime steps."""
+        self._services.package.update_project()
+        self._services.package.write_metadata(self._services.lifecycle.prime_dir)
+
     @staticmethod
     def _should_add_shell_args() -> bool:
         return True
 
 
-class PullCommand(LifecycleStepCommand):
+class LifecyclePartsCommand(LifecycleCommand):
+    """A command that can run the lifecycle for a particular part."""
+
+    # All lifecycle-related commands need a project to work
+    always_load_project = True
+
+    @override
+    def _fill_parser(self, parser: argparse.ArgumentParser) -> None:
+        super()._fill_parser(parser)  # type: ignore[arg-type]
+        parser.add_argument(
+            "parts",
+            metavar="part-name",
+            type=str,
+            nargs="*",
+            help="Optional list of parts to process",
+        )
+
+    @override
+    def _run_lifecycle(
+        self, parsed_args: argparse.Namespace, step_name: str | None = None
+    ) -> None:
+        """Run the lifecycle, optionally for a part or list of parts."""
+        self._services.lifecycle.run(
+            step_name=step_name,
+            part_names=parsed_args.parts,
+        )
+
+
+class PullCommand(LifecyclePartsCommand):
     """Command to pull parts."""
 
     name = "pull"
@@ -206,7 +267,7 @@ class PullCommand(LifecycleStepCommand):
     )
 
 
-class OverlayCommand(LifecycleStepCommand):
+class OverlayCommand(LifecyclePartsCommand):
     """Command to overlay parts."""
 
     name = "overlay"
@@ -219,7 +280,7 @@ class OverlayCommand(LifecycleStepCommand):
     )
 
 
-class BuildCommand(LifecycleStepCommand):
+class BuildCommand(LifecyclePartsCommand):
     """Command to build parts."""
 
     name = "build"
@@ -232,7 +293,7 @@ class BuildCommand(LifecycleStepCommand):
     )
 
 
-class StageCommand(LifecycleStepCommand):
+class StageCommand(LifecyclePartsCommand):
     """Command to stage parts."""
 
     name = "stage"
@@ -246,7 +307,7 @@ class StageCommand(LifecycleStepCommand):
     )
 
 
-class PrimeCommand(LifecycleStepCommand):
+class PrimeCommand(LifecyclePartsCommand):
     """Command to prime parts."""
 
     name = "prime"
@@ -268,12 +329,13 @@ class PrimeCommand(LifecycleStepCommand):
     ) -> None:
         """Run the prime command."""
         super()._run(parsed_args, step_name=step_name)
+        self._run_post_prime_steps()
 
-        self._services.package.write_metadata(self._services.lifecycle.prime_dir)
 
-
-class PackCommand(PrimeCommand):
+class PackCommand(LifecycleCommand):
     """Command to pack the final artifact."""
+
+    always_load_project = True
 
     name = "pack"
     help_msg = "Create the final artifact"
@@ -306,6 +368,7 @@ class PackCommand(PrimeCommand):
         if step_name not in ("pack", None):
             raise RuntimeError(f"Step name {step_name} passed to pack command.")
         super()._run(parsed_args, step_name="prime")
+        self._run_post_prime_steps()
 
         emit.progress("Packing...")
         packages = self._services.package.pack(
@@ -326,9 +389,10 @@ class PackCommand(PrimeCommand):
         return False
 
 
-class CleanCommand(LifecyclePartsCommand):
+class CleanCommand(_BaseLifecycleCommand):
     """Command to remove part assets."""
 
+    always_load_project = True
     name = "clean"
     help_msg = "Remove a part's assets"
     overview = textwrap.dedent(
@@ -339,11 +403,34 @@ class CleanCommand(LifecyclePartsCommand):
     )
 
     @override
-    def _run(self, parsed_args: argparse.Namespace, **kwargs: Any) -> None:
-        """Run the clean command."""
+    def _fill_parser(self, parser: argparse.ArgumentParser) -> None:
+        super()._fill_parser(parser)  # type: ignore[arg-type]
+        parser.add_argument(
+            "parts",
+            metavar="part-name",
+            type=str,
+            nargs="*",
+            help="Optional list of parts to process",
+        )
+
+    @override
+    def _run(
+        self,
+        parsed_args: argparse.Namespace,
+        **kwargs: Any,
+    ) -> None:
+        """Run the clean command.
+
+        The project's work directory will be cleaned if:
+        - the `--destructive-mode` flag is provided OR
+        - `CRAFT_BUILD_ENVIRONMENT` is set to `host` OR
+        - no list of specific parts to clean is provided
+
+        Otherwise, it will clean an instance.
+        """
         super()._run(parsed_args)
 
-        if parsed_args.destructive_mode or not self._should_clean_instances(
+        if not super().run_managed(parsed_args) or not self._should_clean_instances(
             parsed_args
         ):
             self._services.lifecycle.clean(parsed_args.parts)
@@ -352,12 +439,16 @@ class CleanCommand(LifecyclePartsCommand):
 
     @override
     def run_managed(self, parsed_args: argparse.Namespace) -> bool:
-        if parsed_args.destructive_mode:
-            # In destructive mode, always run on the host.
+        """Return whether the command should run in managed mode or not.
+
+        Clean will run in managed mode unless:
+        - the `--destructive-mode` flag is provided OR
+        - `CRAFT_BUILD_ENVIRONMENT` is set to `host` OR
+        - a list of specific parts to clean is provided
+        """
+        if not super().run_managed(parsed_args):
             return False
 
-        # "clean" should run managed if cleaning specific parts.
-        # otherwise, should run on the host to clean the build provider.
         return not self._should_clean_instances(parsed_args)
 
     @staticmethod

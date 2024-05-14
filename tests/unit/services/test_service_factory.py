@@ -1,4 +1,4 @@
-# Copyright 2023 Canonical Ltd.
+# Copyright 2023-2024 Canonical Ltd.
 #
 # This program is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Lesser General Public License version 3, as
@@ -18,7 +18,7 @@ from unittest import mock
 
 import pytest
 import pytest_check
-from craft_application import services
+from craft_application import AppMetadata, services
 from craft_cli import emit
 
 
@@ -108,7 +108,7 @@ def test_getattr_not_a_service_class(app_metadata, fake_project):
         app_metadata,
         project=fake_project,
         # This incorrect type is intentional
-        PackageClass=InvalidClass,  # pyright: ignore[reportGeneralTypeIssues]
+        PackageClass=InvalidClass,  # pyright: ignore[reportArgumentType]
     )
 
     with pytest.raises(TypeError):
@@ -138,3 +138,26 @@ def test_service_setup(app_metadata, fake_project, fake_package_service_class, e
     _ = factory.package
 
     assert emitter.assert_debug("setting up package service")
+
+
+def test_mandatory_adoptable_field(
+    fake_project,
+    fake_lifecycle_service_class,
+    fake_package_service_class,
+):
+    app_metadata = AppMetadata(
+        "testcraft",
+        "A fake app for testing craft-application",
+        mandatory_adoptable_fields=["license"],
+    )
+    fake_project.license = None
+    fake_project.adopt_info = "partname"
+
+    factory = services.ServiceFactory(
+        app_metadata,
+        project=fake_project,
+        PackageClass=fake_package_service_class,
+        LifecycleClass=fake_lifecycle_service_class,
+    )
+
+    _ = factory.lifecycle

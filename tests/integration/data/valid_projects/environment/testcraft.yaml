@@ -1,7 +1,7 @@
 name: environment-project
 summary: A project with environment variables
-version: 1.2.3
-base: ["ubuntu", "22.04"]
+version: 1.0
+base: "ubuntu@22.04"
 
 parts:
   my-part:
@@ -9,6 +9,10 @@ parts:
     override-build: |
         target_file=${CRAFT_PART_INSTALL}/variables.yaml
         touch $target_file
-        echo "project_name:    \"${CRAFT_PROJECT_NAME}\""    >> $target_file
-        echo "project_dir:     \"${CRAFT_PROJECT_DIR}\""     >> $target_file
-        echo "project_version: \"${CRAFT_PROJECT_VERSION}\"" >> $target_file
+        echo "project_name:           \"${CRAFT_PROJECT_NAME}\""           >> $target_file
+        echo "project_dir:            \"${CRAFT_PROJECT_DIR}\""            >> $target_file
+        echo "project_version:        \"${CRAFT_PROJECT_VERSION}\""        >> $target_file
+        echo "arch_build_for:         \"${CRAFT_ARCH_BUILD_FOR}\""         >> $target_file
+        echo "arch_triplet_build_for: \"${CRAFT_ARCH_TRIPLET_BUILD_FOR}\"" >> $target_file
+        echo "arch_build_on:          \"${CRAFT_ARCH_BUILD_ON}\""         >> $target_file
+        echo "arch_triplet_build_on:  \"${CRAFT_ARCH_TRIPLET_BUILD_ON}\"" >> $target_file

@@ -25,7 +25,8 @@ from typing_extensions import Self
 from craft_application import errors, util
 
 
-def _alias_generator(s: str) -> str:
+def alias_generator(s: str) -> str:
+    """Generate an alias YAML key."""
     return s.replace("_", "-")
 
 
@@ -36,7 +37,7 @@ class CraftBaseConfig(pydantic.BaseConfig):  # pylint: disable=too-few-public-me
     extra = pydantic.Extra.forbid
     allow_mutation = True
     allow_population_by_field_name = True
-    alias_generator = _alias_generator
+    alias_generator = alias_generator
 
 
 class CraftBaseModel(pydantic.BaseModel):

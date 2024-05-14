@@ -1,6 +1,6 @@
 # This file is part of craft-application.
 #
-# Copyright 2023 Canonical Ltd.
+# Copyright 2023-2024 Canonical Ltd.
 #
 # This program is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Lesser General Public License version 3, as
@@ -14,14 +14,18 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Unit tests for provider service"""
+
 import pathlib
+import pkgutil
+import uuid
+from typing import NamedTuple
 from unittest import mock
 
 import craft_providers
 import pytest
 from craft_application import errors, models, util
 from craft_application.services import provider
-from craft_application.util import platforms
+from craft_application.util import platforms, snap_config
 from craft_providers import bases, lxd, multipass
 from craft_providers.actions.snap_installer import Snap
 
@@ -30,12 +34,15 @@ from craft_providers.actions.snap_installer import Snap
     ("install_snap", "snaps"),
     [(True, [Snap(name="testcraft", channel=None, classic=True)]), (False, [])],
 )
-def test_install_snap(app_metadata, fake_project, fake_services, install_snap, snaps):
+def test_install_snap(
+    app_metadata, fake_project, fake_build_plan, fake_services, install_snap, snaps
+):
     service = provider.ProviderService(
         app_metadata,
         fake_services,
         project=fake_project,
         work_dir=pathlib.Path(),
+        build_plan=fake_build_plan,
         install_snap=install_snap,
     )
 
@@ -51,9 +58,27 @@ def test_install_snap(app_metadata, fake_project, fake_services, install_snap, s
     ],
 )
 def test_is_managed(managed_value, expected, monkeypatch):
-    monkeypatch.setenv(provider.ProviderService.managed_mode_env_var, managed_value)
+    monkeypatch.setenv(
+        provider.ProviderService.managed_mode_env_var, str(managed_value)
+    )
 
     assert provider.ProviderService.is_managed() == expected
+
+
+def test_forward_environment_variables(monkeypatch, provider_service):
+    var_contents = uuid.uuid4().hex
+    for var in provider.DEFAULT_FORWARD_ENVIRONMENT_VARIABLES:
+        monkeypatch.setenv(var, f"{var}__{var_contents}")
+
+    provider_service.setup()
+
+    assert provider_service.environment == {
+        provider_service.managed_mode_env_var: "1",
+        **{
+            var: f"{var}__{var_contents}"
+            for var in provider.DEFAULT_FORWARD_ENVIRONMENT_VARIABLES
+        },
+    }
 
 
 @pytest.mark.parametrize("lxd_remote", ["local", "something-else"])
@@ -71,53 +96,143 @@ def test_get_lxd_provider(monkeypatch, provider_service, lxd_remote, check):
         )
 
 
-@pytest.mark.parametrize(
-    ("platform", "provider_cls"),
-    [
-        ("linux", lxd.LXDProvider),
-        ("not-linux", multipass.MultipassProvider),
-    ],
-)
-def test_get_default_provider(monkeypatch, provider_service, platform, provider_cls):
-    monkeypatch.setattr("sys.platform", platform)
-    provider_service._provider = None
-    provider_service.is_managed = lambda: False
+class TestGetProvider:
+    """Test cases for `get_provider()`."""
 
-    result = provider_service.get_provider()
+    class ProviderInfo(NamedTuple):
+        name: str
+        cls: type
 
-    assert isinstance(result, provider_cls)
+    @pytest.fixture(
+        params=[
+            ProviderInfo(name="lxd", cls=lxd.LXDProvider),
+            ProviderInfo(name="LXD", cls=lxd.LXDProvider),
+            ProviderInfo(name=" LxD ", cls=lxd.LXDProvider),
+            ProviderInfo(name="multipass", cls=multipass.MultipassProvider),
+            ProviderInfo(name="MULTIPASS", cls=multipass.MultipassProvider),
+            ProviderInfo(name=" MultiPass ", cls=multipass.MultipassProvider),
+        ]
+    )
+    def providers(self, request):
+        """Return a provider name and its expected class.
 
+        Names can contain upper and lower cases and surrounding whitespace.
+        """
+        return request.param
 
-@pytest.mark.parametrize(
-    ("name", "provider_cls"),
-    [("lxd", lxd.LXDProvider), ("multipass", multipass.MultipassProvider)],
-)
-def test_get_provider_by_name_success(provider_service, name, provider_cls):
-    provider_service._provider = None
-    provider_service.is_managed = lambda: False
+    @pytest.fixture(autouse=True)
+    def _mock_env_vars(self, monkeypatch):
+        """Ensure the env var does not exist."""
+        monkeypatch.delenv("CRAFT_BUILD_ENVIRONMENT", raising=False)
 
-    result = provider_service.get_provider(name)
+    @pytest.mark.parametrize("name", ["axolotl"])
+    def test_get_provider_unknown_name(self, provider_service, name):
+        """Raise an error for unknown provider names."""
+        with pytest.raises(RuntimeError) as raised:
+            provider_service.get_provider(name)
 
-    assert isinstance(result, provider_cls)
+        assert str(raised.value) == "Unknown provider: 'axolotl'"
 
+    def test_get_existing_provider(self, provider_service):
+        """Short circuit `get_provider()` when the provider is already set."""
+        provider_service._provider = expected = "This is totally a provider."
 
-@pytest.mark.parametrize("name", ["axolotl"])
-def test_get_provider_invalid_name(provider_service, name):
-    with pytest.raises(RuntimeError):
-        provider_service.get_provider(name)
+        assert provider_service.get_provider() == expected
 
+    def test_get_provider_managed_mode(self, provider_service):
+        """Raise an error when running in managed mode."""
+        provider_service._provider = None
+        provider_service.is_managed = lambda: True
 
-def test_get_provider_managed(monkeypatch, provider_service):
-    monkeypatch.setenv(provider_service.managed_mode_env_var, "1")
+        with pytest.raises(errors.CraftError) as raised:
+            provider_service.get_provider()
 
-    with pytest.raises(errors.CraftError):
+        assert raised.value == errors.CraftError("Cannot nest managed environments.")
+
+    def test_get_provider_from_argument(self, provider_service, providers):
+        """(1) use provider specified in the function argument."""
+        provider_service._provider = None
+        provider_service.is_managed = lambda: False
+
+        result = provider_service.get_provider(name=providers.name)
+
+        assert isinstance(result, providers.cls)
+
+    def test_get_provider_from_env(self, monkeypatch, provider_service, providers):
+        """(2) get the provider from the environment (CRAFT_BUILD_ENVIRONMENT)."""
+        provider_service._provider = None
+        provider_service.is_managed = lambda: False
+        monkeypatch.setenv("CRAFT_BUILD_ENVIRONMENT", providers.name)
+
+        result = provider_service.get_provider()
+
+        assert isinstance(result, providers.cls)
+
+    def test_get_provider_from_snap(self, mocker, provider_service, providers):
+        """(3) use provider specified with snap configuration."""
+        provider_service._provider = None
+        provider_service.is_managed = lambda: False
+        mocker.patch(
+            "craft_application.services.provider.snap_config.get_snap_config",
+            return_value=snap_config.SnapConfig(provider=providers.name),
+        )
+
+        result = provider_service.get_provider()
+
+        assert isinstance(result, providers.cls)
+
+    def test_get_provider_no_snap_config(self, mocker, provider_service, emitter):
+        """Do not error when snap config does not exist.
+
+        Instead, proceed to the next step."""
+        provider_service._provider = None
+        provider_service.is_managed = lambda: False
+        mocker.patch(
+            "craft_application.services.provider.snap_config.get_snap_config",
+            return_value=None,
+        )
+
         provider_service.get_provider()
 
+        emitter.assert_debug("No snap config found.")
 
-def test_get_existing_provider(provider_service):
-    provider_service._provider = expected = "This is totally a provider."
+    def test_get_provider_no_provider_in_snap_config(
+        self, mocker, provider_service, emitter
+    ):
+        """Do not error when the snap config does not contain a provider.
 
-    assert provider_service.get_provider() == expected
+        Instead, proceed to the next step."""
+        provider_service._provider = None
+        provider_service.is_managed = lambda: False
+        mocker.patch(
+            "craft_application.services.provider.snap_config.get_snap_config",
+            return_value={},
+        )
+
+        provider_service.get_provider()
+
+        emitter.assert_debug("Provider not set in snap config.")
+
+    @pytest.mark.parametrize(
+        ("platform", "provider_cls"),
+        [
+            ("linux", lxd.LXDProvider),
+            ("darwin", multipass.MultipassProvider),
+            ("win32", multipass.MultipassProvider),
+            ("unknown", multipass.MultipassProvider),
+        ],
+    )
+    def test_get_provider_from_platform(
+        self, mocker, provider_service, platform, provider_cls
+    ):
+        """(4) default to platform default (LXD on Linux, otherwise Multipass)."""
+        provider_service._provider = None
+        provider_service.is_managed = lambda: False
+        mocker.patch("sys.platform", platform)
+
+        result = provider_service.get_provider()
+
+        assert isinstance(result, provider_cls)
 
 
 @pytest.mark.parametrize("environment", [{}, {"a": "b"}])
@@ -126,15 +241,12 @@ def test_get_existing_provider(provider_service):
     [
         (("ubuntu", "devel"), bases.BuilddBase, bases.BuilddBaseAlias.DEVEL),
         (("ubuntu", "22.04"), bases.BuilddBase, bases.BuilddBaseAlias.JAMMY),
-        (("centos", "7"), bases.centos.CentOSBase, bases.centos.CentOSBaseAlias.SEVEN),
-        (
-            ("almalinux", "9"),
-            bases.almalinux.AlmaLinuxBase,
-            bases.almalinux.AlmaLinuxBaseAlias.NINE,
-        ),
     ],
 )
-def test_get_base(check, provider_service, base_name, base_class, alias, environment):
+def test_get_base_buildd(
+    check, provider_service, base_name, base_class, alias, environment
+):
+    """Check that a BuilddBase is properly retrieved for Ubuntu-like bases."""
     provider_service.environment = environment
 
     base = provider_service.get_base(base_name, instance_name="test")
@@ -143,6 +255,11 @@ def test_get_base(check, provider_service, base_name, base_class, alias, environ
     check.equal(base.alias, alias)
     check.equal(base.compatibility_tag, f"testcraft-{base_class.compatibility_tag}")
     check.equal(base._environment, environment)
+
+    # Verify that the two packages we care about in order to support Craft Archives
+    # on Buildd bases are listed to be provisioned.
+    assert "gpg" in base._packages
+    assert "dirmngr" in base._packages
 
 
 def test_get_base_packages(provider_service):
@@ -161,8 +278,6 @@ def test_get_base_packages(provider_service):
     [
         ("ubuntu", "devel"),
         ("ubuntu", "22.04"),
-        ("centos", "7"),
-        ("almalinux", "9"),
     ],
 )
 def test_instance(
@@ -175,11 +290,13 @@ def test_instance(
     provider_service,
     base_name,
     allow_unstable,
-    mocker,
 ):
     mock_provider = mock.MagicMock(spec=craft_providers.Provider)
-    monkeypatch.setattr(provider_service, "get_provider", lambda: mock_provider)
-    spy_pause = mocker.spy(provider.emit, "pause")
+    monkeypatch.setattr(
+        provider_service,
+        "get_provider",
+        lambda name: mock_provider,  # noqa: ARG005 (unused argument)
+    )
     arch = util.get_host_architecture()
     build_info = models.BuildInfo("foo", arch, arch, base_name)
 
@@ -200,10 +317,63 @@ def test_instance(
         instance.mount.assert_called_once_with(
             host_source=tmp_path, target=app_metadata.managed_instance_project_path
         )
+        instance.push_file_io.assert_called_once_with(
+            destination=pathlib.Path("/root/.bashrc"),
+            content=mock.ANY,
+            file_mode="644",
+        )
     with check:
         emitter.assert_progress("Launching managed .+ instance...", regex=True)
-    with check:
-        assert spy_pause.call_count == 1
+
+
+def test_load_bashrc(emitter):
+    """Test that we are able to load the bashrc file from the craft-application package."""
+    bashrc = pkgutil.get_data("craft_application", "misc/instance_bashrc")
+    assert bashrc is not None
+    assert bashrc.decode("UTF-8").startswith("#!/bin/bash")
+    with pytest.raises(AssertionError):
+        emitter.assert_debug(
+            "Could not find the bashrc file in the craft-application package"
+        )
+
+
+@pytest.mark.parametrize("allow_unstable", [True, False])
+@pytest.mark.parametrize(
+    "base_name",
+    [
+        ("ubuntu", "devel"),
+        ("ubuntu", "22.04"),
+        ("centos", "7"),
+        ("almalinux", "9"),
+    ],
+)
+def test_load_bashrc_missing(
+    monkeypatch,
+    emitter,
+    tmp_path,
+    provider_service,
+    base_name,
+    allow_unstable,
+    mocker,
+):
+    """Test that we handle the case where the bashrc file is missing."""
+    mock_provider = mock.MagicMock(spec=craft_providers.Provider)
+    monkeypatch.setattr(
+        provider_service,
+        "get_provider",
+        lambda name: mock_provider,  # noqa: ARG005 (unused argument)
+    )
+    arch = util.get_host_architecture()
+    build_info = models.BuildInfo("foo", arch, arch, base_name)
+
+    mocker.patch.object(pkgutil, "get_data", return_value=None)
+    with provider_service.instance(
+        build_info, work_dir=tmp_path, allow_unstable=allow_unstable
+    ) as instance:
+        instance._setup_instance_bashrc(instance)
+    emitter.assert_debug(
+        "Could not find the bashrc file in the craft-application package"
+    )
 
 
 @pytest.fixture()
@@ -216,7 +386,11 @@ def setup_fetch_logs_provider(monkeypatch, provider_service, tmp_path):
           should exist (True) or not (False).
         """
         mock_provider = mock.MagicMock(spec=craft_providers.Provider)
-        monkeypatch.setattr(provider_service, "get_provider", lambda: mock_provider)
+        monkeypatch.setattr(
+            provider_service,
+            "get_provider",
+            lambda name: mock_provider,  # noqa: ARG005 (unused argument)
+        )
 
         # This ugly call is to mock the "instance" returned by the "launched_environment"
         # context manager.
@@ -377,16 +551,14 @@ _test_base = bases.BaseName("ubuntu", "22.04")
     ],
 )
 def test_clean_instances(
-    provider_service, fake_project, tmp_path, mocker, build_infos, expected_on_fors
+    provider_service, tmp_path, mocker, build_infos, expected_on_fors
 ):
     mocker.patch.object(platforms, "get_host_architecture", return_value="current")
-    mocker.patch.object(
-        fake_project.__class__, "get_build_plan", return_value=build_infos
-    )
 
     current_provider = provider_service.get_provider()
     mock_clean = mocker.patch.object(current_provider, "clean_project_environments")
 
+    provider_service._build_plan = build_infos
     provider_service.clean_instances()
 
     work_dir_inode = tmp_path.stat().st_ino
