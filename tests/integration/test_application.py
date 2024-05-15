@@ -25,8 +25,6 @@ from craft_application import models, secrets, util
 from craft_application.util import yaml
 from typing_extensions import override
 
-from tests.conftest import MyBuildPlanner
-
 
 class TestableApplication(craft_application.Application):
     """An application modified for integration tests.
@@ -290,7 +288,7 @@ def test_global_environment(
 
     # a build plan that builds for s390x (a cross-compiling scenario unless on s390x)
     mocker.patch.object(
-        MyBuildPlanner,
+        models.BuildPlanner,
         "get_build_plan",
         return_value=[
             models.BuildInfo(
