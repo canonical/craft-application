@@ -18,11 +18,7 @@
 from craft_application.util.callbacks import get_unique_callbacks
 from craft_application.util.logging import setup_loggers
 from craft_application.util.paths import get_filename_from_url_path, get_managed_logpath
-from craft_application.util.platforms import (
-    get_host_architecture,
-    convert_architecture_deb_to_platform,
-    get_host_base,
-)
+from craft_application.util.platforms import get_host_architecture, get_host_base
 from craft_application.util.snap_config import (
     SnapConfig,
     get_snap_config,
@@ -37,7 +33,6 @@ __all__ = [
     "get_filename_from_url_path",
     "get_managed_logpath",
     "get_host_architecture",
-    "convert_architecture_deb_to_platform",
     "get_snap_config",
     "is_running_from_snap",
     "SnapConfig",

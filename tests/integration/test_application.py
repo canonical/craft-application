@@ -14,6 +14,7 @@
 """Integration tests for the Application."""
 import argparse
 import pathlib
+import platform
 import shutil
 import textwrap
 
@@ -323,9 +324,7 @@ def test_global_environment(
     assert variables["arch_triplet_build_for"] == "s390x-linux-gnu"
     assert variables["arch_build_on"] == "amd64"
     # craft-application doesn't have utility for getting arch triplets
-    assert variables["arch_triplet_build_on"].startswith(
-        util.convert_architecture_deb_to_platform(util.get_host_architecture())
-    )
+    assert variables["arch_triplet_build_on"].startswith(platform.machine())
 
 
 @pytest.fixture()

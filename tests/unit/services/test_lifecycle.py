@@ -280,7 +280,7 @@ def test_init_parts_error(
         build_plan=fake_build_plan,
     )
 
-    with pytest.raises(type(expected)) as exc_info:
+    with pytest.raises(type(expected)) as exc_info:  # pyright: ignore[reportArgumentType]
         service.setup()
 
     assert exc_info.value.args == expected.args

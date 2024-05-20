@@ -629,7 +629,7 @@ class Application:
         info = craft_parts.ProjectInfo(
             application_name=self.app.name,  # not used in environment expansion
             cache_dir=pathlib.Path(),  # not used in environment expansion
-            arch=util.convert_architecture_deb_to_platform(build_for),
+            arch=build_for,
             project_name=yaml_data.get("name", ""),
             project_dirs=project_dirs,
             project_vars=environment_vars,

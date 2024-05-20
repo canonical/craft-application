@@ -30,15 +30,6 @@ def get_host_architecture() -> str:
     return _ARCH_TRANSLATIONS_PLATFORM_TO_DEB.get(machine, machine)
 
 
-def convert_architecture_deb_to_platform(arch: str) -> str:
-    """Convert an architecture from deb/snap syntax to platform syntax.
-
-    :param architecture: architecture string in debian/snap syntax
-    :return: architecture in platform syntax
-    """
-    return _ARCH_TRANSLATIONS_DEB_TO_PLATFORM.get(arch, arch)
-
-
 @functools.lru_cache(maxsize=1)
 def get_host_base() -> bases.BaseName:
     """Get the craft-providers base for the running host."""
@@ -59,18 +50,6 @@ _ARCH_TRANSLATIONS_PLATFORM_TO_DEB = {
     "ppc64le": "ppc64el",
     "x86_64": "amd64",
     "AMD64": "amd64",  # Windows support
-    "s390x": "s390x",
-    "riscv64": "riscv64",
-}
-
-# architecture translations from the deb/snap syntax to the platform syntax
-_ARCH_TRANSLATIONS_DEB_TO_PLATFORM = {
-    "arm64": "aarch64",
-    "armhf": "armv7l",
-    "i386": "i686",
-    "powerpc": "ppc",
-    "ppc64el": "ppc64le",
-    "amd64": "x86_64",
     "s390x": "s390x",
     "riscv64": "riscv64",
 }
