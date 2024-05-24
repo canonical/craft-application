@@ -26,6 +26,8 @@ from craft_application.errors import CraftValidationError
 from craft_application.models import (
     DEVEL_BASE_INFOS,
     DEVEL_BASE_WARNING,
+    BuildPlanner,
+    Platform,
     Project,
     constraints,
 )
@@ -50,6 +52,12 @@ BASIC_PROJECT_DICT = {
     "version": "1.0",
     "parts": PARTS_DICT,
 }
+
+
+@pytest.fixture()
+def basic_project_dict():
+    """Provides a modifiable copy of ``BASIC_PROJECT_DICT``"""
+    return copy.deepcopy(BASIC_PROJECT_DICT)
 
 
 @pytest.fixture()
@@ -385,4 +393,46 @@ def test_unmarshal_invalid_repositories(full_project_dict):
         "- field 'type' required in 'package-repositories[0]' configuration\n"
         "- field 'url' required in 'package-repositories[0]' configuration\n"
         "- field 'key-id' required in 'package-repositories[0]' configuration"
+    )
+
+
+@pytest.mark.parametrize("model", [Project, BuildPlanner])
+def test_platform_default(model, basic_project_dict):
+    project_path = pathlib.Path("myproject.yaml")
+
+    project = model.from_yaml_data(basic_project_dict, project_path)
+
+    assert project.platforms == {
+        util.get_host_architecture(): Platform(
+            build_on=[util.get_host_architecture()],
+            build_for=[util.get_host_architecture()],
+        )
+    }
+
+
+@pytest.mark.parametrize("model", [Project, BuildPlanner])
+def test_platform_invalid_arch(model, basic_project_dict):
+    basic_project_dict["platforms"] = {"unknown": None}
+    project_path = pathlib.Path("myproject.yaml")
+
+    with pytest.raises(CraftValidationError) as error:
+        model.from_yaml_data(basic_project_dict, project_path)
+
+    assert error.value.args[0] == (
+        "Invalid platform: 'unknown' must either be a valid debian architecture "
+        "or define architectures with 'build-on' and 'build-for'."
+    )
+
+
+@pytest.mark.parametrize("model", [Project, BuildPlanner])
+@pytest.mark.parametrize("field_name", ["build-on", "build-for"])
+def test_platform_invalid_build_arch(model, field_name, basic_project_dict):
+    basic_project_dict["platforms"] = {"amd64": {field_name: ["unknown"]}}
+    project_path = pathlib.Path("myproject.yaml")
+
+    with pytest.raises(CraftValidationError) as error:
+        model.from_yaml_data(basic_project_dict, project_path)
+
+    assert error.value.args[0] == (
+        "Invalid architecture: 'unknown' must be a valid debian architecture."
     )

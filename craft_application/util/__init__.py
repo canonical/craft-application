@@ -22,6 +22,7 @@ from craft_application.util.platforms import (
     get_host_architecture,
     convert_architecture_deb_to_platform,
     get_host_base,
+    is_valid_architecture,
 )
 from craft_application.util.snap_config import (
     SnapConfig,
@@ -40,6 +41,7 @@ __all__ = [
     "convert_architecture_deb_to_platform",
     "get_snap_config",
     "is_running_from_snap",
+    "is_valid_architecture",
     "SnapConfig",
     "humanize_list",
     "strtobool",

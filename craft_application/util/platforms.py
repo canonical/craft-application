@@ -39,6 +39,11 @@ def convert_architecture_deb_to_platform(arch: str) -> str:
     return _ARCH_TRANSLATIONS_DEB_TO_PLATFORM.get(arch, arch)
 
 
+def is_valid_architecture(arch: str) -> bool:
+    """Check if a debian-syntax architecture is valid."""
+    return arch in _ARCH_TRANSLATIONS_DEB_TO_PLATFORM
+
+
 @functools.lru_cache(maxsize=1)
 def get_host_base() -> bases.BaseName:
     """Get the craft-providers base for the running host."""
