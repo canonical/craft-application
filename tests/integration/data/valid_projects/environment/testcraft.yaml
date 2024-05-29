@@ -2,6 +2,15 @@ name: environment-project
 summary: A project with environment variables
 version: 1.0
 base: "ubuntu@22.04"
+platforms:
+  amd64:
+  arm64:
+  armhf:
+  i386:
+  powerpc:
+  ppc64el:
+  riscv64:
+  s390x:
 
 parts:
   my-part:
