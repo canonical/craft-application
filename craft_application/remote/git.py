@@ -221,7 +221,7 @@ class GitRepo:
                 f"Could not initialize a git repository in {str(self.path)!r}."
             ) from error
 
-    def push_url(  # pylint: disable=too-many-branches
+    def push_url(  # noqa: PLR0912 (too many branches)
         self,
         remote_url: str,
         remote_branch: str,
