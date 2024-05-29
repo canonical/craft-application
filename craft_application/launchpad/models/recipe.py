@@ -34,17 +34,15 @@ from collections.abc import Collection, Iterable
 from typing import TYPE_CHECKING
 
 import lazr.restfulclient.errors  # type: ignore[import-untyped]
-from craft_cli import emit
 from typing_extensions import Any, Self, TypedDict, override
 
+from ...util import retry
 from .. import errors, util
 from . import build
 from .base import LaunchpadObject, Pocket
 
 if TYPE_CHECKING:
     from .. import Launchpad
-
-_ATTEMPT_COUNT = 4
 
 
 class RecipeType(enum.Enum):
@@ -247,28 +245,16 @@ class SnapRecipe(_StoreRecipe):
                 "An auto-build archive may only be provided if auto-build is enabled.",
             )
 
-        snap_entry = None
-
-        for attempt in range(_ATTEMPT_COUNT):
-            emit.debug(
-                f"Trying to create snap recipe {name!r} (attempt {attempt + 1}/{_ATTEMPT_COUNT})"
-            )
-            try:
-                snap_entry = lp.lp.snaps.new(
-                    name=name,
-                    owner=util.get_person_link(owner),
-                    store_upload=bool(store_name),
-                    auto_build=auto_build,
-                    **kwargs,
-                )
-            except lazr.restfulclient.errors.BadRequest as err:
-                emit.debug(str(err))
-                if attempt >= _ATTEMPT_COUNT - 1:
-                    raise
-                time.sleep(3)
-                continue
-            else:
-                break
+        snap_entry = retry(
+            f"create snap recipe {name!r}",
+            lazr.restfulclient.errors.BadRequest,
+            lp.lp.snaps.new,
+            name=name,
+            owner=util.get_person_link(owner),
+            store_upload=bool(store_name),
+            auto_build=auto_build,
+            **kwargs,
+        )
 
         if not snap_entry:
             raise ValueError("Failed to create snap recipe")
@@ -391,28 +377,16 @@ class CharmRecipe(_StoreRecipe):
         )
         cls._fill_repo_info(kwargs, git_ref=git_ref)
 
-        charm_entry = None
-
-        for attempt in range(_ATTEMPT_COUNT):
-            emit.debug(
-                f"Trying to create charm recipe {name!r} (attempt {attempt + 1}/{_ATTEMPT_COUNT})"
-            )
-            try:
-                charm_entry = lp.lp.charm_recipes.new(
-                    name=name,
-                    owner=util.get_person_link(owner),
-                    project=f"/{project}",
-                    auto_build=auto_build,
-                    **kwargs,
-                )
-            except lazr.restfulclient.errors.BadRequest as err:
-                emit.debug(str(err))
-                if attempt >= _ATTEMPT_COUNT - 1:
-                    raise
-                time.sleep(3)
-                continue
-            else:
-                break
+        charm_entry = retry(
+            f"create charm recipe {name!r}",
+            lazr.restfulclient.errors.BadRequest,
+            lp.lp.charm_recipes.new,
+            name=name,
+            owner=util.get_person_link(owner),
+            project=f"/{project}",
+            auto_build=auto_build,
+            **kwargs,
+        )
 
         if not charm_entry:
             raise ValueError("Failed to create charm recipe")
