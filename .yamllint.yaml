@@ -8,5 +8,7 @@ rules:
   float-values: enable
   line-length: disable
   octal-values: enable
+  indentation:
+    indent-sequences: consistent
   truthy:
     check-keys: false

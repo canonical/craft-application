@@ -27,7 +27,6 @@ from craft_application.models import (
     DEVEL_BASE_INFOS,
     DEVEL_BASE_WARNING,
     BuildPlanner,
-    Platform,
     Project,
     constraints,
 )
@@ -43,6 +42,7 @@ def basic_project():
     return Project(  # pyright: ignore[reportCallIssue]
         name="project-name",  # pyright: ignore[reportGeneralTypeIssues]
         version="1.0",  # pyright: ignore[reportGeneralTypeIssues]
+        platforms={"arm64": None},
         parts=PARTS_DICT,
     )
 
@@ -50,6 +50,12 @@ def basic_project():
 BASIC_PROJECT_DICT = {
     "name": "project-name",
     "version": "1.0",
+    "platforms": {
+        "arm64": {
+            "build-on": ["arm64"],
+            "build-for": ["arm64"],
+        }
+    },
     "parts": PARTS_DICT,
 }
 
@@ -73,6 +79,7 @@ def full_project():
         summary="A fully-defined craft-application project.",  # pyright: ignore[reportGeneralTypeIssues]
         description="A fully-defined craft-application project.\nWith more than one line.\n",
         license="LGPLv3",
+        platforms={"arm64": None},
         parts=PARTS_DICT,
     )
 
@@ -94,6 +101,12 @@ FULL_PROJECT_DICT = {
     "summary": "A fully-defined craft-application project.",
     "title": "A fully-defined project",
     "version": "1.0.0.post64+git12345678",
+    "platforms": {
+        "arm64": {
+            "build-on": ["arm64"],
+            "build-for": ["arm64"],
+        }
+    },
 }
 
 
@@ -230,6 +243,7 @@ def test_effective_base_is_build_base():
         name="project-name",  # pyright: ignore[reportGeneralTypeIssues]
         version="1.0",  # pyright: ignore[reportGeneralTypeIssues]
         parts={},
+        platforms={"arm64": None},
         base="ubuntu@22.04",
         build_base="ubuntu@24.04",
     )
@@ -242,6 +256,7 @@ def test_effective_base_unknown():
         name="project-name",  # pyright: ignore[reportGeneralTypeIssues]
         version="1.0",  # pyright: ignore[reportGeneralTypeIssues]
         parts={},
+        platforms={"arm64": None},
         base=None,
         build_base=None,
     )
@@ -258,6 +273,7 @@ def test_devel_base_devel_build_base(emitter):
         name="project-name",  # pyright: ignore[reportGeneralTypeIssues]
         version="1.0",  # pyright: ignore[reportGeneralTypeIssues]
         parts={},
+        platforms={"arm64": None},
         base=f"ubuntu@{DEVEL_BASE_INFOS[0].current_devel_base.value}",
         build_base=f"ubuntu@{DEVEL_BASE_INFOS[0].current_devel_base.value}",
     )
@@ -271,6 +287,7 @@ def test_devel_base_no_base():
         name="project-name",  # pyright: ignore[reportGeneralTypeIssues]
         version="1.0",  # pyright: ignore[reportGeneralTypeIssues]
         parts={},
+        platforms={"arm64": None},
     )
 
 
@@ -285,6 +302,7 @@ def test_devel_base_no_base_alias(mocker):
         name="project-name",  # pyright: ignore[reportGeneralTypeIssues]
         version="1.0",  # pyright: ignore[reportGeneralTypeIssues]
         parts={},
+        platforms={"arm64": None},
     )
 
 
@@ -295,6 +313,7 @@ def test_devel_base_no_build_base():
         version="1.0",  # pyright: ignore[reportGeneralTypeIssues]
         parts={},
         base=f"ubuntu@{DEVEL_BASE_INFOS[0].current_devel_base.value}",
+        platforms={"arm64": None},
     )
 
 
@@ -305,6 +324,7 @@ def test_devel_base_error():
             name="project-name",  # pyright: ignore[reportGeneralTypeIssues]
             version="1.0",  # pyright: ignore[reportGeneralTypeIssues]
             parts={},
+            platforms={"arm64": None},
             base=f"ubuntu@{DEVEL_BASE_INFOS[0].current_devel_base.value}",
             build_base=f"ubuntu@{craft_providers.bases.ubuntu.BuilddBaseAlias.JAMMY.value}",
         )
@@ -394,20 +414,6 @@ def test_unmarshal_invalid_repositories(full_project_dict):
         "- field 'url' required in 'package-repositories[0]' configuration\n"
         "- field 'key-id' required in 'package-repositories[0]' configuration"
     )
-
-
-@pytest.mark.parametrize("model", [Project, BuildPlanner])
-def test_platform_default(model, basic_project_dict):
-    project_path = pathlib.Path("myproject.yaml")
-
-    project = model.from_yaml_data(basic_project_dict, project_path)
-
-    assert project.platforms == {
-        util.get_host_architecture(): Platform(
-            build_on=[util.get_host_architecture()],
-            build_for=[util.get_host_architecture()],
-        )
-    }
 
 
 @pytest.mark.parametrize("model", [Project, BuildPlanner])

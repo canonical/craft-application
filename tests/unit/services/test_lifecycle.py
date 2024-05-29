@@ -686,6 +686,7 @@ def test_lifecycle_project_variables(
             "base": "ubuntu@24.04",
             "version": "1.0.0.post64+git12345678",
             "parts": {"my-part": {"plugin": "nil"}},
+            "platforms": {"arm64": None},
             "adopt-info": "my-part",
         }
     )

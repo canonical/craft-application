@@ -57,6 +57,8 @@ BASIC_PROJECT_YAML = """
 name: myproject
 version: 1.0
 base: ubuntu@24.04
+platforms:
+  arm64:
 parts:
   mypart:
     plugin: nil
@@ -66,6 +68,8 @@ FULL_PROJECT_YAML = """
 name: myproject
 version: 1.0
 base: ubuntu@24.04
+platforms:
+  arm64:
 parts:
   mypart:
     plugin: nil
@@ -136,6 +140,13 @@ FULL_GRAMMAR_PROJECT_YAML = """
 name: myproject
 version: 1.0
 base: ubuntu@24.04
+platforms:
+  riscv64:
+    build-on: [amd64]
+    build-for: [riscv64]
+  s390x:
+    build-on: [amd64]
+    build-for: [s390x]
 parts:
   mypart:
     plugin:
@@ -1156,6 +1167,8 @@ def environment_project(monkeypatch, tmp_path):
         name: myproject
         version: 1.2.3
         base: ubuntu@24.04
+        platforms:
+          arm64:
         parts:
           mypart:
             plugin: nil
@@ -1189,6 +1202,8 @@ def build_secrets_project(monkeypatch, tmp_path):
         name: myproject
         version: 1.2.3
         base: ubuntu@24.04
+        platforms:
+          arm64:
         parts:
           mypart:
             plugin: nil
@@ -1234,7 +1249,7 @@ def test_get_project_current_dir(app):
 
 @pytest.mark.usefixtures("fake_project_file")
 def test_get_project_all_platform(app):
-    app.get_project(platform=get_host_architecture())
+    app.get_project(platform="arm64")
 
 
 @pytest.mark.usefixtures("fake_project_file")
@@ -1358,6 +1373,13 @@ def grammar_project_mini(tmp_path):
     name: myproject
     version: 1.0
     base: ubuntu@24.04
+    platforms:
+      riscv64:
+        build-on: [amd64]
+        build-for: [riscv64]
+      s390x:
+        build-on: [amd64]
+        build-for: [s390x]
     parts:
       mypart:
         plugin: meson
@@ -1603,6 +1625,8 @@ def environment_partitions_project(monkeypatch, tmp_path):
         name: myproject
         version: 1.2.3
         base: ubuntu@24.04
+        platforms:
+          arm64:
         parts:
           mypart:
             plugin: nil

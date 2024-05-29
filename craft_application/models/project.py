@@ -42,7 +42,7 @@ from craft_application.models.constraints import (
     UniqueStrList,
     VersionStr,
 )
-from craft_application.util import get_host_architecture, is_valid_architecture
+from craft_application.util import is_valid_architecture
 
 
 @dataclasses.dataclass
@@ -132,16 +132,6 @@ class Platform(CraftBaseModel):
         return values
 
 
-def _get_default_platform() -> dict[str, Platform]:
-    """Return a platform the builds on and build for the host architecture."""
-    return {
-        get_host_architecture(): Platform(
-            build_on=[get_host_architecture()],
-            build_for=[get_host_architecture()],
-        )
-    }
-
-
 def _populate_platforms(platforms: dict[str, Platform]) -> dict[str, Platform]:
     """Populate empty platform entries.
 
@@ -162,7 +152,7 @@ def _populate_platforms(platforms: dict[str, Platform]) -> dict[str, Platform]:
 class BuildPlanner(CraftBaseModel, metaclass=abc.ABCMeta):
     """The BuildPlanner obtains a build plan for the project."""
 
-    platforms: dict[str, Platform] = _get_default_platform()
+    platforms: dict[str, Platform]
     base: str | None
     build_base: str | None
 
@@ -217,7 +207,7 @@ class Project(CraftBaseModel):
 
     base: Any | None = None
     build_base: Any | None = None
-    platforms: dict[str, Platform] = _get_default_platform()
+    platforms: dict[str, Platform]
 
     contact: str | UniqueStrList | None
     issues: str | UniqueStrList | None
