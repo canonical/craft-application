@@ -419,8 +419,7 @@ def test_platform_invalid_arch(model, basic_project_dict):
         model.from_yaml_data(basic_project_dict, project_path)
 
     assert error.value.args[0] == (
-        "Invalid platform: 'unknown' must either be a valid debian architecture "
-        "or define architectures with 'build-on' and 'build-for'."
+        "Invalid architecture: 'unknown' must be a valid debian architecture."
     )
 
 

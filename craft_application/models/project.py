@@ -133,6 +133,7 @@ class Platform(CraftBaseModel):
 
 
 def _get_default_platform() -> dict[str, Platform]:
+    """Return a platform the builds on and build for the host architecture."""
     return {
         get_host_architecture(): Platform(
             build_on=[get_host_architecture()],
@@ -141,27 +142,18 @@ def _get_default_platform() -> dict[str, Platform]:
     }
 
 
-def _validate_platforms(platforms: dict[str, Platform]) -> dict[str, Platform]:
-    """Validate that platforms are valid and populate platform entries.
+def _populate_platforms(platforms: dict[str, Platform]) -> dict[str, Platform]:
+    """Populate empty platform entries.
 
-    :param platforms: The platforms to validate.
-
-    :raises CraftValidationError: If a platform does not have a `build-on` and
-    `build-for` and the platform entry's name is not a valid debian architecture.
+    :param platforms: The platform data.
 
     :returns: The dict of platforms with populated entries.
     """
-    for platform_entry, platform in platforms.items():
+    for platform_label, platform in platforms.items():
         if not platform:
-            if not is_valid_architecture(platform_entry):
-                raise errors.CraftValidationError(
-                    f"Invalid platform: {platform_entry!r} must either be a "
-                    "valid debian architecture or define architectures with "
-                    "'build-on' and 'build-for'."
-                )
-            # populate "empty" platforms entries
-            platforms[platform_entry] = Platform(
-                build_on=[platform_entry], build_for=[platform_entry]
+            # populate "empty" platforms entries from the platform's name
+            platforms[platform_label] = Platform(
+                build_on=[platform_label], build_for=[platform_label]
             )
 
     return platforms
@@ -179,9 +171,9 @@ class BuildPlanner(CraftBaseModel, metaclass=abc.ABCMeta):
     @pydantic.validator(  # pyright: ignore[reportUnknownMemberType,reportUntypedFunctionDecorator]
         "platforms", pre=True
     )
-    def _validate_platforms(cls, platforms: dict[str, Platform]) -> dict[str, Platform]:
-        """Validate platform entries."""
-        return _validate_platforms(platforms)
+    def _populate_platforms(cls, platforms: dict[str, Platform]) -> dict[str, Platform]:
+        """Populate empty platform entries."""
+        return _populate_platforms(platforms)
 
     @property
     def effective_base(self) -> bases.BaseName:
@@ -199,12 +191,12 @@ class BuildPlanner(CraftBaseModel, metaclass=abc.ABCMeta):
         """Obtain the list of architectures and bases from the Project."""
         build_infos: list[BuildInfo] = []
 
-        for platform_entry, platform in self.platforms.items():
-            for build_for in platform.build_for or [platform_entry]:
-                for build_on in platform.build_on or [platform_entry]:
+        for platform_label, platform in self.platforms.items():
+            for build_for in platform.build_for or [platform_label]:
+                for build_on in platform.build_on or [platform_label]:
                     build_infos.append(
                         BuildInfo(
-                            platform=platform_entry,
+                            platform=platform_label,
                             build_on=build_on,
                             build_for=build_for,
                             base=self.effective_base,
@@ -249,9 +241,9 @@ class Project(CraftBaseModel):
     @pydantic.validator(  # pyright: ignore[reportUnknownMemberType,reportUntypedFunctionDecorator]
         "platforms", pre=True
     )
-    def _validate_platforms(cls, platforms: dict[str, Platform]) -> dict[str, Platform]:
-        """Validate platform entries."""
-        return _validate_platforms(platforms)
+    def _populate_platforms(cls, platforms: dict[str, Platform]) -> dict[str, Platform]:
+        """Populate empty platform entries."""
+        return _populate_platforms(platforms)
 
     @property
     def effective_base(self) -> Any:  # noqa: ANN401 app specific classes can improve
