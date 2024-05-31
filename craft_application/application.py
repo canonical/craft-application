@@ -559,7 +559,7 @@ class Application:
                 cause=err,
             )
             return_code = 1
-        except Exception as err:  # pylint: disable=broad-except
+        except Exception as err:
             self._emit_error(
                 craft_cli.CraftError(f"{self.app.name} internal error: {err!r}"),
                 cause=err,
