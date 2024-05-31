@@ -413,7 +413,7 @@ class Application:
         except KeyboardInterrupt as err:
             self._emit_error(craft_cli.CraftError("Interrupted."), cause=err)
             sys.exit(128 + signal.SIGINT)
-        except Exception as err:  # noqa: BLE001
+        except Exception as err:
             self._emit_error(
                 craft_cli.CraftError(
                     f"Internal error while loading {self.app.name}: {err!r}"
@@ -548,7 +548,7 @@ class Application:
                 cause=err,
             )
             return_code = 1
-        except Exception as err:  # noqa: BLE001 pylint: disable=broad-except
+        except Exception as err:
             self._emit_error(
                 craft_cli.CraftError(f"{self.app.name} internal error: {err!r}"),
                 cause=err,
