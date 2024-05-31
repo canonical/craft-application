@@ -20,7 +20,10 @@ from typing import Any, Protocol, TypeVar
 
 from craft_cli import emit
 
-_ATTEMPT_COUNT = 4
+# The number of seconds to sleep after each consecutive retry failure.
+# Added together, each call to retry() will sleep() at most just over a minute
+# (62 seconds).
+_ATTEMPT_SLEEPS = [2, 4, 8, 16, 32]
 
 
 R_co = TypeVar("R_co", covariant=True)  # the variable return type
@@ -59,17 +62,19 @@ def retry(
     :param call_kwargs: the kwargs to be passed to when calling
       ``call_to_retry``.
     """
-    for attempt in range(_ATTEMPT_COUNT):
-        emit.debug(
-            f"Trying to {action_message} (attempt {attempt + 1}/{_ATTEMPT_COUNT})"
-        )
+    total_attempts = len(_ATTEMPT_SLEEPS) + 1
+
+    for attempt, sleep_time in enumerate(_ATTEMPT_SLEEPS, start=1):
+        emit.debug(f"Trying to {action_message} (attempt {attempt}/{total_attempts})")
         try:
             return call_to_retry(*call_args, **call_kwargs)
         except retry_exception as err:
             emit.debug(str(err))
-            if attempt >= _ATTEMPT_COUNT - 1:
-                raise
-            time.sleep(3)
+            time.sleep(sleep_time)
             continue
 
-    raise AssertionError("This code is unreachable!")
+    # One final, sleep-less call to let the exception propagate.
+    emit.debug(
+        f"Trying to {action_message} (attempt {total_attempts}/{total_attempts})"
+    )
+    return call_to_retry(*call_args, **call_kwargs)
