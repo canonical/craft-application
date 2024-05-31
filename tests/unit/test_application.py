@@ -826,6 +826,36 @@ def test_run_success_managed_with_platform(monkeypatch, app, fake_project, mocke
     app.run_managed.assert_called_once_with("foo", None)
 
 
+@pytest.mark.parametrize(
+    ("params", "expected_call"),
+    [
+        ([], mock.call(None, None)),
+        (["--platform=s390x"], mock.call("s390x", None)),
+        (
+            ["--platform", get_host_architecture()],
+            mock.call(get_host_architecture(), None),
+        ),
+        (
+            ["--build-for", get_host_architecture()],
+            mock.call(None, get_host_architecture()),
+        ),
+        (["--build-for", "s390x"], mock.call(None, "s390x")),
+        (["--platform", "s390x,riscv64"], mock.call("s390x", None)),
+        (["--build-for", "s390x,riscv64"], mock.call(None, "s390x")),
+    ],
+)
+def test_run_passes_platforms(
+    monkeypatch, app, fake_project, mocker, params, expected_call
+):
+    mocker.patch.object(app, "get_project", return_value=fake_project)
+    app.run_managed = mock.Mock(return_value=False)
+    monkeypatch.setattr(sys, "argv", ["testcraft", "pull", *params])
+
+    pytest_check.equal(app.run(), 0)
+
+    assert app.run_managed.mock_calls == [expected_call]
+
+
 @pytest.mark.parametrize("return_code", [None, 0, 1])
 def test_run_success_managed_inside_managed(
     monkeypatch, check, app, fake_project, mock_dispatcher, return_code, mocker
