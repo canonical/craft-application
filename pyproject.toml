@@ -54,6 +54,8 @@ dev = [
     "pytest-mock==3.14.0",
     "pytest-rerunfailures==14.0",
     "pytest-time>=0.3.1",
+    # Pin requests because of https://github.com/msabramo/requests-unixsocket/issues/73
+    "requests<2.32.0",
     "responses~=0.25.0",
     "craft-application[remote]"
 ]
