@@ -271,7 +271,13 @@ class SnapRecipe(_StoreRecipe):
         try:
             return cls(
                 lp,
-                lp.lp.snaps.getByName(owner=util.get_person_link(owner), name=name),
+                retry(
+                    f"get snap recipe {name!r}",
+                    lazr.restfulclient.errors.NotFound,
+                    lp.lp.snaps.getByName,
+                    owner=util.get_person_link(owner),
+                    name=name,
+                ),
             )
         except lazr.restfulclient.errors.NotFound:
             raise ValueError(
@@ -401,7 +407,10 @@ class CharmRecipe(_StoreRecipe):
         try:
             return cls(
                 lp,
-                lp.lp.charm_recipes.getByName(
+                retry(
+                    f"get charm recipe {name!r}",
+                    lazr.restfulclient.errors.NotFound,
+                    lp.lp.charm_recipes.getByName,
                     name=name,
                     owner=util.get_person_link(owner),
                     project=f"/{project}",
