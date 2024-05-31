@@ -20,8 +20,6 @@ from unittest.mock import call
 import pytest
 from craft_application.util import retry
 
-EXPECTED_ATTEMPTS = 3
-
 
 class MyError(Exception):
     pass
@@ -47,7 +45,7 @@ def test_retry_success(mocked_sleep, emitter):
     assert not mocked_sleep.called
 
     # Attempts get logged.
-    emitter.assert_debug("Trying to call never_raises (attempt 1/4)")
+    emitter.assert_debug("Trying to call never_raises (attempt 1/6)")
 
 
 def test_retry_args_kwargs():
@@ -61,17 +59,29 @@ def test_retry_args_kwargs():
 
 @pytest.mark.parametrize("exceptions", [MyError, (ValueError, MyError)])
 def test_retry_failure(mocked_sleep, exceptions, emitter):
-    with pytest.raises(MyError):
-        retry("call always_raises", exceptions, always_raises)
+    func_calls = 0
 
-    # sleep() is called multiple times.
-    assert mocked_sleep.mock_calls == [call(3)] * EXPECTED_ATTEMPTS
+    def count_calls(*_args, **_kwargs):
+        nonlocal func_calls
+        func_calls += 1
+        return always_raises()
+
+    with pytest.raises(MyError):
+        retry("call count_calls", exceptions, count_calls)
+
+    # sleep() is called 5 times.
+    assert mocked_sleep.mock_calls == [call(2), call(4), call(8), call(16), call(32)]
+
+    # count_calls() is called 6 times (one more than sleep()).
+    assert func_calls == len(mocked_sleep.mock_calls) + 1
 
     # Attempts get logged.
-    emitter.assert_debug("Trying to call always_raises (attempt 1/4)")
-    emitter.assert_debug("Trying to call always_raises (attempt 2/4)")
-    emitter.assert_debug("Trying to call always_raises (attempt 3/4)")
-    emitter.assert_debug("Trying to call always_raises (attempt 4/4)")
+    emitter.assert_debug("Trying to call count_calls (attempt 1/6)")
+    emitter.assert_debug("Trying to call count_calls (attempt 2/6)")
+    emitter.assert_debug("Trying to call count_calls (attempt 3/6)")
+    emitter.assert_debug("Trying to call count_calls (attempt 4/6)")
+    emitter.assert_debug("Trying to call count_calls (attempt 5/6)")
+    emitter.assert_debug("Trying to call count_calls (attempt 6/6)")
 
 
 def test_retry_eventual_success(mocked_sleep, emitter):
@@ -90,9 +100,9 @@ def test_retry_eventual_success(mocked_sleep, emitter):
     result = retry("call fails_twice", MyError, fails_twice)
 
     assert result == "eventual success"
-    assert mocked_sleep.mock_calls == [call(3), call(3)]
-    emitter.assert_debug("Trying to call fails_twice (attempt 1/4)")
-    emitter.assert_debug("Trying to call fails_twice (attempt 2/4)")
+    assert mocked_sleep.mock_calls == [call(2), call(4)]
+    emitter.assert_debug("Trying to call fails_twice (attempt 1/6)")
+    emitter.assert_debug("Trying to call fails_twice (attempt 2/6)")
 
 
 def test_retry_wrong_exception(mocked_sleep):
