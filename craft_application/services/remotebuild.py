@@ -176,7 +176,6 @@ class RemoteBuildService(base.AppService):
             raise RuntimeError(
                 "RemoteBuildService must be set up using start_builds or resume_builds before fetching logs."
             )
-        project_name = self._name.split("-", maxsplit=2)[1]
         logs: dict[str, pathlib.Path | None] = {}
         log_downloads: dict[str, pathlib.Path] = {}
         fetch_time = datetime.datetime.now().isoformat(timespec="seconds")
@@ -185,7 +184,7 @@ class RemoteBuildService(base.AppService):
             if not url:
                 logs[build.arch_tag] = None
                 continue
-            filename = f"{project_name}_{build.arch_tag}-{fetch_time}.txt"
+            filename = f"{self._name}_{build.arch_tag}_{fetch_time}.txt"
             logs[build.arch_tag] = output_dir / filename
             log_downloads[url] = output_dir / filename
         self.request.download_files_with_progress(log_downloads)
