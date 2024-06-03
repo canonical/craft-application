@@ -34,11 +34,13 @@ import enum
 from collections.abc import Iterable
 
 import launchpadlib.errors  # type: ignore[import-untyped]
+from lazr.restfulclient.resource import Entry  # type: ignore[import-untyped]
 from typing_extensions import Self, Any
 from typing import TYPE_CHECKING
 
 from ..models.base import InformationType, LaunchpadObject
 from .. import errors
+from ...util import retry
 
 if TYPE_CHECKING:
     from .. import Launchpad
@@ -100,8 +102,20 @@ class Project(LaunchpadObject):
         cls, lp: Launchpad, name: str
     ) -> Self:
         """Get an existing project."""
+
+        def get_project(name: str) -> Entry:
+            return lp.lp.projects[name]
+
         try:
-            return cls(lp, lp.lp.projects[name])
+            return cls(
+                lp,
+                retry(
+                    f"get project {name}",
+                    launchpadlib.errors.NotFound,
+                    get_project,  # pyright: ignore[reportArgumentType]
+                    name,
+                ),
+            )
         except (launchpadlib.errors.NotFound, KeyError):
             raise errors.NotFoundError(f"Could not find project {name}")
 

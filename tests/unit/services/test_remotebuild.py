@@ -55,10 +55,14 @@ def test_set_project_success(remote_build_service, mock_project_entry, name):
 
 
 @pytest.mark.parametrize("name", ["some-project", "another-project"])
-def test_set_project_name_error(remote_build_service, mock_project_entry, name):
+def test_set_project_name_error(remote_build_service, mock_project_entry, name, mocker):
+    mocker.patch("time.sleep")
     mock_project_entry.name = name
+    response = mocker.Mock(
+        status=400, reason="Bad Request", items=mocker.Mock(return_value=[])
+    )
     remote_build_service.lp.lp.projects.__getitem__.side_effect = (
-        lazr.restfulclient.errors.NotFound("yo", "dawg")
+        lazr.restfulclient.errors.NotFound(response, "dawg")
     )
 
     with pytest.raises(
@@ -80,9 +84,13 @@ def test_ensure_project_existing(remote_build_service, mock_project_entry):
     remote_build_service._ensure_project()
 
 
-def test_ensure_project_new(remote_build_service):
+def test_ensure_project_new(remote_build_service, mocker):
+    mocker.patch("time.sleep")
+    response = mocker.Mock(
+        status=400, reason="Bad Request", items=mocker.Mock(return_value=[])
+    )
     remote_build_service.lp.lp.projects.__getitem__.side_effect = (
-        lazr.restfulclient.errors.NotFound("yo", "dawg")
+        lazr.restfulclient.errors.NotFound(response, "dawg")
     )
 
     remote_build_service._ensure_project()
