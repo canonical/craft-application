@@ -24,6 +24,7 @@ from craft_application.util.platforms import (
     get_host_base,
     is_valid_architecture,
 )
+from craft_application.util.retry import retry
 from craft_application.util.snap_config import (
     SnapConfig,
     get_snap_config,
@@ -48,4 +49,5 @@ __all__ = [
     "get_host_base",
     "dump_yaml",
     "safe_yaml_load",
+    "retry",
 ]

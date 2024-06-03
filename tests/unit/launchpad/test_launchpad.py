@@ -208,8 +208,8 @@ def test_recipe_snap_new_retry(emitter, mocker):
     assert isinstance(recipe, models.SnapRecipe)
     assert mock_launchpad.lp.snaps.new.call_count == 2  # noqa: PLR2004
 
-    emitter.assert_debug("Trying to create snap recipe 'my_recipe' (attempt 1/4)")
-    emitter.assert_debug("Trying to create snap recipe 'my_recipe' (attempt 2/4)")
+    emitter.assert_debug("Trying to create snap recipe 'my_recipe' (attempt 1/6)")
+    emitter.assert_debug("Trying to create snap recipe 'my_recipe' (attempt 2/6)")
 
 
 @pytest.mark.parametrize("type_", ["charm", "Charm", models.RecipeType.CHARM])
@@ -258,8 +258,8 @@ def test_recipe_charm_new_retry(emitter, mocker):
     assert isinstance(recipe, models.CharmRecipe)
     assert mock_launchpad.lp.charm_recipes.new.call_count == 2  # noqa: PLR2004
 
-    emitter.assert_debug("Trying to create charm recipe 'my_recipe' (attempt 1/4)")
-    emitter.assert_debug("Trying to create charm recipe 'my_recipe' (attempt 2/4)")
+    emitter.assert_debug("Trying to create charm recipe 'my_recipe' (attempt 1/6)")
+    emitter.assert_debug("Trying to create charm recipe 'my_recipe' (attempt 2/6)")
 
 
 @pytest.mark.parametrize(
