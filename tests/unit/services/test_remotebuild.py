@@ -289,7 +289,10 @@ def test_monitor_builds_timeout(remote_build_service):
         [{"build_log_url": "http://whatever", "arch_tag": "riscv64"}],
     ],
 )
-def test_fetch_logs(tmp_path, remote_build_service, logs):
+def test_fetch_logs(tmp_path, remote_build_service, logs, mocker):
+    mock_datetime = mocker.patch("datetime.datetime")
+    mock_datetime.now().isoformat.return_value = "2024-01-01T12:34:56"
+
     remote_build_service._name = "appname-project-checksum"
     remote_build_service._builds = [mock.Mock(**log) for log in logs]
     remote_build_service._is_setup = True
@@ -300,7 +303,11 @@ def test_fetch_logs(tmp_path, remote_build_service, logs):
     assert list(actual) == [item["arch_tag"] for item in logs]
 
     remote_build_service.request.download_files_with_progress.assert_called_once_with(
-        {log["build_log_url"]: mock.ANY for log in logs}
+        {
+            log["build_log_url"]: tmp_path
+            / f"appname-project-checksum_{log['arch_tag']}_2024-01-01T12:34:56.txt"
+            for log in logs
+        }
     )
 
 
