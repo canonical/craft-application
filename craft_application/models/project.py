@@ -27,7 +27,8 @@ import pydantic
 from craft_cli import emit
 from craft_providers.errors import BaseConfigurationError
 from pydantic import AnyUrl
-from typing_extensions import override
+from pydantic.functional_validators import AfterValidator
+from typing_extensions import Annotated, override
 
 from craft_application import errors
 from craft_application.models.base import CraftBaseConfig, CraftBaseModel
@@ -40,6 +41,12 @@ from craft_application.models.constraints import (
     UniqueStrList,
     VersionStr,
 )
+
+
+def _validate_parts(item: Dict[str, Any]) -> Dict[str, Any]:
+    """Verify each part (craft-parts will re-validate this)."""
+    craft_parts.validate_part(item)
+    return item
 
 
 @dataclasses.dataclass
@@ -115,7 +122,7 @@ class Project(CraftBaseModel):
     base: Any | None = None
     build_base: Any | None = None
     platforms: dict[str, Any] | None = None
-
+    
     contact: str | UniqueStrList | None
     issues: str | UniqueStrList | None
     source_code: AnyUrl | None
@@ -123,7 +130,9 @@ class Project(CraftBaseModel):
 
     adopt_info: str | None
 
-    parts: dict[str, dict[str, Any]]  # parts are handled by craft-parts
+    parts: Dict[
+        str, Annotated[Dict[str, Any], AfterValidator(_validate_parts)]
+    ]  # parts are handled by craft-parts
 
     package_repositories: list[dict[str, Any]] | None
 
