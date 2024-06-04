@@ -19,12 +19,14 @@ This defines the structure of the input file (e.g. snapcraft.yaml)
 """
 import abc
 import dataclasses
+from collections.abc import Mapping
 from typing import Any
 
 import craft_parts
 import craft_providers.bases
 import pydantic
 from craft_cli import emit
+from craft_providers import bases
 from craft_providers.errors import BaseConfigurationError
 from pydantic import AnyUrl
 from typing_extensions import override
@@ -40,6 +42,7 @@ from craft_application.models.constraints import (
     UniqueStrList,
     VersionStr,
 )
+from craft_application.util import is_valid_architecture
 
 
 @dataclasses.dataclass
@@ -93,14 +96,104 @@ class BuildPlannerConfig(CraftBaseConfig):
     """The BuildPlanner model uses attributes from the project yaml."""
 
 
+class Platform(CraftBaseModel):
+    """Project platform definition."""
+
+    build_on: list[str] | None = pydantic.Field(min_items=1, unique_items=True)
+    build_for: list[str] | None = pydantic.Field(
+        min_items=1, max_items=1, unique_items=True
+    )
+
+    @pydantic.validator(  # pyright: ignore[reportUnknownMemberType,reportUntypedFunctionDecorator]
+        "build_on", "build_for"
+    )
+    def _validate_architectures(cls, values: list[str]) -> list[str]:
+        """Validate the architecture entries."""
+        for architecture in values:
+            if not is_valid_architecture(architecture):
+                raise errors.CraftValidationError(
+                    f"Invalid architecture: {architecture!r} "
+                    "must be a valid debian architecture."
+                )
+
+        return values
+
+    @pydantic.root_validator(  # pyright: ignore[reportUntypedFunctionDecorator,reportUnknownMemberType]
+        skip_on_failure=True
+    )
+    @classmethod
+    def _validate_platform_set(cls, values: Mapping[str, Any]) -> Mapping[str, Any]:
+        """If build_for is provided, then build_on must also be."""
+        if not values.get("build_on") and values.get("build_for"):
+            raise errors.CraftValidationError(
+                "'build_for' expects 'build_on' to also be provided."
+            )
+
+        return values
+
+
+def _populate_platforms(platforms: dict[str, Platform]) -> dict[str, Platform]:
+    """Populate empty platform entries.
+
+    :param platforms: The platform data.
+
+    :returns: The dict of platforms with populated entries.
+    """
+    for platform_label, platform in platforms.items():
+        if not platform:
+            # populate "empty" platforms entries from the platform's name
+            platforms[platform_label] = Platform(
+                build_on=[platform_label], build_for=[platform_label]
+            )
+
+    return platforms
+
+
 class BuildPlanner(CraftBaseModel, metaclass=abc.ABCMeta):
     """The BuildPlanner obtains a build plan for the project."""
 
+    platforms: dict[str, Platform]
+    base: str | None
+    build_base: str | None
+
     Config = BuildPlannerConfig
 
-    @abc.abstractmethod
+    @pydantic.validator(  # pyright: ignore[reportUnknownMemberType,reportUntypedFunctionDecorator]
+        "platforms", pre=True
+    )
+    def _populate_platforms(cls, platforms: dict[str, Platform]) -> dict[str, Platform]:
+        """Populate empty platform entries."""
+        return _populate_platforms(platforms)
+
+    @property
+    def effective_base(self) -> bases.BaseName:
+        """Get the Base name for craft-providers."""
+        base = self.build_base if self.build_base else self.base
+
+        if not base:
+            raise errors.CraftValidationError("Could not determine effective base")
+
+        name, _, channel = base.partition("@")
+
+        return bases.BaseName(name, channel)
+
     def get_build_plan(self) -> list[BuildInfo]:
-        """Obtain the list of architectures and bases from the project file."""
+        """Obtain the list of architectures and bases from the Project."""
+        build_infos: list[BuildInfo] = []
+
+        for platform_label, platform in self.platforms.items():
+            for build_for in platform.build_for or [platform_label]:
+                for build_on in platform.build_on or [platform_label]:
+                    build_infos.append(
+                        BuildInfo(
+                            platform=platform_label,
+                            build_on=build_on,
+                            build_for=build_for,
+                            base=self.effective_base,
+                        )
+                    )
+
+        return build_infos
 
 
 class Project(CraftBaseModel):
@@ -114,7 +207,7 @@ class Project(CraftBaseModel):
 
     base: Any | None = None
     build_base: Any | None = None
-    platforms: dict[str, Any] | None = None
+    platforms: dict[str, Platform]
 
     contact: str | UniqueStrList | None
     issues: str | UniqueStrList | None
@@ -134,6 +227,13 @@ class Project(CraftBaseModel):
         """Verify each part (craft-parts will re-validate this)."""
         craft_parts.validate_part(item)
         return item
+
+    @pydantic.validator(  # pyright: ignore[reportUnknownMemberType,reportUntypedFunctionDecorator]
+        "platforms", pre=True
+    )
+    def _populate_platforms(cls, platforms: dict[str, Platform]) -> dict[str, Platform]:
+        """Populate empty platform entries."""
+        return _populate_platforms(platforms)
 
     @property
     def effective_base(self) -> Any:  # noqa: ANN401 app specific classes can improve

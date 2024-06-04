@@ -33,6 +33,7 @@ from craft_application.models.project import (
     DEVEL_BASE_WARNING,
     BuildInfo,
     BuildPlanner,
+    Platform,
     Project,
 )
 
@@ -46,6 +47,7 @@ __all__ = [
     "CraftBaseModel",
     "get_grammar_aware_part_keywords",
     "GrammarAwareProject",
+    "Platform",
     "Project",
     "BuildPlanner",
     "ProjectName",
