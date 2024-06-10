@@ -56,6 +56,8 @@ from craft_parts.plugins.plugins import PluginType
 from craft_providers import bases, lxd
 from overrides import override
 
+from tests.conftest import FakeApplication
+
 EMPTY_COMMAND_GROUP = craft_cli.CommandGroup("FakeCommands", [])
 BASIC_PROJECT_YAML = """
 name: myproject
@@ -365,35 +367,6 @@ def test_app_metadata_default_mandatory_adoptable_fields():
         summary="dummy craft",
     )
     assert app.mandatory_adoptable_fields == ["version"]
-
-
-class FakeApplication(application.Application):
-    """An application class explicitly for testing. Adds some convenient test hooks."""
-
-    platform: str = "unknown-platform"
-    build_on: str = "unknown-build-on"
-    build_for: str | None = "unknown-build-for"
-
-    def set_project(self, project):
-        self._Application__project = project
-
-    @override
-    def _extra_yaml_transform(
-        self,
-        yaml_data: dict[str, Any],
-        *,
-        build_on: str,
-        build_for: str | None,
-    ) -> dict[str, Any]:
-        self.build_on = build_on
-        self.build_for = build_for
-
-        return yaml_data
-
-
-@pytest.fixture
-def app(app_metadata, fake_services):
-    return FakeApplication(app_metadata, fake_services)
 
 
 class FakePlugin(craft_parts.plugins.Plugin):

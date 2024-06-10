@@ -67,6 +67,9 @@ class AppFeatures:
     build_secrets: bool = False
     """Support for build-time secrets."""
 
+    fetch_service: bool = False
+    """Support for the fetch service."""
+
 
 @final
 @dataclass(frozen=True)
@@ -379,6 +382,10 @@ class Application:
             with self.services.provider.instance(
                 build_info, work_dir=self._work_dir
             ) as instance:
+                if self.app.features.fetch_service:
+                    session_env = self.services.fetch.create_session(instance)
+                    env.update(session_env)
+
                 # if pro services are required, ensure the pro client is
                 # installed, attached and the correct services are enabled
                 if self._pro_services:
@@ -414,6 +421,12 @@ class Application:
                     raise craft_providers.ProviderError(
                         f"Failed to execute {self.app.name} in instance."
                     ) from exc
+                finally:
+                    if self.app.features.fetch_service:
+                        self.services.fetch.teardown_session()
+
+        if self.app.features.fetch_service:
+            self.services.fetch.shutdown()
 
     def configure(self, global_args: dict[str, Any]) -> None:
         """Configure the application using any global arguments."""
