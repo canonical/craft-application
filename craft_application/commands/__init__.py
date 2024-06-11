@@ -1,6 +1,6 @@
 #  This file is part of craft-application.
 #
-#  Copyright 2023 Canonical Ltd.
+#  Copyright 2023-2024 Canonical Ltd.
 #
 #  This program is free software: you can redistribute it and/or modify it
 #  under the terms of the GNU Lesser General Public License version 3, as
@@ -15,17 +15,19 @@
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Command classes for a craft application."""
 
-from craft_application.commands.base import AppCommand, ExtensibleCommand
-from craft_application.commands import lifecycle
-from craft_application.commands.lifecycle import (
+from .base import AppCommand, ExtensibleCommand
+from . import lifecycle
+from .init import InitCommand
+from .lifecycle import (
     get_lifecycle_command_group,
     LifecycleCommand,
 )
-from craft_application.commands.other import get_other_command_group
+from .other import get_other_command_group
 
 __all__ = [
     "AppCommand",
     "ExtensibleCommand",
+    "InitCommand",
     "lifecycle",
     "LifecycleCommand",
     "get_lifecycle_command_group",
