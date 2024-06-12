@@ -22,7 +22,7 @@ import pathlib
 import signal
 import subprocess
 import sys
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
 from functools import cached_property
 from importlib import metadata
@@ -188,7 +188,7 @@ class Application:
         self._global_arguments.append(argument)
 
     def add_command_group(
-        self, name: str, commands: list[type[craft_cli.BaseCommand]]
+        self, name: str, commands: Sequence[type[craft_cli.BaseCommand]]
     ) -> None:
         """Add a CommandGroup to the Application."""
         self._command_groups.append(craft_cli.CommandGroup(name, commands))
