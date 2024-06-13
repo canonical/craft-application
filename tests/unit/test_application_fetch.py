@@ -49,8 +49,8 @@ class FakeFetchService(services.FetchService):
         self.calls.append("teardown_session")
 
     @override
-    def shutdown(self) -> None:
-        self.calls.append("shutdown")
+    def shutdown(self, *, force: bool = False) -> None:
+        self.calls.append(f"shutdown({force})")
 
 
 @pytest.mark.enable_features("fetch_service")
@@ -78,6 +78,6 @@ def test_run_managed_fetch_service(app, fake_project, fake_build_plan):
         "teardown_session",
         "create_session",
         "teardown_session",
-        # One call to shut down
-        "shutdown",
+        # One call to shut down (without `force`)
+        "shutdown(False)",
     ]
