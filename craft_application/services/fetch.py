@@ -14,11 +14,18 @@
 #  You should have received a copy of the GNU Lesser General Public License
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Service class to communicate with the fetch-service."""
+from __future__ import annotations
+
+import subprocess
+import typing
 
 import craft_providers
 from typing_extensions import override
 
-from craft_application import services
+from craft_application import fetch, services
+
+if typing.TYPE_CHECKING:
+    from craft_application.application import AppMetadata
 
 
 class FetchService(services.AppService):
@@ -36,12 +43,17 @@ class FetchService(services.AppService):
     - Stop the fetch-service via shutdown().
     """
 
+    _fetch_process: subprocess.Popen[str] | None
+
+    def __init__(self, app: AppMetadata, services: services.ServiceFactory) -> None:
+        super().__init__(app, services)
+        self._fetch_process = None
+
     @override
     def setup(self) -> None:
         """Start the fetch-service process with proper arguments."""
-        # Things to do here:
-        # - Figure out available ports
-        # - Spawn the service (from the snap?)
+        super().setup()
+        self._fetch_process = fetch.start_service()
 
     def create_session(
         self,
@@ -73,5 +85,14 @@ class FetchService(services.AppService):
         # - Delete session
         # - Clean session resources?
 
-    def shutdown(self) -> None:
-        """Stop the fetch-service."""
+    def shutdown(self, *, force: bool = False) -> None:
+        """Stop the fetch-service.
+
+        The default behavior is a no-op; the Application never shuts down the
+        fetch-service so that it stays up and ready to serve other craft
+        applications.
+
+        :param force: Whether the fetch-service should be, in fact, stopped.
+        """
+        if force and self._fetch_process:
+            fetch.stop_service(self._fetch_process)

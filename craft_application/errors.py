@@ -244,6 +244,10 @@ class CancelFailedError(RemoteBuildError):
         )
 
 
+class FetchServiceError(CraftError):
+    """Errors related to the fetch-service."""
+
+
 class UbuntuProError(CraftError):
     """Base Exception class for ProServices."""
 
