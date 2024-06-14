@@ -16,7 +16,9 @@
 """Tests for FetchService."""
 import shutil
 import socket
+from unittest import mock
 
+import craft_providers
 import pytest
 from craft_application import errors, fetch, services
 
@@ -88,3 +90,19 @@ def test_shutdown_service(app_service):
     # shutdown(force=True) must stop the fetch-service.
     app_service.shutdown(force=True)
     assert not fetch.is_service_online()
+
+
+def test_create_teardown_session(app_service):
+    app_service.setup()
+
+    assert len(fetch.get_service_status()["active-sessions"]) == 0
+
+    app_service.create_session(
+        instance=mock.MagicMock(spec_set=craft_providers.Executor)
+    )
+    assert len(fetch.get_service_status()["active-sessions"]) == 1
+
+    report = app_service.teardown_session()
+    assert len(fetch.get_service_status()["active-sessions"]) == 0
+
+    assert "artefacts" in report

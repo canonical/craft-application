@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU Lesser General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Unit tests for the interaction between the Application and the FetchService."""
+from typing import Any
 from unittest import mock
 
 import craft_providers
@@ -45,8 +46,9 @@ class FakeFetchService(services.FetchService):
         return {}
 
     @override
-    def teardown_session(self) -> None:
+    def teardown_session(self) -> dict[str, Any]:
         self.calls.append("teardown_session")
+        return {}
 
     @override
     def shutdown(self, *, force: bool = False) -> None:

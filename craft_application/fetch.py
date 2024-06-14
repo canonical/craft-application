@@ -21,9 +21,11 @@ from dataclasses import dataclass
 from typing import Any, cast
 
 import requests
+from pydantic import Field
 from requests.auth import HTTPBasicAuth
 
 from craft_application import errors
+from craft_application.models import CraftBaseModel
 from craft_application.util import retry
 
 
@@ -56,6 +58,13 @@ _DEFAULT_CONFIG = FetchServiceConfig(
 )
 
 
+class SessionData(CraftBaseModel):
+    """Fetch service session data."""
+
+    session_id: str = Field(alias="id")
+    token: str
+
+
 def is_service_online() -> bool:
     """Whether the fetch-service is up and listening."""
     try:
@@ -70,23 +79,7 @@ def get_service_status() -> dict[str, Any]:
 
     :raises errors.FetchServiceError: if a connection error happens.
     """
-    headers = {
-        "Content-type": "application/json",
-        "Accept": "application/json",
-    }
-    auth = HTTPBasicAuth(_DEFAULT_CONFIG.username, _DEFAULT_CONFIG.password)
-    try:
-        response = requests.get(
-            f"http://localhost:{_DEFAULT_CONFIG.control}/status",
-            auth=auth,
-            headers=headers,
-            timeout=0.1,
-        )
-        response.raise_for_status()
-    except requests.RequestException as err:
-        message = f"Error querying fetch-service status: {str(err)}"
-        raise errors.FetchServiceError(message)
-
+    response = _service_request("get", "status")
     return cast(dict[str, Any], response.json())
 
 
@@ -159,6 +152,67 @@ def stop_service(fetch_process: subprocess.Popen[str]) -> None:
         fetch_process.wait(timeout=1.0)
     except subprocess.TimeoutExpired:
         fetch_process.kill()
+
+
+def create_session() -> SessionData:
+    """Create a new fetch-service session.
+
+    :return: a SessionData object containing the session's id and token.
+    """
+    data = _service_request("post", "session", json={}).json()
+
+    return SessionData.unmarshal(data=data)
+
+
+def teardown_session(session_data: SessionData) -> dict[str, Any]:
+    """Stop and cleanup a running fetch-service session.
+
+    :param SessionData: the data of a previously-created session.
+    :return: A dict containing the session's report (the contents and format
+      of this dict are still subject to change).
+    """
+    session_id = session_data.session_id
+    session_token = session_data.token
+
+    # Revoke token
+    _revoke_data = _service_request(
+        "delete", f"session/{session_id}/token", json={"token": session_token}
+    ).json()
+
+    # Get session report
+    session_report = _service_request("get", f"session/{session_id}", json={}).json()
+
+    # Delete session
+    _service_request("delete", f"session/{session_id}")
+
+    # Delete session resources
+    _service_request("delete", f"resources/{session_id}")
+
+    return cast(dict[str, Any], session_report)
+
+
+def _service_request(
+    verb: str, endpoint: str, json: dict[str, Any] | None = None
+) -> requests.Response:
+    headers = {
+        "Content-type": "application/json",
+    }
+    auth = HTTPBasicAuth(_DEFAULT_CONFIG.username, _DEFAULT_CONFIG.password)
+    try:
+        response = requests.request(
+            verb,
+            f"http://localhost:{_DEFAULT_CONFIG.control}/{endpoint}",
+            auth=auth,
+            headers=headers,
+            json=json,  # Use defaults
+            timeout=0.1,
+        )
+        response.raise_for_status()
+    except requests.RequestException as err:
+        message = f"Error with fetch-service {verb.upper()}: {str(err)}"
+        raise errors.FetchServiceError(message)
+
+    return response
 
 
 def _get_service_base_dir() -> pathlib.Path:
