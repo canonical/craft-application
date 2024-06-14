@@ -20,13 +20,16 @@ from unittest.mock import call
 import pytest
 import responses
 from craft_application import errors, fetch
+from responses import matchers
 
 CONTROL = fetch._DEFAULT_CONFIG.control
 PROXY = fetch._DEFAULT_CONFIG.proxy
 AUTH = fetch._DEFAULT_CONFIG.auth
 
+assert_requests = responses.activate(assert_all_requests_are_fired=True)
 
-@responses.activate
+
+@assert_requests
 def test_get_service_status_success():
     responses.add(
         responses.GET,
@@ -38,14 +41,14 @@ def test_get_service_status_success():
     assert status == {"uptime": 10}
 
 
-@responses.activate
+@assert_requests
 def test_get_service_status_failure():
     responses.add(
         responses.GET,
         f"http://localhost:{CONTROL}/status",
         status=404,
     )
-    expected = "Error querying fetch-service status: 404 Client Error"
+    expected = "Error with fetch-service GET: 404 Client Error"
     with pytest.raises(errors.FetchServiceError, match=expected):
         fetch.get_service_status()
 
@@ -59,7 +62,7 @@ def test_get_service_status_failure():
         (404, {"other-key": "value"}, False),
     ],
 )
-@responses.activate
+@assert_requests
 def test_is_service_online(status, json, expected):
     responses.add(
         responses.GET,
@@ -115,3 +118,51 @@ def test_start_service_already_up(mocker):
 
     assert mock_is_online.called
     assert not mock_popen.called
+
+
+@assert_requests
+def test_create_session():
+    responses.add(
+        responses.POST,
+        f"http://localhost:{CONTROL}/session",
+        json={"id": "my-session-id", "token": "my-session-token"},
+        status=200,
+    )
+
+    session_data = fetch.create_session()
+
+    assert session_data.session_id == "my-session-id"
+    assert session_data.token == "my-session-token"
+
+
+@assert_requests
+def test_teardown_session():
+    session_data = fetch.SessionData(id="my-session-id", token="my-session-token")
+
+    # Call to delete token
+    responses.delete(
+        f"http://localhost:{CONTROL}/session/{session_data.session_id}/token",
+        match=[matchers.json_params_matcher({"token": session_data.token})],
+        json={},
+        status=200,
+    )
+    # Call to get session report
+    responses.get(
+        f"http://localhost:{CONTROL}/session/{session_data.session_id}",
+        json={},
+        status=200,
+    )
+    # Call to delete session
+    responses.delete(
+        f"http://localhost:{CONTROL}/session/{session_data.session_id}",
+        json={},
+        status=200,
+    )
+    # Call to delete session resources
+    responses.delete(
+        f"http://localhost:{CONTROL}/resources/{session_data.session_id}",
+        json={},
+        status=200,
+    )
+
+    fetch.teardown_session(session_data)

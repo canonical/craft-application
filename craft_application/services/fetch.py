@@ -44,10 +44,12 @@ class FetchService(services.AppService):
     """
 
     _fetch_process: subprocess.Popen[str] | None
+    _session_data: fetch.SessionData | None
 
     def __init__(self, app: AppMetadata, services: services.ServiceFactory) -> None:
         super().__init__(app, services)
         self._fetch_process = None
+        self._session_data = None
 
     @override
     def setup(self) -> None:
@@ -66,7 +68,7 @@ class FetchService(services.AppService):
         """
         # Things to do here (from the prototype):
         # To create the session:
-        # - Create a session (POST), store session data
+        # - Create a session (POST), store session data (DONE)
         # - Find the gateway for the network used by the instance (need API)
         # - Return http_proxy/https_proxy with session data
         #
@@ -74,16 +76,23 @@ class FetchService(services.AppService):
         # - Install bundled certificate
         # - Configure snap proxy
         # - Clean APT's cache
+        if self._session_data is not None:
+            raise ValueError(
+                "create_session() called but there's already a live fetch-service session."
+            )
+
+        self._session_data = fetch.create_session()
         return {}
 
-    def teardown_session(self) -> None:
+    def teardown_session(self) -> dict[str, typing.Any]:
         """Teardown and cleanup a previously-created session."""
-        # Things to do here (from the prototype):
-        # - Dump service status (where?)
-        # - Revoke session token
-        # - Dump session report
-        # - Delete session
-        # - Clean session resources?
+        if self._session_data is None:
+            raise ValueError(
+                "teardown_session() called with no live fetch-service session."
+            )
+        report = fetch.teardown_session(self._session_data)
+        self._session_data = None
+        return report
 
     def shutdown(self, *, force: bool = False) -> None:
         """Stop the fetch-service.

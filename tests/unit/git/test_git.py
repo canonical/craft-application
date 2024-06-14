@@ -549,7 +549,7 @@ def test_push_url_hide_token(url, expected_url, mocker, empty_working_directory)
         repo.push_url(
             remote_url=url,
             remote_branch="test-branch",
-            token="test-token",  # noqa: S106
+            token="test-token",
         )
 
     # token should be hidden in the log output
