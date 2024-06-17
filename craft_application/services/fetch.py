@@ -57,32 +57,19 @@ class FetchService(services.AppService):
         super().setup()
         self._fetch_process = fetch.start_service()
 
-    def create_session(
-        self,
-        instance: craft_providers.Executor,  # noqa: ARG002 (unused-method-argument)
-    ) -> dict[str, str]:
+    def create_session(self, instance: craft_providers.Executor) -> dict[str, str]:
         """Create a new session.
 
         :return: The environment variables that must be used by any process
           that will use the new session.
         """
-        # Things to do here (from the prototype):
-        # To create the session:
-        # - Create a session (POST), store session data (DONE)
-        # - Find the gateway for the network used by the instance (need API)
-        # - Return http_proxy/https_proxy with session data
-        #
-        # To configure the instance:
-        # - Install bundled certificate
-        # - Configure snap proxy
-        # - Clean APT's cache
         if self._session_data is not None:
             raise ValueError(
                 "create_session() called but there's already a live fetch-service session."
             )
 
         self._session_data = fetch.create_session()
-        return {}
+        return fetch.configure_instance(instance, self._session_data)
 
     def teardown_session(self) -> dict[str, typing.Any]:
         """Teardown and cleanup a previously-created session."""
