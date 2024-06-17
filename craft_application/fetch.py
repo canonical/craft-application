@@ -15,16 +15,19 @@
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Utilities to interact with the fetch-service."""
 import contextlib
+import io
 import pathlib
 import subprocess
 from dataclasses import dataclass
+from importlib import resources
 from typing import Any, cast
 
+import craft_providers
 import requests
 from pydantic import Field
 from requests.auth import HTTPBasicAuth
 
-from craft_application import errors
+from craft_application import errors, util
 from craft_application.models import CraftBaseModel
 from craft_application.util import retry
 
@@ -65,6 +68,29 @@ class SessionData(CraftBaseModel):
     token: str
 
 
+class NetInfo:
+    """Network and proxy info linking a fetch-service session and a build instance."""
+
+    def __init__(
+        self, instance: craft_providers.Executor, session_data: SessionData
+    ) -> None:
+        self._gateway = _get_gateway(instance)
+        self._session_data = session_data
+
+    @property
+    def http_proxy(self) -> str:
+        """Proxy string in the 'http://<session-id>:<session-token>@<ip>:<port>/."""
+        session = self._session_data
+        port = _DEFAULT_CONFIG.proxy
+        gw = self._gateway
+        return f"http://{session.session_id}:{session.token}@{gw}:{port}/"
+
+    @property
+    def env(self) -> dict[str, str]:
+        """Environment variables to use for the proxy."""
+        return {"http_proxy": self.http_proxy, "https_proxy": self.http_proxy}
+
+
 def is_service_online() -> bool:
     """Whether the fetch-service is up and listening."""
     try:
@@ -92,6 +118,25 @@ def start_service() -> subprocess.Popen[str] | None:
     cmd = [_FETCH_BINARY]
 
     env = {"FETCH_SERVICE_AUTH": _DEFAULT_CONFIG.auth}
+
+    # Add the public key for the Ubuntu archives
+    archive_keyring = (
+        "/snap/fetch-service/current/usr/share/keyrings/ubuntu-archive-keyring.gpg"
+    )
+    archive_key_id = "F6ECB3762474EDA9D21B7022871920D1991BC93C"
+    archive_key = subprocess.check_output(
+        [
+            "gpg",
+            "--export",
+            "--armor",
+            "--no-default-keyring",
+            "--keyring",
+            archive_keyring,
+            archive_key_id,
+        ],
+        text=True,
+    )
+    env["FETCH_APT_RELEASE_PUBLIC_KEY"] = archive_key
 
     # Add the ports
     cmd.append(f"--control-port={_DEFAULT_CONFIG.control}")
@@ -191,6 +236,20 @@ def teardown_session(session_data: SessionData) -> dict[str, Any]:
     return cast(dict[str, Any], session_report)
 
 
+def configure_instance(
+    instance: craft_providers.Executor, session_data: SessionData
+) -> dict[str, str]:
+    """Configure a build instance to use a given fetch-service session."""
+    net_info = NetInfo(instance, session_data)
+
+    _install_certificate(instance)
+    _configure_pip(instance)
+    _configure_snapd(instance, net_info)
+    _configure_apt(instance, net_info)
+
+    return net_info.env
+
+
 def _service_request(
     verb: str, endpoint: str, json: dict[str, Any] | None = None
 ) -> requests.Response:
@@ -222,3 +281,89 @@ def _get_service_base_dir() -> pathlib.Path:
         ["snap", "run", "--shell", "fetch-service"], text=True, input=input_line
     )
     return pathlib.Path(output.strip())
+
+
+def _install_certificate(instance: craft_providers.Executor) -> None:
+
+    # Push the local certificate
+    certs = resources.files("craft_application") / "certs"
+    with resources.as_file(certs) as certs_dir:
+        instance.push_file(
+            source=certs_dir / "local-ca.crt",
+            destination=pathlib.Path("/usr/local/share/ca-certificates/local-ca.crt"),
+        )
+    # Update the certificates db
+    instance.execute_run(  # pyright: ignore[reportUnknownMemberType]
+        ["/bin/sh", "-c", "/usr/sbin/update-ca-certificates > /dev/null"],
+        check=True,
+    )
+
+
+def _configure_pip(instance: craft_providers.Executor) -> None:
+    instance.execute_run(  # pyright: ignore[reportUnknownMemberType]
+        ["mkdir", "-p", "/root/.pip"]
+    )
+    pip_config = b"[global]\ncert=/usr/local/share/ca-certificates/local-ca.crt"
+    instance.push_file_io(
+        destination=pathlib.Path("/root/.pip/pip.conf"),
+        content=io.BytesIO(pip_config),
+        file_mode="0644",
+    )
+
+
+def _configure_snapd(instance: craft_providers.Executor, net_info: NetInfo) -> None:
+    """Configure snapd to use the proxy and see our certificate.
+
+    Note: This *must* be called *after* _install_certificate(), to ensure that
+    when the snapd restart happens the new cert is there.
+    """
+    instance.execute_run(  # pyright: ignore[reportUnknownMemberType]
+        ["systemctl", "restart", "snapd"]
+    )
+    for config in ("proxy.http", "proxy.https"):
+        instance.execute_run(  # pyright: ignore[reportUnknownMemberType]
+            ["snap", "set", "system", f"{config}={net_info.http_proxy}"]
+        )
+
+
+def _configure_apt(instance: craft_providers.Executor, net_info: NetInfo) -> None:
+    apt_config = f'Acquire::http::Proxy "{net_info.http_proxy}";\n'
+    apt_config += f'Acquire::https::Proxy "{net_info.http_proxy}";\n'
+
+    instance.push_file_io(
+        destination=pathlib.Path("/etc/apt/apt.conf.d/99proxy"),
+        content=io.BytesIO(apt_config.encode("utf-8")),
+        file_mode="0644",
+    )
+    instance.execute_run(  # pyright: ignore[reportUnknownMemberType]
+        ["/bin/rm", "-Rf", "/var/lib/apt/lists"],
+        check=True,
+    )
+    env = cast(dict[str, str | None], net_info.env)
+    instance.execute_run(  # pyright: ignore[reportUnknownMemberType]
+        ["apt", "update"],
+        env=env,
+        check=True,
+    )
+
+
+def _get_gateway(instance: craft_providers.Executor) -> str:
+    from craft_providers.lxd import LXDInstance
+
+    if not isinstance(instance, LXDInstance):
+        raise TypeError("Don't know how to handle non-lxd instances")
+
+    instance_name = instance.instance_name
+    project = instance.project
+    output = subprocess.check_output(
+        ["lxc", "--project", project, "config", "show", instance_name, "--expanded"],
+        text=True,
+    )
+    config = util.safe_yaml_load(io.StringIO(output))
+    network = config["devices"]["eth0"]["network"]
+
+    route = subprocess.check_output(
+        ["ip", "route", "show", "dev", network],
+        text=True,
+    )
+    return route.strip().split()[-1]

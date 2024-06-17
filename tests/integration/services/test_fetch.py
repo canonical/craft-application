@@ -14,20 +14,23 @@
 #  You should have received a copy of the GNU Lesser General Public License
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Tests for FetchService."""
+import contextlib
 import shutil
 import socket
 from unittest import mock
 
 import craft_providers
 import pytest
-from craft_application import errors, fetch, services
+from craft_application import errors, fetch, services, util
+from craft_application.models import BuildInfo
+from craft_providers import bases
 
 
 @pytest.fixture(autouse=True)
 def _set_test_base_dir(mocker):
     original = fetch._get_service_base_dir()
     test_dir = original / "test"
-    test_dir.mkdir(exist_ok=False)
+    test_dir.mkdir(exist_ok=True)
     mocker.patch.object(fetch, "_get_service_base_dir", return_value=test_dir)
     yield
     shutil.rmtree(test_dir)
@@ -92,7 +95,8 @@ def test_shutdown_service(app_service):
     assert not fetch.is_service_online()
 
 
-def test_create_teardown_session(app_service):
+def test_create_teardown_session(app_service, mocker):
+    mocker.patch.object(fetch, "_get_gateway", return_value="127.0.0.1")
     app_service.setup()
 
     assert len(fetch.get_service_status()["active-sessions"]) == 0
@@ -106,3 +110,44 @@ def test_create_teardown_session(app_service):
     assert len(fetch.get_service_status()["active-sessions"]) == 0
 
     assert "artefacts" in report
+
+
+@pytest.fixture()
+def lxd_instance(snap_safe_tmp_path, provider_service):
+    provider_service.get_provider("lxd")
+
+    arch = util.get_host_architecture()
+    build_info = BuildInfo("foo", arch, arch, bases.BaseName("ubuntu", "22.04"))
+    instance = provider_service.instance(build_info, work_dir=snap_safe_tmp_path)
+
+    with instance as executor:
+        yield executor
+
+    if executor is not None:
+        with contextlib.suppress(craft_providers.ProviderError):
+            executor.delete()
+
+
+def test_build_instance_integration(app_service, lxd_instance):
+
+    app_service.setup()
+
+    env = app_service.create_session(lxd_instance)
+    try:
+        lxd_instance.execute_run(
+            ["apt", "install", "-y", "hello"], check=True, env=env, capture_output=True
+        )
+    finally:
+        report = app_service.teardown_session()
+
+    # Check that the installation of the "hello" deb went through the inspector.
+    debs = set()
+    deb_type = "application/vnd.debian.binary-package"
+
+    for artefact in report["artefacts"]:
+        metadata_name = artefact["metadata"]["name"]
+        metadata_type = artefact["metadata"]["type"]
+        if metadata_name == "hello" and metadata_type == deb_type:
+            debs.add(metadata_name)
+
+    assert "hello" in debs

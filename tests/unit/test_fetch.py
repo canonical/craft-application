@@ -15,11 +15,14 @@
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Tests for fetch-service-related functions."""
 import subprocess
+from pathlib import Path
+from unittest import mock
 from unittest.mock import call
 
 import pytest
 import responses
 from craft_application import errors, fetch
+from craft_providers.lxd import LXDInstance
 from responses import matchers
 
 CONTROL = fetch._DEFAULT_CONFIG.control
@@ -81,6 +84,9 @@ def test_start_service(mocker, tmp_path):
     mock_get_status = mocker.patch.object(
         fetch, "get_service_status", return_value={"uptime": 10}
     )
+    mock_archive_key = mocker.patch.object(
+        subprocess, "check_output", return_value="DEADBEEF"
+    )
 
     mock_popen = mocker.patch.object(subprocess, "Popen")
     mock_process = mock_popen.return_value
@@ -92,6 +98,18 @@ def test_start_service(mocker, tmp_path):
     assert mock_is_online.called
     assert mock_base_dir.called
     assert mock_get_status.called
+    mock_archive_key.assert_called_once_with(
+        [
+            "gpg",
+            "--export",
+            "--armor",
+            "--no-default-keyring",
+            "--keyring",
+            "/snap/fetch-service/current/usr/share/keyrings/ubuntu-archive-keyring.gpg",
+            "F6ECB3762474EDA9D21B7022871920D1991BC93C",
+        ],
+        text=True,
+    )
 
     popen_call = mock_popen.mock_calls[0]
     assert popen_call == call(
@@ -102,7 +120,7 @@ def test_start_service(mocker, tmp_path):
             f"--config={tmp_path/'config'}",
             f"--spool={tmp_path/'spool'}",
         ],
-        env={"FETCH_SERVICE_AUTH": AUTH},
+        env={"FETCH_SERVICE_AUTH": AUTH, "FETCH_APT_RELEASE_PUBLIC_KEY": "DEADBEEF"},
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,
@@ -166,3 +184,70 @@ def test_teardown_session():
     )
 
     fetch.teardown_session(session_data)
+
+
+def test_configure_build_instance(mocker):
+    mocker.patch.object(fetch, "_get_gateway", return_value="127.0.0.1")
+
+    session_data = fetch.SessionData(id="my-session-id", token="my-session-token")
+    instance = mock.MagicMock(spec_set=LXDInstance)
+    assert isinstance(instance, LXDInstance)
+
+    expected_proxy = f"http://my-session-id:my-session-token@127.0.0.1:{PROXY}/"
+    expected_env = {"http_proxy": expected_proxy, "https_proxy": expected_proxy}
+
+    env = fetch.configure_instance(instance, session_data)
+    assert env == expected_env
+
+    # Execution calls on the instance
+    assert instance.execute_run.mock_calls == [
+        call(
+            ["/bin/sh", "-c", "/usr/sbin/update-ca-certificates > /dev/null"],
+            check=True,
+        ),
+        call(["mkdir", "-p", "/root/.pip"]),
+        call(["systemctl", "restart", "snapd"]),
+        call(
+            [
+                "snap",
+                "set",
+                "system",
+                f"proxy.http={expected_proxy}",
+            ]
+        ),
+        call(
+            [
+                "snap",
+                "set",
+                "system",
+                f"proxy.https={expected_proxy}",
+            ]
+        ),
+        call(["/bin/rm", "-Rf", "/var/lib/apt/lists"], check=True),
+        call(
+            ["apt", "update"],
+            env=expected_env,
+            check=True,
+        ),
+    ]
+
+    # Files pushed to the instance
+    assert instance.push_file.mock_calls == [
+        call(
+            source=mocker.ANY,
+            destination=Path("/usr/local/share/ca-certificates/local-ca.crt"),
+        )
+    ]
+
+    assert instance.push_file_io.mock_calls == [
+        call(
+            destination=Path("/root/.pip/pip.conf"),
+            content=mocker.ANY,
+            file_mode="0644",
+        ),
+        call(
+            destination=Path("/etc/apt/apt.conf.d/99proxy"),
+            content=mocker.ANY,
+            file_mode="0644",
+        ),
+    ]
