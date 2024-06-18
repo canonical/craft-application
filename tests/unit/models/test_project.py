@@ -20,12 +20,14 @@ import textwrap
 from textwrap import dedent
 
 import craft_providers.bases
+import pydantic
 import pytest
 from craft_application import util
 from craft_application.errors import CraftValidationError
 from craft_application.models import (
     DEVEL_BASE_INFOS,
     DEVEL_BASE_WARNING,
+    BuildInfo,
     BuildPlanner,
     Project,
     constraints,
@@ -441,3 +443,99 @@ def test_platform_invalid_build_arch(model, field_name, basic_project_dict):
     assert error.value.args[0] == (
         "Invalid architecture: 'unknown' must be a valid debian architecture."
     )
+
+
+@pytest.mark.parametrize(
+    ("platforms", "expected_build_info"),
+    [
+        pytest.param({}, [], id="empty"),
+        pytest.param(
+            {"platform1": {"build-on": ["arm64"], "build-for": ["s390x"]}},
+            [
+                BuildInfo(
+                    platform="platform1",
+                    build_on="arm64",
+                    build_for="s390x",
+                    base=craft_providers.bases.BaseName(name="ubuntu", version="24.04"),
+                ),
+            ],
+            id="simple",
+        ),
+        pytest.param(
+            {"arm64": {"build-on": ["s390x"]}},
+            [
+                BuildInfo(
+                    platform="arm64",
+                    build_on="s390x",
+                    build_for="arm64",
+                    base=craft_providers.bases.BaseName(name="ubuntu", version="24.04"),
+                ),
+            ],
+            id="implicit-build-for-the-platform",
+        ),
+        pytest.param(
+            {"arm64": None},
+            [
+                BuildInfo(
+                    platform="arm64",
+                    build_on="arm64",
+                    build_for="arm64",
+                    base=craft_providers.bases.BaseName(name="ubuntu", version="24.04"),
+                ),
+            ],
+            id="implicit-build-on-and-for-the-platform",
+        ),
+        pytest.param(
+            {
+                "ppc64el": None,
+                "riscv64": {"build-on": ["amd64"]},
+                "platform1": {"build-on": ["s390x"], "build-for": ["s390x"]},
+                "platform2": {"build-on": ["amd64", "arm64"], "build-for": ["arm64"]},
+            },
+            [
+                BuildInfo(
+                    platform="ppc64el",
+                    build_on="ppc64el",
+                    build_for="ppc64el",
+                    base=craft_providers.bases.BaseName(name="ubuntu", version="24.04"),
+                ),
+                BuildInfo(
+                    platform="riscv64",
+                    build_on="amd64",
+                    build_for="riscv64",
+                    base=craft_providers.bases.BaseName(name="ubuntu", version="24.04"),
+                ),
+                BuildInfo(
+                    platform="platform1",
+                    build_on="s390x",
+                    build_for="s390x",
+                    base=craft_providers.bases.BaseName(name="ubuntu", version="24.04"),
+                ),
+                BuildInfo(
+                    platform="platform2",
+                    build_on="amd64",
+                    build_for="arm64",
+                    base=craft_providers.bases.BaseName(name="ubuntu", version="24.04"),
+                ),
+                BuildInfo(
+                    platform="platform2",
+                    build_on="arm64",
+                    build_for="arm64",
+                    base=craft_providers.bases.BaseName(name="ubuntu", version="24.04"),
+                ),
+            ],
+            id="complex",
+        ),
+    ]
+
+)
+def test_get_build_plan(mocker, platforms, expected_build_info):
+    """Create valid build plans from a set of platforms."""
+    mocker.patch(
+        "craft_application.models.project.get_host_architecture",
+        return_value="arm64",
+    )
+
+    build_plan = BuildPlanner(base="ubuntu@24.04", platforms=platforms).get_build_plan()
+
+    assert build_plan == expected_build_info
