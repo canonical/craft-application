@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU Lesser General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Unit tests for craft-application app classes."""
+
 import argparse
 import copy
 import dataclasses
@@ -871,6 +872,16 @@ def test_run_success_managed_inside_managed(
         (KeyboardInterrupt(), 130, "Interrupted.\n"),
         (craft_cli.CraftError("msg"), 1, "msg\n"),
         (craft_parts.PartsError("unable to pull"), 1, "unable to pull\n"),
+        (
+            craft_parts.errors.PluginBuildError(part_name="foo", plugin_name="python"),
+            1,
+            dedent(
+                """\
+                Failed to run the build script for part 'foo'.
+                Recommended resolution: Check the build output and verify the project can work with the 'python' plugin.
+            """
+            ),
+        ),
         (craft_providers.ProviderError("fail to launch"), 1, "fail to launch\n"),
         (Exception(), 70, "testcraft internal error: Exception()\n"),
         (
@@ -901,7 +912,55 @@ def test_run_error(
     monkeypatch.setattr(sys, "argv", ["testcraft", "pull"])
 
     pytest_check.equal(app.run(), return_code)
-    out, err = capsys.readouterr()
+    _, err = capsys.readouterr()
+    assert err.startswith(error_msg)
+
+
+@pytest.mark.parametrize(
+    ("error", "return_code", "error_msg"),
+    [
+        # PluginPullError does not have a docs_slug
+        (
+            craft_parts.errors.PluginPullError(part_name="foo"),
+            1,
+            dedent(
+                """\
+                Failed to run the pull script for part 'foo'.
+                Full execution log:"""
+            ),
+        ),
+        (
+            craft_parts.errors.PluginBuildError(part_name="foo", plugin_name="python"),
+            1,
+            dedent(
+                """\
+                Failed to run the build script for part 'foo'.
+                Recommended resolution: Check the build output and verify the project can work with the 'python' plugin.
+                For more information, check out: http://craft-app.com/reference/plugins.html
+                Full execution log:"""
+            ),
+        ),
+    ],
+)
+def test_run_error_with_docs_url(
+    monkeypatch,
+    capsys,
+    mock_dispatcher,
+    app_metadata_docs,
+    fake_services,
+    fake_project,
+    error,
+    return_code,
+    error_msg,
+):
+    app = FakeApplication(app_metadata_docs, fake_services)
+    app.set_project(fake_project)
+    mock_dispatcher.load_command.side_effect = error
+    mock_dispatcher.pre_parse_args.return_value = {}
+    monkeypatch.setattr(sys, "argv", ["testcraft", "pull"])
+
+    pytest_check.equal(app.run(), return_code)
+    _, err = capsys.readouterr()
     assert err.startswith(error_msg)
 
 
