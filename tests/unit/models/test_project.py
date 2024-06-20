@@ -315,7 +315,7 @@ def test_devel_base_error():
         dedent(
             f"""
     Bad testcraft.yaml content:
-    - A development build-base must be used when base is 'ubuntu@{expected_devel}'
+    - a development build-base must be used when base is 'ubuntu@{expected_devel}'
     """
         ).strip()
     )
