@@ -29,7 +29,6 @@ from craft_providers.errors import BaseConfigurationError
 from pydantic import AnyUrl
 from typing_extensions import override
 
-from craft_application import errors
 from craft_application.models.base import CraftBaseConfig, CraftBaseModel
 from craft_application.models.constraints import (
     MESSAGE_INVALID_NAME,
@@ -163,7 +162,7 @@ class Project(CraftBaseModel):
             name, channel = base.split("@")
             return craft_providers.bases.get_base_alias((name, channel))
         except (ValueError, BaseConfigurationError) as err:
-            raise errors.CraftValidationError(f"Unknown base {base!r}") from err
+            raise ValueError(f"Unknown base {base!r}") from err
 
     @pydantic.root_validator(  # pyright: ignore[reportUnknownMemberType,reportUntypedFunctionDecorator]
         pre=False
@@ -191,7 +190,7 @@ class Project(CraftBaseModel):
                 if build_base_alias == devel_base_info.devel_base:
                     emit.message(DEVEL_BASE_WARNING)
                 else:
-                    raise errors.CraftValidationError(
+                    raise ValueError(
                         f"A development build-base must be used when base is {base!r}"
                     )
 
