@@ -1863,3 +1863,24 @@ def test_process_grammar_full(grammar_app_full):
         {"path": "riscv64-perm-1", "owner": 123, "group": 123, "mode": "777"},
         {"path": "riscv64-perm-2", "owner": 456, "group": 456, "mode": "666"},
     ]
+
+
+def test_enable_features(app, mocker):
+    calls = []
+
+    def enable_features(*_args, **_kwargs):
+        calls.append("enable-features")
+
+    def register_plugins(*_args, **_kwargs):
+        calls.append("register-plugins")
+
+    mocker.patch.object(
+        app, "_enable_craft_parts_features", side_effect=enable_features
+    )
+    mocker.patch.object(app, "_register_default_plugins", side_effect=register_plugins)
+
+    with pytest.raises(SystemExit):
+        app.run()
+
+    # Check that features were enabled very early, before plugins are registered.
+    assert calls == ["enable-features", "register-plugins"]
