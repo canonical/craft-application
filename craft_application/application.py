@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU Lesser General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Main application classes for a craft-application."""
+
 from __future__ import annotations
 
 import importlib
@@ -72,6 +73,7 @@ class AppMetadata:
     name: str
     summary: str | None = None
     version: str = field(init=False)
+    docs_url: str | None = None
     source_ignore_patterns: list[str] = field(default_factory=lambda: [])
     managed_instance_project_path = pathlib.PurePosixPath("/root/project")
     features: AppFeatures = AppFeatures()
@@ -544,9 +546,15 @@ class Application:
             self._emit_error(err)
             return_code = err.retcode
         except craft_parts.PartsError as err:
+            docs_url: str | None = None
+            if self.app.docs_url and err.doc_slug:
+                docs_url = self.app.docs_url + err.doc_slug
             self._emit_error(
                 craft_cli.CraftError(
-                    err.brief, details=err.details, resolution=err.resolution
+                    err.brief,
+                    details=err.details,
+                    resolution=err.resolution,
+                    docs_url=docs_url,
                 ),
                 cause=err,
             )
