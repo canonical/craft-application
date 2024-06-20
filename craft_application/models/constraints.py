@@ -37,7 +37,7 @@ class ProjectName(ConstrainedStr):
 
 
 MESSAGE_INVALID_NAME = (
-    "Invalid name: Names can only use ASCII lowercase letters, numbers, and hyphens. "
+    "invalid name: Names can only use ASCII lowercase letters, numbers, and hyphens. "
     "They must have at least one letter, may not start or end with a hyphen, "
     "and may not have two hyphens in a row."
 )
@@ -84,7 +84,7 @@ class VersionStr(ConstrainedStr):
 
 
 MESSAGE_INVALID_VERSION = (
-    "Invalid version: Valid versions consist of upper- and lower-case "
+    "invalid version: Valid versions consist of upper- and lower-case "
     "alphanumeric characters, as well as periods, colons, plus signs, tildes, "
     "and hyphens. They cannot begin with a period, colon, plus sign, tilde, or "
     "hyphen. They cannot end with a period, colon, or hyphen."
