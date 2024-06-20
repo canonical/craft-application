@@ -276,7 +276,9 @@ class Application:
             yaml_data = util.safe_yaml_load(file)
 
         host_arch = util.get_host_architecture()
-        build_planner = self.app.BuildPlannerClass.unmarshal(yaml_data)
+        build_planner = self.app.BuildPlannerClass.from_yaml_data(
+            yaml_data, project_path
+        )
         self._full_build_plan = build_planner.get_build_plan()
         self._build_plan = filter_plan(
             self._full_build_plan, platform, build_for, host_arch

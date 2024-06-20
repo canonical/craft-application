@@ -25,6 +25,7 @@ import pathlib
 import re
 import subprocess
 import sys
+import textwrap
 from textwrap import dedent
 from typing import Any
 from unittest import mock
@@ -52,6 +53,7 @@ from craft_application.util import (
 from craft_parts.plugins.plugins import PluginType
 from craft_providers import bases
 from overrides import override
+from pydantic import validator
 
 from tests.conftest import MyBuildPlanner
 
@@ -1884,3 +1886,51 @@ def test_enable_features(app, mocker):
 
     # Check that features were enabled very early, before plugins are registered.
     assert calls == ["enable-features", "register-plugins"]
+
+
+class MyRaisingPlanner(models.BuildPlanner):
+    value1: int
+    value2: str
+
+    @validator("value1")
+    def _validate_value1(cls, v):
+        raise ValueError(f"Bad value1: {v}")
+
+    @validator("value2")
+    def _validate_value(cls, v):
+        raise ValueError(f"Bad value2: {v}")
+
+    @override
+    def get_build_plan(self) -> list[BuildInfo]:
+        return []
+
+
+def test_build_planner_errors(tmp_path, monkeypatch, fake_services):
+    monkeypatch.chdir(tmp_path)
+    app_metadata = craft_application.AppMetadata(
+        "testcraft",
+        "A fake app for testing craft-application",
+        BuildPlannerClass=MyRaisingPlanner,
+        source_ignore_patterns=["*.snap", "*.charm", "*.starcraft"],
+    )
+    app = FakeApplication(app_metadata, fake_services)
+    project_contents = textwrap.dedent(
+        """\
+    name: my-project
+    base: ubuntu@24.04
+    value1: 10
+    value2: "banana"
+    """
+    ).strip()
+    project_path = tmp_path / "testcraft.yaml"
+    project_path.write_text(project_contents)
+
+    with pytest.raises(errors.CraftValidationError) as err:
+        app.get_project()
+
+    expected = (
+        "Bad testcraft.yaml content:\n"
+        "- bad value1: 10 (in field 'value1')\n"
+        "- bad value2: banana (in field 'value2')"
+    )
+    assert str(err.value) == expected
