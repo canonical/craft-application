@@ -116,6 +116,8 @@ class ProviderService(base.ProjectService):
         base = self.get_base(base_name, instance_name=instance_name, **kwargs)
         provider = self.get_provider(name=self.__provider_name)
 
+        provider.ensure_provider_is_available()
+
         emit.progress(f"Launching managed {base_name[0]} {base_name[1]} instance...")
         with provider.launched_environment(
             project_name=self._project.name,
