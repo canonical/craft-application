@@ -83,7 +83,10 @@ class CraftBaseModel(pydantic.BaseModel):
         except pydantic.ValidationError as err:
             cls.transform_pydantic_error(err)
             raise errors.CraftValidationError.from_pydantic(
-                err, file_name=filepath.name
+                err,
+                file_name=filepath.name,
+                doc_slug=cls.model_reference_slug(),
+                logpath_report=False,
             ) from None
 
     def to_yaml_file(self, path: pathlib.Path) -> None:
@@ -102,3 +105,8 @@ class CraftBaseModel(pydantic.BaseModel):
           model.
         """
         pass
+
+    @classmethod
+    def model_reference_slug(cls) -> str | None:
+        """Get the slug to this model class' reference docs."""
+        return None
