@@ -548,16 +548,8 @@ class Application:
             self._emit_error(err)
             return_code = err.retcode
         except craft_parts.PartsError as err:
-            docs_url: str | None = None
-            if self.app.docs_url and err.doc_slug:
-                docs_url = self.app.docs_url + err.doc_slug
             self._emit_error(
-                craft_cli.CraftError(
-                    err.brief,
-                    details=err.details,
-                    resolution=err.resolution,
-                    docs_url=docs_url,
-                ),
+                errors.PartsLifecycleError.from_parts_error(err),
                 cause=err,
             )
             return_code = 1
@@ -737,6 +729,7 @@ class Application:
             greeting=f"Starting {self.app.name}, version {self.app.version}",
             log_filepath=self.log_path,
             streaming_brief=True,
+            docs_base_url=self.app.docs_url,
         )
 
         craft_cli.emit.debug(f"Log verbosity level set to {emitter_mode.name}")
