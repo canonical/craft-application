@@ -488,7 +488,7 @@ class Application:
     ) -> int:
         """Bootstrap and run the application."""
         self._setup_logging()
-        self._register_default_plugins()
+        self._initialize_craft_parts()
         dispatcher = self._get_dispatcher()
         craft_cli.emit.debug("Preparing application...")
 
@@ -745,6 +745,14 @@ class Application:
                 f"Valid levels are: {', '.join(emitter.name for emitter in craft_cli.EmitterMode)}",
                 permanent=True,
             )
+
+    def _enable_craft_parts_features(self) -> None:
+        """Enable any specific craft-parts Feature that the application will need."""
+
+    def _initialize_craft_parts(self) -> None:
+        """Perform craft-parts-specific initialization, like features and plugins."""
+        self._enable_craft_parts_features()
+        self._register_default_plugins()
 
 
 def filter_plan(
