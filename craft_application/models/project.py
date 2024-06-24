@@ -110,7 +110,7 @@ class Platform(CraftBaseModel):
     def _validate_architectures(cls, values: list[str]) -> list[str]:
         """Validate the architecture entries."""
         for architecture in values:
-            if not is_valid_architecture(architecture):
+            if architecture != "all" and not is_valid_architecture(architecture):
                 raise errors.CraftValidationError(
                     f"Invalid architecture: {architecture!r} "
                     "must be a valid debian architecture."
@@ -164,6 +164,41 @@ class BuildPlanner(CraftBaseModel, metaclass=abc.ABCMeta):
     def _populate_platforms(cls, platforms: dict[str, Platform]) -> dict[str, Platform]:
         """Populate empty platform entries."""
         return _populate_platforms(platforms)
+
+    @pydantic.validator(  # pyright: ignore[reportUnknownMemberType,reportUntypedFunctionDecorator]
+        "platforms",
+    )
+    def _validate_platforms_all_keyword(
+        cls, platforms: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Validate `all` keyword is properly used.
+
+        Validation rules:
+        - `all` cannot be used to `build-on`
+        - If `all` is used for `build-for`, no other architectures can be defined
+          for `build-for`.
+
+        :raises ValueError: if `all` keyword isn't properly used.
+        """
+        # track if 'all' is used in any platform
+        is_all_used = False
+
+        # validate `all` inside each platform:
+        for platform in platforms.values():
+            if platform.build_on and "all" in platform.build_on:
+                raise ValueError("'all' cannot be used for 'build-on'")
+            if platform.build_for and "all" in platform.build_for:
+                is_all_used = True
+
+        # validate `all` across all platforms:
+        if len(platforms) > 1 and is_all_used:
+            raise ValueError(
+                "one of the platforms has 'all' in 'build-for', but there are"
+                f" {len(platforms)} platforms: upon release they will conflict."
+                "'all' should only be used if there is a single item"
+            )
+
+        return platforms
 
     @property
     def effective_base(self) -> bases.BaseName:

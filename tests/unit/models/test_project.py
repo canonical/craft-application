@@ -29,6 +29,7 @@ from craft_application.models import (
     DEVEL_BASE_WARNING,
     BuildInfo,
     BuildPlanner,
+    Platform,
     Project,
     constraints,
 )
@@ -526,16 +527,70 @@ def test_platform_invalid_build_arch(model, field_name, basic_project_dict):
             ],
             id="complex",
         ),
-    ]
-
+        pytest.param(
+            {"arm64": {"build-on": ["arm64"], "build-for": ["all"]}},
+            [
+                BuildInfo(
+                    platform="arm64",
+                    build_on="arm64",
+                    build_for="all",
+                    base=craft_providers.bases.BaseName(name="ubuntu", version="24.04"),
+                ),
+            ],
+            id="all",
+        ),
+    ],
 )
-def test_get_build_plan(mocker, platforms, expected_build_info):
+def test_get_build_plan(platforms, expected_build_info):
     """Create valid build plans from a set of platforms."""
-    mocker.patch(
-        "craft_application.models.project.get_host_architecture",
-        return_value="arm64",
-    )
-
-    build_plan = BuildPlanner(base="ubuntu@24.04", platforms=platforms).get_build_plan()
+    build_plan = BuildPlanner(
+        base="ubuntu@24.04", platforms=platforms, build_base=None
+    ).get_build_plan()
 
     assert build_plan == expected_build_info
+
+
+@pytest.mark.parametrize(
+    "platforms",
+    [
+        pytest.param(
+            {
+                "arm64": {"build-on": ["arm64"], "build-for": ["all"]},
+                "s390x": {"build-on": ["s390x"], "build-for": ["s390x"]},
+            },
+            id="simple",
+        ),
+        pytest.param(
+            {
+                "ppc64el": None,
+                "riscv64": {"build-on": ["amd64"]},
+                "arm64": {"build-on": ["arm64"], "build-for": ["all"]},
+                "platform1": {"build-on": ["s390x"], "build-for": ["s390x"]},
+                "platform2": {"build-on": ["amd64", "arm64"], "build-for": ["arm64"]},
+            },
+            id="complex",
+        ),
+    ],
+)
+def test_get_build_plan_all_with_other_platforms(platforms):
+    """`build-for: all` is not allowed with other platforms."""
+    with pytest.raises(pydantic.ValidationError) as raised:
+        BuildPlanner(base="ubuntu@24.04", platforms=platforms, build_base=None)
+
+    assert (
+        "one of the platforms has 'all' in 'build-for', but there are"
+        f" {len(platforms)} platforms: upon release they will conflict."
+        "'all' should only be used if there is a single item"
+    ) in str(raised.value)
+
+
+def test_get_build_plan_build_on_all():
+    """`build-on: all` is not allowed."""
+    with pytest.raises(pydantic.ValidationError) as raised:
+        BuildPlanner(
+            base="ubuntu@24.04",
+            platforms={"arm64": Platform(build_on=["all"], build_for=["s390x"])},
+            build_base=None,
+        )
+
+    assert "'all' cannot be used for 'build-on'" in str(raised.value)

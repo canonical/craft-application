@@ -212,6 +212,41 @@ def test_create_new_recipe(remote_build_service, mock_lp_project):
     )
 
 
+@pytest.mark.parametrize(
+    ("archs", "expected_archs"),
+    [
+        (None, None),
+        ([], []),
+        (["amd64"], ["amd64"]),
+        (["amd64", "amd64"], ["amd64", "amd64"]),
+        pytest.param(["all"], ["amd64"], id="all-to-amd64"),
+        # craft-application's Project model does not allow 'all' with other archs but
+        # RemoteBuild service should still handle this scenario
+        pytest.param(
+            ["amd64", "s390x", "all"], ["amd64", "s390x", "amd64"], id="all-with-others"
+        ),
+    ],
+)
+def test_create_new_recipe_archs(
+    archs, expected_archs, remote_build_service, mock_lp_project
+):
+    """Test that _new_recipe works correctly with architectures."""
+    remote_build_service._lp_project = mock_lp_project
+    remote_build_service.RecipeClass = mock.Mock()
+    repo = mock.Mock(git_https_url="https://localhost/~me/some-project/+git/my-repo")
+
+    remote_build_service._new_recipe("test-recipe", repo, architectures=archs)
+
+    remote_build_service.RecipeClass.new.assert_called_once_with(
+        remote_build_service.lp,
+        "test-recipe",
+        "craft_test_user",
+        git_ref="/~me/some-project/+git/my-repo/+ref/main",
+        project="craft_test_user-craft-remote-build",
+        architectures=expected_archs,
+    )
+
+
 def test_not_setup(remote_build_service):
     with pytest.raises(RuntimeError):
         all(remote_build_service.monitor_builds())

@@ -459,6 +459,38 @@ def test_post_prime_wrong_step(fake_parts_lifecycle, step):
         fake_parts_lifecycle.post_prime(step_info)
 
 
+def test_run_lifecycle_build_for_all(
+    app_metadata,
+    fake_project,
+    fake_services,
+    tmp_path,
+):
+    """'build-for: [all]' should be converted to the host arch."""
+    build_plan = [
+        models.BuildInfo(
+            platform="platform1",
+            build_on=util.get_host_architecture(),
+            build_for="all",
+            base=util.get_host_base(),
+        )
+    ]
+    work_dir = tmp_path / "work"
+
+    service = lifecycle.LifecycleService(
+        app_metadata,
+        fake_services,
+        project=fake_project,
+        work_dir=work_dir,
+        cache_dir=tmp_path / "cache",
+        platform=None,
+        build_plan=build_plan,
+    )
+    service.setup()
+
+    assert service.project_info.target_arch == util.get_host_architecture()
+    assert service.project_info.arch_build_for == util.get_host_architecture()
+
+
 # endregion
 # region Feature package repositories tests
 

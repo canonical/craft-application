@@ -630,6 +630,16 @@ class Application:
         :param yaml_data: The project's yaml data.
         :param build_for: The architecture to build for.
         """
+        if build_for == "all":
+            build_for_arch = util.get_host_architecture()
+            craft_cli.emit.debug(
+                "Expanding environment variables with the host architecture "
+                f"{build_for_arch!r} as the build-for architecture because 'all' was "
+                "specified."
+            )
+        else:
+            build_for_arch = build_for
+
         environment_vars = self._get_project_vars(yaml_data)
         project_dirs = craft_parts.ProjectDirs(
             work_dir=self._work_dir, partitions=self._partitions
@@ -638,7 +648,7 @@ class Application:
         info = craft_parts.ProjectInfo(
             application_name=self.app.name,  # not used in environment expansion
             cache_dir=pathlib.Path(),  # not used in environment expansion
-            arch=util.convert_architecture_deb_to_platform(build_for),
+            arch=util.convert_architecture_deb_to_platform(build_for_arch),
             project_name=yaml_data.get("name", ""),
             project_dirs=project_dirs,
             project_vars=environment_vars,

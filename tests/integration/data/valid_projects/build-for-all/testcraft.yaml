@@ -1,0 +1,12 @@
+name: build-for-all
+title: Build one artefact for all architectures
+version: 1.0
+base: "ubuntu@22.04"
+platforms:
+  platform1:
+    build-on: [amd64, arm64, armhf, i386, powerpc, ppc64el, riscv64, s390x]
+    build-for: [all]
+
+parts:
+  my-part:
+    plugin: nil
