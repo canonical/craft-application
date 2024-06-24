@@ -1203,12 +1203,59 @@ def environment_project(monkeypatch, tmp_path):
           mypart:
             plugin: nil
             source-tag: v$CRAFT_PROJECT_VERSION
+            build-environment:
+              - BUILD_ON: $CRAFT_ARCH_BUILD_ON
+              - BUILD_FOR: $CRAFT_ARCH_BUILD_FOR
         """
         )
     )
     monkeypatch.chdir(project_dir)
 
     return project_path
+
+
+def test_expand_environment_build_for_all(
+    monkeypatch, app_metadata, tmp_path, fake_services, emitter
+):
+    """Expand build-for to the host arch when build-for is 'all'."""
+    project_dir = tmp_path / "project"
+    project_dir.mkdir()
+    project_path = project_dir / "testcraft.yaml"
+    project_path.write_text(
+        dedent(
+            f"""\
+            name: myproject
+            version: 1.2.3
+            base: ubuntu@24.04
+            platforms:
+              platform1:
+                build-on: [{util.get_host_architecture()}]
+                build-for: [all]
+            parts:
+              mypart:
+                plugin: nil
+                build-environment:
+                  - BUILD_ON: $CRAFT_ARCH_BUILD_ON
+                  - BUILD_FOR: $CRAFT_ARCH_BUILD_FOR
+        """
+        )
+    )
+    monkeypatch.chdir(project_dir)
+
+    app = application.Application(app_metadata, fake_services)
+    project = app.get_project()
+
+    # Make sure the project is loaded correctly (from the cwd)
+    assert project is not None
+    assert project.parts["mypart"]["build-environment"] == [
+        {"BUILD_ON": util.get_host_architecture()},
+        {"BUILD_FOR": util.get_host_architecture()},
+    ]
+    emitter.assert_debug(
+        "Expanding environment variables with the host architecture "
+        f"{util.get_host_architecture()!r} as the build-for architecture "
+        "because 'all' was specified."
+    )
 
 
 @pytest.mark.usefixtures("environment_project")
@@ -1219,6 +1266,10 @@ def test_application_expand_environment(app_metadata, fake_services):
     # Make sure the project is loaded correctly (from the cwd)
     assert project is not None
     assert project.parts["mypart"]["source-tag"] == "v1.2.3"
+    assert project.parts["mypart"]["build-environment"] == [
+        {"BUILD_ON": util.get_host_architecture()},
+        {"BUILD_FOR": util.get_host_architecture()},
+    ]
 
 
 @pytest.fixture()
@@ -1536,6 +1587,46 @@ def test_process_grammar_build_for(grammar_app_mini):
     assert project.parts["mypart"]["build-packages"] == [
         "test-package",
         "on-amd64-to-s390x",
+    ]
+
+
+def test_process_grammar_to_all(tmp_path, app_metadata, fake_services):
+    """Test that 'to all' is a valid grammar statement."""
+    contents = dedent(
+        f"""\
+        name: myproject
+        version: 1.0
+        base: ubuntu@24.04
+        platforms:
+          myplatform:
+            build-on: [{util.get_host_architecture()}]
+            build-for: [all]
+        parts:
+          mypart:
+            plugin: nil
+            build-packages:
+            - test-package
+            - on {util.get_host_architecture()} to all:
+              - on-host-to-all
+            - to all:
+              - to-all
+            - on {util.get_host_architecture()} to s390x:
+              - on-host-to-s390x
+            - to s390x:
+              - on-amd64-to-s390x
+        """
+    )
+    project_file = tmp_path / "testcraft.yaml"
+    project_file.write_text(contents)
+    app = application.Application(app_metadata, fake_services)
+    app.project_dir = tmp_path
+
+    project = app.get_project()
+
+    assert project.parts["mypart"]["build-packages"] == [
+        "test-package",
+        "on-host-to-all",
+        "to-all",
     ]
 
 

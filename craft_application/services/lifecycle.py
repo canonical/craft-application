@@ -160,12 +160,15 @@ class LifecycleService(base.ProjectService):
         emit.debug(f"Initialising lifecycle manager in {self._work_dir}")
         emit.trace(f"Lifecycle: {repr(self)}")
 
-        host_arch = util.get_host_architecture()
         # Note: we fallback to the host's architecture here if the build plan
         # is empty just to be able to create the LifecycleManager; this will
         # correctly fail later on when run() is called (but not necessarily when
         # something else like clean() is called).
-        build_for = self._build_plan[0].build_for if self._build_plan else host_arch
+        # We also use the host arch if the build-for is 'all'
+        if self._build_plan and self._build_plan[0].build_for != "all":
+            build_for = self._build_plan[0].build_for
+        else:
+            build_for = util.get_host_architecture()
 
         if self._project.package_repositories:
             self._manager_kwargs["package_repositories"] = (

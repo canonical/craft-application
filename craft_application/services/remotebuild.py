@@ -313,6 +313,14 @@ class RemoteBuildService(base.AppService):
         """Create a new recipe for the given repository."""
         repository.lp_refresh()  # Prevents a race condition on new repositories.
         git_ref = parse.urlparse(str(repository.git_https_url)).path + "/+ref/main"
+
+        # if kwargs has a collection of 'architectures',  replace 'all' with 'amd64'
+        # because the amd64 runners are fast to build on
+        if kwargs.get("architectures"):
+            kwargs["architectures"] = [
+                "amd64" if arch == "all" else arch for arch in kwargs["architectures"]
+            ]
+
         return self.RecipeClass.new(
             self.lp,
             name,
