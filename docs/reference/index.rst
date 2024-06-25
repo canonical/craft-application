@@ -6,6 +6,8 @@ Reference
 .. toctree::
    :maxdepth: 1
 
+   platforms
+
 Indices and tables
 ==================
 
