@@ -126,7 +126,8 @@ def test_shutdown_service(app_service):
     assert not fetch.is_service_online()
 
 
-def test_create_teardown_session(app_service, mocker):
+def test_create_teardown_session(app_service, mocker, tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
     mocker.patch.object(fetch, "_get_gateway", return_value="127.0.0.1")
     app_service.setup()
 
@@ -137,10 +138,15 @@ def test_create_teardown_session(app_service, mocker):
     )
     assert len(fetch.get_service_status()["active-sessions"]) == 1
 
+    # Check that when closing the session its report is dumped to cwd
+    expected_report = tmp_path / "session-report.json"
+    assert not expected_report.is_file()
+
     report = app_service.teardown_session()
     assert len(fetch.get_service_status()["active-sessions"]) == 0
 
     assert "artefacts" in report
+    assert expected_report.is_file()
 
 
 # Bash script to setup the build instance before the actual testing.
@@ -205,7 +211,9 @@ def lxd_instance(snap_safe_tmp_path, provider_service):
             executor.delete()
 
 
-def test_build_instance_integration(app_service, lxd_instance):
+def test_build_instance_integration(app_service, lxd_instance, tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+
     app_service.setup()
 
     env = app_service.create_session(lxd_instance)
