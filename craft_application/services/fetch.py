@@ -16,10 +16,13 @@
 """Service class to communicate with the fetch-service."""
 from __future__ import annotations
 
+import json
+import pathlib
 import subprocess
 import typing
 
 import craft_providers
+from craft_cli import emit
 from typing_extensions import override
 
 from craft_application import fetch, services
@@ -78,6 +81,14 @@ class FetchService(services.AppService):
                 "teardown_session() called with no live fetch-service session."
             )
         report = fetch.teardown_session(self._session_data)
+
+        # TODO for now we just dump the session report locally
+        # (will use it in the future to create a manifest)
+        report_path = pathlib.Path("session-report.json")
+        with report_path.open("w") as f:
+            json.dump(report, f, ensure_ascii=False, indent=4)
+        emit.debug(f"Session report dumped to {report_path}")
+
         self._session_data = None
         return report
 
