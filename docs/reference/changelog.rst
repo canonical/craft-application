@@ -2,6 +2,28 @@
 Changelog
 *********
 
+2.8.0 (2024-Jun-03)
+-------------------
+
+Commands
+========
+
+* Fixes a bug where the pack command could accept a list of parts as command
+  line arguments.
+* Adds support for commands to accept multiple ``platform`` or ``build-for``
+  values from the command line as comma-separated values.
+
+Remote build
+============
+
+* Retries more API calls to Launchpad.
+* Adds an exponential backoff to API retries with a maximum total delay of
+  62 seconds.
+* Fixes a bug where the full project name was not used in the remote build log
+  files.
+
+For a complete list of commits, check out the `2.8.0`_ release on GitHub.
+
 2.7.0 (2024-May-08)
 -------------------
 
@@ -32,3 +54,4 @@ For a complete list of commits, check out the `2.7.0`_ release on GitHub.
 
 
 .. _2.7.0: https://github.com/canonical/craft-application/releases/tag/2.7.0
+.. _2.8.0: https://github.com/canonical/craft-application/releases/tag/2.8.0
