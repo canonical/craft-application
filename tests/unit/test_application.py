@@ -30,18 +30,13 @@ from textwrap import dedent
 from typing import Any
 from unittest import mock
 
+import craft_application
+import craft_application.errors
 import craft_cli
 import craft_parts
 import craft_providers
 import pytest
 import pytest_check
-from craft_parts.plugins.plugins import PluginType
-from craft_providers import bases
-from overrides import override
-from pydantic import validator
-
-import craft_application
-import craft_application.errors
 from craft_application import (
     application,
     commands,
