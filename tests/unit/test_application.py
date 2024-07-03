@@ -880,8 +880,7 @@ def test_run_success_managed_inside_managed(
             dedent(
                 """\
                 Failed to run the build script for part 'foo'.
-                Recommended resolution: Check the build output and verify the project can work with the 'python' plugin.
-            """
+                Full execution log:"""
             ),
         ),
         (craft_providers.ProviderError("fail to launch"), 1, "fail to launch\n"),
@@ -937,8 +936,6 @@ def test_run_error(
             dedent(
                 """\
                 Failed to run the build script for part 'foo'.
-                Recommended resolution: Check the build output and verify the project can work with the 'python' plugin.
-                For more information, check out: http://craft-app.com/reference/plugins.html
                 Full execution log:"""
             ),
         ),
