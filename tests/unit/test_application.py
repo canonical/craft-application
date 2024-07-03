@@ -55,6 +55,11 @@ from craft_application.models import BuildInfo
 from craft_application.util import (
     get_host_architecture,  # pyright: ignore[reportGeneralTypeIssues]
 )
+from craft_parts.plugins.plugins import PluginType
+from craft_providers import bases
+from overrides import override
+from pydantic import validator
+
 from tests.conftest import MyBuildPlanner
 
 EMPTY_COMMAND_GROUP = craft_cli.CommandGroup("FakeCommands", [])
