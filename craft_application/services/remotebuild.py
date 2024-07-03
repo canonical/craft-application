@@ -75,6 +75,11 @@ class RemoteBuildService(base.AppService):
         """Set up the remote builder."""
         self.lp = self._get_lp_client()
 
+    @property
+    def credentials_filepath(self) -> pathlib.Path:
+        """The filepath to the Launchpad credentials."""
+        return platformdirs.user_data_path(self._app.name) / "launchpad-credentials"
+
     # region Public API
     # Commands will call a subset of these methods, generally in order.
     def set_project(self, name: str) -> None:
@@ -235,12 +240,21 @@ class RemoteBuildService(base.AppService):
 
     def _get_lp_client(self) -> launchpad.Launchpad:
         """Get the launchpad client for the remote builder."""
+        credentials_filepath = self.credentials_filepath
+
+        if credentials_filepath.exists():
+            craft_cli.emit.debug(
+                f"Logging in with credentials file {credentials_filepath}."
+            )
+        else:
+            # the Launchpad class will create a file when the user logs in
+            craft_cli.emit.debug(f"Credentials file {credentials_filepath} not found.")
+
         with craft_cli.emit.pause():
             return launchpad.Launchpad.login(
                 f"{self._app.name}/{self._app.version}",
                 root=_get_launchpad_instance(),
-                credentials_file=platformdirs.user_data_path(self._app.name)
-                / "launchpad-credentials",
+                credentials_file=credentials_filepath,
             )
 
     def _ensure_project(self) -> launchpad.models.Project:
