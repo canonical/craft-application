@@ -1,7 +1,9 @@
 .. _howto:
 
-How-to guides
-*************
+How-To
+******
 
 .. toctree::
    :maxdepth: 1
+
+   partitions
