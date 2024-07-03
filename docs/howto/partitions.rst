@@ -5,15 +5,26 @@ Add partition support to an application
 Partitions basics
 =================
 
-Applications implementing ``craft-application`` and its dependent suite of libraries can optionally make use of `disk partitions <https://en.wikipedia.org/wiki/Disk_partitioning>`_.  The supported list of partitions must be defined by the application itself (at runtime), and those defined partitions can then be used by application consumers' configuration yaml files.
+Applications implementing ``craft-application`` and its dependent suite of
+libraries can optionally make use of `disk partitions
+<https://en.wikipedia.org/wiki/Disk_partitioning>`_.  The supported list of
+partitions must be defined by the application itself (at runtime), and those
+defined partitions can then be used by application consumers' configuration
+yaml files.
 
 Optionally, partitions can be namespaced, for organizational purposes.
 
-Partition names and namespace names must consist of *only* lower-case alphabetic characters, unless a partition exists under a namespace, in which case it may also contain hyphen characters, though the first and last characters must still be alphabetic.
+Partition names and namespace names must consist of *only* lower-case
+alphabetic characters, unless a partition exists under a namespace, in which
+case it may also contain hyphen characters, though the first and last
+characters must still be alphabetic.
 
 ``default`` must always be the first listed partition.
 
-In the below examples, we work with three partitions: ``default``, ``kernel``, and ``component/bar-baz``.  The ``default`` and ``kernel`` partitions do not have a namespace.  The ``bar-baz`` partition is part of the ``component`` namespace.
+In the below examples, we work with three partitions: ``default``, ``kernel``,
+and ``component/bar-baz``.  The ``default`` and ``kernel`` partitions do not
+have a namespace.  The ``bar-baz`` partition is part of the ``component``
+namespace.
 
 .. _app_changes:
 
@@ -24,7 +35,8 @@ To add partition support to an application, two basic changes are needed:
 
 #. Enable the feature
 
-   Use the :class:`Features <craft_parts.Features>` class to specify that the application will use partitions:
+   Use the :class:`Features <craft_parts.Features>` class to specify that the
+   application will use partitions:
 
    .. code-block:: python
 
@@ -34,13 +46,22 @@ To add partition support to an application, two basic changes are needed:
      Features(enable_partitions=True)
 
    .. NOTE::
-      The ``craft-application`` class :class:`AppFeatures <craft_application.AppFeatures>` has a similar name and serves a similar purpose to ``craft-parts``'s :class:`Features <craft_parts.Features>`, but partitions cannot be enabled via :class:`AppFeatures <craft_application.AppFeatures>`!
+      The ``craft-application`` class :class:`AppFeatures
+      <craft_application.AppFeatures>` has a similar name and serves a similar
+      purpose to ``craft-parts``'s :class:`Features <craft_parts.Features>`,
+      but partitions cannot be enabled via :class:`AppFeatures
+      <craft_application.AppFeatures>`!
 
 #. Define the list of partitions
 
-   We need to tell the :class:`LifecycleManager <craft_parts.LifecycleManager>` class about our partitions, but applications do not usually directly instantiate the LifecycleManager.
+   We need to tell the :class:`LifecycleManager <craft_parts.LifecycleManager>`
+   class about our partitions, but applications do not usually directly
+   instantiate the LifecycleManager.
 
-   Instead, override your :class:`Application <craft_application.Application>`'s ``_setup_partitions`` method, and return a list of the partitions, which will eventually be passed to the :class:`LifecycleManager <craft_parts.LifecycleManager>`:
+   Instead, override your :class:`Application
+   <craft_application.Application>`'s ``_setup_partitions`` method, and return
+   a list of the partitions, which will eventually be passed to the
+   :class:`LifecycleManager <craft_parts.LifecycleManager>`:
 
    .. code-block:: python
 
@@ -55,12 +76,14 @@ To add partition support to an application, two basic changes are needed:
 Using the partitions
 ====================
 
-Partitions cannot be used until `after you have configured your application <#app-changes>`_.
+Partitions cannot be used until `after you have configured your application
+<#app-changes>`_.
 
 In configuration yaml
 ---------------------
 
-Defined partitions may be referenced in the ``organize``, ``stage``, and ``prime`` sections of your configuration yaml files:
+Defined partitions may be referenced in the ``organize``, ``stage``, and
+``prime`` sections of your configuration yaml files:
 
 .. code-block:: yaml
 
@@ -71,9 +94,11 @@ Defined partitions may be referenced in the ``organize``, ``stage``, and ``prime
   prime:
     - (<partition>)/<path>
 
-Paths in the configuration yaml not beginning with a partition label will implicitly use the default partition.
+Paths in the configuration yaml not beginning with a partition label will
+implicitly use the default partition.
 
-The source path of an ``organize`` entry can only be from the default partition.  For example:
+The source path of an ``organize`` entry can only be from the default
+partition.  For example:
 
 .. code-block:: yaml
 
@@ -85,20 +110,24 @@ The source path of an ``organize`` entry can only be from the default partition.
   Cannot organize files from 'kernel' partition.
   Files can only be organized from the 'default' partition
 
-When the ``stage`` and ``prime`` keywords are not provided for a part, craft-parts' default behavior is to stage and prime all files for the part in all partitions.
+When the ``stage`` and ``prime`` keywords are not provided for a part,
+craft-parts' default behavior is to stage and prime all files for the part in
+all partitions.
 
-(If a stage or prime filter *is* applied to a partition, the default behavior will not be affected for the other partitions.)
+(If a stage or prime filter *is* applied to a partition, the default behavior
+will not be affected for the other partitions.)
 
 See also
 ^^^^^^^^
 
- * `Craft parts: part properties: organize <https://canonical-craft-parts.readthedocs-hosted.com/en/latest/common/craft-parts/reference/part_properties.html#organize>`_
- * `Craft parts: filesets: specifying paths <https://canonical-craft-parts.readthedocs-hosted.com/en/latest/common/craft-parts/explanation/filesets.html#partitions>`_
+ * Craft parts: part properties: `organize`_
+ * Craft parts: filesets: `specifying paths`_
 
 In environment variables
 ------------------------
 
-You might use these variables in a lifecycle override section of a configuration yaml.  For instance:
+You might use these variables in a lifecycle override section of a
+configuration yaml.  For instance:
 
 .. code-block:: yaml
 
@@ -111,13 +140,14 @@ You might use these variables in a lifecycle override section of a configuration
 See also
 ^^^^^^^^
 
- * `Craft parts: parts and steps: environment variables <https://canonical-craft-parts.readthedocs-hosted.com/en/latest/reference/parts_steps.html#partition-specific-output-directory-environment-variables>`_
- * `Craft parts: part properties: override-prime <https://canonical-craft-parts.readthedocs-hosted.com/en/latest/common/craft-parts/reference/part_properties.html#override-prime>`_
+ * Craft parts: parts and steps: `environment variables`_
+ * Craft parts: part properties: `override-prime`_
 
-From code
----------
+In code
+-------
 
-Application code that can access ``Part`` or ``ProjectDirs`` objects may get partition information from them:
+Application code that can access ``Part`` or ``ProjectDirs`` objects may get
+partition information from them:
 
 .. code-block:: python-console
 
@@ -129,3 +159,9 @@ Application code that can access ``Part`` or ``ProjectDirs`` objects may get par
 
   >>> ProjectDirs.get_prime_dir(partition="component/bar-baz")
   Path("/root/partitions/component/bar-baz/prime")
+
+
+.. _organize: https://canonical-craft-parts.readthedocs-hosted.com/en/latest/common/craft-parts/reference/part_properties.html#organize
+.. _specifying paths: https://canonical-craft-parts.readthedocs-hosted.com/en/latest/common/craft-parts/explanation/filesets.html#partitions
+.. _environment variables: https://canonical-craft-parts.readthedocs-hosted.com/en/latest/reference/parts_steps.html#partition-specific-output-directory-environment-variables
+.. _override-prime: https://canonical-craft-parts.readthedocs-hosted.com/en/latest/common/craft-parts/reference/part_properties.html#override-prime
