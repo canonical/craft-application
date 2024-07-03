@@ -880,7 +880,7 @@ def test_run_success_managed_inside_managed(
         (craft_cli.CraftError("msg"), 1, "msg\n"),
         (craft_parts.PartsError("unable to pull"), 1, "unable to pull\n"),
         (
-            craft_parts.errors.PluginBuildError(part_name="foo", plugin_name="python"),
+            craft_parts.errors.PluginBuildError(part_name="foo"),
             1,
             dedent(
                 """\
@@ -937,7 +937,7 @@ def test_run_error(
             ),
         ),
         (
-            craft_parts.errors.PluginBuildError(part_name="foo", plugin_name="python"),
+            craft_parts.errors.PluginBuildError(part_name="foo"),
             1,
             dedent(
                 """\
