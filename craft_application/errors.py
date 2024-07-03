@@ -69,12 +69,7 @@ class PartsLifecycleError(CraftError):
     @classmethod
     def from_parts_error(cls, err: craft_parts.PartsError) -> Self:
         """Shortcut to create a PartsLifecycleError from a PartsError."""
-        return cls(
-            message=err.brief,
-            details=err.details,
-            resolution=err.resolution,
-            doc_slug=err.doc_slug,
-        )
+        return cls(message=err.brief, details=err.details, resolution=err.resolution)
 
     @classmethod
     def from_os_error(cls, err: OSError) -> Self:
