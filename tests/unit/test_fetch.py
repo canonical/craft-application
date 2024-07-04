@@ -194,7 +194,11 @@ def test_configure_build_instance(mocker):
     assert isinstance(instance, LXDInstance)
 
     expected_proxy = f"http://my-session-id:my-session-token@127.0.0.1:{PROXY}/"
-    expected_env = {"http_proxy": expected_proxy, "https_proxy": expected_proxy}
+    expected_env = {
+        "http_proxy": expected_proxy,
+        "https_proxy": expected_proxy,
+        "REQUESTS_CA_BUNDLE": "/usr/local/share/ca-certificates/local-ca.crt",
+    }
 
     env = fetch.configure_instance(instance, session_data)
     assert env == expected_env
