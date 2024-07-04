@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU Lesser General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Main application classes for a craft-application."""
+
 from __future__ import annotations
 
 import importlib
@@ -72,6 +73,7 @@ class AppMetadata:
     name: str
     summary: str | None = None
     version: str = field(init=False)
+    docs_url: str | None = None
     source_ignore_patterns: list[str] = field(default_factory=lambda: [])
     managed_instance_project_path = pathlib.PurePosixPath("/root/project")
     features: AppFeatures = AppFeatures()
@@ -272,7 +274,9 @@ class Application:
             yaml_data = util.safe_yaml_load(file)
 
         host_arch = util.get_host_architecture()
-        build_planner = self.app.BuildPlannerClass.unmarshal(yaml_data)
+        build_planner = self.app.BuildPlannerClass.from_yaml_data(
+            yaml_data, project_path
+        )
         self._full_build_plan = build_planner.get_build_plan()
         self._build_plan = filter_plan(
             self._full_build_plan, platform, build_for, host_arch
@@ -484,7 +488,7 @@ class Application:
     ) -> int:
         """Bootstrap and run the application."""
         self._setup_logging()
-        self._register_default_plugins()
+        self._initialize_craft_parts()
         dispatcher = self._get_dispatcher()
         craft_cli.emit.debug("Preparing application...")
 
@@ -543,9 +547,7 @@ class Application:
             return_code = err.retcode
         except craft_parts.PartsError as err:
             self._emit_error(
-                craft_cli.CraftError(
-                    err.brief, details=err.details, resolution=err.resolution
-                ),
+                errors.PartsLifecycleError.from_parts_error(err),
                 cause=err,
             )
             return_code = 1
@@ -735,6 +737,7 @@ class Application:
             greeting=f"Starting {self.app.name}, version {self.app.version}",
             log_filepath=self.log_path,
             streaming_brief=True,
+            docs_base_url=self.app.docs_url,
         )
 
         craft_cli.emit.debug(f"Log verbosity level set to {emitter_mode.name}")
@@ -745,6 +748,14 @@ class Application:
                 f"Valid levels are: {', '.join(emitter.name for emitter in craft_cli.EmitterMode)}",
                 permanent=True,
             )
+
+    def _enable_craft_parts_features(self) -> None:
+        """Enable any specific craft-parts Feature that the application will need."""
+
+    def _initialize_craft_parts(self) -> None:
+        """Perform craft-parts-specific initialization, like features and plugins."""
+        self._enable_craft_parts_features()
+        self._register_default_plugins()
 
 
 def filter_plan(

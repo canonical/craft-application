@@ -82,6 +82,19 @@ def app_metadata(features) -> craft_application.AppMetadata:
 
 
 @pytest.fixture()
+def app_metadata_docs(features) -> craft_application.AppMetadata:
+    with pytest.MonkeyPatch.context() as m:
+        m.setattr(metadata, "version", lambda _: "3.14159")
+        return craft_application.AppMetadata(
+            "testcraft",
+            "A fake app for testing craft-application",
+            docs_url="http://craft-app.com",
+            source_ignore_patterns=["*.snap", "*.charm", "*.starcraft"],
+            features=craft_application.AppFeatures(**features),
+        )
+
+
+@pytest.fixture()
 def fake_project() -> models.Project:
     arch = util.get_host_architecture()
     return models.Project(

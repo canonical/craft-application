@@ -14,6 +14,8 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Tests for error formatting."""
+import textwrap
+
 import pytest
 import pytest_check
 from craft_application.util.error_formatting import (
@@ -100,3 +102,24 @@ def test_format_pydantic_errors(errors, file_name, expected):
     actual = format_pydantic_errors(errors, file_name=file_name)
 
     assert actual == expected
+
+
+def test_format_pydantic_error_normalization():
+    errors = [
+        {"loc": ["a.b.c"], "msg": "Can't do it"},
+        {"loc": ["d.e.f"], "msg": "something's wrong"},
+        {"loc": ["x"], "msg": "Something's not right"},
+    ]
+
+    result = format_pydantic_errors(
+        errors, file_name="this.yaml"  # pyright: ignore[reportArgumentType]
+    )
+    expected = textwrap.dedent(
+        """
+        Bad this.yaml content:
+        - can't do it (in field 'a.b.c')
+        - something's wrong (in field 'd.e.f')
+        - something's not right (in field 'x')
+    """
+    ).strip()
+    assert result == expected
