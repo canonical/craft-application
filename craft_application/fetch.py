@@ -60,6 +60,11 @@ _DEFAULT_CONFIG = FetchServiceConfig(
     password="craft",  # noqa: S106 (hardcoded-password-func-arg)
 )
 
+# The path to the fetch-service's certificate inside the build instance.
+_FETCH_CERT_INSTANCE_PATH = pathlib.Path(
+    "/usr/local/share/ca-certificates/local-ca.crt"
+)
+
 
 class SessionData(CraftBaseModel):
     """Fetch service session data."""
@@ -88,7 +93,12 @@ class NetInfo:
     @property
     def env(self) -> dict[str, str]:
         """Environment variables to use for the proxy."""
-        return {"http_proxy": self.http_proxy, "https_proxy": self.http_proxy}
+        return {
+            "http_proxy": self.http_proxy,
+            "https_proxy": self.http_proxy,
+            # This makes the requests lib take our cert into account.
+            "REQUESTS_CA_BUNDLE": str(_FETCH_CERT_INSTANCE_PATH),
+        }
 
 
 def is_service_online() -> bool:
@@ -290,7 +300,7 @@ def _install_certificate(instance: craft_providers.Executor) -> None:
     with resources.as_file(certs) as certs_dir:
         instance.push_file(
             source=certs_dir / "local-ca.crt",
-            destination=pathlib.Path("/usr/local/share/ca-certificates/local-ca.crt"),
+            destination=_FETCH_CERT_INSTANCE_PATH,
         )
     # Update the certificates db
     instance.execute_run(  # pyright: ignore[reportUnknownMemberType]

@@ -15,8 +15,11 @@
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Tests for FetchService."""
 import contextlib
+import io
+import pathlib
 import shutil
 import socket
+import textwrap
 from unittest import mock
 
 import craft_providers
@@ -112,6 +115,42 @@ def test_create_teardown_session(app_service, mocker):
     assert "artefacts" in report
 
 
+# Bash script to setup the build instance before the actual testing.
+setup_environment = (
+    textwrap.dedent(
+        """
+    #! /bin/bash
+    set -euo pipefail
+
+    apt install -y python3.10-venv
+    python3 -m venv venv
+    venv/bin/pip install requests
+"""
+    )
+    .strip()
+    .encode("ascii")
+)
+
+wheel_url = (
+    "https://files.pythonhosted.org/packages/0f/ec/"
+    "a9b769274512ea65d8484c2beb8c3d2686d1323b450ce9ee6d09452ac430/"
+    "craft_application-3.0.0-py3-none-any.whl"
+)
+# Bash script to fetch the craft-application wheel.
+check_requests = (
+    textwrap.dedent(
+        f"""
+    #! /bin/bash
+    set -euo pipefail
+
+    venv/bin/python -c "import requests; requests.get('{wheel_url}').raise_for_status()"
+"""
+    )
+    .strip()
+    .encode("ascii")
+)
+
+
 @pytest.fixture()
 def lxd_instance(snap_safe_tmp_path, provider_service):
     provider_service.get_provider("lxd")
@@ -121,6 +160,16 @@ def lxd_instance(snap_safe_tmp_path, provider_service):
     instance = provider_service.instance(build_info, work_dir=snap_safe_tmp_path)
 
     with instance as executor:
+        executor.push_file_io(
+            destination=pathlib.Path("/root/setup-environment.sh"),
+            content=io.BytesIO(setup_environment),
+            file_mode="0644",
+        )
+        executor.execute_run(
+            ["bash", "/root/setup-environment.sh"],
+            check=True,
+            capture_output=True,
+        )
         yield executor
 
     if executor is not None:
@@ -129,25 +178,41 @@ def lxd_instance(snap_safe_tmp_path, provider_service):
 
 
 def test_build_instance_integration(app_service, lxd_instance):
-
     app_service.setup()
 
     env = app_service.create_session(lxd_instance)
+
     try:
+        # Install the hello Ubuntu package.
         lxd_instance.execute_run(
             ["apt", "install", "-y", "hello"], check=True, env=env, capture_output=True
+        )
+
+        # Download the craft-application wheel.
+        lxd_instance.push_file_io(
+            destination=pathlib.Path("/root/check-requests.sh"),
+            content=io.BytesIO(check_requests),
+            file_mode="0644",
+        )
+        lxd_instance.execute_run(
+            ["bash", "/root/check-requests.sh"],
+            check=True,
+            env=env,
+            capture_output=True,
         )
     finally:
         report = app_service.teardown_session()
 
-    # Check that the installation of the "hello" deb went through the inspector.
-    debs = set()
-    deb_type = "application/vnd.debian.binary-package"
+    artefacts_and_types: list[tuple[str, str]] = []
 
     for artefact in report["artefacts"]:
         metadata_name = artefact["metadata"]["name"]
         metadata_type = artefact["metadata"]["type"]
-        if metadata_name == "hello" and metadata_type == deb_type:
-            debs.add(metadata_name)
 
-    assert "hello" in debs
+        artefacts_and_types.append((metadata_name, metadata_type))
+
+    # Check that the installation of the "hello" deb went through the inspector.
+    assert ("hello", "application/vnd.debian.binary-package") in artefacts_and_types
+
+    # Check that the fetching of the "craft-application" wheel went through the inspector.
+    assert ("craft-application", "application/x.python.wheel") in artefacts_and_types
