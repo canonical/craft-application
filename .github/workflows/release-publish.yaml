@@ -15,12 +15,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          fetch-tags: true
-          fetch-depth: 1
-      - name: Check git tag
+      - name: Fetch tag annotations
         run: |
-          # Print out the output of 'git describe' for debugging
+          # Note: we fetch the tags here instead of using actions/checkout's "fetch-tags"
+          # because of https://github.com/actions/checkout/issues/1467
+          git fetch --force --tags --depth 1
           git describe --dirty --long --match '[0-9]*.[0-9]*.[0-9]*' --exclude '*[^0-9.]*'
       - name: Setup Python
         uses: actions/setup-python@v5
