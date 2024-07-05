@@ -2,6 +2,21 @@
 Changelog
 *********
 
+3.1.0 (2024-Jul-05)
+-------------------
+
+.. note::
+
+   3.1.0 includes changes from the 2.9.0 release.
+
+Remote build
+============
+
+Add a ``credentials_filepath`` property to the ``RemoteBuildService`` so that
+applications can point to a different Launchpad credentials file.
+
+For a complete list of commits, check out the `3.1.0`_ release on GitHub.
+
 2.9.0 (2024-Jul-03)
 -------------------
 
@@ -111,3 +126,4 @@ For a complete list of commits, check out the `2.7.0`_ release on GitHub.
 .. _2.7.0: https://github.com/canonical/craft-application/releases/tag/2.7.0
 .. _2.8.0: https://github.com/canonical/craft-application/releases/tag/2.8.0
 .. _3.0.0: https://github.com/canonical/craft-application/releases/tag/3.0.0
+.. _3.1.0: https://github.com/canonical/craft-application/releases/tag/3.1.0
