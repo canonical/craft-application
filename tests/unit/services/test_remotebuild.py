@@ -21,8 +21,9 @@ from unittest import mock
 import launchpadlib.errors
 import lazr.restfulclient.errors
 import lazr.restfulclient.resource
+import platformdirs
 import pytest
-from craft_application import errors, launchpad
+from craft_application import errors, launchpad, services
 from craft_application.remote import git
 from craft_application.remote.errors import RemoteBuildInvalidGitRepoError
 
@@ -367,3 +368,15 @@ def test_new_build_not_git_repo(
 ):
     with pytest.raises(RemoteBuildInvalidGitRepoError):
         remote_build_service.start_builds(tmp_path, None)
+
+
+def test_credentials_filepath(app_metadata, fake_services):
+    """Test that the credentials file path is correctly generated."""
+    credentials_filepath = services.RemoteBuildService(
+        app_metadata, fake_services
+    ).credentials_filepath
+
+    assert (
+        credentials_filepath
+        == platformdirs.user_data_path(app_metadata.name) / "launchpad-credentials"
+    )
