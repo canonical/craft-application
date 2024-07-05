@@ -323,17 +323,26 @@ def test_devel_base_no_build_base():
 def test_devel_base_error():
     """Raise an error if base is 'devel' and build-base is not 'devel'."""
     with pytest.raises(CraftValidationError) as exc_info:
-        FakeBuildBaseProject(  # pyright: ignore[reportCallIssue]
-            name="project-name",  # pyright: ignore[reportGeneralTypeIssues]
-            version="1.0",  # pyright: ignore[reportGeneralTypeIssues]
-            parts={},
-            platforms={"arm64": None},
-            base=f"ubuntu@{DEVEL_BASE_INFOS[0].current_devel_base.value}",
-            build_base=f"ubuntu@{craft_providers.bases.ubuntu.BuilddBaseAlias.JAMMY.value}",
+        FakeBuildBaseProject.from_yaml_data(
+            {
+                "name": "project-name",
+                "version": "1.0",
+                "parts": {},
+                "platforms": {"arm64": None},
+                "base": f"ubuntu@{DEVEL_BASE_INFOS[0].current_devel_base.value}",
+                "build_base": f"ubuntu@{craft_providers.bases.ubuntu.BuilddBaseAlias.JAMMY.value}",
+            },
+            pathlib.Path("testcraft.yaml"),
         )
 
+    expected_devel = DEVEL_BASE_INFOS[0].current_devel_base.value
     assert exc_info.match(
-        f"A development build-base must be used when base is 'ubuntu@{DEVEL_BASE_INFOS[0].current_devel_base.value}'"
+        dedent(
+            f"""
+    Bad testcraft.yaml content:
+    - a development build-base must be used when base is 'ubuntu@{expected_devel}'
+    """
+        ).strip()
     )
 
 

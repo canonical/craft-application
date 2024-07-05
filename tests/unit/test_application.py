@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU Lesser General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Unit tests for craft-application app classes."""
+
 import argparse
 import copy
 import dataclasses
@@ -24,6 +25,7 @@ import pathlib
 import re
 import subprocess
 import sys
+import textwrap
 from textwrap import dedent
 from typing import Any
 from unittest import mock
@@ -51,6 +53,7 @@ from craft_application.util import (
 from craft_parts.plugins.plugins import PluginType
 from craft_providers import bases
 from overrides import override
+from pydantic import validator
 
 EMPTY_COMMAND_GROUP = craft_cli.CommandGroup("FakeCommands", [])
 BASIC_PROJECT_YAML = """
@@ -883,6 +886,16 @@ def test_run_success_managed_inside_managed(
         (KeyboardInterrupt(), 130, "Interrupted.\n"),
         (craft_cli.CraftError("msg"), 1, "msg\n"),
         (craft_parts.PartsError("unable to pull"), 1, "unable to pull\n"),
+        (
+            craft_parts.errors.PluginBuildError(part_name="foo", plugin_name="python"),
+            1,
+            dedent(
+                """\
+                Failed to run the build script for part 'foo'.
+                Recommended resolution: Check the build output and verify the project can work with the 'python' plugin.
+            """
+            ),
+        ),
         (craft_providers.ProviderError("fail to launch"), 1, "fail to launch\n"),
         (Exception(), 70, "testcraft internal error: Exception()\n"),
         (
@@ -913,7 +926,55 @@ def test_run_error(
     monkeypatch.setattr(sys, "argv", ["testcraft", "pull"])
 
     pytest_check.equal(app.run(), return_code)
-    out, err = capsys.readouterr()
+    _, err = capsys.readouterr()
+    assert err.startswith(error_msg)
+
+
+@pytest.mark.parametrize(
+    ("error", "return_code", "error_msg"),
+    [
+        # PluginPullError does not have a docs_slug
+        (
+            craft_parts.errors.PluginPullError(part_name="foo"),
+            1,
+            dedent(
+                """\
+                Failed to run the pull script for part 'foo'.
+                Full execution log:"""
+            ),
+        ),
+        (
+            craft_parts.errors.PluginBuildError(part_name="foo", plugin_name="python"),
+            1,
+            dedent(
+                """\
+                Failed to run the build script for part 'foo'.
+                Recommended resolution: Check the build output and verify the project can work with the 'python' plugin.
+                For more information, check out: http://craft-app.com/reference/plugins.html
+                Full execution log:"""
+            ),
+        ),
+    ],
+)
+def test_run_error_with_docs_url(
+    monkeypatch,
+    capsys,
+    mock_dispatcher,
+    app_metadata_docs,
+    fake_services,
+    fake_project,
+    error,
+    return_code,
+    error_msg,
+):
+    app = FakeApplication(app_metadata_docs, fake_services)
+    app.set_project(fake_project)
+    mock_dispatcher.load_command.side_effect = error
+    mock_dispatcher.pre_parse_args.return_value = {}
+    monkeypatch.setattr(sys, "argv", ["testcraft", "pull"])
+
+    pytest_check.equal(app.run(), return_code)
+    _, err = capsys.readouterr()
     assert err.startswith(error_msg)
 
 
@@ -1924,3 +1985,74 @@ def test_process_grammar_full(grammar_app_full):
         {"path": "riscv64-perm-1", "owner": 123, "group": 123, "mode": "777"},
         {"path": "riscv64-perm-2", "owner": 456, "group": 456, "mode": "666"},
     ]
+
+
+def test_enable_features(app, mocker):
+    calls = []
+
+    def enable_features(*_args, **_kwargs):
+        calls.append("enable-features")
+
+    def register_plugins(*_args, **_kwargs):
+        calls.append("register-plugins")
+
+    mocker.patch.object(
+        app, "_enable_craft_parts_features", side_effect=enable_features
+    )
+    mocker.patch.object(app, "_register_default_plugins", side_effect=register_plugins)
+
+    with pytest.raises(SystemExit):
+        app.run()
+
+    # Check that features were enabled very early, before plugins are registered.
+    assert calls == ["enable-features", "register-plugins"]
+
+
+class MyRaisingPlanner(models.BuildPlanner):
+    value1: int
+    value2: str
+
+    @validator("value1")
+    def _validate_value1(cls, v):
+        raise ValueError(f"Bad value1: {v}")
+
+    @validator("value2")
+    def _validate_value(cls, v):
+        raise ValueError(f"Bad value2: {v}")
+
+    @override
+    def get_build_plan(self) -> list[BuildInfo]:
+        return []
+
+
+def test_build_planner_errors(tmp_path, monkeypatch, fake_services):
+    monkeypatch.chdir(tmp_path)
+    app_metadata = craft_application.AppMetadata(
+        "testcraft",
+        "A fake app for testing craft-application",
+        BuildPlannerClass=MyRaisingPlanner,
+        source_ignore_patterns=["*.snap", "*.charm", "*.starcraft"],
+    )
+    app = FakeApplication(app_metadata, fake_services)
+    project_contents = textwrap.dedent(
+        """\
+    name: my-project
+    base: ubuntu@24.04
+    value1: 10
+    value2: "banana"
+    platforms:
+      amd64:
+    """
+    ).strip()
+    project_path = tmp_path / "testcraft.yaml"
+    project_path.write_text(project_contents)
+
+    with pytest.raises(errors.CraftValidationError) as err:
+        app.get_project()
+
+    expected = (
+        "Bad testcraft.yaml content:\n"
+        "- bad value1: 10 (in field 'value1')\n"
+        "- bad value2: banana (in field 'value2')"
+    )
+    assert str(err.value) == expected
