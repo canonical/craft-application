@@ -180,10 +180,12 @@ partition information from them:
   >>> Part(name="my-part").part_install_dirs["kernel"]
   Path("partitions/kernel/parts/my-part/install")
 
-  >>> ProjectDirs.get_stage_dir(partition="kernel")
+  >>> # or, from within the LifecycleService:
+
+  >>> self.project_info.dirs.get_stage_dir(partition="kernel")
   Path("/root/partitions/kernel/stage")
 
-  >>> ProjectDirs.get_prime_dir(partition="component/bar-baz")
+  >>> self.project_info.dirs.get_prime_dir(partition="component/bar-baz")
   Path("/root/partitions/component/bar-baz/prime")
 
 
