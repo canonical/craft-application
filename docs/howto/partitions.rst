@@ -110,16 +110,30 @@ Paths in the configuration yaml not beginning with a partition label will
 implicitly use the default partition.
 
 The source path of an ``organize`` entry can only be from the default
-partition.  For example:
+partition.  For example, this is valid:
 
 .. code-block:: yaml
 
   organize:
-    (kernel)/usr/local/bin/hello: bin/hello
+    usr/local/bin/hello: (component/bar-baz)/bin/hello
+
+This is also valid, and equivalent to the above:
+
+.. code-block:: yaml
+
+  organize:
+    (default)/usr/local/bin/hello: (component/bar-baz)/bin/hello
+
+But this is invalid:
+
+.. code-block:: yaml
+
+  organize:
+    (component/bar-baz)/usr/local/bin/hello: bin/hello
 
 .. code-block:: text
 
-  Cannot organize files from 'kernel' partition.
+  Cannot organize files from 'component/bar-baz' partition.
   Files can only be organized from the 'default' partition
 
 When the ``stage`` and ``prime`` keywords are not provided for a part,
