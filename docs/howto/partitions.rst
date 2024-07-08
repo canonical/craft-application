@@ -5,9 +5,17 @@ Add partition support to an application
 Partitions basics
 =================
 
+.. Insert link below to new Snapcraft docs when this is merged and live:
+   https://github.com/canonical/snapcraft/issues/4857
+
 Applications implementing ``craft-application`` and its dependent suite of
-libraries can optionally make use of `disk partitions
-<https://en.wikipedia.org/wiki/Disk_partitioning>`_.  The supported list of
+libraries can optionally make use of *partitions* when organizing the files in their output artifact.  Partitions are a generic concept, and may be used to implement a concrete feature in your application.  For instance, partitions may refer to:
+
+* Snapcraft's *components*
+* `Disk partitions <https://en.wikipedia.org/wiki/Disk_partitioning>`_
+* Any other level of organization you may want to add to the application's output, such as layers in an OCI image
+
+The supported list of
 partitions must be defined by the application itself (at runtime), and those
 defined partitions can then be used by application consumers' configuration
 yaml files.
