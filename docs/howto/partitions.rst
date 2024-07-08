@@ -146,8 +146,8 @@ will not be affected for the other partitions.)
 See also
 ^^^^^^^^
 
- * Craft parts: part properties: `organize`_
- * Craft parts: filesets: `specifying paths`_
+* Craft parts: part properties: `organize`_
+* Craft parts: filesets: `specifying paths`_
 
 In environment variables
 ------------------------
@@ -166,8 +166,8 @@ configuration yaml.  For instance:
 See also
 ^^^^^^^^
 
- * Craft parts: parts and steps: `environment variables`_
- * Craft parts: part properties: `override-prime`_
+* Craft parts: parts and steps: `environment variables`_
+* Craft parts: part properties: `override-prime`_
 
 In code
 -------
