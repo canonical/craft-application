@@ -21,7 +21,7 @@ refer to:
 
 The supported list of partitions must be defined by the application itself (at
 runtime), and those defined partitions can then be used by application
-consumers' configuration yaml files.
+consumers' project files.
 
 Optionally, partitions can be namespaced, for organizational purposes.
 
@@ -91,11 +91,11 @@ Using the partitions
 Partitions cannot be used until `after you have configured your application
 <#app-changes>`_.
 
-In configuration yaml
----------------------
+In a project file
+-----------------
 
 Defined partitions may be referenced in the ``organize``, ``stage``, and
-``prime`` sections of your configuration yaml files:
+``prime`` sections of your project files:
 
 .. code-block:: yaml
 
@@ -106,8 +106,8 @@ Defined partitions may be referenced in the ``organize``, ``stage``, and
   prime:
     - (<partition>)/<path>
 
-Paths in the configuration yaml not beginning with a partition label will
-implicitly use the default partition.
+Paths in the project file not beginning with a partition label will implicitly
+use the default partition.
 
 The source path of an ``organize`` entry can only be from the default
 partition.  For example, this is valid:
@@ -152,8 +152,8 @@ See also
 In environment variables
 ------------------------
 
-You might use these variables in a lifecycle override section of a
-configuration yaml.  For instance:
+You might use these variables in a lifecycle override section of a project
+file.  For instance:
 
 .. code-block:: yaml
 
