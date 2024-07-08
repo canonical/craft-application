@@ -28,7 +28,8 @@ Optionally, partitions can be namespaced, for organizational purposes.
 Partition names and namespace names must consist of *only* lower-case
 alphabetic characters, unless a partition exists under a namespace, in which
 case it may also contain hyphen characters, though the first and last
-characters must still be alphabetic.
+characters must still be alphabetic.  Names containing hyphens also may not
+contain two or more hyphens in a row.
 
 ``default`` must always be the first listed partition.
 
