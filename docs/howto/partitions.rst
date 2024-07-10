@@ -172,15 +172,12 @@ See also
 In code
 -------
 
-Application code that can access ``Part`` or ``ProjectDirs`` objects may get
-partition information from them:
+Application code that can access ``ProjectDirs`` objects may get partition
+information from them:
 
 .. code-block:: python-console
 
-  >>> Part(name="my-part").part_install_dirs["kernel"]
-  Path("partitions/kernel/parts/my-part/install")
-
-  >>> # or, from within the LifecycleService:
+  >>> # from within the LifecycleService:
 
   >>> self.project_info.dirs.get_stage_dir(partition="kernel")
   Path("/root/partitions/kernel/stage")
