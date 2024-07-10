@@ -159,9 +159,9 @@ file.  For instance:
 .. code-block:: yaml
 
   override-prime: |
-    cp -R /vmlinux $CRAFT_KERNEL_PRIME/
+    cp -R vmlinux $CRAFT_KERNEL_PRIME/
     chmod -R 444 $CRAFT_KERNEL_PRIME/*
-    cp -R /lib/modules/6.x/* $CRAFT_PRIME
+    cp -R lib/modules/6.x/* $CRAFT_PRIME
     chmod -R 600 $CRAFT_PRIME/*
 
 See also
