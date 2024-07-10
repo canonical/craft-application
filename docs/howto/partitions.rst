@@ -110,14 +110,15 @@ Paths in the project file not beginning with a partition label will implicitly
 use the default partition.
 
 The source path of an ``organize`` entry can only be from the default
-partition.  For example, this is valid:
+partition.  For example, this organizes the file "usr/local/bin/hello" into the
+"bar-baz" partition in the "component" namespace:
 
 .. code-block:: yaml
 
   organize:
     usr/local/bin/hello: (component/bar-baz)/bin/hello
 
-This is also valid, and equivalent to the above:
+This is equivalent to the above:
 
 .. code-block:: yaml
 
