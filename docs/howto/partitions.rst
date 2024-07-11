@@ -15,9 +15,9 @@ artifacts or artifact sections, and the actual layout of partitions are defined
 by the application.  For instance, partitions can be used to implement:
 
 * Snapcraft's *components*
-* `Disk partitions <https://en.wikipedia.org/wiki/Disk_partitioning>`_ * Any
-  other level of organization you may want to add to the application's output,
-  such as layers in an OCI image
+* `Disk partitions <https://en.wikipedia.org/wiki/Disk_partitioning>`_
+* Any other level of organization you may want to add to the application's
+  output, such as layers in an OCI image
 
 The supported list of partitions must be defined by the application itself (at
 runtime), and those defined partitions can then be used by application
