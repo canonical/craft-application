@@ -10,9 +10,9 @@ Partitions basics
 
 Applications implementing ``craft-application`` and its dependent suite of
 libraries can optionally make use of *partitions* when organizing the files in
-their output artifact.  Partitions are a generic concept, and may be used to
-implement a concrete feature in your application.  For instance, partitions may
-refer to:
+their output artifact.  Partitions are used to organize files into different
+artifacts or artifact sections, and the actual layout of partitions are defined
+by the application.  For instance, partitions can be used to implement:
 
 * Snapcraft's *components*
 * `Disk partitions <https://en.wikipedia.org/wiki/Disk_partitioning>`_ * Any
