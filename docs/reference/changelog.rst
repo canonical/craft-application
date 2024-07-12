@@ -2,6 +2,22 @@
 Changelog
 *********
 
+3.2.0 (2024-Jul-07)
+-------------------
+
+Application
+===========
+
+Add support for *versioned* documentation urls - that is, urls that point to
+the documentation for the specific version of the running application.
+
+Documentation
+=============
+
+Add a how-to guide for using partitions.
+
+For a complete list of commits, check out the `3.2.0`_ release on GitHb.
+
 3.1.0 (2024-Jul-05)
 -------------------
 
@@ -127,3 +143,4 @@ For a complete list of commits, check out the `2.7.0`_ release on GitHub.
 .. _2.8.0: https://github.com/canonical/craft-application/releases/tag/2.8.0
 .. _3.0.0: https://github.com/canonical/craft-application/releases/tag/3.0.0
 .. _3.1.0: https://github.com/canonical/craft-application/releases/tag/3.1.0
+.. _3.2.0: https://github.com/canonical/craft-application/releases/tag/3.2.0
