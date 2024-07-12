@@ -50,6 +50,7 @@ from craft_application.models import BuildInfo
 from craft_application.util import (
     get_host_architecture,  # pyright: ignore[reportGeneralTypeIssues]
 )
+from craft_cli import emit
 from craft_parts.plugins.plugins import PluginType
 from craft_providers import bases
 from overrides import override
@@ -2056,3 +2057,19 @@ def test_build_planner_errors(tmp_path, monkeypatch, fake_services):
         "- bad value2: banana (in field 'value2')"
     )
     assert str(err.value) == expected
+
+
+def test_emitter_docs_url(monkeypatch, mocker, app):
+    """Test that the emitter is initialized with the correct url."""
+
+    assert app.app.docs_url == "www.craft-app.com/docs/{version}"
+    assert app.app.version == "3.14159"
+    expected_url = "www.craft-app.com/docs/3.14159"
+
+    spied_init = mocker.spy(emit, "init")
+
+    monkeypatch.setattr(sys, "argv", ["testcraft"])
+    with pytest.raises(SystemExit):
+        app.run()
+
+    assert spied_init.mock_calls[0].kwargs["docs_base_url"] == expected_url

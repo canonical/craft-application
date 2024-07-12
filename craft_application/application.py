@@ -103,6 +103,14 @@ class AppMetadata:
             md = metadata.metadata(self.name)
             setter("summary", md["summary"])
 
+    @property
+    def versioned_docs_url(self) -> str | None:
+        """The ``docs_url`` with the proper app version."""
+        if self.docs_url is None:
+            return None
+
+        return util.render_doc_url(self.docs_url, self.version)
+
 
 class Application:
     """Craft Application Builder.
@@ -737,7 +745,7 @@ class Application:
             greeting=f"Starting {self.app.name}, version {self.app.version}",
             log_filepath=self.log_path,
             streaming_brief=True,
-            docs_base_url=self.app.docs_url,
+            docs_base_url=self.app.versioned_docs_url,
         )
 
         craft_cli.emit.debug(f"Log verbosity level set to {emitter_mode.name}")

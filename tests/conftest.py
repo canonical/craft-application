@@ -78,6 +78,7 @@ def app_metadata(features) -> craft_application.AppMetadata:
             "A fake app for testing craft-application",
             source_ignore_patterns=["*.snap", "*.charm", "*.starcraft"],
             features=craft_application.AppFeatures(**features),
+            docs_url="www.craft-app.com/docs/{version}",
         )
 
 
