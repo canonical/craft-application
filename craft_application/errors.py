@@ -19,8 +19,8 @@ All errors inherit from craft_cli.CraftError.
 """
 from __future__ import annotations
 
-from collections.abc import Sequence
 import os
+from collections.abc import Sequence
 from typing import TYPE_CHECKING
 
 from craft_cli import CraftError
