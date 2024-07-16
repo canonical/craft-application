@@ -1,4 +1,4 @@
-name: Tests, linting, etc.
+name: test
 on:
   push:
     branches:
@@ -6,16 +6,21 @@ on:
       - "feature/*"
       - "hotfix/*"
       - "release/*"
+      - "renovate/*"
   pull_request:
 
 jobs:
-  linters:
+  lint:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - name: conventional commits
+        uses: webiny/action-conventional-commits@v1.3.0
+        with:
+          allowed-commit-types: "build,chore,ci,docs,feat,fix,perf,refactor,style,test"
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
@@ -26,7 +31,7 @@ jobs:
           echo "::group::Begin snap install"
           echo "Installing snaps in the background while running apt and pip..."
           sudo snap install --no-wait --classic pyright
-          sudo snap install --no-wait ruff shellcheck
+          sudo snap install --no-wait codespell shellcheck ruff
           echo "::endgroup::"
           echo "::group::apt-get"
           sudo apt update
@@ -36,7 +41,7 @@ jobs:
           python -m pip install tox
           echo "::endgroup::"
           echo "::group::Create virtual environments for linting processes."
-          tox run -m lint --notest
+          tox run --colored yes -m lint --notest
           echo "::endgroup::"
           echo "::group::Wait for snap to complete"
           snap watch --last=install
@@ -47,18 +52,19 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        platform: [ubuntu-22.04]
+        platform: [ubuntu-22.04, ubuntu-24.04]
     runs-on: ${{ matrix.platform }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Set up Python versions on ${{ matrix.platform }}
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: |
             3.10
             3.12
+            3.13-dev
           cache: 'pip'
       - name: Setup LXD
         uses: canonical/setup-lxd@v0.1.1
@@ -75,9 +81,9 @@ jobs:
           echo "::endgroup::"
           mkdir -p results
       - name: Setup Tox environments
-        run: tox run -m unit-tests --notest
-      - name: Unit tests
-        run: .tox/.tox/bin/tox run --skip-pkg-install --no-list-dependencies --result-json results/tox-${{ matrix.platform }}.json -m unit-tests
+        run: tox run --colored yes -m tests --notest
+      - name: Test with tox
+        run: tox run --skip-pkg-install --no-list-dependencies --result-json results/tox-${{ matrix.platform }}.json --colored yes -m unit-tests
         env:
           PYTEST_ADDOPTS: "--no-header -vv -rN"
       - name: Upload code coverage
@@ -95,19 +101,20 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        platform: [ubuntu-22.04]
+        platform: [ubuntu-22.04, ubuntu-24.04]
         python: [py310, py312]
     runs-on: ${{ matrix.platform }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Set up Python versions on ${{ matrix.platform }}
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: |
             3.10
             3.12
+            3.13-dev
           cache: 'pip'
       - name: Setup LXD
         uses: canonical/setup-lxd@v0.1.1
