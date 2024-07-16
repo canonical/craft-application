@@ -18,6 +18,7 @@
 from craft_application.git import GitRepo, GitError, GitType, get_git_repo_type, is_repo
 from .errors import (
     RemoteBuildError,
+    RemoteBuildGitError,
     RemoteBuildInvalidGitRepoError,
     UnsupportedArchitectureError,
 )
@@ -38,6 +39,7 @@ __all__ = [
     "GitRepo",
     "GitType",
     "RemoteBuildError",
+    "RemoteBuildGitError",
     "RemoteBuildInvalidGitRepoError",
     "UnsupportedArchitectureError",
     "WorkTree",

@@ -16,11 +16,13 @@
 
 from pathlib import Path
 from shutil import copytree
+from typing import cast
 
 from xdg import BaseDirectory  # type: ignore[import-untyped]
 
-from craft_application.git import GitRepo
+from craft_application.git import GitError, GitRepo
 
+from .errors import RemoteBuildGitError
 from .utils import rmtree
 
 
@@ -55,10 +57,15 @@ class WorkTree:
 
     def _gitify_repository(self) -> None:
         """Git-ify source repository tree."""
-        repo = GitRepo(self._repo_dir)
-        if not repo.is_clean():
-            repo.add_all()
-            repo.commit()
+        try:
+            repo = GitRepo(self._repo_dir)
+            if not repo.is_clean():
+                repo.add_all()
+                repo.commit()
+        except GitError as git_error:
+            raise RemoteBuildGitError(
+                cast(str, git_error.details),
+            ) from git_error
 
     def clean_cache(self) -> None:
         """Clean the cache."""
