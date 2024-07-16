@@ -15,16 +15,19 @@
 
 """Tests for the pygit2 wrapper class."""
 
+import os
+import pathlib
 import re
 import subprocess
+from collections.abc import Iterator
 from pathlib import Path
 from unittest.mock import ANY
 
 import pygit2
 import pygit2.enums
 import pytest
+from craft_application.git.errors import GitError
 from craft_application.remote import (
-    GitError,
     GitRepo,
     GitType,
     RemoteBuildInvalidGitRepoError,
@@ -34,33 +37,45 @@ from craft_application.remote import (
 )
 
 
-def test_is_repo(new_dir):
+@pytest.fixture()
+def empty_working_directory(tmp_path) -> Iterator[Path]:
+    cwd = pathlib.Path.cwd()
+
+    repo_dir = Path(tmp_path, "test-repo")
+    repo_dir.mkdir()
+    os.chdir(repo_dir)
+    yield repo_dir
+
+    os.chdir(cwd)
+
+
+def test_is_repo(empty_working_directory):
     """Check if directory is a repo."""
-    GitRepo(new_dir)
+    GitRepo(empty_working_directory)
 
-    assert is_repo(new_dir)
+    assert is_repo(empty_working_directory)
 
 
-def test_is_not_repo(new_dir):
+def test_is_not_repo(empty_working_directory):
     """Check if a directory is not a repo."""
-    assert not is_repo(new_dir)
+    assert not is_repo(empty_working_directory)
 
 
-def test_git_repo_type_invalid(new_dir):
+def test_git_repo_type_invalid(empty_working_directory):
     """Check if directory is an invalid repo."""
-    assert get_git_repo_type(new_dir) == GitType.INVALID
+    assert get_git_repo_type(empty_working_directory) == GitType.INVALID
 
 
-def test_git_repo_type_normal(new_dir):
+def test_git_repo_type_normal(empty_working_directory):
     """Check if directory is a repo."""
-    GitRepo(new_dir)
+    GitRepo(empty_working_directory)
 
-    assert get_git_repo_type(new_dir) == GitType.NORMAL
+    assert get_git_repo_type(empty_working_directory) == GitType.NORMAL
 
 
-def test_git_repo_type_shallow(new_dir):
+def test_git_repo_type_shallow(empty_working_directory):
     """Check if directory is a shallow cloned repo."""
-    root_path = Path(new_dir)
+    root_path = Path(empty_working_directory)
     git_normal_path = root_path / "normal"
     git_normal_path.mkdir()
     git_shallow_path = root_path / "shallow"
@@ -94,7 +109,7 @@ def test_git_repo_type_shallow(new_dir):
     assert get_git_repo_type(git_shallow_path) == GitType.SHALLOW
 
 
-@pytest.mark.usefixtures("new_dir")
+@pytest.mark.usefixtures("empty_working_directory")
 def test_is_repo_path_only():
     """Only look at the path for a repo."""
     Path("parent-repo/not-a-repo/child-repo").mkdir(parents=True)
@@ -107,82 +122,82 @@ def test_is_repo_path_only():
     assert is_repo(Path("parent-repo/not-a-repo/child-repo"))
 
 
-def test_is_repo_error(new_dir, mocker):
+def test_is_repo_error(empty_working_directory, mocker):
     """Raise an error if git fails to check a repo."""
     mocker.patch("pygit2.discover_repository", side_effect=pygit2.GitError)
 
     with pytest.raises(GitError) as raised:
-        assert is_repo(new_dir)
+        assert is_repo(empty_working_directory)
 
     assert raised.value.details == (
-        f"Could not check for git repository in {str(new_dir)!r}."
+        f"Could not check for git repository in {str(empty_working_directory)!r}."
     )
 
 
-def test_init_repo(new_dir):
+def test_init_repo(empty_working_directory):
     """Initialize a GitRepo object."""
-    repo = GitRepo(new_dir)
+    repo = GitRepo(empty_working_directory)
 
-    assert is_repo(new_dir)
-    assert repo.path == new_dir
+    assert is_repo(empty_working_directory)
+    assert repo.path == empty_working_directory
 
 
-def test_init_existing_repo(new_dir):
+def test_init_existing_repo(empty_working_directory):
     """Initialize a GitRepo object in an existing git repository."""
     # initialize a repo
-    GitRepo(new_dir)
+    GitRepo(empty_working_directory)
 
     # creating a new GitRepo object will not re-initialize the repo
-    repo = GitRepo(new_dir)
+    repo = GitRepo(empty_working_directory)
 
-    assert is_repo(new_dir)
-    assert repo.path == new_dir
+    assert is_repo(empty_working_directory)
+    assert repo.path == empty_working_directory
 
 
-def test_init_repo_no_directory(new_dir):
+def test_init_repo_no_directory(empty_working_directory):
     """Raise an error if the directory is missing."""
     with pytest.raises(FileNotFoundError) as raised:
-        GitRepo(new_dir / "missing")
+        GitRepo(empty_working_directory / "missing")
 
     assert str(raised.value) == (
         "Could not initialize a git repository because "
-        f"{str(new_dir / 'missing')!r} does not exist or is not a directory."
+        f"{str(empty_working_directory / 'missing')!r} does not exist or is not a directory."
     )
 
 
-def test_init_repo_not_a_directory(new_dir):
+def test_init_repo_not_a_directory(empty_working_directory):
     """Raise an error if the path is not a directory."""
     Path("regular-file").touch()
 
     with pytest.raises(FileNotFoundError) as raised:
-        GitRepo(new_dir / "regular-file")
+        GitRepo(empty_working_directory / "regular-file")
 
     assert str(raised.value) == (
         "Could not initialize a git repository because "
-        f"{str(new_dir / 'regular-file')!r} does not exist or is not a directory."
+        f"{str(empty_working_directory / 'regular-file')!r} does not exist or is not a directory."
     )
 
 
-def test_init_repo_error(new_dir, mocker):
+def test_init_repo_error(empty_working_directory, mocker):
     """Raise an error if the repo cannot be initialized."""
     mocker.patch("pygit2.init_repository", side_effect=pygit2.GitError)
 
     with pytest.raises(GitError) as raised:
-        GitRepo(new_dir)
+        GitRepo(empty_working_directory)
 
     assert raised.value.details == (
-        f"Could not initialize a git repository in {str(new_dir)!r}."
+        f"Could not initialize a git repository in {str(empty_working_directory)!r}."
     )
 
 
-def test_add_all(new_dir):
+def test_add_all(empty_working_directory):
     """Add all files."""
-    repo = GitRepo(new_dir)
+    repo = GitRepo(empty_working_directory)
     (repo.path / "foo").touch()
     (repo.path / "bar").touch()
     repo.add_all()
 
-    status = pygit2.Repository(new_dir).status()
+    status = pygit2.Repository(empty_working_directory).status()
 
     if pygit2.__version__.startswith("1.13."):
         expected = {
@@ -198,39 +213,39 @@ def test_add_all(new_dir):
     assert status == expected
 
 
-def test_add_all_no_files_to_add(new_dir):
+def test_add_all_no_files_to_add(empty_working_directory):
     """`add_all` should succeed even if there are no files to add."""
-    repo = GitRepo(new_dir)
+    repo = GitRepo(empty_working_directory)
     repo.add_all()
 
-    status = pygit2.Repository(new_dir).status()
+    status = pygit2.Repository(empty_working_directory).status()
 
     assert status == {}
 
 
-def test_add_all_error(new_dir, mocker):
+def test_add_all_error(empty_working_directory, mocker):
     """Raise an error if the changes could not be added."""
     mocker.patch("pygit2.Index.add_all", side_effect=pygit2.GitError)
-    repo = GitRepo(new_dir)
+    repo = GitRepo(empty_working_directory)
 
     with pytest.raises(GitError) as raised:
         repo.add_all()
 
     assert raised.value.details == (
-        f"Could not add changes for the git repository in {str(new_dir)!r}."
+        f"Could not add changes for the git repository in {str(empty_working_directory)!r}."
     )
 
 
-def test_commit(new_dir):
+def test_commit(empty_working_directory):
     """Commit a file and confirm it is in the tree."""
-    repo = GitRepo(new_dir)
+    repo = GitRepo(empty_working_directory)
     (repo.path / "test-file").touch()
     repo.add_all()
 
     repo.commit()
 
     # verify commit (the `isinstance` checks are to satsify pyright)
-    commit = pygit2.Repository(new_dir).revparse_single("HEAD")
+    commit = pygit2.Repository(empty_working_directory).revparse_single("HEAD")
     assert isinstance(commit, pygit2.Commit)
     assert commit.message == "auto commit"
     assert commit.committer.name == "auto commit"
@@ -247,10 +262,10 @@ def test_commit(new_dir):
     assert blob.name == "test-file"
 
 
-def test_commit_write_tree_error(new_dir, mocker):
+def test_commit_write_tree_error(empty_working_directory, mocker):
     """Raise an error if the tree cannot be created."""
     mocker.patch("pygit2.Index.write_tree", side_effect=pygit2.GitError)
-    repo = GitRepo(new_dir)
+    repo = GitRepo(empty_working_directory)
     (repo.path / "test-file").touch()
     repo.add_all()
 
@@ -258,14 +273,14 @@ def test_commit_write_tree_error(new_dir, mocker):
         repo.commit()
 
     assert raised.value.details == (
-        f"Could not create a tree for the git repository in {str(new_dir)!r}."
+        f"Could not create a tree for the git repository in {str(empty_working_directory)!r}."
     )
 
 
-def test_commit_error(new_dir, mocker):
+def test_commit_error(empty_working_directory, mocker):
     """Raise an error if the commit cannot be created."""
     mocker.patch("pygit2.Repository.create_commit", side_effect=pygit2.GitError)
-    repo = GitRepo(new_dir)
+    repo = GitRepo(empty_working_directory)
     (repo.path / "test-file").touch()
     repo.add_all()
 
@@ -273,13 +288,13 @@ def test_commit_error(new_dir, mocker):
         repo.commit()
 
     assert raised.value.details == (
-        f"Could not create a commit for the git repository in {str(new_dir)!r}."
+        f"Could not create a commit for the git repository in {str(empty_working_directory)!r}."
     )
 
 
-def test_is_clean(new_dir):
+def test_is_clean(empty_working_directory):
     """Check if a repo is clean."""
-    repo = GitRepo(new_dir)
+    repo = GitRepo(empty_working_directory)
 
     assert repo.is_clean()
 
@@ -288,20 +303,20 @@ def test_is_clean(new_dir):
     assert not repo.is_clean()
 
 
-def test_is_clean_error(new_dir, mocker):
+def test_is_clean_error(empty_working_directory, mocker):
     """Check if git fails when checking if the repo is clean."""
     mocker.patch("pygit2.Repository.status", side_effect=pygit2.GitError)
-    repo = GitRepo(new_dir)
+    repo = GitRepo(empty_working_directory)
 
     with pytest.raises(GitError) as raised:
         repo.is_clean()
 
     assert raised.value.details == (
-        f"Could not check if the git repository in {str(new_dir)!r} is clean."
+        f"Could not check if the git repository in {str(empty_working_directory)!r} is clean."
     )
 
 
-@pytest.mark.usefixtures("new_dir")
+@pytest.mark.usefixtures("empty_working_directory")
 def test_push_url():
     """Push the default ref (HEAD) to a remote branch."""
     # create a local repo and make a commit
@@ -335,7 +350,7 @@ def test_push_url():
     assert blob.name == "test-file"
 
 
-@pytest.mark.usefixtures("new_dir")
+@pytest.mark.usefixtures("empty_working_directory")
 def test_push_url_detached_head():
     """Push a detached HEAD to a remote branch."""
     # create a local repo and make two commits
@@ -377,7 +392,7 @@ def test_push_url_detached_head():
     assert blob.name == "test-file-1"
 
 
-@pytest.mark.usefixtures("new_dir")
+@pytest.mark.usefixtures("empty_working_directory")
 def test_push_url_branch():
     """Push a branch to a remote branch."""
     # create a local repo and make a commit
@@ -413,7 +428,7 @@ def test_push_url_branch():
     assert blob.name == "test-file"
 
 
-@pytest.mark.usefixtures("new_dir")
+@pytest.mark.usefixtures("empty_working_directory")
 def test_push_tags():
     """Verify that tags are push by trying to ref them from the remote."""
     # create a local repo and make a commit
@@ -450,16 +465,16 @@ def test_push_tags():
     assert blob.name == "test-file"
 
 
-def test_push_url_refspec_unknown_ref(new_dir):
+def test_push_url_refspec_unknown_ref(empty_working_directory):
     """Raise an error for an unknown refspec."""
-    repo = GitRepo(new_dir)
+    repo = GitRepo(empty_working_directory)
 
     with pytest.raises(GitError) as raised:
         repo.push_url(remote_url="test-url", remote_branch="test-branch", ref="bad-ref")
 
     assert raised.value.details == (
         "Could not resolve reference 'bad-ref' for the git repository "
-        f"in {str(new_dir)!r}."
+        f"in {str(empty_working_directory)!r}."
     )
 
 
@@ -474,18 +489,18 @@ def test_push_url_refspec_unknown_ref(new_dir):
         ("fake-url/test-token/test-token", "fake-url/<token>/<token>"),
     ],
 )
-def test_push_url_hide_token(url, expected_url, mocker, new_dir):
+def test_push_url_hide_token(url, expected_url, mocker, empty_working_directory):
     """Hide the token in the log and error output."""
     mock_logs = mocker.patch("logging.Logger.debug")
 
-    repo = GitRepo(new_dir)
+    repo = GitRepo(empty_working_directory)
     (repo.path / "test-file").touch()
     repo.add_all()
     repo.commit()
     expected_error_details = (
         f"Could not push 'HEAD' to {expected_url!r} with refspec "
         "'.*:refs/heads/test-branch' for the git repository "
-        f"in {str(new_dir)!r}."
+        f"in {str(empty_working_directory)!r}."
     )
 
     with pytest.raises(GitError) as raised:
@@ -510,33 +525,33 @@ def test_push_url_hide_token(url, expected_url, mocker, new_dir):
     assert re.match(expected_error_details, raised.value.details)
 
 
-def test_push_url_refspec_git_error(mocker, new_dir):
+def test_push_url_refspec_git_error(mocker, empty_working_directory):
     """Raise an error if git fails when looking for a refspec."""
     mocker.patch(
         "pygit2.Repository.lookup_reference_dwim",
         side_effect=pygit2.GitError,
     )
-    repo = GitRepo(new_dir)
+    repo = GitRepo(empty_working_directory)
 
     with pytest.raises(GitError) as raised:
         repo.push_url(remote_url="test-url", remote_branch="test-branch", ref="bad-ref")
 
     assert raised.value.details == (
         "Could not resolve reference 'bad-ref' for the git repository "
-        f"in {str(new_dir)!r}."
+        f"in {str(empty_working_directory)!r}."
     )
 
 
-def test_push_url_push_error(new_dir):
+def test_push_url_push_error(empty_working_directory):
     """Raise an error when the refspec cannot be pushed."""
-    repo = GitRepo(new_dir)
+    repo = GitRepo(empty_working_directory)
     (repo.path / "test-file").touch()
     repo.add_all()
     repo.commit()
     expected_error_details = (
         "Could not push 'HEAD' to 'bad-url' with refspec "
         "'.*:refs/heads/test-branch' for the git repository "
-        f"in {str(new_dir)!r}."
+        f"in {str(empty_working_directory)!r}."
     )
 
     with pytest.raises(GitError) as raised:
@@ -546,23 +561,23 @@ def test_push_url_push_error(new_dir):
     assert re.match(expected_error_details, raised.value.details)
 
 
-def test_check_git_repo_for_remote_build_invalid(new_dir):
+def test_check_git_repo_for_remote_build_invalid(empty_working_directory):
     """Check if directory is an invalid repo."""
     with pytest.raises(
         RemoteBuildInvalidGitRepoError, match="Could not find a git repository in"
     ):
-        check_git_repo_for_remote_build(new_dir)
+        check_git_repo_for_remote_build(empty_working_directory)
 
 
-def test_check_git_repo_for_remote_build_normal(new_dir):
+def test_check_git_repo_for_remote_build_normal(empty_working_directory):
     """Check if directory is a repo."""
-    GitRepo(new_dir)
-    check_git_repo_for_remote_build(new_dir)
+    GitRepo(empty_working_directory)
+    check_git_repo_for_remote_build(empty_working_directory)
 
 
-def test_check_git_repo_for_remote_build_shallow(new_dir):
+def test_check_git_repo_for_remote_build_shallow(empty_working_directory):
     """Check if directory is a shallow cloned repo."""
-    root_path = Path(new_dir)
+    root_path = Path(empty_working_directory)
     git_normal_path = root_path / "normal"
     git_normal_path.mkdir()
     git_shallow_path = root_path / "shallow"

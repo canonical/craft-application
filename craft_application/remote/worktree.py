@@ -19,7 +19,8 @@ from shutil import copytree
 
 from xdg import BaseDirectory  # type: ignore[import-untyped]
 
-from .git import GitRepo
+from craft_application.git import GitRepo
+
 from .utils import rmtree
 
 

@@ -38,17 +38,6 @@ class RemoteBuildError(Exception):
         return "\n".join(components)
 
 
-class GitError(RemoteBuildError):
-    """Git is not working as expected."""
-
-    def __init__(self, message: str) -> None:
-        self.message = message
-        brief = "Git operation failed."
-        details = message
-
-        super().__init__(brief=brief, details=details)
-
-
 class UnsupportedArchitectureError(RemoteBuildError):
     """Unsupported architecture error."""
 

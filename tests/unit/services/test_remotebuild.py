@@ -23,8 +23,7 @@ import lazr.restfulclient.errors
 import lazr.restfulclient.resource
 import platformdirs
 import pytest
-from craft_application import errors, launchpad, services
-from craft_application.remote import git
+from craft_application import errors, git, launchpad, services
 from craft_application.remote.errors import RemoteBuildInvalidGitRepoError
 
 from tests.unit.services.conftest import (
