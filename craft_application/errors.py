@@ -20,6 +20,7 @@ All errors inherit from craft_cli.CraftError.
 from __future__ import annotations
 
 from collections.abc import Sequence
+import os
 from typing import TYPE_CHECKING
 
 from craft_cli import CraftError
@@ -163,7 +164,7 @@ class IncompatibleBaseError(CraftError):
             "environment."
         )
         resolution = "Run a managed build, or run on a compatible host."
-        retcode = 78  # "configuration error" from sysexits.h
+        retcode = os.EX_CONFIG
 
         super().__init__(
             message=message, details=details, resolution=resolution, retcode=retcode

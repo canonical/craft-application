@@ -94,7 +94,7 @@ class RemoteBuildService(base.AppService):
             raise errors.CraftError(
                 message=f"Could not find project on Launchpad: {name}",
                 resolution="Ensure the project exists and that you have access to it.",
-                retcode=77,  # EX_NOPERM from sysexits.h
+                retcode=os.EX_NOPERM,
                 reportable=False,
                 logpath_report=False,
             )

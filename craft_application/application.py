@@ -274,7 +274,7 @@ class Application:
                 f"Project file '{self.app.name}.yaml' not found in '{self.project_dir}'.",
                 details="The project file could not be found.",
                 resolution="Ensure the project file exists.",
-                retcode=66,  # EX_NOINPUT from sysexits.h
+                retcode=os.EX_NOINPUT,
             ) from err
         craft_cli.emit.debug(f"Loading project file '{project_path!s}'")
 
@@ -419,7 +419,7 @@ class Application:
         except craft_cli.ArgumentParsingError as err:
             print(err, file=sys.stderr)  # to stderr, as argparse normally does
             craft_cli.emit.ended_ok()
-            sys.exit(64)  # Command line usage error from sysexits.h
+            sys.exit(os.EX_USAGE)
         except KeyboardInterrupt as err:
             self._emit_error(craft_cli.CraftError("Interrupted."), cause=err)
             sys.exit(128 + signal.SIGINT)
@@ -431,7 +431,7 @@ class Application:
             )
             if os.getenv("CRAFT_DEBUG") == "1":
                 raise
-            sys.exit(70)  # EX_SOFTWARE from sysexits.h
+            sys.exit(os.EX_SOFTWARE)
 
         craft_cli.emit.debug("Configuring application...")
         self.configure(global_args)
@@ -535,18 +535,18 @@ class Application:
             if not managed_mode:
                 # command runs in the outer instance
                 craft_cli.emit.debug(f"Running {self.app.name} {command.name} on host")
-                return_code = dispatcher.run() or 0
+                return_code = dispatcher.run() or os.EX_OK
             elif not self.is_managed():
                 # command runs in inner instance, but this is the outer instance
                 self.run_managed(platform, build_for)
-                return_code = 0
+                return_code = os.EX_OK
             else:
                 # command runs in inner instance
                 return_code = dispatcher.run() or 0
         except craft_cli.ArgumentParsingError as err:
             print(err, file=sys.stderr)  # to stderr, as argparse normally does
             craft_cli.emit.ended_ok()
-            return_code = 64  # Command line usage error from sysexits.h
+            return_code = os.EX_USAGE
         except KeyboardInterrupt as err:
             self._emit_error(craft_cli.CraftError("Interrupted."), cause=err)
             return_code = 128 + signal.SIGINT
@@ -574,7 +574,7 @@ class Application:
             )
             if os.getenv("CRAFT_DEBUG") == "1":
                 raise
-            return_code = 70  # EX_SOFTWARE from sysexits.h
+            return_code = os.EX_SOFTWARE
         else:
             craft_cli.emit.ended_ok()
 
