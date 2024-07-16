@@ -229,7 +229,7 @@ def test_commit(new_dir):
 
     repo.commit()
 
-    # verify commit (the `isinstance` checks are to satsify pyright)
+    # verify commit (the `isinstance` checks are to satisfy pyright)
     commit = pygit2.Repository(new_dir).revparse_single("HEAD")
     assert isinstance(commit, pygit2.Commit)
     assert commit.message == "auto commit"
@@ -319,7 +319,7 @@ def test_push_url():
         remote_branch="test-branch",
     )
 
-    # verify commit in remote (the `isinstance` checks are to satsify pyright)
+    # verify commit in remote (the `isinstance` checks are to satisfy pyright)
     commit = remote.revparse_single("test-branch")
     assert isinstance(commit, pygit2.Commit)
     assert commit.message == "auto commit"
@@ -361,7 +361,7 @@ def test_push_url_detached_head():
         remote_branch="test-branch",
     )
 
-    # verify commit in remote (the `isinstance` checks are to satsify pyright)
+    # verify commit in remote (the `isinstance` checks are to satisfy pyright)
     commit = remote.revparse_single("test-branch")
     assert isinstance(commit, pygit2.Commit)
     assert commit.message == "auto commit"
@@ -397,7 +397,7 @@ def test_push_url_branch():
         ref=repo._repo.head.shorthand,
     )
 
-    # verify commit in remote (the `isinstance` checks are to satsify pyright)
+    # verify commit in remote (the `isinstance` checks are to satisfy pyright)
     commit = remote.revparse_single("test-branch")
     assert isinstance(commit, pygit2.Commit)
     assert commit.message == "auto commit"
@@ -434,7 +434,7 @@ def test_push_tags():
         push_tags=True,
     )
 
-    # verify commit through tag in remote (the `isinstance` checks are to satsify pyright)
+    # verify commit through tag in remote (the `isinstance` checks are to satisfy pyright)
     commit = remote.revparse_single(tag)
     assert isinstance(commit, pygit2.Commit)
     assert commit.message == "auto commit"
