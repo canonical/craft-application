@@ -351,6 +351,45 @@ def test_push_url():
 
 
 @pytest.mark.usefixtures("empty_working_directory")
+def test_push_url_raises_git_error_on_subprocess_error(mocker):
+    """Push subprocess fails."""
+    # create a local repo and make a commit
+    Path("local-repo").mkdir()
+    repo = GitRepo(Path("local-repo"))
+    (repo.path / "test-file").touch()
+    repo.add_all()
+    repo.commit()
+
+    mocked_subprocess = mocker.patch("subprocess.Popen")
+    mocked_subprocess.side_effect = subprocess.SubprocessError
+
+    with pytest.raises(GitError):
+        repo.push_url(
+            remote_url=f"file://{str(Path('remote-repo').absolute())}",
+            remote_branch="test-branch",
+        )
+
+
+@pytest.mark.usefixtures("empty_working_directory")
+def test_push_url_raises_git_error_on_subprocess_non_zero_exit(mocker):
+    """Push subprocess fails."""
+    # create a local repo and make a commit
+    Path("local-repo").mkdir()
+    repo = GitRepo(Path("local-repo"))
+    (repo.path / "test-file").touch()
+    repo.add_all()
+    repo.commit()
+
+    mocked_subprocess = mocker.patch("subprocess.Popen")
+    mocked_subprocess.return_value.__enter__.return_value.returncode = 2
+    with pytest.raises(GitError):
+        repo.push_url(
+            remote_url=f"file://{str(Path('remote-repo').absolute())}",
+            remote_branch="test-branch",
+        )
+
+
+@pytest.mark.usefixtures("empty_working_directory")
 def test_push_url_detached_head():
     """Push a detached HEAD to a remote branch."""
     # create a local repo and make two commits
