@@ -146,6 +146,7 @@ def test_ensure_repository_creation(
     mock_push_url.assert_called_once_with(
         "https://craft_test_user:super_secret_token@git.launchpad.net/~user/+git/my_repo",
         "main",
+        push_tags=True,
     )
     expiry = wrapped_repository.get_access_token.call_args.kwargs["expiry"]
 
@@ -184,6 +185,7 @@ def test_ensure_repository_already_exists(
     mock_push_url.assert_called_once_with(
         "https://craft_test_user:super_secret_token@git.launchpad.net/~user/+git/my_repo",
         "main",
+        push_tags=True,
     )
     expiry = wrapped_repository.get_access_token.call_args.kwargs["expiry"]
 

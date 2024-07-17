@@ -297,7 +297,7 @@ class RemoteBuildService(base.AppService):
         )
 
         local_repository = GitRepo(work_tree.repo_dir)
-        local_repository.push_url(push_url.geturl(), "main")
+        local_repository.push_url(push_url.geturl(), "main", push_tags=True)
 
         return work_tree, lp_repository
 
