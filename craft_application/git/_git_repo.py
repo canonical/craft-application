@@ -40,8 +40,8 @@ except Exception:  # noqa: BLE001 (narrower types are provided by the import)
     else:
         del os.environ["SSL_CERT_DIR"]
 
-from .errors import GitError
-from .models import GitType
+from ._errors import GitError
+from ._models import GitType
 
 logger = logging.getLogger(__name__)
 

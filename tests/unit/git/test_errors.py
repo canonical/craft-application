@@ -1,10 +1,10 @@
-from craft_application.git import errors
+from craft_application.git import GitError
 
 
 def test_git_error():
     """Test GitError."""
-    error = errors.GitError("Error details.")
+    git_error = GitError("Error details.")
 
-    assert error.details == "Error details."
-    assert str(error) == "Git operation failed."
-    assert repr(error) == "GitError('Git operation failed.')"
+    assert git_error.details == "Error details."
+    assert str(git_error) == "Git operation failed."
+    assert repr(git_error) == "GitError('Git operation failed.')"

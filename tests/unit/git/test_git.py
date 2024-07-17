@@ -26,7 +26,7 @@ from unittest.mock import ANY
 import pygit2
 import pygit2.enums
 import pytest
-from craft_application.git.errors import GitError
+from craft_application.git import GitError
 from craft_application.remote import (
     GitRepo,
     GitType,

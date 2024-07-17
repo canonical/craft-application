@@ -14,9 +14,9 @@
 
 """Git repository utilities."""
 
-from .errors import GitError
-from .models import GitType
-from .git_repo import GitRepo, get_git_repo_type, is_repo
+from ._errors import GitError
+from ._models import GitType
+from ._git_repo import GitRepo, get_git_repo_type, is_repo
 
 __all__ = [
     "GitError",
