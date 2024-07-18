@@ -26,14 +26,10 @@ from unittest.mock import ANY
 import pygit2
 import pygit2.enums
 import pytest
-from craft_application.git import GitError
+from craft_application.git import GitError, GitRepo, GitType, get_git_repo_type, is_repo
 from craft_application.remote import (
-    GitRepo,
-    GitType,
     RemoteBuildInvalidGitRepoError,
     check_git_repo_for_remote_build,
-    get_git_repo_type,
-    is_repo,
 )
 
 
@@ -244,7 +240,7 @@ def test_commit(empty_working_directory):
 
     repo.commit()
 
-    # verify commit (the `isinstance` checks are to satsify pyright)
+    # verify commit (the `isinstance` checks are to satisfy pyright)
     commit = pygit2.Repository(empty_working_directory).revparse_single("HEAD")
     assert isinstance(commit, pygit2.Commit)
     assert commit.message == "auto commit"
@@ -334,7 +330,7 @@ def test_push_url():
         remote_branch="test-branch",
     )
 
-    # verify commit in remote (the `isinstance` checks are to satsify pyright)
+    # verify commit in remote (the `isinstance` checks are to satisfy pyright)
     commit = remote.revparse_single("test-branch")
     assert isinstance(commit, pygit2.Commit)
     assert commit.message == "auto commit"
@@ -415,7 +411,7 @@ def test_push_url_detached_head():
         remote_branch="test-branch",
     )
 
-    # verify commit in remote (the `isinstance` checks are to satsify pyright)
+    # verify commit in remote (the `isinstance` checks are to satisfy pyright)
     commit = remote.revparse_single("test-branch")
     assert isinstance(commit, pygit2.Commit)
     assert commit.message == "auto commit"
@@ -451,7 +447,7 @@ def test_push_url_branch():
         ref=repo._repo.head.shorthand,
     )
 
-    # verify commit in remote (the `isinstance` checks are to satsify pyright)
+    # verify commit in remote (the `isinstance` checks are to satisfy pyright)
     commit = remote.revparse_single("test-branch")
     assert isinstance(commit, pygit2.Commit)
     assert commit.message == "auto commit"
@@ -488,7 +484,7 @@ def test_push_tags():
         push_tags=True,
     )
 
-    # verify commit through tag in remote (the `isinstance` checks are to satsify pyright)
+    # verify commit through tag in remote (the `isinstance` checks are to satisfy pyright)
     commit = remote.revparse_single(tag)
     assert isinstance(commit, pygit2.Commit)
     assert commit.message == "auto commit"
