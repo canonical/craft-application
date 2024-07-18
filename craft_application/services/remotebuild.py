@@ -32,8 +32,9 @@ import launchpadlib.errors  # type: ignore[import-untyped]
 import platformdirs
 
 from craft_application import errors, launchpad, models
+from craft_application.git import GitError, GitRepo
 from craft_application.remote import (
-    GitRepo,
+    RemoteBuildGitError,
     WorkTree,
     check_git_repo_for_remote_build,
     utils,
@@ -296,10 +297,15 @@ class RemoteBuildService(base.AppService):
             netloc=f"{self.lp.lp.me.name}:{token}@{repo_url.netloc}"  # pyright: ignore[reportOptionalMemberAccess,reportAttributeAccessIssue,reportUnknownMemberType]
         )
 
-        local_repository = GitRepo(work_tree.repo_dir)
-        local_repository.push_url(push_url.geturl(), "main", push_tags=True)
-
-        return work_tree, lp_repository
+        try:
+            local_repository = GitRepo(work_tree.repo_dir)
+            local_repository.push_url(push_url.geturl(), "main", push_tags=True)
+        except GitError as git_error:
+            raise RemoteBuildGitError(
+                cast(str, git_error.details),
+            ) from git_error
+        else:
+            return work_tree, lp_repository
 
     def _get_repository(self) -> launchpad.models.GitRepository:
         """Get an existing repository on Launchpad."""

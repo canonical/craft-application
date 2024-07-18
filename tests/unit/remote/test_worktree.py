@@ -18,7 +18,8 @@ from pathlib import Path
 from unittest.mock import call
 
 import pytest
-from craft_application.remote import WorkTree
+from craft_application.git import GitError
+from craft_application.remote import RemoteBuildGitError, WorkTree
 
 
 @pytest.fixture(autouse=True)
@@ -59,6 +60,17 @@ def test_worktree_init_clean(mock_base_directory, mock_git_repo):
         call(Path().resolve() / "repo"),
         call().is_clean(),
     ]
+
+
+@pytest.mark.usefixtures("new_dir", "mock_copytree")
+def test_worktree_init_clean_exception_wrapped(mock_git_repo):
+    """Test initialization of a WorkTree with a clean git repository."""
+    mock_git_repo.return_value.is_clean.side_effect = GitError("Cannot initialize git")
+
+    worktree = WorkTree(app_name="test-app", build_id="test-id", project_dir=Path())
+
+    with pytest.raises(RemoteBuildGitError):
+        worktree.init_repo()
 
 
 @pytest.mark.usefixtures("new_dir", "mock_copytree")
