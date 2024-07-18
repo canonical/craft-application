@@ -179,12 +179,12 @@ def test_ensure_repository_creation(
     assert expiry > datetime.datetime.now(tz=tz)
 
 
+@pytest.mark.usefixtures("mock_push_url_raises_git_error")
 def test_ensure_repository_wraps_git_error_on_pushing(
     monkeypatch,
     tmp_path,
     remote_build_service,
     mock_lp_project,
-    mock_push_url_raises_git_error,
 ):
     wrapped_repository = mock.Mock(
         spec=launchpad.models.GitRepository,
@@ -202,10 +202,10 @@ def test_ensure_repository_wraps_git_error_on_pushing(
         remote_build_service._ensure_repository(tmp_path)
 
 
+@pytest.mark.usefixtures("mock_init_raises_git_error")
 def test_ensure_repository_wraps_git_error_during_init(
     tmp_path,
     remote_build_service,
-    mock_init_raises_git_error,
 ):
     with pytest.raises(RemoteBuildGitError, match="Fake _init_repo error during tests"):
         remote_build_service._ensure_repository(tmp_path)
