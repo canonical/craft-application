@@ -14,18 +14,16 @@
 
 """Remote-build and related utilities."""
 
+# TODO: below import should be removed in next incompatible release
+from craft_application.git import GitRepo, GitError, GitType, get_git_repo_type, is_repo
 from .errors import (
-    GitError,
     RemoteBuildError,
+    RemoteBuildGitError,
     RemoteBuildInvalidGitRepoError,
     UnsupportedArchitectureError,
 )
 from .git import (
-    GitRepo,
-    GitType,
     check_git_repo_for_remote_build,
-    get_git_repo_type,
-    is_repo,
 )
 from .utils import get_build_id, rmtree, validate_architectures
 from .worktree import WorkTree
@@ -41,6 +39,7 @@ __all__ = [
     "GitRepo",
     "GitType",
     "RemoteBuildError",
+    "RemoteBuildGitError",
     "RemoteBuildInvalidGitRepoError",
     "UnsupportedArchitectureError",
     "WorkTree",

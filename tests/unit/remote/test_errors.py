@@ -15,19 +15,6 @@
 from craft_application.remote import errors
 
 
-def test_git_error():
-    """Test GitError."""
-    error = errors.GitError("Error details.")
-
-    assert str(error) == "Git operation failed.\nError details."
-    assert (
-        repr(error)
-        == "GitError(brief='Git operation failed.', details='Error details.')"
-    )
-    assert error.brief == "Git operation failed."
-    assert error.details == "Error details."
-
-
 def test_unsupported_architecture_error():
     """Test UnsupportedArchitectureError."""
     error = errors.UnsupportedArchitectureError(architectures=["amd64", "arm64"])

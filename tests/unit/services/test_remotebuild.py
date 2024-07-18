@@ -23,9 +23,11 @@ import lazr.restfulclient.errors
 import lazr.restfulclient.resource
 import platformdirs
 import pytest
-from craft_application import errors, launchpad, services
-from craft_application.remote import git
-from craft_application.remote.errors import RemoteBuildInvalidGitRepoError
+from craft_application import errors, git, launchpad, services
+from craft_application.remote.errors import (
+    RemoteBuildGitError,
+    RemoteBuildInvalidGitRepoError,
+)
 
 from tests.unit.services.conftest import (
     get_mock_callable,
@@ -37,6 +39,24 @@ def mock_push_url(monkeypatch):
     push_url = get_mock_callable(return_value=None)
     monkeypatch.setattr(git.GitRepo, "push_url", push_url)
     return push_url
+
+
+@pytest.fixture()
+def mock_push_url_raises_git_error(monkeypatch):
+    push_url = get_mock_callable(
+        side_effect=git.GitError("Fake push_url error during tests")
+    )
+    monkeypatch.setattr(git.GitRepo, "push_url", push_url)
+    return push_url
+
+
+@pytest.fixture()
+def mock_init_raises_git_error(monkeypatch):
+    git_repo_init = get_mock_callable(
+        side_effect=git.GitError("Fake _init_repo error during tests")
+    )
+    monkeypatch.setattr(git.GitRepo, "_init_repo", git_repo_init)
+    return git_repo_init
 
 
 @pytest.fixture()
@@ -146,6 +166,7 @@ def test_ensure_repository_creation(
     mock_push_url.assert_called_once_with(
         "https://craft_test_user:super_secret_token@git.launchpad.net/~user/+git/my_repo",
         "main",
+        push_tags=True,
     )
     expiry = wrapped_repository.get_access_token.call_args.kwargs["expiry"]
 
@@ -156,6 +177,38 @@ def test_ensure_repository_creation(
     # time zone the expiry time is still in the future.
     tz = datetime.timezone(datetime.timedelta(hours=14))
     assert expiry > datetime.datetime.now(tz=tz)
+
+
+@pytest.mark.usefixtures("mock_push_url_raises_git_error")
+def test_ensure_repository_wraps_git_error_on_pushing(
+    monkeypatch,
+    tmp_path,
+    remote_build_service,
+    mock_lp_project,
+):
+    wrapped_repository = mock.Mock(
+        spec=launchpad.models.GitRepository,
+        git_https_url="https://git.launchpad.net/~user/+git/my_repo",
+        **{"get_access_token.return_value": "super_secret_token"},
+    )
+    repository_new = mock.Mock(return_value=wrapped_repository)
+
+    monkeypatch.setattr(launchpad.models.GitRepository, "new", repository_new)
+    sentinel = tmp_path / "sentinel_file"
+    sentinel.write_text("I am a sentinel file.")
+    remote_build_service._lp_project = mock_lp_project
+
+    with pytest.raises(RemoteBuildGitError, match="Fake push_url error during tests"):
+        remote_build_service._ensure_repository(tmp_path)
+
+
+@pytest.mark.usefixtures("mock_init_raises_git_error")
+def test_ensure_repository_wraps_git_error_during_init(
+    tmp_path,
+    remote_build_service,
+):
+    with pytest.raises(RemoteBuildGitError, match="Fake _init_repo error during tests"):
+        remote_build_service._ensure_repository(tmp_path)
 
 
 def test_ensure_repository_already_exists(
@@ -184,6 +237,7 @@ def test_ensure_repository_already_exists(
     mock_push_url.assert_called_once_with(
         "https://craft_test_user:super_secret_token@git.launchpad.net/~user/+git/my_repo",
         "main",
+        push_tags=True,
     )
     expiry = wrapped_repository.get_access_token.call_args.kwargs["expiry"]
 

@@ -38,12 +38,12 @@ class RemoteBuildError(Exception):
         return "\n".join(components)
 
 
-class GitError(RemoteBuildError):
-    """Git is not working as expected."""
+class RemoteBuildGitError(RemoteBuildError):
+    """Git repository cannot be prepared correctly."""
 
     def __init__(self, message: str) -> None:
         self.message = message
-        brief = "Git operation failed."
+        brief = "Git operation failed"
         details = message
 
         super().__init__(brief=brief, details=details)
