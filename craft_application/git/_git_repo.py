@@ -329,3 +329,29 @@ class GitRepo:
             ) from error
         logger.debug("Resolved reference %r for name %r", reference, ref)
         return reference
+
+    @classmethod
+    def clone_repository(
+        cls,
+        *,
+        url: str,
+        path: Path,
+        checkout_branch: str | None = None,
+    ) -> GitRepo:
+        """Clone repository to specific path and return GitRepo object.
+
+        :param url: the URL to clone repository from
+        :param path: path to the directory where repository should be cloned
+        :param checkout_branch: optional branch which should be checked out
+
+        :returns: GitRepo wrapper around the repository
+
+        raises GitError: if cloning repository cannot be done
+        """
+        try:
+            pygit2.clone_repository(url, path=path, checkout_branch=checkout_branch)
+        except KeyError as ke:
+            raise GitError(f"cannot find branch `{checkout_branch}` in {url}") from ke
+        except pygit2.GitError as ge:
+            raise GitError(f"cannot clone repository: {url} to {str(path)!r}") from ge
+        return cls(path)

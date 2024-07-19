@@ -604,6 +604,59 @@ def test_check_git_repo_for_remote_build_invalid(empty_working_directory):
         check_git_repo_for_remote_build(empty_working_directory)
 
 
+def test_clone_repository_wraps_pygit2_giterror(mocker, empty_working_directory):
+    """Raise an error if git fails when looking for a refspec."""
+    mocker.patch(
+        "pygit2.clone_repository",
+        side_effect=pygit2.GitError,
+    )
+    fake_repo_url = "fake-repository-url.local"
+    with pytest.raises(GitError) as raised:
+        GitRepo.clone_repository(url=fake_repo_url, path=empty_working_directory)
+    assert raised.value.details == (
+        f"cannot clone repository: {fake_repo_url} "
+        f"to {str(empty_working_directory)!r}"
+    )
+
+
+def test_clone_repository_wraps_keyerror(mocker, empty_working_directory):
+    """Raise an error if git fails when looking for a refspec."""
+    mocker.patch(
+        "pygit2.clone_repository",
+        side_effect=KeyError,
+    )
+    fake_repo_url = "fake-repository-url.local"
+    fake_branch = "some-fake-branch"
+    with pytest.raises(GitError) as raised:
+        GitRepo.clone_repository(
+            url=fake_repo_url,
+            path=empty_working_directory,
+            checkout_branch=fake_branch,
+        )
+    assert raised.value.details == (
+        f"cannot find branch `{fake_branch}` in {fake_repo_url}"
+    )
+
+
+def test_clone_repository_returns_git_repo_on_succcess_clone(
+    mocker, empty_working_directory
+):
+    """Raise an error if git fails when looking for a refspec."""
+    subprocess.run(["git", "init"], check=True)
+    mocker.patch(
+        "pygit2.clone_repository",
+    )
+    mocked_init = mocker.patch.object(GitRepo, "_init_repo")
+    fake_repo_url = "fake-repository-url.local"
+    fake_branch = "some-fake-branch"
+    repo = GitRepo.clone_repository(
+        url=fake_repo_url,
+        path=empty_working_directory,
+        checkout_branch=fake_branch,
+    )
+    assert mocked_init.not_called, "_init_repo called on existing repository"
+
+
 def test_check_git_repo_for_remote_build_normal(empty_working_directory):
     """Check if directory is a repo."""
     GitRepo(empty_working_directory)
