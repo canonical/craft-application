@@ -13,6 +13,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """Git repository class and helper utilities."""
+
 from __future__ import annotations
 
 import logging
@@ -191,6 +192,26 @@ class GitRepo:
         except pygit2.GitError as error:
             raise GitError(
                 f"Could not initialize a git repository in {str(self.path)!r}."
+            ) from error
+
+    def add_remote(
+        self,
+        remote_name: str,
+        remote_url: str,
+    ) -> None:
+        """Add new remote to the repository.
+
+        :param remote_name: the remote repository name
+        :param remote_url: the remote repository URL
+
+        :raises GitError: if the ref cannot be resolved or pushed
+        """
+
+        try:
+            self._repo.remotes.create(remote_name, remote_url)
+        except pygit2.GitError as error:
+            raise GitError(
+                f"Could not add remote to a git repository in {str(self.path)!r}."
             ) from error
 
     def push_url(  # noqa: PLR0912 (too-many-branches)
