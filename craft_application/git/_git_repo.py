@@ -118,7 +118,7 @@ class GitLogCallbacks(pygit2.RemoteCallbacks):
             The progress up to now.
         """
         progress_bar = emit.progress_bar(
-            text="Cloning repository objects:",
+            text="Receiving objects:",
             total=stats.total_objects,
         )
         progress_bar.advance(stats.indexed_objects)
