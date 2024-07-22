@@ -206,12 +206,34 @@ class GitRepo:
 
         :raises GitError: if the ref cannot be resolved or pushed
         """
-
         try:
             self._repo.remotes.create(remote_name, remote_url)
         except pygit2.GitError as error:
             raise GitError(
                 f"Could not add remote to a git repository in {str(self.path)!r}."
+            ) from error
+
+    def rename_remote(
+        self,
+        remote_name: str,
+        new_remote_name: str,
+    ) -> None:
+        """Change remote name in the repository.
+
+        :param remote_name: the remote repository name
+        :param new_remote_name: the new name for the remote
+
+        :raises GitError: if the ref cannot be resolved or pushed
+        """
+        try:
+            not_renamed_refs = self._repo.remotes.rename(remote_name, new_remote_name)
+        except ValueError as ve:
+            raise GitError(
+                f"Wrong name `{new_remote_name}` for the remote provided."
+            ) from ve
+        except pygit2.GitError as error:
+            raise GitError(
+                f"Cannot rename `{remote_name}` to `{new_remote_name}`"
             ) from error
 
     def push_url(  # noqa: PLR0912 (too-many-branches)
