@@ -22,6 +22,9 @@ import subprocess
 import time
 from pathlib import Path
 
+from craft_cli import emit
+from overrides import override
+
 # Cannot catch the pygit2 error here raised by the global use of
 # pygit2.Settings on import. We would ideally use pygit2.Settings
 # for this
@@ -85,6 +88,40 @@ def get_git_repo_type(path: Path) -> GitType:
         return GitType.NORMAL
 
     return GitType.INVALID
+
+
+class GitLogCallbacks(pygit2.RemoteCallbacks):
+    """Callback class to log operation progress to user."""
+
+    @override
+    def sideband_progress(self, string: str) -> None:
+        """
+        Progress output callback.  Override this function with your own
+        progress reporting function
+
+        Parameters:
+
+        string : str
+            Progress output from the remote.
+        """
+        emit.progress(string, permanent="done" in string)
+
+    @override
+    def transfer_progress(self, stats: pygit2.remotes.TransferProgress) -> None:
+        """
+        Transfer progress callback. Override with your own function to report
+        transfer progress.
+
+        Parameters:
+
+        stats : TransferProgress
+            The progress up to now.
+        """
+        progress_bar = emit.progress_bar(
+            text="Cloning repository objects:",
+            total=stats.total_objects,
+        )
+        progress_bar.advance(stats.indexed_objects)
 
 
 class GitRepo:
@@ -226,7 +263,7 @@ class GitRepo:
         :raises GitError: if the ref cannot be resolved or pushed
         """
         try:
-            not_renamed_refs = self._repo.remotes.rename(remote_name, new_remote_name)
+            self._repo.remotes.rename(remote_name, new_remote_name)
         except ValueError as ve:
             raise GitError(
                 f"Wrong name `{new_remote_name}` for the remote provided."
@@ -380,6 +417,7 @@ class GitRepo:
                 path=path,
                 checkout_branch=checkout_branch,
                 depth=depth,
+                callbacks=GitLogCallbacks(),
             )
         except KeyError as ke:
             raise GitError(f"cannot find branch `{checkout_branch}` in {url}") from ke
