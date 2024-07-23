@@ -231,20 +231,32 @@ class GitRepo:
                 f"Could not initialize a git repository in {str(self.path)!r}."
             ) from error
 
+    def remote_exist(self, remote_name: str) -> bool:
+        """Check if remote with given name is configured locally.
+
+        :param remote_name: the remote repository name
+        """
+        try:
+            return self._repo.remotes[remote_name] is not None
+        except KeyError:
+            return False
+
     def add_remote(
         self,
         remote_name: str,
         remote_url: str,
     ) -> None:
-        """Add new remote to the repository.
+        """Add remote in the repository configuration.
 
         :param remote_name: the remote repository name
         :param remote_url: the remote repository URL
 
-        :raises GitError: if the ref cannot be resolved or pushed
+        :raises GitError: if remote cannot be created
         """
         try:
             self._repo.remotes.create(remote_name, remote_url)
+        except ValueError as ve:
+            raise GitError(f"Remote `{remote_name}` already exist.") from ve
         except pygit2.GitError as error:
             raise GitError(
                 f"Could not add remote to a git repository in {str(self.path)!r}."
@@ -255,13 +267,14 @@ class GitRepo:
         remote_name: str,
         new_remote_name: str,
     ) -> None:
-        """Change remote name in the repository.
+        """Rename remote in the repository configuration.
 
         :param remote_name: the remote repository name
         :param new_remote_name: the new name for the remote
 
-        :raises GitError: if the ref cannot be resolved or pushed
+        :raises GitError: if remote cannot be renamed
         """
+        logger.debug("Renaming `%s` to `%s`", remote_name, new_remote_name)
         try:
             self._repo.remotes.rename(remote_name, new_remote_name)
         except ValueError as ve:
@@ -411,7 +424,14 @@ class GitRepo:
         if is_repo(path):
             raise GitError("Cannot clone to existing repository")
 
+        logger.debug("Cloning %s to %s", url, path)
+        if checkout_branch is not None:
+            logger.debug("Checking out to branch: %s", checkout_branch)
+
         try:
+            # TODO: consider using git CLI with --single-branch
+            #  as it is not implemented in pygit2
+            #  https://github.com/libgit2/pygit2/issues/1290
             pygit2.clone_repository(
                 url,
                 path=path,
