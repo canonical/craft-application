@@ -19,6 +19,7 @@ from pathlib import Path
 from unittest import mock
 from unittest.mock import call
 
+import platformdirs
 import pytest
 import responses
 from craft_application import errors, fetch
@@ -88,6 +89,11 @@ def test_start_service(mocker, tmp_path):
         subprocess, "check_output", return_value="DEADBEEF"
     )
 
+    fake_cert, fake_key = tmp_path / "cert.crt", tmp_path / "key.pem"
+    mock_obtain_certificate = mocker.patch.object(
+        fetch, "_obtain_certificate", return_value=(fake_cert, fake_key)
+    )
+
     mock_popen = mocker.patch.object(subprocess, "Popen")
     mock_process = mock_popen.return_value
     mock_process.poll.return_value = None
@@ -111,6 +117,8 @@ def test_start_service(mocker, tmp_path):
         text=True,
     )
 
+    assert mock_obtain_certificate.called
+
     popen_call = mock_popen.mock_calls[0]
     assert popen_call == call(
         [
@@ -119,6 +127,8 @@ def test_start_service(mocker, tmp_path):
             f"--proxy-port={PROXY}",
             f"--config={tmp_path/'config'}",
             f"--spool={tmp_path/'spool'}",
+            f"--cert={fake_cert}",
+            f"--key={fake_key}",
         ],
         env={"FETCH_SERVICE_AUTH": AUTH, "FETCH_APT_RELEASE_PUBLIC_KEY": "DEADBEEF"},
         stdout=subprocess.PIPE,
@@ -188,6 +198,9 @@ def test_teardown_session():
 
 def test_configure_build_instance(mocker):
     mocker.patch.object(fetch, "_get_gateway", return_value="127.0.0.1")
+    mocker.patch.object(
+        fetch, "_obtain_certificate", return_value=("fake-cert.crt", "key.pem")
+    )
 
     session_data = fetch.SessionData(id="my-session-id", token="my-session-token")
     instance = mock.MagicMock(spec_set=LXDInstance)
@@ -238,7 +251,7 @@ def test_configure_build_instance(mocker):
     # Files pushed to the instance
     assert instance.push_file.mock_calls == [
         call(
-            source=mocker.ANY,
+            source="fake-cert.crt",
             destination=Path("/usr/local/share/ca-certificates/local-ca.crt"),
         )
     ]
@@ -255,3 +268,11 @@ def test_configure_build_instance(mocker):
             file_mode="0644",
         ),
     ]
+
+
+def test_get_certificate_dir():
+    cert_dir = fetch._get_certificate_dir()
+
+    data_dir = Path(platformdirs.user_data_path("craft-application"))
+    expected = data_dir / "fetch-certificate"
+    assert cert_dir == expected
