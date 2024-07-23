@@ -19,10 +19,10 @@ import io
 import pathlib
 import subprocess
 from dataclasses import dataclass
-from importlib import resources
 from typing import Any, cast
 
 import craft_providers
+import platformdirs
 import requests
 from pydantic import Field
 from requests.auth import HTTPBasicAuth
@@ -160,6 +160,11 @@ def start_service() -> subprocess.Popen[str] | None:
         dir_path.mkdir(exist_ok=True)
         cmd.append(f"--{dir_name}={dir_path}")
 
+    cert, cert_key = _obtain_certificate()
+
+    cmd.append(f"--cert={cert}")
+    cmd.append(f"--key={cert_key}")
+
     fetch_process = subprocess.Popen(
         cmd, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True
     )
@@ -296,12 +301,11 @@ def _get_service_base_dir() -> pathlib.Path:
 def _install_certificate(instance: craft_providers.Executor) -> None:
 
     # Push the local certificate
-    certs = resources.files("craft_application") / "certs"
-    with resources.as_file(certs) as certs_dir:
-        instance.push_file(
-            source=certs_dir / "local-ca.crt",
-            destination=_FETCH_CERT_INSTANCE_PATH,
-        )
+    cert, _key = _obtain_certificate()
+    instance.push_file(
+        source=cert,
+        destination=_FETCH_CERT_INSTANCE_PATH,
+    )
     # Update the certificates db
     instance.execute_run(  # pyright: ignore[reportUnknownMemberType]
         ["/bin/sh", "-c", "/usr/sbin/update-ca-certificates > /dev/null"],
@@ -377,3 +381,87 @@ def _get_gateway(instance: craft_providers.Executor) -> str:
         text=True,
     )
     return route.strip().split()[-1]
+
+
+def _obtain_certificate() -> tuple[pathlib.Path, pathlib.Path]:
+    """Retrieve, possibly creating, the certificate and key for the fetch service.
+
+    :return: The full paths to the self-signed certificate and its private key.
+    """
+    cert_dir = _get_certificate_dir()
+
+    cert_dir.mkdir(parents=True, exist_ok=True)
+
+    cert = cert_dir / "local-ca.pem"
+    key = cert_dir / "local-ca.key.pem"
+
+    if cert.is_file() and key.is_file():
+        # Certificate and key already generated
+        # TODO check that the certificate hasn't expired
+        return cert, key
+
+    # At least one is missing, regenerate both
+    key_tmp = cert_dir / "key-tmp.pem"
+    cert_tmp = cert_dir / "cert-tmp.pem"
+
+    # Create the key
+    subprocess.run(
+        [
+            "openssl",
+            "genrsa",
+            "-aes256",
+            "-passout",
+            "pass:1",
+            "-out",
+            key_tmp,
+            "4096",
+        ],
+        check=True,
+    )
+
+    subprocess.run(
+        [
+            "openssl",
+            "rsa",
+            "-passin",
+            "pass:1",
+            "-in",
+            key_tmp,
+            "-out",
+            key_tmp,
+        ],
+        check=True,
+    )
+
+    # Create a certificate with the key
+    subprocess.run(
+        [
+            "openssl",
+            "req",
+            "-subj",
+            "/CN=root@localhost",
+            "-key",
+            key_tmp,
+            "-new",
+            "-x509",
+            "-days",
+            "7300",
+            "-sha256",
+            "-extensions",
+            "v3_ca",
+            "-out",
+            cert_tmp,
+        ],
+        check=True,
+    )
+
+    cert_tmp.rename(cert)
+    key_tmp.rename(key)
+
+    return cert, key
+
+
+def _get_certificate_dir() -> pathlib.Path:
+    """Get the location that should contain the fetch-service certificate and key."""
+    data_dir = pathlib.Path(platformdirs.user_data_dir(appname="craft-application"))
+    return data_dir / "fetch-certificate"
