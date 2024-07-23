@@ -21,12 +21,13 @@ import re
 import subprocess
 from collections.abc import Iterator
 from pathlib import Path
-from unittest.mock import ANY
+from unittest.mock import ANY, MagicMock
 
 import pygit2
 import pygit2.enums
 import pytest
 from craft_application.git import GitError, GitRepo, GitType, get_git_repo_type, is_repo
+from craft_application.git._git_repo import GitLogCallbacks
 from craft_application.remote import (
     RemoteBuildInvalidGitRepoError,
     check_git_repo_for_remote_build,
@@ -677,6 +678,30 @@ def test_check_git_repo_for_remote_build_normal(empty_working_directory):
     check_git_repo_for_remote_build(empty_working_directory)
 
 
+def test_check_git_repo_remote_exists(mocker, empty_working_directory):
+    """Check if True is returned if remote exists."""
+    repo = GitRepo(empty_working_directory)
+    remote_name = "existing-remote"
+    mocked_remotes = mocker.patch.object(repo._repo, "remotes")
+    mocked_remotes.__getitem__.return_value = "test"
+
+    assert repo.remote_exist(remote_name) is True, f"Remote {remote_name} should exist"
+    mocked_remotes.__getitem__.assert_called_with(remote_name)
+
+
+def test_check_git_repo_remote_not_exists(mocker, empty_working_directory):
+    """Check if False is returned if remote does not exist."""
+    repo = GitRepo(empty_working_directory)
+    non_existing_remote = "non-existing-remote"
+    mocked_remotes = mocker.patch.object(repo._repo, "remotes")
+    mocked_remotes.__getitem__.side_effect = KeyError
+
+    assert (
+        repo.remote_exist(non_existing_remote) is False
+    ), f"Remote {non_existing_remote} should not exist"
+    mocked_remotes.__getitem__.assert_called_with(non_existing_remote)
+
+
 def test_check_git_repo_add_remote(mocker, empty_working_directory):
     """Check if add_remote is called correctly."""
     repo = GitRepo(empty_working_directory)
@@ -808,3 +833,26 @@ def test_check_git_repo_for_remote_build_shallow(empty_working_directory):
         match="Remote build for shallow cloned git repos are no longer supported",
     ):
         check_git_repo_for_remote_build(git_shallow_path)
+
+
+@pytest.fixture()
+def git_log_callbacks() -> GitLogCallbacks:
+    return GitLogCallbacks()
+
+
+def test_git_logging_callbacks(git_log_callbacks) -> None:
+    """Test if callbacks behave correctly if called."""
+    git_log_callbacks.sideband_progress("some various progress")
+
+
+def test_git_logging_callbacks_something_is_done(git_log_callbacks) -> None:
+    """Test if callbacks behave correctly if called."""
+    git_log_callbacks.sideband_progress("something is done.")
+
+
+def test_git_logging_callbacks_progress(git_log_callbacks) -> None:
+    """Test if progress is correctly displayed."""
+    mock = MagicMock()
+    mock.total_objects = 5
+    mock.indexed_objects = 0
+    git_log_callbacks.transfer_progress(pygit2.remotes.TransferProgress(mock))
