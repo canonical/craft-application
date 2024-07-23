@@ -677,6 +677,99 @@ def test_check_git_repo_for_remote_build_normal(empty_working_directory):
     check_git_repo_for_remote_build(empty_working_directory)
 
 
+def test_check_git_repo_add_remote(mocker, empty_working_directory):
+    """Check if add_remote is called correctly."""
+    repo = GitRepo(empty_working_directory)
+    new_remote_name = "new-remote"
+    mocked_fn = mocker.patch.object(repo._repo.remotes, "create")
+    repo.add_remote(new_remote_name, "https://git.fake-remote-url.local")
+    mocked_fn.assert_called_with(new_remote_name, "https://git.fake-remote-url.local")
+
+
+def test_check_git_repo_add_remote_value_error_is_wrapped(
+    mocker, empty_working_directory
+):
+    """Check if ValueError is wrapped correctly when adding same remote twice."""
+    repo = GitRepo(empty_working_directory)
+    new_remote_name = "new-remote"
+    mocker.patch.object(repo._repo.remotes, "create", side_effect=[True, ValueError])
+    repo.add_remote(new_remote_name, "https://git.fake-remote-url.local")
+
+    with pytest.raises(GitError) as ge:
+        repo.add_remote(new_remote_name, "https://git.fake-remote-url.local")
+    assert ge.value.details == f"remote `{new_remote_name}` already exists."
+
+
+def test_check_git_repo_add_remote_pygit_error_is_wrapped(
+    mocker, empty_working_directory
+):
+    """Check if ValueError is wrapped correctly when adding same remote twice."""
+    repo = GitRepo(empty_working_directory)
+    new_remote_name = "new-remote"
+    mocker.patch.object(repo._repo.remotes, "create", side_effect=pygit2.GitError)
+
+    with pytest.raises(GitError) as ge:
+        repo.add_remote(new_remote_name, "https://git.fake-remote-url.local")
+    expected_err_msg = (
+        "could not add remote to a git "
+        f"repository in {str(empty_working_directory)!r}."
+    )
+    assert ge.value.details == expected_err_msg
+
+
+def test_check_git_repo_rename_remote(mocker, empty_working_directory):
+    """Check if rename_remote is called correctly."""
+    repo = GitRepo(empty_working_directory)
+    remote_name = "remote"
+    new_remote_name = "new-remote"
+    mocked_fn = mocker.patch.object(repo._repo.remotes, "rename")
+    repo.rename_remote(remote_name, new_remote_name)
+    mocked_fn.assert_called_with(remote_name, new_remote_name)
+
+
+def test_check_git_repo_rename_remote_key_error_is_wrapped(
+    mocker, empty_working_directory
+):
+    """Check if KeyError is wrapped correctly when renaming non-existing remote."""
+    repo = GitRepo(empty_working_directory)
+    remote_name = "non-existing-remote"
+    new_remote_name = "new-remote"
+    mocker.patch.object(repo._repo.remotes, "rename", side_effect=KeyError)
+    with pytest.raises(GitError) as ge:
+        repo.rename_remote(remote_name, new_remote_name)
+    assert ge.value.details == f"remote `{remote_name}` does not exist."
+
+
+def test_check_git_repo_rename_remote_value_error_is_wrapped(
+    mocker, empty_working_directory
+):
+    """Check if ValueError is wrapped correctly when new name is incorrect."""
+    repo = GitRepo(empty_working_directory)
+    remote_name = "remote"
+    new_remote_name = "wrong-@$!~@-remote"
+    mocker.patch.object(repo._repo.remotes, "rename", side_effect=ValueError)
+    with pytest.raises(GitError) as ge:
+        repo.rename_remote(remote_name, new_remote_name)
+    assert (
+        ge.value.details == f"wrong name `{new_remote_name}` for the remote provided."
+    )
+
+
+def test_check_git_repo_rename_remote_pygit_error_is_wrapped(
+    mocker, empty_working_directory
+):
+    """Check if ValueError is wrapped correctly when adding same remote twice."""
+    repo = GitRepo(empty_working_directory)
+    remote_name = "remote"
+    new_remote_name = "new-remote"
+    mocker.patch.object(repo._repo.remotes, "rename", side_effect=pygit2.GitError)
+
+    with pytest.raises(GitError) as ge:
+        repo.rename_remote(remote_name, new_remote_name)
+    expected_err_msg = f"cannot rename `{remote_name}` to `{new_remote_name}`"
+    assert ge.value.details == expected_err_msg
+
+
 def test_check_git_repo_for_remote_build_shallow(empty_working_directory):
     """Check if directory is a shallow cloned repo."""
     root_path = Path(empty_working_directory)

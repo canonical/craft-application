@@ -256,10 +256,10 @@ class GitRepo:
         try:
             self._repo.remotes.create(remote_name, remote_url)
         except ValueError as ve:
-            raise GitError(f"Remote `{remote_name}` already exist.") from ve
+            raise GitError(f"remote `{remote_name}` already exists.") from ve
         except pygit2.GitError as error:
             raise GitError(
-                f"Could not add remote to a git repository in {str(self.path)!r}."
+                f"could not add remote to a git repository in {str(self.path)!r}."
             ) from error
 
     def rename_remote(
@@ -277,13 +277,15 @@ class GitRepo:
         logger.debug("Renaming `%s` to `%s`", remote_name, new_remote_name)
         try:
             self._repo.remotes.rename(remote_name, new_remote_name)
+        except KeyError as ke:
+            raise GitError(f"remote `{remote_name}` does not exist.") from ke
         except ValueError as ve:
             raise GitError(
-                f"Wrong name `{new_remote_name}` for the remote provided."
+                f"wrong name `{new_remote_name}` for the remote provided."
             ) from ve
         except pygit2.GitError as error:
             raise GitError(
-                f"Cannot rename `{remote_name}` to `{new_remote_name}`"
+                f"cannot rename `{remote_name}` to `{new_remote_name}`"
             ) from error
 
     def push_url(  # noqa: PLR0912 (too-many-branches)
