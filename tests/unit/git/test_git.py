@@ -605,7 +605,7 @@ def test_check_git_repo_for_remote_build_invalid(empty_working_directory):
 
 
 def test_clone_repository_wraps_pygit2_giterror(mocker, empty_working_directory):
-    """Raise an error if git fails when looking for a refspec."""
+    """Test if error is raised if clone failed."""
     mocker.patch(
         "pygit2.clone_repository",
         side_effect=pygit2.GitError,
@@ -620,7 +620,7 @@ def test_clone_repository_wraps_pygit2_giterror(mocker, empty_working_directory)
 
 
 def test_clone_repository_wraps_keyerror(mocker, empty_working_directory):
-    """Raise an error if git fails when looking for a refspec."""
+    """Test if error is raised when branch cannot be found."""
     mocker.patch(
         "pygit2.clone_repository",
         side_effect=KeyError,
@@ -641,11 +641,13 @@ def test_clone_repository_wraps_keyerror(mocker, empty_working_directory):
 def test_clone_repository_returns_git_repo_on_succcess_clone(
     mocker, empty_working_directory
 ):
-    """Raise an error if git fails when looking for a refspec."""
+    """Test if GitRepo is return on clone success."""
     subprocess.run(["git", "init"], check=True)
     mocker.patch(
         "pygit2.clone_repository",
     )
+    # it is not a repo before clone is triggered, but will be after fake pygit2.clone_repository is called
+    mocker.patch("craft_application.git._git_repo.is_repo", side_effect=[False, True])
     mocked_init = mocker.patch.object(GitRepo, "_init_repo")
     fake_repo_url = "fake-repository-url.local"
     fake_branch = "some-fake-branch"
@@ -654,7 +656,19 @@ def test_clone_repository_returns_git_repo_on_succcess_clone(
         path=empty_working_directory,
         checkout_branch=fake_branch,
     )
-    assert mocked_init.not_called, "_init_repo called on existing repository"
+    mocked_init.assert_not_called()
+    assert isinstance(repo, GitRepo)
+
+
+def test_clone_repository_raises_in_existing_repo(mocker, empty_working_directory):
+    """Test if error is raised on clone to already exisiting repository."""
+    # it is not a repo before clone is triggered, but will be after fake pygit2.clone_repository is called
+    mocker.patch("craft_application.git._git_repo.is_repo", return_value=True)
+
+    with pytest.raises(GitError) as exc:
+        GitRepo.clone_repository(url="some-url.local", path=empty_working_directory)
+
+    assert exc.value.details == "Cannot clone to existing repository"
 
 
 def test_check_git_repo_for_remote_build_normal(empty_working_directory):

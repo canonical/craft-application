@@ -337,6 +337,7 @@ class GitRepo:
         url: str,
         path: Path,
         checkout_branch: str | None = None,
+        depth: int = 0,
     ) -> GitRepo:
         """Clone repository to specific path and return GitRepo object.
 
@@ -348,8 +349,16 @@ class GitRepo:
 
         raises GitError: if cloning repository cannot be done
         """
+        if is_repo(path):
+            raise GitError("Cannot clone to existing repository")
+
         try:
-            pygit2.clone_repository(url, path=path, checkout_branch=checkout_branch)
+            pygit2.clone_repository(
+                url,
+                path=path,
+                checkout_branch=checkout_branch,
+                depth=depth,
+            )
         except KeyError as ke:
             raise GitError(f"cannot find branch `{checkout_branch}` in {url}") from ke
         except pygit2.GitError as ge:
