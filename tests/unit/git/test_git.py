@@ -749,7 +749,7 @@ def test_check_git_repo_remote_exists(mocker, empty_working_directory):
     mocked_remotes = mocker.patch.object(repo._repo, "remotes")
     mocked_remotes.__getitem__.return_value = "test"
 
-    assert repo.remote_exist(remote_name) is True, f"Remote {remote_name} should exist"
+    assert repo.remote_exists(remote_name) is True, f"Remote {remote_name} should exist"
     mocked_remotes.__getitem__.assert_called_with(remote_name)
 
 
@@ -761,7 +761,7 @@ def test_check_git_repo_remote_not_exists(mocker, empty_working_directory):
     mocked_remotes.__getitem__.side_effect = KeyError
 
     assert (
-        repo.remote_exist(non_existing_remote) is False
+        repo.remote_exists(non_existing_remote) is False
     ), f"Remote {non_existing_remote} should not exist"
     mocked_remotes.__getitem__.assert_called_with(non_existing_remote)
 

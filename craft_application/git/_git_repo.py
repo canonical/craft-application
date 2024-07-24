@@ -24,6 +24,7 @@ from pathlib import Path
 from shlex import quote
 
 from craft_parts.utils import os_utils
+from typing_extensions import Self
 
 # Cannot catch the pygit2 error here raised by the global use of
 # pygit2.Settings on import. We would ideally use pygit2.Settings
@@ -197,7 +198,7 @@ class GitRepo:
                 f"Could not initialize a git repository in {str(self.path)!r}."
             ) from error
 
-    def remote_exist(self, remote_name: str) -> bool:
+    def remote_exists(self, remote_name: str) -> bool:
         """Check if remote with given name is configured locally.
 
         :param remote_name: the remote repository name
@@ -381,7 +382,7 @@ class GitRepo:
         checkout_branch: str | None = None,
         depth: int = 0,
         single_branch: bool = False,
-    ) -> GitRepo:
+    ) -> Self:
         """Clone repository to specific path and return GitRepo object.
 
         :param url: the URL to clone repository from
