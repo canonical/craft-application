@@ -21,9 +21,7 @@ import os
 import subprocess
 import time
 from pathlib import Path
-
-from craft_cli import emit
-from overrides import override  # type: ignore[reportUnknownVariableType]
+from shlex import quote
 
 # Cannot catch the pygit2 error here raised by the global use of
 # pygit2.Settings on import. We would ideally use pygit2.Settings
@@ -88,40 +86,6 @@ def get_git_repo_type(path: Path) -> GitType:
         return GitType.NORMAL
 
     return GitType.INVALID
-
-
-class GitLogCallbacks(pygit2.RemoteCallbacks):  # type: ignore[misc]
-    """Callback class to log operation progress to user."""
-
-    @override
-    def sideband_progress(self, string: str) -> None:
-        """
-        Progress output callback.  Override this function with your own
-        progress reporting function
-
-        Parameters:
-
-        string : str
-            Progress output from the remote.
-        """
-        emit.progress(string, permanent="done" in string)
-
-    @override
-    def transfer_progress(self, stats: pygit2.remotes.TransferProgress) -> None:
-        """
-        Transfer progress callback. Override with your own function to report
-        transfer progress.
-
-        Parameters:
-
-        stats : TransferProgress
-            The progress up to now.
-        """
-        progress_bar = emit.progress_bar(
-            text="Receiving objects:",
-            total=stats.total_objects,
-        )
-        progress_bar.advance(stats.indexed_objects)
 
 
 class GitRepo:
@@ -414,12 +378,15 @@ class GitRepo:
         path: Path,
         checkout_branch: str | None = None,
         depth: int = 0,
+        single_branch: bool = False,
     ) -> GitRepo:
         """Clone repository to specific path and return GitRepo object.
 
         :param url: the URL to clone repository from
         :param path: path to the directory where repository should be cloned
         :param checkout_branch: optional branch which should be checked out
+        :param depth: optional parameter to specify history len of the clone
+        :param single_branch: optional to narrow cloning to the single branch
 
         :returns: GitRepo wrapper around the repository
 
@@ -429,25 +396,27 @@ class GitRepo:
             raise GitError("Cannot clone to existing repository")
 
         logger.debug("Cloning %s to %s", url, path)
+        clone_cmd = ["git", "clone"]
         if checkout_branch is not None:
             logger.debug("Checking out to branch: %s", checkout_branch)
+            clone_cmd.extend(["--branch", quote(checkout_branch)])
+        if depth > 0:
+            logger.debug("Limiting to last %d commits", depth)
+            clone_cmd.extend(["--depth", str(depth)])
+        if single_branch:
+            logger.debug("Limiting to the single branch")
+            clone_cmd.append("--single-branch")
+        clone_cmd.extend([url, os.fspath(path)])
 
         try:
-            # TODO: consider using git CLI with --single-branch
-            #  as it is not implemented in pygit2
-            #  https://github.com/libgit2/pygit2/issues/1290
-            pygit2.clone_repository(
-                url,
-                path=os.fspath(path),
-                checkout_branch=checkout_branch,
-                depth=depth,
-                callbacks=GitLogCallbacks(),
+            subprocess.run(
+                clone_cmd,
+                check=True,
+                capture_output=True,
             )
-        except KeyError as error:
-            raise GitError(
-                f"cannot find branch `{checkout_branch}` in {url}"
-            ) from error
-        except pygit2.GitError as error:
+        except FileNotFoundError as error:
+            raise GitError("git command not found in the system") from error
+        except subprocess.CalledProcessError as error:
             raise GitError(
                 f"cannot clone repository: {url} to {str(path)!r}"
             ) from error
