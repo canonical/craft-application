@@ -23,7 +23,6 @@ import time
 from pathlib import Path
 from shlex import quote
 
-from craft_cli import emit
 from craft_parts.utils import os_utils
 
 # Cannot catch the pygit2 error here raised by the global use of
