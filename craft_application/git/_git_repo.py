@@ -257,8 +257,8 @@ class GitRepo:
         """
         try:
             self._repo.remotes.create(remote_name, remote_url)
-        except ValueError as ve:
-            raise GitError(f"remote `{remote_name}` already exists.") from ve
+        except ValueError as error:
+            raise GitError(f"remote `{remote_name}` already exists.") from error
         except pygit2.GitError as error:
             raise GitError(
                 f"could not add remote to a git repository in {str(self.path)!r}."
@@ -279,12 +279,12 @@ class GitRepo:
         logger.debug("Renaming '%s' to '%s'", remote_name, new_remote_name)
         try:
             self._repo.remotes.rename(remote_name, new_remote_name)
-        except KeyError as ke:
-            raise GitError(f"remote '{remote_name}' does not exist.") from ke
-        except ValueError as ve:
+        except KeyError as error:
+            raise GitError(f"remote '{remote_name}' does not exist.") from error
+        except ValueError as error:
             raise GitError(
                 f"wrong name '{new_remote_name}' for the remote provided."
-            ) from ve
+            ) from error
         except pygit2.GitError as error:
             raise GitError(
                 f"cannot rename '{remote_name}' to '{new_remote_name}'"
@@ -443,8 +443,12 @@ class GitRepo:
                 depth=depth,
                 callbacks=GitLogCallbacks(),
             )
-        except KeyError as ke:
-            raise GitError(f"cannot find branch `{checkout_branch}` in {url}") from ke
-        except pygit2.GitError as ge:
-            raise GitError(f"cannot clone repository: {url} to {str(path)!r}") from ge
+        except KeyError as error:
+            raise GitError(
+                f"cannot find branch `{checkout_branch}` in {url}"
+            ) from error
+        except pygit2.GitError as error:
+            raise GitError(
+                f"cannot clone repository: {url} to {str(path)!r}"
+            ) from error
         return cls(path)
