@@ -21,6 +21,7 @@ import re
 import subprocess
 from collections.abc import Iterator
 from pathlib import Path
+from typing import cast
 from unittest.mock import ANY
 
 import pygit2
@@ -43,6 +44,12 @@ def empty_working_directory(tmp_path) -> Iterator[Path]:
     yield repo_dir
 
     os.chdir(cwd)
+
+
+@pytest.fixture()
+def empty_repository(empty_working_directory) -> Path:
+    subprocess.run(["git", "init"], check=True)
+    return cast(Path, empty_working_directory)
 
 
 def test_is_repo(empty_working_directory):
@@ -604,11 +611,19 @@ def test_check_git_repo_for_remote_build_invalid(empty_working_directory):
         check_git_repo_for_remote_build(empty_working_directory)
 
 
-def test_clone_repository_wraps_called_process_error(mocker, empty_working_directory):
+@pytest.fixture()
+def patched_cloning_process(mocker):
+    return mocker.patch(
+        "craft_parts.utils.os_utils.process_run",
+    )
+
+
+def test_clone_repository_wraps_called_process_error(
+    patched_cloning_process, empty_working_directory
+):
     """Test if error is raised if clone failed."""
-    mocker.patch(
-        "subprocess.run",
-        side_effect=subprocess.CalledProcessError(returncode=1, cmd="git clone"),
+    patched_cloning_process.side_effect = subprocess.CalledProcessError(
+        returncode=1, cmd="git clone"
     )
     fake_repo_url = "fake-repository-url.local"
     with pytest.raises(GitError) as raised:
@@ -619,12 +634,11 @@ def test_clone_repository_wraps_called_process_error(mocker, empty_working_direc
     )
 
 
-def test_clone_repository_wraps_file_not_found_error(mocker, empty_working_directory):
+def test_clone_repository_wraps_file_not_found_error(
+    patched_cloning_process, empty_working_directory
+):
     """Test if error is raised if git is not found."""
-    mocker.patch(
-        "craft_parts.utils.os_utils.process_run",
-        side_effect=FileNotFoundError,
-    )
+    patched_cloning_process.side_effect = FileNotFoundError
     fake_repo_url = "fake-repository-url.local"
     fake_branch = "some-fake-branch"
     with pytest.raises(GitError) as raised:
@@ -666,13 +680,9 @@ def test_clone_repository_wraps_file_not_found_error(mocker, empty_working_direc
     ],
 )
 def test_clone_repository_appends_correct_parameters_to_clone_command(
-    mocker, empty_working_directory, kwargs, expected_cmd_args
+    mocker, empty_repository, kwargs, expected_cmd_args, patched_cloning_process
 ) -> None:
     """Test if GitRepo uses correct arguments in subprocess calls."""
-    subprocess.run(["git", "init"], check=True)
-    patched_run = mocker.patch(
-        "craft_parts.utils.os_utils.process_run",
-    )
     # it is not a repo before clone is triggered, but will be after fake pygit2.clone_repository is called
     mocker.patch("craft_application.git._git_repo.is_repo", side_effect=[False, True])
     mocked_init = mocker.patch.object(GitRepo, "_init_repo")
@@ -681,30 +691,25 @@ def test_clone_repository_appends_correct_parameters_to_clone_command(
 
     _ = GitRepo.clone_repository(
         url=fake_repo_url,
-        path=empty_working_directory,
+        path=empty_repository,
         **kwargs,
     )
     mocked_init.assert_not_called()
-    patched_run.assert_called_with(
+    patched_cloning_process.assert_called_with(
         [
             "git",
             "clone",
             *expected_cmd_args,
             fake_repo_url,
-            str(empty_working_directory),
+            str(empty_repository),
         ],
         git_repo_logger.debug,
     )
 
 
-def test_clone_repository_returns_git_repo_on_succcess_clone(
-    mocker, empty_working_directory
-):
+@pytest.mark.usefixtures("patched_cloning_process")
+def test_clone_repository_returns_git_repo_on_succcess_clone(mocker, empty_repository):
     """Test if GitRepo is return on clone success."""
-    subprocess.run(["git", "init"], check=True)
-    mocker.patch(
-        "craft_parts.utils.os_utils.process_run",
-    )
     # it is not a repo before clone is triggered, but will be after fake pygit2.clone_repository is called
     mocker.patch("craft_application.git._git_repo.is_repo", side_effect=[False, True])
     mocked_init = mocker.patch.object(GitRepo, "_init_repo")
@@ -713,7 +718,7 @@ def test_clone_repository_returns_git_repo_on_succcess_clone(
 
     repo = GitRepo.clone_repository(
         url=fake_repo_url,
-        path=empty_working_directory,
+        path=empty_repository,
         checkout_branch=fake_branch,
     )
     mocked_init.assert_not_called()
