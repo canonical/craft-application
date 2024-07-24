@@ -23,6 +23,8 @@ import time
 from pathlib import Path
 from shlex import quote
 
+from craft_cli import emit
+
 # Cannot catch the pygit2 error here raised by the global use of
 # pygit2.Settings on import. We would ideally use pygit2.Settings
 # for this
@@ -409,11 +411,13 @@ class GitRepo:
         clone_cmd.extend([url, os.fspath(path)])
 
         try:
-            subprocess.run(
-                clone_cmd,
-                check=True,
-                capture_output=True,
-            )
+            with emit.open_stream() as stream:
+                subprocess.run(
+                    clone_cmd,
+                    check=True,
+                    stdout=stream,
+                    stderr=stream,
+                )
         except FileNotFoundError as error:
             raise GitError("git command not found in the system") from error
         except subprocess.CalledProcessError as error:
