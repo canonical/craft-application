@@ -276,18 +276,18 @@ class GitRepo:
 
         :raises GitError: if remote cannot be renamed
         """
-        logger.debug("Renaming `%s` to `%s`", remote_name, new_remote_name)
+        logger.debug("Renaming '%s' to '%s'", remote_name, new_remote_name)
         try:
             self._repo.remotes.rename(remote_name, new_remote_name)
         except KeyError as ke:
-            raise GitError(f"remote `{remote_name}` does not exist.") from ke
+            raise GitError(f"remote '{remote_name}' does not exist.") from ke
         except ValueError as ve:
             raise GitError(
-                f"wrong name `{new_remote_name}` for the remote provided."
+                f"wrong name '{new_remote_name}' for the remote provided."
             ) from ve
         except pygit2.GitError as error:
             raise GitError(
-                f"cannot rename `{remote_name}` to `{new_remote_name}`"
+                f"cannot rename '{remote_name}' to '{new_remote_name}'"
             ) from error
 
     def push_url(  # noqa: PLR0912 (too-many-branches)
