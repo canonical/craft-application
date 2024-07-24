@@ -762,7 +762,7 @@ def test_check_git_repo_rename_remote_key_error_is_wrapped(
     mocker.patch.object(repo._repo.remotes, "rename", side_effect=KeyError)
     with pytest.raises(GitError) as ge:
         repo.rename_remote(remote_name, new_remote_name)
-    assert ge.value.details == f"remote `{remote_name}` does not exist."
+    assert ge.value.details == f"remote '{remote_name}' does not exist."
 
 
 def test_check_git_repo_rename_remote_value_error_is_wrapped(
@@ -776,7 +776,7 @@ def test_check_git_repo_rename_remote_value_error_is_wrapped(
     with pytest.raises(GitError) as ge:
         repo.rename_remote(remote_name, new_remote_name)
     assert (
-        ge.value.details == f"wrong name `{new_remote_name}` for the remote provided."
+        ge.value.details == f"wrong name '{new_remote_name}' for the remote provided."
     )
 
 
@@ -791,7 +791,7 @@ def test_check_git_repo_rename_remote_pygit_error_is_wrapped(
 
     with pytest.raises(GitError) as ge:
         repo.rename_remote(remote_name, new_remote_name)
-    expected_err_msg = f"cannot rename `{remote_name}` to `{new_remote_name}`"
+    expected_err_msg = f"cannot rename '{remote_name}' to '{new_remote_name}'"
     assert ge.value.details == expected_err_msg
 
 
