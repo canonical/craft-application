@@ -23,7 +23,7 @@ import time
 from pathlib import Path
 
 from craft_cli import emit
-from overrides import override
+from overrides import override  # type: ignore[reportUnknownVariableType]
 
 # Cannot catch the pygit2 error here raised by the global use of
 # pygit2.Settings on import. We would ideally use pygit2.Settings
@@ -90,7 +90,7 @@ def get_git_repo_type(path: Path) -> GitType:
     return GitType.INVALID
 
 
-class GitLogCallbacks(pygit2.RemoteCallbacks):
+class GitLogCallbacks(pygit2.RemoteCallbacks):  # type: ignore[misc]
     """Callback class to log operation progress to user."""
 
     @override
@@ -237,9 +237,11 @@ class GitRepo:
         :param remote_name: the remote repository name
         """
         try:
-            return self._repo.remotes[remote_name] is not None
+            _ = self._repo.remotes[remote_name]
         except KeyError:
             return False
+        else:
+            return True
 
     def add_remote(
         self,
@@ -436,7 +438,7 @@ class GitRepo:
             #  https://github.com/libgit2/pygit2/issues/1290
             pygit2.clone_repository(
                 url,
-                path=path,
+                path=os.fspath(path),
                 checkout_branch=checkout_branch,
                 depth=depth,
                 callbacks=GitLogCallbacks(),
