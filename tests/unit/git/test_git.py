@@ -786,7 +786,7 @@ def test_check_git_repo_add_remote_value_error_is_wrapped(
 
     with pytest.raises(GitError) as ge:
         repo.add_remote(new_remote_name, "https://git.fake-remote-url.local")
-    assert ge.value.details == f"remote `{new_remote_name}` already exists."
+    assert ge.value.details == f"remote '{new_remote_name}' already exists."
 
 
 def test_check_git_repo_add_remote_pygit_error_is_wrapped(

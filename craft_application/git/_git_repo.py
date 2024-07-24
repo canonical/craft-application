@@ -225,7 +225,7 @@ class GitRepo:
         try:
             self._repo.remotes.create(remote_name, remote_url)
         except ValueError as error:
-            raise GitError(f"remote `{remote_name}` already exists.") from error
+            raise GitError(f"remote '{remote_name}' already exists.") from error
         except pygit2.GitError as error:
             raise GitError(
                 f"could not add remote to a git repository in {str(self.path)!r}."
