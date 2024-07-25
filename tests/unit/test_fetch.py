@@ -211,6 +211,7 @@ def test_configure_build_instance(mocker):
         "http_proxy": expected_proxy,
         "https_proxy": expected_proxy,
         "REQUESTS_CA_BUNDLE": "/usr/local/share/ca-certificates/local-ca.crt",
+        "CARGO_HTTP_CAINFO": "/usr/local/share/ca-certificates/local-ca.crt",
     }
 
     env = fetch.configure_instance(instance, session_data)

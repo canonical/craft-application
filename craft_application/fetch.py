@@ -98,6 +98,8 @@ class NetInfo:
             "https_proxy": self.http_proxy,
             # This makes the requests lib take our cert into account.
             "REQUESTS_CA_BUNDLE": str(_FETCH_CERT_INSTANCE_PATH),
+            # Same, but for cargo.
+            "CARGO_HTTP_CAINFO": str(_FETCH_CERT_INSTANCE_PATH),
         }
 
 
