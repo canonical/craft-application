@@ -21,6 +21,7 @@ import re
 import subprocess
 from collections.abc import Iterator
 from pathlib import Path
+from typing import cast
 from unittest.mock import ANY
 
 import pygit2
@@ -43,6 +44,12 @@ def empty_working_directory(tmp_path) -> Iterator[Path]:
     yield repo_dir
 
     os.chdir(cwd)
+
+
+@pytest.fixture()
+def empty_repository(empty_working_directory) -> Path:
+    subprocess.run(["git", "init"], check=True)
+    return cast(Path, empty_working_directory)
 
 
 def test_is_repo(empty_working_directory):
@@ -604,10 +611,252 @@ def test_check_git_repo_for_remote_build_invalid(empty_working_directory):
         check_git_repo_for_remote_build(empty_working_directory)
 
 
+@pytest.fixture()
+def patched_cloning_process(mocker):
+    return mocker.patch(
+        "craft_parts.utils.os_utils.process_run",
+    )
+
+
+def test_clone_repository_wraps_called_process_error(
+    patched_cloning_process, empty_working_directory
+):
+    """Test if error is raised if clone failed."""
+    patched_cloning_process.side_effect = subprocess.CalledProcessError(
+        returncode=1, cmd="git clone"
+    )
+    fake_repo_url = "fake-repository-url.local"
+    with pytest.raises(GitError) as raised:
+        GitRepo.clone_repository(url=fake_repo_url, path=empty_working_directory)
+    assert raised.value.details == (
+        f"cannot clone repository: {fake_repo_url} "
+        f"to {str(empty_working_directory)!r}"
+    )
+
+
+def test_clone_repository_wraps_file_not_found_error(
+    patched_cloning_process, empty_working_directory
+):
+    """Test if error is raised if git is not found."""
+    patched_cloning_process.side_effect = FileNotFoundError
+    fake_repo_url = "fake-repository-url.local"
+    fake_branch = "some-fake-branch"
+    with pytest.raises(GitError) as raised:
+        GitRepo.clone_repository(
+            url=fake_repo_url,
+            path=empty_working_directory,
+            checkout_branch=fake_branch,
+        )
+    assert raised.value.details == "git command not found in the system"
+
+
+@pytest.mark.parametrize(
+    ("kwargs", "expected_cmd_args"),
+    [
+        (
+            {"checkout_branch": "feat/new-glowing-feature"},
+            ["--branch", "feat/new-glowing-feature"],
+        ),
+        (
+            {"checkout_branch": "feat/new-glowing-feature", "single_branch": True},
+            ["--branch", "feat/new-glowing-feature", "--single-branch"],
+        ),
+        (
+            {"single_branch": True},
+            ["--single-branch"],
+        ),
+        (
+            {"depth": 1},
+            ["--depth", "1"],
+        ),
+        (
+            {"depth": 0},
+            [],
+        ),
+        (
+            {},
+            [],
+        ),
+    ],
+)
+def test_clone_repository_appends_correct_parameters_to_clone_command(
+    mocker, empty_repository, kwargs, expected_cmd_args, patched_cloning_process
+) -> None:
+    """Test if GitRepo uses correct arguments in subprocess calls."""
+    # it is not a repo before clone is triggered, but will be after fake pygit2.clone_repository is called
+    mocker.patch("craft_application.git._git_repo.is_repo", side_effect=[False, True])
+    mocked_init = mocker.patch.object(GitRepo, "_init_repo")
+    fake_repo_url = "fake-repository-url.local"
+    from craft_application.git._git_repo import logger as git_repo_logger
+
+    _ = GitRepo.clone_repository(
+        url=fake_repo_url,
+        path=empty_repository,
+        **kwargs,
+    )
+    mocked_init.assert_not_called()
+    patched_cloning_process.assert_called_with(
+        [
+            "git",
+            "clone",
+            *expected_cmd_args,
+            fake_repo_url,
+            str(empty_repository),
+        ],
+        git_repo_logger.debug,
+    )
+
+
+@pytest.mark.usefixtures("patched_cloning_process")
+def test_clone_repository_returns_git_repo_on_succcess_clone(mocker, empty_repository):
+    """Test if GitRepo is return on clone success."""
+    # it is not a repo before clone is triggered, but will be after fake pygit2.clone_repository is called
+    mocker.patch("craft_application.git._git_repo.is_repo", side_effect=[False, True])
+    mocked_init = mocker.patch.object(GitRepo, "_init_repo")
+    fake_repo_url = "fake-repository-url.local"
+    fake_branch = "some-fake-branch"
+
+    repo = GitRepo.clone_repository(
+        url=fake_repo_url,
+        path=empty_repository,
+        checkout_branch=fake_branch,
+    )
+    mocked_init.assert_not_called()
+    assert isinstance(repo, GitRepo)
+
+
+def test_clone_repository_raises_in_existing_repo(mocker, empty_working_directory):
+    """Test if error is raised on clone to already existing repository."""
+    # it is not a repo before clone is triggered, but will be after fake pygit2.clone_repository is called
+    mocker.patch("craft_application.git._git_repo.is_repo", return_value=True)
+
+    with pytest.raises(GitError) as exc:
+        GitRepo.clone_repository(url="some-url.local", path=empty_working_directory)
+
+    assert exc.value.details == "Cannot clone to existing repository"
+
+
 def test_check_git_repo_for_remote_build_normal(empty_working_directory):
     """Check if directory is a repo."""
     GitRepo(empty_working_directory)
     check_git_repo_for_remote_build(empty_working_directory)
+
+
+def test_check_git_repo_remote_exists(mocker, empty_working_directory):
+    """Check if True is returned if remote exists."""
+    repo = GitRepo(empty_working_directory)
+    remote_name = "existing-remote"
+    mocked_remotes = mocker.patch.object(repo._repo, "remotes")
+    mocked_remotes.__getitem__.return_value = "test"
+
+    assert repo.remote_exists(remote_name) is True, f"Remote {remote_name} should exist"
+    mocked_remotes.__getitem__.assert_called_with(remote_name)
+
+
+def test_check_git_repo_remote_not_exists(mocker, empty_working_directory):
+    """Check if False is returned if remote does not exist."""
+    repo = GitRepo(empty_working_directory)
+    non_existing_remote = "non-existing-remote"
+    mocked_remotes = mocker.patch.object(repo._repo, "remotes")
+    mocked_remotes.__getitem__.side_effect = KeyError
+
+    assert (
+        repo.remote_exists(non_existing_remote) is False
+    ), f"Remote {non_existing_remote} should not exist"
+    mocked_remotes.__getitem__.assert_called_with(non_existing_remote)
+
+
+def test_check_git_repo_add_remote(mocker, empty_working_directory):
+    """Check if add_remote is called correctly."""
+    repo = GitRepo(empty_working_directory)
+    new_remote_name = "new-remote"
+    mocked_fn = mocker.patch.object(repo._repo.remotes, "create")
+    repo.add_remote(new_remote_name, "https://git.fake-remote-url.local")
+    mocked_fn.assert_called_with(new_remote_name, "https://git.fake-remote-url.local")
+
+
+def test_check_git_repo_add_remote_value_error_is_wrapped(
+    mocker, empty_working_directory
+):
+    """Check if ValueError is wrapped correctly when adding same remote twice."""
+    repo = GitRepo(empty_working_directory)
+    new_remote_name = "new-remote"
+    mocker.patch.object(repo._repo.remotes, "create", side_effect=[True, ValueError])
+    repo.add_remote(new_remote_name, "https://git.fake-remote-url.local")
+
+    with pytest.raises(GitError) as ge:
+        repo.add_remote(new_remote_name, "https://git.fake-remote-url.local")
+    assert ge.value.details == f"remote '{new_remote_name}' already exists."
+
+
+def test_check_git_repo_add_remote_pygit_error_is_wrapped(
+    mocker, empty_working_directory
+):
+    """Check if ValueError is wrapped correctly when adding same remote twice."""
+    repo = GitRepo(empty_working_directory)
+    new_remote_name = "new-remote"
+    mocker.patch.object(repo._repo.remotes, "create", side_effect=pygit2.GitError)
+
+    with pytest.raises(GitError) as ge:
+        repo.add_remote(new_remote_name, "https://git.fake-remote-url.local")
+    expected_err_msg = (
+        "could not add remote to a git "
+        f"repository in {str(empty_working_directory)!r}."
+    )
+    assert ge.value.details == expected_err_msg
+
+
+def test_check_git_repo_rename_remote(mocker, empty_working_directory):
+    """Check if rename_remote is called correctly."""
+    repo = GitRepo(empty_working_directory)
+    remote_name = "remote"
+    new_remote_name = "new-remote"
+    mocked_fn = mocker.patch.object(repo._repo.remotes, "rename")
+    repo.rename_remote(remote_name, new_remote_name)
+    mocked_fn.assert_called_with(remote_name, new_remote_name)
+
+
+def test_check_git_repo_rename_remote_key_error_is_wrapped(
+    mocker, empty_working_directory
+):
+    """Check if KeyError is wrapped correctly when renaming non-existing remote."""
+    repo = GitRepo(empty_working_directory)
+    remote_name = "non-existing-remote"
+    new_remote_name = "new-remote"
+    mocker.patch.object(repo._repo.remotes, "rename", side_effect=KeyError)
+    with pytest.raises(GitError) as ge:
+        repo.rename_remote(remote_name, new_remote_name)
+    assert ge.value.details == f"remote '{remote_name}' does not exist."
+
+
+def test_check_git_repo_rename_remote_value_error_is_wrapped(
+    mocker, empty_working_directory
+):
+    """Check if ValueError is wrapped correctly when new name is incorrect."""
+    repo = GitRepo(empty_working_directory)
+    remote_name = "remote"
+    new_remote_name = "wrong-@$!~@-remote"
+    mocker.patch.object(repo._repo.remotes, "rename", side_effect=ValueError)
+    with pytest.raises(GitError) as ge:
+        repo.rename_remote(remote_name, new_remote_name)
+    assert (
+        ge.value.details == f"wrong name '{new_remote_name}' for the remote provided."
+    )
+
+
+def test_check_git_repo_rename_remote_pygit_error_is_wrapped(
+    mocker, empty_working_directory
+):
+    """Check if ValueError is wrapped correctly when adding same remote twice."""
+    repo = GitRepo(empty_working_directory)
+    remote_name = "remote"
+    new_remote_name = "new-remote"
+    mocker.patch.object(repo._repo.remotes, "rename", side_effect=pygit2.GitError)
+
+    with pytest.raises(GitError) as ge:
+        repo.rename_remote(remote_name, new_remote_name)
+    expected_err_msg = f"cannot rename '{remote_name}' to '{new_remote_name}'"
+    assert ge.value.details == expected_err_msg
 
 
 def test_check_git_repo_for_remote_build_shallow(empty_working_directory):
