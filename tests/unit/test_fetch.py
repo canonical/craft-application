@@ -129,6 +129,7 @@ def test_start_service(mocker, tmp_path):
             f"--spool={tmp_path/'spool'}",
             f"--cert={fake_cert}",
             f"--key={fake_key}",
+            "--permissive-mode",
         ],
         env={"FETCH_SERVICE_AUTH": AUTH, "FETCH_APT_RELEASE_PUBLIC_KEY": "DEADBEEF"},
         stdout=subprocess.PIPE,
@@ -155,6 +156,7 @@ def test_create_session():
         f"http://localhost:{CONTROL}/session",
         json={"id": "my-session-id", "token": "my-session-token"},
         status=200,
+        match=[matchers.json_params_matcher({"policy": "permissive"})],
     )
 
     session_data = fetch.create_session()
