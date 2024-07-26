@@ -167,6 +167,9 @@ def start_service() -> subprocess.Popen[str] | None:
     cmd.append(f"--cert={cert}")
     cmd.append(f"--key={cert_key}")
 
+    # Accept permissive sessions
+    cmd.append("--permissive-mode")
+
     fetch_process = subprocess.Popen(
         cmd, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True
     )
@@ -221,7 +224,9 @@ def create_session() -> SessionData:
 
     :return: a SessionData object containing the session's id and token.
     """
-    data = _service_request("post", "session", json={}).json()
+    # For now we'll always create permissive (as opposed to strict) sessions.
+    json = {"policy": "permissive"}
+    data = _service_request("post", "session", json=json).json()
 
     return SessionData.unmarshal(data=data)
 
