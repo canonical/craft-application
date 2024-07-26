@@ -240,11 +240,7 @@ def test_build_instance_integration(app_service, lxd_instance):
         artefacts_and_types.append((metadata_name, metadata_type))
 
     # Check that the installation of the "hello" deb went through the inspector.
-
-    # NOTE: the right type is missing on deb artefacts currently - the "type"
-    # field is empty. If this fails, set "application/vnd.debian.binary-package"
-    # instead of "".
-    assert ("hello", "") in artefacts_and_types
+    assert ("hello", "application/vnd.debian.binary-package") in artefacts_and_types
 
     # Check that the fetching of the "craft-application" wheel went through the inspector.
     assert ("craft-application", "application/x.python.wheel") in artefacts_and_types
