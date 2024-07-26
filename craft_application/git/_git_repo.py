@@ -13,6 +13,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """Git repository class and helper utilities."""
+
 from __future__ import annotations
 
 import logging
@@ -20,6 +21,10 @@ import os
 import subprocess
 import time
 from pathlib import Path
+from shlex import quote
+
+from craft_parts.utils import os_utils
+from typing_extensions import Self
 
 # Cannot catch the pygit2 error here raised by the global use of
 # pygit2.Settings on import. We would ideally use pygit2.Settings
@@ -193,6 +198,65 @@ class GitRepo:
                 f"Could not initialize a git repository in {str(self.path)!r}."
             ) from error
 
+    def remote_exists(self, remote_name: str) -> bool:
+        """Check if remote with given name is configured locally.
+
+        :param remote_name: the remote repository name
+        """
+        try:
+            _ = self._repo.remotes[remote_name]
+        except KeyError:
+            return False
+        else:
+            return True
+
+    def add_remote(
+        self,
+        remote_name: str,
+        remote_url: str,
+    ) -> None:
+        """Add remote in the repository configuration.
+
+        :param remote_name: the remote repository name
+        :param remote_url: the remote repository URL
+
+        :raises GitError: if remote cannot be created
+        """
+        try:
+            self._repo.remotes.create(remote_name, remote_url)
+        except ValueError as error:
+            raise GitError(f"remote '{remote_name}' already exists.") from error
+        except pygit2.GitError as error:
+            raise GitError(
+                f"could not add remote to a git repository in {str(self.path)!r}."
+            ) from error
+
+    def rename_remote(
+        self,
+        remote_name: str,
+        new_remote_name: str,
+    ) -> None:
+        """Rename remote in the repository configuration.
+
+        :param remote_name: the remote repository name
+        :param new_remote_name: the new name for the remote
+
+        :raises GitError: if remote cannot be renamed
+        """
+        logger.debug("Renaming '%s' to '%s'", remote_name, new_remote_name)
+        try:
+            self._repo.remotes.rename(remote_name, new_remote_name)
+        except KeyError as error:
+            raise GitError(f"remote '{remote_name}' does not exist.") from error
+        except ValueError as error:
+            raise GitError(
+                f"wrong name '{new_remote_name}' for the remote provided."
+            ) from error
+        except pygit2.GitError as error:
+            raise GitError(
+                f"cannot rename '{remote_name}' to '{new_remote_name}'"
+            ) from error
+
     def push_url(  # noqa: PLR0912 (too-many-branches)
         self,
         remote_url: str,
@@ -308,3 +372,51 @@ class GitRepo:
             ) from error
         logger.debug("Resolved reference %r for name %r", reference, ref)
         return reference
+
+    @classmethod
+    def clone_repository(
+        cls,
+        *,
+        url: str,
+        path: Path,
+        checkout_branch: str | None = None,
+        depth: int = 0,
+        single_branch: bool = False,
+    ) -> Self:
+        """Clone repository to specific path and return GitRepo object.
+
+        :param url: the URL to clone repository from
+        :param path: path to the directory where repository should be cloned
+        :param checkout_branch: optional branch which should be checked out
+        :param depth: optional parameter to specify history len of the clone
+        :param single_branch: optional to narrow cloning to the single branch
+
+        :returns: GitRepo wrapper around the repository
+
+        raises GitError: if cloning repository cannot be done
+        """
+        if is_repo(path):
+            raise GitError("Cannot clone to existing repository")
+
+        logger.debug("Cloning %s to %s", url, path)
+        clone_cmd = ["git", "clone"]
+        if checkout_branch is not None:
+            logger.debug("Checking out to branch: %s", checkout_branch)
+            clone_cmd.extend(["--branch", quote(checkout_branch)])
+        if depth > 0:
+            logger.debug("Limiting to last %d commits", depth)
+            clone_cmd.extend(["--depth", str(depth)])
+        if single_branch:
+            logger.debug("Limiting to the single branch")
+            clone_cmd.append("--single-branch")
+        clone_cmd.extend([url, os.fspath(path)])
+
+        try:
+            os_utils.process_run(clone_cmd, logger.debug)
+        except FileNotFoundError as error:
+            raise GitError("git command not found in the system") from error
+        except subprocess.CalledProcessError as error:
+            raise GitError(
+                f"cannot clone repository: {url} to {str(path)!r}"
+            ) from error
+        return cls(path)
