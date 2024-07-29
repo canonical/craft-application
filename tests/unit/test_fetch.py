@@ -19,7 +19,6 @@ from pathlib import Path
 from unittest import mock
 from unittest.mock import call
 
-import platformdirs
 import pytest
 import responses
 from craft_application import errors, fetch
@@ -273,9 +272,13 @@ def test_configure_build_instance(mocker):
     ]
 
 
-def test_get_certificate_dir():
+def test_get_certificate_dir(mocker):
+    mocker.patch.object(
+        fetch,
+        "_get_service_base_dir",
+        return_value=Path("/home/user/snap/fetch-service/common"),
+    )
     cert_dir = fetch._get_certificate_dir()
 
-    data_dir = Path(platformdirs.user_data_path("craft-application"))
-    expected = data_dir / "fetch-certificate"
+    expected = Path("/home/user/snap/fetch-service/common/craft/fetch-certificate")
     assert cert_dir == expected
