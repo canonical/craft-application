@@ -22,7 +22,6 @@ from dataclasses import dataclass
 from typing import Any, cast
 
 import craft_providers
-import platformdirs
 import requests
 from pydantic import Field
 from requests.auth import HTTPBasicAuth
@@ -470,5 +469,6 @@ def _obtain_certificate() -> tuple[pathlib.Path, pathlib.Path]:
 
 def _get_certificate_dir() -> pathlib.Path:
     """Get the location that should contain the fetch-service certificate and key."""
-    data_dir = pathlib.Path(platformdirs.user_data_dir(appname="craft-application"))
-    return data_dir / "fetch-certificate"
+    base_dir = _get_service_base_dir()
+
+    return base_dir / "craft/fetch-certificate"
