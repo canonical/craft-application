@@ -17,12 +17,14 @@
 import contextlib
 import io
 import pathlib
+import shlex
 import subprocess
 from dataclasses import dataclass
 from typing import Any, cast
 
 import craft_providers
 import requests
+from craft_cli import emit
 from pydantic import Field
 from requests.auth import HTTPBasicAuth
 
@@ -168,6 +170,8 @@ def start_service() -> subprocess.Popen[str] | None:
 
     # Accept permissive sessions
     cmd.append("--permissive-mode")
+
+    emit.debug(f"Launching fetch-service with '{shlex.join(cmd)}'")
 
     fetch_process = subprocess.Popen(
         cmd, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True
