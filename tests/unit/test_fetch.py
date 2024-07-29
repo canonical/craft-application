@@ -247,6 +247,8 @@ def test_configure_build_instance(mocker):
             ["apt", "update"],
             env=expected_env,
             check=True,
+            stdout=mocker.ANY,
+            stderr=mocker.ANY,
         ),
     ]
 
