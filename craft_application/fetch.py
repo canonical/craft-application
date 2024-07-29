@@ -364,11 +364,10 @@ def _configure_apt(instance: craft_providers.Executor, net_info: NetInfo) -> Non
         check=True,
     )
     env = cast(dict[str, str | None], net_info.env)
-    instance.execute_run(  # pyright: ignore[reportUnknownMemberType]
-        ["apt", "update"],
-        env=env,
-        check=True,
-    )
+    with emit.open_stream() as fd:
+        instance.execute_run(  # pyright: ignore[reportUnknownMemberType]
+            ["apt", "update"], env=env, check=True, stdout=fd, stderr=fd
+        )
 
 
 def _get_gateway(instance: craft_providers.Executor) -> str:
