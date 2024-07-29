@@ -80,6 +80,6 @@ def test_run_managed_fetch_service(app, fake_project, fake_build_plan):
         "teardown_session",
         "create_session",
         "teardown_session",
-        # One call to shut down (without `force`)
-        "shutdown(False)",
+        # One call to shut down (with `force`)
+        "shutdown(True)",
     ]

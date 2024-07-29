@@ -426,7 +426,7 @@ class Application:
                         self.services.fetch.teardown_session()
 
         if self.app.features.fetch_service:
-            self.services.fetch.shutdown()
+            self.services.fetch.shutdown(force=True)
 
     def configure(self, global_args: dict[str, Any]) -> None:
         """Configure the application using any global arguments."""
