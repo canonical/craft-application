@@ -88,6 +88,11 @@ requires = [
 ]
 build-backend = "setuptools.build_meta"
 
+[tool]
+rye = { dev-dependencies = [
+    "pytest-xdist>=3.6.1",
+] }
+
 [tool.setuptools.dynamic]
 readme = {file = "README.rst"}
 
