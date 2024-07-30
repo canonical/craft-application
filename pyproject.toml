@@ -154,8 +154,6 @@ exclude = ["craft_application/_version.py"]
 strict = ["craft_application"]
 pythonVersion = "3.10"
 pythonPlatform = "Linux"
-venvPath = ".tox"
-venv = "typing"
 
 [tool.mypy]
 python_version = "3.10"
