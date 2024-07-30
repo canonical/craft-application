@@ -27,11 +27,11 @@ class MyBaseModel(models.CraftBaseModel):
     value1: int
     value2: str
 
-    @pydantic.validator("value1")
+    @pydantic.field_validator("value1", mode="after")
     def _validate_value1(cls, _v):
         raise ValueError("Bad value1 value")
 
-    @pydantic.validator("value2")
+    @pydantic.field_validator("value2", mode="after")
     def _validate_value2(cls, _v):
         raise ValueError("Bad value2 value")
 
