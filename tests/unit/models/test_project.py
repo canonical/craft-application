@@ -415,18 +415,25 @@ def test_unmarshal_undefined_repositories(full_project_dict):
 @pytest.mark.parametrize(
     ("repositories_val", "error_lines"),
     [
-        ([[]], ["- input should be a valid dictionary (in field 'package-repositories[0]')"]),
+        (
+            [[]],
+            [
+                "- input should be a valid dictionary (in field 'package-repositories[0]')"
+            ],
+        ),
         (
             [{}],
             [
                 "- field 'type' required in 'package-repositories[0]' configuration",
                 "- field 'url' required in 'package-repositories[0]' configuration",
                 "- field 'key-id' required in 'package-repositories[0]' configuration",
-            ]
-        )
-    ]
+            ],
+        ),
+    ],
 )
-def test_unmarshal_invalid_repositories(full_project_dict, repositories_val, error_lines):
+def test_unmarshal_invalid_repositories(
+    full_project_dict, repositories_val, error_lines
+):
     """Test that package-repositories are validated in Project with package repositories feature."""
     full_project_dict["package-repositories"] = repositories_val
     project_path = pathlib.Path("myproject.yaml")
@@ -434,7 +441,9 @@ def test_unmarshal_invalid_repositories(full_project_dict, repositories_val, err
     with pytest.raises(CraftValidationError) as error:
         Project.from_yaml_data(full_project_dict, project_path)
 
-    assert error.value.args[0] == "\n".join(("Bad myproject.yaml content:", *error_lines))
+    assert error.value.args[0] == "\n".join(
+        ("Bad myproject.yaml content:", *error_lines)
+    )
 
 
 @pytest.mark.parametrize("model", [Project, BuildPlanner])

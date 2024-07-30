@@ -16,7 +16,8 @@
 """Constrained pydantic types for *craft applications."""
 import collections
 import re
-from typing import Annotated, Callable, TypeVar
+from collections.abc import Callable
+from typing import Annotated, TypeVar
 
 import pydantic
 
@@ -32,7 +33,9 @@ def _validate_list_is_unique(value: list[T]) -> list[T]:
     raise ValueError(f"Duplicate values in list: {dupes}")
 
 
-def _get_validator_by_regex(regex: re.Pattern[str], error_msg: str) -> Callable[[str], str]:
+def _get_validator_by_regex(
+    regex: re.Pattern[str], error_msg: str
+) -> Callable[[str], str]:
     """Get a string validator by regular expression with a known error message.
 
     This allows providing better error messages for regex-based validation than the
@@ -43,6 +46,7 @@ def _get_validator_by_regex(regex: re.Pattern[str], error_msg: str) -> Callable[
     :param error_msg: The error message to raise if the value is invalid.
     :returns: A validator function ready to be used by pydantic.BeforeValidator
     """
+
     def validate(value: str) -> str:
         """Validate the given string with the outer regex, raising the error message.
 
@@ -99,7 +103,7 @@ ProjectName = Annotated[
     ),
     pydantic.Field(
         min_length=1,
-        max_length = 40,
+        max_length=40,
         strict=True,
         pattern=_PROJECT_NAME_REGEX,
         description=_PROJECT_NAME_DESCRIPTION,
@@ -111,7 +115,7 @@ ProjectName = Annotated[
             "digikam",
             "kafka",
             "mysql-router-k8s",
-        ]
+        ],
     ),
 ]
 
@@ -130,8 +134,8 @@ ProjectTitle = Annotated[
             "DigiKam",
             "Apache Kafka",
             "MySQL Router K8s charm",
-        ]
-    )
+        ],
+    ),
 ]
 
 SummaryStr = Annotated[
@@ -147,8 +151,8 @@ SummaryStr = Annotated[
             "Photo Management Program",
             "Charm for routing MySQL databases in Kubernetes",
             "An open-source event streaming platform for high-performance data pipelines",
-        ]
-    )
+        ],
+    ),
 ]
 
 UniqueStrList = UniqueList[str]
@@ -164,7 +168,9 @@ MESSAGE_INVALID_VERSION = (
 
 VersionStr = Annotated[
     str,
-    pydantic.BeforeValidator(_get_validator_by_regex(_VERSION_STR_COMPILED_REGEX, MESSAGE_INVALID_VERSION)),
+    pydantic.BeforeValidator(
+        _get_validator_by_regex(_VERSION_STR_COMPILED_REGEX, MESSAGE_INVALID_VERSION)
+    ),
     pydantic.Field(
         max_length=32,
         pattern=_VERSION_STR_REGEX,
@@ -177,8 +183,8 @@ VersionStr = Annotated[
             "1.0.0",
             "v1.0.0",
             "24.04",
-        ]
-    )
+        ],
+    ),
 ]
 """A valid version string.
 
@@ -187,4 +193,3 @@ https://github.com/snapcore/snapd/blame/a39482ead58bf06cddbc0d3ffad3c17dfcf39913
 Applications may use a different set of constraints if necessary, but
 ideally they will retain this same constraint.
 """
-

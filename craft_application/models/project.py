@@ -111,7 +111,9 @@ class Platform(base.CraftBaseModel):
 
     @pydantic.model_validator(mode="before")
     @classmethod
-    def _validate_platform_set(cls, values: Mapping[str, list[str]]) -> Mapping[str, Any]:
+    def _validate_platform_set(
+        cls, values: Mapping[str, list[str]]
+    ) -> Mapping[str, Any]:
         """If build_for is provided, then build_on must also be."""
         if values.get("build_for") and not values.get("build_on"):
             raise errors.CraftValidationError(
@@ -231,6 +233,7 @@ def _validate_package_repository(repository: dict[str, Any]) -> dict[str, Any]:
     """
     # This check is not always used, import it here to avoid unnecessary
     from craft_archives import repo  # type: ignore[import-untyped]
+
     repo.validate_repository(repository)
     return repository
 
@@ -257,12 +260,14 @@ class Project(base.CraftBaseModel):
 
     parts: dict[str, dict[str, Any]]  # parts are handled by craft-parts
 
-    package_repositories: list[
-        Annotated[
-            dict[str, Any],
-            pydantic.AfterValidator(_validate_package_repository)
+    package_repositories: (
+        list[
+            Annotated[
+                dict[str, Any], pydantic.AfterValidator(_validate_package_repository)
+            ]
         ]
-    ] | None = None
+        | None
+    ) = None
 
     @pydantic.field_validator("parts", mode="before")
     @classmethod
@@ -310,7 +315,9 @@ class Project(base.CraftBaseModel):
 
     @pydantic.field_validator("build_base", mode="before")
     @classmethod
-    def _validate_devel_base(cls, build_base: str, info: pydantic.ValidationInfo) -> str:
+    def _validate_devel_base(
+        cls, build_base: str, info: pydantic.ValidationInfo
+    ) -> str:
         """Validate the build-base is 'devel' for the current devel base."""
         base = info.data.get("base")
         # if there is no base, do not validate the build-base

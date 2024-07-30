@@ -21,7 +21,7 @@ import pydantic
 import pytest
 import pytest_check
 from craft_application.errors import CraftValidationError, PartsLifecycleError
-from pydantic import BaseModel, conint
+from pydantic import BaseModel
 
 
 @pytest.mark.parametrize(

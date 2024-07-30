@@ -18,8 +18,6 @@ import os
 import textwrap
 
 import craft_cli
-import craft_parts
-import craft_parts.overlays
 import pytest
 import pytest_check
 from craft_application.services.lifecycle import LifecycleService
@@ -166,5 +164,7 @@ def test_package_repositories_in_overlay(
 
     # Checking that the files are present should be enough
     pytest_check.is_true((overlay_apt / "keyrings/craft-9BE21867.gpg").is_file())
-    pytest_check.is_true((overlay_apt / "sources.list.d/craft-ppa-mozillateam_ppa.sources").is_file())
+    pytest_check.is_true(
+        (overlay_apt / "sources.list.d/craft-ppa-mozillateam_ppa.sources").is_file()
+    )
     pytest_check.is_true((overlay_apt / "preferences.d/craft-archives").is_file())

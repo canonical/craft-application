@@ -35,6 +35,7 @@ import craft_application.errors
 import craft_cli
 import craft_parts
 import craft_providers
+import pydantic
 import pytest
 import pytest_check
 from craft_application import (
@@ -54,7 +55,6 @@ from craft_cli import emit
 from craft_parts.plugins.plugins import PluginType
 from craft_providers import bases
 from overrides import override
-import pydantic
 
 EMPTY_COMMAND_GROUP = craft_cli.CommandGroup("FakeCommands", [])
 BASIC_PROJECT_YAML = """
@@ -2037,7 +2037,8 @@ def test_build_planner_errors(tmp_path, monkeypatch, fake_services):
         source_ignore_patterns=["*.snap", "*.charm", "*.starcraft"],
     )
     app = FakeApplication(app_metadata, fake_services)
-    project_contents = textwrap.dedent("""\
+    project_contents = textwrap.dedent(
+        """\
         name: my-project
         base: ubuntu@24.04
         value1: 10

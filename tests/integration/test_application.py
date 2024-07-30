@@ -17,8 +17,6 @@ import pathlib
 import shutil
 import textwrap
 
-from craft_providers import bases
-
 import craft_application
 import craft_cli
 import pytest

@@ -19,15 +19,19 @@ from typing import Any
 
 import pydantic
 from craft_grammar.models import Grammar  # pyright: ignore[reportMissingTypeStubs]
-
-from craft_application.models.base import alias_generator
 from pydantic import ConfigDict
 
+from craft_application.models.base import alias_generator
 from craft_application.models.constraints import SingleEntryDict
 
 
 class _GrammarAwareModel(pydantic.BaseModel):
-    model_config = ConfigDict(validate_assignment=True, extra="allow", alias_generator=alias_generator, populate_by_name=True)
+    model_config = ConfigDict(
+        validate_assignment=True,
+        extra="allow",
+        alias_generator=alias_generator,
+        populate_by_name=True,
+    )
 
 
 class _GrammarAwarePart(_GrammarAwareModel):
@@ -50,7 +54,9 @@ class _GrammarAwarePart(_GrammarAwareModel):
     build_packages: Grammar[list[str]] | None = None
     build_environment: Grammar[list[SingleEntryDict[str, str]]] | None = None
     build_attributes: Grammar[list[str]] | None = None
-    organize_files: Grammar[dict[str, str]] | None = pydantic.Field(default=None, alias="organize")
+    organize_files: Grammar[dict[str, str]] | None = pydantic.Field(
+        default=None, alias="organize"
+    )
     overlay_files: Grammar[list[str]] | None = pydantic.Field(None, alias="overlay")
     stage_files: Grammar[list[str]] | None = pydantic.Field(None, alias="stage")
     prime_files: Grammar[list[str]] | None = pydantic.Field(None, alias="prime")
@@ -66,8 +72,7 @@ class _GrammarAwarePart(_GrammarAwareModel):
 def get_grammar_aware_part_keywords() -> list[str]:
     """Return all supported grammar keywords for a part."""
     keywords: list[str] = [
-        item.alias or name
-        for name, item in _GrammarAwarePart.model_fields.items()
+        item.alias or name for name, item in _GrammarAwarePart.model_fields.items()
     ]
     return keywords
 

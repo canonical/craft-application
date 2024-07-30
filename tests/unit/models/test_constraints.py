@@ -126,7 +126,8 @@ def test_invalid_project_name(name):
 class _VersionStrModel(pydantic.BaseModel):
     version: VersionStr
 
-@given(version=strategies.integers(min_value=0, max_value=10**32-1))
+
+@given(version=strategies.integers(min_value=0, max_value=10**32 - 1))
 def test_version_str_hypothesis_integers(version):
     version_str = str(version)
     _VersionStrModel(version=version_str)
