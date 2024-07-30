@@ -161,6 +161,7 @@ class BuildPlanner(base.CraftBaseModel, metaclass=abc.ABCMeta):
         return _populate_platforms(platforms)
 
     @pydantic.field_validator("platforms", mode="after")
+    @classmethod
     def _validate_platforms_all_keyword(
         cls, platforms: dict[str, Any]
     ) -> dict[str, Any]:

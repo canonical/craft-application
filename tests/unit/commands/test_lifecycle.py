@@ -61,7 +61,7 @@ MANAGED_LIFECYCLE_COMMANDS = (
 )
 UNMANAGED_LIFECYCLE_COMMANDS = (CleanCommand, PackCommand)
 ALL_LIFECYCLE_COMMANDS = MANAGED_LIFECYCLE_COMMANDS + UNMANAGED_LIFECYCLE_COMMANDS
-NON_CLEAN_COMMANDS = MANAGED_LIFECYCLE_COMMANDS + (PackCommand,)
+NON_CLEAN_COMMANDS = (*MANAGED_LIFECYCLE_COMMANDS, PackCommand)
 
 
 def get_fake_command_class(parent_cls, managed):
@@ -554,7 +554,7 @@ def test_shell_after(
     mock_subprocess_run.assert_called_once_with(["bash"], check=False)
 
 
-@pytest.mark.parametrize("command_cls", MANAGED_LIFECYCLE_COMMANDS + (PackCommand,))
+@pytest.mark.parametrize("command_cls", [*MANAGED_LIFECYCLE_COMMANDS, PackCommand])
 def test_debug(app_metadata, fake_services, mocker, mock_subprocess_run, command_cls):
     parsed_args = argparse.Namespace(parts=None, debug=True)
     error_message = "Lifecycle run failed!"

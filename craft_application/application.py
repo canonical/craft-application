@@ -525,7 +525,6 @@ class Application:
             self._pre_run(dispatcher)
 
             managed_mode = command.run_managed(dispatcher.parsed_args())
-            # breakpoint()
             if managed_mode or command.needs_project(dispatcher.parsed_args()):
                 self.services.project = self.get_project(
                     platform=platform, build_for=build_for
