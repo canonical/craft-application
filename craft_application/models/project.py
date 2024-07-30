@@ -153,8 +153,8 @@ class BuildPlanner(CraftBaseModel, metaclass=abc.ABCMeta):
     """The BuildPlanner obtains a build plan for the project."""
 
     platforms: dict[str, Platform]
-    base: str | None
-    build_base: str | None
+    base: str | None = None
+    build_base: str | None = None
 
     Config = BuildPlannerConfig
 
@@ -235,25 +235,25 @@ class Project(CraftBaseModel):
     """Craft Application project definition."""
 
     name: ProjectName
-    title: ProjectTitle | None
-    version: VersionStr | None
-    summary: SummaryStr | None
-    description: str | None
+    title: ProjectTitle | None = None
+    version: VersionStr | None = None
+    summary: SummaryStr | None = None
+    description: str | None = None
 
     base: Any | None = None
     build_base: Any | None = None
     platforms: dict[str, Platform]
 
-    contact: str | UniqueStrList | None
-    issues: str | UniqueStrList | None
-    source_code: AnyUrl | None
-    license: str | None
+    contact: str | UniqueStrList | None = None
+    issues: str | UniqueStrList | None = None
+    source_code: AnyUrl | None = None
+    license: str | None = None
 
-    adopt_info: str | None
+    adopt_info: str | None = None
 
     parts: dict[str, dict[str, Any]]  # parts are handled by craft-parts
 
-    package_repositories: list[dict[str, Any]] | None
+    package_repositories: list[dict[str, Any]] | None = None
 
     @pydantic.validator(  # pyright: ignore[reportUnknownMemberType,reportUntypedFunctionDecorator]
         "parts", each_item=True

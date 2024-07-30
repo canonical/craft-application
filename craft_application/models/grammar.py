@@ -29,49 +29,44 @@ from craft_grammar.models import (  # type: ignore[import-untyped]
 )
 
 from craft_application.models.base import alias_generator
+from pydantic import ConfigDict
 
 
 class _GrammarAwareModel(pydantic.BaseModel):
-    class Config:
-        """Default configuration for grammar-aware models."""
-
-        validate_assignment = True
-        extra = pydantic.Extra.allow  # verify only grammar-aware parts
-        alias_generator = alias_generator
-        allow_population_by_field_name = True
+    model_config = ConfigDict(validate_assignment=True, extra=pydantic.Extra.allow, alias_generator=alias_generator, populate_by_name=True)
 
 
 class _GrammarAwarePart(_GrammarAwareModel):
-    plugin: GrammarStr | None
-    source: GrammarStr | None
-    source_checksum: GrammarStr | None
-    source_branch: GrammarStr | None
-    source_commit: GrammarStr | None
-    source_depth: GrammarInt | None
-    source_subdir: GrammarStr | None
-    source_submodules: GrammarStrList | None
-    source_tag: GrammarStr | None
-    source_type: GrammarStr | None
-    disable_parallel: GrammarBool | None
-    after: GrammarStrList | None
-    overlay_packages: GrammarStrList | None
-    stage_snaps: GrammarStrList | None
-    stage_packages: GrammarStrList | None
-    build_snaps: GrammarStrList | None
-    build_packages: GrammarStrList | None
-    build_environment: GrammarSingleEntryDictList | None
-    build_attributes: GrammarStrList | None
+    plugin: GrammarStr | None = None
+    source: GrammarStr | None = None
+    source_checksum: GrammarStr | None = None
+    source_branch: GrammarStr | None = None
+    source_commit: GrammarStr | None = None
+    source_depth: GrammarInt | None = None
+    source_subdir: GrammarStr | None = None
+    source_submodules: GrammarStrList | None = None
+    source_tag: GrammarStr | None = None
+    source_type: GrammarStr | None = None
+    disable_parallel: GrammarBool | None = None
+    after: GrammarStrList | None = None
+    overlay_packages: GrammarStrList | None = None
+    stage_snaps: GrammarStrList | None = None
+    stage_packages: GrammarStrList | None = None
+    build_snaps: GrammarStrList | None = None
+    build_packages: GrammarStrList | None = None
+    build_environment: GrammarSingleEntryDictList | None = None
+    build_attributes: GrammarStrList | None = None
     organize_files: GrammarDict | None = pydantic.Field(alias="organize")
     overlay_files: GrammarStrList | None = pydantic.Field(alias="overlay")
     stage_files: GrammarStrList | None = pydantic.Field(alias="stage")
     prime_files: GrammarStrList | None = pydantic.Field(alias="prime")
-    override_pull: GrammarStr | None
-    overlay_script: GrammarStr | None
-    override_build: GrammarStr | None
-    override_stage: GrammarStr | None
-    override_prime: GrammarStr | None
-    permissions: GrammarDictList | None
-    parse_info: GrammarStrList | None
+    override_pull: GrammarStr | None = None
+    overlay_script: GrammarStr | None = None
+    override_build: GrammarStr | None = None
+    override_stage: GrammarStr | None = None
+    override_prime: GrammarStr | None = None
+    permissions: GrammarDictList | None = None
+    parse_info: GrammarStrList | None = None
 
 
 def get_grammar_aware_part_keywords() -> list[str]:
