@@ -110,9 +110,9 @@ def test_package_repositories_in_overlay(
     # Mock overlay-related calls that need root; we won't be actually installing
     # any packages, just checking that the repositories are correctly installed
     # in the overlay.
-    mocker.patch.object(craft_parts.overlays.OverlayManager, "refresh_packages_list")  # type: ignore[reportPrivateImportUsage]
-    mocker.patch.object(craft_parts.overlays.OverlayManager, "download_packages")  # type: ignore[reportPrivateImportUsage]
-    mocker.patch.object(craft_parts.overlays.OverlayManager, "install_packages")  # type: ignore[reportPrivateImportUsage]
+    mocker.patch("craft_parts.overlays.OverlayManager.refresh_packages_list")
+    mocker.patch("craft_parts.overlays.OverlayManager.download_packages")
+    mocker.patch("craft_parts.overlays.OverlayManager.install_packages")
     mocker.patch.object(os, "geteuid", return_value=0)
 
     parts = {
@@ -165,6 +165,6 @@ def test_package_repositories_in_overlay(
     assert overlay_apt.is_dir()
 
     # Checking that the files are present should be enough
-    assert (overlay_apt / "keyrings/craft-9BE21867.gpg").is_file()
-    assert (overlay_apt / "sources.list.d/craft-ppa-mozillateam_ppa.sources").is_file()
-    assert (overlay_apt / "preferences.d/craft-archives").is_file()
+    pytest_check.is_true((overlay_apt / "keyrings/craft-9BE21867.gpg").is_file())
+    pytest_check.is_true((overlay_apt / "sources.list.d/craft-ppa-mozillateam_ppa.sources").is_file())
+    pytest_check.is_true((overlay_apt / "preferences.d/craft-archives").is_file())
