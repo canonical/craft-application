@@ -18,7 +18,7 @@
 from typing import Any
 
 import pydantic
-from craft_grammar.models import Grammar
+from craft_grammar.models import Grammar  # pyright: ignore[reportMissingTypeStubs]
 
 from craft_application.models.base import alias_generator
 from pydantic import ConfigDict
@@ -27,7 +27,7 @@ from craft_application.models.constraints import SingleEntryDict
 
 
 class _GrammarAwareModel(pydantic.BaseModel):
-    model_config = ConfigDict(validate_assignment=True, extra=pydantic.Extra.allow, alias_generator=alias_generator, populate_by_name=True)
+    model_config = ConfigDict(validate_assignment=True, extra="allow", alias_generator=alias_generator, populate_by_name=True)
 
 
 class _GrammarAwarePart(_GrammarAwareModel):
@@ -48,12 +48,12 @@ class _GrammarAwarePart(_GrammarAwareModel):
     stage_packages: Grammar[list[str]] | None = None
     build_snaps: Grammar[list[str]] | None = None
     build_packages: Grammar[list[str]] | None = None
-    build_environment: Grammar[list[SingleEntryDict]] | None = None
+    build_environment: Grammar[list[SingleEntryDict[str, str]]] | None = None
     build_attributes: Grammar[list[str]] | None = None
-    organize_files: Grammar[dict[str, str]] | None = pydantic.Field(alias="organize")
-    overlay_files: Grammar[list[str]] | None = pydantic.Field(alias="overlay")
-    stage_files: Grammar[list[str]] | None = pydantic.Field(alias="stage")
-    prime_files: Grammar[list[str]] | None = pydantic.Field(alias="prime")
+    organize_files: Grammar[dict[str, str]] | None = pydantic.Field(default=None, alias="organize")
+    overlay_files: Grammar[list[str]] | None = pydantic.Field(None, alias="overlay")
+    stage_files: Grammar[list[str]] | None = pydantic.Field(None, alias="stage")
+    prime_files: Grammar[list[str]] | None = pydantic.Field(None, alias="prime")
     override_pull: Grammar[str] | None = None
     overlay_script: Grammar[str] | None = None
     override_build: Grammar[str] | None = None
@@ -65,7 +65,10 @@ class _GrammarAwarePart(_GrammarAwareModel):
 
 def get_grammar_aware_part_keywords() -> list[str]:
     """Return all supported grammar keywords for a part."""
-    keywords: list[str] = [item.alias for item in _GrammarAwarePart.__fields__.values()]
+    keywords: list[str] = [
+        item.alias or name
+        for name, item in _GrammarAwarePart.model_fields.items()
+    ]
     return keywords
 
 
@@ -74,9 +77,8 @@ class GrammarAwareProject(_GrammarAwareModel):
 
     parts: "dict[str, _GrammarAwarePart]"
 
-    @pydantic.root_validator(  # pyright: ignore[reportUntypedFunctionDecorator,reportUnknownMemberType]
-        pre=True
-    )
+    @pydantic.model_validator(mode="before")
+    @classmethod
     def _ensure_parts(cls, data: dict[str, Any]) -> dict[str, Any]:
         """Ensure that the "parts" dictionary exists.
 
@@ -90,4 +92,4 @@ class GrammarAwareProject(_GrammarAwareModel):
     @classmethod
     def validate_grammar(cls, data: dict[str, Any]) -> None:
         """Ensure grammar-enabled entries are syntactically valid."""
-        cls(**data)
+        cls.model_validate(data)
