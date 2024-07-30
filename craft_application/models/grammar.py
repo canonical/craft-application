@@ -18,7 +18,7 @@
 from typing import Any
 
 import pydantic
-from craft_grammar.models import Grammar  # pyright: ignore[reportMissingTypeStubs]
+from craft_grammar.models import Grammar  # type: ignore[import-untyped]
 from pydantic import ConfigDict
 
 from craft_application.models.base import alias_generator
