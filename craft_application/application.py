@@ -525,6 +525,7 @@ class Application:
             self._pre_run(dispatcher)
 
             managed_mode = command.run_managed(dispatcher.parsed_args())
+            # breakpoint()
             if managed_mode or command.needs_project(dispatcher.parsed_args()):
                 self.services.project = self.get_project(
                     platform=platform, build_for=build_for
@@ -658,7 +659,7 @@ class Application:
         info = craft_parts.ProjectInfo(
             application_name=self.app.name,  # not used in environment expansion
             cache_dir=pathlib.Path(),  # not used in environment expansion
-            arch=util.convert_architecture_deb_to_platform(build_for_arch),
+            arch=build_for_arch,
             project_name=yaml_data.get("name", ""),
             project_dirs=project_dirs,
             project_vars=environment_vars,
@@ -682,7 +683,7 @@ class Application:
         """Return a dict with project variables to be expanded."""
         pvars: dict[str, str] = {}
         for var in self.app.project_variables:
-            pvars[var] = yaml_data.get(var, "")
+            pvars[var] = str(yaml_data.get(var, ""))
         return pvars
 
     def _set_global_environment(self, info: craft_parts.ProjectInfo) -> None:

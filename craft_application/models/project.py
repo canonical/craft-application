@@ -20,7 +20,7 @@ This defines the structure of the input file (e.g. snapcraft.yaml)
 import abc
 import dataclasses
 from collections.abc import Mapping
-from typing import Annotated, Any, Collection
+from typing import Annotated, Any
 
 import craft_parts
 import craft_providers.bases

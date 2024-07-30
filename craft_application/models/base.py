@@ -57,7 +57,7 @@ class CraftBaseModel(pydantic.BaseModel):
         if not isinstance(data, dict):  # pyright: ignore[reportUnnecessaryIsInstance]
             raise TypeError("Project data is not a dictionary")
 
-        return cls(**data)
+        return cls.model_validate(data)
 
     @classmethod
     def from_yaml_file(cls, path: pathlib.Path) -> Self:

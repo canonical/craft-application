@@ -670,8 +670,8 @@ def test_gets_project(monkeypatch, tmp_path, app_metadata, fake_services):
 
     app.run()
 
-    assert fake_services.project is not None
-    assert app.project is not None
+    pytest_check.is_not_none(fake_services.project)
+    pytest_check.is_not_none(app.project)
 
 
 def test_fails_without_project(
@@ -2037,15 +2037,14 @@ def test_build_planner_errors(tmp_path, monkeypatch, fake_services):
         source_ignore_patterns=["*.snap", "*.charm", "*.starcraft"],
     )
     app = FakeApplication(app_metadata, fake_services)
-    project_contents = textwrap.dedent(
-        """\
-    name: my-project
-    base: ubuntu@24.04
-    value1: 10
-    value2: "banana"
-    platforms:
-      amd64:
-    """
+    project_contents = textwrap.dedent("""\
+        name: my-project
+        base: ubuntu@24.04
+        value1: 10
+        value2: "banana"
+        platforms:
+          amd64:
+        """
     ).strip()
     project_path = tmp_path / "testcraft.yaml"
     project_path.write_text(project_contents)
@@ -2055,8 +2054,8 @@ def test_build_planner_errors(tmp_path, monkeypatch, fake_services):
 
     expected = (
         "Bad testcraft.yaml content:\n"
-        "- bad value1: 10 (in field 'value1')\n"
-        "- bad value2: banana (in field 'value2')"
+        "- value error, Bad value1: 10 (in field 'value1')\n"
+        "- value error, Bad value2: banana (in field 'value2')"
     )
     assert str(err.value) == expected
 

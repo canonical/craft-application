@@ -50,6 +50,7 @@ def _get_validator_by_regex(regex: re.Pattern[str], error_msg: str) -> Callable[
         :returns: that same string if it's valid.
         :raises: ValueError if the string is invalid.
         """
+        value = str(value)
         if not regex.match(value):
             raise ValueError(error_msg)
         return value
@@ -167,6 +168,8 @@ VersionStr = Annotated[
     pydantic.Field(
         max_length=32,
         pattern=_VERSION_STR_REGEX,
+        strict=False,
+        coerce_numbers_to_str=True,
         title="version string",
         description="A string containing the version of the project",
         examples=[
