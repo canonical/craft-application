@@ -78,7 +78,7 @@ def full_project():
         version="1.0.0.post64+git12345678",  # pyright: ignore[reportGeneralTypeIssues]
         contact="author@project.org",
         issues="https://github.com/canonical/craft-application/issues",
-        source_code="https://github.com/canonical/craft-application",  # pyright: ignore[reportGeneralTypeIssues]
+        source_code="https://github.com/canonical/craft-application",
         summary="A fully-defined craft-application project.",  # pyright: ignore[reportGeneralTypeIssues]
         description="A fully-defined craft-application project.\nWith more than one line.\n",
         license="LGPLv3",
@@ -237,7 +237,7 @@ def test_effective_base_is_base(full_project):
 
 
 class FakeBuildBaseProject(Project):
-    build_base: str | None  # pyright: ignore[reportGeneralTypeIssues]
+    build_base: str | None = None
 
 
 def test_effective_base_is_build_base():
@@ -340,7 +340,7 @@ def test_devel_base_error():
         dedent(
             f"""
     Bad testcraft.yaml content:
-    - a development build-base must be used when base is 'ubuntu@{expected_devel}'
+    - value error, A development build-base must be used when base is 'ubuntu@{expected_devel}'
     """
         ).strip()
     )
@@ -373,7 +373,7 @@ def test_invalid_field_message(
     full_expected_message = textwrap.dedent(
         f"""
         Bad myproject.yaml content:
-        - {expected_message} (in field '{field_name}')
+        - value error, {expected_message} (in field '{field_name}')
         """
     ).strip()
 
@@ -412,20 +412,29 @@ def test_unmarshal_undefined_repositories(full_project_dict):
     assert project.package_repositories is None
 
 
-def test_unmarshal_invalid_repositories(full_project_dict):
+@pytest.mark.parametrize(
+    ("repositories_val", "error_lines"),
+    [
+        ([[]], ["- input should be a valid dictionary (in field 'package-repositories[0]')"]),
+        (
+            [{}],
+            [
+                "- field 'type' required in 'package-repositories[0]' configuration",
+                "- field 'url' required in 'package-repositories[0]' configuration",
+                "- field 'key-id' required in 'package-repositories[0]' configuration",
+            ]
+        )
+    ]
+)
+def test_unmarshal_invalid_repositories(full_project_dict, repositories_val, error_lines):
     """Test that package-repositories are validated in Project with package repositories feature."""
-    full_project_dict["package-repositories"] = [[]]
+    full_project_dict["package-repositories"] = repositories_val
     project_path = pathlib.Path("myproject.yaml")
 
     with pytest.raises(CraftValidationError) as error:
         Project.from_yaml_data(full_project_dict, project_path)
 
-    assert error.value.args[0] == (
-        "Bad myproject.yaml content:\n"
-        "- field 'type' required in 'package-repositories[0]' configuration\n"
-        "- field 'url' required in 'package-repositories[0]' configuration\n"
-        "- field 'key-id' required in 'package-repositories[0]' configuration"
-    )
+    assert error.value.args[0] == "\n".join(("Bad myproject.yaml content:", *error_lines))
 
 
 @pytest.mark.parametrize("model", [Project, BuildPlanner])

@@ -15,7 +15,7 @@
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 """General-purpose models for *craft applications."""
 
-from craft_application.models.base import CraftBaseConfig, CraftBaseModel
+from craft_application.models.base import CraftBaseModel
 from craft_application.models.constraints import (
     ProjectName,
     ProjectTitle,
@@ -43,7 +43,6 @@ __all__ = [
     "BuildInfo",
     "DEVEL_BASE_INFOS",
     "DEVEL_BASE_WARNING",
-    "CraftBaseConfig",
     "CraftBaseModel",
     "get_grammar_aware_part_keywords",
     "GrammarAwareProject",

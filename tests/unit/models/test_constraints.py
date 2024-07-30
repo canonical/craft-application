@@ -76,11 +76,15 @@ def string_or_unique_list():
 
 # endregion
 # region ProjectName tests
+class _ProjectNameModel(pydantic.BaseModel):
+    name: ProjectName
+
+
 @given(name=valid_project_name_strategy())
 def test_valid_project_name_hypothesis(name):
-    project_name = ProjectName.validate(name)
+    project = _ProjectNameModel(name=name)
 
-    assert project_name == name
+    assert project.name == name
 
 
 @pytest.mark.parametrize(
@@ -97,9 +101,9 @@ def test_valid_project_name_hypothesis(name):
     ],
 )
 def test_valid_project_name(name):
-    project_name = ProjectName.validate(name)
+    project = _ProjectNameModel(name=name)
 
-    assert project_name == name
+    assert project.name == name
 
 
 @pytest.mark.parametrize(
@@ -113,48 +117,51 @@ def test_valid_project_name(name):
     ],
 )
 def test_invalid_project_name(name):
-    with pytest.raises(pydantic.PydanticValueError):
-        ProjectName.validate(name)
+    with pytest.raises(pydantic.ValidationError):
+        _ProjectNameModel(name=name)
 
 
 # endregion
 # region VersionStr tests
-@given(version=strategies.integers(min_value=0))
+class _VersionStrModel(pydantic.BaseModel):
+    version: VersionStr
+
+@given(version=strategies.integers(min_value=0, max_value=10**32-1))
 def test_version_str_hypothesis_integers(version):
-    version_str = VersionStr(version)
-    VersionStr.validate(version_str)
+    version_str = str(version)
+    _VersionStrModel(version=version_str)
 
     assert version_str == str(version)
 
 
 @given(version=strategies.floats(min_value=0.0))
 def test_version_str_hypothesis_floats(version):
-    version_str = VersionStr(version)
-    VersionStr.validate(version_str)
+    version_str = str(version)
+    _VersionStrModel(version=version_str)
 
     assert version_str == str(version)
 
 
 @given(version=valid_version_strategy())
 def test_version_str_hypothesis(version):
-    version_str = VersionStr(version)
-    VersionStr.validate(version)
+    version_str = str(version)
+    _VersionStrModel(version=version)
 
     assert version_str == str(version)
 
 
 @pytest.mark.parametrize("version", ["0", "1.0", "1.0.0.post10+git12345678"])
 def test_valid_version_str(version):
-    version_str = VersionStr(version)
-    VersionStr.validate(version)
+    version_str = str(version)
+    _VersionStrModel(version=version)
 
     assert version_str == str(version)
 
 
 @pytest.mark.parametrize("version", [""])
 def test_invalid_version_str(version):
-    with pytest.raises(pydantic.PydanticValueError):
-        VersionStr.validate(VersionStr(version))
+    with pytest.raises(pydantic.ValidationError):
+        _VersionStrModel(version=str(version))
 
 
 # endregion

@@ -14,78 +14,174 @@
 # You should have received a copy of the GNU Lesser General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Constrained pydantic types for *craft applications."""
+import collections
 import re
+from typing import Annotated, Callable, TypeVar
 
-from pydantic import ConstrainedList, ConstrainedStr, StrictStr
+import pydantic
+
+T = TypeVar("T")
+Tv = TypeVar("Tv")
 
 
-class ProjectName(ConstrainedStr):
-    """A constrained string for describing a project name.
+def _validate_list_is_unique(value: list[T]) -> list[T]:
+    value_set = set(value)
+    if len(value_set) == len(value):
+        return value
+    dupes = [item for item, count in collections.Counter(value).items() if count > 1]
+    raise ValueError(f"Duplicate values in list: {dupes}")
 
-    Project name rules:
-     * Valid characters are lower-case ASCII letters, numerals and hyphens.
-     * Must contain at least one letter
-     * May not start or end with a hyphen
-     * May not have two hyphens in a row
+
+def _get_validator_by_regex(regex: re.Pattern[str], error_msg: str) -> Callable[[str], str]:
+    """Get a string validator by regular expression with a known error message.
+
+    This allows providing better error messages for regex-based validation than the
+    standard message provided by pydantic. Simply place the result of this function in
+    a BeforeValidator attached to your annotated type.
+
+    :param regex: a compiled regular expression on a string.
+    :param error_msg: The error message to raise if the value is invalid.
+    :returns: A validator function ready to be used by pydantic.BeforeValidator
     """
+    def validate(value: str) -> str:
+        """Validate the given string with the outer regex, raising the error message.
 
-    min_length = 1
-    max_length = 40
-    strict = True
-    strip_whitespace = True
-    regex = re.compile(r"^([a-z0-9][a-z0-9-]?)*[a-z]+([a-z0-9-]?[a-z0-9])*$")
+        :param value: a string to be validated
+        :returns: that same string if it's valid.
+        :raises: ValueError if the string is invalid.
+        """
+        if not regex.match(value):
+            raise ValueError(error_msg)
+        return value
+
+    return validate
 
 
+UniqueList = Annotated[
+    list[T],
+    pydantic.AfterValidator(_validate_list_is_unique),
+    pydantic.Field(json_schema_extra={"uniqueItems": True}),
+]
+
+SingleEntryList = Annotated[
+    list[T],
+    pydantic.Field(min_length=1, max_length=1),
+]
+
+SingleEntryDict = Annotated[
+    dict[T, Tv],
+    pydantic.Field(min_length=1, max_length=1),
+]
+
+_PROJECT_NAME_DESCRIPTION = """\
+The name of this project. This is used when uploading, publishing, or installing.
+
+Project name rules:
+* Valid characters are lower-case ASCII letters, numerals and hyphens.
+* Must contain at least one letter
+* May not start or end with a hyphen
+* May not have two hyphens in a row
+"""
+
+_PROJECT_NAME_REGEX = r"^([a-z0-9][a-z0-9-]?)*[a-z]+([a-z0-9-]?[a-z0-9])*$"
+_PROJECT_NAME_COMPILED_REGEX = re.compile(_PROJECT_NAME_REGEX)
 MESSAGE_INVALID_NAME = (
     "invalid name: Names can only use ASCII lowercase letters, numbers, and hyphens. "
     "They must have at least one letter, may not start or end with a hyphen, "
     "and may not have two hyphens in a row."
 )
 
-
-class ProjectTitle(StrictStr):
-    """A constrained string for describing a project title."""
-
-    min_length = 2
-    max_length = 40
-    strip_whitespace = True
-
-
-class SummaryStr(ConstrainedStr):
-    """A constrained string for a short summary of a project."""
-
-    strip_whitespace = True
-    max_length = 78
-
-
-class UniqueStrList(ConstrainedList):
-    """A list of strings, each of which must be unique.
-
-    This is roughly equivalent to an ordered set of strings, but implemented with a list.
-    """
-
-    __args__ = (str,)
-    item_type = str
-    unique_items = True
+ProjectName = Annotated[
+    str,
+    pydantic.BeforeValidator(
+        _get_validator_by_regex(_PROJECT_NAME_COMPILED_REGEX, MESSAGE_INVALID_NAME)
+    ),
+    pydantic.Field(
+        min_length=1,
+        max_length = 40,
+        strict=True,
+        pattern=_PROJECT_NAME_REGEX,
+        description=_PROJECT_NAME_DESCRIPTION,
+        title="Project Name",
+        examples=[
+            "ubuntu",
+            "jupyterlab-desktop",
+            "lxd",
+            "digikam",
+            "kafka",
+            "mysql-router-k8s",
+        ]
+    ),
+]
 
 
-class VersionStr(ConstrainedStr):
-    """A valid version string.
+ProjectTitle = Annotated[
+    str,
+    pydantic.Field(
+        min_length=2,
+        max_length=40,
+        title="Title",
+        description="A human-readable title.",
+        examples=[
+            "Ubuntu Linux",
+            "Jupyter Lab Desktop",
+            "LXD",
+            "DigiKam",
+            "Apache Kafka",
+            "MySQL Router K8s charm",
+        ]
+    )
+]
 
-    Should match snapd valid versions:
-    https://github.com/snapcore/snapd/blame/a39482ead58bf06cddbc0d3ffad3c17dfcf39913/snap/validate.go#L96
-    Applications may use a different set of constraints if necessary, but
-    ideally they will retain this same constraint.
-    """
+SummaryStr = Annotated[
+    str,
+    pydantic.Field(
+        max_length=78,
+        title="Summary",
+        description="A short description of your project.",
+        examples=[
+            "Linux for Human Beings",
+            "The cross-platform desktop application for JupyterLab",
+            "Container and VM manager",
+            "Photo Management Program",
+            "Charm for routing MySQL databases in Kubernetes",
+            "An open-source event streaming platform for high-performance data pipelines",
+        ]
+    )
+]
 
-    max_length = 32
-    strip_whitespace = True
-    regex = re.compile(r"^[a-zA-Z0-9](?:[a-zA-Z0-9:.+~-]*[a-zA-Z0-9+~])?$")
+UniqueStrList = UniqueList[str]
 
-
+_VERSION_STR_REGEX = r"^[a-zA-Z0-9](?:[a-zA-Z0-9:.+~-]*[a-zA-Z0-9+~])?$"
+_VERSION_STR_COMPILED_REGEX = re.compile(_VERSION_STR_REGEX)
 MESSAGE_INVALID_VERSION = (
     "invalid version: Valid versions consist of upper- and lower-case "
     "alphanumeric characters, as well as periods, colons, plus signs, tildes, "
     "and hyphens. They cannot begin with a period, colon, plus sign, tilde, or "
     "hyphen. They cannot end with a period, colon, or hyphen."
 )
+
+VersionStr = Annotated[
+    str,
+    pydantic.BeforeValidator(_get_validator_by_regex(_VERSION_STR_COMPILED_REGEX, MESSAGE_INVALID_VERSION)),
+    pydantic.Field(
+        max_length=32,
+        pattern=_VERSION_STR_REGEX,
+        title="version string",
+        description="A string containing the version of the project",
+        examples=[
+            "0.1",
+            "1.0.0",
+            "v1.0.0",
+            "24.04",
+        ]
+    )
+]
+"""A valid version string.
+
+Should match snapd valid versions:
+https://github.com/snapcore/snapd/blame/a39482ead58bf06cddbc0d3ffad3c17dfcf39913/snap/validate.go#L96
+Applications may use a different set of constraints if necessary, but
+ideally they will retain this same constraint.
+"""
+
