@@ -20,7 +20,7 @@ This defines the structure of the input file (e.g. snapcraft.yaml)
 import abc
 import dataclasses
 from collections.abc import Mapping
-from typing import Any
+from typing import Annotated, Any, Collection
 
 import craft_parts
 import craft_providers.bases
@@ -143,8 +143,8 @@ class BuildPlanner(base.CraftBaseModel, metaclass=abc.ABCMeta):
 
     model_config = pydantic.ConfigDict(
         validate_assignment=True,
-        extra=pydantic.Extra.ignore,
-        allow_population_by_field_name=True,
+        extra="ignore",
+        populate_by_name=True,
         alias_generator=base.alias_generator,
     )
 
@@ -222,6 +222,19 @@ class BuildPlanner(base.CraftBaseModel, metaclass=abc.ABCMeta):
         return build_infos
 
 
+def _validate_package_repository(repository: dict[str, Any]) -> dict[str, Any]:
+    """Validate a package repository with lazy loading of craft-archives.
+
+    :param repository: a dictionary representing a package repository.
+    :returns: That same dictionary, if valid.
+    :raises: ValueError if the repository is not valid.
+    """
+    # This check is not always used, import it here to avoid unnecessary
+    from craft_archives import repo  # type: ignore[import-untyped]
+    repo.validate_repository(repository)
+    return repository
+
+
 class Project(base.CraftBaseModel):
     """Craft Application project definition."""
 
@@ -244,7 +257,12 @@ class Project(base.CraftBaseModel):
 
     parts: dict[str, dict[str, Any]]  # parts are handled by craft-parts
 
-    package_repositories: list[dict[str, Any]] | None = None
+    package_repositories: list[
+        Annotated[
+            dict[str, Any],
+            pydantic.AfterValidator(_validate_package_repository)
+        ]
+    ] | None = None
 
     @pydantic.field_validator("parts", mode="before")
     @classmethod
@@ -337,16 +355,3 @@ class Project(base.CraftBaseModel):
                 # "input" key in the error dict, so we can't put the original
                 # value in the error message.
                 error_dict["msg"] = message
-
-    @pydantic.validator(  # pyright: ignore[reportUnknownMemberType,reportUntypedFunctionDecorator]
-        "package_repositories", each_item=True
-    )
-    def _validate_package_repositories(
-        cls, repository: dict[str, Any]
-    ) -> dict[str, Any]:
-        # This check is not always used, import it here to avoid unnecessary
-        from craft_archives import repo  # type: ignore[import-untyped]
-
-        repo.validate_repository(repository)
-
-        return repository
