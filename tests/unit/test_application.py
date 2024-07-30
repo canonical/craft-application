@@ -54,7 +54,7 @@ from craft_cli import emit
 from craft_parts.plugins.plugins import PluginType
 from craft_providers import bases
 from overrides import override
-from pydantic import validator
+import pydantic
 
 EMPTY_COMMAND_GROUP = craft_cli.CommandGroup("FakeCommands", [])
 BASIC_PROJECT_YAML = """
@@ -2013,11 +2013,13 @@ class MyRaisingPlanner(models.BuildPlanner):
     value1: int
     value2: str
 
-    @validator("value1")
+    @pydantic.field_validator("value1", mode="after")
+    @classmethod
     def _validate_value1(cls, v):
         raise ValueError(f"Bad value1: {v}")
 
-    @validator("value2")
+    @pydantic.field_validator("value2", mode="after")
+    @classmethod
     def _validate_value(cls, v):
         raise ValueError(f"Bad value2: {v}")
 

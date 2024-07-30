@@ -39,7 +39,7 @@ def is_running_from_snap(app_name: str) -> bool:
     return os.getenv("SNAP_NAME") == app_name and os.getenv("SNAP") is not None
 
 
-class SnapConfig(pydantic.BaseModel, extra=pydantic.Extra.forbid):
+class SnapConfig(pydantic.BaseModel, extra="forbid"):
     """Data stored in a snap config.
 
     :param provider: provider to use. Valid values are 'lxd' and 'multipass'.
@@ -47,9 +47,7 @@ class SnapConfig(pydantic.BaseModel, extra=pydantic.Extra.forbid):
 
     provider: Literal["lxd", "multipass"] | None = None
 
-    @pydantic.validator(  # pyright: ignore[reportUnknownMemberType,reportUntypedFunctionDecorator]
-        "provider", pre=True
-    )
+    @pydantic.field_validator("provider", mode="before")
     @classmethod
     def normalize(cls, provider: str) -> str:
         """Normalize provider name."""

@@ -28,7 +28,7 @@ class BaseMetadata(base.CraftBaseModel):
 
     model_config = pydantic.ConfigDict(
         validate_assignment=True,
-        extra=pydantic.Extra.allow,
-        allow_population_by_field_name=True,
+        extra="allow",
+        populate_by_name=True,
         alias_generator=base.alias_generator,
     )
