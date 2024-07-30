@@ -42,10 +42,10 @@ PARTS_DICT = {"my-part": {"plugin": "nil"}}
 def basic_project():
     # pyright doesn't like these types and doesn't have a pydantic plugin like mypy.
     # Because of this, we need to silence several errors in these constants.
-    return Project(  # pyright: ignore[reportCallIssue]
-        name="project-name",  # pyright: ignore[reportGeneralTypeIssues]
-        version="1.0",  # pyright: ignore[reportGeneralTypeIssues]
-        platforms={"arm64": None},
+    return Project(
+        name="project-name",
+        version="1.0",
+        platforms={"arm64": None},  # pyright: ignore[reportArgumentType]
         parts=PARTS_DICT,
     )
 
@@ -71,19 +71,21 @@ def basic_project_dict():
 
 @pytest.fixture()
 def full_project():
-    return Project(  # pyright: ignore[reportCallIssue]
-        name="full-project",  # pyright: ignore[reportGeneralTypeIssues]
-        title="A fully-defined project",  # pyright: ignore[reportGeneralTypeIssues]
-        base="ubuntu@24.04",
-        version="1.0.0.post64+git12345678",  # pyright: ignore[reportGeneralTypeIssues]
-        contact="author@project.org",
-        issues="https://github.com/canonical/craft-application/issues",
-        source_code="https://github.com/canonical/craft-application",
-        summary="A fully-defined craft-application project.",  # pyright: ignore[reportGeneralTypeIssues]
-        description="A fully-defined craft-application project.\nWith more than one line.\n",
-        license="LGPLv3",
-        platforms={"arm64": None},
-        parts=PARTS_DICT,
+    return Project.model_validate(
+        {
+            "name": "full-project",
+            "title": "A fully-defined project",
+            "base": "ubuntu@24.04",
+            "version": "1.0.0.post64+git12345678",
+            "contact": "author@project.org",
+            "issues": "https://github.com/canonical/craft-application/issues",
+            "source_code": "https://github.com/canonical/craft-application",
+            "summary": "A fully-defined craft-application project.",
+            "description": "A fully-defined craft-application project.\nWith more than one line.\n",
+            "license": "LGPLv3",
+            "platforms": {"arm64": None},
+            "parts": PARTS_DICT,
+        }
     )
 
 
@@ -246,7 +248,7 @@ def test_effective_base_is_build_base():
         name="project-name",  # pyright: ignore[reportGeneralTypeIssues]
         version="1.0",  # pyright: ignore[reportGeneralTypeIssues]
         parts={},
-        platforms={"arm64": None},
+        platforms={"arm64": None},  # pyright: ignore[reportArgumentType]
         base="ubuntu@22.04",
         build_base="ubuntu@24.04",
     )
@@ -255,11 +257,11 @@ def test_effective_base_is_build_base():
 
 
 def test_effective_base_unknown():
-    project = FakeBuildBaseProject(  # pyright: ignore[reportCallIssue]
-        name="project-name",  # pyright: ignore[reportGeneralTypeIssues]
-        version="1.0",  # pyright: ignore[reportGeneralTypeIssues]
+    project = FakeBuildBaseProject(
+        name="project-name",
+        version="1.0",
         parts={},
-        platforms={"arm64": None},
+        platforms={"arm64": None},  # pyright: ignore[reportArgumentType]
         base=None,
         build_base=None,
     )
@@ -272,11 +274,11 @@ def test_effective_base_unknown():
 
 def test_devel_base_devel_build_base(emitter):
     """Base can be 'devel' when the build-base is 'devel'."""
-    _ = FakeBuildBaseProject(  # pyright: ignore[reportCallIssue]
-        name="project-name",  # pyright: ignore[reportGeneralTypeIssues]
-        version="1.0",  # pyright: ignore[reportGeneralTypeIssues]
+    _ = FakeBuildBaseProject(
+        name="project-name",
+        version="1.0",
         parts={},
-        platforms={"arm64": None},
+        platforms={"arm64": None},  # pyright: ignore[reportArgumentType]
         base=f"ubuntu@{DEVEL_BASE_INFOS[0].current_devel_base.value}",
         build_base=f"ubuntu@{DEVEL_BASE_INFOS[0].current_devel_base.value}",
     )
@@ -286,11 +288,11 @@ def test_devel_base_devel_build_base(emitter):
 
 def test_devel_base_no_base():
     """Do not validate the build-base if there is no base."""
-    _ = FakeBuildBaseProject(  # pyright: ignore[reportCallIssue]
-        name="project-name",  # pyright: ignore[reportGeneralTypeIssues]
-        version="1.0",  # pyright: ignore[reportGeneralTypeIssues]
+    _ = FakeBuildBaseProject(
+        name="project-name",
+        version="1.0",
         parts={},
-        platforms={"arm64": None},
+        platforms={"arm64": None},  # pyright: ignore[reportArgumentType]
     )
 
 
@@ -301,22 +303,22 @@ def test_devel_base_no_base_alias(mocker):
         return_value=None,
     )
 
-    _ = FakeBuildBaseProject(  # pyright: ignore[reportCallIssue]
-        name="project-name",  # pyright: ignore[reportGeneralTypeIssues]
-        version="1.0",  # pyright: ignore[reportGeneralTypeIssues]
+    _ = FakeBuildBaseProject(
+        name="project-name",
+        version="1.0",
         parts={},
-        platforms={"arm64": None},
+        platforms={"arm64": None},  # pyright: ignore[reportArgumentType]
     )
 
 
 def test_devel_base_no_build_base():
     """Base can be 'devel' if the build-base is not set."""
-    _ = FakeBuildBaseProject(  # pyright: ignore[reportCallIssue]
-        name="project-name",  # pyright: ignore[reportGeneralTypeIssues]
-        version="1.0",  # pyright: ignore[reportGeneralTypeIssues]
+    _ = FakeBuildBaseProject(
+        name="project-name",
+        version="1.0",
         parts={},
         base=f"ubuntu@{DEVEL_BASE_INFOS[0].current_devel_base.value}",
-        platforms={"arm64": None},
+        platforms={"arm64": None},  # pyright: ignore[reportArgumentType]
     )
 
 
