@@ -21,6 +21,8 @@ import os
 import types
 from typing import TYPE_CHECKING, Any
 
+import craft_platforms
+import distro
 from craft_cli import emit
 from craft_parts import (
     Action,
@@ -34,9 +36,10 @@ from craft_parts import (
     callbacks,
 )
 from craft_parts.errors import CallbackRegistrationError
+from craft_providers import bases
 from typing_extensions import override
 
-from craft_application import errors, models, util
+from craft_application import errors, util
 from craft_application.services import base
 from craft_application.util import convert_architecture_deb_to_platform, repositories
 
@@ -133,7 +136,7 @@ class LifecycleService(base.ProjectService):
         project: Project,
         work_dir: Path | str,
         cache_dir: Path | str,
-        build_plan: list[models.BuildInfo],
+        build_plan: list[craft_platforms.BuildInfo],
         partitions: list[str] | None = None,
         **lifecycle_kwargs: Any,  # noqa: ANN401 - eventually used in an Any
     ) -> None:
@@ -410,7 +413,7 @@ class LifecycleService(base.ProjectService):
         return None
 
 
-def _validate_build_plan(build_plan: list[models.BuildInfo]) -> None:
+def _validate_build_plan(build_plan: list[craft_platforms.BuildInfo]) -> None:
     """Check that the build plan has exactly 1 compatible build info."""
     if not build_plan:
         raise errors.EmptyBuildPlanError
@@ -418,14 +421,23 @@ def _validate_build_plan(build_plan: list[models.BuildInfo]) -> None:
     if len(build_plan) > 1:
         raise errors.MultipleBuildsError
 
-    build_base = build_plan[0].base
-    host_base = util.get_host_base()
+    build_base = build_plan[0].build_base
+    host_base = craft_platforms.DistroBase.from_linux_distribution(
+        distro.LinuxDistribution()
+    )
 
-    if build_base.version == "devel":
+    if build_base.series == "devel":
         # If the build base is "devel", we don't try to match the specific
         # version as that is a moving target; Just ensure the systems are the
         # same.
-        if build_base.name != host_base.name:
-            raise errors.IncompatibleBaseError(host_base, build_base)
+        # TODO: refactor with craft-platforms
+        if build_base.distribution != host_base.distribution:
+            raise errors.IncompatibleBaseError(
+                bases.BaseName(host_base.distribution, host_base.series),
+                bases.BaseName(build_base.distribution, build_base.series),
+            )
     elif build_base != host_base:
-        raise errors.IncompatibleBaseError(host_base, build_base)
+        raise errors.IncompatibleBaseError(
+            bases.BaseName(host_base.distribution, host_base.series),
+            bases.BaseName(build_base.distribution, build_base.series),
+        )

@@ -25,6 +25,7 @@ import sys
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+import craft_platforms
 from craft_cli import CraftError, emit
 from craft_providers import bases
 from craft_providers.actions.snap_installer import Snap
@@ -65,7 +66,7 @@ class ProviderService(base.ProjectService):
         *,
         project: models.Project,
         work_dir: pathlib.Path,
-        build_plan: list[models.BuildInfo],
+        build_plan: list[craft_platforms.BuildInfo],
         provider_name: str | None = None,
         install_snap: bool = True,
     ) -> None:
@@ -97,7 +98,7 @@ class ProviderService(base.ProjectService):
     @contextlib.contextmanager
     def instance(
         self,
-        build_info: models.BuildInfo,
+        build_info: craft_platforms.BuildInfo,
         *,
         work_dir: pathlib.Path,
         allow_unstable: bool = True,
@@ -112,13 +113,15 @@ class ProviderService(base.ProjectService):
         """
         instance_name = self._get_instance_name(work_dir, build_info)
         emit.debug(f"Preparing managed instance {instance_name!r}")
-        base_name = build_info.base
+        base_name = build_info.build_base
         base = self.get_base(base_name, instance_name=instance_name, **kwargs)
         provider = self.get_provider(name=self.__provider_name)
 
         provider.ensure_provider_is_available()
 
-        emit.progress(f"Launching managed {base_name[0]} {base_name[1]} instance...")
+        emit.progress(
+            f"Launching managed {base_name.distribution} {base_name.series} instance..."
+        )
         with provider.launched_environment(
             project_name=self._project.name,
             project_path=work_dir,
@@ -141,7 +144,7 @@ class ProviderService(base.ProjectService):
 
     def get_base(
         self,
-        base_name: bases.BaseName | tuple[str, str],
+        base_name: craft_platforms.DistroBase | tuple[str, str],
         *,
         instance_name: str,
         **kwargs: bool | str | pathlib.Path | None,
@@ -155,7 +158,21 @@ class ProviderService(base.ProjectService):
         This method should be overridden by a specific application if it intends to
         use base names that don't align to a "distro:version" naming convention.
         """
-        alias = bases.get_base_alias(base_name)
+        # TODO: refactor me
+        if isinstance(base_name, craft_platforms.DistroBase):
+            alias = bases.get_base_alias(
+                (
+                    base_name.distribution,
+                    base_name.series,
+                )
+            )
+        else:
+            alias = bases.get_base_alias(
+                (
+                    base_name[0],
+                    base_name[1],
+                )
+            )
         base_class = bases.get_base_from_alias(alias)
         if base_class is bases.BuilddBase:
             # These packages are required on the base system (provider) for
@@ -257,7 +274,7 @@ class ProviderService(base.ProjectService):
             provider.clean_project_environments(instance_name=instance_name)
 
     def _get_instance_name(
-        self, work_dir: pathlib.Path, build_info: models.BuildInfo
+        self, work_dir: pathlib.Path, build_info: craft_platforms.BuildInfo
     ) -> str:
         work_dir_inode = work_dir.stat().st_ino
         return (

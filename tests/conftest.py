@@ -24,20 +24,29 @@ from typing import TYPE_CHECKING, Any
 
 import craft_application
 import craft_parts
+import craft_platforms
+import distro
 import pytest
 from craft_application import application, models, services, util
 from craft_cli import EmitterMode, emit
-from craft_providers import bases
 
 if TYPE_CHECKING:  # pragma: no cover
     from collections.abc import Iterator
 
 
-def _create_fake_build_plan(num_infos: int = 1) -> list[models.BuildInfo]:
+def _create_fake_build_plan(num_infos: int = 1) -> list[craft_platforms.BuildInfo]:
     """Create a build plan that is able to execute on the running system."""
     arch = util.get_host_architecture()
-    base = util.get_host_base()
-    return [models.BuildInfo("foo", arch, arch, base)] * num_infos
+    return [
+        craft_platforms.BuildInfo(
+            "foo",
+            craft_platforms.DebianArchitecture(arch),
+            craft_platforms.DebianArchitecture(arch),
+            craft_platforms.DistroBase.from_linux_distribution(
+                distro.LinuxDistribution()
+            ),
+        )
+    ] * num_infos
 
 
 @pytest.fixture()
@@ -117,24 +126,24 @@ def fake_project() -> models.Project:
 
 
 @pytest.fixture()
-def fake_build_plan(request) -> list[models.BuildInfo]:
+def fake_build_plan(request) -> list[craft_platforms.BuildInfo]:
     num_infos = getattr(request, "param", 1)
     return _create_fake_build_plan(num_infos)
 
 
 @pytest.fixture()
-def full_build_plan(mocker) -> list[models.BuildInfo]:
+def full_build_plan(mocker) -> list[craft_platforms.BuildInfo]:
     """A big build plan with multiple bases and build-for targets."""
-    host_arch = util.get_host_architecture()
+    host_arch = craft_platforms.DebianArchitecture.from_host()
     build_plan = []
     for release in ("20.04", "22.04", "24.04"):
         for build_for in (host_arch, "s390x", "riscv64"):
             build_plan.append(
-                models.BuildInfo(
+                craft_platforms.BuildInfo(
                     f"ubuntu-{release}-{build_for}",
                     host_arch,
-                    build_for,
-                    bases.BaseName("ubuntu", release),
+                    craft_platforms.DebianArchitecture(build_for),
+                    craft_platforms.DistroBase("ubuntu", release),
                 )
             )
 

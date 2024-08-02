@@ -23,6 +23,7 @@ from collections.abc import Mapping
 from typing import Any
 
 import craft_parts
+import craft_platforms
 import craft_providers.bases
 import pydantic
 from craft_cli import emit
@@ -70,23 +71,6 @@ DEVEL_BASE_WARNING = (
     "as its contents are bound to change with the opening of new Ubuntu releases, "
     "suddenly and without warning."
 )
-
-
-@dataclasses.dataclass
-class BuildInfo:
-    """Platform build information."""
-
-    platform: str
-    """The platform name."""
-
-    build_on: str
-    """The architecture to build on."""
-
-    build_for: str
-    """The architecture to build for."""
-
-    base: craft_providers.bases.BaseName
-    """The base to build on."""
 
 
 class BuildPlannerConfig(CraftBaseConfig):
@@ -212,23 +196,16 @@ class BuildPlanner(CraftBaseModel, metaclass=abc.ABCMeta):
 
         return bases.BaseName(name, channel)
 
-    def get_build_plan(self) -> list[BuildInfo]:
+    def get_build_plan(self) -> list[craft_platforms.BuildInfo]:
         """Obtain the list of architectures and bases from the Project."""
-        build_infos: list[BuildInfo] = []
+        data = self.marshal()
+        build_infos = craft_platforms.get_platforms_build_plan(
+            base=data["base"],
+            platforms=data["platforms"],
+            build_base=data.get("build-base"),
+        )
 
-        for platform_label, platform in self.platforms.items():
-            for build_for in platform.build_for or [platform_label]:
-                for build_on in platform.build_on or [platform_label]:
-                    build_infos.append(
-                        BuildInfo(
-                            platform=platform_label,
-                            build_on=build_on,
-                            build_for=build_for,
-                            base=self.effective_base,
-                        )
-                    )
-
-        return build_infos
+        return list(build_infos)
 
 
 class Project(CraftBaseModel):

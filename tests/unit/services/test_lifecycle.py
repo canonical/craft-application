@@ -23,6 +23,8 @@ from unittest import mock
 
 import craft_parts
 import craft_parts.callbacks
+import craft_platforms
+import distro
 import pytest
 import pytest_check
 from craft_application import errors, models, util
@@ -193,7 +195,9 @@ def test_progress_messages(fake_parts_lifecycle, emitter):
     lcm = fake_parts_lifecycle._lcm
     lcm.plan.return_value = actions
 
-    fake_parts_lifecycle.run("prime", "arch")
+    fake_parts_lifecycle.run(
+        "prime", craft_platforms.DebianArchitecture.from_host().value
+    )
 
     emitter.assert_progress("Pulling my-part")
     emitter.assert_progress("Building my-part")
@@ -459,6 +463,7 @@ def test_post_prime_wrong_step(fake_parts_lifecycle, step):
         fake_parts_lifecycle.post_prime(step_info)
 
 
+@pytest.mark.skip(reason="craft-platforms does not support 'all'.")
 def test_run_lifecycle_build_for_all(
     app_metadata,
     fake_project,
@@ -467,11 +472,13 @@ def test_run_lifecycle_build_for_all(
 ):
     """'build-for: [all]' should be converted to the host arch."""
     build_plan = [
-        models.BuildInfo(
+        craft_platforms.BuildInfo(
             platform="platform1",
-            build_on=util.get_host_architecture(),
+            build_on=craft_platforms.DebianArchitecture.from_host(),
             build_for="all",
-            base=util.get_host_base(),
+            build_base=craft_platforms.DistroBase.from_linux_distribution(
+                distro.LinuxDistribution()
+            ),
         )
     ]
     work_dir = tmp_path / "work"
@@ -787,7 +794,9 @@ def test_invalid_base_error(
         "get_host_base",
         return_value=fake_host,
     )
-    fake_build_plan[0].base = bases.BaseName(name=system_name, version=system_version)
+    fake_build_plan[0].build_base = craft_platforms.DistroBase(
+        system_name, system_version
+    )
 
     expected = (
         f"{expected_pretty} builds cannot be performed on this Ubuntu 24.04 system."
@@ -806,7 +815,7 @@ def test_devel_base_no_error(fake_parts_lifecycle, fake_build_plan, mocker):
         "get_host_base",
         return_value=fake_host,
     )
-    fake_build_plan[0].base = bases.BaseName(name="ubuntu", version="devel")
+    fake_build_plan[0].build_base = craft_platforms.DistroBase("ubuntu", "devel")
 
     # Pass None as the step to ensure validation but skip the actual lifecycle run
     _ = fake_parts_lifecycle.run(None)

@@ -21,11 +21,12 @@ import uuid
 from typing import NamedTuple
 from unittest import mock
 
+import craft_platforms
 import craft_providers
 import pytest
-from craft_application import errors, models, util
+from craft_application import errors
 from craft_application.services import provider
-from craft_application.util import platforms, snap_config
+from craft_application.util import snap_config
 from craft_providers import bases, lxd, multipass
 from craft_providers.actions.snap_installer import Snap
 
@@ -276,8 +277,8 @@ def test_get_base_packages(provider_service):
 @pytest.mark.parametrize(
     "base_name",
     [
-        ("ubuntu", "devel"),
-        ("ubuntu", "22.04"),
+        craft_platforms.DistroBase("ubuntu", "devel"),
+        craft_platforms.DistroBase("ubuntu", "22.04"),
     ],
 )
 def test_instance(
@@ -297,8 +298,8 @@ def test_instance(
         "get_provider",
         lambda name: mock_provider,  # noqa: ARG005 (unused argument)
     )
-    arch = util.get_host_architecture()
-    build_info = models.BuildInfo("foo", arch, arch, base_name)
+    arch = craft_platforms.DebianArchitecture.from_host()
+    build_info = craft_platforms.BuildInfo("foo", arch, arch, base_name)
 
     with provider_service.instance(
         build_info, work_dir=tmp_path, allow_unstable=allow_unstable
@@ -341,10 +342,10 @@ def test_load_bashrc(emitter):
 @pytest.mark.parametrize(
     "base_name",
     [
-        ("ubuntu", "devel"),
-        ("ubuntu", "22.04"),
-        ("centos", "7"),
-        ("almalinux", "9"),
+        craft_platforms.DistroBase("ubuntu", "devel"),
+        craft_platforms.DistroBase("ubuntu", "22.04"),
+        craft_platforms.DistroBase("centos", "7"),
+        craft_platforms.DistroBase("almalinux", "9"),
     ],
 )
 def test_load_bashrc_missing(
@@ -363,8 +364,8 @@ def test_load_bashrc_missing(
         "get_provider",
         lambda name: mock_provider,  # noqa: ARG005 (unused argument)
     )
-    arch = util.get_host_architecture()
-    build_info = models.BuildInfo("foo", arch, arch, base_name)
+    arch = craft_platforms.DebianArchitecture.from_host()
+    build_info = craft_platforms.BuildInfo("foo", arch, arch, base_name)
 
     mocker.patch.object(pkgutil, "get_data", return_value=None)
     with provider_service.instance(
@@ -416,13 +417,13 @@ def setup_fetch_logs_provider(monkeypatch, provider_service, tmp_path):
     return _setup
 
 
-def _get_build_info() -> models.BuildInfo:
-    arch = util.get_host_architecture()
-    return models.BuildInfo(
+def _get_build_info() -> craft_platforms.BuildInfo:
+    arch = craft_platforms.DebianArchitecture.from_host()
+    return craft_platforms.BuildInfo(
         platform=arch,
         build_on=arch,
         build_for=arch,
-        base=bases.BaseName("ubuntu", "22.04"),
+        build_base=craft_platforms.DistroBase("ubuntu", "22.04"),
     )
 
 
@@ -512,7 +513,10 @@ def test_instance_fetch_logs_missing_file(
         emitter.assert_interactions(expected)
 
 
-_test_base = bases.BaseName("ubuntu", "22.04")
+_test_host_arch = craft_platforms.DebianArchitecture.from_host()
+_test_other_arch_1 = craft_platforms.DebianArchitecture("s390x")
+_test_other_arch_2 = craft_platforms.DebianArchitecture("riscv64")
+_test_base = craft_platforms.DistroBase("ubuntu", "22.04")
 
 
 @pytest.mark.parametrize(
@@ -520,31 +524,49 @@ _test_base = bases.BaseName("ubuntu", "22.04")
     [
         # A single build info, matching the current architecture
         (
-            [models.BuildInfo("foo", "current", "current", _test_base)],
-            ["on-current-for-current"],
-        ),
-        # Two build infos, both matching the current architecture
-        (
             [
-                models.BuildInfo("foo", "current", "current", _test_base),
-                models.BuildInfo("foo2", "current", "other", _test_base),
+                craft_platforms.BuildInfo(
+                    "foo", _test_host_arch, _test_host_arch, _test_base
+                )
             ],
-            ["on-current-for-current", "on-current-for-other"],
+            ["on-amd64-for-amd64"],
         ),
-        # Three build infos, only one matches current architecture
+        # Two build infos, both matching the amd64 architecture
         (
             [
-                models.BuildInfo("foo", "current", "current", _test_base),
-                models.BuildInfo("foo2", "other", "other", _test_base),
-                models.BuildInfo("foo3", "other", "other2", _test_base),
+                craft_platforms.BuildInfo(
+                    "foo", _test_host_arch, _test_host_arch, _test_base
+                ),
+                craft_platforms.BuildInfo(
+                    "foo2", _test_host_arch, _test_other_arch_1, _test_base
+                ),
             ],
-            ["on-current-for-current"],
+            ["on-amd64-for-amd64", "on-amd64-for-s390x"],
         ),
-        # Two build infos, none matches current architecture
+        # Three build infos, only one matches amd64 architecture
         (
             [
-                models.BuildInfo("foo2", "other", "other", _test_base),
-                models.BuildInfo("foo3", "other", "other2", _test_base),
+                craft_platforms.BuildInfo(
+                    "foo", _test_host_arch, _test_host_arch, _test_base
+                ),
+                craft_platforms.BuildInfo(
+                    "foo2", _test_other_arch_1, _test_other_arch_1, _test_base
+                ),
+                craft_platforms.BuildInfo(
+                    "foo3", _test_other_arch_1, _test_other_arch_2, _test_base
+                ),
+            ],
+            ["on-amd64-for-amd64"],
+        ),
+        # Two build infos, none matches amd64 architecture
+        (
+            [
+                craft_platforms.BuildInfo(
+                    "foo2", _test_other_arch_1, _test_other_arch_1, _test_base
+                ),
+                craft_platforms.BuildInfo(
+                    "foo3", _test_other_arch_1, _test_other_arch_2, _test_base
+                ),
             ],
             [],
         ),
@@ -553,7 +575,8 @@ _test_base = bases.BaseName("ubuntu", "22.04")
 def test_clean_instances(
     provider_service, tmp_path, mocker, build_infos, expected_on_fors
 ):
-    mocker.patch.object(platforms, "get_host_architecture", return_value="current")
+    # TODO: mock craft_platforms and use something besides amd64
+    # mocker.patch.object(platforms, "get_host_architecture", return_value="amd64")
 
     current_provider = provider_service.get_provider()
     mock_clean = mocker.patch.object(current_provider, "clean_project_environments")

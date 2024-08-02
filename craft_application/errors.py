@@ -148,6 +148,8 @@ class MultipleBuildsError(CraftError):
         super().__init__(message=message, resolution=resolution)
 
 
+# TODO: upstream to craft-platforms
+#       this mostly complete via https://github.com/canonical/craft-platforms/pull/21
 class IncompatibleBaseError(CraftError):
     """The build plan's base is incompatible with the host environment."""
 

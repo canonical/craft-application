@@ -19,6 +19,8 @@ import textwrap
 
 import craft_application
 import craft_cli
+import craft_platforms
+import distro
 import pytest
 import pytest_check
 from craft_application import models, secrets, util
@@ -291,11 +293,13 @@ def test_global_environment(
         models.BuildPlanner,
         "get_build_plan",
         return_value=[
-            models.BuildInfo(
+            craft_platforms.BuildInfo(
                 platform="my-platform",
-                build_on=util.get_host_architecture(),
-                build_for="s390x",
-                base=util.get_host_base(),
+                build_on=craft_platforms.DebianArchitecture.from_host(),
+                build_for=craft_platforms.DebianArchitecture("s390x"),
+                build_base=craft_platforms.DistroBase.from_linux_distribution(
+                    distro.LinuxDistribution()
+                ),
             ),
         ],
     )

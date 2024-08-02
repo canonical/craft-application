@@ -17,11 +17,9 @@
 import contextlib
 import subprocess
 
+import craft_platforms
 import craft_providers
 import pytest
-from craft_application.models import BuildInfo
-from craft_application.util import get_host_architecture
-from craft_providers import bases
 
 
 @pytest.mark.parametrize(
@@ -53,8 +51,13 @@ def test_provider_lifecycle(
         pytest.skip("multipass only provides ubuntu images")
     provider_service.get_provider(name)
 
-    arch = get_host_architecture()
-    build_info = BuildInfo("foo", arch, arch, bases.BaseName(*base_name))
+    arch = craft_platforms.DebianArchitecture.from_host()
+    build_info = craft_platforms.BuildInfo(
+        "foo",
+        arch,
+        arch,
+        craft_platforms.DistroBase(*base_name),
+    )
     instance = provider_service.instance(build_info, work_dir=snap_safe_tmp_path)
     executor = None
     try:
@@ -77,7 +80,7 @@ def test_provider_lifecycle(
     assert proc_result.stdout.startswith("#!/bin/bash")
 
 
-@pytest.mark.parametrize("base", [bases.BaseName("ubuntu", "22.04")])
+@pytest.mark.parametrize("base", [craft_platforms.DistroBase("ubuntu", "22.04")])
 @pytest.mark.parametrize(
     "proxy_vars",
     [
@@ -94,8 +97,13 @@ def test_proxy_variables_forwarded(
 ):
     for var, content in proxy_vars.items():
         monkeypatch.setenv(var, content)
-    arch = get_host_architecture()
-    build_info = BuildInfo("foo", arch, arch, base)
+    arch = craft_platforms.DebianArchitecture.from_host()
+    build_info = craft_platforms.BuildInfo(
+        "foo",
+        arch,
+        arch,
+        base,
+    )
     provider_service.get_provider(provider_name)
     executor = None
 

@@ -34,7 +34,9 @@ import craft_application
 import craft_application.errors
 import craft_cli
 import craft_parts
+import craft_platforms
 import craft_providers
+import distro
 import pytest
 import pytest_check
 from craft_application import (
@@ -46,13 +48,11 @@ from craft_application import (
     services,
     util,
 )
-from craft_application.models import BuildInfo
 from craft_application.util import (
     get_host_architecture,  # pyright: ignore[reportGeneralTypeIssues]
 )
 from craft_cli import emit
 from craft_parts.plugins.plugins import PluginType
-from craft_providers import bases
 from overrides import override
 from pydantic import validator
 
@@ -563,9 +563,19 @@ def test_run_managed_multiple(app, fake_project):
     app.services.provider = mock_provider
     app.set_project(fake_project)
 
-    arch = get_host_architecture()
-    info1 = BuildInfo("a1", arch, "arch1", bases.BaseName("base", "1"))
-    info2 = BuildInfo("a2", arch, "arch2", bases.BaseName("base", "2"))
+    arch = craft_platforms.DebianArchitecture.from_host()
+    info1 = craft_platforms.BuildInfo(
+        "a1",
+        arch,
+        craft_platforms.DebianArchitecture("s390x"),
+        craft_platforms.DistroBase("ubuntu", "24.04"),
+    )
+    info2 = craft_platforms.BuildInfo(
+        "a2",
+        arch,
+        craft_platforms.DebianArchitecture("riscv64"),
+        craft_platforms.DistroBase("ubuntu", "24.04"),
+    )
     app._build_plan = [info1, info2]
 
     app.run_managed(None, None)
@@ -579,12 +589,22 @@ def test_run_managed_specified_arch(app, fake_project):
     app.services.provider = mock_provider
     app.set_project(fake_project)
 
-    arch = get_host_architecture()
-    info1 = BuildInfo("a1", arch, "arch1", bases.BaseName("base", "1"))
-    info2 = BuildInfo("a2", arch, "arch2", bases.BaseName("base", "2"))
+    arch = craft_platforms.DebianArchitecture.from_host()
+    info1 = craft_platforms.BuildInfo(
+        "a1",
+        arch,
+        craft_platforms.DebianArchitecture("s390x"),
+        craft_platforms.DistroBase("ubuntu", "24.04"),
+    )
+    info2 = craft_platforms.BuildInfo(
+        "a2",
+        arch,
+        craft_platforms.DebianArchitecture("riscv64"),
+        craft_platforms.DistroBase("ubuntu", "24.04"),
+    )
     app._build_plan = [info1, info2]
 
-    app.run_managed(None, "arch2")
+    app.run_managed(None, "riscv64")
 
     assert mock.call(info2, work_dir=mock.ANY) in mock_provider.instance.mock_calls
     assert mock.call(info1, work_dir=mock.ANY) not in mock_provider.instance.mock_calls
@@ -595,9 +615,19 @@ def test_run_managed_specified_platform(app, fake_project):
     app.services.provider = mock_provider
     app.set_project(fake_project)
 
-    arch = get_host_architecture()
-    info1 = BuildInfo("a1", arch, "arch1", bases.BaseName("base", "1"))
-    info2 = BuildInfo("a2", arch, "arch2", bases.BaseName("base", "2"))
+    arch = craft_platforms.DebianArchitecture.from_host()
+    info1 = craft_platforms.BuildInfo(
+        "a1",
+        arch,
+        craft_platforms.DebianArchitecture("s390x"),
+        craft_platforms.DistroBase("ubuntu", "24.04"),
+    )
+    info2 = craft_platforms.BuildInfo(
+        "a2",
+        arch,
+        craft_platforms.DebianArchitecture("riscv64"),
+        craft_platforms.DistroBase("ubuntu", "24.04"),
+    )
     app._build_plan = [info1, info2]
 
     app.run_managed("a2", None)
@@ -991,21 +1021,36 @@ def test_run_error_debug(monkeypatch, mock_dispatcher, app, fake_project, error)
         app.run()
 
 
-_base = bases.BaseName("", "")
-_pc_on_amd64_for_amd64 = BuildInfo(
-    platform="pc", build_on="amd64", build_for="amd64", base=_base
+_base = craft_platforms.DistroBase.from_linux_distribution(distro.LinuxDistribution())
+_pc_on_amd64_for_amd64 = craft_platforms.BuildInfo(
+    platform="pc",
+    build_on=craft_platforms.DebianArchitecture("amd64"),
+    build_for=craft_platforms.DebianArchitecture("amd64"),
+    build_base=_base,
 )
-_pc_on_amd64_for_i386 = BuildInfo(
-    platform="legacy-pc", build_on="amd64", build_for="i386", base=_base
+_pc_on_amd64_for_i386 = craft_platforms.BuildInfo(
+    platform="legacy-pc",
+    build_on=craft_platforms.DebianArchitecture("amd64"),
+    build_for=craft_platforms.DebianArchitecture("i386"),
+    build_base=_base,
 )
-_amd64_on_amd64_for_amd64 = BuildInfo(
-    platform="amd64", build_on="amd64", build_for="amd64", base=_base
+_amd64_on_amd64_for_amd64 = craft_platforms.BuildInfo(
+    platform="amd64",
+    build_on=craft_platforms.DebianArchitecture("amd64"),
+    build_for=craft_platforms.DebianArchitecture("amd64"),
+    build_base=_base,
 )
-_i386_on_amd64_for_i386 = BuildInfo(
-    platform="i386", build_on="amd64", build_for="i386", base=_base
+_i386_on_amd64_for_i386 = craft_platforms.BuildInfo(
+    platform="i386",
+    build_on=craft_platforms.DebianArchitecture("amd64"),
+    build_for=craft_platforms.DebianArchitecture("i386"),
+    build_base=_base,
 )
-_i386_on_i386_for_i386 = BuildInfo(
-    platform="i386", build_on="i386", build_for="i386", base=_base
+_i386_on_i386_for_i386 = craft_platforms.BuildInfo(
+    platform="i386",
+    build_on=craft_platforms.DebianArchitecture("i386"),
+    build_for=craft_platforms.DebianArchitecture("i386"),
+    build_base=_base,
 )
 
 
@@ -1276,6 +1321,7 @@ def environment_project(monkeypatch, tmp_path):
     return project_path
 
 
+@pytest.mark.xfail(reason="craft-platforms does not support 'all'.", strict=True)
 def test_expand_environment_build_for_all(
     monkeypatch, app_metadata, tmp_path, fake_services, emitter
 ):
@@ -1568,14 +1614,14 @@ def grammar_project_full(tmp_path):
 @pytest.fixture()
 def non_grammar_build_plan(mocker):
     """A build plan to build on amd64 to riscv64."""
-    host_arch = "amd64"
-    base = util.get_host_base()
     build_plan = [
-        models.BuildInfo(
+        craft_platforms.BuildInfo(
             "platform-riscv64",
-            host_arch,
-            "riscv64",
-            base,
+            craft_platforms.DebianArchitecture.from_host(),
+            craft_platforms.DebianArchitecture("riscv64"),
+            craft_platforms.DistroBase.from_linux_distribution(
+                distro.LinuxDistribution()
+            ),
         )
     ]
 
@@ -1585,14 +1631,14 @@ def non_grammar_build_plan(mocker):
 @pytest.fixture()
 def grammar_build_plan(mocker):
     """A build plan to build on amd64 to riscv64 and s390x."""
-    host_arch = "amd64"
-    base = util.get_host_base()
     build_plan = [
-        models.BuildInfo(
+        craft_platforms.BuildInfo(
             f"platform-{build_for}",
-            host_arch,
-            build_for,
-            base,
+            craft_platforms.DebianArchitecture.from_host(),
+            craft_platforms.DebianArchitecture(build_for),
+            craft_platforms.DistroBase.from_linux_distribution(
+                distro.LinuxDistribution()
+            ),
         )
         for build_for in ("riscv64", "s390x")
     ]
@@ -1652,6 +1698,7 @@ def test_process_grammar_build_for(grammar_app_mini):
     ]
 
 
+@pytest.mark.xfail(reason="craft-platforms does not support 'all'.", strict=True)
 def test_process_grammar_to_all(tmp_path, app_metadata, fake_services):
     """Test that 'to all' is a valid grammar statement."""
     contents = dedent(
@@ -2022,7 +2069,7 @@ class MyRaisingPlanner(models.BuildPlanner):
         raise ValueError(f"Bad value2: {v}")
 
     @override
-    def get_build_plan(self) -> list[BuildInfo]:
+    def get_build_plan(self) -> list[craft_platforms.BuildInfo]:
         return []
 
 

@@ -31,13 +31,14 @@ from typing import TYPE_CHECKING, Any, cast, final
 
 import craft_cli
 import craft_parts
+import craft_platforms
 import craft_providers
 from craft_parts.plugins.plugins import PluginType
 from platformdirs import user_cache_path
 
 from craft_application import commands, errors, grammar, models, secrets, util
 from craft_application.errors import PathInvalidError
-from craft_application.models import BuildInfo, GrammarAwareProject
+from craft_application.models import GrammarAwareProject
 
 if TYPE_CHECKING:
     from craft_application.services import service_factory
@@ -133,8 +134,8 @@ class Application:
         self._command_groups: list[craft_cli.CommandGroup] = []
         self._global_arguments: list[craft_cli.GlobalArgument] = [GLOBAL_VERSION]
         self._cli_loggers = DEFAULT_CLI_LOGGERS | set(extra_loggers)
-        self._full_build_plan: list[models.BuildInfo] = []
-        self._build_plan: list[models.BuildInfo] = []
+        self._full_build_plan: list[craft_platforms.BuildInfo] = []
+        self._build_plan: list[craft_platforms.BuildInfo] = []
         # When build_secrets are enabled, this contains the secret info to pass to
         # managed instances.
         self._secrets: secrets.BuildSecrets | None = None
@@ -767,17 +768,17 @@ class Application:
 
 
 def filter_plan(
-    build_plan: list[BuildInfo],
+    build_plan: list[craft_platforms.BuildInfo],
     platform: str | None,
     build_for: str | None,
     host_arch: str | None,
-) -> list[BuildInfo]:
+) -> list[craft_platforms.BuildInfo]:
     """Filter out build plans that are not matching build-on, build-for, and platform.
 
     If the host_arch is None, ignore the build-on check for remote builds.
     """
-    new_plan_matched_build_for: list[BuildInfo] = []
-    new_plan_matched_platform_name: list[BuildInfo] = []
+    new_plan_matched_build_for: list[craft_platforms.BuildInfo] = []
+    new_plan_matched_platform_name: list[craft_platforms.BuildInfo] = []
 
     for build_info in build_plan:
         if platform and build_info.platform != platform:
