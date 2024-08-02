@@ -14,11 +14,13 @@
 # You should have received a copy of the GNU Lesser General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Constrained pydantic types for *craft applications."""
+
 import collections
 import re
 from collections.abc import Callable
-from typing import Annotated, TypeVar
+from typing import Annotated, Literal, TypeVar
 
+import license_expression  # type: ignore[import]
 import pydantic
 
 T = TypeVar("T")
@@ -193,3 +195,44 @@ https://github.com/snapcore/snapd/blame/a39482ead58bf06cddbc0d3ffad3c17dfcf39913
 Applications may use a different set of constraints if necessary, but
 ideally they will retain this same constraint.
 """
+
+
+def _parse_spdx_license(value: str) -> license_expression.LicenseExpression:
+    licensing = license_expression.get_spdx_licensing()
+    if (
+        lic := licensing.parse(  # pyright: ignore[reportUnknownMemberType]
+            value, validate=True
+        )
+    ) is not None:
+        return lic
+    raise ValueError
+
+
+def _validate_spdx_license(value: str) -> str:
+    """Ensure the provided licence is a valid SPDX licence."""
+    try:
+        lic = _parse_spdx_license(value)
+    except (license_expression.ExpressionError, ValueError):
+        raise ValueError(
+            f"License '{value}' not valid. It must be in SPDX format.",
+        ) from None
+    else:
+        return str(lic.simplify())
+
+
+SpdxLicenseStr = Annotated[
+    str,
+    pydantic.AfterValidator(_validate_spdx_license),
+    pydantic.Field(
+        title="Licence",
+        description="SPDX license string.",
+        examples=[
+            "GPL-3.0",
+            "MIT",
+            "LGPL-3.0-or-later",
+            "GPL-3.0+ and MIT",
+        ],
+    ),
+]
+
+ProprietaryLicenseStr = Literal["proprietary"]
