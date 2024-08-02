@@ -19,6 +19,7 @@ from string import ascii_letters, ascii_lowercase, digits
 
 import pydantic.errors
 import pytest
+from craft_application.models import constraints
 from craft_application.models.constraints import ProjectName, VersionStr
 from hypothesis import given, strategies
 
@@ -72,6 +73,47 @@ def string_or_unique_list():
         strategies.text(),
         strategies.lists(strategies.text(), unique=True),
     )
+
+
+# endregion
+# region Unique list values tests
+@given(
+    strategies.sets(
+        strategies.one_of(
+            strategies.none(),
+            strategies.integers(),
+            strategies.floats(),
+            strategies.text(),
+        )
+    )
+)
+def test_validate_list_is_unique_hypothesis_success(values: set):
+    values_list = list(values)
+    constraints._validate_list_is_unique(values_list)
+
+
+@pytest.mark.parametrize(
+    "values", [[], [None], [None, 0], [None, 0, ""], [True, 2, "True", "2", "two"]]
+)
+def test_validate_list_is_unique_success(values: list):
+    constraints._validate_list_is_unique(values)
+
+
+@pytest.mark.parametrize(
+    ("values", "expected_dupes_text"),
+    [
+        ([None, None], "[None]"),
+        ([0, 0], "[0]"),
+        ([1, True], "[1]"),
+        ([True, 1], "[True]"),
+        (["this", "that", "this"], "['this']"),
+    ],
+)
+def test_validate_list_is_unique_with_duplicates(values, expected_dupes_text):
+    with pytest.raises(ValueError, match="^duplicate values in list: ") as exc_info:
+        constraints._validate_list_is_unique(values)
+
+    assert exc_info.value.args[0].endswith(expected_dupes_text)
 
 
 # endregion

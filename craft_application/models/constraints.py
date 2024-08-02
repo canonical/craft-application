@@ -30,7 +30,7 @@ def _validate_list_is_unique(value: list[T]) -> list[T]:
     if len(value_set) == len(value):
         return value
     dupes = [item for item, count in collections.Counter(value).items() if count > 1]
-    raise ValueError(f"Duplicate values in list: {dupes}")
+    raise ValueError(f"duplicate values in list: {dupes}")
 
 
 def _get_validator_by_regex(
