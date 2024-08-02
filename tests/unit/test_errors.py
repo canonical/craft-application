@@ -21,7 +21,7 @@ import pydantic
 import pytest
 import pytest_check
 from craft_application.errors import CraftValidationError, PartsLifecycleError
-from pydantic import BaseModel, conint
+from pydantic import BaseModel
 
 
 @pytest.mark.parametrize(
@@ -69,7 +69,7 @@ def test_parts_lifecycle_error_from_os_error(
 
 def test_validation_error_from_pydantic():
     class Model(BaseModel):
-        gt_int: conint(gt=42)  # pyright: ignore [reportInvalidTypeForm]
+        gt_int: int = pydantic.Field(gt=42)
         a_float: float
 
     data = {
@@ -86,8 +86,8 @@ def test_validation_error_from_pydantic():
     expected = textwrap.dedent(
         """
         Bad myfile.yaml content:
-        - ensure this value is greater than 42 (in field 'gt_int')
-        - value is not a valid float (in field 'a_float')
+        - input should be greater than 42 (in field 'gt_int')
+        - input should be a valid number, unable to parse string as a number (in field 'a_float')
         """
     ).strip()
 

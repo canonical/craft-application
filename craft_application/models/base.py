@@ -30,24 +30,19 @@ def alias_generator(s: str) -> str:
     return s.replace("_", "-")
 
 
-class CraftBaseConfig(pydantic.BaseConfig):  # pylint: disable=too-few-public-methods
-    """Pydantic model configuration."""
-
-    validate_assignment = True
-    extra = pydantic.Extra.forbid
-    allow_mutation = True
-    allow_population_by_field_name = True
-    alias_generator = alias_generator
-
-
 class CraftBaseModel(pydantic.BaseModel):
     """Base model for craft-application classes."""
 
-    Config = CraftBaseConfig
+    model_config = pydantic.ConfigDict(
+        validate_assignment=True,
+        extra="forbid",
+        populate_by_name=True,
+        alias_generator=alias_generator,
+    )
 
     def marshal(self) -> dict[str, str | list[str] | dict[str, Any]]:
         """Convert to a dictionary."""
-        return self.dict(by_alias=True, exclude_unset=True)
+        return self.model_dump(mode="json", by_alias=True, exclude_unset=True)
 
     @classmethod
     def unmarshal(cls, data: dict[str, Any]) -> Self:
@@ -62,7 +57,7 @@ class CraftBaseModel(pydantic.BaseModel):
         if not isinstance(data, dict):  # pyright: ignore[reportUnnecessaryIsInstance]
             raise TypeError("Project data is not a dictionary")
 
-        return cls(**data)
+        return cls.model_validate(data)
 
     @classmethod
     def from_yaml_file(cls, path: pathlib.Path) -> Self:
