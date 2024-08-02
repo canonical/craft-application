@@ -65,7 +65,7 @@ def format_pydantic_error(loc: Iterable[str | int], message: str) -> str:
         return f"- extra field {field_name!r} not permitted in {location} configuration"
     if message == "the list has duplicated items":
         return f"- duplicate {field_name!r} entry not permitted in {location} configuration"
-    if field_path == "__root__":
+    if field_path in ("__root__", ""):
         return f"- {message}"
     return f"- {message} (in field {field_path!r})"
 
