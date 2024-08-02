@@ -28,13 +28,10 @@ import pydantic
 from craft_cli import emit
 from craft_providers import bases
 from craft_providers.errors import BaseConfigurationError
-from typing_extensions import override
 
 from craft_application import errors
 from craft_application.models import base
 from craft_application.models.constraints import (
-    MESSAGE_INVALID_NAME,
-    MESSAGE_INVALID_VERSION,
     ProjectName,
     ProjectTitle,
     SingleEntryList,
@@ -345,21 +342,3 @@ class Project(base.CraftBaseModel):
                     )
 
         return build_base
-
-    @override
-    @classmethod
-    def transform_pydantic_error(cls, error: pydantic.ValidationError) -> None:
-        errors_to_messages: dict[tuple[str, str], str] = {
-            ("version", "value_error.str.regex"): MESSAGE_INVALID_VERSION,
-            ("name", "value_error.str.regex"): MESSAGE_INVALID_NAME,
-        }
-
-        base.CraftBaseModel.transform_pydantic_error(error)
-
-        for error_dict in error.errors():
-            loc_and_type = (str(error_dict["loc"][0]), error_dict["type"])
-            if message := errors_to_messages.get(loc_and_type):
-                # Note that unfortunately, Pydantic 1.x does not have the
-                # "input" key in the error dict, so we can't put the original
-                # value in the error message.
-                error_dict["msg"] = message
