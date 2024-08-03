@@ -22,7 +22,7 @@ dependencies = [
     "pygit2>=1.13.0,<1.15.0",
     "PyYaml>=6.0",
     # see https://github.com/psf/requests/issues/6707
-    "requests<2.32",
+    "requests<2.33",
     "typing_extensions>=4.4.0",
 ]
 classifiers = [
