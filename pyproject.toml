@@ -10,8 +10,8 @@ dependencies = [
     "craft-providers>=1.20.0,<2.0",
     "snap-helpers>=0.4.2",
     "platformdirs>=3.10",
-    "pydantic>=1.10,<2.0",
-    "pydantic-yaml<1.0",
+    "pydantic>=2.8,<2.9",
+    "pydantic-yaml<1.4",
     # Pygit2 and libgit2 need to match versions.
     # Further info: https://www.pygit2.org/install.html#version-numbers
     # Minor versions of pygit2 can include breaking changes, so we need to check
