@@ -29,7 +29,6 @@ from craft_application.models import (
     DEVEL_BASE_WARNING,
     BuildInfo,
     BuildPlanner,
-    Platform,
     Project,
     constraints,
 )
@@ -616,10 +615,14 @@ def test_get_build_plan_all_with_other_platforms(platforms):
 def test_get_build_plan_build_on_all():
     """`build-on: all` is not allowed."""
     with pytest.raises(pydantic.ValidationError) as raised:
-        BuildPlanner(
-            base="ubuntu@24.04",
-            platforms={"arm64": Platform(build_on=["all"], build_for=["s390x"])},
-            build_base=None,
+        BuildPlanner.model_validate(
+            {
+                "base": "ubuntu@24.04",
+                "platforms": {
+                    "arm64": {"build-on": ["all"], "build-for": ["s390x"]},
+                },
+                "build_base": None,
+            }
         )
 
     assert "'all' cannot be used for 'build-on'" in str(raised.value)

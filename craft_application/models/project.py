@@ -120,7 +120,7 @@ class Platform(base.CraftBaseModel):
         return values
 
 
-def _populate_platforms(platforms: dict[str, Platform]) -> dict[str, Platform]:
+def _populate_platforms(platforms: dict[str, Any]) -> dict[str, Any]:
     """Populate empty platform entries.
 
     :param platforms: The platform data.
@@ -130,9 +130,10 @@ def _populate_platforms(platforms: dict[str, Platform]) -> dict[str, Platform]:
     for platform_label, platform in platforms.items():
         if not platform:
             # populate "empty" platforms entries from the platform's name
-            platforms[platform_label] = Platform(
-                build_on=[platform_label], build_for=[platform_label]
-            )
+            platforms[platform_label] = {
+                "build-on": [platform_label],
+                "build-for": [platform_label],
+            }
 
     return platforms
 
@@ -153,7 +154,7 @@ class BuildPlanner(base.CraftBaseModel, metaclass=abc.ABCMeta):
 
     @pydantic.field_validator("platforms", mode="before")
     @classmethod
-    def _populate_platforms(cls, platforms: dict[str, Platform]) -> dict[str, Platform]:
+    def _populate_platforms(cls, platforms: dict[str, Any]) -> dict[str, Any]:
         """Populate empty platform entries."""
         return _populate_platforms(platforms)
 
