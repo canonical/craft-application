@@ -237,6 +237,12 @@ def _validate_package_repository(repository: dict[str, Any]) -> dict[str, Any]:
     return repository
 
 
+def _validate_part(part: dict[str, Any]) -> dict[str, Any]:
+    """Verify each part (craft-parts will re-validate this)."""
+    craft_parts.validate_part(part)
+    return part
+
+
 class Project(base.CraftBaseModel):
     """Craft Application project definition."""
 
@@ -257,7 +263,10 @@ class Project(base.CraftBaseModel):
 
     adopt_info: str | None = None
 
-    parts: dict[str, dict[str, Any]]  # parts are handled by craft-parts
+    parts: dict[  # parts are handled by craft-parts
+        str,
+        Annotated[dict[str, Any], pydantic.BeforeValidator(_validate_part)],
+    ]
 
     package_repositories: (
         list[
@@ -267,14 +276,6 @@ class Project(base.CraftBaseModel):
         ]
         | None
     ) = None
-
-    @pydantic.field_validator("parts", mode="before")
-    @classmethod
-    def _validate_parts(cls, parts: dict[str, Any]) -> dict[str, Any]:
-        """Verify each part (craft-parts will re-validate this)."""
-        for part in parts.values():
-            craft_parts.validate_part(part)
-        return parts
 
     @pydantic.field_validator("platforms", mode="before")
     @classmethod
