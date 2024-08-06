@@ -22,6 +22,7 @@ from typing import Annotated, Literal, TypeVar
 
 import license_expression  # type: ignore[import]
 import pydantic
+from pydantic_core import PydanticCustomError
 
 T = TypeVar("T")
 Tv = TypeVar("Tv")
@@ -213,8 +214,10 @@ def _validate_spdx_license(value: str) -> str:
     try:
         lic = _parse_spdx_license(value)
     except (license_expression.ExpressionError, ValueError):
-        raise ValueError(
-            f"License '{value}' not valid. It must be in SPDX format.",
+        raise PydanticCustomError(
+            "not_spdx_license",
+            "License '{wrong_license}' not valid. It must be in SPDX format.",
+            {"wrong_license": value},
         ) from None
     else:
         return str(lic.simplify())
@@ -236,3 +239,5 @@ SpdxLicenseStr = Annotated[
 ]
 
 ProprietaryLicenseStr = Literal["proprietary"]
+
+LicenseStr = SpdxLicenseStr | ProprietaryLicenseStr

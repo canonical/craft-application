@@ -22,6 +22,7 @@ import pydantic.errors
 import pytest
 from craft_application.models import constraints
 from craft_application.models.constraints import (
+    LicenseStr,
     ProjectName,
     ProprietaryLicenseStr,
     SpdxLicenseStr,
@@ -267,6 +268,45 @@ def test_proprietary_str_valid():
 def test_proprietary_str_invalid():
     with pytest.raises(pydantic.ValidationError) as validation_error:
         _ = _ProprietaryLicenseStrModel(
+            license="non-proprietary"  # pyright: ignore[reportArgumentType]
+        )
+    assert validation_error.match("Input should be 'proprietary'")
+
+
+# endregion
+# region LicenseStr tests
+class _LicenseStrModel(pydantic.BaseModel):
+    license: LicenseStr
+
+
+@pytest.mark.parametrize(
+    ("license_str", "license_value"),
+    [
+        ("MIT", "MIT"),
+        ("GPL-3.0", "GPL-3.0-only"),
+        ("GPL-3.0+", "GPL-3.0-or-later"),
+        ("GPL-3.0+ and MIT", "GPL-3.0-or-later AND MIT"),
+        ("LGPL-3.0+ or BSD-3-Clause", "BSD-3-Clause OR LGPL-3.0-or-later"),
+        ("proprietary", "proprietary"),
+    ],
+)
+def test_license_str_valid(license_str, license_value):
+    model = _LicenseStrModel(license=license_str)
+    assert model.license == license_value
+
+
+@pytest.mark.parametrize("license_str", ["Copyright 1990", "Proprietary"])
+def test_license_str_invalid(license_str):
+    with pytest.raises(pydantic.ValidationError) as validation_error:
+        _ = _LicenseStrModel(license=license_str)
+    assert validation_error.match(
+        f"License '{license_str}' not valid. It must be in SPDX format.",
+    )
+
+
+def test_license_str_invalid_literal():
+    with pytest.raises(pydantic.ValidationError) as validation_error:
+        _ = _LicenseStrModel(
             license="non-proprietary"  # pyright: ignore[reportArgumentType]
         )
     assert validation_error.match("Input should be 'proprietary'")
