@@ -33,7 +33,7 @@ def _validate_list_is_unique(value: list[T]) -> list[T]:
     raise ValueError(f"duplicate values in list: {dupes}")
 
 
-def _get_validator_by_regex(
+def get_validator_by_regex(
     regex: re.Pattern[str], error_msg: str
 ) -> Callable[[str], str]:
     """Get a string validator by regular expression with a known error message.
@@ -99,7 +99,7 @@ MESSAGE_INVALID_NAME = (
 ProjectName = Annotated[
     str,
     pydantic.BeforeValidator(
-        _get_validator_by_regex(_PROJECT_NAME_COMPILED_REGEX, MESSAGE_INVALID_NAME)
+        get_validator_by_regex(_PROJECT_NAME_COMPILED_REGEX, MESSAGE_INVALID_NAME)
     ),
     pydantic.Field(
         min_length=1,
@@ -169,7 +169,7 @@ MESSAGE_INVALID_VERSION = (
 VersionStr = Annotated[
     str,
     pydantic.BeforeValidator(
-        _get_validator_by_regex(_VERSION_STR_COMPILED_REGEX, MESSAGE_INVALID_VERSION)
+        get_validator_by_regex(_VERSION_STR_COMPILED_REGEX, MESSAGE_INVALID_VERSION)
     ),
     pydantic.Field(
         max_length=32,
