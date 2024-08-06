@@ -113,7 +113,7 @@ def test_validation_error_from_pydantic_model():
     expected = textwrap.dedent(
         """
         Bad myfile.yaml content:
-        - value error, 'b_int' must be smaller than 'gt_int'
+        - 'b_int' must be smaller than 'gt_int'
         """
     ).strip()
 

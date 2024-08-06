@@ -2055,8 +2055,8 @@ def test_build_planner_errors(tmp_path, monkeypatch, fake_services):
 
     expected = (
         "Bad testcraft.yaml content:\n"
-        "- value error, Bad value1: 10 (in field 'value1')\n"
-        "- value error, Bad value2: banana (in field 'value2')"
+        "- bad value1: 10 (in field 'value1')\n"
+        "- bad value2: banana (in field 'value2')"
     )
     assert str(err.value) == expected
 
