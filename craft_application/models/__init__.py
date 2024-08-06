@@ -22,6 +22,7 @@ from craft_application.models.constraints import (
     SummaryStr,
     UniqueStrList,
     VersionStr,
+    get_validator_by_regex,
 )
 from craft_application.models.grammar import (
     GrammarAwareProject,
@@ -54,4 +55,5 @@ __all__ = [
     "SummaryStr",
     "UniqueStrList",
     "VersionStr",
+    "get_validator_by_regex",
 ]
