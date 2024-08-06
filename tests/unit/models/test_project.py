@@ -16,6 +16,7 @@
 """Tests for BaseProject"""
 import copy
 import pathlib
+import re
 import textwrap
 from textwrap import dedent
 
@@ -627,3 +628,19 @@ def test_get_build_plan_build_on_all():
         )
 
     assert "'all' cannot be used for 'build-on'" in str(raised.value)
+
+
+def test_invalid_part_error(basic_project_dict):
+    """Check that the part name is included in the error message."""
+    basic_project_dict["parts"] = {
+        "p1": {"plugin": "badplugin"},
+        "p2": {"plugin": "nil", "bad-key": 1},
+    }
+    expected = textwrap.dedent(
+        """\
+    Bad bla.yaml content:
+    - value error, plugin not registered: 'badplugin' (in field 'parts.p1')
+    - extra inputs are not permitted (in field 'parts.p2.bad-key')"""
+    )
+    with pytest.raises(CraftValidationError, match=re.escape(expected)):
+        Project.from_yaml_data(basic_project_dict, filepath=pathlib.Path("bla.yaml"))
