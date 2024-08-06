@@ -224,13 +224,14 @@ def test_from_yaml_data_failure(project_file, error_class):
         ("full_project", PROJECTS_DIR / "full_project.yaml"),
     ],
 )
-def test_to_yaml_file(project_fixture, expected_file, tmp_path, request):
+def test_to_yaml(project_fixture, expected_file, tmp_path, request):
     project = request.getfixturevalue(project_fixture)
     actual_file = tmp_path / "out.yaml"
 
     project.to_yaml_file(actual_file)
 
     assert actual_file.read_text() == expected_file.read_text()
+    assert actual_file.read_text() == project.to_yaml_string()
 
 
 def test_effective_base_is_base(full_project):
