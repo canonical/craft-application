@@ -110,6 +110,7 @@ def _format_pydantic_error_message(msg: str) -> str:
     """Format pydantic's error message field."""
     # Replace shorthand "str" with "string".
     msg = msg.replace("str type expected", "string type expected")
+    msg = msg.removeprefix("Value error, ")
     if msg:
         msg = msg[0].lower() + msg[1:]
     return msg

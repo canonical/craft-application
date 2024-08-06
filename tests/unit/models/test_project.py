@@ -343,7 +343,7 @@ def test_devel_base_error():
         dedent(
             f"""
     Bad testcraft.yaml content:
-    - value error, A development build-base must be used when base is 'ubuntu@{expected_devel}'
+    - a development build-base must be used when base is 'ubuntu@{expected_devel}'
     """
         ).strip()
     )
@@ -376,7 +376,7 @@ def test_invalid_field_message(
     full_expected_message = textwrap.dedent(
         f"""
         Bad myproject.yaml content:
-        - value error, {expected_message} (in field '{field_name}')
+        - {expected_message} (in field '{field_name}')
         """
     ).strip()
 
@@ -639,7 +639,7 @@ def test_invalid_part_error(basic_project_dict):
     expected = textwrap.dedent(
         """\
     Bad bla.yaml content:
-    - value error, plugin not registered: 'badplugin' (in field 'parts.p1')
+    - plugin not registered: 'badplugin' (in field 'parts.p1')
     - extra inputs are not permitted (in field 'parts.p2.bad-key')"""
     )
     with pytest.raises(CraftValidationError, match=re.escape(expected)):
