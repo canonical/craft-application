@@ -227,7 +227,7 @@ SpdxLicenseStr = Annotated[
     str,
     pydantic.AfterValidator(_validate_spdx_license),
     pydantic.Field(
-        title="Licence",
+        title="License",
         description="SPDX license string.",
         examples=[
             "GPL-3.0",
