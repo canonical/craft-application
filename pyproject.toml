@@ -3,11 +3,11 @@ name = "craft-application"
 description = "A framework for *craft applications."
 dynamic = ["version", "readme"]
 dependencies = [
-    "craft-archives@git+https://github.com/canonical/craft-archives@feature/2.0",
+    "craft-archives>=2.0.0",
     "craft-cli>=2.6.0",
-    "craft-grammar@git+https://github.com/canonical/craft-grammar@feature/pydantic-2",
-    "craft-parts@git+https://github.com/canonical/craft-parts@feature/2.0",
-    "craft-providers@git+https://github.com/canonical/craft-providers@feature/2.0",
+    "craft-grammar>=2.0.0",
+    "craft-parts>=2.0.0",
+    "craft-providers>=2.0.0",
     "snap-helpers>=0.4.2",
     "platformdirs>=3.10",
     "pydantic~=2.0",
