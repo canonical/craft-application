@@ -15,20 +15,20 @@
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Base project metadata model."""
 import pydantic
-from typing_extensions import override
 
-from craft_application.models.base import CraftBaseConfig, CraftBaseModel
+from craft_application.models import base
 
 
-class BaseMetadata(CraftBaseModel):
+class BaseMetadata(base.CraftBaseModel):
     """Project metadata base model.
 
     This model is the basis for output metadata files that are stored in
     the application's output.
     """
 
-    @override
-    class Config(CraftBaseConfig):
-        """Allows writing of unknown fields."""
-
-        extra = pydantic.Extra.allow
+    model_config = pydantic.ConfigDict(
+        validate_assignment=True,
+        extra="allow",
+        populate_by_name=True,
+        alias_generator=base.alias_generator,
+    )

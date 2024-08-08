@@ -35,6 +35,7 @@ import craft_application.errors
 import craft_cli
 import craft_parts
 import craft_providers
+import pydantic
 import pytest
 import pytest_check
 from craft_application import (
@@ -54,7 +55,6 @@ from craft_cli import emit
 from craft_parts.plugins.plugins import PluginType
 from craft_providers import bases
 from overrides import override
-from pydantic import validator
 
 EMPTY_COMMAND_GROUP = craft_cli.CommandGroup("FakeCommands", [])
 BASIC_PROJECT_YAML = """
@@ -670,8 +670,8 @@ def test_gets_project(monkeypatch, tmp_path, app_metadata, fake_services):
 
     app.run()
 
-    assert fake_services.project is not None
-    assert app.project is not None
+    pytest_check.is_not_none(fake_services.project)
+    pytest_check.is_not_none(app.project)
 
 
 def test_fails_without_project(
@@ -2013,11 +2013,13 @@ class MyRaisingPlanner(models.BuildPlanner):
     value1: int
     value2: str
 
-    @validator("value1")
+    @pydantic.field_validator("value1", mode="after")
+    @classmethod
     def _validate_value1(cls, v):
         raise ValueError(f"Bad value1: {v}")
 
-    @validator("value2")
+    @pydantic.field_validator("value2", mode="after")
+    @classmethod
     def _validate_value(cls, v):
         raise ValueError(f"Bad value2: {v}")
 
@@ -2037,13 +2039,13 @@ def test_build_planner_errors(tmp_path, monkeypatch, fake_services):
     app = FakeApplication(app_metadata, fake_services)
     project_contents = textwrap.dedent(
         """\
-    name: my-project
-    base: ubuntu@24.04
-    value1: 10
-    value2: "banana"
-    platforms:
-      amd64:
-    """
+        name: my-project
+        base: ubuntu@24.04
+        value1: 10
+        value2: "banana"
+        platforms:
+          amd64:
+        """
     ).strip()
     project_path = tmp_path / "testcraft.yaml"
     project_path.write_text(project_contents)

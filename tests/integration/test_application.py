@@ -123,6 +123,7 @@ def test_special_inputs(capsys, monkeypatch, app, argv, stdout, stderr, exit_cod
     pytest_check.equal(captured.err, stderr, "stderr does not match")
 
 
+@pytest.mark.usefixtures("pretend_jammy")
 @pytest.mark.parametrize("project", (d.name for d in VALID_PROJECTS_DIR.iterdir()))
 def test_project_managed(capsys, monkeypatch, tmp_path, project, create_app):
     monkeypatch.setenv("CRAFT_DEBUG", "1")
@@ -144,7 +145,7 @@ def test_project_managed(capsys, monkeypatch, tmp_path, project, create_app):
     )
 
 
-@pytest.mark.usefixtures("full_build_plan")
+@pytest.mark.usefixtures("full_build_plan", "pretend_jammy")
 @pytest.mark.parametrize("project", (d.name for d in VALID_PROJECTS_DIR.iterdir()))
 def test_project_destructive(
     capsys,
@@ -365,6 +366,7 @@ def check_secrets_output(tmp_path, capsys):
     return _inner
 
 
+@pytest.mark.usefixtures("pretend_jammy")
 @pytest.mark.enable_features("build_secrets")
 def test_build_secrets_destructive(
     monkeypatch, setup_secrets_project, check_secrets_output
@@ -381,6 +383,7 @@ def test_build_secrets_destructive(
     check_secrets_output()
 
 
+@pytest.mark.usefixtures("pretend_jammy")
 @pytest.mark.enable_features("build_secrets")
 def test_build_secrets_managed(
     monkeypatch, tmp_path, setup_secrets_project, check_secrets_output
@@ -406,6 +409,7 @@ def test_build_secrets_managed(
     check_secrets_output()
 
 
+@pytest.mark.usefixtures("pretend_jammy")
 def test_lifecycle_error_logging(monkeypatch, tmp_path, create_app):
     monkeypatch.chdir(tmp_path)
     shutil.copytree(INVALID_PROJECTS_DIR / "build-error", tmp_path, dirs_exist_ok=True)
@@ -424,6 +428,7 @@ def test_lifecycle_error_logging(monkeypatch, tmp_path, create_app):
     assert parts_message in log_contents
 
 
+@pytest.mark.usefixtures("pretend_jammy")
 def test_runtime_error_logging(monkeypatch, tmp_path, create_app, mocker):
     monkeypatch.chdir(tmp_path)
     shutil.copytree(INVALID_PROJECTS_DIR / "build-error", tmp_path, dirs_exist_ok=True)
@@ -437,6 +442,7 @@ def test_runtime_error_logging(monkeypatch, tmp_path, create_app, mocker):
 
     monkeypatch.setattr("sys.argv", ["testcraft", "pack", "--destructive-mode"])
     app = create_app()
+
     app.run()
 
     log_contents = craft_cli.emit._log_filepath.read_text()

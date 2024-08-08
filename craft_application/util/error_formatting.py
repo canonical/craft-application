@@ -14,11 +14,12 @@
 # You should have received a copy of the GNU Lesser General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Helper utilities for formatting error messages."""
-from collections.abc import Iterable
-from typing import TYPE_CHECKING, NamedTuple
+from __future__ import annotations
 
-if TYPE_CHECKING:  # pragma: no cover
-    from pydantic.error_wrappers import ErrorDict
+from collections.abc import Iterable
+from typing import NamedTuple
+
+from pydantic import error_wrappers
 
 
 class FieldLocationTuple(NamedTuple):
@@ -28,7 +29,7 @@ class FieldLocationTuple(NamedTuple):
     location: str = "top-level"
 
     @classmethod
-    def from_str(cls, loc_str: str) -> "FieldLocationTuple":
+    def from_str(cls, loc_str: str) -> FieldLocationTuple:
         """Return split field location.
 
         If top-level, location is returned as unquoted "top-level".
@@ -64,13 +65,13 @@ def format_pydantic_error(loc: Iterable[str | int], message: str) -> str:
         return f"- extra field {field_name!r} not permitted in {location} configuration"
     if message == "the list has duplicated items":
         return f"- duplicate {field_name!r} entry not permitted in {location} configuration"
-    if field_path == "__root__":
+    if field_path in ("__root__", ""):
         return f"- {message}"
     return f"- {message} (in field {field_path!r})"
 
 
 def format_pydantic_errors(
-    errors: "Iterable[ErrorDict]", *, file_name: str = "yaml file"
+    errors: Iterable[error_wrappers.ErrorDict], *, file_name: str = "yaml file"
 ) -> str:
     """Format errors.
 
@@ -109,6 +110,7 @@ def _format_pydantic_error_message(msg: str) -> str:
     """Format pydantic's error message field."""
     # Replace shorthand "str" with "string".
     msg = msg.replace("str type expected", "string type expected")
+    msg = msg.removeprefix("Value error, ")
     if msg:
         msg = msg[0].lower() + msg[1:]
     return msg

@@ -38,7 +38,7 @@ from typing_extensions import override
 
 from craft_application import errors, models, util
 from craft_application.services import base
-from craft_application.util import convert_architecture_deb_to_platform, repositories
+from craft_application.util import repositories
 
 if TYPE_CHECKING:  # pragma: no cover
     from pathlib import Path
@@ -187,7 +187,7 @@ class LifecycleService(base.ProjectService):
             return LifecycleManager(
                 {"parts": self._project.parts},
                 application_name=self._app.name,
-                arch=convert_architecture_deb_to_platform(build_for),
+                arch=build_for,
                 cache_dir=self._cache_dir,
                 work_dir=self._work_dir,
                 ignore_local_sources=self._app.source_ignore_patterns,
