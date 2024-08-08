@@ -1,4 +1,4 @@
-# This file is part of craft_application.
+# This file is part of craft_application.modcon
 #
 # Copyright 2023 Canonical Ltd.
 #
@@ -212,7 +212,7 @@ def _parse_spdx_license(value: str) -> license_expression.LicenseExpression:
 def _validate_spdx_license(value: str) -> str:
     """Ensure the provided licence is a valid SPDX licence."""
     try:
-        lic = _parse_spdx_license(value)
+        _ = _parse_spdx_license(value)
     except (license_expression.ExpressionError, ValueError):
         raise PydanticCustomError(
             "not_spdx_license",
@@ -220,7 +220,7 @@ def _validate_spdx_license(value: str) -> str:
             {"wrong_license": value},
         ) from None
     else:
-        return str(lic.simplify())
+        return value
 
 
 SpdxLicenseStr = Annotated[

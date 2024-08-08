@@ -17,6 +17,7 @@
 
 import re
 from string import ascii_letters, ascii_lowercase, digits
+from typing import cast
 
 import pydantic.errors
 import pytest
@@ -216,23 +217,28 @@ def test_invalid_version_str(version):
 
 # endregion
 # region SpdxLicenseStr tests
+
+_VALID_SPDX_LICENCES = [
+    "MIT",
+    "GPL-3.0",
+    "GPL-3.0+",
+    "GPL-3.0+ and MIT",
+    "LGPL-3.0+ or BSD-3-Clause",
+]
+
+
+@pytest.fixture(params=_VALID_SPDX_LICENCES)
+def valid_spdx_license_str(request: pytest.FixtureRequest) -> str:
+    return cast(str, request.param)
+
+
 class _SpdxLicenseStrModel(pydantic.BaseModel):
     license: SpdxLicenseStr
 
 
-@pytest.mark.parametrize(
-    ("license_str", "license_value"),
-    [
-        ("MIT", "MIT"),
-        ("GPL-3.0", "GPL-3.0-only"),
-        ("GPL-3.0+", "GPL-3.0-or-later"),
-        ("GPL-3.0+ and MIT", "GPL-3.0-or-later AND MIT"),
-        ("LGPL-3.0+ or BSD-3-Clause", "BSD-3-Clause OR LGPL-3.0-or-later"),
-    ],
-)
-def test_spdx_license_str_valid(license_str, license_value):
-    model = _SpdxLicenseStrModel(license=license_str)
-    assert model.license == license_value
+def test_spdx_license_str_valid(valid_spdx_license_str: str) -> None:
+    model = _SpdxLicenseStrModel(license=valid_spdx_license_str)
+    assert model.license == valid_spdx_license_str
 
 
 @pytest.mark.parametrize("license_str", ["Copyright 1990", "Proprietary"])
@@ -280,19 +286,12 @@ class _LicenseStrModel(pydantic.BaseModel):
 
 
 @pytest.mark.parametrize(
-    ("license_str", "license_value"),
-    [
-        ("MIT", "MIT"),
-        ("GPL-3.0", "GPL-3.0-only"),
-        ("GPL-3.0+", "GPL-3.0-or-later"),
-        ("GPL-3.0+ and MIT", "GPL-3.0-or-later AND MIT"),
-        ("LGPL-3.0+ or BSD-3-Clause", "BSD-3-Clause OR LGPL-3.0-or-later"),
-        ("proprietary", "proprietary"),
-    ],
+    "license_str",
+    [*_VALID_SPDX_LICENCES, "proprietary"],
 )
-def test_license_str_valid(license_str, license_value):
+def test_license_str_valid(license_str):
     model = _LicenseStrModel(license=license_str)
-    assert model.license == license_value
+    assert model.license == license_str
 
 
 @pytest.mark.parametrize("license_str", ["Copyright 1990", "Proprietary"])
