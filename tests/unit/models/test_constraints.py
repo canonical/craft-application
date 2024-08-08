@@ -14,13 +14,21 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Tests for project model."""
+
 import re
 from string import ascii_letters, ascii_lowercase, digits
+from typing import cast
 
 import pydantic.errors
 import pytest
 from craft_application.models import constraints
-from craft_application.models.constraints import ProjectName, VersionStr
+from craft_application.models.constraints import (
+    LicenseStr,
+    ProjectName,
+    ProprietaryLicenseStr,
+    SpdxLicenseStr,
+    VersionStr,
+)
 from hypothesis import given, strategies
 
 ALPHA_NUMERIC = [*ascii_letters, *digits]
@@ -205,6 +213,102 @@ def test_valid_version_str(version):
 def test_invalid_version_str(version):
     with pytest.raises(pydantic.ValidationError):
         _VersionStrModel(version=str(version))
+
+
+# endregion
+# region SpdxLicenseStr tests
+
+_VALID_SPDX_LICENCES = [
+    "MIT",
+    "GPL-3.0",
+    "GPL-3.0+",
+    "GPL-3.0+ and MIT",
+    "LGPL-3.0+ or BSD-3-Clause",
+]
+
+
+@pytest.fixture(params=_VALID_SPDX_LICENCES)
+def valid_spdx_license_str(request: pytest.FixtureRequest) -> str:
+    return cast(str, request.param)
+
+
+class _SpdxLicenseStrModel(pydantic.BaseModel):
+    license: SpdxLicenseStr
+
+
+def test_spdx_license_str_valid(valid_spdx_license_str: str) -> None:
+    model = _SpdxLicenseStrModel(license=valid_spdx_license_str)
+    assert model.license == valid_spdx_license_str
+
+
+@pytest.mark.parametrize("license_str", ["Copyright 1990", "Proprietary"])
+def test_spdx_license_str_invalid(license_str):
+    with pytest.raises(pydantic.ValidationError) as validation_error:
+        _ = _SpdxLicenseStrModel(license=license_str)
+    assert validation_error.match(
+        f"License '{license_str}' not valid. It must be in SPDX format.",
+    )
+
+
+def test_spdx_parser_with_none():
+    from craft_application.models.constraints import _validate_spdx_license
+
+    val = None
+    with pytest.raises(
+        ValueError, match=f"License '{val}' not valid. It must be in SPDX format."
+    ):
+        _validate_spdx_license(val)  # pyright: ignore[reportArgumentType]
+
+
+# endregion
+# region ProprietaryLicenseStr tests
+class _ProprietaryLicenseStrModel(pydantic.BaseModel):
+    license: ProprietaryLicenseStr
+
+
+def test_proprietary_str_valid():
+    model = _ProprietaryLicenseStrModel(license="proprietary")
+    assert model.license == "proprietary"
+
+
+def test_proprietary_str_invalid():
+    with pytest.raises(pydantic.ValidationError) as validation_error:
+        _ = _ProprietaryLicenseStrModel(
+            license="non-proprietary"  # pyright: ignore[reportArgumentType]
+        )
+    assert validation_error.match("Input should be 'proprietary'")
+
+
+# endregion
+# region LicenseStr tests
+class _LicenseStrModel(pydantic.BaseModel):
+    license: LicenseStr
+
+
+@pytest.mark.parametrize(
+    "license_str",
+    [*_VALID_SPDX_LICENCES, "proprietary"],
+)
+def test_license_str_valid(license_str):
+    model = _LicenseStrModel(license=license_str)
+    assert model.license == license_str
+
+
+@pytest.mark.parametrize("license_str", ["Copyright 1990", "Proprietary"])
+def test_license_str_invalid(license_str):
+    with pytest.raises(pydantic.ValidationError) as validation_error:
+        _ = _LicenseStrModel(license=license_str)
+    assert validation_error.match(
+        f"License '{license_str}' not valid. It must be in SPDX format.",
+    )
+
+
+def test_license_str_invalid_literal():
+    with pytest.raises(pydantic.ValidationError) as validation_error:
+        _ = _LicenseStrModel(
+            license="non-proprietary"  # pyright: ignore[reportArgumentType]
+        )
+    assert validation_error.match("Input should be 'proprietary'")
 
 
 # endregion

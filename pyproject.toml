@@ -11,6 +11,7 @@ dependencies = [
     "snap-helpers>=0.4.2",
     "platformdirs>=3.10",
     "pydantic~=2.0",
+    "license-expression>=30.0.0",
     # "pydantic-yaml<1.0",
     # Pygit2 and libgit2 need to match versions.
     # Further info: https://www.pygit2.org/install.html#version-numbers
