@@ -710,7 +710,7 @@ def test_lifecycle_project_variables(
     """Test that project variables are set after the lifecycle runs."""
 
     class LocalProject(models.Project):
-        color: str | None
+        color: str | None = None
 
     fake_project = LocalProject.unmarshal(
         {

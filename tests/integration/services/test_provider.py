@@ -1,6 +1,6 @@
 #  This file is part of craft-application.
 #
-#  Copyright 2023 Canonical Ltd.
+#  Copyright 2023-2024 Canonical Ltd.
 #
 #  This program is free software: you can redistribute it and/or modify it
 #  under the terms of the GNU Lesser General Public License version 3, as
@@ -27,9 +27,13 @@ from craft_providers import bases
 @pytest.mark.parametrize(
     "base_name",
     [
-        # Skipping Oracular test for now; see
-        # https://github.com/canonical/craft-providers/issues/593
-        pytest.param(("ubuntu", "24.10"), id="ubuntu_latest", marks=pytest.mark.skip),
+        pytest.param(
+            ("ubuntu", "24.10"),
+            id="ubuntu_latest",
+            marks=pytest.mark.skip(
+                reason="Skipping Oracular test for now; see https://github.com/canonical/craft-providers/issues/593"
+            ),
+        ),
         pytest.param(("ubuntu", "24.04"), id="ubuntu_lts"),
         pytest.param(("ubuntu", "22.04"), id="ubuntu_old_lts"),
     ],

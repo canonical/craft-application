@@ -141,7 +141,7 @@ class ProviderService(base.ProjectService):
 
     def get_base(
         self,
-        base_name: bases.BaseName | tuple[str, str],
+        base_name: bases.BaseName,
         *,
         instance_name: str,
         **kwargs: bool | str | pathlib.Path | None,
@@ -164,7 +164,7 @@ class ProviderService(base.ProjectService):
             # this only applies to our Buildd images (i.e.; Ubuntu)
             self.packages.extend(["gpg", "dirmngr"])
         return base_class(
-            alias=alias,  # pyright: ignore[reportArgumentType] craft-providers annotations are loose.
+            alias=alias,  # type: ignore[arg-type]
             compatibility_tag=f"{self._app.name}-{base_class.compatibility_tag}",
             hostname=instance_name,
             snaps=self.snaps,
