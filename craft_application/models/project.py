@@ -309,7 +309,9 @@ class Project(base.CraftBaseModel):
         """
         try:
             name, channel = base.split("@")
-            return craft_providers.bases.get_base_alias((name, channel))
+            return craft_providers.bases.get_base_alias(
+                craft_providers.bases.BaseName(name, channel)
+            )
         except (ValueError, BaseConfigurationError) as err:
             raise ValueError(f"Unknown base {base!r}") from err
 
