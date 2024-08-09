@@ -2,6 +2,37 @@
 Changelog
 *********
 
+4.0.0 (2024-Aug-09)
+-------------------
+
+Breaking changes
+================
+
+This release migrates to pydantic 2.
+Most exit codes use constants from the ``os`` module. (This makes
+craft-application 4 only compatible with Windows when using Python 3.11+.)
+
+Models
+======
+Add constrained string fields that check for SPDX license strings or the
+license string "proprietary".
+
+CraftBaseModel now includes a ``to_yaml_string`` method.
+
+Custom regex-based validators can be built with
+``models.get_validator_by_regex``. These can be used to make a better error
+message than the pydantic default.
+
+Git
+===
+
+The ``git`` submodule under ``launchpad`` is now its own module and can clone
+repositories and add remotes.
+
+
+For a complete list of commits, check out the `4.0.0`_ release on GitHub.
+
+
 3.2.0 (2024-Jul-07)
 -------------------
 
@@ -16,7 +47,7 @@ Documentation
 
 Add a how-to guide for using partitions.
 
-For a complete list of commits, check out the `3.2.0`_ release on GitHb.
+For a complete list of commits, check out the `3.2.0`_ release on GitHub.
 
 3.1.0 (2024-Jul-05)
 -------------------
@@ -144,3 +175,4 @@ For a complete list of commits, check out the `2.7.0`_ release on GitHub.
 .. _3.0.0: https://github.com/canonical/craft-application/releases/tag/3.0.0
 .. _3.1.0: https://github.com/canonical/craft-application/releases/tag/3.1.0
 .. _3.2.0: https://github.com/canonical/craft-application/releases/tag/3.2.0
+.. _4.0.0: https://github.com/canonical/craft-application/releases/tag/4.0.0
