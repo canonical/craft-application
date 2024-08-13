@@ -19,26 +19,20 @@ import itertools
 import json
 import string
 import subprocess
-from typing import Iterator
+from collections.abc import Iterator
 
-from hypothesis import given, strategies
 import craft_cli
 import pytest
 import pytest_subprocess
-
-from craft_application import ConfigModel
 from craft_application.services import config
-
+from hypothesis import given, strategies
 
 CRAFT_APPLICATION_TEST_ENTRY_VALUES = [
     *(
         ("verbosity_level", mode.name.lower(), mode)
         for mode in craft_cli.messages.EmitterMode
     ),
-    *(
-        ("verbosity_level", mode.name, mode)
-        for mode in craft_cli.messages.EmitterMode
-    ),
+    *(("verbosity_level", mode.name, mode) for mode in craft_cli.messages.EmitterMode),
     ("debug", "true", True),
     ("debug", "false", False),
     ("build_environment", "host", "host"),
@@ -128,11 +122,9 @@ def test_snap_config_handler(snap_config_handler, item: str, content: str):
     with pytest_subprocess.FakeProcess.context() as fp, pytest.MonkeyPatch.context() as mp:
         mp.setattr("snaphelpers._ctl.Popen", subprocess.Popen)
         fp.register(
-            ["/usr/bin/snapctl", "get", "-d", item],
-            stdout=json.dumps({item: content})
+            ["/usr/bin/snapctl", "get", "-d", item], stdout=json.dumps({item: content})
         )
         assert snap_config_handler.get_raw(item) == content
-
 
 
 @pytest.mark.parametrize(
@@ -146,8 +138,8 @@ def test_snap_config_handler(snap_config_handler, item: str, content: str):
         ("my_default_str", "default"),
         ("my_default_int", -1),
         ("my_default_bool", True),
-        ("my_default_factory", {"dict": "yes"})
-    ]
+        ("my_default_factory", {"dict": "yes"}),
+    ],
 )
 def test_default_config_handler_success(default_config_handler, item, expected):
     assert default_config_handler.get_raw(item) == expected
@@ -176,26 +168,31 @@ def test_default_config_handler_success(default_config_handler, item, expected):
         *(
             ("debug", {var: value}, True)
             for var, value in itertools.product(
-                ["CRAFT_DEBUG", "TESTCRAFT_DEBUG"],
-                ["true", "1", "yes", "Y"]
+                ["CRAFT_DEBUG", "TESTCRAFT_DEBUG"], ["true", "1", "yes", "Y"]
             )
         ),
         *(
             ("debug", {var: value}, False)
             for var, value in itertools.product(
-                ["CRAFT_DEBUG", "TESTCRAFT_DEBUG"],
-                ["false", "0", "no", "N"]
+                ["CRAFT_DEBUG", "TESTCRAFT_DEBUG"], ["false", "0", "no", "N"]
             )
         ),
         *(
             ("parallel_build_count", {var: str(value)}, value)
-            for var, value in itertools.product(["CRAFT_PARALLEL_BUILD_COUNT", "TESTCRAFT_PARALLEL_BUILD_COUNT"], range(10))
-        )
-    ]
+            for var, value in itertools.product(
+                ["CRAFT_PARALLEL_BUILD_COUNT", "TESTCRAFT_PARALLEL_BUILD_COUNT"],
+                range(10),
+            )
+        ),
+    ],
 )
 def test_config_service_converts_type(
-    monkeypatch: pytest.MonkeyPatch, fake_process: pytest_subprocess.FakeProcess,
-    fake_services, item: str, environment_variables: dict[str, str], expected
+    monkeypatch: pytest.MonkeyPatch,
+    fake_process: pytest_subprocess.FakeProcess,
+    fake_services,
+    item: str,
+    environment_variables: dict[str, str],
+    expected,
 ):
     monkeypatch.setattr("snaphelpers._ctl.Popen", subprocess.Popen)
     for key, value in environment_variables.items():

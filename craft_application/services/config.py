@@ -20,11 +20,13 @@ import abc
 import contextlib
 import enum
 import os
-from typing import TYPE_CHECKING, Any, cast, Iterable, TypeVar, final
-from craft_cli import emit
+from collections.abc import Iterable
+from typing import TYPE_CHECKING, Any, TypeVar, cast, final
+
 import pydantic
 import pydantic_core
 import snaphelpers
+from craft_cli import emit
 from typing_extensions import override
 
 from craft_application import application, util
@@ -44,7 +46,7 @@ class ConfigHandler(abc.ABC):
         self._app = app
 
     @abc.abstractmethod
-    def get_raw(self, item: str) -> Any:
+    def get_raw(self, item: str) -> Any:  # noqa: ANN401
         """Get the string value for a configuration item.
 
         :param item: the name of the configuration item.
@@ -83,7 +85,7 @@ class SnapConfigHandler(ConfigHandler):
         try:
             self._snap = snaphelpers.SnapConfig()
         except KeyError:
-            raise EnvironmentError("Not running as a snap.")
+            raise OSError("Not running as a snap.")
 
     @override
     def get_raw(self, item: str) -> Any:
@@ -91,7 +93,6 @@ class SnapConfigHandler(ConfigHandler):
             return self._snap.get(item)
         except snaphelpers.UnknownConfigKey as exc:
             raise KeyError(f"unknown snap config item: {item!r}") from exc
-
 
 
 @final
@@ -119,6 +120,7 @@ class DefaultConfigHandler(ConfigHandler):
 
         raise KeyError(f"config item {item!r} has no default value.")
 
+
 class ConfigService(base.AppService):
     """Application-wide configuration access."""
 
@@ -129,7 +131,7 @@ class ConfigService(base.AppService):
         app: application.AppMetadata,
         services: ServiceFactory,
         *,
-        extra_handlers: Iterable[type[ConfigHandler]] = ()
+        extra_handlers: Iterable[type[ConfigHandler]] = (),
     ) -> None:
         super().__init__(app, services)
         self._extra_handlers = extra_handlers
@@ -145,12 +147,14 @@ class ConfigService(base.AppService):
         ]
         try:
             snap_handler = SnapConfigHandler(self._app)
-        except EnvironmentError:
-            emit.debug("App is not running as a snap - snap config handler not created.")
+        except OSError:
+            emit.debug(
+                "App is not running as a snap - snap config handler not created."
+            )
         else:
             self._handlers.append(snap_handler)
 
-    def get(self, item: str) -> Any:
+    def get(self, item: str) -> Any:  # noqa: ANN401
         """Get the given configuration item."""
         if item not in self._app.config_model.model_fields:
             raise KeyError(r"unknown config item: {item!r}")

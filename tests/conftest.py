@@ -22,10 +22,9 @@ import shutil
 from importlib import metadata
 from typing import TYPE_CHECKING, Any
 
-import pydantic
-
 import craft_application
 import craft_parts
+import pydantic
 import pytest
 from craft_application import application, models, services, util
 from craft_cli import EmitterMode, emit
@@ -68,7 +67,9 @@ class FakeConfigModel(craft_application.ConfigModel):
     my_default_str: str = "default"
     my_default_int: int = -1
     my_default_bool: bool = True
-    my_default_factory: dict[str, str] = pydantic.Field(default_factory=lambda: {"dict": "yes"})
+    my_default_factory: dict[str, str] = pydantic.Field(
+        default_factory=lambda: {"dict": "yes"}
+    )
 
 
 @pytest.fixture(scope="session")
@@ -84,7 +85,7 @@ def default_app_metadata(fake_config_model) -> craft_application.AppMetadata:
             "testcraft",
             "A fake app for testing craft-application",
             source_ignore_patterns=["*.snap", "*.charm", "*.starcraft"],
-            config_model=fake_config_model
+            config_model=fake_config_model,
         )
 
 
@@ -98,7 +99,7 @@ def app_metadata(features, fake_config_model) -> craft_application.AppMetadata:
             source_ignore_patterns=["*.snap", "*.charm", "*.starcraft"],
             features=craft_application.AppFeatures(**features),
             docs_url="www.craft-app.com/docs/{version}",
-            config_model=fake_config_model
+            config_model=fake_config_model,
         )
 
 

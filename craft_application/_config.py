@@ -16,8 +16,8 @@
 """Configuration model for craft applications."""
 from __future__ import annotations
 
-import pydantic
 import craft_cli
+import pydantic
 
 
 class ConfigModel(pydantic.BaseModel):
