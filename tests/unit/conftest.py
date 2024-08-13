@@ -19,7 +19,13 @@ from __future__ import annotations
 from unittest import mock
 
 import pytest
-from craft_application import services
+from craft_application import services, util
+
+
+@pytest.fixture(params=["amd64", "arm64", "riscv64"])
+def fake_host_architecture(monkeypatch, request) -> str:
+    monkeypatch.setattr(util, "get_host_architecture", lambda: request.param)
+    return request.param
 
 
 @pytest.fixture()
