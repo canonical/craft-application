@@ -56,6 +56,7 @@ dev = [
     "pytest-cov==5.0.0",
     "pytest-mock==3.14.0",
     "pytest-rerunfailures==14.0",
+    "pytest-subprocess~=1.5.2",
     "pytest-time>=0.3.1",
     # Pin requests because of https://github.com/msabramo/requests-unixsocket/issues/73
     "requests<2.32.0",
