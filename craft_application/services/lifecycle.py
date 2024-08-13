@@ -151,6 +151,23 @@ class LifecycleService(base.ProjectService):
         self._lcm = self._init_lifecycle_manager()
         callbacks.register_post_step(self.post_prime, step_list=[Step.PRIME])
 
+    def _get_build_for(self) -> str:
+        """Get the ``build_for`` architecture for craft-parts.
+
+        The default behaviour is as follows:
+        1. If the build plan's ``build_for`` is ``all``, use the host architecture.
+        2. If it's anything else, use that.
+        3. If it's undefined, use the host architecture.
+        """
+        # Note: we fallback to the host's architecture here if the build plan
+        # is empty just to be able to create the LifecycleManager; this will
+        # correctly fail later on when run() is called (but not necessarily when
+        # something else like clean() is called).
+        # We also use the host arch if the build-for is 'all'
+        if self._build_plan and self._build_plan[0].build_for != "all":
+            return self._build_plan[0].build_for
+        return util.get_host_architecture()
+
     def _init_lifecycle_manager(self) -> LifecycleManager:
         """Create and return the Lifecycle manager.
 
@@ -160,15 +177,7 @@ class LifecycleService(base.ProjectService):
         emit.debug(f"Initialising lifecycle manager in {self._work_dir}")
         emit.trace(f"Lifecycle: {repr(self)}")
 
-        # Note: we fallback to the host's architecture here if the build plan
-        # is empty just to be able to create the LifecycleManager; this will
-        # correctly fail later on when run() is called (but not necessarily when
-        # something else like clean() is called).
-        # We also use the host arch if the build-for is 'all'
-        if self._build_plan and self._build_plan[0].build_for != "all":
-            build_for = self._build_plan[0].build_for
-        else:
-            build_for = util.get_host_architecture()
+        build_for = self._get_build_for()
 
         if self._project.package_repositories:
             self._manager_kwargs["package_repositories"] = (
