@@ -620,6 +620,7 @@ def test_run_managed_specified_platform(app, fake_project):
         ),
     ],
 )
+@pytest.mark.usefixtures("emitter")
 def test_get_dispatcher_error(
     monkeypatch, check, capsys, app, mock_dispatcher, managed, error, exit_code, message
 ):
@@ -911,6 +912,7 @@ def test_run_success_managed_inside_managed(
         ),
     ],
 )
+@pytest.mark.usefixtures("emitter")
 def test_run_error(
     monkeypatch,
     capsys,
@@ -980,6 +982,7 @@ def test_run_error_with_docs_url(
 
 
 @pytest.mark.parametrize("error", [KeyError(), ValueError(), Exception()])
+@pytest.mark.usefixtures("emitter")
 def test_run_error_debug(monkeypatch, mock_dispatcher, app, fake_project, error):
     app.set_project(fake_project)
     mock_dispatcher.load_command.side_effect = error

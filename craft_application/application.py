@@ -36,6 +36,7 @@ from craft_parts.plugins.plugins import PluginType
 from platformdirs import user_cache_path
 
 from craft_application import commands, errors, grammar, models, secrets, util
+from craft_application._config import ConfigModel
 from craft_application.errors import PathInvalidError
 from craft_application.models import BuildInfo, GrammarAwareProject
 
@@ -79,6 +80,7 @@ class AppMetadata:
     features: AppFeatures = AppFeatures()
     project_variables: list[str] = field(default_factory=lambda: ["version"])
     mandatory_adoptable_fields: list[str] = field(default_factory=lambda: ["version"])
+    config_model: type[ConfigModel] = ConfigModel
 
     ProjectClass: type[models.Project] = models.Project
     BuildPlannerClass: type[models.BuildPlanner] = models.BuildPlanner
@@ -429,7 +431,7 @@ class Application:
                     f"Internal error while loading {self.app.name}: {err!r}"
                 )
             )
-            if os.getenv("CRAFT_DEBUG") == "1":
+            if self.services.config.get("debug"):
                 raise
             sys.exit(os.EX_SOFTWARE)
 
@@ -572,7 +574,7 @@ class Application:
                 craft_cli.CraftError(f"{self.app.name} internal error: {err!r}"),
                 cause=err,
             )
-            if os.getenv("CRAFT_DEBUG") == "1":
+            if self.services.config.get("debug"):
                 raise
             return_code = os.EX_SOFTWARE
         else:
