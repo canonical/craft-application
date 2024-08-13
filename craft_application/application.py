@@ -17,6 +17,7 @@
 
 from __future__ import annotations
 
+import argparse
 import importlib
 import os
 import pathlib
@@ -493,6 +494,17 @@ class Application:
                     resolution="Ensure the path entered is correct.",
                 )
 
+    def get_arg_or_config(self, parsed_args: argparse.Namespace, item: str) -> Any:
+        """Get a configuration option that could be overridden by a command argument.
+
+        :param parsed_args: The argparse Namespace to check.
+        :param item: the name of the namespace or config item.
+        :returns: the requested value.
+        """
+        if hasattr(parsed_args, item):
+            return getattr(parsed_args, item)
+        return self.services.config.get(item)
+
     def run(  # noqa: PLR0912,PLR0915  (too many branches, too many statements)
         self,
     ) -> int:
@@ -508,8 +520,9 @@ class Application:
                 commands.AppCommand,
                 dispatcher.load_command(self.app_config),
             )
-            platform = getattr(dispatcher.parsed_args(), "platform", None)
-            build_for = getattr(dispatcher.parsed_args(), "build_for", None)
+            parsed_args = dispatcher.parsed_args()
+            platform = self.get_arg_or_config(parsed_args, "platform")
+            build_for = self.get_arg_or_config(parsed_args, "build_for")
 
             # Some commands (e.g. remote build) can allow multiple platforms
             # or build-fors, comma-separated. In these cases, we create the

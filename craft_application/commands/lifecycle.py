@@ -147,14 +147,12 @@ class LifecycleCommand(_BaseLifecycleCommand):
             "--platform",
             type=str,
             metavar="name",
-            default=self._services.config.get("platform"),
             help="Set platform to build for",
         )
         group.add_argument(
             "--build-for",
             type=str,
             metavar="arch",
-            default=self._services.config.get("build_for"),
             help="Set architecture to build for",
         )
 

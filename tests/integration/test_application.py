@@ -197,6 +197,7 @@ def test_version(capsys, monkeypatch, app):
     assert captured.out == "testcraft 3.14159\n"
 
 
+@pytest.mark.usefixtures("emitter")
 def test_non_lifecycle_command_does_not_require_project(monkeypatch, app):
     """Run a command without having a project instance shall not fail."""
     monkeypatch.setattr("sys.argv", ["testcraft", "nothing"])
