@@ -27,6 +27,7 @@ import pytest
 import pytest_check
 from craft_application import errors, models, util
 from craft_application.errors import InvalidParameterError, PartsLifecycleError
+from craft_application.models.project import BuildInfo
 from craft_application.services import lifecycle
 from craft_application.util import repositories
 from craft_parts import (
@@ -349,6 +350,71 @@ def test_get_primed_stage_packages(lifecycle_service):
     pkgs = lifecycle_service.get_primed_stage_packages(part_name="my-part")
 
     assert pkgs == ["pkg1", "pkg2"]
+
+
+@pytest.mark.parametrize(
+    ("build_plan", "expected"),
+    [
+        ([], None),
+        (
+            [
+                BuildInfo(
+                    "my-platform",
+                    build_on="any",
+                    build_for="all",
+                    base=bases.BaseName("ubuntu", "24.04"),
+                )
+            ],
+            None,
+        ),
+        (
+            [
+                BuildInfo(
+                    "my-platform",
+                    build_on="any",
+                    build_for="amd64",
+                    base=bases.BaseName("ubuntu", "24.04"),
+                )
+            ],
+            "amd64",
+        ),
+        (
+            [
+                BuildInfo(
+                    "my-platform",
+                    build_on="any",
+                    build_for="arm64",
+                    base=bases.BaseName("ubuntu", "24.04"),
+                )
+            ],
+            "arm64",
+        ),
+        (
+            [
+                BuildInfo(
+                    "my-platform",
+                    build_on="any",
+                    build_for="riscv64",
+                    base=bases.BaseName("ubuntu", "24.04"),
+                )
+            ],
+            "riscv64",
+        ),
+    ],
+)
+def test_get_build_for(
+    fake_host_architecture,
+    fake_parts_lifecycle: lifecycle.LifecycleService,
+    build_plan: list[BuildInfo],
+    expected: str | None,
+):
+    if expected is None:
+        expected = fake_host_architecture
+    fake_parts_lifecycle._build_plan = build_plan
+
+    actual = fake_parts_lifecycle._get_build_for()
+
+    assert actual == expected
 
 
 @pytest.mark.parametrize(
