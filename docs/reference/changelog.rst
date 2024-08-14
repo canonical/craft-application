@@ -2,6 +2,24 @@
 Changelog
 *********
 
+4.1.0 (2024-Aug-14)
+-------------------
+
+Application
+===========
+
+If an app isn't running from snap, the installed app will install the snap
+in the provider using the channel in the ``CRAFT_SNAP_CHANNEL`` environment
+variable, defaulting to ``latest/stable`` if none is set.
+
+Services
+========
+
+The ``LifecycleService`` now breaks out a ``_get_build_for`` method for
+apps to override if necessary.
+
+For a complete list of commits, check out the `4.1.0`_ release on GitHub.
+
 4.0.0 (2024-Aug-09)
 -------------------
 
@@ -176,3 +194,4 @@ For a complete list of commits, check out the `2.7.0`_ release on GitHub.
 .. _3.1.0: https://github.com/canonical/craft-application/releases/tag/3.1.0
 .. _3.2.0: https://github.com/canonical/craft-application/releases/tag/3.2.0
 .. _4.0.0: https://github.com/canonical/craft-application/releases/tag/4.0.0
+.. _4.1.0: https://github.com/canonical/craft-application/releases/tag/4.1.0
