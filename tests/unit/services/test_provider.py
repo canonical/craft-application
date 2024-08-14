@@ -31,12 +31,55 @@ from craft_providers.actions.snap_installer import Snap
 
 
 @pytest.mark.parametrize(
-    ("install_snap", "snaps"),
-    [(True, [Snap(name="testcraft", channel=None, classic=True)]), (False, [])],
+    ("install_snap", "environment", "snaps"),
+    [
+        (True, {}, [Snap(name="testcraft", channel="latest/stable", classic=True)]),
+        (
+            True,
+            {"CRAFT_SNAP_CHANNEL": "something"},
+            [Snap(name="testcraft", channel="something", classic=True)],
+        ),
+        (
+            True,
+            {"SNAP_NAME": "testcraft", "SNAP": "/snap/testcraft/x1"},
+            [Snap(name="testcraft", channel=None, classic=True)],
+        ),
+        (
+            True,
+            {
+                "SNAP_NAME": "testcraft",
+                "SNAP": "/snap/testcraft/x1",
+                "CRAFT_SNAP_CHANNEL": "something",
+            },
+            [Snap(name="testcraft", channel=None, classic=True)],
+        ),
+        (False, {}, []),
+        (False, {"CRAFT_SNAP_CHANNEL": "something"}, []),
+        (
+            False,
+            {
+                "SNAP_NAME": "testcraft",
+                "SNAP": "/snap/testcraft/x1",
+                "CRAFT_SNAP_CHANNEL": "something",
+            },
+            [],
+        ),
+    ],
 )
 def test_install_snap(
-    app_metadata, fake_project, fake_build_plan, fake_services, install_snap, snaps
+    monkeypatch,
+    app_metadata,
+    fake_project,
+    fake_build_plan,
+    fake_services,
+    install_snap,
+    environment,
+    snaps,
 ):
+    monkeypatch.delenv("SNAP", raising=False)
+    monkeypatch.delenv("CRAFT_SNAP_CHANNEL", raising=False)
+    for name, value in environment.items():
+        monkeypatch.setenv(name, value)
     service = provider.ProviderService(
         app_metadata,
         fake_services,
@@ -45,6 +88,7 @@ def test_install_snap(
         build_plan=fake_build_plan,
         install_snap=install_snap,
     )
+    service.setup()
 
     assert service.snaps == snaps
 
