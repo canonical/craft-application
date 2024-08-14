@@ -429,7 +429,7 @@ def test_lifecycle_error_logging(monkeypatch, tmp_path, create_app):
     assert parts_message in log_contents
 
 
-@pytest.mark.usefixtures("pretend_jammy")
+@pytest.mark.usefixtures("pretend_jammy", "emitter")
 def test_runtime_error_logging(monkeypatch, tmp_path, create_app, mocker):
     monkeypatch.chdir(tmp_path)
     shutil.copytree(INVALID_PROJECTS_DIR / "build-error", tmp_path, dirs_exist_ok=True)
