@@ -16,6 +16,7 @@
 """Tests for BaseProject"""
 import copy
 import pathlib
+import re
 import textwrap
 from textwrap import dedent
 
@@ -29,7 +30,6 @@ from craft_application.models import (
     DEVEL_BASE_WARNING,
     BuildInfo,
     BuildPlanner,
-    Platform,
     Project,
     constraints,
 )
@@ -42,10 +42,10 @@ PARTS_DICT = {"my-part": {"plugin": "nil"}}
 def basic_project():
     # pyright doesn't like these types and doesn't have a pydantic plugin like mypy.
     # Because of this, we need to silence several errors in these constants.
-    return Project(  # pyright: ignore[reportCallIssue]
-        name="project-name",  # pyright: ignore[reportGeneralTypeIssues]
-        version="1.0",  # pyright: ignore[reportGeneralTypeIssues]
-        platforms={"arm64": None},
+    return Project(
+        name="project-name",
+        version="1.0",
+        platforms={"arm64": None},  # pyright: ignore[reportArgumentType]
         parts=PARTS_DICT,
     )
 
@@ -71,19 +71,21 @@ def basic_project_dict():
 
 @pytest.fixture()
 def full_project():
-    return Project(  # pyright: ignore[reportCallIssue]
-        name="full-project",  # pyright: ignore[reportGeneralTypeIssues]
-        title="A fully-defined project",  # pyright: ignore[reportGeneralTypeIssues]
-        base="ubuntu@24.04",
-        version="1.0.0.post64+git12345678",  # pyright: ignore[reportGeneralTypeIssues]
-        contact="author@project.org",
-        issues="https://github.com/canonical/craft-application/issues",
-        source_code="https://github.com/canonical/craft-application",  # pyright: ignore[reportGeneralTypeIssues]
-        summary="A fully-defined craft-application project.",  # pyright: ignore[reportGeneralTypeIssues]
-        description="A fully-defined craft-application project.\nWith more than one line.\n",
-        license="LGPLv3",
-        platforms={"arm64": None},
-        parts=PARTS_DICT,
+    return Project.model_validate(
+        {
+            "name": "full-project",
+            "title": "A fully-defined project",
+            "base": "ubuntu@24.04",
+            "version": "1.0.0.post64+git12345678",
+            "contact": "author@project.org",
+            "issues": "https://github.com/canonical/craft-application/issues",
+            "source_code": "https://github.com/canonical/craft-application",
+            "summary": "A fully-defined craft-application project.",
+            "description": "A fully-defined craft-application project.\nWith more than one line.\n",
+            "license": "LGPLv3",
+            "platforms": {"arm64": None},
+            "parts": PARTS_DICT,
+        }
     )
 
 
@@ -223,13 +225,14 @@ def test_from_yaml_data_failure(project_file, error_class):
         ("full_project", PROJECTS_DIR / "full_project.yaml"),
     ],
 )
-def test_to_yaml_file(project_fixture, expected_file, tmp_path, request):
+def test_to_yaml(project_fixture, expected_file, tmp_path, request):
     project = request.getfixturevalue(project_fixture)
     actual_file = tmp_path / "out.yaml"
 
     project.to_yaml_file(actual_file)
 
     assert actual_file.read_text() == expected_file.read_text()
+    assert actual_file.read_text() == project.to_yaml_string()
 
 
 def test_effective_base_is_base(full_project):
@@ -237,7 +240,7 @@ def test_effective_base_is_base(full_project):
 
 
 class FakeBuildBaseProject(Project):
-    build_base: str | None  # pyright: ignore[reportGeneralTypeIssues]
+    build_base: str | None = None
 
 
 def test_effective_base_is_build_base():
@@ -246,7 +249,7 @@ def test_effective_base_is_build_base():
         name="project-name",  # pyright: ignore[reportGeneralTypeIssues]
         version="1.0",  # pyright: ignore[reportGeneralTypeIssues]
         parts={},
-        platforms={"arm64": None},
+        platforms={"arm64": None},  # pyright: ignore[reportArgumentType]
         base="ubuntu@22.04",
         build_base="ubuntu@24.04",
     )
@@ -255,11 +258,11 @@ def test_effective_base_is_build_base():
 
 
 def test_effective_base_unknown():
-    project = FakeBuildBaseProject(  # pyright: ignore[reportCallIssue]
-        name="project-name",  # pyright: ignore[reportGeneralTypeIssues]
-        version="1.0",  # pyright: ignore[reportGeneralTypeIssues]
+    project = FakeBuildBaseProject(
+        name="project-name",
+        version="1.0",
         parts={},
-        platforms={"arm64": None},
+        platforms={"arm64": None},  # pyright: ignore[reportArgumentType]
         base=None,
         build_base=None,
     )
@@ -272,11 +275,11 @@ def test_effective_base_unknown():
 
 def test_devel_base_devel_build_base(emitter):
     """Base can be 'devel' when the build-base is 'devel'."""
-    _ = FakeBuildBaseProject(  # pyright: ignore[reportCallIssue]
-        name="project-name",  # pyright: ignore[reportGeneralTypeIssues]
-        version="1.0",  # pyright: ignore[reportGeneralTypeIssues]
+    _ = FakeBuildBaseProject(
+        name="project-name",
+        version="1.0",
         parts={},
-        platforms={"arm64": None},
+        platforms={"arm64": None},  # pyright: ignore[reportArgumentType]
         base=f"ubuntu@{DEVEL_BASE_INFOS[0].current_devel_base.value}",
         build_base=f"ubuntu@{DEVEL_BASE_INFOS[0].current_devel_base.value}",
     )
@@ -286,11 +289,11 @@ def test_devel_base_devel_build_base(emitter):
 
 def test_devel_base_no_base():
     """Do not validate the build-base if there is no base."""
-    _ = FakeBuildBaseProject(  # pyright: ignore[reportCallIssue]
-        name="project-name",  # pyright: ignore[reportGeneralTypeIssues]
-        version="1.0",  # pyright: ignore[reportGeneralTypeIssues]
+    _ = FakeBuildBaseProject(
+        name="project-name",
+        version="1.0",
         parts={},
-        platforms={"arm64": None},
+        platforms={"arm64": None},  # pyright: ignore[reportArgumentType]
     )
 
 
@@ -301,22 +304,22 @@ def test_devel_base_no_base_alias(mocker):
         return_value=None,
     )
 
-    _ = FakeBuildBaseProject(  # pyright: ignore[reportCallIssue]
-        name="project-name",  # pyright: ignore[reportGeneralTypeIssues]
-        version="1.0",  # pyright: ignore[reportGeneralTypeIssues]
+    _ = FakeBuildBaseProject(
+        name="project-name",
+        version="1.0",
         parts={},
-        platforms={"arm64": None},
+        platforms={"arm64": None},  # pyright: ignore[reportArgumentType]
     )
 
 
 def test_devel_base_no_build_base():
     """Base can be 'devel' if the build-base is not set."""
-    _ = FakeBuildBaseProject(  # pyright: ignore[reportCallIssue]
-        name="project-name",  # pyright: ignore[reportGeneralTypeIssues]
-        version="1.0",  # pyright: ignore[reportGeneralTypeIssues]
+    _ = FakeBuildBaseProject(
+        name="project-name",
+        version="1.0",
         parts={},
         base=f"ubuntu@{DEVEL_BASE_INFOS[0].current_devel_base.value}",
-        platforms={"arm64": None},
+        platforms={"arm64": None},  # pyright: ignore[reportArgumentType]
     )
 
 
@@ -412,19 +415,37 @@ def test_unmarshal_undefined_repositories(full_project_dict):
     assert project.package_repositories is None
 
 
-def test_unmarshal_invalid_repositories(full_project_dict):
+@pytest.mark.parametrize(
+    ("repositories_val", "error_lines"),
+    [
+        (
+            [[]],
+            [
+                "- input should be a valid dictionary (in field 'package-repositories[0]')"
+            ],
+        ),
+        (
+            [{}],
+            [
+                "- field 'type' required in 'package-repositories[0]' configuration",
+                "- field 'url' required in 'package-repositories[0]' configuration",
+                "- field 'key-id' required in 'package-repositories[0]' configuration",
+            ],
+        ),
+    ],
+)
+def test_unmarshal_invalid_repositories(
+    full_project_dict, repositories_val, error_lines
+):
     """Test that package-repositories are validated in Project with package repositories feature."""
-    full_project_dict["package-repositories"] = [[]]
+    full_project_dict["package-repositories"] = repositories_val
     project_path = pathlib.Path("myproject.yaml")
 
     with pytest.raises(CraftValidationError) as error:
         Project.from_yaml_data(full_project_dict, project_path)
 
-    assert error.value.args[0] == (
-        "Bad myproject.yaml content:\n"
-        "- field 'type' required in 'package-repositories[0]' configuration\n"
-        "- field 'url' required in 'package-repositories[0]' configuration\n"
-        "- field 'key-id' required in 'package-repositories[0]' configuration"
+    assert error.value.args[0] == "\n".join(
+        ("Bad myproject.yaml content:", *error_lines)
     )
 
 
@@ -596,10 +617,30 @@ def test_get_build_plan_all_with_other_platforms(platforms):
 def test_get_build_plan_build_on_all():
     """`build-on: all` is not allowed."""
     with pytest.raises(pydantic.ValidationError) as raised:
-        BuildPlanner(
-            base="ubuntu@24.04",
-            platforms={"arm64": Platform(build_on=["all"], build_for=["s390x"])},
-            build_base=None,
+        BuildPlanner.model_validate(
+            {
+                "base": "ubuntu@24.04",
+                "platforms": {
+                    "arm64": {"build-on": ["all"], "build-for": ["s390x"]},
+                },
+                "build_base": None,
+            }
         )
 
     assert "'all' cannot be used for 'build-on'" in str(raised.value)
+
+
+def test_invalid_part_error(basic_project_dict):
+    """Check that the part name is included in the error message."""
+    basic_project_dict["parts"] = {
+        "p1": {"plugin": "badplugin"},
+        "p2": {"plugin": "nil", "bad-key": 1},
+    }
+    expected = textwrap.dedent(
+        """\
+    Bad bla.yaml content:
+    - plugin not registered: 'badplugin' (in field 'parts.p1')
+    - extra inputs are not permitted (in field 'parts.p2.bad-key')"""
+    )
+    with pytest.raises(CraftValidationError, match=re.escape(expected)):
+        Project.from_yaml_data(basic_project_dict, filepath=pathlib.Path("bla.yaml"))

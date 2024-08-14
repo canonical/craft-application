@@ -87,7 +87,7 @@ def test_unmarshal_invalid_provider_error():
 
     assert str(raised.value) == (
         "Bad snap config content:\n"
-        "- unexpected value; permitted: 'lxd', 'multipass' (in field 'provider')"
+        "- input should be 'lxd' or 'multipass' (in field 'provider')"
     )
 
 
@@ -98,7 +98,7 @@ def test_unmarshal_extra_data_error():
 
     assert str(raised.value) == (
         "Bad snap config content:\n"
-        "- extra field 'test' not permitted in top-level configuration"
+        "- extra inputs are not permitted (in field 'test')"
     )
 
 
