@@ -74,8 +74,7 @@ class ProviderService(base.ProjectService):
         self._work_dir = work_dir
         self._build_plan = build_plan
         self.snaps: list[Snap] = []
-        if install_snap:
-            self.snaps.append(Snap(name=app.name, channel=None, classic=True))
+        self._install_snap = install_snap
         self.environment: dict[str, str | None] = {self.managed_mode_env_var: "1"}
         self.packages: list[str] = []
         # this is a private attribute because it may not reflect the actual
@@ -93,6 +92,14 @@ class ProviderService(base.ProjectService):
         for name in DEFAULT_FORWARD_ENVIRONMENT_VARIABLES:
             if name in os.environ:
                 self.environment[name] = os.getenv(name)
+
+        if self._install_snap:
+            channel = (
+                None
+                if util.is_running_from_snap(self._app.name)
+                else os.getenv("CRAFT_SNAP_CHANNEL", "latest/stable")
+            )
+            self.snaps.append(Snap(name=self._app.name, channel=channel, classic=True))
 
     @contextlib.contextmanager
     def instance(
