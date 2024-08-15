@@ -29,7 +29,7 @@ import snaphelpers
 from craft_cli import emit
 from typing_extensions import override
 
-from craft_application import application, util
+from craft_application import _config, application, util
 from craft_application.services import base
 
 if TYPE_CHECKING:
@@ -72,8 +72,17 @@ class AppEnvironmentHandler(ConfigHandler):
 class CraftEnvironmentHandler(ConfigHandler):
     """Configuration handler to get values from CRAFT environment variables."""
 
+    def __init__(self, app: application.AppMetadata) -> None:
+        super().__init__(app)
+        self._fields = _config.ConfigModel.model_fields
+
     @override
     def get_raw(self, item: str) -> str:
+        # Ensure that CRAFT_* env vars can only be used for configuration items
+        # known to craft-application.
+        if item not in self._fields:
+            raise KeyError(f"{item!r} not a general craft-application config item.")
+
         return os.environ[f"CRAFT_{item.upper()}"]
 
 

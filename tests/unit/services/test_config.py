@@ -21,6 +21,7 @@ import string
 import subprocess
 from collections.abc import Iterator
 
+import craft_application
 import craft_cli
 import pytest
 import pytest_subprocess
@@ -100,7 +101,7 @@ def test_app_environment_handler(app_environment_handler, item: str, content: st
 
 
 @given(
-    item=strategies.text(alphabet=string.ascii_letters + "_", min_size=1),
+    item=strategies.sampled_from(list(craft_application.ConfigModel.model_fields)),
     content=strategies.text(
         alphabet=strategies.characters(categories=["L", "M", "N", "P", "S", "Z"])
     ),
@@ -109,6 +110,27 @@ def test_craft_environment_handler(craft_environment_handler, item: str, content
     with pytest.MonkeyPatch.context() as monkeypatch:
         monkeypatch.setenv(f"CRAFT_{item.upper()}", content)
 
+        assert craft_environment_handler.get_raw(item) == content
+
+
+@pytest.mark.parametrize(("item", "content", "_"), CRAFT_APPLICATION_TEST_ENTRY_VALUES)
+@pytest.mark.usefixtures("_")
+def test_craft_environment_handler_success(
+    monkeypatch, craft_environment_handler, item: str, content: str
+):
+    monkeypatch.setenv(f"CRAFT_{item.upper()}", content)
+
+    assert craft_environment_handler.get_raw(item) == content
+
+
+@pytest.mark.parametrize(("item", "content", "_"), APP_SPECIFIC_TEST_ENTRY_VALUES)
+@pytest.mark.usefixtures("_")
+def test_craft_environment_handler_error(
+    monkeypatch, craft_environment_handler, item: str, content: str
+):
+    monkeypatch.setenv(f"CRAFT_{item.upper()}", content)
+
+    with pytest.raises(KeyError):
         assert craft_environment_handler.get_raw(item) == content
 
 
