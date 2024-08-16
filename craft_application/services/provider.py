@@ -22,6 +22,7 @@ import os
 import pathlib
 import pkgutil
 import sys
+import urllib.request
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -45,7 +46,7 @@ if TYPE_CHECKING:  # pragma: no cover
     from craft_application.services import ServiceFactory
 
 
-DEFAULT_FORWARD_ENVIRONMENT_VARIABLES = ("http_proxy", "https_proxy", "no_proxy")
+DEFAULT_FORWARD_ENVIRONMENT_VARIABLES = ()
 
 
 class ProviderService(base.ProjectService):
@@ -92,6 +93,10 @@ class ProviderService(base.ProjectService):
         for name in DEFAULT_FORWARD_ENVIRONMENT_VARIABLES:
             if name in os.environ:
                 self.environment[name] = os.getenv(name)
+
+        for scheme, value in urllib.request.getproxies().items():
+            self.environment[f"{scheme.lower()}_proxy"] = value
+            self.environment[f"{scheme.upper()}_PROXY"] = value
 
         if self._install_snap:
             channel = (
