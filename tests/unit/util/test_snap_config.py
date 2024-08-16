@@ -24,14 +24,14 @@ from craft_application.util import SnapConfig, get_snap_config, is_running_from_
 from snaphelpers import SnapCtlError
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_config(mocker):
     return mocker.patch(
         "craft_application.util.snap_config.SnapConfigOptions", autospec=True
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_is_running_from_snap(mocker):
     return mocker.patch(
         "craft_application.util.snap_config.is_running_from_snap",

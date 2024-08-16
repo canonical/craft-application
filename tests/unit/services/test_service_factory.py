@@ -22,7 +22,7 @@ from craft_application import AppMetadata, services
 from craft_cli import emit
 
 
-@pytest.fixture()
+@pytest.fixture
 def factory(
     app_metadata, fake_project, fake_package_service_class, fake_lifecycle_service_class
 ):

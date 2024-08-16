@@ -42,7 +42,7 @@ def pytest_runtest_setup(item: pytest.Item):
         pytest.skip("multipass not installed")
 
 
-@pytest.fixture()
+@pytest.fixture
 def provider_service(app_metadata, fake_project, fake_build_plan, fake_services):
     """Provider service with install snap disabled for integration tests"""
     return provider.ProviderService(
@@ -63,7 +63,7 @@ def anonymous_remote_build_service(default_app_metadata):
     return service
 
 
-@pytest.fixture()
+@pytest.fixture
 def snap_safe_tmp_path():
     """A temporary path accessible to snap-confined craft providers.
 
@@ -87,7 +87,7 @@ def snap_safe_tmp_path():
         yield pathlib.Path(temp_dir)
 
 
-@pytest.fixture()
+@pytest.fixture
 def pretend_jammy(mocker) -> None:
     """Pretend we're running on jammy. Used for tests that use destructive mode."""
     fake_host = bases.BaseName(name="ubuntu", version="22.04")

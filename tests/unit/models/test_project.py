@@ -38,7 +38,7 @@ PROJECTS_DIR = pathlib.Path(__file__).parent / "project_models"
 PARTS_DICT = {"my-part": {"plugin": "nil"}}
 
 
-@pytest.fixture()
+@pytest.fixture
 def basic_project():
     # pyright doesn't like these types and doesn't have a pydantic plugin like mypy.
     # Because of this, we need to silence several errors in these constants.
@@ -63,13 +63,13 @@ BASIC_PROJECT_DICT = {
 }
 
 
-@pytest.fixture()
+@pytest.fixture
 def basic_project_dict():
     """Provides a modifiable copy of ``BASIC_PROJECT_DICT``"""
     return copy.deepcopy(BASIC_PROJECT_DICT)
 
 
-@pytest.fixture()
+@pytest.fixture
 def full_project():
     return Project.model_validate(
         {
@@ -115,7 +115,7 @@ FULL_PROJECT_DICT = {
 }
 
 
-@pytest.fixture()
+@pytest.fixture
 def full_project_dict():
     """Provides a modifiable copy of ``FULL_PROJECT_DICT``"""
     return copy.deepcopy(FULL_PROJECT_DICT)

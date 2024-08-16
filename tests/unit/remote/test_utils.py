@@ -152,7 +152,7 @@ def test_get_build_id_directory_is_not_a_directory_error():
 ################
 
 
-@pytest.fixture()
+@pytest.fixture
 def stub_directory_tree():
     """Creates a tree of directories and files."""
     root_dir = Path("root-dir")

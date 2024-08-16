@@ -49,7 +49,7 @@ class FakeLaunchpadObject(LaunchpadObject):
         raise NotImplementedError
 
 
-@pytest.fixture()
+@pytest.fixture
 def fake_obj(fake_launchpad, mock_lplib_entry):
     return FakeLaunchpadObject(fake_launchpad, mock_lplib_entry)
 

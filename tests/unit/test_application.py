@@ -391,7 +391,7 @@ class FakeApplication(application.Application):
         return yaml_data
 
 
-@pytest.fixture()
+@pytest.fixture
 def app(app_metadata, fake_services):
     return FakeApplication(app_metadata, fake_services)
 
@@ -416,12 +416,12 @@ class FakePlugin(craft_parts.plugins.Plugin):
         return set()
 
 
-@pytest.fixture()
+@pytest.fixture
 def fake_plugin(app_metadata, fake_services):
     return FakePlugin(app_metadata, fake_services)
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_dispatcher(monkeypatch):
     dispatcher = mock.Mock(spec_set=craft_cli.Dispatcher)
     monkeypatch.setattr("craft_cli.Dispatcher", mock.Mock(return_value=dispatcher))
@@ -1206,7 +1206,7 @@ def test_filter_plan(mocker, plan, platform, build_for, host_arch, result):
     assert application.filter_plan(plan, platform, build_for, host_arch) == result
 
 
-@pytest.fixture()
+@pytest.fixture
 def fake_project_file(monkeypatch, tmp_path):
     project_dir = tmp_path / "project"
     project_dir.mkdir()
@@ -1248,7 +1248,7 @@ def test_work_dir_project_managed(monkeypatch, app_metadata, fake_services):
     assert project.version == "1.0"
 
 
-@pytest.fixture()
+@pytest.fixture
 def environment_project(monkeypatch, tmp_path):
     project_dir = tmp_path / "project"
     project_dir.mkdir()
@@ -1334,7 +1334,7 @@ def test_application_expand_environment(app_metadata, fake_services):
     ]
 
 
-@pytest.fixture()
+@pytest.fixture
 def build_secrets_project(monkeypatch, tmp_path):
     project_dir = tmp_path / "project"
     project_dir.mkdir()
@@ -1508,7 +1508,7 @@ def test_mandatory_adoptable_fields(tmp_path, app_metadata, fake_services):
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def grammar_project_mini(tmp_path):
     """A project that builds on amd64 to riscv64 and s390x."""
     contents = dedent(
@@ -1551,21 +1551,21 @@ def grammar_project_mini(tmp_path):
     project_file.write_text(contents)
 
 
-@pytest.fixture()
+@pytest.fixture
 def non_grammar_project_full(tmp_path):
     """A project that builds on amd64 to riscv64."""
     project_file = tmp_path / "testcraft.yaml"
     project_file.write_text(FULL_PROJECT_YAML)
 
 
-@pytest.fixture()
+@pytest.fixture
 def grammar_project_full(tmp_path):
     """A project that builds on amd64 to riscv64 and s390x."""
     project_file = tmp_path / "testcraft.yaml"
     project_file.write_text(FULL_GRAMMAR_PROJECT_YAML)
 
 
-@pytest.fixture()
+@pytest.fixture
 def non_grammar_build_plan(mocker):
     """A build plan to build on amd64 to riscv64."""
     host_arch = "amd64"
@@ -1582,7 +1582,7 @@ def non_grammar_build_plan(mocker):
     mocker.patch.object(models.BuildPlanner, "get_build_plan", return_value=build_plan)
 
 
-@pytest.fixture()
+@pytest.fixture
 def grammar_build_plan(mocker):
     """A build plan to build on amd64 to riscv64 and s390x."""
     host_arch = "amd64"
@@ -1600,7 +1600,7 @@ def grammar_build_plan(mocker):
     mocker.patch.object(models.BuildPlanner, "get_build_plan", return_value=build_plan)
 
 
-@pytest.fixture()
+@pytest.fixture
 def grammar_app_mini(
     tmp_path,
     grammar_project_mini,  # noqa: ARG001
@@ -1614,7 +1614,7 @@ def grammar_app_mini(
     return app
 
 
-@pytest.fixture()
+@pytest.fixture
 def non_grammar_app_full(
     tmp_path,
     non_grammar_project_full,  # noqa: ARG001
@@ -1628,7 +1628,7 @@ def non_grammar_app_full(
     return app
 
 
-@pytest.fixture()
+@pytest.fixture
 def grammar_app_full(
     tmp_path,
     grammar_project_full,  # noqa: ARG001
@@ -1797,7 +1797,7 @@ class FakePartitionsApplication(FakeApplication):
         return ["default", "mypartition"]
 
 
-@pytest.fixture()
+@pytest.fixture
 def environment_partitions_project(monkeypatch, tmp_path):
     project_dir = tmp_path / "project"
     project_dir.mkdir()

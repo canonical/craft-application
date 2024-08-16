@@ -58,7 +58,7 @@ class FakePartsLifecycle(lifecycle.LifecycleService):
         return mock_lcm
 
 
-@pytest.fixture()
+@pytest.fixture
 def fake_parts_lifecycle(
     app_metadata, fake_project, fake_services, tmp_path, fake_build_plan
 ):
