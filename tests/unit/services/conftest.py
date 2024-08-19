@@ -50,7 +50,7 @@ def get_mock_callable(**kwargs):
     return mock.Mock(spec_set=Callable, **kwargs)
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_project_entry():
     return get_mock_lazr_entry(
         resource_type="project",
@@ -58,7 +58,7 @@ def mock_project_entry():
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_git_repository():
     return get_mock_lazr_entry(
         "git_repository",
@@ -67,7 +67,7 @@ def mock_git_repository():
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def fake_launchpad(app_metadata, mock_git_repository, mock_project_entry):
     me = mock.Mock(lazr.restfulclient.resource.Entry)
     me.name = "craft_test_user"
@@ -109,7 +109,7 @@ def fake_launchpad(app_metadata, mock_git_repository, mock_project_entry):
     return launchpad.Launchpad(app_metadata.name, lp)
 
 
-@pytest.fixture()
+@pytest.fixture
 def remote_build_service(app_metadata, fake_services, fake_launchpad):
     class FakeRemoteBuildService(services.RemoteBuildService):
         RecipeClass = launchpad.models.SnapRecipe

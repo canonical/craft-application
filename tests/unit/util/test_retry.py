@@ -33,7 +33,7 @@ def always_raises(*_args, **_kwargs) -> None:
     raise MyError("raised an error!")
 
 
-@pytest.fixture()
+@pytest.fixture
 def mocked_sleep(mocker):
     return mocker.patch.object(time, "sleep")
 

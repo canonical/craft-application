@@ -40,7 +40,7 @@ def _create_fake_build_plan(num_infos: int = 1) -> list[models.BuildInfo]:
     return [models.BuildInfo("foo", arch, arch, base)] * num_infos
 
 
-@pytest.fixture()
+@pytest.fixture
 def features(request) -> dict[str, bool]:
     """Fixture that controls the enabled features.
 
@@ -69,7 +69,7 @@ def default_app_metadata() -> craft_application.AppMetadata:
         )
 
 
-@pytest.fixture()
+@pytest.fixture
 def app_metadata(features) -> craft_application.AppMetadata:
     with pytest.MonkeyPatch.context() as m:
         m.setattr(metadata, "version", lambda _: "3.14159")
@@ -82,7 +82,7 @@ def app_metadata(features) -> craft_application.AppMetadata:
         )
 
 
-@pytest.fixture()
+@pytest.fixture
 def app_metadata_docs(features) -> craft_application.AppMetadata:
     with pytest.MonkeyPatch.context() as m:
         m.setattr(metadata, "version", lambda _: "3.14159")
@@ -95,7 +95,7 @@ def app_metadata_docs(features) -> craft_application.AppMetadata:
         )
 
 
-@pytest.fixture()
+@pytest.fixture
 def fake_project() -> models.Project:
     arch = util.get_host_architecture()
     return models.Project(
@@ -116,13 +116,13 @@ def fake_project() -> models.Project:
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def fake_build_plan(request) -> list[models.BuildInfo]:
     num_infos = getattr(request, "param", 1)
     return _create_fake_build_plan(num_infos)
 
 
-@pytest.fixture()
+@pytest.fixture
 def full_build_plan(mocker) -> list[models.BuildInfo]:
     """A big build plan with multiple bases and build-for targets."""
     host_arch = util.get_host_architecture()
@@ -142,7 +142,7 @@ def full_build_plan(mocker) -> list[models.BuildInfo]:
     return build_plan
 
 
-@pytest.fixture()
+@pytest.fixture
 def enable_partitions() -> Iterator[craft_parts.Features]:
     """Enable the partitions feature in craft_parts for the relevant test."""
     enable_overlay = craft_parts.Features().enable_overlay
@@ -152,7 +152,7 @@ def enable_partitions() -> Iterator[craft_parts.Features]:
     craft_parts.Features.reset()
 
 
-@pytest.fixture()
+@pytest.fixture
 def enable_overlay() -> Iterator[craft_parts.Features]:
     """Enable the overlay feature in craft_parts for the relevant test."""
     if not os.getenv("CI") and not shutil.which("fuse-overlayfs"):
@@ -164,7 +164,7 @@ def enable_overlay() -> Iterator[craft_parts.Features]:
     craft_parts.Features.reset()
 
 
-@pytest.fixture()
+@pytest.fixture
 def lifecycle_service(
     app_metadata, fake_project, fake_services, fake_build_plan, mocker, tmp_path
 ) -> services.LifecycleService:
@@ -194,7 +194,7 @@ def lifecycle_service(
     return service
 
 
-@pytest.fixture()
+@pytest.fixture
 def request_service(app_metadata, fake_services) -> services.RequestService:
     """A working version of the requests service."""
     return services.RequestService(app=app_metadata, services=fake_services)
@@ -208,7 +208,7 @@ def emitter_verbosity(request):
     emit.set_mode(reset_verbosity)
 
 
-@pytest.fixture()
+@pytest.fixture
 def fake_provider_service_class(fake_build_plan):
     class FakeProviderService(services.ProviderService):
         def __init__(
@@ -229,7 +229,7 @@ def fake_provider_service_class(fake_build_plan):
     return FakeProviderService
 
 
-@pytest.fixture()
+@pytest.fixture
 def fake_package_service_class():
     class FakePackageService(services.PackageService):
         def pack(
@@ -247,7 +247,7 @@ def fake_package_service_class():
     return FakePackageService
 
 
-@pytest.fixture()
+@pytest.fixture
 def fake_lifecycle_service_class(tmp_path, fake_build_plan):
     class FakeLifecycleService(services.LifecycleService):
         def __init__(
@@ -272,7 +272,7 @@ def fake_lifecycle_service_class(tmp_path, fake_build_plan):
     return FakeLifecycleService
 
 
-@pytest.fixture()
+@pytest.fixture
 def fake_services(
     app_metadata, fake_project, fake_lifecycle_service_class, fake_package_service_class
 ):

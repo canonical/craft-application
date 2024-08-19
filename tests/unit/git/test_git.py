@@ -34,7 +34,7 @@ from craft_application.remote import (
 )
 
 
-@pytest.fixture()
+@pytest.fixture
 def empty_working_directory(tmp_path) -> Iterator[Path]:
     cwd = pathlib.Path.cwd()
 
@@ -46,7 +46,7 @@ def empty_working_directory(tmp_path) -> Iterator[Path]:
     os.chdir(cwd)
 
 
-@pytest.fixture()
+@pytest.fixture
 def empty_repository(empty_working_directory) -> Path:
     subprocess.run(["git", "init"], check=True)
     return cast(Path, empty_working_directory)
@@ -611,7 +611,7 @@ def test_check_git_repo_for_remote_build_invalid(empty_working_directory):
         check_git_repo_for_remote_build(empty_working_directory)
 
 
-@pytest.fixture()
+@pytest.fixture
 def patched_cloning_process(mocker):
     return mocker.patch(
         "craft_parts.utils.os_utils.process_run",
