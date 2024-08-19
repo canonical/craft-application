@@ -20,9 +20,51 @@ import craft_parts
 import pydantic
 import pytest
 import pytest_check
-from craft_application.errors import CraftValidationError, PartsLifecycleError
+import yaml
+from craft_application.errors import (
+    CraftValidationError,
+    PartsLifecycleError,
+    YamlError,
+)
 from pydantic import BaseModel
 from typing_extensions import Self
+
+
+@pytest.mark.parametrize(
+    ("original", "expected"),
+    [
+        (
+            yaml.YAMLError("I am a thing"),
+            YamlError(
+                "error parsing 'something.yaml'",
+                details="I am a thing",
+                resolution="Ensure something.yaml contains valid YAML",
+            ),
+        ),
+        (
+            yaml.MarkedYAMLError(
+                problem="I am a thing",
+                problem_mark=yaml.error.Mark(
+                    name="bork",
+                    index=0,
+                    line=0,
+                    column=0,
+                    buffer="Hello there",
+                    pointer=0,
+                ),
+            ),
+            YamlError(
+                "error parsing 'something.yaml'",
+                details='I am a thing\n  in "bork", line 1, column 1:\n    Hello there\n    ^',
+                resolution="Ensure something.yaml contains valid YAML",
+            ),
+        ),
+    ],
+)
+def test_yaml_error_from_yaml_error(original, expected):
+    actual = YamlError.from_yaml_error("something.yaml", original)
+
+    assert actual == expected
 
 
 @pytest.mark.parametrize(
