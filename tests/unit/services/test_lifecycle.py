@@ -825,8 +825,16 @@ def test_no_builds_error(fake_parts_lifecycle):
 @pytest.mark.parametrize("fake_build_plan", [2, 3, 4], indirect=True)
 def test_multiple_builds_error(fake_parts_lifecycle):
     """Build plan contains more than 1 item."""
-    with pytest.raises(errors.MultipleBuildsError):
+    with pytest.raises(errors.MultipleBuildsError) as e:
         fake_parts_lifecycle.run("prime")
+    assert str(e.value) == (
+        "Multiple builds match the current platform: "
+        + ", ".join([
+                buildinfo.platform
+                for buildinfo in fake_parts_lifecycle._build_plan
+            ]
+        )
+    )
 
 
 @pytest.mark.parametrize(
