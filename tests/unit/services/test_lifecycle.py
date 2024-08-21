@@ -829,10 +829,7 @@ def test_multiple_builds_error(fake_parts_lifecycle):
         fake_parts_lifecycle.run("prime")
     assert str(e.value) == (
         "Multiple builds match the current platform: "
-        + ", ".join([
-                buildinfo.platform
-                for buildinfo in fake_parts_lifecycle._build_plan
-            ]
+        + ", ".join([buildinfo.platform for buildinfo in fake_parts_lifecycle._build_plan]
         )
     )
 
