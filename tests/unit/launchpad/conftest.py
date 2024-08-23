@@ -21,12 +21,12 @@ import pytest
 from craft_application.launchpad import Launchpad
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_lplib():
     return mock.Mock(**{"me.name": "test_user"})
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_lplib_entry():
     return mock.MagicMock(
         __class__=lazr.restfulclient.resource.Entry,
@@ -34,6 +34,6 @@ def mock_lplib_entry():
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def fake_launchpad(mock_lplib):
     return Launchpad("testcraft", mock_lplib)

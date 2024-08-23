@@ -492,7 +492,7 @@ def test_pack_run_wrong_step(app_metadata, fake_services):
     assert exc_info.value.args[0] == "Step name wrong-command passed to pack command."
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_subprocess_run(mocker):
     return mocker.patch.object(subprocess, "run")
 

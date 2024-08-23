@@ -420,7 +420,7 @@ def test_load_bashrc_missing(
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def setup_fetch_logs_provider(monkeypatch, provider_service, tmp_path):
     """Return a function that, when called, mocks the provider_service's instance()."""
 

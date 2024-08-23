@@ -39,7 +39,7 @@ class TestableApplication(craft_application.Application):
             self.project_dir = pathlib.Path.cwd()
 
 
-@pytest.fixture()
+@pytest.fixture
 def create_app(app_metadata, fake_package_service_class):
     def _inner():
         # Create a factory without a project, to simulate a real application use
@@ -52,7 +52,7 @@ def create_app(app_metadata, fake_package_service_class):
     return _inner
 
 
-@pytest.fixture()
+@pytest.fixture
 def app(create_app):
     return create_app()
 
@@ -328,7 +328,7 @@ def test_global_environment(
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def setup_secrets_project(create_app, monkeypatch, tmp_path):
     """Test the use of build secrets in destructive mode."""
 
@@ -349,7 +349,7 @@ def setup_secrets_project(create_app, monkeypatch, tmp_path):
     return _inner
 
 
-@pytest.fixture()
+@pytest.fixture
 def check_secrets_output(tmp_path, capsys):
     def _inner():
         prime_dir = tmp_path / "prime"

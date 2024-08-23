@@ -19,7 +19,7 @@ import pytest
 from craft_application import errors, secrets
 
 
-@pytest.fixture()
+@pytest.fixture
 def good_yaml_data():
     p1_data = {
         "source": "the source secret is $(HOST_SECRET:echo ${SECRET_1})",

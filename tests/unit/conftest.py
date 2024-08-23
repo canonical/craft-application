@@ -28,7 +28,7 @@ def fake_host_architecture(monkeypatch, request) -> str:
     return request.param
 
 
-@pytest.fixture()
+@pytest.fixture
 def provider_service(
     app_metadata, fake_project, fake_build_plan, fake_services, tmp_path
 ):
@@ -41,7 +41,7 @@ def provider_service(
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_services(app_metadata, fake_project, fake_package_service_class):
     factory = services.ServiceFactory(
         app_metadata, project=fake_project, PackageClass=fake_package_service_class
