@@ -89,7 +89,7 @@ def default_app_metadata(fake_config_model) -> craft_application.AppMetadata:
         )
 
 
-@pytest.fixture()
+@pytest.fixture
 def app_metadata(features, fake_config_model) -> craft_application.AppMetadata:
     with pytest.MonkeyPatch.context() as m:
         m.setattr(metadata, "version", lambda _: "3.14159")
