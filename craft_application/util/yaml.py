@@ -17,9 +17,12 @@
 from __future__ import annotations
 
 import contextlib
+import pathlib
 from typing import TYPE_CHECKING, Any, TextIO, cast, overload
 
 import yaml
+
+from craft_application import errors
 
 if TYPE_CHECKING:  # pragma: no cover
     from collections.abc import Hashable
@@ -99,9 +102,13 @@ def safe_yaml_load(stream: TextIO) -> Any:  # noqa: ANN401 - The YAML could be a
     :param stream: Any text-like IO object.
     :returns: A dict object mapping the yaml.
     """
-    # Silencing S506 ("probable use of unsafe loader") because we override it by using
-    # our own safe loader.
-    return yaml.load(stream, Loader=_SafeYamlLoader)  # noqa: S506
+    try:
+        # Silencing S506 ("probable use of unsafe loader") because we override it by
+        # using our own safe loader.
+        return yaml.load(stream, Loader=_SafeYamlLoader)  # noqa: S506
+    except yaml.YAMLError as error:
+        filename = pathlib.Path(stream.name).name
+        raise errors.YamlError.from_yaml_error(filename, error) from error
 
 
 @overload

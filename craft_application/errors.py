@@ -23,6 +23,7 @@ import os
 from collections.abc import Sequence
 from typing import TYPE_CHECKING
 
+import yaml
 from craft_cli import CraftError
 from craft_providers import bases
 
@@ -40,6 +41,21 @@ class ProjectFileMissingError(CraftError, FileNotFoundError):
 
 class PathInvalidError(CraftError, OSError):
     """Error that the given path is not usable."""
+
+
+class YamlError(CraftError, yaml.YAMLError):
+    """Craft-cli friendly version of a YAML error."""
+
+    @classmethod
+    def from_yaml_error(cls, filename: str, error: yaml.YAMLError) -> Self:
+        """Convert a pyyaml YAMLError to a craft-application YamlError."""
+        message = f"error parsing {filename!r}"
+        details = str(error)
+        return cls(
+            message,
+            details=details,
+            resolution=f"Ensure {filename} contains valid YAML",
+        )
 
 
 class CraftValidationError(CraftError):
