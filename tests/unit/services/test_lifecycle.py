@@ -29,7 +29,7 @@ from craft_application import errors, models, util
 from craft_application.errors import InvalidParameterError, PartsLifecycleError
 from craft_application.models.project import BuildInfo
 from craft_application.services import lifecycle
-from craft_application.util import humanize_list, repositories
+from craft_application.util import repositories
 from craft_parts import (
     Action,
     ActionType,
@@ -822,18 +822,21 @@ def test_no_builds_error(fake_parts_lifecycle):
         fake_parts_lifecycle.run("prime")
 
 
-@pytest.mark.parametrize("fake_build_plan", [2, 3, 4], indirect=True)
-def test_multiple_builds_error(fake_parts_lifecycle):
+@pytest.mark.parametrize(
+    ("fake_build_plan", "fake_result_str"),
+    [
+        (2, "'foo' and 'foo'"),
+        (3, "'foo', 'foo', and 'foo'"),
+        (4, "'foo', 'foo', 'foo', and 'foo'"),
+    ],
+    indirect=["fake_build_plan"],
+)
+def test_multiple_builds_error(fake_parts_lifecycle, fake_result_str):
     """Build plan contains more than 1 item."""
     with pytest.raises(errors.MultipleBuildsError) as e:
         fake_parts_lifecycle.run("prime")
     assert str(e.value) == (
-        "Multiple builds match the current platform: "
-        + humanize_list(
-            [build.platform for build in fake_parts_lifecycle._build_plan],
-            conjunction="and",
-        )
-        + "."
+        f"Multiple builds match the current platform: {fake_result_str}."
     )
 
 
