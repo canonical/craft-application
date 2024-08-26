@@ -425,7 +425,7 @@ def _validate_build_plan(build_plan: list[models.BuildInfo]) -> None:
         raise errors.EmptyBuildPlanError
 
     if len(build_plan) > 1:
-        raise errors.MultipleBuildsError
+        raise errors.MultipleBuildsError(matching_builds=build_plan)
 
     build_base = build_plan[0].base
     host_base = util.get_host_base()

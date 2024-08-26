@@ -27,7 +27,9 @@ import yaml
 from craft_cli import CraftError
 from craft_providers import bases
 
+from craft_application import models
 from craft_application.util.error_formatting import format_pydantic_errors
+from craft_application.util.string import humanize_list
 
 if TYPE_CHECKING:  # pragma: no cover
     import craft_parts
@@ -157,8 +159,14 @@ class EmptyBuildPlanError(CraftError):
 class MultipleBuildsError(CraftError):
     """The build plan contains multiple possible builds."""
 
-    def __init__(self) -> None:
-        message = "Multiple builds match the current platform."
+    def __init__(self, matching_builds: list[models.BuildInfo] | None = None) -> None:
+        message = "Multiple builds match the current platform"
+        if matching_builds:
+            message += ": " + humanize_list(
+                [build.platform for build in matching_builds],
+                conjunction="and",
+            )
+        message += "."
         resolution = 'Check the "--platform" and "--build-for" parameters.'
 
         super().__init__(message=message, resolution=resolution)
