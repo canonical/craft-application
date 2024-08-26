@@ -6,6 +6,15 @@ Applications built on craft-application have several environment variables that
 can configure their behaviour. They and the behaviour they modify are listed
 below.
 
+Variables passed to managed builders
+------------------------------------
+
+Several environment variables from the host environment are passed to the
+managed build environment. While an application may adjust these by adjusting
+the ``environment`` dictionary attached to the ``ProviderService``,
+craft-application will by default forward the ``http_proxy``, ``https_proxy``
+and ``no_proxy`` environment variables from the host.
+
 Supported variables
 -------------------
 
