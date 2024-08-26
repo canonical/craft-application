@@ -23,6 +23,7 @@ import pathlib
 import pkgutil
 import sys
 import urllib.request
+from collections.abc import Generator, Iterable
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -37,8 +38,6 @@ from craft_application.services import base
 from craft_application.util import platforms, snap_config
 
 if TYPE_CHECKING:  # pragma: no cover
-    from collections.abc import Generator
-
     import craft_providers
 
     from craft_application import models
@@ -46,7 +45,7 @@ if TYPE_CHECKING:  # pragma: no cover
     from craft_application.services import ServiceFactory
 
 
-DEFAULT_FORWARD_ENVIRONMENT_VARIABLES = ()
+DEFAULT_FORWARD_ENVIRONMENT_VARIABLES: Iterable[str] = ()
 
 
 class ProviderService(base.ProjectService):
