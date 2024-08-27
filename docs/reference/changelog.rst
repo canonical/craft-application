@@ -2,6 +2,18 @@
 Changelog
 *********
 
+4.1.1 (2024-Aug-27)
+-------------------
+
+Application
+===========
+
+* When a build fails due to matching multiple platforms, those matching
+  platforms will be specified in the error message.
+* Show nicer error messages for invalid YAML files.
+
+For a complete list of commits, check out the `4.1.1`_ release on GitHub.
+
 4.1.0 (2024-Aug-14)
 -------------------
 
@@ -195,3 +207,4 @@ For a complete list of commits, check out the `2.7.0`_ release on GitHub.
 .. _3.2.0: https://github.com/canonical/craft-application/releases/tag/3.2.0
 .. _4.0.0: https://github.com/canonical/craft-application/releases/tag/4.0.0
 .. _4.1.0: https://github.com/canonical/craft-application/releases/tag/4.1.0
+.. _4.1.1: https://github.com/canonical/craft-application/releases/tag/4.1.1
