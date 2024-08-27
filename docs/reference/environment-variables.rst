@@ -1,5 +1,5 @@
 *********************
-Environment Variables
+Environment variables
 *********************
 
 Applications built on craft-application have several environment variables that
@@ -25,8 +25,8 @@ These variables are explicitly supported for user configuration.
 ``CRAFT_BUILD_ENVIRONMENT``
 ===========================
 
-Allows an environment to tell a craft application to run directly on the host
-rather than in managed mode if the value is ``host``. This is roughly equivalent
+If the value is ``host``, allows an environment to tell a craft application to run directly on the host
+rather than in managed mode. This method is roughly equivalent
 to using ``--destructive-mode``, but is designed for configurations where the
 application is already being run in an appropriate container or VM, such as
 `Snapcraft rocks <https://github.com/canonical/snapcraft-rocks/>`_ or
@@ -35,7 +35,7 @@ when controlled by a CI system such as `Launchpad <https://launchpad.net>`_.
 ``CRAFT_BUILD_FOR``
 ===================
 
-Sets the default architecture to build for. Is overridden by ``--build-for`` in
+Sets the default architecture to build for. Overridden by ``--build-for`` in
 lifecycle commands.
 
 ``CRAFT_PLATFORM``
@@ -47,7 +47,7 @@ commands.
 ``CRAFT_SNAP_CHANNEL``
 ======================
 
-Overrides the default channel a craft application's snap is installed from if
+Overrides the default channel that a craft application's snap is installed from if
 the manager instance is not running as a snap. If unset, the application will
 be installed from the specified channel.
 
@@ -87,7 +87,7 @@ should not be used except by craft-application itself.
 If using LXD, the application will start containers in the configured remote
 rather than ``local``.
 
-**WARNING:** Using non-default remotes is experimental and not recommended at
+**CAUTION:** Using non-default remotes is experimental and not recommended at
 this time.
 
 ``CRAFT_MANAGED_MODE``
