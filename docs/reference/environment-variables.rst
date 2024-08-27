@@ -25,8 +25,8 @@ These variables are explicitly supported for user configuration.
 ``CRAFT_BUILD_ENVIRONMENT``
 ===========================
 
-If the value is ``host``, allows an environment to tell a craft application to run directly on the host
-rather than in managed mode. This method is roughly equivalent
+If the value is ``host``, allows an environment to tell a craft application to run
+directly on the host rather than in managed mode. This method is roughly equivalent
 to using ``--destructive-mode``, but is designed for configurations where the
 application is already being run in an appropriate container or VM, such as
 `Snapcraft rocks <https://github.com/canonical/snapcraft-rocks/>`_ or
@@ -52,13 +52,12 @@ commands.
 
 Overrides the default channel that a craft application's snap is installed from if
 the manager instance is not running as a snap. If unset, the application will
-be installed from the ``latest/stable`` channel.
+be installed from the ``latest/stable`` channel. If the application is running from
+a snap, this variable is ignored and the same snap used on the host system is
+injected into the managed builder.
 
-**NOTE:** If the application is running from a snap, the same revision as the
-outer instance will be used, even if the outer instance was built locally.
-
-Developer variables
--------------------
+Development variables
+---------------------
 
 The following variables exist to help developers writing applications using
 craft-application more easily debug their code:
@@ -82,7 +81,7 @@ Unsupported variables
 ---------------------
 
 The following variables cause behaviour changes in craft-application, but
-should not be used except by craft-application itself.
+should not be set except by craft-application itself.
 
 ``CRAFT_LXD_REMOTE``
 ====================
@@ -96,9 +95,7 @@ this time.
 ``CRAFT_MANAGED_MODE``
 ======================
 
-Alerts the application that it is running in managed mode. This should only be
-set by craft-application when creating a provider.
-
-**NOTE:** Systems designed to wrap craft applications may use the
-:ref:`env-var-craft-build-environment` environment variable to make the app
+Alerts the application that it is running in managed mode. This should only be set by
+craft-application when creating a provider. Systems designed to wrap craft applications
+may use the :ref:`env-var-craft-build-environment` environment variable to make the app
 run on the host.
