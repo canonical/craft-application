@@ -32,6 +32,9 @@ application is already being run in an appropriate container or VM, such as
 `Snapcraft rocks <https://github.com/canonical/snapcraft-rocks/>`_ or
 when controlled by a CI system such as `Launchpad <https://launchpad.net>`_.
 
+**WARNING**: Setting the build environment is only recommended if you are aware of
+the exact packages needed to reproduce the build containers created by the app.
+
 ``CRAFT_BUILD_FOR``
 ===================
 
@@ -49,7 +52,7 @@ commands.
 
 Overrides the default channel that a craft application's snap is installed from if
 the manager instance is not running as a snap. If unset, the application will
-be installed from the specified channel.
+be installed from the ``latest/stable`` channel.
 
 **NOTE:** If the application is running from a snap, the same revision as the
 outer instance will be used, even if the outer instance was built locally.
