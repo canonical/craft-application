@@ -44,7 +44,7 @@ lifecycle commands.
 ``CRAFT_PLATFORM``
 ==================
 
-Sets the default platform to build. Is overridden by ``--platform`` in lifecycle
+Sets the default platform to build. Overridden by ``--platform`` in lifecycle
 commands.
 
 ``CRAFT_SNAP_CHANNEL``
