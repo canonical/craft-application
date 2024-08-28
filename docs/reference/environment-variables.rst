@@ -56,6 +56,13 @@ be installed from the ``latest/stable`` channel. If the application is running f
 a snap, this variable is ignored and the same snap used on the host system is
 injected into the managed builder.
 
+``CRAFT_VERBOSITY_LEVEL``
+=========================
+
+Set the verbosity level for the application. Valid values are: ``quiet``,
+``brief``, ``verbose``, ``debug`` and ``trace``. This is overridden by the
+``--quiet``, ``--verbose`` or ``--verbosity={value}`` global command options.
+
 Development variables
 ---------------------
 
