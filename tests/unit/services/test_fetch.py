@@ -29,7 +29,7 @@ import pytest
 from craft_application import fetch, services
 
 
-@pytest.fixture()
+@pytest.fixture
 def fetch_service(app, fake_services):
     return services.FetchService(app, fake_services)
 

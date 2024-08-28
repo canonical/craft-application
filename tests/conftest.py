@@ -372,6 +372,6 @@ class FakeApplication(application.Application):
         return yaml_data
 
 
-@pytest.fixture()
+@pytest.fixture
 def app(app_metadata, fake_services):
     return FakeApplication(app_metadata, fake_services)
