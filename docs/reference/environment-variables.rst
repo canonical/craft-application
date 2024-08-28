@@ -25,15 +25,17 @@ These variables are explicitly supported for user configuration.
 ``CRAFT_BUILD_ENVIRONMENT``
 ===========================
 
-If the value is ``host``, allows an environment to tell a craft application to run
-directly on the host rather than in managed mode. This method is roughly equivalent
-to using ``--destructive-mode``, but is designed for configurations where the
-application is already being run in an appropriate container or VM, such as
+If the value is ``host``, allows an environment to tell a craft application
+to run directly on the host rather than in managed mode. This method is
+roughly equivalent to using ``--destructive-mode``, but is designed for
+configurations where the application is already being run in an appropriate
+container or VM, such as
 `Snapcraft rocks <https://github.com/canonical/snapcraft-rocks/>`_ or
 when controlled by a CI system such as `Launchpad <https://launchpad.net>`_.
 
-**CAUTION**: Setting the build environment is only recommended if you are aware of
-the exact packages needed to reproduce the build containers created by the app.
+**CAUTION**: Setting the build environment is only recommended if you are
+aware of the exact packages needed to reproduce the build containers created
+by the app.
 
 ``CRAFT_BUILD_FOR``
 ===================
@@ -50,11 +52,11 @@ commands.
 ``CRAFT_SNAP_CHANNEL``
 ======================
 
-Overrides the default channel that a craft application's snap is installed from if
-the manager instance is not running as a snap. If unset, the application will
-be installed from the ``latest/stable`` channel. If the application is running from
-a snap, this variable is ignored and the same snap used on the host system is
-injected into the managed builder.
+Overrides the default channel that a craft application's snap is installed from
+if the manager instance is not running as a snap. If unset, the application
+will be installed from the ``latest/stable`` channel. If the application is
+running from a snap, this variable is ignored and the same snap used on
+the host system is injected into the managed builder.
 
 ``CRAFT_VERBOSITY_LEVEL``
 =========================
@@ -103,7 +105,7 @@ this time.
 ``CRAFT_MANAGED_MODE``
 ======================
 
-Alerts the application that it is running in managed mode. This should only be set by
-craft-application when creating a provider. Systems designed to wrap craft applications
-may use the :ref:`env-var-craft-build-environment` environment variable to make the app
-run on the host.
+Alerts the application that it is running in managed mode. This should only be
+set by craft-application when creating a provider. Systems designed to wrap
+craft applications may use the :ref:`env-var-craft-build-environment`
+environment variable to make the app run on the host.
