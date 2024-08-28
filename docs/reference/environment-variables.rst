@@ -32,7 +32,7 @@ application is already being run in an appropriate container or VM, such as
 `Snapcraft rocks <https://github.com/canonical/snapcraft-rocks/>`_ or
 when controlled by a CI system such as `Launchpad <https://launchpad.net>`_.
 
-**WARNING**: Setting the build environment is only recommended if you are aware of
+**CAUTION**: Setting the build environment is only recommended if you are aware of
 the exact packages needed to reproduce the build containers created by the app.
 
 ``CRAFT_BUILD_FOR``
