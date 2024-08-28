@@ -68,7 +68,8 @@ craft-application more easily debug their code:
 Controls whether the application is in debug mode. If this variable is set to
 ``1``, general exceptions will not be caught, instead showing a traceback on
 the command line. This is normally only useful for developers working on
-craft-application or an app that uses the framework.
+craft-application or an app that uses the framework, as a traceback is always
+written to the log file as well.
 
 ``CRAFT_LAUNCHPAD_INSTANCE``
 ============================
