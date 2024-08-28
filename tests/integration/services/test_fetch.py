@@ -67,7 +67,7 @@ def _set_test_base_dirs(mocker):
     shutil.rmtree(test_dir)
 
 
-@pytest.fixture()
+@pytest.fixture
 def app_service(app_metadata, fake_services):
     fetch_service = services.FetchService(app_metadata, fake_services)
     yield fetch_service
@@ -185,7 +185,7 @@ check_requests = (
 )
 
 
-@pytest.fixture()
+@pytest.fixture
 def lxd_instance(snap_safe_tmp_path, provider_service):
     provider_service.get_provider("lxd")
 
