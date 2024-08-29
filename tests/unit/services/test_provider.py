@@ -37,6 +37,24 @@ from craft_providers.actions.snap_installer import Snap
         ({"http_proxy": "thing"}, {"http_proxy": "thing", "HTTP_PROXY": "thing"}),
         ({"HTTP_PROXY": "thing"}, {"http_proxy": "thing", "HTTP_PROXY": "thing"}),
         ({"ssh_proxy": "thing"}, {"ssh_proxy": "thing", "SSH_PROXY": "thing"}),
+        ({"no_proxy": "thing"}, {"no_proxy": "thing", "NO_PROXY": "thing"}),
+        ({"NO_PROXY": "thing"}, {"no_proxy": "thing", "NO_PROXY": "thing"}),
+        # Special case handled by upstream:
+        # https://docs.python.org/3/library/urllib.request.html#urllib.request.getproxies
+        (
+            {
+                "REQUEST_METHOD": "GET",
+                "HTTP_PROXY": "thing",
+            },
+            {},
+        ),
+        (  # But lower-case http_proxy is still allowed
+            {
+                "REQUEST_METHOD": "GET",
+                "http_proxy": "thing",
+            },
+            {"http_proxy": "thing", "HTTP_PROXY": "thing"}
+        ),
     ],
 )
 def test_setup_proxy_environment(
