@@ -128,6 +128,16 @@ def start_service() -> subprocess.Popen[str] | None:
         # Nothing to do, service is already up.
         return None
 
+    # Check that the fetch service is actually installed
+    if not _check_installed():
+        raise errors.FetchServiceError(
+            "The 'fetch-service' snap is not installed.",
+            resolution=(
+                "Install the fetch-service snap via "
+                "'snap install --channel=beta fetch-service'."
+            ),
+        )
+
     cmd = [_FETCH_BINARY]
 
     env = {"FETCH_SERVICE_AUTH": _DEFAULT_CONFIG.auth}
@@ -475,3 +485,8 @@ def _get_certificate_dir() -> pathlib.Path:
     base_dir = _get_service_base_dir()
 
     return base_dir / "craft/fetch-certificate"
+
+
+def _check_installed() -> bool:
+    """Check whether the fetch-service is installed."""
+    return pathlib.Path(_FETCH_BINARY).is_file()

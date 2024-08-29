@@ -14,6 +14,7 @@
 #  You should have received a copy of the GNU Lesser General Public License
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Tests for fetch-service-related functions."""
+import re
 import subprocess
 from pathlib import Path
 from unittest import mock
@@ -78,6 +79,7 @@ def test_is_service_online(status, json, expected):
 
 def test_start_service(mocker, tmp_path):
     mock_is_online = mocker.patch.object(fetch, "is_service_online", return_value=False)
+    mocker.patch.object(fetch, "_check_installed", return_value=True)
     mock_base_dir = mocker.patch.object(
         fetch, "_get_service_base_dir", return_value=tmp_path
     )
@@ -146,6 +148,15 @@ def test_start_service_already_up(mocker):
 
     assert mock_is_online.called
     assert not mock_popen.called
+
+
+def test_start_service_not_installed(mocker):
+    mocker.patch.object(fetch, "is_service_online", return_value=False)
+    mocker.patch.object(fetch, "_check_installed", return_value=False)
+
+    expected = re.escape("The 'fetch-service' snap is not installed.")
+    with pytest.raises(errors.FetchServiceError, match=expected):
+        fetch.start_service()
 
 
 @assert_requests
