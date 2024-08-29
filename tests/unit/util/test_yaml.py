@@ -41,13 +41,36 @@ def test_safe_yaml_loader_valid(file):
 def test_safe_yaml_loader_invalid(file):
     with file.open() as f:
         with pytest.raises(
-            errors.YamlError, match=f"error parsing {file.name!r}"
+            errors.YamlError, match=f"error parsing {file.name!r}: "
         ) as exc_info:
             yaml.safe_yaml_load(f)
 
     pytest_check.is_in(file.name, exc_info.value.resolution)
     pytest_check.is_true(str(exc_info.value.resolution).endswith("contains valid YAML"))
     pytest_check.is_in("found", exc_info.value.details)
+
+
+@pytest.mark.parametrize(
+    ("yaml_text", "error_msg"),
+    [
+        (
+            "thing: \nthing:\n",
+            "error parsing 'testcraft.yaml': found duplicate key 'thing'",
+        ),
+        (
+            "{{unhashable}}:",
+            "error parsing 'testcraft.yaml': found unhashable key",
+        ),
+    ],
+)
+def test_safe_yaml_loader_specific_error(yaml_text: str, error_msg: str):
+    f = io.StringIO(yaml_text)
+    f.name = "testcraft.yaml"
+
+    with pytest.raises(errors.YamlError) as exc_info:
+        yaml.safe_yaml_load(f)
+
+    assert exc_info.value.args[0] == error_msg
 
 
 @pytest.mark.parametrize(
