@@ -52,6 +52,8 @@ class YamlError(CraftError, yaml.YAMLError):
     def from_yaml_error(cls, filename: str, error: yaml.YAMLError) -> Self:
         """Convert a pyyaml YAMLError to a craft-application YamlError."""
         message = f"error parsing {filename!r}"
+        if isinstance(error, yaml.MarkedYAMLError):
+            message += f": {error.problem}"
         details = str(error)
         return cls(
             message,
