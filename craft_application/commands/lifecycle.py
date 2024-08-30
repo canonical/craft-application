@@ -19,6 +19,7 @@ import pathlib
 import subprocess
 import textwrap
 from typing import TYPE_CHECKING, Any
+import json
 
 from craft_cli import CommandGroup, emit
 from craft_parts.features import Features
@@ -50,10 +51,31 @@ def get_lifecycle_command_group() -> CommandGroup:
     )
 
 
+class ProException(Exception):
+    pass
+
+
+class InvalidProStatus(ProException):
+    pass
+
+
+class ProApiException(ProException):
+    pass
+
+
+class ProApiErrorResponse(ProApiException):
+    pass
+
+
+class ProApiBadResponse(ProApiException):
+    pass
+
+
 class ProServices(set):
     """Class for managing pro-services within the lifecycle"""
 
     separator: str = ","
+    service_mask = {"esm-apps", "esm-infa", "fips-preview", "fips-updates"}
 
     @classmethod
     def from_csv(cls, services: str) -> ProServices:
@@ -63,6 +85,77 @@ class ProServices(set):
         result = cls(split)
 
         return result
+
+    @staticmethod
+    def pro_api_call(endpoint: str):
+        """Make a call to"""
+
+        output_bytes = None
+
+        try:
+            try:
+                output_bytes = subprocess.check_output(
+                    ["pro", "api", "u.pro.status.is_attached.v2"],
+                )
+
+                output_dict = json.loads(output_bytes.decode())
+                data_dict = output_dict["data"]
+
+                return data_dict
+
+            except subprocess.CalledProcessError as exc:
+
+                output_bytes = exc.output
+                output_dict = json.loads(output_bytes.decode())
+
+                raise ProApiErrorResponse(
+                    "Recived Error response from Ubuntu Pro API", output_dict
+                ) from exc
+
+        except json.JSONDecodeError as json_exc:
+
+            raise ProApiBadResponse(
+                "Recived invalid JSON response from Ubuntu Pro API", output_bytes
+            ) from json_exc
+
+    @classmethod
+    def pro_attached(cls):
+        response = cls.pro_api_call("u.pro.status.is_attached.v1")
+        attached = response["is_attached"]  # or is_attached_and_contract_valid ?
+
+        return attached
+
+    @classmethod
+    def pro_services(cls):
+        response = cls.pro_api_call("u.pro.status.enabled_services.v1")
+        services = response["enabled_services"]
+
+        service_names = {service.name for service in services}
+        service_names = service_names.intersection(cls.service_mask)
+
+        return service_names
+
+    def validate(self):
+
+        attached = self.pro_attached()
+
+        # pro services are declared
+        if self:
+
+            # first check that we are attached
+            if attached:
+                raise InvalidProStatus("Host is not attached")
+
+            services = self.pro_services()
+
+            if services != self:
+                raise InvalidProStatus(
+                    "Host pro service enablement does not match build requirements"
+                )
+
+        else:
+            if attached:
+                raise InvalidProStatus("Host is attached")
 
 
 class _BaseLifecycleCommand(base.ExtensibleCommand):

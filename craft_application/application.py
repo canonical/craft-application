@@ -38,6 +38,7 @@ from platformdirs import user_cache_path
 from craft_application import commands, errors, grammar, models, secrets, util
 from craft_application.errors import PathInvalidError
 from craft_application.models import BuildInfo, GrammarAwareProject
+from craft_application.commands.lifecycle import ProServices
 
 if TYPE_CHECKING:
     from craft_application.services import service_factory
@@ -471,7 +472,9 @@ class Application:
         """Register per application plugins when initializing."""
         self.register_plugins(self._get_app_plugins())
 
-    def _pre_run(self, dispatcher: craft_cli.Dispatcher) -> None:
+    def _pre_run(
+        self, dispatcher: craft_cli.Dispatcher, dispatcher: craft_cli.Dispatcher
+    ) -> None:
         """Do any final setup before running the command.
 
         At the time this is run, the command is loaded in the dispatcher, but
@@ -480,6 +483,11 @@ class Application:
         # Some commands might have a project_dir parameter. Those commands and
         # only those commands should get a project directory, but only when
         # not managed.
+
+        # Check that pro services are correctly attached.
+        pro_services = getattr(dispatcher.parsed_args(), "pro", ProServices())
+        pro_services.validate()
+
         if self.is_managed():
             self.project_dir = pathlib.Path("/root/project")
         elif project_dir := getattr(dispatcher.parsed_args(), "project_dir", None):
