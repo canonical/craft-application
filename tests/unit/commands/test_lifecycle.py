@@ -31,6 +31,7 @@ from craft_application.commands.lifecycle import (
     PullCommand,
     StageCommand,
     get_lifecycle_command_group,
+    ProServices,
 )
 from craft_cli import emit
 from craft_parts import Features
@@ -51,6 +52,25 @@ BUILD_ENV_COMMANDS = [
     ({"destructive_mode": True, "use_lxd": False}, ["--destructive-mode"]),
     ({"destructive_mode": False, "use_lxd": True}, ["--use-lxd"]),
 ]
+
+# test paring --pro argument with various pro services, and whitespace
+PRO_SERVICE_COMMANDS = [
+    ({"pro": None}, []),
+    ({"pro": ProServices(["fips-updates"])}, ["--pro", "fips-updates"]),
+    (
+        {"pro": ProServices(["fips-updates", "esm-infra"])},
+        ["--pro", "fips-updates,esm-infra"],
+    ),
+    (
+        {"pro": ProServices(["fips-updates", "esm-infra"])},
+        ["--pro", "fips-updates , esm-infra"],
+    ),
+    (
+        {"pro": ProServices(["fips-updates"])},
+        ["--pro", "fips-updates,fips-updates"],
+    ),
+]
+
 STEP_NAMES = [step.name.lower() for step in craft_parts.Step]
 MANAGED_LIFECYCLE_COMMANDS = (
     PullCommand,
@@ -107,12 +127,15 @@ def test_get_lifecycle_command_group(enable_overlay, commands):
     Features.reset()
 
 
+@pytest.mark.parametrize(("pro_service_dict", "pro_service_args"), PRO_SERVICE_COMMANDS)
 @pytest.mark.parametrize(("build_env_dict", "build_env_args"), BUILD_ENV_COMMANDS)
 @pytest.mark.parametrize(("debug_dict", "debug_args"), DEBUG_PARAMS)
 @pytest.mark.parametrize(("shell_dict", "shell_args"), SHELL_PARAMS)
 def test_lifecycle_command_fill_parser(
     app_metadata,
     fake_services,
+    pro_service_dict,
+    pro_service_args,
     build_env_dict,
     build_env_args,
     debug_dict,
@@ -129,11 +152,16 @@ def test_lifecycle_command_fill_parser(
         **shell_dict,
         **debug_dict,
         **build_env_dict,
+        **pro_service_dict,
     }
 
     command.fill_parser(parser)
 
-    args_dict = vars(parser.parse_args([*build_env_args, *debug_args, *shell_args]))
+    args_dict = vars(
+        parser.parse_args(
+            [*pro_service_args, *build_env_args, *debug_args, *shell_args]
+        )
+    )
     assert args_dict == expected
 
 
@@ -189,6 +217,7 @@ def test_parts_command_run_managed(
     assert command.run_managed(parsed_args) == expected_run_managed
 
 
+@pytest.mark.parametrize(("pro_service_dict", "pro_service_args"), PRO_SERVICE_COMMANDS)
 @pytest.mark.parametrize(("build_env_dict", "build_env_args"), BUILD_ENV_COMMANDS)
 @pytest.mark.parametrize(("debug_dict", "debug_args"), DEBUG_PARAMS)
 @pytest.mark.parametrize(("shell_dict", "shell_args"), SHELL_PARAMS)
@@ -196,6 +225,8 @@ def test_parts_command_run_managed(
 def test_step_command_fill_parser(
     app_metadata,
     fake_services,
+    pro_service_dict,
+    pro_service_args,
     parts_args,
     build_env_dict,
     build_env_args,
@@ -213,13 +244,16 @@ def test_step_command_fill_parser(
         **shell_dict,
         **debug_dict,
         **build_env_dict,
+        **pro_service_dict,
     }
     command = cls({"app": app_metadata, "services": fake_services})
 
     command.fill_parser(parser)
 
     args_dict = vars(
-        parser.parse_args([*build_env_args, *shell_args, *debug_args, *parts_args])
+        parser.parse_args(
+            [*pro_service_args, *build_env_args, *shell_args, *debug_args, *parts_args]
+        )
     )
     assert args_dict == expected
 
@@ -413,12 +447,15 @@ def test_clean_run_managed(
     assert command.run_managed(parsed_args) == expected_run_managed
 
 
+@pytest.mark.parametrize(("pro_service_dict", "pro_service_args"), PRO_SERVICE_COMMANDS)
 @pytest.mark.parametrize(("build_env_dict", "build_env_args"), BUILD_ENV_COMMANDS)
 @pytest.mark.parametrize(("debug_dict", "debug_args"), DEBUG_PARAMS)
 @pytest.mark.parametrize("output_arg", [".", "/"])
 def test_pack_fill_parser(
     app_metadata,
     mock_services,
+    pro_service_dict,
+    pro_service_args,
     build_env_dict,
     build_env_args,
     debug_dict,
@@ -432,13 +469,16 @@ def test_pack_fill_parser(
         "output": pathlib.Path(output_arg),
         **debug_dict,
         **build_env_dict,
+        **pro_service_dict,
     }
     command = PackCommand({"app": app_metadata, "services": mock_services})
 
     command.fill_parser(parser)
 
     args_dict = vars(
-        parser.parse_args([*build_env_args, *debug_args, f"--output={output_arg}"])
+        parser.parse_args(
+            [*pro_service_args, *build_env_args, *debug_args, f"--output={output_arg}"]
+        )
     )
     assert args_dict == expected
 
