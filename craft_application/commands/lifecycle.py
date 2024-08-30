@@ -50,6 +50,21 @@ def get_lifecycle_command_group() -> CommandGroup:
     )
 
 
+class ProServices(set):
+    """Class for managing pro-services within the lifecycle"""
+
+    separator: str = ","
+
+    @classmethod
+    def from_csv(cls, services: str) -> ProServices:
+        """Return a set of ProServices from a csv string."""
+
+        split = [service.strip() for service in services.split(cls.separator)]
+        result = cls(split)
+
+        return result
+
+
 class _BaseLifecycleCommand(base.ExtensibleCommand):
     """Base class for lifecycle-related commands.
 
@@ -75,6 +90,13 @@ class _BaseLifecycleCommand(base.ExtensibleCommand):
             "--use-lxd",
             action="store_true",
             help="Build in a LXD container.",
+        )
+
+        parser.add_argument(
+            "--pro",
+            type=ProServices.from_csv,
+            metavar="<pro-services>",
+            help="Enable Ubuntu Pro service by name. Each service should be separated by a comma.",
         )
 
     @override
