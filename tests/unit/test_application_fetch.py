@@ -20,18 +20,15 @@ from unittest import mock
 import craft_providers
 import pytest
 from craft_application import services
-from craft_application.util import get_host_architecture
 from typing_extensions import override
 
 
 class FakeFetchService(services.FetchService):
     """Fake FetchService that tracks calls"""
 
-    calls: list[str]
-
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, fetch_calls: list[str], **kwargs):
         super().__init__(*args, **kwargs)
-        self.calls = []
+        self.calls = fetch_calls
 
     @override
     def setup(self) -> None:
@@ -55,31 +52,49 @@ class FakeFetchService(services.FetchService):
         self.calls.append(f"shutdown({force})")
 
 
-@pytest.mark.enable_features("fetch_service")
 @pytest.mark.parametrize("fake_build_plan", [2], indirect=True)
-def test_run_managed_fetch_service(app, fake_project, fake_build_plan):
+@pytest.mark.parametrize(
+    ("pack_args", "expected_calls"),
+    [
+        # No --use-fetch-service: no calls to the FetchService
+        (
+            [],
+            [],
+        ),
+        # --use-fetch-service: full expected calls to the FetchService
+        (
+            ["--use-fetch-service"],
+            [
+                # One call to setup
+                "setup",
+                # Two pairs of create/teardown sessions, for two builds
+                "create_session",
+                "teardown_session",
+                "create_session",
+                "teardown_session",
+                # One call to shut down (with `force`)
+                "shutdown(True)",
+            ],
+        ),
+    ],
+)
+def test_run_managed_fetch_service(
+    app, fake_project, fake_build_plan, monkeypatch, pack_args, expected_calls
+):
     """Test that the application calls the correct FetchService methods."""
     mock_provider = mock.MagicMock(spec_set=services.ProviderService)
     app.services.provider = mock_provider
-    app.project = fake_project
+    app.set_project(fake_project)
 
     expected_build_infos = 2
     assert len(fake_build_plan) == expected_build_infos
     app._build_plan = fake_build_plan
 
+    fetch_calls: list[str] = []
     app.services.FetchClass = FakeFetchService
+    app.services.set_kwargs("fetch", fetch_calls=fetch_calls)
 
-    app.run_managed(None, get_host_architecture())
+    monkeypatch.setattr("sys.argv", ["testcraft", "pack", *pack_args])
+    app.run()
 
-    fetch_service = app.services.fetch
-    assert fetch_service.calls == [
-        # One call to setup
-        "setup",
-        # Two pairs of create/teardown sessions, for two builds
-        "create_session",
-        "teardown_session",
-        "create_session",
-        "teardown_session",
-        # One call to shut down (with `force`)
-        "shutdown(True)",
-    ]
+    assert fetch_calls == expected_calls
