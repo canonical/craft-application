@@ -371,6 +371,12 @@ class PackCommand(LifecycleCommand):
             help="Output directory for created packages.",
         )
 
+        parser.add_argument(
+            "--use-fetch-service",
+            action="store_true",
+            help="Use the Fetch Service to inspect downloaded assets.",
+        )
+
     @override
     def _run(
         self,

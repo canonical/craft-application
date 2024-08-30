@@ -67,9 +67,6 @@ class AppFeatures:
     build_secrets: bool = False
     """Support for build-time secrets."""
 
-    fetch_service: bool = False
-    """Support for the fetch service."""
-
 
 @final
 @dataclass(frozen=True)
@@ -164,6 +161,9 @@ class Application:
             self._work_dir = pathlib.Path("/root")
         else:
             self._work_dir = pathlib.Path.cwd()
+
+        # Whether the command execution should use the fetch-service
+        self._use_fetch_service = False
 
     @property
     def app_config(self) -> dict[str, Any]:
@@ -382,7 +382,7 @@ class Application:
             with self.services.provider.instance(
                 build_info, work_dir=self._work_dir
             ) as instance:
-                if self.app.features.fetch_service:
+                if self._use_fetch_service:
                     session_env = self.services.fetch.create_session(instance)
                     env.update(session_env)
 
@@ -422,10 +422,10 @@ class Application:
                         f"Failed to execute {self.app.name} in instance."
                     ) from exc
                 finally:
-                    if self.app.features.fetch_service:
+                    if self._use_fetch_service:
                         self.services.fetch.teardown_session()
 
-        if self.app.features.fetch_service:
+        if self._use_fetch_service:
             self.services.fetch.shutdown(force=True)
 
     def configure(self, global_args: dict[str, Any]) -> None:
@@ -522,13 +522,15 @@ class Application:
         At the time this is run, the command is loaded in the dispatcher, but
         the project has not yet been loaded.
         """
+        args = dispatcher.parsed_args()
+
         # Some commands might have a project_dir parameter. Those commands and
         # only those commands should get a project directory, but only when
         # not managed.
 
         if self.is_managed():
             self.project_dir = pathlib.Path("/root/project")
-        elif project_dir := getattr(dispatcher.parsed_args(), "project_dir", None):
+        elif project_dir := getattr(args, "project_dir", None):
             self.project_dir = pathlib.Path(project_dir).expanduser().resolve()
             if self.project_dir.exists() and not self.project_dir.is_dir():
                 raise errors.ProjectFileMissingError(
@@ -536,6 +538,8 @@ class Application:
                     details=f"Not a directory: {project_dir}",
                     resolution="Ensure the path entered is correct.",
                 )
+
+        self._use_fetch_service = getattr(args, "use_fetch_service", False)
 
     def get_arg_or_config(
         self, parsed_args: argparse.Namespace, item: str
