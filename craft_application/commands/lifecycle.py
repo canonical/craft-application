@@ -63,11 +63,7 @@ class ProApiException(ProException):
     pass
 
 
-class ProApiErrorResponse(ProApiException):
-    pass
-
-
-class ProApiBadResponse(ProApiException):
+class UnableToImportProApi(ProApiException):
     pass
 
 
@@ -75,7 +71,7 @@ class ProServices(set):
     """Class for managing pro-services within the lifecycle"""
 
     separator: str = ","
-    service_mask = {"esm-apps", "esm-infa", "fips-preview", "fips-updates"}
+    build_service_scope = {"esm-apps", "esm-infa", "fips-preview", "fips-updates"}
 
     @classmethod
     def from_csv(cls, services: str) -> ProServices:
@@ -86,54 +82,36 @@ class ProServices(set):
 
         return result
 
-    @staticmethod
-    def pro_api_call(endpoint: str):
-        """Make a call to"""
-
-        output_bytes = None
-
+    @classmethod
+    def pro_attached(cls) -> bool:
         try:
-            try:
-                output_bytes = subprocess.check_output(
-                    ["pro", "api", "u.pro.status.is_attached.v2"],
-                )
+            from uaclient.api.u.pro.status.enabled_services.v1 import is_attached
 
-                output_dict = json.loads(output_bytes.decode())
-                data_dict = output_dict["data"]
+            response = is_attached()
 
-                return data_dict
+            is_attached = response.is_attached
 
-            except subprocess.CalledProcessError as exc:
+            return is_attached
 
-                output_bytes = exc.output
-                output_dict = json.loads(output_bytes.decode())
-
-                raise ProApiErrorResponse(
-                    "Recived Error response from Ubuntu Pro API", output_dict
-                ) from exc
-
-        except json.JSONDecodeError as json_exc:
-
-            raise ProApiBadResponse(
-                "Recived invalid JSON response from Ubuntu Pro API", output_bytes
-            ) from json_exc
+        except ImportError as exc:
+            raise UnableToImportProApi() from exc
 
     @classmethod
-    def pro_attached(cls):
-        response = cls.pro_api_call("u.pro.status.is_attached.v1")
-        attached = response["is_attached"]  # or is_attached_and_contract_valid ?
+    def pro_services(cls) -> set:
+        try:
+            from uaclient.api.u.pro.status.enabled_services.v1 import enabled_services
 
-        return attached
+            response = enabled_services()
 
-    @classmethod
-    def pro_services(cls):
-        response = cls.pro_api_call("u.pro.status.enabled_services.v1")
-        services = response["enabled_services"]
+            service_names = {service.name for service in response.enabled_services}
 
-        service_names = {service.name for service in services}
-        service_names = service_names.intersection(cls.service_mask)
+            # remove any services that arn't relevant to build services
+            service_names = service_names.intersection(cls.build_service_scope)
 
-        return service_names
+            return service_names
+
+        except ImportError as exc:
+            raise UnableToImportProApi() from exc
 
     def validate(self):
 
