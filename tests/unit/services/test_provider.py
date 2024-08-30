@@ -31,6 +31,59 @@ from craft_providers.actions.snap_installer import Snap
 
 
 @pytest.mark.parametrize(
+    ("given_environment", "expected_environment"),
+    [
+        ({}, {}),
+        ({"http_proxy": "thing"}, {"http_proxy": "thing", "HTTP_PROXY": "thing"}),
+        ({"HTTP_PROXY": "thing"}, {"http_proxy": "thing", "HTTP_PROXY": "thing"}),
+        ({"ssh_proxy": "thing"}, {"ssh_proxy": "thing", "SSH_PROXY": "thing"}),
+        ({"no_proxy": "thing"}, {"no_proxy": "thing", "NO_PROXY": "thing"}),
+        ({"NO_PROXY": "thing"}, {"no_proxy": "thing", "NO_PROXY": "thing"}),
+        # Special case handled by upstream:
+        # https://docs.python.org/3/library/urllib.request.html#urllib.request.getproxies
+        (
+            {
+                "REQUEST_METHOD": "GET",
+                "HTTP_PROXY": "thing",
+            },
+            {},
+        ),
+        (  # But lower-case http_proxy is still allowed
+            {
+                "REQUEST_METHOD": "GET",
+                "http_proxy": "thing",
+            },
+            {"http_proxy": "thing", "HTTP_PROXY": "thing"},
+        ),
+    ],
+)
+def test_setup_proxy_environment(
+    monkeypatch: pytest.MonkeyPatch,
+    app_metadata,
+    fake_services,
+    fake_project,
+    fake_build_plan,
+    given_environment: dict[str, str],
+    expected_environment: dict[str, str],
+):
+    for var, value in given_environment.items():
+        monkeypatch.setenv(var, value)
+
+    expected_environment |= {"CRAFT_MANAGED_MODE": "1"}
+
+    service = provider.ProviderService(
+        app_metadata,
+        fake_services,
+        project=fake_project,
+        work_dir=pathlib.Path(),
+        build_plan=fake_build_plan,
+    )
+    service.setup()
+
+    assert service.environment == expected_environment
+
+
+@pytest.mark.parametrize(
     ("install_snap", "environment", "snaps"),
     [
         (True, {}, [Snap(name="testcraft", channel="latest/stable", classic=True)]),
