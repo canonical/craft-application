@@ -53,7 +53,7 @@ from craft_providers.actions.snap_installer import Snap
                 "REQUEST_METHOD": "GET",
                 "http_proxy": "thing",
             },
-            {"http_proxy": "thing", "HTTP_PROXY": "thing"}
+            {"http_proxy": "thing", "HTTP_PROXY": "thing"},
         ),
     ],
 )
