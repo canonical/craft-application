@@ -676,6 +676,14 @@ def test_run_managed_specified_platform(app, fake_project):
     assert mock.call(info1, work_dir=mock.ANY) not in mock_provider.instance.mock_calls
 
 
+def test_run_managed_empty_plan(app, fake_project):
+    app.set_project(fake_project)
+
+    app._build_plan = []
+    with pytest.raises(errors.EmptyBuildPlanError):
+        app.run_managed(None, None)
+
+
 @pytest.mark.parametrize(
     ("managed", "error", "exit_code", "message"),
     [
