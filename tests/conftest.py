@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 import os
+import sys
 import pathlib
 import shutil
 from importlib import metadata
@@ -282,3 +283,31 @@ def fake_services(
         PackageClass=fake_package_service_class,
         LifecycleClass=fake_lifecycle_service_class,
     )
+
+
+@pytest.fixture
+def uaclient_mock(monkeypatch, mocker):
+
+    # create mock for UA client
+    mock_uaclient = mocker.Mock()
+
+    # mock is_attached calls to return false
+    mock_isattachedresult = mocker.Mock()
+    type(mock_isattachedresult).is_attached = mocker.PropertyMock(return_value=False)
+    mock_uaclient.api.u.pro.status.is_attached.v1.is_attached.return_value = (
+        mock_isattachedresult
+    )
+
+    # similarily mock empty enabled services list
+    mock_enabledserviceresult = mocker.Mock()
+    type(mock_enabledserviceresult).enabled_services = mocker.PropertyMock(
+        return_value=list()
+    )
+    mock_uaclient.api.u.pro.status.enabled_services.v1.enabled_services.return_value = (
+        mock_enabledserviceresult
+    )
+
+    # patch imports of uaclient
+    monkeypatch.setitem(sys.modules, "uaclient", mock_uaclient)
+
+    return mock_uaclient

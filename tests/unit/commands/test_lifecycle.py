@@ -55,7 +55,7 @@ BUILD_ENV_COMMANDS = [
 
 # test paring --pro argument with various pro services, and whitespace
 PRO_SERVICE_COMMANDS = [
-    ({"pro": None}, []),
+    ({"pro": ProServices()}, []),
     ({"pro": ProServices(["fips-updates"])}, ["--pro", "fips-updates"]),
     (
         {"pro": ProServices(["fips-updates", "esm-infra"])},
