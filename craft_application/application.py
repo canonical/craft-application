@@ -508,6 +508,8 @@ class Application:
                 commands.AppCommand,
                 dispatcher.load_command(self.app_config),
             )
+
+            # TODO: do we need default kwargs here? our argparse was already passed defaults.
             platform = getattr(dispatcher.parsed_args(), "platform", None)
             build_for = getattr(dispatcher.parsed_args(), "build_for", None)
             pro_services = getattr(dispatcher.parsed_args(), "pro", ProServices())
@@ -525,21 +527,22 @@ class Application:
 
             provider_name = command.provider_name(dispatcher.parsed_args())
 
-            craft_cli.emit.debug(
-                f"Build plan: platform={platform}, build_for={build_for}"
-            )
-            self._pre_run(dispatcher)
-
-            # Check that pro services are correctly attached...
+            # Check that pro services are correctly configured
             # only validate requested pro services if we are inside a managed execution
             # or outside an unmanaged execution
-            if not (managed_mode ^ is_managed):
+
+            if (managed_mode and is_managed) or not (managed_mode or is_managed):
                 pro_services.validate()
 
             if managed_mode or command.needs_project(dispatcher.parsed_args()):
                 self.services.project = self.get_project(
                     platform=platform, build_for=build_for
                 )
+
+            craft_cli.emit.debug(
+                f"Build plan: platform={platform}, build_for={build_for}"
+            )
+            self._pre_run(dispatcher)
 
             self._configure_services(provider_name)
 
