@@ -472,9 +472,7 @@ class Application:
         """Register per application plugins when initializing."""
         self.register_plugins(self._get_app_plugins())
 
-    def _pre_run(
-        self, dispatcher: craft_cli.Dispatcher, dispatcher: craft_cli.Dispatcher
-    ) -> None:
+    def _pre_run(self, dispatcher: craft_cli.Dispatcher) -> None:
         """Do any final setup before running the command.
 
         At the time this is run, the command is loaded in the dispatcher, but
@@ -483,10 +481,6 @@ class Application:
         # Some commands might have a project_dir parameter. Those commands and
         # only those commands should get a project directory, but only when
         # not managed.
-
-        # Check that pro services are correctly attached.
-        pro_services = getattr(dispatcher.parsed_args(), "pro", ProServices())
-        pro_services.validate()
 
         if self.is_managed():
             self.project_dir = pathlib.Path("/root/project")
@@ -516,6 +510,10 @@ class Application:
             )
             platform = getattr(dispatcher.parsed_args(), "platform", None)
             build_for = getattr(dispatcher.parsed_args(), "build_for", None)
+            pro_services = getattr(dispatcher.parsed_args(), "pro", ProServices())
+
+            managed_mode = command.run_managed(dispatcher.parsed_args())
+            is_managed = self.is_managed()
 
             # Some commands (e.g. remote build) can allow multiple platforms
             # or build-fors, comma-separated. In these cases, we create the
@@ -532,7 +530,12 @@ class Application:
             )
             self._pre_run(dispatcher)
 
-            managed_mode = command.run_managed(dispatcher.parsed_args())
+            # Check that pro services are correctly attached...
+            # only validate requested pro services if we are inside a managed execution
+            # or outside an unmanaged execution
+            if not (managed_mode ^ is_managed):
+                pro_services.validate()
+
             if managed_mode or command.needs_project(dispatcher.parsed_args()):
                 self.services.project = self.get_project(
                     platform=platform, build_for=build_for
@@ -544,7 +547,7 @@ class Application:
                 # command runs in the outer instance
                 craft_cli.emit.debug(f"Running {self.app.name} {command.name} on host")
                 return_code = dispatcher.run() or os.EX_OK
-            elif not self.is_managed():
+            elif not is_managed:
                 # command runs in inner instance, but this is the outer instance
                 self.run_managed(platform, build_for)
                 return_code = os.EX_OK
