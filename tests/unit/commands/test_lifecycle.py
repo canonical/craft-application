@@ -32,9 +32,13 @@ from craft_application.commands.lifecycle import (
     StageCommand,
     get_lifecycle_command_group,
     ProServices,
+    InvalidProStatus,
 )
 from craft_cli import emit
 from craft_parts import Features
+
+# disable black reformat for improve readability on long paramterisations
+# fmt: off
 
 PARTS_LISTS = [[], ["my-part"], ["my-part", "your-part"]]
 SHELL_PARAMS = [
@@ -55,20 +59,23 @@ BUILD_ENV_COMMANDS = [
 
 # test paring --pro argument with various pro services, and whitespace
 PRO_SERVICE_COMMANDS = [
-    ({"pro": ProServices()}, []),
-    ({"pro": ProServices(["fips-updates"])}, ["--pro", "fips-updates"]),
-    (
-        {"pro": ProServices(["fips-updates", "esm-infra"])},
-        ["--pro", "fips-updates,esm-infra"],
-    ),
-    (
-        {"pro": ProServices(["fips-updates", "esm-infra"])},
-        ["--pro", "fips-updates , esm-infra"],
-    ),
-    (
-        {"pro": ProServices(["fips-updates"])},
-        ["--pro", "fips-updates,fips-updates"],
-    ),
+    ({"pro": ProServices()},                                []),
+    ({"pro": ProServices(["fips-updates"])},                ["--pro", "fips-updates"]),
+    ({"pro": ProServices(["fips-updates", "esm-infra"])},   ["--pro", "fips-updates,esm-infra"]),
+    ({"pro": ProServices(["fips-updates", "esm-infra"])},   ["--pro", "fips-updates , esm-infra"]),
+    ({"pro": ProServices(["fips-updates"])},                ["--pro", "fips-updates,fips-updates"]),
+]
+
+PRO_SERVICE_CONFIGS = [
+    # ua_is_attached,       ua_enabled_services,         proservices_args,                   expected_exception
+    (False,                 [],                          [],                                None),
+    (True,                  ["esm-apps"],                ["esm-apps"],                      None),
+    (True,                  ["esm-apps", "fips-updates"],["esm-apps", "fips-updates"],  None),
+    (False,                 ["esm-apps"],                [],                                InvalidProStatus),
+    (True,                  [],                          ["esm-apps"],                      InvalidProStatus),
+    (True,                  ["esm-apps", "fips-updates"],["fips-updates"],                  InvalidProStatus),
+    (True,                  ["esm-apps",],               ["fips-updates", "fips-updates"],  InvalidProStatus),
+
 ]
 
 STEP_NAMES = [step.name.lower() for step in craft_parts.Step]
@@ -82,6 +89,8 @@ MANAGED_LIFECYCLE_COMMANDS = (
 UNMANAGED_LIFECYCLE_COMMANDS = (CleanCommand, PackCommand)
 ALL_LIFECYCLE_COMMANDS = MANAGED_LIFECYCLE_COMMANDS + UNMANAGED_LIFECYCLE_COMMANDS
 NON_CLEAN_COMMANDS = (*MANAGED_LIFECYCLE_COMMANDS, PackCommand)
+
+# fmt: on
 
 
 def get_fake_command_class(parent_cls, managed):
@@ -97,6 +106,31 @@ def get_fake_command_class(parent_cls, managed):
             return self._run_managed
 
     return FakeCommand
+
+
+@pytest.mark.parametrize(
+    ("ua_is_attached", "ua_enabled_services", "proservices_args", "expected_exception"),
+    PRO_SERVICE_CONFIGS,
+)
+def test_validate_pro_services(
+    uaclient_mock,
+    ua_is_attached,
+    ua_enabled_services,
+    proservices_args,
+    expected_exception,
+):
+    # unpack fixture
+    mock_uaclient_module, set_mock_uaclient = uaclient_mock
+
+    try:
+        # configure api state
+        set_mock_uaclient(ua_is_attached, ua_enabled_services)
+
+        # create and validate pro services
+        proservices = ProServices(proservices_args)
+        proservices.validate()
+    except Exception as exc:
+        assert type(exc) is expected_exception
 
 
 @pytest.mark.parametrize(
