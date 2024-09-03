@@ -25,6 +25,7 @@ dependencies = [
     # see https://github.com/psf/requests/issues/6707
     "requests<2.32",
     "typing_extensions>=4.4.0",
+    "Jinja2~=3.1",
 ]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
