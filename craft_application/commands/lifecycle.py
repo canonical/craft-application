@@ -68,11 +68,16 @@ class UnableToImportProApi(ProApiException):
     pass
 
 
-class ProServices(set):
+class ProServices(set[str]):
     """Class for managing pro-services within the lifecycle"""
 
     separator: str = ","
-    build_service_scope: set = {"esm-apps", "esm-infa", "fips-preview", "fips-updates"}
+    build_service_scope: set[str] = {
+        "esm-apps",
+        "esm-infa",
+        "fips-preview",
+        "fips-updates",
+    }
 
     def __str__(self) -> str:
         """Convert to string for display to user."""
@@ -93,14 +98,18 @@ class ProServices(set):
     @classmethod
     def pro_attached(cls) -> bool:
         """Returns True if environment is attached to Ubuntu Pro."""
+
+        # TODO: fix pyright when uaclient module is not available
         try:
-            import uaclient
+            import uaclient  # pyright: ignore
 
-            response = uaclient.api.u.pro.status.is_attached.v1.is_attached()
+            response = (  # pyright: ignore
+                uaclient.api.u.pro.status.is_attached.v1.is_attached()  # pyright: ignore
+            )
 
-            result = response.is_attached
+            result = response.is_attached  # pyright: ignore
 
-            return result
+            return result  # pyright: ignore
 
         except ImportError as exc:
             raise UnableToImportProApi() from exc
@@ -111,16 +120,22 @@ class ProServices(set):
         The returned set only includes services relevant to lifecycle commands."""
 
         try:
-            import uaclient
+            import uaclient  # pyright: ignore
 
-            response = uaclient.api.u.pro.status.enabled_services.v1.enabled_services()
+            response = (  # pyright: ignore
+                uaclient.api.u.pro.status.enabled_services.v1.enabled_services()  # pyright: ignore
+            )
 
-            service_names = {service.name for service in response.enabled_services}
+            service_names = {  # pyright: ignore
+                service.name for service in response.enabled_services  # pyright: ignore
+            }
 
             # remove any services that aren't relevant to build services
-            service_names = service_names.intersection(cls.build_service_scope)
+            service_names = service_names.intersection(  # pyright: ignore
+                cls.build_service_scope  # pyright: ignore
+            )
 
-            result = cls(service_names)
+            result = cls(service_names)  # pyright: ignore
 
             return result
 
