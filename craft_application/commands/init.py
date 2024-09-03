@@ -44,29 +44,17 @@ class InitCommand(base.AppCommand):
         """
         Command creates an initial project filetree.
 
-        It has three variants:
-
         1. No positional arguments provided
         Initialize project in current working directory.
 
-        2. One positional argument (<name>) provided
-        Initialize project <name> in the <name> subdirectory.
-
-        3. Two positional arguments (<name> <project_dir>)
-        Initialize project <name> in the <project_dir> directory.
+        2. One positional argument (<project_dir>) provided
+        Initialize project in the <project_dir> directory.
         """
     )
     common = True
 
     def fill_parser(self, parser: argparse.ArgumentParser) -> None:
         """Specify command's specific parameters."""
-        parser.add_argument(
-            "name",
-            type=str,
-            nargs="?",
-            default=None,
-            help="The name of project; defaults to the current working directory name",
-        )
         parser.add_argument(
             "project_dir",
             type=pathlib.Path,
@@ -75,6 +63,12 @@ class InitCommand(base.AppCommand):
             help=(
                 "Path to initialize project in; defaults to <name> or current working directory."
             ),
+        )
+        parser.add_argument(
+            "--name",
+            type=str,
+            default=None,
+            help="The name of project; defaults to the current working directory name",
         )
         parser.add_argument(
             "--force",
@@ -193,16 +187,11 @@ class InitCommand(base.AppCommand):
 
         It applies rules in the following order:
         - if <project_dir> is specified explicitly, it returns <project_dir>
-        - if <name> is specified, <project_dir> is a subdirectory with <name>
-        - if neither is defined, it defaults to current working directory
+        - if <project_dir> is undefined, it defaults to cwd
         """
         # if set explicitly, just return it
         if parsed_args.project_dir is not None:
             return pathlib.Path(parsed_args.project_dir)
-
-        if parsed_args.name is not None:
-            # If package name is defined, default to <name> subdirectory
-            return pathlib.Path(cast(str, parsed_args.name)).resolve()
 
         # If both args are undefined, default to current dir
         return pathlib.Path.cwd().resolve()
