@@ -304,7 +304,7 @@ def uaclient_mock(monkeypatch, mocker):
             mock_isattachedresult
         )
 
-        # similarily mock empty enabled services list
+        # similarly mock empty enabled services list
 
         mock_enabledservice_list = list()
         for service in services:

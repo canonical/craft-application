@@ -117,7 +117,7 @@ class ProServices(set):
 
             service_names = {service.name for service in response.enabled_services}
 
-            # remove any services that arn't relevant to build services
+            # remove any services that aren't relevant to build services
             service_names = service_names.intersection(cls.build_service_scope)
 
             result = cls(service_names)
@@ -156,7 +156,7 @@ class ProServices(set):
             # the services specified in this set
             if (services := self.pro_services()) != self:
                 raise InvalidProStatus(
-                    "The requested pro services do not match the services enabled in the enviroment.\n"
+                    "The requested pro services do not match the services enabled in the environment.\n"
                     f"Enabled Pro Services: {services}\n"
                     f"Specified Pro Services: {self}\n"
                 )
