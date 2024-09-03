@@ -17,6 +17,7 @@
 
 from craft_application.util.callbacks import get_unique_callbacks
 from craft_application.util.docs import render_doc_url
+from craft_application.util.file import make_executable
 from craft_application.util.logging import setup_loggers
 from craft_application.util.paths import get_filename_from_url_path, get_managed_logpath
 from craft_application.util.platforms import (
@@ -52,4 +53,5 @@ __all__ = [
     "dump_yaml",
     "safe_yaml_load",
     "retry",
+    "make_executable",
 ]
