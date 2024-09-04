@@ -53,23 +53,25 @@ def get_lifecycle_command_group() -> CommandGroup:
 
 
 class ProException(Exception):
+    """Base Exception class for ProServices."""
+
     pass
 
 
 class InvalidProStatus(ProException):
+    """Raised when ProServices does not environment Ubuntu Pro configuration."""
+
     pass
 
 
-class ProApiException(ProException):
-    pass
+class UnableToImportProApi(ProException):
+    """Raised when uaclient module is not found."""
 
-
-class UnableToImportProApi(ProApiException):
     pass
 
 
 class ProServices(set[str]):
-    """Class for managing pro-services within the lifecycle"""
+    """Class for managing pro-services within the lifecycle."""
 
     separator: str = ","
     build_service_scope: set[str] = {

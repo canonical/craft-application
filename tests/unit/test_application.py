@@ -785,7 +785,7 @@ def test_run_success_unmanaged(
     fake_project,
     return_code,
     load_project,
-    uaclient_mock,
+    uaclient_mock,  # noqa: ARG001
 ):
     class UnmanagedCommand(commands.AppCommand):
         name = "pass"
@@ -878,7 +878,7 @@ def test_run_success_managed_inside_managed(
     mock_dispatcher,
     return_code,
     mocker,
-    uaclient_mock,
+    uaclient_mock,  # noqa: ARG001
 ):
     mocker.patch.object(app, "get_project", return_value=fake_project)
     mocker.patch.object(
