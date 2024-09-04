@@ -152,8 +152,11 @@ class EmptyBuildPlanError(CraftError):
     """The build plan filtered out all possible builds."""
 
     def __init__(self) -> None:
-        message = "No build matches the current platform."
-        resolution = 'Check the "--platform" and "--build-for" parameters.'
+        message = "No build matches the current execution environment."
+        resolution = (
+            "Check the project's 'platforms' declaration, and the "
+            "'--platform' and '--build-for' parameters."
+        )
 
         super().__init__(message=message, resolution=resolution)
 

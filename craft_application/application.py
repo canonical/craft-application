@@ -336,8 +336,10 @@ class Application:
 
     def run_managed(self, platform: str | None, build_for: str | None) -> None:
         """Run the application in a managed instance."""
-        extra_args: dict[str, Any] = {}
+        if not self._build_plan:
+            raise errors.EmptyBuildPlanError
 
+        extra_args: dict[str, Any] = {}
         for build_info in self._build_plan:
             if platform and platform != build_info.platform:
                 continue
