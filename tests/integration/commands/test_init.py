@@ -222,15 +222,13 @@ def test_init_works_with_single_template_file(
 
 def test_init_works_with_single_template_and_custom_name(
     init_command: InitCommand,
-    tmp_path: Path,
+    fake_empty_project_dir: Path,
     project_yaml_filename: str,
     template_dir_with_testcraft_yaml_j2: Path,
     emitter,
     mocker,
-    monkeypatch,
     check,
 ):
-    monkeypatch.chdir(tmp_path)
     custom_name = "some-other-testproject"
     parsed_args = get_command_arguments(name=custom_name)
     mocker.patch.object(
@@ -245,7 +243,7 @@ def test_init_works_with_single_template_and_custom_name(
     with check:
         assert emitter.assert_message("Successfully initialised project.")
 
-    project_yaml_path = Path(custom_name, project_yaml_filename)
+    project_yaml_path = Path(fake_empty_project_dir, project_yaml_filename)
 
     with check:
         assert project_yaml_path.exists(), "Project should be initialized with template"
