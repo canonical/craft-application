@@ -372,6 +372,7 @@ class PackCommand(LifecycleCommand):
         shell_after = getattr(parsed_args, "shell_after", False)
         debug = getattr(parsed_args, "debug", False)
 
+        # Prevent the steps in the prime command from using `--shell` or `--shell-after`
         parsed_args.shell = False
         parsed_args.shell_after = False
 
