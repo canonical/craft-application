@@ -237,3 +237,75 @@ class CancelFailedError(RemoteBuildError):
             reportable=reportable,
             retcode=retcode,
         )
+
+
+class UbuntuProException(CraftError):
+    """Base Exception class for ProServices."""
+
+
+class UbuntuProApiException(UbuntuProException):
+    """Base class for exceptions raised during Ubuntu Pro Api calls"""
+
+
+class InvalidUbuntuProState(UbuntuProException):
+    """Base class for exceptions raised during Ubuntu Pro validation"""
+
+
+class UbuntuProClientNotFound(UbuntuProApiException):
+    """Raised when Ubuntu Pro client was not found on the system."""
+
+    def __init__(self, path: str) -> None:
+
+        message = f'The Ubuntu Pro client was not found on the system at "{path}"'
+
+        super().__init__(message=message)
+
+
+class UbuntuProDetached(InvalidUbuntuProState):
+    """Raised when Ubuntu Pro is not attached, but Pro services were requested."""
+
+    def __init__(self) -> None:
+
+        message = "Ubuntu Pro is requested, but was found detached."
+        resolution = 'Attach Ubuntu Pro to continue. See "pro" command for details.'
+
+        super().__init__(message=message, resolution=resolution)
+
+
+class UbuntuProAttached(InvalidUbuntuProState):
+    """Raised when Ubuntu Pro is attached, but Pro services were not requested."""
+
+    def __init__(self) -> None:
+
+        message = "Ubuntu Pro is not requested, but was found attached."
+        resolution = 'Detach Ubuntu Pro to continue. See "pro" command for details.'
+
+        super().__init__(message=message, resolution=resolution)
+
+
+class InvalidUbuntuProServices(InvalidUbuntuProState):
+    """Raised when the incorrect set of Pro Services are enabled."""
+
+    def __init__(
+        self, requested_services: set[str], available_services: set[str]
+    ) -> None:
+
+        line_fmt = "\t{}\n"
+        enable_services = "".join(
+            line_fmt.format(service)
+            for service in requested_services - available_services
+        )
+        disable_services = "".join(
+            line_fmt.format(service)
+            for service in available_services - requested_services
+        )
+
+        message = "Incorrect Ubuntu Pro Services were enabled."
+        resolution = (
+            "Please enable or disable the following services.\n"
+            f"Enable:\n{enable_services}\n"
+            f"Disable:\n{disable_services}\n"
+            ' See "pro" command for details.'
+        )
+
+        super().__init__(message=message, resolution=resolution)

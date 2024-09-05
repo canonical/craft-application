@@ -29,6 +29,7 @@ from functools import cached_property
 from importlib import metadata
 from typing import TYPE_CHECKING, Any, cast, final
 
+
 import craft_cli
 import craft_parts
 import craft_providers
@@ -532,6 +533,9 @@ class Application:
             # or outside an unmanaged execution
 
             if (managed_mode and is_managed) or not (managed_mode or is_managed):
+                craft_cli.emit.debug(
+                    f"Validating Requested Ubuntu Pro Services: {pro_services}"
+                )
                 pro_services.validate()
 
             if managed_mode or command.needs_project(dispatcher.parsed_args()):

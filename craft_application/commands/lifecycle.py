@@ -26,6 +26,7 @@ from craft_parts.features import Features
 from typing_extensions import override
 
 from craft_application.commands import base
+from craft_application.util.pro_services import ProServices
 
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -50,143 +51,6 @@ def get_lifecycle_command_group() -> CommandGroup:
         "Lifecycle",
         commands,  # type: ignore[arg-type] # https://github.com/canonical/craft-cli/pull/157
     )
-
-
-class ProException(Exception):
-    """Base Exception class for ProServices."""
-
-    pass
-
-
-class InvalidProStatus(ProException):
-    """Raised when ProServices does not environment Ubuntu Pro configuration."""
-
-    pass
-
-
-class UnableToImportProApi(ProException):
-    """Raised when uaclient module is not found."""
-
-    pass
-
-
-class ProServices(set[str]):
-    """Class for managing pro-services within the lifecycle."""
-
-    separator: str = ","
-    build_service_scope: set[str] = {
-        "esm-apps",
-        "esm-infa",
-        "fips-preview",
-        "fips-updates",
-    }
-
-    def __str__(self) -> str:
-        """Convert to string for display to user."""
-
-        result = ", ".join(self)
-
-        return result
-
-    @classmethod
-    def from_csv(cls, services: str) -> ProServices:
-        """Create a new ProServices instance from a csv string."""
-
-        split = [service.strip() for service in services.split(cls.separator)]
-        result = cls(split)
-
-        return result
-
-    @classmethod
-    def pro_attached(cls) -> bool:
-        """Returns True if environment is attached to Ubuntu Pro."""
-
-        # TODO: fix pyright when uaclient module is not available
-        try:
-            import uaclient  # pyright: ignore
-
-            response = (  # pyright: ignore
-                uaclient.api.u.pro.status.is_attached.v1.is_attached()  # pyright: ignore
-            )
-
-            result = response.is_attached  # pyright: ignore
-
-            return result  # pyright: ignore
-
-        except ImportError as exc:
-            raise UnableToImportProApi() from exc
-
-    @classmethod
-    def pro_services(cls) -> ProServices:
-        """Return set of enabled Ubuntu Pro services in the environment.
-        The returned set only includes services relevant to lifecycle commands."""
-
-        try:
-            import uaclient  # pyright: ignore
-
-            response = (  # pyright: ignore
-                uaclient.api.u.pro.status.enabled_services.v1.enabled_services()  # pyright: ignore
-            )
-
-            service_names = {  # pyright: ignore
-                service.name for service in response.enabled_services  # pyright: ignore
-            }
-
-            # remove any services that aren't relevant to build services
-            service_names = service_names.intersection(  # pyright: ignore
-                cls.build_service_scope  # pyright: ignore
-            )
-
-            result = cls(service_names)  # pyright: ignore
-
-            return result
-
-        except ImportError as exc:
-            raise UnableToImportProApi() from exc
-
-    def validate(self):
-        """Validate the environment against pro services specified in this ProServices instance."""
-
-        try:
-
-            # first, check Ubuntu Pro status
-            # Since we extend the set class, cast ourselves to bool to check if we empty. if we are not
-            # empty, this implies we require pro services.
-            if self.pro_attached() != bool(self):
-                if bool(self):
-                    raise InvalidProStatus(
-                        "This command requires a Ubuntu Pro environment, "
-                        "but no Ubuntu Pro attachment was found."
-                    )
-                else:
-                    raise InvalidProStatus(
-                        "This command requires a non-Ubuntu Pro environment, "
-                        "but Ubuntu Pro attachment was found."
-                    )
-
-            # TODO:
-            # - Optimization: could we just check if the services we need are available and skip
-            #   checking if we are attached? or could we return early here if we are detached and did not request pro services?
-            # - What if pro services are attached, but no services within the build_service_scope are used?
-
-            # second, check that the set of enabled pro services in the environment matches
-            # the services specified in this set
-            if (services := self.pro_services()) != self:
-                raise InvalidProStatus(
-                    "The requested pro services do not match the services enabled in the environment.\n"
-                    f"Enabled Pro Services: {services}\n"
-                    f"Specified Pro Services: {self}\n"
-                )
-
-        except UnableToImportProApi as exc:
-            # TODO: if we ever run in environments where the uaclient module
-            # is not available we may need to add it to the path, or suppress this
-            # exception on platforms that do not support uaclient.
-            #
-            # If we have difficulty importing uaclient, we may want to
-            # revert back to calling the command directly via subprocess
-
-            raise exc
 
 
 class _BaseLifecycleCommand(base.ExtensibleCommand):
@@ -216,11 +80,16 @@ class _BaseLifecycleCommand(base.ExtensibleCommand):
             help="Build in a LXD container.",
         )
 
+        # we suppress the help msg from this argument if the pro api is not found
         parser.add_argument(
             "--pro",
             type=ProServices.from_csv,
             metavar="<pro-services>",
-            help="Enable Ubuntu Pro service by name. Each service should be separated by a comma.",
+            help=(
+                "Enable Ubuntu Pro service by name. Each service should be separated by a comma."
+                if ProServices.pro_client_exists()
+                else argparse.SUPPRESS
+            ),
             default=ProServices(),
         )
 

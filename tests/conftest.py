@@ -286,45 +286,42 @@ def fake_services(
 
 
 @pytest.fixture
-def uaclient_mock(monkeypatch, mocker):
+def mock_pro_api_call(mocker):
 
-    # create mock for UA client
-    mock_uaclient_module = mocker.Mock()
+    mock_responses = {
+        "u.pro.status.is_attached.v1": {
+            "data": {
+                "attributes": {"is_attached": False},
+                "result": "success",
+            }
+        },
+        "u.pro.status.enabled_services.v1": {
+            "data": {"attributes": {"enabled_services": []}},
+            "result": "success",
+        },
+    }
 
-    # default state must be a non pro environment for non pro related tests
-    def set_mock_uaclient(is_attached: bool = False, services: list[str] = list()):
-        """Helper function to set mock uaclient state"""
+    def set_is_attached(value: bool):
+        response = mock_responses["u.pro.status.is_attached.v1"]
+        response["data"]["attributes"]["is_attached"] = value
 
-        # mock is_attached calls to return false
-        mock_isattachedresult = mocker.Mock()
-        type(mock_isattachedresult).is_attached = mocker.PropertyMock(
-            return_value=is_attached
-        )
-        mock_uaclient_module.api.u.pro.status.is_attached.v1.is_attached.return_value = (
-            mock_isattachedresult
-        )
+    def set_enabled_services(service_names: list[str]):
 
-        # similarly mock empty enabled services list
+        enabled_services = [
+            {"name": name, "variant_enabled": False, "variant_name": None}
+            for name in service_names
+        ]
 
-        mock_enabledservice_list = list()
-        for service in services:
-            mock_enabledservice = mocker.Mock()
-            type(mock_enabledservice).name = mocker.PropertyMock(return_value=service)
+        response = mock_responses["u.pro.status.enabled_services.v1"]
+        response["data"]["attributes"]["enabled_services"] = enabled_services
 
-            mock_enabledservice_list.append(mock_enabledservice)
+    def mock_pro_api_call(endpoint: str):
+        result = mock_responses[endpoint]
+        return result
 
-        mock_enabledserviceresult = mocker.Mock()
-        type(mock_enabledserviceresult).enabled_services = mocker.PropertyMock(
-            return_value=mock_enabledservice_list
-        )
-        mock_uaclient_module.api.u.pro.status.enabled_services.v1.enabled_services.return_value = (
-            mock_enabledserviceresult
-        )
+    mocker.patch(
+        "craft_application.util.pro_services.ProServices._pro_api_call",
+        new=mock_pro_api_call,
+    )
 
-    # set default values
-    set_mock_uaclient()
-
-    # patch imports of uaclient
-    monkeypatch.setitem(sys.modules, "uaclient", mock_uaclient_module)
-
-    return mock_uaclient_module, set_mock_uaclient
+    return set_is_attached, set_enabled_services

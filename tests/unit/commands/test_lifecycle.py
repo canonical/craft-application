@@ -32,7 +32,11 @@ from craft_application.commands.lifecycle import (
     StageCommand,
     get_lifecycle_command_group,
     ProServices,
-    InvalidProStatus,
+)
+from craft_application.errors import (
+    InvalidUbuntuProServices,
+    UbuntuProAttached,
+    UbuntuProDetached,
 )
 from craft_cli import emit
 from craft_parts import Features
@@ -67,14 +71,14 @@ PRO_SERVICE_COMMANDS = [
 ]
 
 PRO_SERVICE_CONFIGS = [
-    # ua_is_attached,       ua_enabled_services,         proservices_args,                   expected_exception
+    # is_attached,           enabled_services,           proservices_args,                  expected_exception
     (False,                 [],                          [],                                None),
     (True,                  ["esm-apps"],                ["esm-apps"],                      None),
-    (True,                  ["esm-apps", "fips-updates"],["esm-apps", "fips-updates"],  None),
-    (False,                 ["esm-apps"],                [],                                InvalidProStatus),
-    (True,                  [],                          ["esm-apps"],                      InvalidProStatus),
-    (True,                  ["esm-apps", "fips-updates"],["fips-updates"],                  InvalidProStatus),
-    (True,                  ["esm-apps",],               ["fips-updates", "fips-updates"],  InvalidProStatus),
+    (True,                  ["esm-apps", "fips-updates"],["esm-apps", "fips-updates"],      None),
+    (True,                  ["esm-apps"],                [],                                UbuntuProAttached),
+    (False,                 [],                          ["esm-apps"],                      UbuntuProDetached),
+    (True,                  ["esm-apps", "fips-updates"],["fips-updates"],                  InvalidUbuntuProServices),
+    (True,                  ["esm-apps",],               ["fips-updates", "fips-updates"],  InvalidUbuntuProServices),
 
 ]
 
@@ -109,26 +113,27 @@ def get_fake_command_class(parent_cls, managed):
 
 
 @pytest.mark.parametrize(
-    ("ua_is_attached", "ua_enabled_services", "proservices_args", "expected_exception"),
+    ("is_attached", "enabled_services", "proservices_args", "expected_exception"),
     PRO_SERVICE_CONFIGS,
 )
 def test_validate_pro_services(
-    uaclient_mock,
-    ua_is_attached,
-    ua_enabled_services,
+    mock_pro_api_call,
+    is_attached,
+    enabled_services,
     proservices_args,
     expected_exception,
 ):
-    # unpack fixture
-    mock_uaclient_module, set_mock_uaclient = uaclient_mock
+
+    # configure api state
+    set_is_attached, set_enabled_service = mock_pro_api_call
+    set_is_attached(is_attached)
+    set_enabled_service(enabled_services)
 
     try:
-        # configure api state
-        set_mock_uaclient(ua_is_attached, ua_enabled_services)
-
         # create and validate pro services
         proservices = ProServices(proservices_args)
         proservices.validate()
+
     except Exception as exc:
         assert type(exc) is expected_exception
 

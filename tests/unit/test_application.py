@@ -659,7 +659,7 @@ def test_craft_lib_log_level(app_metadata, fake_services):
 
 
 def test_gets_project(
-    monkeypatch, tmp_path, app_metadata, fake_services, uaclient_mock
+    monkeypatch, tmp_path, app_metadata, fake_services, mock_pro_api_call
 ):
     project_file = tmp_path / "testcraft.yaml"
     project_file.write_text(BASIC_PROJECT_YAML)
@@ -785,7 +785,7 @@ def test_run_success_unmanaged(
     fake_project,
     return_code,
     load_project,
-    uaclient_mock,  # noqa: ARG001
+    mock_pro_api_call,
 ):
     class UnmanagedCommand(commands.AppCommand):
         name = "pass"
@@ -878,7 +878,7 @@ def test_run_success_managed_inside_managed(
     mock_dispatcher,
     return_code,
     mocker,
-    uaclient_mock,  # noqa: ARG001
+    mock_pro_api_call, 
 ):
     mocker.patch.object(app, "get_project", return_value=fake_project)
     mocker.patch.object(
