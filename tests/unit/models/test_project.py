@@ -30,9 +30,11 @@ from craft_application.models import (
     DEVEL_BASE_WARNING,
     BuildInfo,
     BuildPlanner,
+    Platform,
     Project,
     constraints,
 )
+from craft_application.util import platforms
 
 PROJECTS_DIR = pathlib.Path(__file__).parent / "project_models"
 PARTS_DICT = {"my-part": {"plugin": "nil"}}
@@ -119,6 +121,38 @@ FULL_PROJECT_DICT = {
 def full_project_dict():
     """Provides a modifiable copy of ``FULL_PROJECT_DICT``"""
     return copy.deepcopy(FULL_PROJECT_DICT)
+
+
+@pytest.mark.parametrize(
+    ("incoming", "expected"),
+    [
+        *(
+            pytest.param(
+                {"build-on": arch, "build-for": arch},
+                Platform(build_on=[arch], build_for=[arch]),
+                id=arch,
+            )
+            for arch in platforms._ARCH_TRANSLATIONS_DEB_TO_PLATFORM
+        ),
+        *(
+            pytest.param(
+                {"build-on": arch},
+                Platform(build_on=[arch]),
+                id=f"build-on-only-{arch}",
+            )
+            for arch in platforms._ARCH_TRANSLATIONS_DEB_TO_PLATFORM
+        ),
+        pytest.param(
+            {"build-on": "amd64", "build-for": "riscv64"},
+            Platform(build_on=["amd64"], build_for=["riscv64"]),
+            id="cross-compile",
+        ),
+    ],
+)
+def test_platform_vectorise_architectures(incoming, expected):
+    platform = Platform.model_validate(incoming)
+
+    assert platform == expected
 
 
 @pytest.mark.parametrize(
