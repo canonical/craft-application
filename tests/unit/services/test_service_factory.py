@@ -97,10 +97,17 @@ def test_set_kwargs(
             {"overridden": False},
             {"overridden": True},
             {"overridden": True},
-        )
-    ]
+        ),
+    ],
 )
-def test_update_kwargs(app_metadata, fake_project, fake_package_service_class, first_kwargs, second_kwargs, expected):
+def test_update_kwargs(
+    app_metadata,
+    fake_project,
+    fake_package_service_class,
+    first_kwargs,
+    second_kwargs,
+    expected,
+):
     class MockPackageService(fake_package_service_class):
         mock_class = mock.Mock(return_value=mock.Mock(spec_set=services.PackageService))
 

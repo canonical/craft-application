@@ -15,8 +15,8 @@
 from __future__ import annotations
 
 import dataclasses
-from typing import TYPE_CHECKING, Any
 import warnings
+from typing import TYPE_CHECKING, Any
 
 from craft_application import models, services
 
@@ -62,12 +62,15 @@ class ServiceFactory:
         service: str,
         **kwargs: Any,  # noqa: ANN401 this is intentionally duck-typed.
     ) -> None:
-        """Set up the keyword arguments to pass to a particular service class."""
+        """Set up the keyword arguments to pass to a particular service class.
+
+        PENDING DEPRECATION: use update_kwargs instead
+        """
         warnings.warn(
             PendingDeprecationWarning(
                 "ServiceFactory.set_kwargs is pending deprecation. Use update_kwargs instead."
             ),
-            stacklevel=2
+            stacklevel=2,
         )
         self._service_kwargs[service] = kwargs
 
@@ -76,6 +79,13 @@ class ServiceFactory:
         service: str,
         **kwargs: Any,  # noqa: ANN401 this is intentionally duck-typed.
     ) -> None:
+        """Update the keyword arguments to pass to a particular service class.
+
+        This works like ``dict.update()``, overwriting already-set values.
+
+        :param service: the name of the service (e.g. "lifecycle")
+        :param kwargs: keyword arguments to set.
+        """
         self._service_kwargs.setdefault(service, {}).update(kwargs)
 
     def __getattr__(self, service: str) -> services.AppService:
