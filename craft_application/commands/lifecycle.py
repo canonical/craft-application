@@ -367,13 +367,32 @@ class PackCommand(LifecycleCommand):
         """Run the pack command."""
         if step_name not in ("pack", None):
             raise RuntimeError(f"Step name {step_name} passed to pack command.")
+
+        shell = getattr(parsed_args, "shell", False)
+        shell_after = getattr(parsed_args, "shell_after", False)
+        debug = getattr(parsed_args, "debug", False)
+
+        # Prevent the steps in the prime command from using `--shell` or `--shell-after`
+        parsed_args.shell = False
+        parsed_args.shell_after = False
+
         super()._run(parsed_args, step_name="prime")
         self._run_post_prime_steps()
 
+        if shell:
+            _launch_shell()
+            return
+
         emit.progress("Packing...")
-        packages = self._services.package.pack(
-            self._services.lifecycle.prime_dir, parsed_args.output
-        )
+        try:
+            packages = self._services.package.pack(
+                self._services.lifecycle.prime_dir, parsed_args.output
+            )
+        except Exception as err:
+            if debug:
+                emit.progress(str(err), permanent=True)
+                _launch_shell()
+            raise
 
         if not packages:
             emit.progress("No packages created.", permanent=True)
@@ -383,10 +402,8 @@ class PackCommand(LifecycleCommand):
             package_names = ", ".join(pkg.name for pkg in packages)
             emit.progress(f"Packed: {package_names}", permanent=True)
 
-    @staticmethod
-    @override
-    def _should_add_shell_args() -> bool:
-        return False
+        if shell_after:
+            _launch_shell()
 
 
 class CleanCommand(_BaseLifecycleCommand):
