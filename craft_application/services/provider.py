@@ -211,7 +211,7 @@ class ProviderService(base.ProjectService):
             emit.debug(f"Using provider {provider!r} from system configuration.")
             chosen_provider = provider
 
-        # (3) use provider specified in provider
+        # (3) use provider specified in snap configuration
         elif snap_provider := self._get_provider_from_snap_config():
             emit.debug(f"Using provider {snap_provider!r} from snap config.")
             chosen_provider = snap_provider
