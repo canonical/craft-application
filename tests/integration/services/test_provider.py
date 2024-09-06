@@ -36,7 +36,7 @@ from craft_providers import bases
         ),
         pytest.param(("ubuntu", "24.04"), id="ubuntu_lts"),
         pytest.param(("ubuntu", "22.04"), id="ubuntu_old_lts"),
-        pytest.param(("almalinux", "9"), id="almalinux_9")
+        pytest.param(("almalinux", "9"), id="almalinux_9"),
     ],
 )
 @pytest.mark.parametrize(
