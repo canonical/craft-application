@@ -184,6 +184,9 @@ def start_service() -> subprocess.Popen[str] | None:
     # Accept permissive sessions
     cmd.append("--permissive-mode")
 
+    # Shutdown after 5 minutes with no live sessions
+    cmd.append("--idle-shutdown=300")
+
     log_filepath = _get_log_filepath()
     log_filepath.parent.mkdir(parents=True, exist_ok=True)
 
