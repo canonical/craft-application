@@ -136,6 +136,7 @@ def test_start_service(mocker, tmp_path):
                     f"--cert={fake_cert}",
                     f"--key={fake_key}",
                     "--permissive-mode",
+                    "--idle-shutdown=300",
                 ]
             )
             + f" > {fetch._get_log_filepath()}",
