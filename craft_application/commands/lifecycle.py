@@ -147,14 +147,12 @@ class LifecycleCommand(_BaseLifecycleCommand):
             "--platform",
             type=str,
             metavar="name",
-            default=os.getenv("CRAFT_PLATFORM"),
             help="Set platform to build for",
         )
         group.add_argument(
             "--build-for",
             type=str,
             metavar="arch",
-            default=os.getenv("CRAFT_BUILD_FOR"),
             help="Set architecture to build for",
         )
 

@@ -24,8 +24,9 @@ from typing import TYPE_CHECKING, Any
 
 import craft_application
 import craft_parts
+import pydantic
 import pytest
-from craft_application import application, models, services, util
+from craft_application import application, launchpad, models, services, util
 from craft_cli import EmitterMode, emit
 from craft_providers import bases
 
@@ -58,19 +59,39 @@ def features(request) -> dict[str, bool]:
     return features
 
 
+class FakeConfigModel(craft_application.ConfigModel):
+
+    my_str: str
+    my_int: int
+    my_bool: bool
+    my_default_str: str = "default"
+    my_default_int: int = -1
+    my_default_bool: bool = True
+    my_default_factory: dict[str, str] = pydantic.Field(
+        default_factory=lambda: {"dict": "yes"}
+    )
+    my_arch: launchpad.Architecture
+
+
 @pytest.fixture(scope="session")
-def default_app_metadata() -> craft_application.AppMetadata:
+def fake_config_model() -> type[FakeConfigModel]:
+    return FakeConfigModel
+
+
+@pytest.fixture(scope="session")
+def default_app_metadata(fake_config_model) -> craft_application.AppMetadata:
     with pytest.MonkeyPatch.context() as m:
         m.setattr(metadata, "version", lambda _: "3.14159")
         return craft_application.AppMetadata(
             "testcraft",
             "A fake app for testing craft-application",
             source_ignore_patterns=["*.snap", "*.charm", "*.starcraft"],
+            ConfigModel=fake_config_model,
         )
 
 
 @pytest.fixture
-def app_metadata(features) -> craft_application.AppMetadata:
+def app_metadata(features, fake_config_model) -> craft_application.AppMetadata:
     with pytest.MonkeyPatch.context() as m:
         m.setattr(metadata, "version", lambda _: "3.14159")
         return craft_application.AppMetadata(
@@ -79,6 +100,7 @@ def app_metadata(features) -> craft_application.AppMetadata:
             source_ignore_patterns=["*.snap", "*.charm", "*.starcraft"],
             features=craft_application.AppFeatures(**features),
             docs_url="www.craft-app.com/docs/{version}",
+            ConfigModel=fake_config_model,
         )
 
 

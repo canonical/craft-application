@@ -197,6 +197,7 @@ def test_version(capsys, monkeypatch, app):
     assert captured.out == "testcraft 3.14159\n"
 
 
+@pytest.mark.usefixtures("emitter")
 def test_non_lifecycle_command_does_not_require_project(monkeypatch, app):
     """Run a command without having a project instance shall not fail."""
     monkeypatch.setattr("sys.argv", ["testcraft", "nothing"])
@@ -428,7 +429,7 @@ def test_lifecycle_error_logging(monkeypatch, tmp_path, create_app):
     assert parts_message in log_contents
 
 
-@pytest.mark.usefixtures("pretend_jammy")
+@pytest.mark.usefixtures("pretend_jammy", "emitter")
 def test_runtime_error_logging(monkeypatch, tmp_path, create_app, mocker):
     monkeypatch.chdir(tmp_path)
     shutil.copytree(INVALID_PROJECTS_DIR / "build-error", tmp_path, dirs_exist_ok=True)
