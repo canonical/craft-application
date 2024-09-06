@@ -37,7 +37,7 @@ from craft_parts.plugins.plugins import PluginType
 from platformdirs import user_cache_path
 
 from craft_application import commands, errors, grammar, models, secrets, util
-from craft_application._config import ConfigModel
+from craft_application import _config
 from craft_application.errors import PathInvalidError
 from craft_application.models import BuildInfo, GrammarAwareProject
 
@@ -81,7 +81,7 @@ class AppMetadata:
     features: AppFeatures = AppFeatures()
     project_variables: list[str] = field(default_factory=lambda: ["version"])
     mandatory_adoptable_fields: list[str] = field(default_factory=lambda: ["version"])
-    config_model: type[ConfigModel] = ConfigModel
+    ConfigModel: type[_config.ConfigModel] = _config.ConfigModel
 
     ProjectClass: type[models.Project] = models.Project
     BuildPlannerClass: type[models.BuildPlanner] = models.BuildPlanner

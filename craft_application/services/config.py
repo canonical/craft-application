@@ -98,8 +98,9 @@ class SnapConfigHandler(ConfigHandler):
 
     @override
     def get_raw(self, item: str) -> Any:
+        snap_item = item.replace("_", "-")
         try:
-            return self._snap.get(item)
+            return self._snap.get(snap_item)
         except snaphelpers.UnknownConfigKey as exc:
             raise KeyError(f"unknown snap config item: {item!r}") from exc
 
@@ -110,7 +111,7 @@ class DefaultConfigHandler(ConfigHandler):
 
     def __init__(self, app: application.AppMetadata) -> None:
         super().__init__(app)
-        self._config_model = app.config_model
+        self._config_model = app.ConfigModel
         self._cache: dict[str, str] = {}
 
     @override
@@ -165,9 +166,9 @@ class ConfigService(base.AppService):
 
     def get(self, item: str) -> Any:  # noqa: ANN401
         """Get the given configuration item."""
-        if item not in self._app.config_model.model_fields:
+        if item not in self._app.ConfigModel.model_fields:
             raise KeyError(r"unknown config item: {item!r}")
-        field_info = self._app.config_model.model_fields[item]
+        field_info = self._app.ConfigModel.model_fields[item]
 
         for handler in self._handlers:
             try:
