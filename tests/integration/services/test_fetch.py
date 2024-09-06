@@ -47,24 +47,18 @@ def _set_test_certificate_dir():
     with mock.patch.object(fetch, "_get_certificate_dir", return_value=cert_dir):
         fetch._obtain_certificate()
 
-    yield
-
-    shutil.rmtree(cert_dir)
-
 
 @pytest.fixture(autouse=True)
 def _set_test_base_dirs(mocker):
     original = fetch._get_service_base_dir()
     test_dir = original / "test"
-    test_dir.mkdir(exist_ok=True)
+    if test_dir.exists():
+        shutil.rmtree(test_dir)
+    test_dir.mkdir()
     mocker.patch.object(fetch, "_get_service_base_dir", return_value=test_dir)
 
     cert_dir = _get_fake_certificate_dir()
     mocker.patch.object(fetch, "_get_certificate_dir", return_value=cert_dir)
-
-    yield
-
-    shutil.rmtree(test_dir)
 
 
 @pytest.fixture
@@ -147,6 +141,36 @@ def test_create_teardown_session(app_service, mocker, tmp_path, monkeypatch):
 
     assert "artefacts" in report
     assert expected_report.is_file()
+
+
+def test_service_logging(app_service, mocker, tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    mocker.patch.object(fetch, "_get_gateway", return_value="127.0.0.1")
+
+    logfile = fetch._get_log_filepath()
+    assert not logfile.is_file()
+
+    app_service.setup()
+
+    mock_instance = mock.MagicMock(spec_set=craft_providers.Executor)
+
+    # Create and teardown two sessions
+    app_service.create_session(mock_instance)
+    app_service.teardown_session()
+    app_service.create_session(mock_instance)
+    app_service.teardown_session()
+
+    # Check the logfile for the creation/deletion of the two sessions
+    expected = 2
+    assert logfile.is_file()
+    lines = logfile.read_text().splitlines()
+    create = discard = 0
+    for line in lines:
+        if "creating session" in line:
+            create += 1
+        if "discarding session" in line:
+            discard += 1
+    assert create == discard == expected
 
 
 # Bash script to setup the build instance before the actual testing.
