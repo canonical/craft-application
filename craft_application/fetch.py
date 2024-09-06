@@ -16,9 +16,12 @@
 """Utilities to interact with the fetch-service."""
 import contextlib
 import io
+import os
 import pathlib
 import shlex
+import signal
 import subprocess
+import time
 from dataclasses import dataclass
 from typing import Any, cast
 
@@ -181,10 +184,21 @@ def start_service() -> subprocess.Popen[str] | None:
     # Accept permissive sessions
     cmd.append("--permissive-mode")
 
-    emit.debug(f"Launching fetch-service with '{shlex.join(cmd)}'")
+    log_filepath = _get_log_filepath()
+    log_filepath.parent.mkdir(parents=True, exist_ok=True)
+
+    str_cmd = f"{shlex.join(cmd)} > {log_filepath.absolute()}"
+    emit.debug(f"Launching fetch-service with '{str_cmd}'")
 
     fetch_process = subprocess.Popen(
-        cmd, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True
+        ["bash", "-c", str_cmd],
+        env=env,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        # Start a new session because when killing the service we need to kill
+        # both 'bash' and the 'fetch' it spawns.
+        start_new_session=True,
     )
 
     # Wait a bit for the service to come online
@@ -193,17 +207,18 @@ def start_service() -> subprocess.Popen[str] | None:
 
     if fetch_process.poll() is not None:
         # fetch-service already exited, something is wrong
-        stdout = ""
-        if fetch_process.stdout is not None:
-            stdout = fetch_process.stdout.read()
+        log = log_filepath.read_text()
+        lines = log.splitlines()
+        error_lines = [line for line in lines if "ERROR:" in line]
+        error_text = "\n".join(error_lines)
 
-        if "bind: address already in use" in stdout:
+        if "bind: address already in use" in error_text:
             proxy, control = _DEFAULT_CONFIG.proxy, _DEFAULT_CONFIG.control
             message = f"fetch-service ports {proxy} and {control} are already in use."
             details = None
         else:
             message = "Error spawning the fetch-service."
-            details = stdout
+            details = error_text
         raise errors.FetchServiceError(message, details=details)
 
     status = retry(
@@ -225,11 +240,16 @@ def stop_service(fetch_process: subprocess.Popen[str]) -> None:
 
     This function first calls terminate(), and then kill() after a short time.
     """
-    fetch_process.terminate()
     try:
-        fetch_process.wait(timeout=1.0)
-    except subprocess.TimeoutExpired:
-        fetch_process.kill()
+        os.killpg(os.getpgid(fetch_process.pid), signal.SIGTERM)
+    except ProcessLookupError:
+        return
+
+    # Give the shell and fetch-service a chance to terminate
+    time.sleep(0.2)
+
+    with contextlib.suppress(ProcessLookupError):
+        os.killpg(os.getpgid(fetch_process.pid), signal.SIGKILL)
 
 
 def create_session() -> SessionData:
@@ -490,3 +510,9 @@ def _get_certificate_dir() -> pathlib.Path:
 def _check_installed() -> bool:
     """Check whether the fetch-service is installed."""
     return pathlib.Path(_FETCH_BINARY).is_file()
+
+
+def _get_log_filepath() -> pathlib.Path:
+    base_dir = _get_service_base_dir()
+
+    return base_dir / "craft/fetch-log.txt"
