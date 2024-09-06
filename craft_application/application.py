@@ -225,14 +225,14 @@ class Application:
         Any child classes that override this must either call this directly or must
         provide a valid ``project`` to ``self.services``.
         """
-        self.services.set_kwargs(
+        self.services.update_kwargs(
             "lifecycle",
             cache_dir=self.cache_dir,
             work_dir=self._work_dir,
             build_plan=self._build_plan,
             partitions=self._partitions,
         )
-        self.services.set_kwargs(
+        self.services.update_kwargs(
             "provider",
             work_dir=self._work_dir,
             build_plan=self._build_plan,
@@ -338,8 +338,10 @@ class Application:
 
     def run_managed(self, platform: str | None, build_for: str | None) -> None:
         """Run the application in a managed instance."""
-        extra_args: dict[str, Any] = {}
+        if not self._build_plan:
+            raise errors.EmptyBuildPlanError
 
+        extra_args: dict[str, Any] = {}
         for build_info in self._build_plan:
             if platform and platform != build_info.platform:
                 continue
