@@ -26,7 +26,7 @@ import craft_application
 import craft_parts
 import pydantic
 import pytest
-from craft_application import application, models, services, util
+from craft_application import application, launchpad, models, services, util
 from craft_cli import EmitterMode, emit
 from craft_providers import bases
 
@@ -70,6 +70,7 @@ class FakeConfigModel(craft_application.ConfigModel):
     my_default_factory: dict[str, str] = pydantic.Field(
         default_factory=lambda: {"dict": "yes"}
     )
+    my_arch: launchpad.Architecture
 
 
 @pytest.fixture(scope="session")

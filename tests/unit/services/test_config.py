@@ -25,6 +25,7 @@ import craft_application
 import craft_cli
 import pytest
 import pytest_subprocess
+from craft_application import launchpad
 from craft_application.services import config
 from hypothesis import given, strategies
 
@@ -54,6 +55,7 @@ APP_SPECIFIC_TEST_ENTRY_VALUES = [
     ("my_default_str", "something", "something"),
     ("my_default_int", "4294967296", 2**32),
     ("my_bool", "1", True),
+    ("my_arch", "riscv64", launchpad.Architecture.RISCV64),
 ]
 TEST_ENTRY_VALUES = CRAFT_APPLICATION_TEST_ENTRY_VALUES + APP_SPECIFIC_TEST_ENTRY_VALUES
 
