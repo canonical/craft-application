@@ -147,7 +147,8 @@ def test_snap_config_handler(snap_config_handler, item: str, content: str):
     with pytest_subprocess.FakeProcess.context() as fp, pytest.MonkeyPatch.context() as mp:
         mp.setattr("snaphelpers._ctl.Popen", subprocess.Popen)
         fp.register(
-            ["/usr/bin/snapctl", "get", "-d", snap_item], stdout=json.dumps({snap_item: content})
+            ["/usr/bin/snapctl", "get", "-d", snap_item],
+            stdout=json.dumps({snap_item: content}),
         )
         assert snap_config_handler.get_raw(item) == content
 

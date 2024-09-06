@@ -36,8 +36,7 @@ import craft_providers
 from craft_parts.plugins.plugins import PluginType
 from platformdirs import user_cache_path
 
-from craft_application import commands, errors, grammar, models, secrets, util
-from craft_application import _config
+from craft_application import _config, commands, errors, grammar, models, secrets, util
 from craft_application.errors import PathInvalidError
 from craft_application.models import BuildInfo, GrammarAwareProject
 
