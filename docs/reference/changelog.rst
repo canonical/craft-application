@@ -2,6 +2,22 @@
 Changelog
 *********
 
+4.1.2 (2024-Sep-05)
+-------------------
+
+Application
+===========
+
+- Managed runs now fail if the build plan is empty.
+- Error message tweaks for invalid YAML files.
+
+Models
+======
+
+- Platform models now correctly accept non-vectorised architectures.
+
+For a complete list of commits, check out the `4.1.2`_ release on GitHub.
+
 4.1.1 (2024-Aug-27)
 -------------------
 
@@ -208,3 +224,4 @@ For a complete list of commits, check out the `2.7.0`_ release on GitHub.
 .. _4.0.0: https://github.com/canonical/craft-application/releases/tag/4.0.0
 .. _4.1.0: https://github.com/canonical/craft-application/releases/tag/4.1.0
 .. _4.1.1: https://github.com/canonical/craft-application/releases/tag/4.1.1
+.. _4.1.2: https://github.com/canonical/craft-application/releases/tag/4.1.2

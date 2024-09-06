@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import dataclasses
+import warnings
 from typing import TYPE_CHECKING, Any
 
 from craft_application import models, services
@@ -41,6 +42,7 @@ class ServiceFactory:
     ProviderClass: type[services.ProviderService] = services.ProviderService
     RemoteBuildClass: type[services.RemoteBuildService] = services.RemoteBuildService
     RequestClass: type[services.RequestService] = services.RequestService
+    ConfigClass: type[services.ConfigService] = services.ConfigService
 
     project: models.Project | None = None
 
@@ -52,6 +54,7 @@ class ServiceFactory:
         provider: services.ProviderService = None  # type: ignore[assignment]
         remote_build: services.RemoteBuildService = None  # type: ignore[assignment]
         request: services.RequestService = None  # type: ignore[assignment]
+        config: services.ConfigService = None  # type: ignore[assignment]
 
     def __post_init__(self) -> None:
         self._service_kwargs: dict[str, dict[str, Any]] = {}
@@ -61,8 +64,31 @@ class ServiceFactory:
         service: str,
         **kwargs: Any,  # noqa: ANN401 this is intentionally duck-typed.
     ) -> None:
-        """Set up the keyword arguments to pass to a particular service class."""
+        """Set up the keyword arguments to pass to a particular service class.
+
+        PENDING DEPRECATION: use update_kwargs instead
+        """
+        warnings.warn(
+            PendingDeprecationWarning(
+                "ServiceFactory.set_kwargs is pending deprecation. Use update_kwargs instead."
+            ),
+            stacklevel=2,
+        )
         self._service_kwargs[service] = kwargs
+
+    def update_kwargs(
+        self,
+        service: str,
+        **kwargs: Any,  # noqa: ANN401 this is intentionally duck-typed.
+    ) -> None:
+        """Update the keyword arguments to pass to a particular service class.
+
+        This works like ``dict.update()``, overwriting already-set values.
+
+        :param service: the name of the service (e.g. "lifecycle")
+        :param kwargs: keyword arguments to set.
+        """
+        self._service_kwargs.setdefault(service, {}).update(kwargs)
 
     def __getattr__(self, service: str) -> services.AppService:
         """Instantiate a service class.

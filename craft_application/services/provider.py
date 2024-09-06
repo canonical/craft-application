@@ -210,12 +210,12 @@ class ProviderService(base.ProjectService):
             emit.debug(f"Using provider {name!r} passed as an argument.")
             chosen_provider: str = name
 
-        # (2) get the provider from the environment (CRAFT_BUILD_ENVIRONMENT),
-        elif env_provider := os.getenv("CRAFT_BUILD_ENVIRONMENT"):
-            emit.debug(f"Using provider {env_provider!r} from environment.")
-            chosen_provider = env_provider
+        # (2) get the provider from build_environment
+        elif provider := self._services.config.get("build_environment"):
+            emit.debug(f"Using provider {provider!r} from system configuration.")
+            chosen_provider = provider
 
-        # (3) use provider specified with snap configuration,
+        # (3) use provider specified in snap configuration
         elif snap_provider := self._get_provider_from_snap_config():
             emit.debug(f"Using provider {snap_provider!r} from snap config.")
             chosen_provider = snap_provider
@@ -289,7 +289,7 @@ class ProviderService(base.ProjectService):
 
     def _get_lxd_provider(self) -> LXDProvider:
         """Get the LXD provider for this manager."""
-        lxd_remote = os.getenv("CRAFT_LXD_REMOTE", "local")
+        lxd_remote = self._services.config.get("lxd_remote")
         return LXDProvider(lxd_project=self._app.name, lxd_remote=lxd_remote)
 
     def _get_multipass_provider(self) -> MultipassProvider:

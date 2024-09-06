@@ -93,6 +93,14 @@ class Platform(base.CraftBaseModel):
     build_on: UniqueList[str] | None = pydantic.Field(min_length=1)
     build_for: SingleEntryList[str] | None = None
 
+    @pydantic.field_validator("build_on", "build_for", mode="before")
+    @classmethod
+    def _vectorise_architectures(cls, values: str | list[str]) -> list[str]:
+        """Convert string build-on and build-for to lists."""
+        if isinstance(values, str):
+            return [values]
+        return values
+
     @pydantic.field_validator("build_on", "build_for", mode="after")
     @classmethod
     def _validate_architectures(cls, values: list[str]) -> list[str]:

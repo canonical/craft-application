@@ -17,6 +17,7 @@
 
 from __future__ import annotations
 
+import argparse
 import importlib
 import os
 import pathlib
@@ -35,7 +36,7 @@ import craft_providers
 from craft_parts.plugins.plugins import PluginType
 from platformdirs import user_cache_path
 
-from craft_application import commands, errors, grammar, models, secrets, util
+from craft_application import _config, commands, errors, grammar, models, secrets, util
 from craft_application.errors import PathInvalidError
 from craft_application.models import BuildInfo, GrammarAwareProject
 
@@ -79,6 +80,7 @@ class AppMetadata:
     features: AppFeatures = AppFeatures()
     project_variables: list[str] = field(default_factory=lambda: ["version"])
     mandatory_adoptable_fields: list[str] = field(default_factory=lambda: ["version"])
+    ConfigModel: type[_config.ConfigModel] = _config.ConfigModel
 
     ProjectClass: type[models.Project] = models.Project
     BuildPlannerClass: type[models.BuildPlanner] = models.BuildPlanner
@@ -223,14 +225,14 @@ class Application:
         Any child classes that override this must either call this directly or must
         provide a valid ``project`` to ``self.services``.
         """
-        self.services.set_kwargs(
+        self.services.update_kwargs(
             "lifecycle",
             cache_dir=self.cache_dir,
             work_dir=self._work_dir,
             build_plan=self._build_plan,
             partitions=self._partitions,
         )
-        self.services.set_kwargs(
+        self.services.update_kwargs(
             "provider",
             work_dir=self._work_dir,
             build_plan=self._build_plan,
@@ -431,7 +433,7 @@ class Application:
                     f"Internal error while loading {self.app.name}: {err!r}"
                 )
             )
-            if os.getenv("CRAFT_DEBUG") == "1":
+            if self.services.config.get("debug"):
                 raise
             sys.exit(os.EX_SOFTWARE)
 
@@ -493,6 +495,17 @@ class Application:
                     resolution="Ensure the path entered is correct.",
                 )
 
+    def get_arg_or_config(
+        self, parsed_args: argparse.Namespace, item: str
+    ) -> Any:  # noqa: ANN401
+        """Get a configuration option that could be overridden by a command argument.
+
+        :param parsed_args: The argparse Namespace to check.
+        :param item: the name of the namespace or config item.
+        :returns: the requested value.
+        """
+        return getattr(parsed_args, item, self.services.config.get(item))
+
     def run(  # noqa: PLR0912,PLR0915  (too many branches, too many statements)
         self,
     ) -> int:
@@ -508,8 +521,9 @@ class Application:
                 commands.AppCommand,
                 dispatcher.load_command(self.app_config),
             )
-            platform = getattr(dispatcher.parsed_args(), "platform", None)
-            build_for = getattr(dispatcher.parsed_args(), "build_for", None)
+            parsed_args = dispatcher.parsed_args()
+            platform = self.get_arg_or_config(parsed_args, "platform")
+            build_for = self.get_arg_or_config(parsed_args, "build_for")
 
             # Some commands (e.g. remote build) can allow multiple platforms
             # or build-fors, comma-separated. In these cases, we create the
@@ -574,7 +588,7 @@ class Application:
                 craft_cli.CraftError(f"{self.app.name} internal error: {err!r}"),
                 cause=err,
             )
-            if os.getenv("CRAFT_DEBUG") == "1":
+            if self.services.config.get("debug"):
                 raise
             return_code = os.EX_SOFTWARE
         else:
