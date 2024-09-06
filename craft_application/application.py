@@ -17,6 +17,7 @@
 
 from __future__ import annotations
 
+import argparse
 import importlib
 import os
 import pathlib
@@ -36,7 +37,7 @@ import craft_providers.lxd
 from craft_parts.plugins.plugins import PluginType
 from platformdirs import user_cache_path
 
-from craft_application import commands, errors, grammar, models, secrets, util
+from craft_application import _config, commands, errors, grammar, models, secrets, util
 from craft_application.errors import PathInvalidError
 from craft_application.models import BuildInfo, GrammarAwareProject
 from craft_application.util import ProServices, ValidatorOptions
@@ -81,6 +82,7 @@ class AppMetadata:
     features: AppFeatures = AppFeatures()
     project_variables: list[str] = field(default_factory=lambda: ["version"])
     mandatory_adoptable_fields: list[str] = field(default_factory=lambda: ["version"])
+    ConfigModel: type[_config.ConfigModel] = _config.ConfigModel
 
     ProjectClass: type[models.Project] = models.Project
     BuildPlannerClass: type[models.BuildPlanner] = models.BuildPlanner
@@ -458,7 +460,7 @@ class Application:
                     f"Internal error while loading {self.app.name}: {err!r}"
                 )
             )
-            if os.getenv("CRAFT_DEBUG") == "1":
+            if self.services.config.get("debug"):
                 raise
             sys.exit(os.EX_SOFTWARE)
 
@@ -521,6 +523,17 @@ class Application:
                     resolution="Ensure the path entered is correct.",
                 )
 
+    def get_arg_or_config(
+        self, parsed_args: argparse.Namespace, item: str
+    ) -> Any:  # noqa: ANN401
+        """Get a configuration option that could be overridden by a command argument.
+
+        :param parsed_args: The argparse Namespace to check.
+        :param item: the name of the namespace or config item.
+        :returns: the requested value.
+        """
+        return getattr(parsed_args, item, self.services.config.get(item))
+
     @staticmethod
     def _check_pro_requirement(
         pro_services: ProServices | None,
@@ -564,9 +577,9 @@ class Application:
                 commands.AppCommand,
                 dispatcher.load_command(self.app_config),
             )
-
-            platform = getattr(dispatcher.parsed_args(), "platform", None)
-            build_for = getattr(dispatcher.parsed_args(), "build_for", None)
+            parsed_args = dispatcher.parsed_args()
+            platform = self.get_arg_or_config(parsed_args, "platform")
+            build_for = self.get_arg_or_config(parsed_args, "build_for")
 
             run_managed = command.run_managed(dispatcher.parsed_args())
             is_managed = self.is_managed()
@@ -640,7 +653,7 @@ class Application:
                 craft_cli.CraftError(f"{self.app.name} internal error: {err!r}"),
                 cause=err,
             )
-            if os.getenv("CRAFT_DEBUG") == "1":
+            if self.services.config.get("debug"):
                 raise
             return_code = os.EX_SOFTWARE
         else:
