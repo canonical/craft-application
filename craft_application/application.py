@@ -503,9 +503,7 @@ class Application:
         :param item: the name of the namespace or config item.
         :returns: the requested value.
         """
-        if hasattr(parsed_args, item):
-            return getattr(parsed_args, item)
-        return self.services.config.get(item)
+        return getattr(parsed_args, item, self.services.config.get(item))
 
     def run(  # noqa: PLR0912,PLR0915  (too many branches, too many statements)
         self,
