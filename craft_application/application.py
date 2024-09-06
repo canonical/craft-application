@@ -223,14 +223,14 @@ class Application:
         Any child classes that override this must either call this directly or must
         provide a valid ``project`` to ``self.services``.
         """
-        self.services.set_kwargs(
+        self.services.update_kwargs(
             "lifecycle",
             cache_dir=self.cache_dir,
             work_dir=self._work_dir,
             build_plan=self._build_plan,
             partitions=self._partitions,
         )
-        self.services.set_kwargs(
+        self.services.update_kwargs(
             "provider",
             work_dir=self._work_dir,
             build_plan=self._build_plan,
