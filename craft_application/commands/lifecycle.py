@@ -80,15 +80,20 @@ class _BaseLifecycleCommand(base.ExtensibleCommand):
         )
 
         # we suppress the help msg from this argument if the pro api is not found
+        pro_help_str = argparse.SUPPRESS
+        if ProServices.pro_client_exists():
+            supported_pro_services = ", ".join(
+                [f"'{name}'" for name in ProServices.supported_services]
+            )
+            pro_help_str = "Enable Ubuntu Pro services for this command. "
+            f"Supported values include: {supported_pro_services}. "
+            "Multiple values can be passed separated by commas."
+
         parser.add_argument(
             "--pro",
             type=ProServices.from_csv,
             metavar="<pro-services>",
-            help=(
-                "Enable Ubuntu Pro service by name. Each service should be separated by a comma."
-                if ProServices.pro_client_exists()
-                else argparse.SUPPRESS
-            ),
+            help=pro_help_str,
             default=ProServices(),
         )
 

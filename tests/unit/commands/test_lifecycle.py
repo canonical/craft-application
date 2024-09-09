@@ -34,7 +34,8 @@ from craft_application.commands.lifecycle import (
     ProServices,
 )
 from craft_application.errors import (
-    InvalidUbuntuProServices,
+    InvalidUbuntuProStatus,
+    InvalidUbuntuProService,
     UbuntuProAttached,
     UbuntuProDetached,
 )
@@ -77,9 +78,9 @@ PRO_SERVICE_CONFIGS = [
     (True,                  ["esm-apps", "fips-updates"],["esm-apps", "fips-updates"],      None),
     (True,                  ["esm-apps"],                [],                                UbuntuProAttached),
     (False,                 [],                          ["esm-apps"],                      UbuntuProDetached),
-    (True,                  ["esm-apps", "fips-updates"],["fips-updates"],                  InvalidUbuntuProServices),
-    (True,                  ["esm-apps",],               ["fips-updates", "fips-updates"],  InvalidUbuntuProServices),
-
+    (True,                  ["esm-apps", "fips-updates"],["fips-updates"],                  InvalidUbuntuProStatus),
+    (True,                  ["esm-apps",],               ["fips-updates", "fips-updates"],  InvalidUbuntuProStatus),
+    (True,                  ["esm-apps"],                ["esm-apps", "invalid-service"],   InvalidUbuntuProService),
 ]
 
 STEP_NAMES = [step.name.lower() for step in craft_parts.Step]

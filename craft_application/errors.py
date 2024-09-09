@@ -250,6 +250,9 @@ class UbuntuProApiException(UbuntuProException):
 class InvalidUbuntuProState(UbuntuProException):
     """Base class for exceptions raised during Ubuntu Pro validation"""
 
+    # TODO: some of the resolution strings may not sense in a managed
+    # environment. What is the best way to get the is_managed method here?
+
 
 class UbuntuProClientNotFound(UbuntuProApiException):
     """Raised when Ubuntu Pro client was not found on the system."""
@@ -283,29 +286,44 @@ class UbuntuProAttached(InvalidUbuntuProState):
         super().__init__(message=message, resolution=resolution)
 
 
-class InvalidUbuntuProServices(InvalidUbuntuProState):
+class InvalidUbuntuProService(InvalidUbuntuProState):
+    """Raised when the requested Ubuntu Pro service is not supported in
+    Craft Application or is an invalid Ubuntu Pro Service."""
+
+    # TODO: Should there be separate exceptions for services that not supported vs. invalid?
+    # if so where is the list of supported service names?
+
+    def __init__(self, invalid_services: set[str]) -> None:
+
+        invalid_services_str = "".join(invalid_services)
+
+        message = "Invalid Ubuntu Pro Services were requested."
+        resolution = (
+            "The services listed are either not supported by this application "
+            "or are invalid Ubuntu Pro Services.\n"
+            f"Invalid Services: {invalid_services_str}\n"
+            'See "--pro" argument details for supported services.'
+        )
+
+        super().__init__(message=message, resolution=resolution)
+
+
+class InvalidUbuntuProStatus(InvalidUbuntuProState):
     """Raised when the incorrect set of Pro Services are enabled."""
 
     def __init__(
         self, requested_services: set[str], available_services: set[str]
     ) -> None:
 
-        line_fmt = "\t{}\n"
-        enable_services = "".join(
-            line_fmt.format(service)
-            for service in requested_services - available_services
-        )
-        disable_services = "".join(
-            line_fmt.format(service)
-            for service in available_services - requested_services
-        )
+        enable_services_str = " ".join(requested_services - available_services)
+        disable_services_str = " ".join(available_services - requested_services)
 
         message = "Incorrect Ubuntu Pro Services were enabled."
         resolution = (
             "Please enable or disable the following services.\n"
-            f"Enable:\n{enable_services}\n"
-            f"Disable:\n{disable_services}\n"
-            ' See "pro" command for details.'
+            f"Enable: {enable_services_str}\n"
+            f"Disable: {disable_services_str}\n"
+            'See "pro" command for details.'
         )
 
         super().__init__(message=message, resolution=resolution)

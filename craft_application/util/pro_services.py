@@ -22,7 +22,8 @@ from craft_application.errors import (
     UbuntuProApiException,
     UbuntuProDetached,
     UbuntuProAttached,
-    InvalidUbuntuProServices,
+    InvalidUbuntuProStatus,
+    InvalidUbuntuProService,
 )
 import logging
 import subprocess as sub
@@ -31,7 +32,9 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
-# list of locations to search for paths
+
+# locations to search for pro executable
+# TODO: which path will we support in long term?
 PRO_CLIENT_PATHS = [
     Path("/usr/bin/ubuntu-advantage"),
     Path("/usr/bin/ua"),
@@ -42,14 +45,10 @@ PRO_CLIENT_PATHS = [
 class ProServices(set[str]):
     """Class for managing pro-services within the lifecycle."""
 
-    # pro binary to use for calls
-    # TODO: will we support this executable long term?
-
     # placeholder for empty sets
     empty_placeholder = "none"
 
-    # ignore services outside of this scope
-    build_service_scope: set[str] = {
+    supported_services: set[str] = {
         "esm-apps",
         "esm-infra",
         "fips-preview",
@@ -158,7 +157,7 @@ class ProServices(set[str]):
         service_names = {service["name"] for service in enabled_services}
 
         # remove any services that aren't relevant to build services
-        service_names = service_names.intersection(cls.build_service_scope)
+        service_names = service_names.intersection(cls.supported_services)
 
         result = cls(service_names)
 
@@ -167,7 +166,10 @@ class ProServices(set[str]):
     def validate(self):
         """Validate the environment against pro services specified in this ProServices instance."""
 
-        # TODO: add logging
+        # raise exception if any service was requested outside of build_service_scope
+        if invalid_services := self - self.supported_services:
+            raise InvalidUbuntuProService(invalid_services)
+
         try:
             # first, check Ubuntu Pro status
             # Since we extend the set class, cast ourselves to bool to check if we empty. if we are not
@@ -185,7 +187,7 @@ class ProServices(set[str]):
             # second, check that the set of enabled pro services in the environment matches
             # the services specified in this set
             if (available_services := self.pro_services()) != self:
-                raise InvalidUbuntuProServices(self, available_services)
+                raise InvalidUbuntuProStatus(self, available_services)
 
         except UbuntuProClientNotFound as exc:
 
