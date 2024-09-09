@@ -515,7 +515,7 @@ class Application:
             build_for = getattr(dispatcher.parsed_args(), "build_for", None)
             pro_services = getattr(dispatcher.parsed_args(), "pro", ProServices())
 
-            managed_mode = command.run_managed(dispatcher.parsed_args())
+            run_managed = command.run_managed(dispatcher.parsed_args())
             is_managed = self.is_managed()
 
             # Some commands (e.g. remote build) can allow multiple platforms
@@ -532,13 +532,19 @@ class Application:
             # only validate requested pro services if we are inside a managed execution
             # or outside an unmanaged execution
 
-            if (managed_mode and is_managed) or not (managed_mode or is_managed):
+            if not run_managed and not is_managed:
                 craft_cli.emit.debug(
-                    f"Validating Requested Ubuntu Pro Services: {pro_services}"
+                    f"Validating requested Ubuntu Pro status on host: {pro_services}"
                 )
                 pro_services.validate()
 
-            if managed_mode or command.needs_project(dispatcher.parsed_args()):
+            elif run_managed and not is_managed:
+                craft_cli.emit.debug(
+                    f"Validating requested Ubuntu Pro attachment on host: {pro_services}"
+                )
+                pro_services.validate(service_support=False, service_enablement=False)
+
+            if run_managed or command.needs_project(dispatcher.parsed_args()):
                 self.services.project = self.get_project(
                     platform=platform, build_for=build_for
                 )
@@ -550,7 +556,7 @@ class Application:
 
             self._configure_services(provider_name)
 
-            if not managed_mode:
+            if not run_managed:
                 # command runs in the outer instance
                 craft_cli.emit.debug(f"Running {self.app.name} {command.name} on host")
                 return_code = dispatcher.run() or os.EX_OK

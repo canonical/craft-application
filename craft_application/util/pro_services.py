@@ -139,7 +139,7 @@ class ProServices(set[str]):
         return result
 
     @classmethod
-    def pro_attached(cls) -> bool:
+    def is_pro_attached(cls) -> bool:
         """Returns True if environment is attached to Ubuntu Pro."""
 
         response = cls._pro_api_call("u.pro.status.is_attached.v1")
@@ -148,7 +148,7 @@ class ProServices(set[str]):
         return result  # pyright: ignore
 
     @classmethod
-    def pro_services(cls) -> ProServices:
+    def get_pro_services(cls) -> ProServices:
         """Return set of enabled Ubuntu Pro services in the environment.
         The returned set only includes services relevant to lifecycle commands."""
 
@@ -164,31 +164,35 @@ class ProServices(set[str]):
 
         return result
 
-    def validate(self):
+    def validate(
+        self,
+        service_support: bool = True,
+        pro_attachment: bool = True,
+        service_enablement: bool = True,
+    ):
         """Validate the environment against pro services specified in this ProServices instance."""
 
         # raise exception if any service was requested outside of build_service_scope
-        if invalid_services := self - self.supported_services:
-            raise InvalidUbuntuProService(invalid_services)
+        if service_support:
+            if invalid_services := self - self.supported_services:
+                raise InvalidUbuntuProService(invalid_services)
 
         try:
             # first, check Ubuntu Pro status
             # Since we extend the set class, cast ourselves to bool to check if we empty. if we are not
             # empty, this implies we require pro services.
-            if self.pro_attached() != bool(self):
-                if self:
-                    raise UbuntuProDetached()
-                else:
-                    raise UbuntuProAttached()
-
-            # If we are not attached, we can infer that services are disabled
-            if not self:
-                return
+            if pro_attachment:
+                if self.is_pro_attached() != bool(self):
+                    if self:
+                        raise UbuntuProDetached()
+                    else:
+                        raise UbuntuProAttached()
 
             # second, check that the set of enabled pro services in the environment matches
             # the services specified in this set
-            if (available_services := self.pro_services()) != self:
-                raise InvalidUbuntuProStatus(self, available_services)
+            if service_enablement:
+                if (available_services := self.get_pro_services()) != self:
+                    raise InvalidUbuntuProStatus(self, available_services)
 
         except UbuntuProClientNotFound as exc:
 
