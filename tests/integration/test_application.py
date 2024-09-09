@@ -104,7 +104,9 @@ INVALID_PROJECTS_DIR = TEST_DATA_DIR / "invalid_projects"
         pytest.param(["--version"], VERSION_INFO, "", 0, id="--version"),
         pytest.param(["-V"], VERSION_INFO, "", 0, id="-V"),
         pytest.param(["-q", "--version"], "", "", 0, id="-q--version"),
-        pytest.param(["--invalid-parameter"], "", BASIC_USAGE, 64, id="--invalid-parameter"),
+        pytest.param(
+            ["--invalid-parameter"], "", BASIC_USAGE, 64, id="--invalid-parameter"
+        ),
         pytest.param(["non-command"], "", INVALID_COMMAND, 64, id="non-command"),
     ],
 )
