@@ -29,8 +29,7 @@ from craft_application.commands import base
 from craft_application.util.pro_services import ProServices
 
 
-if TYPE_CHECKING:  # pragma: no cover
-    import argparse
+import argparse
 
 
 def get_lifecycle_command_group() -> CommandGroup:
