@@ -337,7 +337,9 @@ class TestGetProvider:
     ("base_name", "base_class", "alias"),
     [
         (("ubuntu", "devel"), bases.BuilddBase, bases.BuilddBaseAlias.DEVEL),
+        (("ubuntu", "24.04"), bases.BuilddBase, bases.BuilddBaseAlias.NOBLE),
         (("ubuntu", "22.04"), bases.BuilddBase, bases.BuilddBaseAlias.JAMMY),
+        (("ubuntu", "20.04"), bases.BuilddBase, bases.BuilddBaseAlias.FOCAL),
     ],
 )
 def test_get_base_buildd(
@@ -374,7 +376,11 @@ def test_get_base_packages(provider_service):
     "base_name",
     [
         ("ubuntu", "devel"),
+        ("ubuntu", "24.10"),
+        ("ubuntu", "24.04"),
         ("ubuntu", "22.04"),
+        ("ubuntu", "20.04"),
+        ("almalinux", "9"),
     ],
 )
 def test_instance(
