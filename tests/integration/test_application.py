@@ -98,14 +98,16 @@ INVALID_PROJECTS_DIR = TEST_DATA_DIR / "invalid_projects"
 @pytest.mark.parametrize(
     ("argv", "stdout", "stderr", "exit_code"),
     [
-        (["help"], "", BASIC_USAGE, 0),
-        (["--help"], "", BASIC_USAGE, 0),
-        (["-h"], "", BASIC_USAGE, 0),
-        (["--version"], VERSION_INFO, "", 0),
-        (["-V"], VERSION_INFO, "", 0),
-        (["-q", "--version"], "", "", 0),
-        (["--invalid-parameter"], "", BASIC_USAGE, 64),
-        (["non-command"], "", INVALID_COMMAND, 64),
+        pytest.param(["help"], "", BASIC_USAGE, 0, id="help"),
+        pytest.param(["--help"], "", BASIC_USAGE, 0, id="--help"),
+        pytest.param(["-h"], "", BASIC_USAGE, 0, id="-h"),
+        pytest.param(["--version"], VERSION_INFO, "", 0, id="--version"),
+        pytest.param(["-V"], VERSION_INFO, "", 0, id="-V"),
+        pytest.param(["-q", "--version"], "", "", 0, id="-q--version"),
+        pytest.param(
+            ["--invalid-parameter"], "", BASIC_USAGE, 64, id="--invalid-parameter"
+        ),
+        pytest.param(["non-command"], "", INVALID_COMMAND, 64, id="non-command"),
     ],
 )
 def test_special_inputs(capsys, monkeypatch, app, argv, stdout, stderr, exit_code):
