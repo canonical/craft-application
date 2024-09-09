@@ -51,6 +51,7 @@ class ProServices(set[str]):
     supported_services: set[str] = {
         "esm-apps",
         "esm-infra",
+        "fips",
         "fips-preview",
         "fips-updates",
     }
