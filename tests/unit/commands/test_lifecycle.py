@@ -41,7 +41,7 @@ from craft_application.errors import (
 from craft_cli import emit
 from craft_parts import Features
 
-# disable black reformat for improve readability on long paramterisations
+# disable black reformat for improve readability on long parameterisations
 # fmt: off
 
 PARTS_LISTS = [[], ["my-part"], ["my-part", "your-part"]]

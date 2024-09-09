@@ -51,7 +51,7 @@ class ProServices(set[str]):
     # ignore services outside of this scope
     build_service_scope: set[str] = {
         "esm-apps",
-        "esm-infa",
+        "esm-infra",
         "fips-preview",
         "fips-updates",
     }
