@@ -85,9 +85,11 @@ class _BaseLifecycleCommand(base.ExtensibleCommand):
             supported_pro_services = ", ".join(
                 [f"'{name}'" for name in ProServices.supported_services]
             )
-            pro_help_str = "Enable Ubuntu Pro services for this command. "
-            f"Supported values include: {supported_pro_services}. "
-            "Multiple values can be passed separated by commas."
+            pro_help_str = (
+                "Enable Ubuntu Pro services for this command. "
+                f"Supported values include: {supported_pro_services}. "
+                "Multiple values can be passed separated by commas."
+            )
 
         parser.add_argument(
             "--pro",
