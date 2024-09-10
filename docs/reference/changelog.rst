@@ -8,13 +8,20 @@ Changelog
 Application
 ===========
 
-- Managed runs now fail if the build plan is empty.
-- Error message tweaks for invalid YAML files.
+* Managed runs now fail if the build plan is empty.
+* Error message tweaks for invalid YAML files.
+
+Commands
+========
+
+* The ``pack`` command now accepts ``--shell`` and ``--shell-after``.
+* Using ``--debug`` for lifecycle commands will shell into the build
+  environment if the packing itself fails.
 
 Models
 ======
 
-- Platform models now correctly accept non-vectorised architectures.
+* Platform models now correctly accept non-vectorised architectures.
 
 For a complete list of commits, check out the `4.1.2`_ release on GitHub.
 
