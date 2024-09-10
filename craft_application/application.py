@@ -528,16 +528,14 @@ class Application:
 
             provider_name = command.provider_name(dispatcher.parsed_args())
 
-            # Check that pro services are correctly configured
-            # only validate requested pro services if we are inside a managed execution
-            # or outside an unmanaged execution
-
+            # Check that pro services are correctly configured:
+            # Validate requested pro services if we are running in destructive mode ...
             if not run_managed and not is_managed:
                 craft_cli.emit.debug(
                     f"Validating requested Ubuntu Pro status on host: {pro_services}"
                 )
                 pro_services.validate()
-
+            # .. or validate pro attachment if running in a managed instance
             elif run_managed and not is_managed:
                 craft_cli.emit.debug(
                     f"Validating requested Ubuntu Pro attachment on host: {pro_services}"
