@@ -12,7 +12,7 @@ Application
   environment variables, snap configurations, and so on.
 - Properly support ``--shell``, ``--shell-after`` and ``--debug`` on the
   ``pack`` command.
-- Use the standard library to get proxies set on the host.
+- Use the standard library to retrieve the host's proxies.
 
 For a complete list of commits, check out the `4.2.0`_ release on GitHub.
 
