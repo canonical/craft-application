@@ -17,6 +17,7 @@
 import argparse
 import pathlib
 import subprocess
+from contextlib import nullcontext
 
 import craft_parts
 import pytest
@@ -72,7 +73,7 @@ PRO_SERVICE_COMMANDS = [
 ]
 
 PRO_SERVICE_CONFIGS = [
-    # is_attached,           enabled_services,           proservices_args,                  expected_exception
+    # is_attached,           enabled_services,           pro_services_args,                  expected_exception
     (False,                 [],                          [],                                None),
     (True,                  ["esm-apps"],                ["esm-apps"],                      None),
     (True,                  ["esm-apps", "fips-updates"],["esm-apps", "fips-updates"],      None),
@@ -114,14 +115,14 @@ def get_fake_command_class(parent_cls, managed):
 
 
 @pytest.mark.parametrize(
-    ("is_attached", "enabled_services", "proservices_args", "expected_exception"),
+    ("is_attached", "enabled_services", "pro_services_args", "expected_exception"),
     PRO_SERVICE_CONFIGS,
 )
 def test_validate_pro_services(
     mock_pro_api_call,
     is_attached,
     enabled_services,
-    proservices_args,
+    pro_services_args,
     expected_exception,
 ):
 
@@ -130,13 +131,12 @@ def test_validate_pro_services(
     set_is_attached(is_attached)
     set_enabled_service(enabled_services)
 
-    try:
-        # create and validate pro services
-        proservices = ProServices(proservices_args)
-        proservices.validate()
+    exception_context = pytest.raises(expected_exception) if expected_exception else nullcontext()
 
-    except Exception as exc:
-        assert type(exc) is expected_exception
+    with exception_context:
+        # create and validate pro services
+        pro_services = ProServices(pro_services_args)
+        pro_services.validate()
 
 
 @pytest.mark.parametrize(
