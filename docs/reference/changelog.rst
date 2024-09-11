@@ -2,6 +2,24 @@
 Changelog
 *********
 
+4.2.0 (2024-Sep-12)
+-------------------
+
+Application
+===========
+
+- Add a configuration service to unify handling of command line arguments,
+  environment variables, snap configurations, and so on.
+- Use the standard library to retrieve the host's proxies.
+
+Commands
+========
+
+- Properly support ``--shell``, ``--shell-after`` and ``--debug`` on the
+  ``pack`` command.
+
+For a complete list of commits, check out the `4.2.0`_ release on GitHub.
+
 4.1.2 (2024-Sep-05)
 -------------------
 
@@ -225,3 +243,4 @@ For a complete list of commits, check out the `2.7.0`_ release on GitHub.
 .. _4.1.0: https://github.com/canonical/craft-application/releases/tag/4.1.0
 .. _4.1.1: https://github.com/canonical/craft-application/releases/tag/4.1.1
 .. _4.1.2: https://github.com/canonical/craft-application/releases/tag/4.1.2
+.. _4.2.0: https://github.com/canonical/craft-application/releases/tag/4.2.0
