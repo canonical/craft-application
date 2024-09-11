@@ -10,9 +10,13 @@ Application
 
 - Add a configuration service to unify handling of command line arguments,
   environment variables, snap configurations, and so on.
+- Use the standard library to retrieve the host's proxies.
+
+Commands
+========
+
 - Properly support ``--shell``, ``--shell-after`` and ``--debug`` on the
   ``pack`` command.
-- Use the standard library to retrieve the host's proxies.
 
 For a complete list of commits, check out the `4.2.0`_ release on GitHub.
 
