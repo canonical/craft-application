@@ -28,16 +28,16 @@ from craft_application.commands.lifecycle import (
     OverlayCommand,
     PackCommand,
     PrimeCommand,
+    ProServices,
     PullCommand,
     StageCommand,
     get_lifecycle_command_group,
-    ProServices,
 )
 from craft_application.errors import (
-    InvalidUbuntuProStatus,
-    InvalidUbuntuProService,
-    UbuntuProAttached,
-    UbuntuProDetached,
+    InvalidUbuntuProServiceError,
+    InvalidUbuntuProStatusError,
+    UbuntuProAttachedError,
+    UbuntuProDetachedError,
 )
 from craft_cli import emit
 from craft_parts import Features
@@ -76,11 +76,11 @@ PRO_SERVICE_CONFIGS = [
     (False,                 [],                          [],                                None),
     (True,                  ["esm-apps"],                ["esm-apps"],                      None),
     (True,                  ["esm-apps", "fips-updates"],["esm-apps", "fips-updates"],      None),
-    (True,                  ["esm-apps"],                [],                                UbuntuProAttached),
-    (False,                 [],                          ["esm-apps"],                      UbuntuProDetached),
-    (True,                  ["esm-apps", "fips-updates"],["fips-updates"],                  InvalidUbuntuProStatus),
-    (True,                  ["esm-apps",],               ["fips-updates", "fips-updates"],  InvalidUbuntuProStatus),
-    (True,                  ["esm-apps"],                ["esm-apps", "invalid-service"],   InvalidUbuntuProService),
+    (True,                  ["esm-apps"],                [],                                UbuntuProAttachedError),
+    (False,                 [],                          ["esm-apps"],                      UbuntuProDetachedError),
+    (True,                  ["esm-apps", "fips-updates"],["fips-updates"],                  InvalidUbuntuProStatusError),
+    (True,                  ["esm-apps",],               ["fips-updates", "fips-updates"],  InvalidUbuntuProStatusError),
+    (True,                  ["esm-apps"],                ["esm-apps", "invalid-service"],   InvalidUbuntuProServiceError),
 ]
 
 STEP_NAMES = [step.name.lower() for step in craft_parts.Step]

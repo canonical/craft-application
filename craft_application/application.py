@@ -29,7 +29,6 @@ from functools import cached_property
 from importlib import metadata
 from typing import TYPE_CHECKING, Any, cast, final
 
-
 import craft_cli
 import craft_parts
 import craft_providers
@@ -39,7 +38,7 @@ from platformdirs import user_cache_path
 from craft_application import commands, errors, grammar, models, secrets, util
 from craft_application.errors import PathInvalidError
 from craft_application.models import BuildInfo, GrammarAwareProject
-from craft_application.commands.lifecycle import ProServices
+from craft_application.util.pro_services import ProServices, ValidatorOptions
 
 if TYPE_CHECKING:
     from craft_application.services import service_factory
@@ -540,7 +539,7 @@ class Application:
                 craft_cli.emit.debug(
                     f"Validating requested Ubuntu Pro attachment on host: {pro_services}"
                 )
-                pro_services.validate(service_support=False, service_enablement=False)
+                pro_services.validate(options=ValidatorOptions.ATTACHMENT)
 
             if run_managed or command.needs_project(dispatcher.parsed_args()):
                 self.services.project = self.get_project(

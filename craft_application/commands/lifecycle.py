@@ -14,12 +14,12 @@
 """Basic lifecycle commands for a Craft Application."""
 from __future__ import annotations
 
+import argparse
 import os
 import pathlib
 import subprocess
 import textwrap
-from typing import TYPE_CHECKING, Any
-
+from typing import Any
 
 from craft_cli import CommandGroup, emit
 from craft_parts.features import Features
@@ -27,9 +27,6 @@ from typing_extensions import override
 
 from craft_application.commands import base
 from craft_application.util.pro_services import ProServices
-
-
-import argparse
 
 
 def get_lifecycle_command_group() -> CommandGroup:

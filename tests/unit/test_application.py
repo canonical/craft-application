@@ -659,7 +659,11 @@ def test_craft_lib_log_level(app_metadata, fake_services):
 
 
 def test_gets_project(
-    monkeypatch, tmp_path, app_metadata, fake_services, mock_pro_api_call
+    monkeypatch,
+    tmp_path,
+    app_metadata,
+    fake_services,
+    mock_pro_api_call,  # noqa: ARG001
 ):
     project_file = tmp_path / "testcraft.yaml"
     project_file.write_text(BASIC_PROJECT_YAML)
@@ -677,7 +681,12 @@ def test_gets_project(
 
 
 def test_fails_without_project(
-    monkeypatch, capsys, tmp_path, app_metadata, fake_services, mock_pro_api_call
+    monkeypatch,
+    capsys,
+    tmp_path,
+    app_metadata,
+    fake_services,
+    mock_pro_api_call,  # noqa: ARG001
 ):
     monkeypatch.setattr(sys, "argv", ["testcraft", "prime"])
 
@@ -789,7 +798,7 @@ def test_run_success_unmanaged(
     fake_project,
     return_code,
     load_project,
-    mock_pro_api_call,
+    mock_pro_api_call,  # noqa: ARG001
 ):
     class UnmanagedCommand(commands.AppCommand):
         name = "pass"
@@ -812,7 +821,9 @@ def test_run_success_unmanaged(
         emitter.assert_debug("Running testcraft pass on host")
 
 
-def test_run_success_managed(monkeypatch, app, fake_project, mocker, mock_pro_api_call):
+def test_run_success_managed(
+    monkeypatch, app, fake_project, mocker, mock_pro_api_call  # noqa: ARG001
+):
     mocker.patch.object(app, "get_project", return_value=fake_project)
     app.run_managed = mock.Mock()
     monkeypatch.setattr(sys, "argv", ["testcraft", "pull"])
@@ -823,7 +834,7 @@ def test_run_success_managed(monkeypatch, app, fake_project, mocker, mock_pro_ap
 
 
 def test_run_success_managed_with_arch(
-    monkeypatch, app, fake_project, mocker, mock_pro_api_call
+    monkeypatch, app, fake_project, mocker, mock_pro_api_call  # noqa: ARG001
 ):
     mocker.patch.object(app, "get_project", return_value=fake_project)
     app.run_managed = mock.Mock()
@@ -836,7 +847,7 @@ def test_run_success_managed_with_arch(
 
 
 def test_run_success_managed_with_platform(
-    monkeypatch, app, fake_project, mocker, mock_pro_api_call
+    monkeypatch, app, fake_project, mocker, mock_pro_api_call  # noqa: ARG001
 ):
     mocker.patch.object(app, "get_project", return_value=fake_project)
     app.run_managed = mock.Mock()
@@ -866,7 +877,13 @@ def test_run_success_managed_with_platform(
     ],
 )
 def test_run_passes_platforms(
-    monkeypatch, app, fake_project, mocker, params, expected_call, mock_pro_api_call
+    monkeypatch,
+    app,
+    fake_project,
+    mocker,
+    params,
+    expected_call,
+    mock_pro_api_call,  # noqa: ARG001
 ):
     mocker.patch.object(app, "get_project", return_value=fake_project)
     app.run_managed = mock.Mock(return_value=False)
@@ -886,7 +903,7 @@ def test_run_success_managed_inside_managed(
     mock_dispatcher,
     return_code,
     mocker,
-    mock_pro_api_call,
+    mock_pro_api_call,  # noqa: ARG001
 ):
     mocker.patch.object(app, "get_project", return_value=fake_project)
     mocker.patch.object(

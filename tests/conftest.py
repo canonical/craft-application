@@ -17,7 +17,6 @@
 from __future__ import annotations
 
 import os
-import sys
 import pathlib
 import shutil
 from importlib import metadata
@@ -301,7 +300,7 @@ def mock_pro_api_call(mocker):
         },
     }
 
-    def set_is_attached(value: bool):
+    def set_is_attached(value: bool):  # noqa: FBT001
         response = mock_responses["u.pro.status.is_attached.v1"]
         response["data"]["attributes"]["is_attached"] = value
 
@@ -316,8 +315,7 @@ def mock_pro_api_call(mocker):
         response["data"]["attributes"]["enabled_services"] = enabled_services
 
     def mock_pro_api_call(endpoint: str):
-        result = mock_responses[endpoint]
-        return result
+        return mock_responses[endpoint]
 
     mocker.patch(
         "craft_application.util.pro_services.ProServices._pro_api_call",

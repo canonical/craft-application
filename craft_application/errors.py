@@ -239,22 +239,22 @@ class CancelFailedError(RemoteBuildError):
         )
 
 
-class UbuntuProException(CraftError):
+class UbuntuProError(CraftError):
     """Base Exception class for ProServices."""
 
 
-class UbuntuProApiException(UbuntuProException):
-    """Base class for exceptions raised during Ubuntu Pro Api calls"""
+class UbuntuProApiError(UbuntuProError):
+    """Base class for exceptions raised during Ubuntu Pro Api calls."""
 
 
-class InvalidUbuntuProState(UbuntuProException):
-    """Base class for exceptions raised during Ubuntu Pro validation"""
+class InvalidUbuntuProStateError(UbuntuProError):
+    """Base class for exceptions raised during Ubuntu Pro validation."""
 
     # TODO: some of the resolution strings may not sense in a managed
     # environment. What is the best way to get the is_managed method here?
 
 
-class UbuntuProClientNotFound(UbuntuProApiException):
+class UbuntuProClientNotFoundError(UbuntuProApiError):
     """Raised when Ubuntu Pro client was not found on the system."""
 
     def __init__(self, path: str) -> None:
@@ -264,7 +264,7 @@ class UbuntuProClientNotFound(UbuntuProApiException):
         super().__init__(message=message)
 
 
-class UbuntuProDetached(InvalidUbuntuProState):
+class UbuntuProDetachedError(InvalidUbuntuProStateError):
     """Raised when Ubuntu Pro is not attached, but Pro services were requested."""
 
     def __init__(self) -> None:
@@ -275,7 +275,7 @@ class UbuntuProDetached(InvalidUbuntuProState):
         super().__init__(message=message, resolution=resolution)
 
 
-class UbuntuProAttached(InvalidUbuntuProState):
+class UbuntuProAttachedError(InvalidUbuntuProStateError):
     """Raised when Ubuntu Pro is attached, but Pro services were not requested."""
 
     def __init__(self) -> None:
@@ -286,9 +286,8 @@ class UbuntuProAttached(InvalidUbuntuProState):
         super().__init__(message=message, resolution=resolution)
 
 
-class InvalidUbuntuProService(InvalidUbuntuProState):
-    """Raised when the requested Ubuntu Pro service is not supported in
-    Craft Application or is an invalid Ubuntu Pro Service."""
+class InvalidUbuntuProServiceError(InvalidUbuntuProStateError):
+    """Raised when the requested Ubuntu Pro service is not supported or invalid."""
 
     # TODO: Should there be separate exceptions for services that not supported vs. invalid?
     # if so where is the list of supported service names?
@@ -308,7 +307,7 @@ class InvalidUbuntuProService(InvalidUbuntuProState):
         super().__init__(message=message, resolution=resolution)
 
 
-class InvalidUbuntuProStatus(InvalidUbuntuProState):
+class InvalidUbuntuProStatusError(InvalidUbuntuProStateError):
     """Raised when the incorrect set of Pro Services are enabled."""
 
     def __init__(
