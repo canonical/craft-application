@@ -9,7 +9,7 @@ Application
 ===========
 
 - Add a configuration service to unify handling of command line arguments,
-  environment variables, snap configuration, etc.
+  environment variables, snap configurations, and so on.
 - Properly support ``--shell``, ``--shell-after`` and ``--debug`` on the
   ``pack`` command.
 - Use the standard library to get proxies set on the host.
