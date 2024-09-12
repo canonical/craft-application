@@ -509,7 +509,6 @@ class Application:
                 dispatcher.load_command(self.app_config),
             )
 
-            # TODO: do we need default kwargs here? our argparse was already passed defaults.
             platform = getattr(dispatcher.parsed_args(), "platform", None)
             build_for = getattr(dispatcher.parsed_args(), "build_for", None)
             pro_services = getattr(dispatcher.parsed_args(), "pro", ProServices())
@@ -528,18 +527,24 @@ class Application:
             provider_name = command.provider_name(dispatcher.parsed_args())
 
             # Check that pro services are correctly configured:
-            # Validate requested pro services if we are running in destructive mode ...
+            # Validate requested pro services on the host if we are running in destructive mode...
             if not run_managed and not is_managed:
                 craft_cli.emit.debug(
                     f"Validating requested Ubuntu Pro status on host: {pro_services}"
                 )
                 pro_services.validate()
-            # .. or validate pro attachment if running in a managed instance
+            # .. or running in managed mode inside a managed instance
+            if run_managed and is_managed:
+                craft_cli.emit.debug(
+                    f"Validating requested Ubuntu Pro status in managed instance: {pro_services}"
+                )
+                pro_services.validate()
+            # .. or validate pro attachment and service names on the host before starting a managed instance.
             elif run_managed and not is_managed:
                 craft_cli.emit.debug(
                     f"Validating requested Ubuntu Pro attachment on host: {pro_services}"
                 )
-                pro_services.validate(options=ValidatorOptions.ATTACHMENT)
+                pro_services.validate(options=ValidatorOptions.ATTACHMENT | ValidatorOptions.SUPPORT)
 
             if run_managed or command.needs_project(dispatcher.parsed_args()):
                 self.services.project = self.get_project(
