@@ -38,7 +38,7 @@ from platformdirs import user_cache_path
 from craft_application import commands, errors, grammar, models, secrets, util
 from craft_application.errors import PathInvalidError
 from craft_application.models import BuildInfo, GrammarAwareProject
-from craft_application.util.pro_services import ProServices, ValidatorOptions
+from craft_application.util.pro_services import ValidatorOptions
 
 if TYPE_CHECKING:
     from craft_application.services import service_factory
@@ -511,7 +511,7 @@ class Application:
 
             platform = getattr(dispatcher.parsed_args(), "platform", None)
             build_for = getattr(dispatcher.parsed_args(), "build_for", None)
-            pro_services = getattr(dispatcher.parsed_args(), "pro", ProServices())
+            pro_services = getattr(dispatcher.parsed_args(), "pro", None)
 
             run_managed = command.run_managed(dispatcher.parsed_args())
             is_managed = self.is_managed()
@@ -526,27 +526,29 @@ class Application:
 
             provider_name = command.provider_name(dispatcher.parsed_args())
 
-            # Check that pro services are correctly configured:
-            # Validate requested pro services on the host if we are running in destructive mode...
-            if not run_managed and not is_managed:
-                craft_cli.emit.debug(
-                    f"Validating requested Ubuntu Pro status on host: {pro_services}"
-                )
-                pro_services.validate()
-            # .. or running in managed mode inside a managed instance
-            if run_managed and is_managed:
-                craft_cli.emit.debug(
-                    f"Validating requested Ubuntu Pro status in managed instance: {pro_services}"
-                )
-                pro_services.validate()
-            # .. or validate pro attachment and service names on the host before starting a managed instance.
-            elif run_managed and not is_managed:
-                craft_cli.emit.debug(
-                    f"Validating requested Ubuntu Pro attachment on host: {pro_services}"
-                )
-                pro_services.validate(
-                    options=ValidatorOptions.ATTACHMENT | ValidatorOptions.SUPPORT
-                )
+            # Check that pro services are correctly configured. A ProServices instance will
+            # only be available for lifecycle commands, otherwise we default to None
+            if pro_services is not None:
+                # Validate requested pro services on the host if we are running in destructive mode...
+                if not run_managed and not is_managed:
+                    craft_cli.emit.debug(
+                        f"Validating requested Ubuntu Pro status on host: {pro_services}"
+                    )
+                    pro_services.validate()
+                # .. or running in managed mode inside a managed instance
+                elif run_managed and is_managed:
+                    craft_cli.emit.debug(
+                        f"Validating requested Ubuntu Pro status in managed instance: {pro_services}"
+                    )
+                    pro_services.validate()
+                # .. or validate pro attachment and service names on the host before starting a managed instance.
+                elif run_managed and not is_managed:
+                    craft_cli.emit.debug(
+                        f"Validating requested Ubuntu Pro attachment on host: {pro_services}"
+                    )
+                    pro_services.validate(
+                        options=ValidatorOptions.ATTACHMENT | ValidatorOptions.SUPPORT
+                    )
 
             if run_managed or command.needs_project(dispatcher.parsed_args()):
                 self.services.project = self.get_project(
