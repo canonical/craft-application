@@ -544,7 +544,9 @@ class Application:
                 craft_cli.emit.debug(
                     f"Validating requested Ubuntu Pro attachment on host: {pro_services}"
                 )
-                pro_services.validate(options=ValidatorOptions.ATTACHMENT | ValidatorOptions.SUPPORT)
+                pro_services.validate(
+                    options=ValidatorOptions.ATTACHMENT | ValidatorOptions.SUPPORT
+                )
 
             if run_managed or command.needs_project(dispatcher.parsed_args()):
                 self.services.project = self.get_project(

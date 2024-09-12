@@ -131,7 +131,9 @@ def test_validate_pro_services(
     set_is_attached(is_attached)
     set_enabled_service(enabled_services)
 
-    exception_context = pytest.raises(expected_exception) if expected_exception else nullcontext()
+    exception_context = (
+        pytest.raises(expected_exception) if expected_exception else nullcontext()
+    )
 
     with exception_context:
         # create and validate pro services

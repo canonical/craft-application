@@ -151,14 +151,18 @@ class ProServices(set[str]):
                 "Ubuntu Pro API returned an error response. See log for more details"
             )
 
-        return result
+        # Ignore typing for this private method. The returned object is variable in type, but types are declared in the API docs:
+        # https://canonical-ubuntu-pro-client.readthedocs-hosted.com/en/v32/references/api/
+        return result  # type: ignore [no-any-return]
 
     @classmethod
     def is_pro_attached(cls) -> bool:
         """Return True if environment is attached to Ubuntu Pro."""
         response = cls._pro_api_call("u.pro.status.is_attached.v1")
 
-        return response["data"]["attributes"]["is_attached"]
+        # Ignore typing here. This field's type is static according to:
+        # https://canonical-ubuntu-pro-client.readthedocs-hosted.com/en/v32/references/api/#u-pro-status-is-attached-v1
+        return response["data"]["attributes"]["is_attached"]  # type: ignore [no-any-return]
 
     @classmethod
     def get_pro_services(cls) -> ProServices:
@@ -177,12 +181,14 @@ class ProServices(set[str]):
         return cls(service_names)
 
     def validate(
-        self, options: ValidatorOptions = ValidatorOptions.DEFAULT,
+        self,
+        options: ValidatorOptions = ValidatorOptions.DEFAULT,
     ) -> None:
         """Validate the environment against pro services specified in this ProServices instance."""
         # raise exception if any service was requested outside of build_service_scope
-        if ValidatorOptions.SUPPORT in options \
-                and (invalid_services := self - self.supported_services):
+        if ValidatorOptions.SUPPORT in options and (
+            invalid_services := self - self.supported_services
+        ):
             raise InvalidUbuntuProServiceError(invalid_services)
 
         try:
@@ -190,19 +196,20 @@ class ProServices(set[str]):
             # Since we extend the set class, cast ourselves to bool to check if we empty. if we are not
             # empty, this implies we require pro services.
 
-            if (self.is_pro_attached() != bool(self)):
-                if ValidatorOptions._ATTACHED in options and self: # type: ignore [reportPrivateUsage]
+            if self.is_pro_attached() != bool(self):
+                if ValidatorOptions._ATTACHED in options and self:  # type: ignore [reportPrivateUsage]
                     # Ubuntu Pro is requested but not attached
                     raise UbuntuProDetachedError
 
-                if ValidatorOptions._DETACHED in options and not self: # type: ignore [reportPrivateUsage]
+                if ValidatorOptions._DETACHED in options and not self:  # type: ignore [reportPrivateUsage]
                     # Ubuntu Pro is not requested but attached
                     raise UbuntuProAttachedError
 
             # second, check that the set of enabled pro services in the environment matches
             # the services specified in this set
-            if ValidatorOptions.ENABLEMENT in options \
-                    and ((available_services := self.get_pro_services()) != self):
+            if ValidatorOptions.ENABLEMENT in options and (
+                (available_services := self.get_pro_services()) != self
+            ):
                 raise InvalidUbuntuProStatusError(self, available_services)
 
         except UbuntuProClientNotFoundError:
