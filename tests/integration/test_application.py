@@ -98,14 +98,16 @@ INVALID_PROJECTS_DIR = TEST_DATA_DIR / "invalid_projects"
 @pytest.mark.parametrize(
     ("argv", "stdout", "stderr", "exit_code"),
     [
-        (["help"], "", BASIC_USAGE, 0),
-        (["--help"], "", BASIC_USAGE, 0),
-        (["-h"], "", BASIC_USAGE, 0),
-        (["--version"], VERSION_INFO, "", 0),
-        (["-V"], VERSION_INFO, "", 0),
-        (["-q", "--version"], "", "", 0),
-        (["--invalid-parameter"], "", BASIC_USAGE, 64),
-        (["non-command"], "", INVALID_COMMAND, 64),
+        pytest.param(["help"], "", BASIC_USAGE, 0, id="help"),
+        pytest.param(["--help"], "", BASIC_USAGE, 0, id="--help"),
+        pytest.param(["-h"], "", BASIC_USAGE, 0, id="-h"),
+        pytest.param(["--version"], VERSION_INFO, "", 0, id="--version"),
+        pytest.param(["-V"], VERSION_INFO, "", 0, id="-V"),
+        pytest.param(["-q", "--version"], "", "", 0, id="-q--version"),
+        pytest.param(
+            ["--invalid-parameter"], "", BASIC_USAGE, 64, id="--invalid-parameter"
+        ),
+        pytest.param(["non-command"], "", INVALID_COMMAND, 64, id="non-command"),
     ],
 )
 def test_special_inputs(capsys, monkeypatch, app, argv, stdout, stderr, exit_code):
@@ -197,6 +199,7 @@ def test_version(capsys, monkeypatch, app):
     assert captured.out == "testcraft 3.14159\n"
 
 
+@pytest.mark.usefixtures("emitter")
 def test_non_lifecycle_command_does_not_require_project(monkeypatch, app):
     """Run a command without having a project instance shall not fail."""
     monkeypatch.setattr("sys.argv", ["testcraft", "nothing"])
@@ -428,7 +431,7 @@ def test_lifecycle_error_logging(monkeypatch, tmp_path, create_app):
     assert parts_message in log_contents
 
 
-@pytest.mark.usefixtures("pretend_jammy")
+@pytest.mark.usefixtures("pretend_jammy", "emitter")
 def test_runtime_error_logging(monkeypatch, tmp_path, create_app, mocker):
     monkeypatch.chdir(tmp_path)
     shutil.copytree(INVALID_PROJECTS_DIR / "build-error", tmp_path, dirs_exist_ok=True)

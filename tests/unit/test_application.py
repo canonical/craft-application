@@ -56,6 +56,8 @@ from craft_parts.plugins.plugins import PluginType
 from craft_providers import bases
 from overrides import override
 
+from tests.conftest import FakeApplication
+
 EMPTY_COMMAND_GROUP = craft_cli.CommandGroup("FakeCommands", [])
 BASIC_PROJECT_YAML = """
 name: myproject
@@ -367,35 +369,6 @@ def test_app_metadata_default_mandatory_adoptable_fields():
     assert app.mandatory_adoptable_fields == ["version"]
 
 
-class FakeApplication(application.Application):
-    """An application class explicitly for testing. Adds some convenient test hooks."""
-
-    platform: str = "unknown-platform"
-    build_on: str = "unknown-build-on"
-    build_for: str | None = "unknown-build-for"
-
-    def set_project(self, project):
-        self._Application__project = project
-
-    @override
-    def _extra_yaml_transform(
-        self,
-        yaml_data: dict[str, Any],
-        *,
-        build_on: str,
-        build_for: str | None,
-    ) -> dict[str, Any]:
-        self.build_on = build_on
-        self.build_for = build_for
-
-        return yaml_data
-
-
-@pytest.fixture
-def app(app_metadata, fake_services):
-    return FakeApplication(app_metadata, fake_services)
-
-
 class FakePlugin(craft_parts.plugins.Plugin):
     def __init__(self, properties, part_info):
         pass
@@ -628,6 +601,7 @@ def test_run_managed_empty_plan(app, fake_project):
         ),
     ],
 )
+@pytest.mark.usefixtures("emitter")
 def test_get_dispatcher_error(
     monkeypatch, check, capsys, app, mock_dispatcher, managed, error, exit_code, message
 ):
@@ -919,6 +893,7 @@ def test_run_success_managed_inside_managed(
         ),
     ],
 )
+@pytest.mark.usefixtures("emitter")
 def test_run_error(
     monkeypatch,
     capsys,
@@ -988,6 +963,7 @@ def test_run_error_with_docs_url(
 
 
 @pytest.mark.parametrize("error", [KeyError(), ValueError(), Exception()])
+@pytest.mark.usefixtures("emitter")
 def test_run_error_debug(monkeypatch, mock_dispatcher, app, fake_project, error):
     app.set_project(fake_project)
     mock_dispatcher.load_command.side_effect = error

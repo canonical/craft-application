@@ -22,6 +22,8 @@ import os
 import pathlib
 import pkgutil
 import sys
+import urllib.request
+from collections.abc import Generator, Iterable
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -36,8 +38,6 @@ from craft_application.services import base
 from craft_application.util import platforms, snap_config
 
 if TYPE_CHECKING:  # pragma: no cover
-    from collections.abc import Generator
-
     import craft_providers
 
     from craft_application import models
@@ -45,7 +45,7 @@ if TYPE_CHECKING:  # pragma: no cover
     from craft_application.services import ServiceFactory
 
 
-DEFAULT_FORWARD_ENVIRONMENT_VARIABLES = ("http_proxy", "https_proxy", "no_proxy")
+DEFAULT_FORWARD_ENVIRONMENT_VARIABLES: Iterable[str] = ()
 
 
 class ProviderService(base.ProjectService):
@@ -92,6 +92,10 @@ class ProviderService(base.ProjectService):
         for name in DEFAULT_FORWARD_ENVIRONMENT_VARIABLES:
             if name in os.environ:
                 self.environment[name] = os.getenv(name)
+
+        for scheme, value in urllib.request.getproxies().items():
+            self.environment[f"{scheme.lower()}_proxy"] = value
+            self.environment[f"{scheme.upper()}_PROXY"] = value
 
         if self._install_snap:
             channel = (
@@ -206,12 +210,12 @@ class ProviderService(base.ProjectService):
             emit.debug(f"Using provider {name!r} passed as an argument.")
             chosen_provider: str = name
 
-        # (2) get the provider from the environment (CRAFT_BUILD_ENVIRONMENT),
-        elif env_provider := os.getenv("CRAFT_BUILD_ENVIRONMENT"):
-            emit.debug(f"Using provider {env_provider!r} from environment.")
-            chosen_provider = env_provider
+        # (2) get the provider from build_environment
+        elif provider := self._services.config.get("build_environment"):
+            emit.debug(f"Using provider {provider!r} from system configuration.")
+            chosen_provider = provider
 
-        # (3) use provider specified with snap configuration,
+        # (3) use provider specified in snap configuration
         elif snap_provider := self._get_provider_from_snap_config():
             emit.debug(f"Using provider {snap_provider!r} from snap config.")
             chosen_provider = snap_provider
@@ -285,7 +289,7 @@ class ProviderService(base.ProjectService):
 
     def _get_lxd_provider(self) -> LXDProvider:
         """Get the LXD provider for this manager."""
-        lxd_remote = os.getenv("CRAFT_LXD_REMOTE", "local")
+        lxd_remote = self._services.config.get("lxd_remote")
         return LXDProvider(lxd_project=self._app.name, lxd_remote=lxd_remote)
 
     def _get_multipass_provider(self) -> MultipassProvider:

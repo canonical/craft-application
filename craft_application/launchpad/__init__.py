@@ -22,6 +22,7 @@ from . import errors
 from .errors import LaunchpadError
 from .launchpad import Launchpad
 from .models import LaunchpadObject, RecipeType, Recipe, SnapRecipe, CharmRecipe
+from .util import Architecture
 
 __all__ = [
     "errors",
@@ -32,4 +33,5 @@ __all__ = [
     "Recipe",
     "SnapRecipe",
     "CharmRecipe",
+    "Architecture",
 ]
