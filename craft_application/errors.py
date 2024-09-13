@@ -242,3 +242,7 @@ class CancelFailedError(RemoteBuildError):
             reportable=reportable,
             retcode=retcode,
         )
+
+
+class FetchServiceError(CraftError):
+    """Errors related to the fetch-service."""

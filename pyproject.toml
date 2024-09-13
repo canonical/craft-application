@@ -284,6 +284,7 @@ lint.ignore = [
     "ANN", # Ignore type annotations in tests
     "S101",  # Allow assertions in tests
     "S103", # Allow `os.chmod` setting a permissive mask `0o555` on file or directory
+    "S105", "S106", "S107",  # Allow hardcoded "passwords" in test files.
     "S108", # Allow Probable insecure usage of temporary file or directory
     "PLR0913",  # Allow many arguments for test functions
     "PT004", # Allow fixtures that don't return anything to not start with underscores
