@@ -2,6 +2,16 @@
 Changelog
 *********
 
+4.1.3 (2024-Sep-12)
+-------------------
+
+Models
+======
+
+- Fix a regression where numeric part properties could not be parsed.
+
+For a complete list of commits, check out the `4.1.3`_ release on GitHub.
+
 4.2.0 (2024-Sep-12)
 -------------------
 
@@ -243,4 +253,5 @@ For a complete list of commits, check out the `2.7.0`_ release on GitHub.
 .. _4.1.0: https://github.com/canonical/craft-application/releases/tag/4.1.0
 .. _4.1.1: https://github.com/canonical/craft-application/releases/tag/4.1.1
 .. _4.1.2: https://github.com/canonical/craft-application/releases/tag/4.1.2
+.. _4.1.3: https://github.com/canonical/craft-application/releases/tag/4.1.3
 .. _4.2.0: https://github.com/canonical/craft-application/releases/tag/4.2.0
