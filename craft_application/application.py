@@ -405,8 +405,9 @@ class Application:
         """Configure the application using any global arguments."""
 
     def _get_dispatcher(self) -> craft_cli.Dispatcher:
-        """Configure this application. Should be called by the run method.
+        """Configure this application.
 
+        Should be called by the _run_inner method.
         Side-effect: This method may exit the process.
 
         :returns: A ready-to-run Dispatcher object
@@ -523,59 +524,62 @@ class Application:
         """
         return getattr(parsed_args, item, self.services.config.get(item))
 
-    def run(  # noqa: PLR0912,PLR0915  (too many branches, too many statements)
-        self,
-    ) -> int:
+    def _run_inner(self) -> int:
+        """Actual run implementation."""
+        dispatcher = self._get_dispatcher()
+        command = cast(
+            commands.AppCommand,
+            dispatcher.load_command(self.app_config),
+        )
+        parsed_args = dispatcher.parsed_args()
+        platform = self.get_arg_or_config(parsed_args, "platform")
+        build_for = self.get_arg_or_config(parsed_args, "build_for")
+
+        # Some commands (e.g. remote build) can allow multiple platforms
+        # or build-fors, comma-separated. In these cases, we create the
+        # project using the first defined platform.
+        if platform and "," in platform:
+            platform = platform.split(",", maxsplit=1)[0]
+        if build_for and "," in build_for:
+            build_for = build_for.split(",", maxsplit=1)[0]
+
+        provider_name = command.provider_name(dispatcher.parsed_args())
+
+        craft_cli.emit.debug(f"Build plan: platform={platform}, build_for={build_for}")
+        self._pre_run(dispatcher)
+
+        managed_mode = command.run_managed(dispatcher.parsed_args())
+        if managed_mode or command.needs_project(dispatcher.parsed_args()):
+            self.services.project = self.get_project(
+                platform=platform, build_for=build_for
+            )
+
+        self._configure_services(provider_name)
+
+        return_code = 1  # General error
+        if not managed_mode:
+            # command runs in the outer instance
+            craft_cli.emit.debug(f"Running {self.app.name} {command.name} on host")
+            return_code = dispatcher.run() or os.EX_OK
+        elif not self.is_managed():
+            # command runs in inner instance, but this is the outer instance
+            self.run_managed(platform, build_for)
+            return_code = os.EX_OK
+        else:
+            # command runs in inner instance
+            return_code = dispatcher.run() or 0
+
+        return return_code
+
+    def run(self) -> int:
         """Bootstrap and run the application."""
         self._setup_logging()
         self._initialize_craft_parts()
-        dispatcher = self._get_dispatcher()
+
         craft_cli.emit.debug("Preparing application...")
 
-        return_code = 1  # General error
         try:
-            command = cast(
-                commands.AppCommand,
-                dispatcher.load_command(self.app_config),
-            )
-            parsed_args = dispatcher.parsed_args()
-            platform = self.get_arg_or_config(parsed_args, "platform")
-            build_for = self.get_arg_or_config(parsed_args, "build_for")
-
-            # Some commands (e.g. remote build) can allow multiple platforms
-            # or build-fors, comma-separated. In these cases, we create the
-            # project using the first defined platform.
-            if platform and "," in platform:
-                platform = platform.split(",", maxsplit=1)[0]
-            if build_for and "," in build_for:
-                build_for = build_for.split(",", maxsplit=1)[0]
-
-            provider_name = command.provider_name(dispatcher.parsed_args())
-
-            craft_cli.emit.debug(
-                f"Build plan: platform={platform}, build_for={build_for}"
-            )
-            self._pre_run(dispatcher)
-
-            managed_mode = command.run_managed(dispatcher.parsed_args())
-            if managed_mode or command.needs_project(dispatcher.parsed_args()):
-                self.services.project = self.get_project(
-                    platform=platform, build_for=build_for
-                )
-
-            self._configure_services(provider_name)
-
-            if not managed_mode:
-                # command runs in the outer instance
-                craft_cli.emit.debug(f"Running {self.app.name} {command.name} on host")
-                return_code = dispatcher.run() or os.EX_OK
-            elif not self.is_managed():
-                # command runs in inner instance, but this is the outer instance
-                self.run_managed(platform, build_for)
-                return_code = os.EX_OK
-            else:
-                # command runs in inner instance
-                return_code = dispatcher.run() or 0
+            return_code = self._run_inner()
         except craft_cli.ArgumentParsingError as err:
             print(err, file=sys.stderr)  # to stderr, as argparse normally does
             craft_cli.emit.ended_ok()
