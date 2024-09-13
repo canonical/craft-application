@@ -54,12 +54,13 @@ class FakeFetchService(services.FetchService):
 
 @pytest.mark.parametrize("fake_build_plan", [2], indirect=True)
 @pytest.mark.parametrize(
-    ("pack_args", "expected_calls"),
+    ("pack_args", "expected_calls", "expected_clean_existing"),
     [
         # No --use-fetch-service: no calls to the FetchService
         (
             [],
             [],
+            False,
         ),
         # --use-fetch-service: full expected calls to the FetchService
         (
@@ -75,11 +76,18 @@ class FakeFetchService(services.FetchService):
                 # One call to shut down (with `force`)
                 "shutdown(True)",
             ],
+            True,
         ),
     ],
 )
 def test_run_managed_fetch_service(
-    app, fake_project, fake_build_plan, monkeypatch, pack_args, expected_calls
+    app,
+    fake_project,
+    fake_build_plan,
+    monkeypatch,
+    pack_args,
+    expected_calls,
+    expected_clean_existing,
 ):
     """Test that the application calls the correct FetchService methods."""
     mock_provider = mock.MagicMock(spec_set=services.ProviderService)
@@ -98,3 +106,18 @@ def test_run_managed_fetch_service(
     app.run()
 
     assert fetch_calls == expected_calls
+
+    # Check that the provider service was correctly instructed to clean, or not
+    # clean, the existing instance.
+
+    # Filter out the various calls to entering and exiting the instance()
+    # context manager.
+    instance_calls = [
+        call
+        for call in mock_provider.instance.mock_calls
+        if "work_dir" in call.kwargs and "clean_existing" in call.kwargs
+    ]
+
+    assert len(instance_calls) == len(fake_build_plan)
+    for call in instance_calls:
+        assert call.kwargs["clean_existing"] == expected_clean_existing
