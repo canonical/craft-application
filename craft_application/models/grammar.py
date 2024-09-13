@@ -31,6 +31,7 @@ class _GrammarAwareModel(pydantic.BaseModel):
         extra="allow",
         alias_generator=alias_generator,
         populate_by_name=True,
+        coerce_numbers_to_str=True,
     )
 
 
