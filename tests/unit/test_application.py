@@ -485,6 +485,7 @@ def test_run_managed_success(mocker, app, fake_project, fake_build_plan):
         mock.call(
             fake_build_plan[0],
             work_dir=mock.ANY,
+            clean_existing=False,
         )
         in mock_provider.instance.mock_calls
     )
@@ -613,8 +614,12 @@ def test_run_managed_multiple(app, fake_project):
 
     app.run_managed(None, None)
 
-    assert mock.call(info2, work_dir=mock.ANY) in mock_provider.instance.mock_calls
-    assert mock.call(info1, work_dir=mock.ANY) in mock_provider.instance.mock_calls
+    extra_args = {
+        "work_dir": mock.ANY,
+        "clean_existing": False,
+    }
+    assert mock.call(info2, **extra_args) in mock_provider.instance.mock_calls
+    assert mock.call(info1, **extra_args) in mock_provider.instance.mock_calls
 
 
 def test_run_managed_specified_arch(app, fake_project):
@@ -629,8 +634,12 @@ def test_run_managed_specified_arch(app, fake_project):
 
     app.run_managed(None, "arch2")
 
-    assert mock.call(info2, work_dir=mock.ANY) in mock_provider.instance.mock_calls
-    assert mock.call(info1, work_dir=mock.ANY) not in mock_provider.instance.mock_calls
+    extra_args = {
+        "work_dir": mock.ANY,
+        "clean_existing": False,
+    }
+    assert mock.call(info2, **extra_args) in mock_provider.instance.mock_calls
+    assert mock.call(info1, **extra_args) not in mock_provider.instance.mock_calls
 
 
 def test_run_managed_specified_platform(app, fake_project):
@@ -645,8 +654,12 @@ def test_run_managed_specified_platform(app, fake_project):
 
     app.run_managed("a2", None)
 
-    assert mock.call(info2, work_dir=mock.ANY) in mock_provider.instance.mock_calls
-    assert mock.call(info1, work_dir=mock.ANY) not in mock_provider.instance.mock_calls
+    extra_args = {
+        "work_dir": mock.ANY,
+        "clean_existing": False,
+    }
+    assert mock.call(info2, **extra_args) in mock_provider.instance.mock_calls
+    assert mock.call(info1, **extra_args) not in mock_provider.instance.mock_calls
 
 
 def test_run_managed_empty_plan(app, fake_project):

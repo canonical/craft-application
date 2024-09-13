@@ -380,7 +380,9 @@ class Application:
             instance_path = pathlib.PosixPath("/root/project")
 
             with self.services.provider.instance(
-                build_info, work_dir=self._work_dir
+                build_info,
+                work_dir=self._work_dir,
+                clean_existing=self._use_fetch_service,
             ) as instance:
                 if self._use_fetch_service:
                     session_env = self.services.fetch.create_session(instance)
