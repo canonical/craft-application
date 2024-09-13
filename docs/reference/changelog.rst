@@ -2,6 +2,16 @@
 Changelog
 *********
 
+4.2.2 (2024-Sep-13)
+-------------------
+
+Application
+===========
+
+- Add a ``_run_inner`` method to override or wrap the core run logic.
+
+For a complete list of commits, check out the `4.2.2`_ release on GitHub.
+
 4.2.1 (2024-Sep-13)
 -------------------
 
@@ -255,3 +265,4 @@ For a complete list of commits, check out the `2.7.0`_ release on GitHub.
 .. _4.1.2: https://github.com/canonical/craft-application/releases/tag/4.1.2
 .. _4.2.0: https://github.com/canonical/craft-application/releases/tag/4.2.0
 .. _4.2.1: https://github.com/canonical/craft-application/releases/tag/4.2.1
+.. _4.2.2: https://github.com/canonical/craft-application/releases/tag/4.2.2
