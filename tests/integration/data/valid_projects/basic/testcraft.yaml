@@ -15,3 +15,5 @@ platforms:
 parts:
   my-part:
     plugin: nil
+    build-environment:
+      - CGO_ENABLED: 0
