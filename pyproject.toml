@@ -77,7 +77,7 @@ types = [
 docs = [
     "canonical-sphinx~=0.1",
     "sphinx-autobuild==2024.9.3",
-    "sphinx-lint==0.9.1",
+    "sphinx-lint==1.0.0",
 ]
 apt = [
     "python-apt>=2.4.0;sys_platform=='linux'"
