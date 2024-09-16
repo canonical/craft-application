@@ -76,23 +76,20 @@ class _BaseLifecycleCommand(base.ExtensibleCommand):
             help="Build in a LXD container.",
         )
 
-        # we suppress the help msg from this argument if the pro api is not found
-        pro_help_str = argparse.SUPPRESS
-        if ProServices.pro_client_exists():
-            supported_pro_services = ", ".join(
-                [f"'{name}'" for name in ProServices.supported_services]
-            )
-            pro_help_str = (
-                "Enable Ubuntu Pro services for this command. "
-                f"Supported values include: {supported_pro_services}. "
-                "Multiple values can be passed separated by commas."
-            )
+        supported_pro_services = ", ".join(
+            [f"'{name}'" for name in ProServices.supported_services]
+        )
 
         parser.add_argument(
             "--pro",
             type=ProServices.from_csv,
             metavar="<pro-services>",
-            help=pro_help_str,
+            help=(
+                "Enable Ubuntu Pro services for this command. "
+                f"Supported values include: {supported_pro_services}. "
+                "Multiple values can be passed separated by commas. "
+                "Note: This feature requires an Ubuntu Pro compatible host and build base."
+            ),
             default=ProServices(),
         )
 
