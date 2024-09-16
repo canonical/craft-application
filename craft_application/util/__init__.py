@@ -33,6 +33,7 @@ from craft_application.util.snap_config import (
 )
 from craft_application.util.string import humanize_list, strtobool
 from craft_application.util.yaml import dump_yaml, safe_yaml_load
+from craft_application.util.pro_services import ProServices, ValidatorOptions
 
 __all__ = [
     "get_unique_callbacks",
@@ -52,4 +53,6 @@ __all__ = [
     "dump_yaml",
     "safe_yaml_load",
     "retry",
+    "ProServices", 
+    "ValidatorOptions",
 ]

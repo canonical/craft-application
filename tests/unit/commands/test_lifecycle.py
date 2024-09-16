@@ -29,7 +29,6 @@ from craft_application.commands.lifecycle import (
     OverlayCommand,
     PackCommand,
     PrimeCommand,
-    ProServices,
     PullCommand,
     StageCommand,
     get_lifecycle_command_group,
@@ -40,6 +39,7 @@ from craft_application.errors import (
     UbuntuProAttachedError,
     UbuntuProDetachedError,
 )
+from craft_application.util import ProServices
 from craft_cli import emit
 from craft_parts import Features
 

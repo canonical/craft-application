@@ -38,7 +38,7 @@ from platformdirs import user_cache_path
 from craft_application import commands, errors, grammar, models, secrets, util
 from craft_application.errors import PathInvalidError
 from craft_application.models import BuildInfo, GrammarAwareProject
-from craft_application.util.pro_services import ValidatorOptions
+from craft_application.util import ValidatorOptions
 
 if TYPE_CHECKING:
     from craft_application.services import service_factory

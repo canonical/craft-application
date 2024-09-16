@@ -318,7 +318,7 @@ def mock_pro_api_call(mocker):
         return mock_responses[endpoint]
 
     mocker.patch(
-        "craft_application.util.pro_services.ProServices._pro_api_call",
+        "craft_application.util.ProServices._pro_api_call",
         new=mock_pro_api_call,
     )
 

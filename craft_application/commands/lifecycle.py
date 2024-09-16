@@ -26,7 +26,7 @@ from craft_parts.features import Features
 from typing_extensions import override
 
 from craft_application.commands import base
-from craft_application.util.pro_services import ProServices
+from craft_application.util import ProServices
 
 
 def get_lifecycle_command_group() -> CommandGroup:
