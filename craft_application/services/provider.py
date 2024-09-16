@@ -98,12 +98,16 @@ class ProviderService(base.ProjectService):
             self.environment[f"{scheme.upper()}_PROXY"] = value
 
         if self._install_snap:
-            channel = (
-                None
-                if util.is_running_from_snap(self._app.name)
-                else os.getenv("CRAFT_SNAP_CHANNEL", "latest/stable")
-            )
-            self.snaps.append(Snap(name=self._app.name, channel=channel, classic=True))
+            if util.is_running_from_snap(self._app.name):
+                # use the aliased name of the snap when injecting
+                name = os.getenv("SNAP_INSTANCE_NAME", self._app.name)
+                channel = None
+            else:
+                # use the snap name when installing from the store
+                name = self._app.name
+                channel = os.getenv("CRAFT_SNAP_CHANNEL", "latest/stable")
+
+            self.snaps.append(Snap(name=name, channel=channel, classic=True))
 
     @contextlib.contextmanager
     def instance(

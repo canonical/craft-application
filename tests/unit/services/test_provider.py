@@ -84,41 +84,70 @@ def test_setup_proxy_environment(
 
 
 @pytest.mark.parametrize(
-    ("install_snap", "environment", "snaps"),
+    ("environment", "snaps"),
     [
-        (True, {}, [Snap(name="testcraft", channel="latest/stable", classic=True)]),
-        (
-            True,
+        pytest.param(
+            {},
+            [Snap(name="testcraft", channel="latest/stable", classic=True)],
+            id="install-from-store-default-channel",
+        ),
+        pytest.param(
             {"CRAFT_SNAP_CHANNEL": "something"},
             [Snap(name="testcraft", channel="something", classic=True)],
+            id="install-from-store-with-channel",
         ),
-        (
-            True,
-            {"SNAP_NAME": "testcraft", "SNAP": "/snap/testcraft/x1"},
-            [Snap(name="testcraft", channel=None, classic=True)],
-        ),
-        (
-            True,
+        pytest.param(
             {
                 "SNAP_NAME": "testcraft",
+                "SNAP_INSTANCE_NAME": "testcraft_1",
+                "SNAP": "/snap/testcraft/x1",
+            },
+            [Snap(name="testcraft_1", channel=None, classic=True)],
+            id="inject-from-host",
+        ),
+        pytest.param(
+            {
+                "SNAP_NAME": "testcraft",
+                "SNAP_INSTANCE_NAME": "testcraft_1",
                 "SNAP": "/snap/testcraft/x1",
                 "CRAFT_SNAP_CHANNEL": "something",
             },
-            [Snap(name="testcraft", channel=None, classic=True)],
+            [Snap(name="testcraft_1", channel=None, classic=True)],
+            id="inject-from-host-ignore-channel",
         ),
-        (False, {}, []),
-        (False, {"CRAFT_SNAP_CHANNEL": "something"}, []),
-        (
-            False,
+        pytest.param(
+            # SNAP_INSTANCE_NAME may not exist if snapd < 2.43 or feature is disabled
             {
                 "SNAP_NAME": "testcraft",
                 "SNAP": "/snap/testcraft/x1",
+            },
+            [Snap(name="testcraft", channel=None, classic=True)],
+            id="missing-snap-instance-name",
+        ),
+        pytest.param(
+            # SNAP_INSTANCE_NAME may not exist if snapd < 2.43 or feature is disabled
+            {
+                "SNAP_NAME": "testcraft",
+                "SNAP": "/snap/testcraft/x1",
+                # CRAFT_SNAP_CHANNEL should be ignored
                 "CRAFT_SNAP_CHANNEL": "something",
             },
-            [],
+            [Snap(name="testcraft", channel=None, classic=True)],
+            id="missing-snap-instance-name-ignore-snap-channel",
+        ),
+        pytest.param(
+            # this can happen when running testcraft from a venv in a snapped terminal
+            {
+                "SNAP_NAME": "kitty",
+                "SNAP_INSTANCE_NAME": "kitty",
+                "SNAP": "/snap/kitty/x1",
+            },
+            [Snap(name="testcraft", channel="latest/stable", classic=True)],
+            id="running-inside-another-snap",
         ),
     ],
 )
+@pytest.mark.parametrize("install_snap", [True, False])
 def test_install_snap(
     monkeypatch,
     app_metadata,
@@ -143,7 +172,10 @@ def test_install_snap(
     )
     service.setup()
 
-    assert service.snaps == snaps
+    if install_snap:
+        assert service.snaps == snaps
+    else:
+        assert service.snaps == []
 
 
 @pytest.mark.parametrize(
