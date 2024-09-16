@@ -116,14 +116,24 @@ def test_setup_proxy_environment(
             id="inject-from-host-ignore-channel",
         ),
         pytest.param(
-            # SNAP_INSTANCE_NAME may not exist if snapd < 2.43
+            # SNAP_INSTANCE_NAME may not exist if snapd < 2.43 or feature is disabled
             {
                 "SNAP_NAME": "testcraft",
                 "SNAP": "/snap/testcraft/x1",
-                "CRAFT_SNAP_CHANNEL": "something",
             },
             [Snap(name="testcraft", channel=None, classic=True)],
             id="missing-snap-instance-name",
+        ),
+        pytest.param(
+            # SNAP_INSTANCE_NAME may not exist if snapd < 2.43 or feature is disabled
+            {
+                "SNAP_NAME": "testcraft",
+                "SNAP": "/snap/testcraft/x1",
+                # CRAFT_SNAP_CHANNEL should be ignored
+                "CRAFT_SNAP_CHANNEL": "something",
+            },
+            [Snap(name="testcraft", channel=None, classic=True)],
+            id="missing-snap-instance-name-ignore-snap-channel",
         ),
         pytest.param(
             # this can happen when running testcraft from a venv in a snapped terminal
