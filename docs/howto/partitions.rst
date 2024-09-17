@@ -45,7 +45,7 @@ Required application changes
 
 To add partition support to an application, two basic changes are needed:
 
-#. Enable the feature
+#. Enable the feature.
 
    Use the :class:`Features <craft_parts.Features>` class to specify that the
    application will use partitions.  This should be called from an overridden
@@ -81,7 +81,7 @@ To add partition support to an application, two basic changes are needed:
 
 
 
-#. Define the list of partitions
+#. Define the list of partitions.
 
    Override your :class:`Application <craft_application.Application>`'s
    ``_setup_partitions`` method and return the list of the partitions.
