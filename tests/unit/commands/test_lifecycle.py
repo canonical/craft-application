@@ -466,7 +466,9 @@ def test_pack_run(
     emitter, mock_services, app_metadata, parts, tmp_path, packages, message
 ):
     mock_services.package.pack.return_value = packages
-    parsed_args = argparse.Namespace(parts=parts, output=tmp_path)
+    parsed_args = argparse.Namespace(
+        parts=parts, output=tmp_path, use_fetch_service=False
+    )
     command = PackCommand(
         {
             "app": app_metadata,
@@ -482,6 +484,33 @@ def test_pack_run(
     )
     emitter.assert_progress("Packing...")
     emitter.assert_progress(message, permanent=True)
+
+
+@pytest.mark.parametrize(
+    ("use_fetch_service", "expect_create_called"), [(True, True), (False, False)]
+)
+def test_pack_fetch_manifest(
+    mock_services, app_metadata, tmp_path, use_fetch_service, expect_create_called
+):
+    packages = [pathlib.Path("package.zip")]
+    mock_services.package.pack.return_value = packages
+    parsed_args = argparse.Namespace(
+        output=tmp_path, use_fetch_service=use_fetch_service
+    )
+    command = PackCommand(
+        {
+            "app": app_metadata,
+            "services": mock_services,
+        }
+    )
+
+    command.run(parsed_args)
+
+    mock_services.package.pack.assert_called_once_with(
+        mock_services.lifecycle.prime_dir,
+        tmp_path,
+    )
+    assert mock_services.fetch.create_project_manifest.called == expect_create_called
 
 
 def test_pack_run_wrong_step(app_metadata, fake_services):
@@ -595,7 +624,9 @@ def test_shell_after_pack(
     mocker,
     mock_subprocess_run,
 ):
-    parsed_args = argparse.Namespace(shell_after=True, output=pathlib.Path())
+    parsed_args = argparse.Namespace(
+        shell_after=True, output=pathlib.Path(), use_fetch_service=False
+    )
     mock_lifecycle_run = mocker.patch.object(fake_services.lifecycle, "run")
     mock_pack = mocker.patch.object(fake_services.package, "pack")
     mocker.patch.object(
