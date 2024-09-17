@@ -48,14 +48,20 @@ To add partition support to an application, two basic changes are needed:
 #. Enable the feature
 
    Use the :class:`Features <craft_parts.Features>` class to specify that the
-   application will use partitions:
+   application will use partitions.  This should be called from an overridden
+   method in your Application subclass:
 
    .. code-block:: python
 
      from craft_parts import Features
 
-     Features.reset()
-     Features(enable_partitions=True)
+     class SnackcraftApplication(Application):
+
+         ...
+
+         @override
+         def _enable_craft_parts_features(self) -> None:
+             Features(enable_partitions=True)
 
    .. NOTE::
       The ``craft-application`` class :class:`AppFeatures
@@ -64,26 +70,31 @@ To add partition support to an application, two basic changes are needed:
       but partitions cannot be enabled via :class:`AppFeatures
       <craft_application.AppFeatures>`!
 
+   .. NOTE::
+      In unit tests, you may need to call this between tests, otherwise the
+      :class:`Features <craft_parts.Features>` global singleton may complain as
+      successive tests try to enable partitions repeatedly.
+
+      .. code-block:: python
+
+        Features.reset()
+
+
+
 #. Define the list of partitions
 
-   We need to tell the :class:`LifecycleManager <craft_parts.LifecycleManager>`
-   class about our partitions, but applications do not usually directly
-   instantiate the LifecycleManager.
-
-   Instead, override your :class:`Application
-   <craft_application.Application>`'s ``_setup_partitions`` method, and return
-   a list of the partitions, which will eventually be passed to the
-   :class:`LifecycleManager <craft_parts.LifecycleManager>`:
+   Override your :class:`Application <craft_application.Application>`'s
+   ``_setup_partitions`` method and return the list of the partitions.
 
    .. code-block:: python
 
      class SnackcraftApplication(Application):
 
-       ...
+         ...
 
-       @override
-       def _setup_partitions(self, yaml_data: dict[str, Any]) -> list[str] | None:
-           return ["default", "kernel", "component/bar-baz"]
+         @override
+         def _setup_partitions(self, yaml_data: dict[str, Any]) -> list[str] | None:
+             return ["default", "kernel", "component/bar-baz"]
 
 Using the partitions
 ====================
