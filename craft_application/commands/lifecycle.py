@@ -414,6 +414,9 @@ class PackCommand(LifecycleCommand):
                 _launch_shell()
             raise
 
+        if parsed_args.use_fetch_service and packages:
+            self._services.fetch.create_project_manifest(packages)
+
         if not packages:
             emit.progress("No packages created.", permanent=True)
         elif len(packages) == 1:

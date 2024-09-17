@@ -375,3 +375,8 @@ class FakeApplication(application.Application):
 @pytest.fixture
 def app(app_metadata, fake_services):
     return FakeApplication(app_metadata, fake_services)
+
+
+@pytest.fixture
+def manifest_data_dir():
+    return pathlib.Path(__file__).parent / "data/manifest"

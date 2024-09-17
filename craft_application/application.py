@@ -250,6 +250,10 @@ class Application:
             build_plan=self._build_plan,
             provider_name=provider_name,
         )
+        self.services.update_kwargs(
+            "fetch",
+            build_plan=self._build_plan,
+        )
 
     def _resolve_project_path(self, project_dir: pathlib.Path | None) -> pathlib.Path:
         """Find the project file for the current project.

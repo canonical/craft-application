@@ -25,13 +25,19 @@ import craft_providers
 from craft_cli import emit
 from typing_extensions import override
 
-from craft_application import fetch, services
+from craft_application import fetch, models, services
+from craft_application.models.manifest import ProjectManifest
 
 if typing.TYPE_CHECKING:
     from craft_application.application import AppMetadata
 
 
-class FetchService(services.AppService):
+_PROJECT_MANIFEST_MANAGED_PATH = pathlib.Path(
+    "/tmp/craft-project-manifest.yaml"  # noqa: S108 (possibly insecure)
+)
+
+
+class FetchService(services.ProjectService):
     """Service class that handles communication with the fetch-service.
 
     This Service is able to spawn a fetch-service instance and create sessions
@@ -49,10 +55,18 @@ class FetchService(services.AppService):
     _fetch_process: subprocess.Popen[str] | None
     _session_data: fetch.SessionData | None
 
-    def __init__(self, app: AppMetadata, services: services.ServiceFactory) -> None:
-        super().__init__(app, services)
+    def __init__(
+        self,
+        app: AppMetadata,
+        services: services.ServiceFactory,
+        *,
+        project: models.Project,
+        build_plan: list[models.BuildInfo],
+    ) -> None:
+        super().__init__(app, services, project=project)
         self._fetch_process = None
         self._session_data = None
+        self._build_plan = build_plan
 
     @override
     def setup(self) -> None:
@@ -103,3 +117,18 @@ class FetchService(services.AppService):
         """
         if force and self._fetch_process:
             fetch.stop_service(self._fetch_process)
+
+    def create_project_manifest(self, artifacts: list[pathlib.Path]) -> None:
+        """Create the project manifest for the artifact in ``artifacts``.
+
+        Only supports a single generated artifact, and only in managed runs.
+        """
+        if not self._services.ProviderClass.is_managed():
+            emit.debug("Unable to generate the project manifest on the host.")
+            return
+
+        emit.debug(f"Generating project manifest at {_PROJECT_MANIFEST_MANAGED_PATH}")
+        project_manifest = ProjectManifest.from_packed_artifact(
+            self._project, self._build_plan[0], artifacts[0]
+        )
+        project_manifest.to_yaml_file(_PROJECT_MANIFEST_MANAGED_PATH)
