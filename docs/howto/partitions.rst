@@ -89,7 +89,7 @@ To add partition support to an application, two basic changes are needed:
 
    .. code-block:: python
 
-     class SnackcraftApplication(Application):
+     class ExampleApplication(Application):
 
          ...
 
