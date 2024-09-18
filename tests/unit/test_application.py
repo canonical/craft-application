@@ -615,6 +615,38 @@ def test_run_managed_empty_plan(app, fake_project):
 
 
 @pytest.mark.parametrize(
+    ("parsed_args", "environ", "item", "expected"),
+    [
+        (argparse.Namespace(), {}, "build_for", None),
+        (argparse.Namespace(build_for=None), {}, "build_for", None),
+        (
+            argparse.Namespace(build_for=None),
+            {"CRAFT_BUILD_FOR": "arm64"},
+            "build_for",
+            "arm64",
+        ),
+        (
+            argparse.Namespace(build_for=None),
+            {"TESTCRAFT_BUILD_FOR": "arm64"},
+            "build_for",
+            "arm64",
+        ),
+        (
+            argparse.Namespace(build_for="riscv64"),
+            {"TESTCRAFT_BUILD_FOR": "arm64"},
+            "build_for",
+            "riscv64",
+        ),
+    ],
+)
+def test_get_arg_or_config(monkeypatch, app, parsed_args, environ, item, expected):
+    for var, content in environ.items():
+        monkeypatch.setenv(var, content)
+
+    assert app.get_arg_or_config(parsed_args, item) == expected
+
+
+@pytest.mark.parametrize(
     ("managed", "error", "exit_code", "message"),
     [
         (False, craft_cli.ProvideHelpException("Hi"), 0, "Hi\n"),
