@@ -18,8 +18,13 @@ import pathlib
 from datetime import datetime
 
 import pytest
-from craft_application import manifest, util
+from craft_application import util
 from craft_application.models import BuildInfo
+from craft_application.models.manifest import (
+    CraftManifest,
+    ProjectManifest,
+    SessionArtifactManifest,
+)
 from craft_providers import bases
 from freezegun import freeze_time
 
@@ -41,7 +46,7 @@ def project_manifest(tmp_path, fake_project):
     artifact = tmp_path / "my-artifact.file"
     artifact.write_text("this is the generated artifact")
 
-    return manifest.from_packed_artifact(project, build_info, artifact)
+    return ProjectManifest.from_packed_artifact(project, build_info, artifact)
 
 
 @pytest.fixture
@@ -58,7 +63,7 @@ def test_from_packed_artifact(project_manifest):
 
 
 def test_from_session_report(session_report):
-    deps = manifest.from_session_report(session_report)
+    deps = SessionArtifactManifest.from_session_report(session_report)
     obtained = util.dump_yaml([d.marshal() for d in deps])
 
     expected = (TEST_DATA_DIR / "session-manifest-expected.yaml").read_text()
@@ -69,7 +74,7 @@ def test_create_craft_manifest(tmp_path, project_manifest, session_report):
     project_manifest_path = tmp_path / "project-manifest.yaml"
     project_manifest.to_yaml_file(project_manifest_path)
 
-    craft_manifest = manifest.create_craft_manifest(
+    craft_manifest = CraftManifest.create_craft_manifest(
         project_manifest_path, session_report
     )
 
