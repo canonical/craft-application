@@ -433,6 +433,7 @@ def test_pack_fill_parser(
         "platform": None,
         "build_for": None,
         "output": pathlib.Path(output_arg),
+        "use_fetch_service": False,
         **shell_dict,
         **debug_dict,
         **build_env_dict,

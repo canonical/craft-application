@@ -29,6 +29,7 @@ import pytest
 from craft_application import application, launchpad, models, services, util
 from craft_cli import EmitterMode, emit
 from craft_providers import bases
+from typing_extensions import override
 
 if TYPE_CHECKING:  # pragma: no cover
     from collections.abc import Iterator
@@ -304,3 +305,32 @@ def fake_services(
         PackageClass=fake_package_service_class,
         LifecycleClass=fake_lifecycle_service_class,
     )
+
+
+class FakeApplication(application.Application):
+    """An application class explicitly for testing. Adds some convenient test hooks."""
+
+    platform: str = "unknown-platform"
+    build_on: str = "unknown-build-on"
+    build_for: str | None = "unknown-build-for"
+
+    def set_project(self, project):
+        self._Application__project = project
+
+    @override
+    def _extra_yaml_transform(
+        self,
+        yaml_data: dict[str, Any],
+        *,
+        build_on: str,
+        build_for: str | None,
+    ) -> dict[str, Any]:
+        self.build_on = build_on
+        self.build_for = build_for
+
+        return yaml_data
+
+
+@pytest.fixture
+def app(app_metadata, fake_services):
+    return FakeApplication(app_metadata, fake_services)

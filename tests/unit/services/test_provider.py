@@ -30,6 +30,18 @@ from craft_providers import bases, lxd, multipass
 from craft_providers.actions.snap_installer import Snap
 
 
+@pytest.fixture
+def mock_provider(monkeypatch, provider_service):
+    mocked_provider = mock.MagicMock(spec=craft_providers.Provider)
+    monkeypatch.setattr(
+        provider_service,
+        "get_provider",
+        lambda name: mocked_provider,  # noqa: ARG005 (unused argument)
+    )
+
+    return mocked_provider
+
+
 @pytest.mark.parametrize(
     ("given_environment", "expected_environment"),
     [
@@ -416,7 +428,6 @@ def test_get_base_packages(provider_service):
     ],
 )
 def test_instance(
-    monkeypatch,
     check,
     emitter,
     tmp_path,
@@ -425,13 +436,8 @@ def test_instance(
     provider_service,
     base_name,
     allow_unstable,
+    mock_provider,
 ):
-    mock_provider = mock.MagicMock(spec=craft_providers.Provider)
-    monkeypatch.setattr(
-        provider_service,
-        "get_provider",
-        lambda name: mock_provider,  # noqa: ARG005 (unused argument)
-    )
     arch = util.get_host_architecture()
     build_info = models.BuildInfo("foo", arch, arch, base_name)
 
@@ -459,6 +465,33 @@ def test_instance(
         )
     with check:
         emitter.assert_progress("Launching managed .+ instance...", regex=True)
+
+
+@pytest.mark.parametrize("clean_existing", [True, False])
+def test_instance_clean_existing(
+    tmp_path,
+    provider_service,
+    mock_provider,
+    clean_existing,
+):
+    arch = util.get_host_architecture()
+    base_name = bases.BaseName("ubuntu", "24.04")
+    build_info = models.BuildInfo("foo", arch, arch, base_name)
+
+    with provider_service.instance(
+        build_info, work_dir=tmp_path, clean_existing=clean_existing
+    ) as _instance:
+        pass
+
+    clean_called = mock_provider.clean_project_environments.called
+    assert clean_called == clean_existing
+
+    if clean_existing:
+        work_dir_inode = tmp_path.stat().st_ino
+        expected_name = f"testcraft-full-project-on-{arch}-for-{arch}-{work_dir_inode}"
+        mock_provider.clean_project_environments.assert_called_once_with(
+            instance_name=expected_name
+        )
 
 
 def test_load_bashrc(emitter):

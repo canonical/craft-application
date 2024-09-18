@@ -56,6 +56,8 @@ from craft_parts.plugins.plugins import PluginType
 from craft_providers import bases
 from overrides import override
 
+from tests.conftest import FakeApplication
+
 EMPTY_COMMAND_GROUP = craft_cli.CommandGroup("FakeCommands", [])
 BASIC_PROJECT_YAML = """
 name: myproject
@@ -367,35 +369,6 @@ def test_app_metadata_default_mandatory_adoptable_fields():
     assert app.mandatory_adoptable_fields == ["version"]
 
 
-class FakeApplication(application.Application):
-    """An application class explicitly for testing. Adds some convenient test hooks."""
-
-    platform: str = "unknown-platform"
-    build_on: str = "unknown-build-on"
-    build_for: str | None = "unknown-build-for"
-
-    def set_project(self, project):
-        self._Application__project = project
-
-    @override
-    def _extra_yaml_transform(
-        self,
-        yaml_data: dict[str, Any],
-        *,
-        build_on: str,
-        build_for: str | None,
-    ) -> dict[str, Any]:
-        self.build_on = build_on
-        self.build_for = build_for
-
-        return yaml_data
-
-
-@pytest.fixture
-def app(app_metadata, fake_services):
-    return FakeApplication(app_metadata, fake_services)
-
-
 class FakePlugin(craft_parts.plugins.Plugin):
     def __init__(self, properties, part_info):
         pass
@@ -512,6 +485,7 @@ def test_run_managed_success(mocker, app, fake_project, fake_build_plan):
         mock.call(
             fake_build_plan[0],
             work_dir=mock.ANY,
+            clean_existing=False,
         )
         in mock_provider.instance.mock_calls
     )
@@ -570,8 +544,12 @@ def test_run_managed_multiple(app, fake_project):
 
     app.run_managed(None, None)
 
-    assert mock.call(info2, work_dir=mock.ANY) in mock_provider.instance.mock_calls
-    assert mock.call(info1, work_dir=mock.ANY) in mock_provider.instance.mock_calls
+    extra_args = {
+        "work_dir": mock.ANY,
+        "clean_existing": False,
+    }
+    assert mock.call(info2, **extra_args) in mock_provider.instance.mock_calls
+    assert mock.call(info1, **extra_args) in mock_provider.instance.mock_calls
 
 
 def test_run_managed_specified_arch(app, fake_project):
@@ -586,8 +564,12 @@ def test_run_managed_specified_arch(app, fake_project):
 
     app.run_managed(None, "arch2")
 
-    assert mock.call(info2, work_dir=mock.ANY) in mock_provider.instance.mock_calls
-    assert mock.call(info1, work_dir=mock.ANY) not in mock_provider.instance.mock_calls
+    extra_args = {
+        "work_dir": mock.ANY,
+        "clean_existing": False,
+    }
+    assert mock.call(info2, **extra_args) in mock_provider.instance.mock_calls
+    assert mock.call(info1, **extra_args) not in mock_provider.instance.mock_calls
 
 
 def test_run_managed_specified_platform(app, fake_project):
@@ -602,8 +584,12 @@ def test_run_managed_specified_platform(app, fake_project):
 
     app.run_managed("a2", None)
 
-    assert mock.call(info2, work_dir=mock.ANY) in mock_provider.instance.mock_calls
-    assert mock.call(info1, work_dir=mock.ANY) not in mock_provider.instance.mock_calls
+    extra_args = {
+        "work_dir": mock.ANY,
+        "clean_existing": False,
+    }
+    assert mock.call(info2, **extra_args) in mock_provider.instance.mock_calls
+    assert mock.call(info1, **extra_args) not in mock_provider.instance.mock_calls
 
 
 def test_run_managed_empty_plan(app, fake_project):
