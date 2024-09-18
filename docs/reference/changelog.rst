@@ -2,6 +2,17 @@
 Changelog
 *********
 
+4.2.3 (2024-Sep-18)
+-------------------
+
+Application
+===========
+
+- ``get_arg_or_config`` now correctly checks the config service if the passed
+  namespace has ``None`` as the value of the requested item.
+
+For a complete list of commits, check out the `4.2.3`_ release on GitHub.
+
 4.2.2 (2024-Sep-13)
 -------------------
 
@@ -266,3 +277,4 @@ For a complete list of commits, check out the `2.7.0`_ release on GitHub.
 .. _4.2.0: https://github.com/canonical/craft-application/releases/tag/4.2.0
 .. _4.2.1: https://github.com/canonical/craft-application/releases/tag/4.2.1
 .. _4.2.2: https://github.com/canonical/craft-application/releases/tag/4.2.2
+.. _4.2.3: https://github.com/canonical/craft-application/releases/tag/4.2.3
