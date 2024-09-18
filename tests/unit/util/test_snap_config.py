@@ -24,14 +24,14 @@ from craft_application.util import SnapConfig, get_snap_config, is_running_from_
 from snaphelpers import SnapCtlError
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_config(mocker):
     return mocker.patch(
         "craft_application.util.snap_config.SnapConfigOptions", autospec=True
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_is_running_from_snap(mocker):
     return mocker.patch(
         "craft_application.util.snap_config.is_running_from_snap",
@@ -87,7 +87,7 @@ def test_unmarshal_invalid_provider_error():
 
     assert str(raised.value) == (
         "Bad snap config content:\n"
-        "- unexpected value; permitted: 'lxd', 'multipass' (in field 'provider')"
+        "- input should be 'lxd' or 'multipass' (in field 'provider')"
     )
 
 
@@ -98,7 +98,7 @@ def test_unmarshal_extra_data_error():
 
     assert str(raised.value) == (
         "Bad snap config content:\n"
-        "- extra field 'test' not permitted in top-level configuration"
+        "- extra inputs are not permitted (in field 'test')"
     )
 
 

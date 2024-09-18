@@ -37,6 +37,7 @@ import craft_parts
 import craft_platforms
 import craft_providers
 import distro
+import pydantic
 import pytest
 import pytest_check
 from craft_application import (
@@ -54,7 +55,8 @@ from craft_application.util import (
 from craft_cli import emit
 from craft_parts.plugins.plugins import PluginType
 from overrides import override
-from pydantic import validator
+
+from tests.conftest import FakeApplication
 
 EMPTY_COMMAND_GROUP = craft_cli.CommandGroup("FakeCommands", [])
 BASIC_PROJECT_YAML = """
@@ -367,35 +369,6 @@ def test_app_metadata_default_mandatory_adoptable_fields():
     assert app.mandatory_adoptable_fields == ["version"]
 
 
-class FakeApplication(application.Application):
-    """An application class explicitly for testing. Adds some convenient test hooks."""
-
-    platform: str = "unknown-platform"
-    build_on: str = "unknown-build-on"
-    build_for: str | None = "unknown-build-for"
-
-    def set_project(self, project):
-        self._Application__project = project
-
-    @override
-    def _extra_yaml_transform(
-        self,
-        yaml_data: dict[str, Any],
-        *,
-        build_on: str,
-        build_for: str | None,
-    ) -> dict[str, Any]:
-        self.build_on = build_on
-        self.build_for = build_for
-
-        return yaml_data
-
-
-@pytest.fixture()
-def app(app_metadata, fake_services):
-    return FakeApplication(app_metadata, fake_services)
-
-
 class FakePlugin(craft_parts.plugins.Plugin):
     def __init__(self, properties, part_info):
         pass
@@ -416,12 +389,12 @@ class FakePlugin(craft_parts.plugins.Plugin):
         return set()
 
 
-@pytest.fixture()
+@pytest.fixture
 def fake_plugin(app_metadata, fake_services):
     return FakePlugin(app_metadata, fake_services)
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_dispatcher(monkeypatch):
     dispatcher = mock.Mock(spec_set=craft_cli.Dispatcher)
     monkeypatch.setattr("craft_cli.Dispatcher", mock.Mock(return_value=dispatcher))
@@ -512,6 +485,7 @@ def test_run_managed_success(mocker, app, fake_project, fake_build_plan):
         mock.call(
             fake_build_plan[0],
             work_dir=mock.ANY,
+            clean_existing=False,
         )
         in mock_provider.instance.mock_calls
     )
@@ -580,8 +554,12 @@ def test_run_managed_multiple(app, fake_project):
 
     app.run_managed(None, None)
 
-    assert mock.call(info2, work_dir=mock.ANY) in mock_provider.instance.mock_calls
-    assert mock.call(info1, work_dir=mock.ANY) in mock_provider.instance.mock_calls
+    extra_args = {
+        "work_dir": mock.ANY,
+        "clean_existing": False,
+    }
+    assert mock.call(info2, **extra_args) in mock_provider.instance.mock_calls
+    assert mock.call(info1, **extra_args) in mock_provider.instance.mock_calls
 
 
 def test_run_managed_specified_arch(app, fake_project):
@@ -606,8 +584,12 @@ def test_run_managed_specified_arch(app, fake_project):
 
     app.run_managed(None, "riscv64")
 
-    assert mock.call(info2, work_dir=mock.ANY) in mock_provider.instance.mock_calls
-    assert mock.call(info1, work_dir=mock.ANY) not in mock_provider.instance.mock_calls
+    extra_args = {
+        "work_dir": mock.ANY,
+        "clean_existing": False,
+    }
+    assert mock.call(info2, **extra_args) in mock_provider.instance.mock_calls
+    assert mock.call(info1, **extra_args) not in mock_provider.instance.mock_calls
 
 
 def test_run_managed_specified_platform(app, fake_project):
@@ -632,8 +614,52 @@ def test_run_managed_specified_platform(app, fake_project):
 
     app.run_managed("a2", None)
 
-    assert mock.call(info2, work_dir=mock.ANY) in mock_provider.instance.mock_calls
-    assert mock.call(info1, work_dir=mock.ANY) not in mock_provider.instance.mock_calls
+    extra_args = {
+        "work_dir": mock.ANY,
+        "clean_existing": False,
+    }
+    assert mock.call(info2, **extra_args) in mock_provider.instance.mock_calls
+    assert mock.call(info1, **extra_args) not in mock_provider.instance.mock_calls
+
+
+def test_run_managed_empty_plan(app, fake_project):
+    app.set_project(fake_project)
+
+    app._build_plan = []
+    with pytest.raises(errors.EmptyBuildPlanError):
+        app.run_managed(None, None)
+
+
+@pytest.mark.parametrize(
+    ("parsed_args", "environ", "item", "expected"),
+    [
+        (argparse.Namespace(), {}, "build_for", None),
+        (argparse.Namespace(build_for=None), {}, "build_for", None),
+        (
+            argparse.Namespace(build_for=None),
+            {"CRAFT_BUILD_FOR": "arm64"},
+            "build_for",
+            "arm64",
+        ),
+        (
+            argparse.Namespace(build_for=None),
+            {"TESTCRAFT_BUILD_FOR": "arm64"},
+            "build_for",
+            "arm64",
+        ),
+        (
+            argparse.Namespace(build_for="riscv64"),
+            {"TESTCRAFT_BUILD_FOR": "arm64"},
+            "build_for",
+            "riscv64",
+        ),
+    ],
+)
+def test_get_arg_or_config(monkeypatch, app, parsed_args, environ, item, expected):
+    for var, content in environ.items():
+        monkeypatch.setenv(var, content)
+
+    assert app.get_arg_or_config(parsed_args, item) == expected
 
 
 @pytest.mark.parametrize(
@@ -650,6 +676,7 @@ def test_run_managed_specified_platform(app, fake_project):
         ),
     ],
 )
+@pytest.mark.usefixtures("emitter")
 def test_get_dispatcher_error(
     monkeypatch, check, capsys, app, mock_dispatcher, managed, error, exit_code, message
 ):
@@ -700,8 +727,8 @@ def test_gets_project(monkeypatch, tmp_path, app_metadata, fake_services):
 
     app.run()
 
-    assert fake_services.project is not None
-    assert app.project is not None
+    pytest_check.is_not_none(fake_services.project)
+    pytest_check.is_not_none(app.project)
 
 
 def test_fails_without_project(
@@ -941,6 +968,7 @@ def test_run_success_managed_inside_managed(
         ),
     ],
 )
+@pytest.mark.usefixtures("emitter")
 def test_run_error(
     monkeypatch,
     capsys,
@@ -1010,6 +1038,7 @@ def test_run_error_with_docs_url(
 
 
 @pytest.mark.parametrize("error", [KeyError(), ValueError(), Exception()])
+@pytest.mark.usefixtures("emitter")
 def test_run_error_debug(monkeypatch, mock_dispatcher, app, fake_project, error):
     app.set_project(fake_project)
     mock_dispatcher.load_command.side_effect = error
@@ -1251,7 +1280,7 @@ def test_filter_plan(mocker, plan, platform, build_for, host_arch, result):
     assert application.filter_plan(plan, platform, build_for, host_arch) == result
 
 
-@pytest.fixture()
+@pytest.fixture
 def fake_project_file(monkeypatch, tmp_path):
     project_dir = tmp_path / "project"
     project_dir.mkdir()
@@ -1293,7 +1322,7 @@ def test_work_dir_project_managed(monkeypatch, app_metadata, fake_services):
     assert project.version == "1.0"
 
 
-@pytest.fixture()
+@pytest.fixture
 def environment_project(monkeypatch, tmp_path):
     project_dir = tmp_path / "project"
     project_dir.mkdir()
@@ -1380,7 +1409,7 @@ def test_application_expand_environment(app_metadata, fake_services):
     ]
 
 
-@pytest.fixture()
+@pytest.fixture
 def build_secrets_project(monkeypatch, tmp_path):
     project_dir = tmp_path / "project"
     project_dir.mkdir()
@@ -1554,7 +1583,7 @@ def test_mandatory_adoptable_fields(tmp_path, app_metadata, fake_services):
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def grammar_project_mini(tmp_path):
     """A project that builds on amd64 to riscv64 and s390x."""
     contents = dedent(
@@ -1597,21 +1626,21 @@ def grammar_project_mini(tmp_path):
     project_file.write_text(contents)
 
 
-@pytest.fixture()
+@pytest.fixture
 def non_grammar_project_full(tmp_path):
     """A project that builds on amd64 to riscv64."""
     project_file = tmp_path / "testcraft.yaml"
     project_file.write_text(FULL_PROJECT_YAML)
 
 
-@pytest.fixture()
+@pytest.fixture
 def grammar_project_full(tmp_path):
     """A project that builds on amd64 to riscv64 and s390x."""
     project_file = tmp_path / "testcraft.yaml"
     project_file.write_text(FULL_GRAMMAR_PROJECT_YAML)
 
 
-@pytest.fixture()
+@pytest.fixture
 def non_grammar_build_plan(mocker):
     """A build plan to build on amd64 to riscv64."""
     build_plan = [
@@ -1628,7 +1657,7 @@ def non_grammar_build_plan(mocker):
     mocker.patch.object(models.BuildPlanner, "get_build_plan", return_value=build_plan)
 
 
-@pytest.fixture()
+@pytest.fixture
 def grammar_build_plan(mocker):
     """A build plan to build on amd64 to riscv64 and s390x."""
     build_plan = [
@@ -1646,7 +1675,7 @@ def grammar_build_plan(mocker):
     mocker.patch.object(models.BuildPlanner, "get_build_plan", return_value=build_plan)
 
 
-@pytest.fixture()
+@pytest.fixture
 def grammar_app_mini(
     tmp_path,
     grammar_project_mini,  # noqa: ARG001
@@ -1660,7 +1689,7 @@ def grammar_app_mini(
     return app
 
 
-@pytest.fixture()
+@pytest.fixture
 def non_grammar_app_full(
     tmp_path,
     non_grammar_project_full,  # noqa: ARG001
@@ -1674,7 +1703,7 @@ def non_grammar_app_full(
     return app
 
 
-@pytest.fixture()
+@pytest.fixture
 def grammar_app_full(
     tmp_path,
     grammar_project_full,  # noqa: ARG001
@@ -1844,7 +1873,7 @@ class FakePartitionsApplication(FakeApplication):
         return ["default", "mypartition"]
 
 
-@pytest.fixture()
+@pytest.fixture
 def environment_partitions_project(monkeypatch, tmp_path):
     project_dir = tmp_path / "project"
     project_dir.mkdir()
@@ -2060,11 +2089,13 @@ class MyRaisingPlanner(models.BuildPlanner):
     value1: int
     value2: str
 
-    @validator("value1")
+    @pydantic.field_validator("value1", mode="after")
+    @classmethod
     def _validate_value1(cls, v):
         raise ValueError(f"Bad value1: {v}")
 
-    @validator("value2")
+    @pydantic.field_validator("value2", mode="after")
+    @classmethod
     def _validate_value(cls, v):
         raise ValueError(f"Bad value2: {v}")
 
@@ -2084,13 +2115,13 @@ def test_build_planner_errors(tmp_path, monkeypatch, fake_services):
     app = FakeApplication(app_metadata, fake_services)
     project_contents = textwrap.dedent(
         """\
-    name: my-project
-    base: ubuntu@24.04
-    value1: 10
-    value2: "banana"
-    platforms:
-      amd64:
-    """
+        name: my-project
+        base: ubuntu@24.04
+        value1: 10
+        value2: "banana"
+        platforms:
+          amd64:
+        """
     ).strip()
     project_path = tmp_path / "testcraft.yaml"
     project_path.write_text(project_contents)

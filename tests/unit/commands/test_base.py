@@ -23,7 +23,7 @@ from craft_cli import EmitterMode, emit
 from typing_extensions import override
 
 
-@pytest.fixture()
+@pytest.fixture
 def fake_command(app_metadata, fake_services):
     class FakeCommand(base.AppCommand):
         _run_managed = True
@@ -85,7 +85,7 @@ def test_needs_project(fake_command, always_load_project):
 
 
 # region Tests for ExtensibleCommand
-@pytest.fixture()
+@pytest.fixture
 def fake_extensible_cls():
     class FakeExtensibleCommand(base.ExtensibleCommand):
         name = "fake"
@@ -108,7 +108,7 @@ def fake_extensible_cls():
     return FakeExtensibleCommand
 
 
-@pytest.fixture()
+@pytest.fixture
 def fake_extensible_child(fake_extensible_cls):
     class FakeChild(fake_extensible_cls):
         name = "child"

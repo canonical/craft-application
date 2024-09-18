@@ -34,14 +34,14 @@ from tests.unit.services.conftest import (
 )
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_push_url(monkeypatch):
     push_url = get_mock_callable(return_value=None)
     monkeypatch.setattr(git.GitRepo, "push_url", push_url)
     return push_url
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_push_url_raises_git_error(monkeypatch):
     push_url = get_mock_callable(
         side_effect=git.GitError("Fake push_url error during tests")
@@ -50,7 +50,7 @@ def mock_push_url_raises_git_error(monkeypatch):
     return push_url
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_init_raises_git_error(monkeypatch):
     git_repo_init = get_mock_callable(
         side_effect=git.GitError("Fake _init_repo error during tests")
@@ -59,7 +59,7 @@ def mock_init_raises_git_error(monkeypatch):
     return git_repo_init
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_lp_project(fake_launchpad, mock_project_entry):
     return launchpad.models.Project(fake_launchpad, mock_project_entry)
 

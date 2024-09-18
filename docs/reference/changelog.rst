@@ -2,6 +2,142 @@
 Changelog
 *********
 
+4.2.3 (2024-Sep-18)
+-------------------
+
+Application
+===========
+
+- ``get_arg_or_config`` now correctly checks the config service if the passed
+  namespace has ``None`` as the value of the requested item.
+
+For a complete list of commits, check out the `4.2.3`_ release on GitHub.
+
+4.2.2 (2024-Sep-13)
+-------------------
+
+Application
+===========
+
+- Add a ``_run_inner`` method to override or wrap the core run logic.
+
+For a complete list of commits, check out the `4.2.2`_ release on GitHub.
+
+4.2.1 (2024-Sep-13)
+-------------------
+
+Models
+======
+
+- Fix a regression where numeric part properties could not be parsed.
+
+For a complete list of commits, check out the `4.2.1`_ release on GitHub.
+
+4.1.3 (2024-Sep-12)
+-------------------
+
+Models
+======
+
+- Fix a regression where numeric part properties could not be parsed.
+
+For a complete list of commits, check out the `4.1.3`_ release on GitHub.
+
+4.2.0 (2024-Sep-12)
+-------------------
+
+Application
+===========
+
+- Add a configuration service to unify handling of command line arguments,
+  environment variables, snap configurations, and so on.
+- Use the standard library to retrieve the host's proxies.
+
+Commands
+========
+
+- Properly support ``--shell``, ``--shell-after`` and ``--debug`` on the
+  ``pack`` command.
+
+For a complete list of commits, check out the `4.2.0`_ release on GitHub.
+
+4.1.2 (2024-Sep-05)
+-------------------
+
+Application
+===========
+
+- Managed runs now fail if the build plan is empty.
+- Error message tweaks for invalid YAML files.
+
+Models
+======
+
+- Platform models now correctly accept non-vectorised architectures.
+
+For a complete list of commits, check out the `4.1.2`_ release on GitHub.
+
+4.1.1 (2024-Aug-27)
+-------------------
+
+Application
+===========
+
+* When a build fails due to matching multiple platforms, those matching
+  platforms will be specified in the error message.
+* Show nicer error messages for invalid YAML files.
+
+For a complete list of commits, check out the `4.1.1`_ release on GitHub.
+
+4.1.0 (2024-Aug-14)
+-------------------
+
+Application
+===========
+
+If an app isn't running from snap, the installed app will install the snap
+in the provider using the channel in the ``CRAFT_SNAP_CHANNEL`` environment
+variable, defaulting to ``latest/stable`` if none is set.
+
+Services
+========
+
+The ``LifecycleService`` now breaks out a ``_get_build_for`` method for
+apps to override if necessary.
+
+For a complete list of commits, check out the `4.1.0`_ release on GitHub.
+
+4.0.0 (2024-Aug-09)
+-------------------
+
+Breaking changes
+================
+
+This release migrates to pydantic 2.
+Most exit codes use constants from the ``os`` module. (This makes
+craft-application 4 only compatible with Windows when using Python 3.11+.)
+
+Models
+======
+Add constrained string fields that check for SPDX license strings or the
+license string "proprietary".
+
+CraftBaseModel now includes a ``to_yaml_string`` method.
+
+Custom regex-based validators can be built with
+``models.get_validator_by_regex``. These can be used to make a better error
+message than the pydantic default.
+
+Git
+===
+
+The ``git`` submodule under ``launchpad`` is now its own module and can clone
+repositories and add remotes.
+
+
+For a complete list of commits, check out the `4.0.0`_ release on GitHub.
+
+
 3.2.0 (2024-Jul-07)
 -------------------
 
@@ -16,7 +152,7 @@ Documentation
 
 Add a how-to guide for using partitions.
 
-For a complete list of commits, check out the `3.2.0`_ release on GitHb.
+For a complete list of commits, check out the `3.2.0`_ release on GitHub.
 
 3.1.0 (2024-Jul-05)
 -------------------
@@ -144,3 +280,12 @@ For a complete list of commits, check out the `2.7.0`_ release on GitHub.
 .. _3.0.0: https://github.com/canonical/craft-application/releases/tag/3.0.0
 .. _3.1.0: https://github.com/canonical/craft-application/releases/tag/3.1.0
 .. _3.2.0: https://github.com/canonical/craft-application/releases/tag/3.2.0
+.. _4.0.0: https://github.com/canonical/craft-application/releases/tag/4.0.0
+.. _4.1.0: https://github.com/canonical/craft-application/releases/tag/4.1.0
+.. _4.1.1: https://github.com/canonical/craft-application/releases/tag/4.1.1
+.. _4.1.2: https://github.com/canonical/craft-application/releases/tag/4.1.2
+.. _4.1.3: https://github.com/canonical/craft-application/releases/tag/4.1.3
+.. _4.2.0: https://github.com/canonical/craft-application/releases/tag/4.2.0
+.. _4.2.1: https://github.com/canonical/craft-application/releases/tag/4.2.1
+.. _4.2.2: https://github.com/canonical/craft-application/releases/tag/4.2.2
+.. _4.2.3: https://github.com/canonical/craft-application/releases/tag/4.2.3

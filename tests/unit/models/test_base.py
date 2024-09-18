@@ -19,6 +19,7 @@ from pathlib import Path
 import pydantic
 import pytest
 from craft_application import errors, models
+from hypothesis import given, strategies
 from overrides import override
 
 
@@ -27,11 +28,13 @@ class MyBaseModel(models.CraftBaseModel):
     value1: int
     value2: str
 
-    @pydantic.validator("value1")
+    @pydantic.field_validator("value1", mode="after")
+    @classmethod
     def _validate_value1(cls, _v):
         raise ValueError("Bad value1 value")
 
-    @pydantic.validator("value2")
+    @pydantic.field_validator("value2", mode="after")
+    @classmethod
     def _validate_value2(cls, _v):
         raise ValueError("Bad value2 value")
 
@@ -56,3 +59,22 @@ def test_model_reference_slug_errors():
     )
     assert str(err.value) == expected
     assert err.value.doc_slug == "/mymodel.html"
+
+
+class CoerceModel(models.CraftBaseModel):
+
+    stringy: str
+
+
+@given(
+    strategies.one_of(
+        strategies.integers(),
+        strategies.floats(),
+        strategies.decimals(),
+        strategies.text(),
+    )
+)
+def test_model_coerces_to_strings(value):
+    result = CoerceModel.model_validate({"stringy": value})
+
+    assert result.stringy == str(value)

@@ -20,8 +20,51 @@ import craft_parts
 import pydantic
 import pytest
 import pytest_check
-from craft_application.errors import CraftValidationError, PartsLifecycleError
-from pydantic import BaseModel, conint
+import yaml
+from craft_application.errors import (
+    CraftValidationError,
+    PartsLifecycleError,
+    YamlError,
+)
+from pydantic import BaseModel
+from typing_extensions import Self
+
+
+@pytest.mark.parametrize(
+    ("original", "expected"),
+    [
+        (
+            yaml.YAMLError("I am a thing"),
+            YamlError(
+                "error parsing 'something.yaml'",
+                details="I am a thing",
+                resolution="Ensure something.yaml contains valid YAML",
+            ),
+        ),
+        (
+            yaml.MarkedYAMLError(
+                problem="I am a thing",
+                problem_mark=yaml.error.Mark(
+                    name="bork",
+                    index=0,
+                    line=0,
+                    column=0,
+                    buffer="Hello there",
+                    pointer=0,
+                ),
+            ),
+            YamlError(
+                "error parsing 'something.yaml': I am a thing",
+                details='I am a thing\n  in "bork", line 1, column 1:\n    Hello there\n    ^',
+                resolution="Ensure something.yaml contains valid YAML",
+            ),
+        ),
+    ],
+)
+def test_yaml_error_from_yaml_error(original, expected):
+    actual = YamlError.from_yaml_error("something.yaml", original)
+
+    assert actual == expected
 
 
 @pytest.mark.parametrize(
@@ -67,27 +110,52 @@ def test_parts_lifecycle_error_from_os_error(
     assert actual == expected
 
 
-def test_validation_error_from_pydantic():
-    class Model(BaseModel):
-        gt_int: conint(gt=42)  # pyright: ignore [reportInvalidTypeForm]
-        a_float: float
+class Model(BaseModel):
+    gt_int: int = pydantic.Field(gt=42)
+    a_float: float
+    b_int: int = 0
 
-    data = {
-        "gt_int": 21,
-        "a_float": "not a float",
-    }
+    @pydantic.model_validator(mode="after")
+    def b_smaller_gt(self) -> Self:
+        if self.b_int >= self.gt_int:
+            raise ValueError("'b_int' must be smaller than 'gt_int'")
+        return self
+
+
+def test_validation_error_from_pydantic():
+    data = {"gt_int": 21, "a_float": "not a float"}
     try:
         Model(**data)
     except pydantic.ValidationError as e:
         err = CraftValidationError.from_pydantic(e, file_name="myfile.yaml")
     else:  # pragma: no cover
-        pytest.fail("Model failed to validate!")
+        pytest.fail("Model failed to fail to validate!")
 
     expected = textwrap.dedent(
         """
         Bad myfile.yaml content:
-        - ensure this value is greater than 42 (in field 'gt_int')
-        - value is not a valid float (in field 'a_float')
+        - input should be greater than 42 (in field 'gt_int')
+        - input should be a valid number, unable to parse string as a number (in field 'a_float')
+        """
+    ).strip()
+
+    message = str(err)
+    assert message == expected
+
+
+def test_validation_error_from_pydantic_model():
+    data = {"gt_int": 100, "a_float": 1.0, "b_int": 3000}
+    try:
+        Model(**data)
+    except pydantic.ValidationError as e:
+        err = CraftValidationError.from_pydantic(e, file_name="myfile.yaml")
+    else:  # pragma: no cover
+        pytest.fail("Model failed to fail to validate!")
+
+    expected = textwrap.dedent(
+        """
+        Bad myfile.yaml content:
+        - 'b_int' must be smaller than 'gt_int'
         """
     ).strip()
 

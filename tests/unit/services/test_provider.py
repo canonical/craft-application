@@ -31,13 +31,150 @@ from craft_providers import bases, lxd, multipass
 from craft_providers.actions.snap_installer import Snap
 
 
+@pytest.fixture
+def mock_provider(monkeypatch, provider_service):
+    mocked_provider = mock.MagicMock(spec=craft_providers.Provider)
+    monkeypatch.setattr(
+        provider_service,
+        "get_provider",
+        lambda name: mocked_provider,  # noqa: ARG005 (unused argument)
+    )
+
+    return mocked_provider
+
+
 @pytest.mark.parametrize(
-    ("install_snap", "snaps"),
-    [(True, [Snap(name="testcraft", channel=None, classic=True)]), (False, [])],
+    ("given_environment", "expected_environment"),
+    [
+        ({}, {}),
+        ({"http_proxy": "thing"}, {"http_proxy": "thing", "HTTP_PROXY": "thing"}),
+        ({"HTTP_PROXY": "thing"}, {"http_proxy": "thing", "HTTP_PROXY": "thing"}),
+        ({"ssh_proxy": "thing"}, {"ssh_proxy": "thing", "SSH_PROXY": "thing"}),
+        ({"no_proxy": "thing"}, {"no_proxy": "thing", "NO_PROXY": "thing"}),
+        ({"NO_PROXY": "thing"}, {"no_proxy": "thing", "NO_PROXY": "thing"}),
+        # Special case handled by upstream:
+        # https://docs.python.org/3/library/urllib.request.html#urllib.request.getproxies
+        (
+            {
+                "REQUEST_METHOD": "GET",
+                "HTTP_PROXY": "thing",
+            },
+            {},
+        ),
+        (  # But lower-case http_proxy is still allowed
+            {
+                "REQUEST_METHOD": "GET",
+                "http_proxy": "thing",
+            },
+            {"http_proxy": "thing", "HTTP_PROXY": "thing"},
+        ),
+    ],
 )
-def test_install_snap(
-    app_metadata, fake_project, fake_build_plan, fake_services, install_snap, snaps
+def test_setup_proxy_environment(
+    monkeypatch: pytest.MonkeyPatch,
+    app_metadata,
+    fake_services,
+    fake_project,
+    fake_build_plan,
+    given_environment: dict[str, str],
+    expected_environment: dict[str, str],
 ):
+    for var, value in given_environment.items():
+        monkeypatch.setenv(var, value)
+
+    expected_environment |= {"CRAFT_MANAGED_MODE": "1"}
+
+    service = provider.ProviderService(
+        app_metadata,
+        fake_services,
+        project=fake_project,
+        work_dir=pathlib.Path(),
+        build_plan=fake_build_plan,
+    )
+    service.setup()
+
+    assert service.environment == expected_environment
+
+
+@pytest.mark.parametrize(
+    ("environment", "snaps"),
+    [
+        pytest.param(
+            {},
+            [Snap(name="testcraft", channel="latest/stable", classic=True)],
+            id="install-from-store-default-channel",
+        ),
+        pytest.param(
+            {"CRAFT_SNAP_CHANNEL": "something"},
+            [Snap(name="testcraft", channel="something", classic=True)],
+            id="install-from-store-with-channel",
+        ),
+        pytest.param(
+            {
+                "SNAP_NAME": "testcraft",
+                "SNAP_INSTANCE_NAME": "testcraft_1",
+                "SNAP": "/snap/testcraft/x1",
+            },
+            [Snap(name="testcraft_1", channel=None, classic=True)],
+            id="inject-from-host",
+        ),
+        pytest.param(
+            {
+                "SNAP_NAME": "testcraft",
+                "SNAP_INSTANCE_NAME": "testcraft_1",
+                "SNAP": "/snap/testcraft/x1",
+                "CRAFT_SNAP_CHANNEL": "something",
+            },
+            [Snap(name="testcraft_1", channel=None, classic=True)],
+            id="inject-from-host-ignore-channel",
+        ),
+        pytest.param(
+            # SNAP_INSTANCE_NAME may not exist if snapd < 2.43 or feature is disabled
+            {
+                "SNAP_NAME": "testcraft",
+                "SNAP": "/snap/testcraft/x1",
+            },
+            [Snap(name="testcraft", channel=None, classic=True)],
+            id="missing-snap-instance-name",
+        ),
+        pytest.param(
+            # SNAP_INSTANCE_NAME may not exist if snapd < 2.43 or feature is disabled
+            {
+                "SNAP_NAME": "testcraft",
+                "SNAP": "/snap/testcraft/x1",
+                # CRAFT_SNAP_CHANNEL should be ignored
+                "CRAFT_SNAP_CHANNEL": "something",
+            },
+            [Snap(name="testcraft", channel=None, classic=True)],
+            id="missing-snap-instance-name-ignore-snap-channel",
+        ),
+        pytest.param(
+            # this can happen when running testcraft from a venv in a snapped terminal
+            {
+                "SNAP_NAME": "kitty",
+                "SNAP_INSTANCE_NAME": "kitty",
+                "SNAP": "/snap/kitty/x1",
+            },
+            [Snap(name="testcraft", channel="latest/stable", classic=True)],
+            id="running-inside-another-snap",
+        ),
+    ],
+)
+@pytest.mark.parametrize("install_snap", [True, False])
+def test_install_snap(
+    monkeypatch,
+    app_metadata,
+    fake_project,
+    fake_build_plan,
+    fake_services,
+    install_snap,
+    environment,
+    snaps,
+):
+    monkeypatch.delenv("SNAP", raising=False)
+    monkeypatch.delenv("CRAFT_SNAP_CHANNEL", raising=False)
+    for name, value in environment.items():
+        monkeypatch.setenv(name, value)
     service = provider.ProviderService(
         app_metadata,
         fake_services,
@@ -46,8 +183,12 @@ def test_install_snap(
         build_plan=fake_build_plan,
         install_snap=install_snap,
     )
+    service.setup()
 
-    assert service.snaps == snaps
+    if install_snap:
+        assert service.snaps == snaps
+    else:
+        assert service.snaps == []
 
 
 @pytest.mark.parametrize(
@@ -241,7 +382,9 @@ class TestGetProvider:
     ("base_name", "base_class", "alias"),
     [
         (("ubuntu", "devel"), bases.BuilddBase, bases.BuilddBaseAlias.DEVEL),
+        (("ubuntu", "24.04"), bases.BuilddBase, bases.BuilddBaseAlias.NOBLE),
         (("ubuntu", "22.04"), bases.BuilddBase, bases.BuilddBaseAlias.JAMMY),
+        (("ubuntu", "20.04"), bases.BuilddBase, bases.BuilddBaseAlias.FOCAL),
     ],
 )
 def test_get_base_buildd(
@@ -279,10 +422,15 @@ def test_get_base_packages(provider_service):
     [
         craft_platforms.DistroBase("ubuntu", "devel"),
         craft_platforms.DistroBase("ubuntu", "22.04"),
+        ("ubuntu", "devel"),
+        ("ubuntu", "24.10"),
+        ("ubuntu", "24.04"),
+        ("ubuntu", "22.04"),
+        ("ubuntu", "20.04"),
+        ("almalinux", "9"),
     ],
 )
 def test_instance(
-    monkeypatch,
     check,
     emitter,
     tmp_path,
@@ -291,6 +439,8 @@ def test_instance(
     provider_service,
     base_name,
     allow_unstable,
+    mock_provider,
+    monkeypatch,
 ):
     mock_provider = mock.MagicMock(spec=craft_providers.Provider)
     monkeypatch.setattr(
@@ -325,6 +475,33 @@ def test_instance(
         )
     with check:
         emitter.assert_progress("Launching managed .+ instance...", regex=True)
+
+
+@pytest.mark.parametrize("clean_existing", [True, False])
+def test_instance_clean_existing(
+    tmp_path,
+    provider_service,
+    mock_provider,
+    clean_existing,
+):
+    arch = util.get_host_architecture()
+    base_name = bases.BaseName("ubuntu", "24.04")
+    build_info = models.BuildInfo("foo", arch, arch, base_name)
+
+    with provider_service.instance(
+        build_info, work_dir=tmp_path, clean_existing=clean_existing
+    ) as _instance:
+        pass
+
+    clean_called = mock_provider.clean_project_environments.called
+    assert clean_called == clean_existing
+
+    if clean_existing:
+        work_dir_inode = tmp_path.stat().st_ino
+        expected_name = f"testcraft-full-project-on-{arch}-for-{arch}-{work_dir_inode}"
+        mock_provider.clean_project_environments.assert_called_once_with(
+            instance_name=expected_name
+        )
 
 
 def test_load_bashrc(emitter):
@@ -377,7 +554,7 @@ def test_load_bashrc_missing(
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def setup_fetch_logs_provider(monkeypatch, provider_service, tmp_path):
     """Return a function that, when called, mocks the provider_service's instance()."""
 
@@ -464,10 +641,13 @@ def test_instance_fetch_logs_error(
 
     # Setup the build instance and pretend the command inside it finished with error.
     provider_service = setup_fetch_logs_provider(should_have_logfile=True)
-    with pytest.raises(RuntimeError), provider_service.instance(
-        build_info=_get_build_info(),
-        work_dir=pathlib.Path(),
-    ) as mock_instance:
+    with (
+        pytest.raises(RuntimeError),
+        provider_service.instance(
+            build_info=_get_build_info(),
+            work_dir=pathlib.Path(),
+        ) as mock_instance,
+    ):
         raise RuntimeError("Faking an error in the build instance!")
 
     # Now check that the logs from the build instance were collected.

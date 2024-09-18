@@ -41,7 +41,7 @@ class TestableApplication(craft_application.Application):
             self.project_dir = pathlib.Path.cwd()
 
 
-@pytest.fixture()
+@pytest.fixture
 def create_app(app_metadata, fake_package_service_class):
     def _inner():
         # Create a factory without a project, to simulate a real application use
@@ -54,7 +54,7 @@ def create_app(app_metadata, fake_package_service_class):
     return _inner
 
 
-@pytest.fixture()
+@pytest.fixture
 def app(create_app):
     return create_app()
 
@@ -100,14 +100,16 @@ INVALID_PROJECTS_DIR = TEST_DATA_DIR / "invalid_projects"
 @pytest.mark.parametrize(
     ("argv", "stdout", "stderr", "exit_code"),
     [
-        (["help"], "", BASIC_USAGE, 0),
-        (["--help"], "", BASIC_USAGE, 0),
-        (["-h"], "", BASIC_USAGE, 0),
-        (["--version"], VERSION_INFO, "", 0),
-        (["-V"], VERSION_INFO, "", 0),
-        (["-q", "--version"], "", "", 0),
-        (["--invalid-parameter"], "", BASIC_USAGE, 64),
-        (["non-command"], "", INVALID_COMMAND, 64),
+        pytest.param(["help"], "", BASIC_USAGE, 0, id="help"),
+        pytest.param(["--help"], "", BASIC_USAGE, 0, id="--help"),
+        pytest.param(["-h"], "", BASIC_USAGE, 0, id="-h"),
+        pytest.param(["--version"], VERSION_INFO, "", 0, id="--version"),
+        pytest.param(["-V"], VERSION_INFO, "", 0, id="-V"),
+        pytest.param(["-q", "--version"], "", "", 0, id="-q--version"),
+        pytest.param(
+            ["--invalid-parameter"], "", BASIC_USAGE, 64, id="--invalid-parameter"
+        ),
+        pytest.param(["non-command"], "", INVALID_COMMAND, 64, id="non-command"),
     ],
 )
 def test_special_inputs(capsys, monkeypatch, app, argv, stdout, stderr, exit_code):
@@ -125,6 +127,7 @@ def test_special_inputs(capsys, monkeypatch, app, argv, stdout, stderr, exit_cod
     pytest_check.equal(captured.err, stderr, "stderr does not match")
 
 
+@pytest.mark.usefixtures("pretend_jammy")
 @pytest.mark.parametrize("project", (d.name for d in VALID_PROJECTS_DIR.iterdir()))
 def test_project_managed(capsys, monkeypatch, tmp_path, project, create_app):
     monkeypatch.setenv("CRAFT_DEBUG", "1")
@@ -146,7 +149,7 @@ def test_project_managed(capsys, monkeypatch, tmp_path, project, create_app):
     )
 
 
-@pytest.mark.usefixtures("full_build_plan")
+@pytest.mark.usefixtures("full_build_plan", "pretend_jammy")
 @pytest.mark.parametrize("project", (d.name for d in VALID_PROJECTS_DIR.iterdir()))
 def test_project_destructive(
     capsys,
@@ -198,6 +201,7 @@ def test_version(capsys, monkeypatch, app):
     assert captured.out == "testcraft 3.14159\n"
 
 
+@pytest.mark.usefixtures("emitter")
 def test_non_lifecycle_command_does_not_require_project(monkeypatch, app):
     """Run a command without having a project instance shall not fail."""
     monkeypatch.setattr("sys.argv", ["testcraft", "nothing"])
@@ -330,7 +334,7 @@ def test_global_environment(
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def setup_secrets_project(create_app, monkeypatch, tmp_path):
     """Test the use of build secrets in destructive mode."""
 
@@ -351,7 +355,7 @@ def setup_secrets_project(create_app, monkeypatch, tmp_path):
     return _inner
 
 
-@pytest.fixture()
+@pytest.fixture
 def check_secrets_output(tmp_path, capsys):
     def _inner():
         prime_dir = tmp_path / "prime"
@@ -369,6 +373,7 @@ def check_secrets_output(tmp_path, capsys):
     return _inner
 
 
+@pytest.mark.usefixtures("pretend_jammy")
 @pytest.mark.enable_features("build_secrets")
 def test_build_secrets_destructive(
     monkeypatch, setup_secrets_project, check_secrets_output
@@ -385,6 +390,7 @@ def test_build_secrets_destructive(
     check_secrets_output()
 
 
+@pytest.mark.usefixtures("pretend_jammy")
 @pytest.mark.enable_features("build_secrets")
 def test_build_secrets_managed(
     monkeypatch, tmp_path, setup_secrets_project, check_secrets_output
@@ -410,6 +416,7 @@ def test_build_secrets_managed(
     check_secrets_output()
 
 
+@pytest.mark.usefixtures("pretend_jammy")
 def test_lifecycle_error_logging(monkeypatch, tmp_path, create_app):
     monkeypatch.chdir(tmp_path)
     shutil.copytree(INVALID_PROJECTS_DIR / "build-error", tmp_path, dirs_exist_ok=True)
@@ -428,6 +435,7 @@ def test_lifecycle_error_logging(monkeypatch, tmp_path, create_app):
     assert parts_message in log_contents
 
 
+@pytest.mark.usefixtures("pretend_jammy", "emitter")
 def test_runtime_error_logging(monkeypatch, tmp_path, create_app, mocker):
     monkeypatch.chdir(tmp_path)
     shutil.copytree(INVALID_PROJECTS_DIR / "build-error", tmp_path, dirs_exist_ok=True)
@@ -441,6 +449,7 @@ def test_runtime_error_logging(monkeypatch, tmp_path, create_app, mocker):
 
     monkeypatch.setattr("sys.argv", ["testcraft", "pack", "--destructive-mode"])
     app = create_app()
+
     app.run()
 
     log_contents = craft_cli.emit._log_filepath.read_text()

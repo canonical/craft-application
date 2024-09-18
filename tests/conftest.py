@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU Lesser General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Shared data for all craft-application tests."""
+
 from __future__ import annotations
 
 import os
@@ -27,8 +28,10 @@ import craft_parts
 import craft_platforms
 import distro
 import pytest
-from craft_application import application, models, services, util
+from craft_application import application, launchpad, models, services, util
 from craft_cli import EmitterMode, emit
+from craft_providers import bases
+from typing_extensions import override
 
 if TYPE_CHECKING:  # pragma: no cover
     from collections.abc import Iterator
@@ -49,7 +52,7 @@ def _create_fake_build_plan(num_infos: int = 1) -> list[craft_platforms.BuildInf
     ] * num_infos
 
 
-@pytest.fixture()
+@pytest.fixture
 def features(request) -> dict[str, bool]:
     """Fixture that controls the enabled features.
 
@@ -67,19 +70,38 @@ def features(request) -> dict[str, bool]:
     return features
 
 
+class FakeConfigModel(craft_application.ConfigModel):
+    my_str: str
+    my_int: int
+    my_bool: bool
+    my_default_str: str = "default"
+    my_default_int: int = -1
+    my_default_bool: bool = True
+    my_default_factory: dict[str, str] = pydantic.Field(
+        default_factory=lambda: {"dict": "yes"}
+    )
+    my_arch: launchpad.Architecture
+
+
 @pytest.fixture(scope="session")
-def default_app_metadata() -> craft_application.AppMetadata:
+def fake_config_model() -> type[FakeConfigModel]:
+    return FakeConfigModel
+
+
+@pytest.fixture(scope="session")
+def default_app_metadata(fake_config_model) -> craft_application.AppMetadata:
     with pytest.MonkeyPatch.context() as m:
         m.setattr(metadata, "version", lambda _: "3.14159")
         return craft_application.AppMetadata(
             "testcraft",
             "A fake app for testing craft-application",
             source_ignore_patterns=["*.snap", "*.charm", "*.starcraft"],
+            ConfigModel=fake_config_model,
         )
 
 
-@pytest.fixture()
-def app_metadata(features) -> craft_application.AppMetadata:
+@pytest.fixture
+def app_metadata(features, fake_config_model) -> craft_application.AppMetadata:
     with pytest.MonkeyPatch.context() as m:
         m.setattr(metadata, "version", lambda _: "3.14159")
         return craft_application.AppMetadata(
@@ -88,10 +110,11 @@ def app_metadata(features) -> craft_application.AppMetadata:
             source_ignore_patterns=["*.snap", "*.charm", "*.starcraft"],
             features=craft_application.AppFeatures(**features),
             docs_url="www.craft-app.com/docs/{version}",
+            ConfigModel=fake_config_model,
         )
 
 
-@pytest.fixture()
+@pytest.fixture
 def app_metadata_docs(features) -> craft_application.AppMetadata:
     with pytest.MonkeyPatch.context() as m:
         m.setattr(metadata, "version", lambda _: "3.14159")
@@ -104,7 +127,7 @@ def app_metadata_docs(features) -> craft_application.AppMetadata:
         )
 
 
-@pytest.fixture()
+@pytest.fixture
 def fake_project() -> models.Project:
     arch = util.get_host_architecture()
     return models.Project(
@@ -125,14 +148,14 @@ def fake_project() -> models.Project:
     )
 
 
-@pytest.fixture()
-def fake_build_plan(request) -> list[craft_platforms.BuildInfo]:
+@pytest.fixture
+def fake_build_plan(request) -> list[models.BuildInfo]:
     num_infos = getattr(request, "param", 1)
     return _create_fake_build_plan(num_infos)
 
 
-@pytest.fixture()
-def full_build_plan(mocker) -> list[craft_platforms.BuildInfo]:
+@pytest.fixture
+def full_build_plan(mocker) -> list[models.BuildInfo]:
     """A big build plan with multiple bases and build-for targets."""
     host_arch = craft_platforms.DebianArchitecture.from_host()
     build_plan = []
@@ -151,7 +174,7 @@ def full_build_plan(mocker) -> list[craft_platforms.BuildInfo]:
     return build_plan
 
 
-@pytest.fixture()
+@pytest.fixture
 def enable_partitions() -> Iterator[craft_parts.Features]:
     """Enable the partitions feature in craft_parts for the relevant test."""
     enable_overlay = craft_parts.Features().enable_overlay
@@ -161,7 +184,7 @@ def enable_partitions() -> Iterator[craft_parts.Features]:
     craft_parts.Features.reset()
 
 
-@pytest.fixture()
+@pytest.fixture
 def enable_overlay() -> Iterator[craft_parts.Features]:
     """Enable the overlay feature in craft_parts for the relevant test."""
     if not os.getenv("CI") and not shutil.which("fuse-overlayfs"):
@@ -173,7 +196,7 @@ def enable_overlay() -> Iterator[craft_parts.Features]:
     craft_parts.Features.reset()
 
 
-@pytest.fixture()
+@pytest.fixture
 def lifecycle_service(
     app_metadata, fake_project, fake_services, fake_build_plan, mocker, tmp_path
 ) -> services.LifecycleService:
@@ -203,7 +226,7 @@ def lifecycle_service(
     return service
 
 
-@pytest.fixture()
+@pytest.fixture
 def request_service(app_metadata, fake_services) -> services.RequestService:
     """A working version of the requests service."""
     return services.RequestService(app=app_metadata, services=fake_services)
@@ -217,7 +240,7 @@ def emitter_verbosity(request):
     emit.set_mode(reset_verbosity)
 
 
-@pytest.fixture()
+@pytest.fixture
 def fake_provider_service_class(fake_build_plan):
     class FakeProviderService(services.ProviderService):
         def __init__(
@@ -238,7 +261,7 @@ def fake_provider_service_class(fake_build_plan):
     return FakeProviderService
 
 
-@pytest.fixture()
+@pytest.fixture
 def fake_package_service_class():
     class FakePackageService(services.PackageService):
         def pack(
@@ -256,7 +279,7 @@ def fake_package_service_class():
     return FakePackageService
 
 
-@pytest.fixture()
+@pytest.fixture
 def fake_lifecycle_service_class(tmp_path, fake_build_plan):
     class FakeLifecycleService(services.LifecycleService):
         def __init__(
@@ -281,7 +304,7 @@ def fake_lifecycle_service_class(tmp_path, fake_build_plan):
     return FakeLifecycleService
 
 
-@pytest.fixture()
+@pytest.fixture
 def fake_services(
     app_metadata, fake_project, fake_lifecycle_service_class, fake_package_service_class
 ):
@@ -291,3 +314,32 @@ def fake_services(
         PackageClass=fake_package_service_class,
         LifecycleClass=fake_lifecycle_service_class,
     )
+
+
+class FakeApplication(application.Application):
+    """An application class explicitly for testing. Adds some convenient test hooks."""
+
+    platform: str = "unknown-platform"
+    build_on: str = "unknown-build-on"
+    build_for: str | None = "unknown-build-for"
+
+    def set_project(self, project):
+        self._Application__project = project
+
+    @override
+    def _extra_yaml_transform(
+        self,
+        yaml_data: dict[str, Any],
+        *,
+        build_on: str,
+        build_for: str | None,
+    ) -> dict[str, Any]:
+        self.build_on = build_on
+        self.build_for = build_for
+
+        return yaml_data
+
+
+@pytest.fixture
+def app(app_metadata, fake_services):
+    return FakeApplication(app_metadata, fake_services)

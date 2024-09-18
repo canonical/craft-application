@@ -19,10 +19,16 @@ from __future__ import annotations
 from unittest import mock
 
 import pytest
-from craft_application import services
+from craft_application import services, util
 
 
-@pytest.fixture()
+@pytest.fixture(params=["amd64", "arm64", "riscv64"])
+def fake_host_architecture(monkeypatch, request) -> str:
+    monkeypatch.setattr(util, "get_host_architecture", lambda: request.param)
+    return request.param
+
+
+@pytest.fixture
 def provider_service(
     app_metadata, fake_project, fake_build_plan, fake_services, tmp_path
 ):
@@ -35,7 +41,7 @@ def provider_service(
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_services(app_metadata, fake_project, fake_package_service_class):
     factory = services.ServiceFactory(
         app_metadata, project=fake_project, PackageClass=fake_package_service_class

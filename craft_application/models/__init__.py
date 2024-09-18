@@ -15,13 +15,14 @@
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 """General-purpose models for *craft applications."""
 
-from craft_application.models.base import CraftBaseConfig, CraftBaseModel
+from craft_application.models.base import CraftBaseModel
 from craft_application.models.constraints import (
     ProjectName,
     ProjectTitle,
     SummaryStr,
     UniqueStrList,
     VersionStr,
+    get_validator_by_regex,
 )
 from craft_application.models.grammar import (
     GrammarAwareProject,
@@ -41,7 +42,6 @@ __all__ = [
     "BaseMetadata",
     "DEVEL_BASE_INFOS",
     "DEVEL_BASE_WARNING",
-    "CraftBaseConfig",
     "CraftBaseModel",
     "get_grammar_aware_part_keywords",
     "GrammarAwareProject",
@@ -53,4 +53,5 @@ __all__ = [
     "SummaryStr",
     "UniqueStrList",
     "VersionStr",
+    "get_validator_by_regex",
 ]

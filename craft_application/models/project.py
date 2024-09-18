@@ -20,7 +20,7 @@ This defines the structure of the input file (e.g. snapcraft.yaml)
 import abc
 import dataclasses
 from collections.abc import Mapping
-from typing import Any
+from typing import Annotated, Any
 
 import craft_parts
 import craft_platforms
@@ -29,17 +29,15 @@ import pydantic
 from craft_cli import emit
 from craft_providers import bases
 from craft_providers.errors import BaseConfigurationError
-from pydantic import AnyUrl
-from typing_extensions import override
 
 from craft_application import errors
-from craft_application.models.base import CraftBaseConfig, CraftBaseModel
+from craft_application.models import base
 from craft_application.models.constraints import (
-    MESSAGE_INVALID_NAME,
-    MESSAGE_INVALID_VERSION,
     ProjectName,
     ProjectTitle,
+    SingleEntryList,
     SummaryStr,
+    UniqueList,
     UniqueStrList,
     VersionStr,
 )
@@ -73,24 +71,22 @@ DEVEL_BASE_WARNING = (
 )
 
 
-class BuildPlannerConfig(CraftBaseConfig):
-    """Config for BuildProjects."""
-
-    extra = pydantic.Extra.ignore
-    """The BuildPlanner model uses attributes from the project yaml."""
-
-
-class Platform(CraftBaseModel):
+class Platform(base.CraftBaseModel):
     """Project platform definition."""
 
-    build_on: list[str] | None = pydantic.Field(min_items=1, unique_items=True)
-    build_for: list[str] | None = pydantic.Field(
-        min_items=1, max_items=1, unique_items=True
-    )
+    build_on: UniqueList[str] | None = pydantic.Field(min_length=1)
+    build_for: SingleEntryList[str] | None = None
 
-    @pydantic.validator(  # pyright: ignore[reportUnknownMemberType,reportUntypedFunctionDecorator]
-        "build_on", "build_for"
-    )
+    @pydantic.field_validator("build_on", "build_for", mode="before")
+    @classmethod
+    def _vectorise_architectures(cls, values: str | list[str]) -> list[str]:
+        """Convert string build-on and build-for to lists."""
+        if isinstance(values, str):
+            return [values]
+        return values
+
+    @pydantic.field_validator("build_on", "build_for", mode="after")
+    @classmethod
     def _validate_architectures(cls, values: list[str]) -> list[str]:
         """Validate the architecture entries."""
         for architecture in values:
@@ -102,21 +98,21 @@ class Platform(CraftBaseModel):
 
         return values
 
-    @pydantic.root_validator(  # pyright: ignore[reportUntypedFunctionDecorator,reportUnknownMemberType]
-        skip_on_failure=True
-    )
+    @pydantic.model_validator(mode="before")
     @classmethod
-    def _validate_platform_set(cls, values: Mapping[str, Any]) -> Mapping[str, Any]:
+    def _validate_platform_set(
+        cls, values: Mapping[str, list[str]]
+    ) -> Mapping[str, Any]:
         """If build_for is provided, then build_on must also be."""
-        if not values.get("build_on") and values.get("build_for"):
+        if values.get("build_for") and not values.get("build_on"):
             raise errors.CraftValidationError(
-                "'build_for' expects 'build_on' to also be provided."
+                "'build-for' expects 'build-on' to also be provided."
             )
 
         return values
 
 
-def _populate_platforms(platforms: dict[str, Platform]) -> dict[str, Platform]:
+def _populate_platforms(platforms: dict[str, Any]) -> dict[str, Any]:
     """Populate empty platform entries.
 
     :param platforms: The platform data.
@@ -126,32 +122,36 @@ def _populate_platforms(platforms: dict[str, Platform]) -> dict[str, Platform]:
     for platform_label, platform in platforms.items():
         if not platform:
             # populate "empty" platforms entries from the platform's name
-            platforms[platform_label] = Platform(
-                build_on=[platform_label], build_for=[platform_label]
-            )
+            platforms[platform_label] = {
+                "build-on": [platform_label],
+                "build-for": [platform_label],
+            }
 
     return platforms
 
 
-class BuildPlanner(CraftBaseModel, metaclass=abc.ABCMeta):
+class BuildPlanner(base.CraftBaseModel, metaclass=abc.ABCMeta):
     """The BuildPlanner obtains a build plan for the project."""
 
-    platforms: dict[str, Platform]
-    base: str | None
-    build_base: str | None
-
-    Config = BuildPlannerConfig
-
-    @pydantic.validator(  # pyright: ignore[reportUnknownMemberType,reportUntypedFunctionDecorator]
-        "platforms", pre=True
+    model_config = pydantic.ConfigDict(
+        validate_assignment=True,
+        extra="ignore",
+        populate_by_name=True,
+        alias_generator=base.alias_generator,
     )
-    def _populate_platforms(cls, platforms: dict[str, Platform]) -> dict[str, Platform]:
+
+    platforms: dict[str, Platform]
+    base: str | None = None
+    build_base: str | None = None
+
+    @pydantic.field_validator("platforms", mode="before")
+    @classmethod
+    def _populate_platforms(cls, platforms: dict[str, Any]) -> dict[str, Any]:
         """Populate empty platform entries."""
         return _populate_platforms(platforms)
 
-    @pydantic.validator(  # pyright: ignore[reportUnknownMemberType,reportUntypedFunctionDecorator]
-        "platforms",
-    )
+    @pydantic.field_validator("platforms", mode="after")
+    @classmethod
     def _validate_platforms_all_keyword(
         cls, platforms: dict[str, Any]
     ) -> dict[str, Any]:
@@ -208,41 +208,62 @@ class BuildPlanner(CraftBaseModel, metaclass=abc.ABCMeta):
         return list(build_infos)
 
 
-class Project(CraftBaseModel):
+def _validate_package_repository(repository: dict[str, Any]) -> dict[str, Any]:
+    """Validate a package repository with lazy loading of craft-archives.
+
+    :param repository: a dictionary representing a package repository.
+    :returns: That same dictionary, if valid.
+    :raises: ValueError if the repository is not valid.
+    """
+    # This check is not always used, import it here to avoid unnecessary
+    from craft_archives import repo  # type: ignore[import-untyped]
+
+    repo.validate_repository(repository)
+    return repository
+
+
+def _validate_part(part: dict[str, Any]) -> dict[str, Any]:
+    """Verify each part (craft-parts will re-validate this)."""
+    craft_parts.validate_part(part)
+    return part
+
+
+class Project(base.CraftBaseModel):
     """Craft Application project definition."""
 
     name: ProjectName
-    title: ProjectTitle | None
-    version: VersionStr | None
-    summary: SummaryStr | None
-    description: str | None
+    title: ProjectTitle | None = None
+    version: VersionStr | None = None
+    summary: SummaryStr | None = None
+    description: str | None = None
 
-    base: Any | None = None
-    build_base: Any | None = None
+    base: str | None = None
+    build_base: str | None = None
     platforms: dict[str, Platform]
 
-    contact: str | UniqueStrList | None
-    issues: str | UniqueStrList | None
-    source_code: AnyUrl | None
-    license: str | None
+    contact: str | UniqueStrList | None = None
+    issues: str | UniqueStrList | None = None
+    source_code: pydantic.AnyUrl | None = None
+    license: str | None = None
 
-    adopt_info: str | None
+    adopt_info: str | None = None
 
-    parts: dict[str, dict[str, Any]]  # parts are handled by craft-parts
+    parts: dict[  # parts are handled by craft-parts
+        str,
+        Annotated[dict[str, Any], pydantic.BeforeValidator(_validate_part)],
+    ]
 
-    package_repositories: list[dict[str, Any]] | None
+    package_repositories: (
+        list[
+            Annotated[
+                dict[str, Any], pydantic.AfterValidator(_validate_package_repository)
+            ]
+        ]
+        | None
+    ) = None
 
-    @pydantic.validator(  # pyright: ignore[reportUnknownMemberType,reportUntypedFunctionDecorator]
-        "parts", each_item=True
-    )
-    def _validate_parts(cls, item: dict[str, Any]) -> dict[str, Any]:
-        """Verify each part (craft-parts will re-validate this)."""
-        craft_parts.validate_part(item)
-        return item
-
-    @pydantic.validator(  # pyright: ignore[reportUnknownMemberType,reportUntypedFunctionDecorator]
-        "platforms", pre=True
-    )
+    @pydantic.field_validator("platforms", mode="before")
+    @classmethod
     def _populate_platforms(cls, platforms: dict[str, Platform]) -> dict[str, Platform]:
         """Populate empty platform entries."""
         return _populate_platforms(platforms)
@@ -273,28 +294,30 @@ class Project(CraftBaseModel):
         """
         try:
             name, channel = base.split("@")
-            return craft_providers.bases.get_base_alias((name, channel))
+            return craft_providers.bases.get_base_alias(
+                craft_providers.bases.BaseName(name, channel)
+            )
         except (ValueError, BaseConfigurationError) as err:
             raise ValueError(f"Unknown base {base!r}") from err
 
-    @pydantic.root_validator(  # pyright: ignore[reportUnknownMemberType,reportUntypedFunctionDecorator]
-        pre=False
-    )
-    def _validate_devel(cls, values: dict[str, Any]) -> dict[str, Any]:
+    @pydantic.field_validator("build_base", mode="before")
+    @classmethod
+    def _validate_devel_base(
+        cls, build_base: str, info: pydantic.ValidationInfo
+    ) -> str:
         """Validate the build-base is 'devel' for the current devel base."""
-        base = values.get("base")
+        base = info.data.get("base")
         # if there is no base, do not validate the build-base
         if not base:
-            return values
+            return build_base
 
         base_alias = cls._providers_base(base)
 
         # if the base does not map to a base alias, do not validate the build-base
         if not base_alias:
-            return values
+            return build_base
 
-        build_base = values.get("build_base") or base
-        build_base_alias = cls._providers_base(build_base)
+        build_base_alias = cls._providers_base(build_base or base)
 
         # warn if a devel build-base is being used, error if a devel build-base is not
         # used for a devel base
@@ -307,35 +330,4 @@ class Project(CraftBaseModel):
                         f"A development build-base must be used when base is {base!r}"
                     )
 
-        return values
-
-    @override
-    @classmethod
-    def transform_pydantic_error(cls, error: pydantic.ValidationError) -> None:
-        errors_to_messages: dict[tuple[str, str], str] = {
-            ("version", "value_error.str.regex"): MESSAGE_INVALID_VERSION,
-            ("name", "value_error.str.regex"): MESSAGE_INVALID_NAME,
-        }
-
-        CraftBaseModel.transform_pydantic_error(error)
-
-        for error_dict in error.errors():
-            loc_and_type = (str(error_dict["loc"][0]), error_dict["type"])
-            if message := errors_to_messages.get(loc_and_type):
-                # Note that unfortunately, Pydantic 1.x does not have the
-                # "input" key in the error dict, so we can't put the original
-                # value in the error message.
-                error_dict["msg"] = message
-
-    @pydantic.validator(  # pyright: ignore[reportUnknownMemberType,reportUntypedFunctionDecorator]
-        "package_repositories", each_item=True
-    )
-    def _validate_package_repositories(
-        cls, repository: dict[str, Any]
-    ) -> dict[str, Any]:
-        # This check is not always used, import it here to avoid unnecessary
-        from craft_archives import repo  # type: ignore[import-untyped]
-
-        repo.validate_repository(repository)
-
-        return repository
+        return build_base

@@ -52,15 +52,16 @@ BUILD_ENV_COMMANDS = [
     ({"destructive_mode": False, "use_lxd": True}, ["--use-lxd"]),
 ]
 STEP_NAMES = [step.name.lower() for step in craft_parts.Step]
-MANAGED_LIFECYCLE_COMMANDS = {
+MANAGED_LIFECYCLE_COMMANDS = (
     PullCommand,
     OverlayCommand,
     BuildCommand,
     StageCommand,
     PrimeCommand,
-}
-UNMANAGED_LIFECYCLE_COMMANDS = {CleanCommand, PackCommand}
-ALL_LIFECYCLE_COMMANDS = MANAGED_LIFECYCLE_COMMANDS | UNMANAGED_LIFECYCLE_COMMANDS
+)
+UNMANAGED_LIFECYCLE_COMMANDS = (CleanCommand, PackCommand)
+ALL_LIFECYCLE_COMMANDS = MANAGED_LIFECYCLE_COMMANDS + UNMANAGED_LIFECYCLE_COMMANDS
+NON_CLEAN_COMMANDS = (*MANAGED_LIFECYCLE_COMMANDS, PackCommand)
 
 
 def get_fake_command_class(parent_cls, managed):
@@ -101,7 +102,7 @@ def test_get_lifecycle_command_group(enable_overlay, commands):
 
     actual = get_lifecycle_command_group()
 
-    assert set(actual.commands) == commands
+    assert set(actual.commands) == set(commands)
 
     Features.reset()
 
@@ -170,7 +171,7 @@ def test_parts_command_get_managed_cmd(
 )
 @pytest.mark.parametrize("parts", PARTS_LISTS)
 # clean command has different logic for `run_managed()`
-@pytest.mark.parametrize("command_cls", ALL_LIFECYCLE_COMMANDS - {CleanCommand})
+@pytest.mark.parametrize("command_cls", NON_CLEAN_COMMANDS)
 def test_parts_command_run_managed(
     app_metadata,
     mock_services,
@@ -413,6 +414,7 @@ def test_clean_run_managed(
 
 
 @pytest.mark.parametrize(("build_env_dict", "build_env_args"), BUILD_ENV_COMMANDS)
+@pytest.mark.parametrize(("shell_dict", "shell_args"), SHELL_PARAMS)
 @pytest.mark.parametrize(("debug_dict", "debug_args"), DEBUG_PARAMS)
 @pytest.mark.parametrize("output_arg", [".", "/"])
 def test_pack_fill_parser(
@@ -420,6 +422,8 @@ def test_pack_fill_parser(
     mock_services,
     build_env_dict,
     build_env_args,
+    shell_dict,
+    shell_args,
     debug_dict,
     debug_args,
     output_arg,
@@ -429,6 +433,8 @@ def test_pack_fill_parser(
         "platform": None,
         "build_for": None,
         "output": pathlib.Path(output_arg),
+        "use_fetch_service": False,
+        **shell_dict,
         **debug_dict,
         **build_env_dict,
     }
@@ -437,7 +443,9 @@ def test_pack_fill_parser(
     command.fill_parser(parser)
 
     args_dict = vars(
-        parser.parse_args([*build_env_args, *debug_args, f"--output={output_arg}"])
+        parser.parse_args(
+            [*build_env_args, *shell_args, *debug_args, f"--output={output_arg}"]
+        )
     )
     assert args_dict == expected
 
@@ -491,7 +499,7 @@ def test_pack_run_wrong_step(app_metadata, fake_services):
     assert exc_info.value.args[0] == "Step name wrong-command passed to pack command."
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_subprocess_run(mocker):
     return mocker.patch.object(subprocess, "run")
 
@@ -530,6 +538,34 @@ def test_shell(
     mock_subprocess_run.assert_called_once_with(["bash"], check=False)
 
 
+def test_shell_pack(
+    app_metadata,
+    fake_services,
+    mocker,
+    mock_subprocess_run,
+):
+    parsed_args = argparse.Namespace(shell=True)
+    mock_lifecycle_run = mocker.patch.object(fake_services.lifecycle, "run")
+    mock_pack = mocker.patch.object(fake_services.package, "pack")
+    mocker.patch.object(
+        fake_services.lifecycle.project_info, "execution_finished", return_value=True
+    )
+    command = PackCommand(
+        {
+            "app": app_metadata,
+            "services": fake_services,
+        }
+    )
+    command.run(parsed_args)
+
+    # Must run the lifecycle
+    mock_lifecycle_run.assert_called_once_with(step_name="prime")
+
+    # Must call the shell instead of packing
+    mock_subprocess_run.assert_called_once_with(["bash"], check=False)
+    assert not mock_pack.called
+
+
 @pytest.mark.parametrize("command_cls", MANAGED_LIFECYCLE_COMMANDS)
 def test_shell_after(
     app_metadata, fake_services, mocker, mock_subprocess_run, command_cls
@@ -553,7 +589,34 @@ def test_shell_after(
     mock_subprocess_run.assert_called_once_with(["bash"], check=False)
 
 
-@pytest.mark.parametrize("command_cls", MANAGED_LIFECYCLE_COMMANDS | {PackCommand})
+def test_shell_after_pack(
+    app_metadata,
+    fake_services,
+    mocker,
+    mock_subprocess_run,
+):
+    parsed_args = argparse.Namespace(shell_after=True, output=pathlib.Path())
+    mock_lifecycle_run = mocker.patch.object(fake_services.lifecycle, "run")
+    mock_pack = mocker.patch.object(fake_services.package, "pack")
+    mocker.patch.object(
+        fake_services.lifecycle.project_info, "execution_finished", return_value=True
+    )
+    command = PackCommand(
+        {
+            "app": app_metadata,
+            "services": fake_services,
+        }
+    )
+    command.run(parsed_args)
+
+    # Must run the lifecycle
+    mock_lifecycle_run.assert_called_once_with(step_name="prime")
+    # Must pack, and then shell
+    mock_pack.assert_called_once_with(fake_services.lifecycle.prime_dir, pathlib.Path())
+    mock_subprocess_run.assert_called_once_with(["bash"], check=False)
+
+
+@pytest.mark.parametrize("command_cls", [*MANAGED_LIFECYCLE_COMMANDS, PackCommand])
 def test_debug(app_metadata, fake_services, mocker, mock_subprocess_run, command_cls):
     parsed_args = argparse.Namespace(parts=None, debug=True)
     error_message = "Lifecycle run failed!"
@@ -563,6 +626,36 @@ def test_debug(app_metadata, fake_services, mocker, mock_subprocess_run, command
         fake_services.lifecycle, "run", side_effect=RuntimeError(error_message)
     )
     command = command_cls(
+        {
+            "app": app_metadata,
+            "services": fake_services,
+        }
+    )
+
+    with pytest.raises(RuntimeError, match=error_message):
+        command.run(parsed_args)
+
+    mock_subprocess_run.assert_called_once_with(["bash"], check=False)
+
+
+def test_debug_pack(
+    app_metadata,
+    fake_services,
+    mocker,
+    mock_subprocess_run,
+):
+    """Same as test_debug(), but checking when the error happens when packing."""
+    parsed_args = argparse.Namespace(debug=True, output=pathlib.Path())
+    error_message = "Packing failed!"
+
+    # Lifecycle.run() should work
+    mocker.patch.object(fake_services.lifecycle, "run")
+    # Package.pack() should fail
+    mocker.patch.object(
+        fake_services.package, "pack", side_effect=RuntimeError(error_message)
+    )
+    mocker.patch.object(fake_services.package, "update_project")
+    command = PackCommand(
         {
             "app": app_metadata,
             "services": fake_services,

@@ -17,6 +17,7 @@
 
 from __future__ import annotations
 
+import argparse
 import importlib
 import os
 import pathlib
@@ -36,7 +37,7 @@ import craft_providers
 from craft_parts.plugins.plugins import PluginType
 from platformdirs import user_cache_path
 
-from craft_application import commands, errors, grammar, models, secrets, util
+from craft_application import _config, commands, errors, grammar, models, secrets, util
 from craft_application.errors import PathInvalidError
 from craft_application.models import GrammarAwareProject
 
@@ -80,6 +81,7 @@ class AppMetadata:
     features: AppFeatures = AppFeatures()
     project_variables: list[str] = field(default_factory=lambda: ["version"])
     mandatory_adoptable_fields: list[str] = field(default_factory=lambda: ["version"])
+    ConfigModel: type[_config.ConfigModel] = _config.ConfigModel
 
     ProjectClass: type[models.Project] = models.Project
     BuildPlannerClass: type[models.BuildPlanner] = models.BuildPlanner
@@ -155,6 +157,9 @@ class Application:
         else:
             self._work_dir = pathlib.Path.cwd()
 
+        # Whether the command execution should use the fetch-service
+        self._use_fetch_service = False
+
     @property
     def app_config(self) -> dict[str, Any]:
         """Get the configuration passed to dispatcher.load_command().
@@ -224,14 +229,14 @@ class Application:
         Any child classes that override this must either call this directly or must
         provide a valid ``project`` to ``self.services``.
         """
-        self.services.set_kwargs(
+        self.services.update_kwargs(
             "lifecycle",
             cache_dir=self.cache_dir,
             work_dir=self._work_dir,
             build_plan=self._build_plan,
             partitions=self._partitions,
         )
-        self.services.set_kwargs(
+        self.services.update_kwargs(
             "provider",
             work_dir=self._work_dir,
             build_plan=self._build_plan,
@@ -337,8 +342,10 @@ class Application:
 
     def run_managed(self, platform: str | None, build_for: str | None) -> None:
         """Run the application in a managed instance."""
-        extra_args: dict[str, Any] = {}
+        if not self._build_plan:
+            raise errors.EmptyBuildPlanError
 
+        extra_args: dict[str, Any] = {}
         for build_info in self._build_plan:
             if platform and platform != build_info.platform:
                 continue
@@ -365,8 +372,14 @@ class Application:
             instance_path = pathlib.PosixPath("/root/project")
 
             with self.services.provider.instance(
-                build_info, work_dir=self._work_dir
+                build_info,
+                work_dir=self._work_dir,
+                clean_existing=self._use_fetch_service,
             ) as instance:
+                if self._use_fetch_service:
+                    session_env = self.services.fetch.create_session(instance)
+                    env.update(session_env)
+
                 cmd = [self.app.name, *sys.argv[1:]]
                 craft_cli.emit.debug(
                     f"Executing {cmd} in instance location {instance_path} with {extra_args}."
@@ -384,13 +397,20 @@ class Application:
                     raise craft_providers.ProviderError(
                         f"Failed to execute {self.app.name} in instance."
                     ) from exc
+                finally:
+                    if self._use_fetch_service:
+                        self.services.fetch.teardown_session()
+
+        if self._use_fetch_service:
+            self.services.fetch.shutdown(force=True)
 
     def configure(self, global_args: dict[str, Any]) -> None:
         """Configure the application using any global arguments."""
 
     def _get_dispatcher(self) -> craft_cli.Dispatcher:
-        """Configure this application. Should be called by the run method.
+        """Configure this application.
 
+        Should be called by the _run_inner method.
         Side-effect: This method may exit the process.
 
         :returns: A ready-to-run Dispatcher object
@@ -430,7 +450,7 @@ class Application:
                     f"Internal error while loading {self.app.name}: {err!r}"
                 )
             )
-            if os.getenv("CRAFT_DEBUG") == "1":
+            if self.services.config.get("debug"):
                 raise
             sys.exit(os.EX_SOFTWARE)
 
@@ -478,12 +498,14 @@ class Application:
         At the time this is run, the command is loaded in the dispatcher, but
         the project has not yet been loaded.
         """
+        args = dispatcher.parsed_args()
+
         # Some commands might have a project_dir parameter. Those commands and
         # only those commands should get a project directory, but only when
         # not managed.
         if self.is_managed():
             self.project_dir = pathlib.Path("/root/project")
-        elif project_dir := getattr(dispatcher.parsed_args(), "project_dir", None):
+        elif project_dir := getattr(args, "project_dir", None):
             self.project_dir = pathlib.Path(project_dir).expanduser().resolve()
             if self.project_dir.exists() and not self.project_dir.is_dir():
                 raise errors.ProjectFileMissingError(
@@ -492,58 +514,78 @@ class Application:
                     resolution="Ensure the path entered is correct.",
                 )
 
-    def run(  # noqa: PLR0912,PLR0915  (too many branches, too many statements)
-        self,
-    ) -> int:
+        self._use_fetch_service = getattr(args, "use_fetch_service", False)
+
+    def get_arg_or_config(
+        self, parsed_args: argparse.Namespace, item: str
+    ) -> Any:  # noqa: ANN401
+        """Get a configuration option that could be overridden by a command argument.
+
+        :param parsed_args: The argparse Namespace to check.
+        :param item: the name of the namespace or config item.
+        :returns: the requested value.
+        """
+        arg_value = getattr(parsed_args, item, None)
+        if arg_value is not None:
+            return arg_value
+        return self.services.config.get(item)
+
+    def _run_inner(self) -> int:
+        """Actual run implementation."""
+        dispatcher = self._get_dispatcher()
+        command = cast(
+            commands.AppCommand,
+            dispatcher.load_command(self.app_config),
+        )
+        parsed_args = dispatcher.parsed_args()
+        platform = self.get_arg_or_config(parsed_args, "platform")
+        build_for = self.get_arg_or_config(parsed_args, "build_for")
+
+        # Some commands (e.g. remote build) can allow multiple platforms
+        # or build-fors, comma-separated. In these cases, we create the
+        # project using the first defined platform.
+        if platform and "," in platform:
+            platform = platform.split(",", maxsplit=1)[0]
+        if build_for and "," in build_for:
+            build_for = build_for.split(",", maxsplit=1)[0]
+
+        provider_name = command.provider_name(dispatcher.parsed_args())
+
+        craft_cli.emit.debug(f"Build plan: platform={platform}, build_for={build_for}")
+        self._pre_run(dispatcher)
+
+        managed_mode = command.run_managed(dispatcher.parsed_args())
+        if managed_mode or command.needs_project(dispatcher.parsed_args()):
+            self.services.project = self.get_project(
+                platform=platform, build_for=build_for
+            )
+
+        self._configure_services(provider_name)
+
+        return_code = 1  # General error
+        if not managed_mode:
+            # command runs in the outer instance
+            craft_cli.emit.debug(f"Running {self.app.name} {command.name} on host")
+            return_code = dispatcher.run() or os.EX_OK
+        elif not self.is_managed():
+            # command runs in inner instance, but this is the outer instance
+            self.run_managed(platform, build_for)
+            return_code = os.EX_OK
+        else:
+            # command runs in inner instance
+            return_code = dispatcher.run() or 0
+
+        return return_code
+
+    def run(self) -> int:
         """Bootstrap and run the application."""
         self._setup_logging()
         self._initialize_craft_parts()
-        dispatcher = self._get_dispatcher()
+
         craft_cli.emit.debug("Preparing application...")
 
-        return_code = 1  # General error
         try:
-            command = cast(
-                commands.AppCommand,
-                dispatcher.load_command(self.app_config),
-            )
-            platform = getattr(dispatcher.parsed_args(), "platform", None)
-            build_for = getattr(dispatcher.parsed_args(), "build_for", None)
-
-            # Some commands (e.g. remote build) can allow multiple platforms
-            # or build-fors, comma-separated. In these cases, we create the
-            # project using the first defined platform.
-            if platform and "," in platform:
-                platform = platform.split(",", maxsplit=1)[0]
-            if build_for and "," in build_for:
-                build_for = build_for.split(",", maxsplit=1)[0]
-
-            provider_name = command.provider_name(dispatcher.parsed_args())
-
-            craft_cli.emit.debug(
-                f"Build plan: platform={platform}, build_for={build_for}"
-            )
-            self._pre_run(dispatcher)
-
-            managed_mode = command.run_managed(dispatcher.parsed_args())
-            if managed_mode or command.needs_project(dispatcher.parsed_args()):
-                self.services.project = self.get_project(
-                    platform=platform, build_for=build_for
-                )
-
-            self._configure_services(provider_name)
-
-            if not managed_mode:
-                # command runs in the outer instance
-                craft_cli.emit.debug(f"Running {self.app.name} {command.name} on host")
-                return_code = dispatcher.run() or os.EX_OK
-            elif not self.is_managed():
-                # command runs in inner instance, but this is the outer instance
-                self.run_managed(platform, build_for)
-                return_code = os.EX_OK
-            else:
-                # command runs in inner instance
-                return_code = dispatcher.run() or 0
+            return_code = self._run_inner()
         except craft_cli.ArgumentParsingError as err:
             print(err, file=sys.stderr)  # to stderr, as argparse normally does
             craft_cli.emit.ended_ok()
@@ -573,7 +615,7 @@ class Application:
                 craft_cli.CraftError(f"{self.app.name} internal error: {err!r}"),
                 cause=err,
             )
-            if os.getenv("CRAFT_DEBUG") == "1":
+            if self.services.config.get("debug"):
                 raise
             return_code = os.EX_SOFTWARE
         else:
@@ -659,7 +701,7 @@ class Application:
         info = craft_parts.ProjectInfo(
             application_name=self.app.name,  # not used in environment expansion
             cache_dir=pathlib.Path(),  # not used in environment expansion
-            arch=util.convert_architecture_deb_to_platform(build_for_arch),
+            arch=build_for_arch,
             project_name=yaml_data.get("name", ""),
             project_dirs=project_dirs,
             project_vars=environment_vars,
@@ -683,7 +725,7 @@ class Application:
         """Return a dict with project variables to be expanded."""
         pvars: dict[str, str] = {}
         for var in self.app.project_variables:
-            pvars[var] = yaml_data.get(var, "")
+            pvars[var] = str(yaml_data.get(var, ""))
         return pvars
 
     def _set_global_environment(self, info: craft_parts.ProjectInfo) -> None:

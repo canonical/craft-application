@@ -23,10 +23,13 @@ import os
 from collections.abc import Sequence
 from typing import TYPE_CHECKING
 
+import yaml
 from craft_cli import CraftError
 from craft_providers import bases
 
+from craft_application import models
 from craft_application.util.error_formatting import format_pydantic_errors
+from craft_application.util.string import humanize_list
 
 if TYPE_CHECKING:  # pragma: no cover
     import craft_parts
@@ -40,6 +43,23 @@ class ProjectFileMissingError(CraftError, FileNotFoundError):
 
 class PathInvalidError(CraftError, OSError):
     """Error that the given path is not usable."""
+
+
+class YamlError(CraftError, yaml.YAMLError):
+    """Craft-cli friendly version of a YAML error."""
+
+    @classmethod
+    def from_yaml_error(cls, filename: str, error: yaml.YAMLError) -> Self:
+        """Convert a pyyaml YAMLError to a craft-application YamlError."""
+        message = f"error parsing {filename!r}"
+        if isinstance(error, yaml.MarkedYAMLError):
+            message += f": {error.problem}"
+        details = str(error)
+        return cls(
+            message,
+            details=details,
+            resolution=f"Ensure {filename} contains valid YAML",
+        )
 
 
 class CraftValidationError(CraftError):
@@ -132,8 +152,11 @@ class EmptyBuildPlanError(CraftError):
     """The build plan filtered out all possible builds."""
 
     def __init__(self) -> None:
-        message = "No build matches the current platform."
-        resolution = 'Check the "--platform" and "--build-for" parameters.'
+        message = "No build matches the current execution environment."
+        resolution = (
+            "Check the project's 'platforms' declaration, and the "
+            "'--platform' and '--build-for' parameters."
+        )
 
         super().__init__(message=message, resolution=resolution)
 
@@ -141,8 +164,14 @@ class EmptyBuildPlanError(CraftError):
 class MultipleBuildsError(CraftError):
     """The build plan contains multiple possible builds."""
 
-    def __init__(self) -> None:
-        message = "Multiple builds match the current platform."
+    def __init__(self, matching_builds: list[models.BuildInfo] | None = None) -> None:
+        message = "Multiple builds match the current platform"
+        if matching_builds:
+            message += ": " + humanize_list(
+                [build.platform for build in matching_builds],
+                conjunction="and",
+            )
+        message += "."
         resolution = 'Check the "--platform" and "--build-for" parameters.'
 
         super().__init__(message=message, resolution=resolution)
@@ -215,3 +244,7 @@ class CancelFailedError(RemoteBuildError):
             reportable=reportable,
             retcode=retcode,
         )
+
+
+class FetchServiceError(CraftError):
+    """Errors related to the fetch-service."""
