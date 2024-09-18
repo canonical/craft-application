@@ -533,7 +533,10 @@ class Application:
         :param item: the name of the namespace or config item.
         :returns: the requested value.
         """
-        return getattr(parsed_args, item, self.services.config.get(item))
+        arg_value = getattr(parsed_args, item, None)
+        if arg_value is not None:
+            return arg_value
+        return self.services.config.get(item)
 
     @staticmethod
     def _check_pro_requirement(
