@@ -47,9 +47,8 @@ To add partition support to an application, two basic changes are needed:
 
 #. Enable the feature.
 
-   Use the :class:`Features <craft_parts.Features>` class to specify that the
-   application will use partitions.  This should be called from an overridden
-   method in your Application subclass:
+   In your Application subclass, override the following method and invoke the
+   :class:`Features <craft_parts.Features>` class:
 
    .. code-block:: python
 
@@ -70,10 +69,12 @@ To add partition support to an application, two basic changes are needed:
       but partitions cannot be enabled via :class:`AppFeatures
       <craft_application.AppFeatures>`!
 
-   .. NOTE::
-      In unit tests, you may need to call this between tests, otherwise the
-      :class:`Features <craft_parts.Features>` global singleton may complain as
-      successive tests try to enable partitions repeatedly.
+    .. Tip::
+      In unit tests, the :class:`Features <craft_parts.Features>` global
+      singleton may raise exceptions when successive tests repeatedly try to
+      enable partitions.
+
+      To prevent these errors, reset the features at the start of each test:
 
       .. code-block:: python
 
@@ -83,8 +84,9 @@ To add partition support to an application, two basic changes are needed:
 
 #. Define the list of partitions.
 
-   Override your :class:`Application <craft_application.Application>`'s
-   ``_setup_partitions`` method and return the list of the partitions.
+   Override the  ``_setup_partitions`` method of your :class:`Application
+   <craft_application.Application>` class and return the list of the
+   partitions.
 
    .. code-block:: python
 
