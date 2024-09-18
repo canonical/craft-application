@@ -62,12 +62,11 @@ To add partition support to an application, two basic changes are needed:
          def _enable_craft_parts_features(self) -> None:
              Features(enable_partitions=True)
 
-   .. NOTE::
-      The ``craft-application`` class :class:`AppFeatures
-      <craft_application.AppFeatures>` has a similar name and serves a similar
-      purpose to ``craft-parts``'s :class:`Features <craft_parts.Features>`,
-      but partitions cannot be enabled via :class:`AppFeatures
-      <craft_application.AppFeatures>`!
+   You can only be enable partitions with the :class:`Features
+   <craft_parts.Features>` class from craft-parts. In craft-application
+   there's a similarly-named :class:`AppFeatures
+   <craft_application.AppFeatures>` class which serves a similar purpose,
+   but it can't enable partitions.
 
     .. Tip::
       In unit tests, the :class:`Features <craft_parts.Features>` global
