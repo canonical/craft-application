@@ -54,7 +54,7 @@ To add partition support to an application, two basic changes are needed:
 
      from craft_parts import Features
 
-     class SnackcraftApplication(Application):
+     class ExampleApplication(Application):
 
          ...
 
