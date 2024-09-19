@@ -22,10 +22,14 @@ Note that most of the fetch-service functionality is already tested either on:
 As such, this module mostly unit-tests error paths coming from wrong usage of
 the FetchService class.
 """
+import contextlib
+import json
 import re
 from datetime import datetime
+from unittest import mock
 from unittest.mock import MagicMock
 
+import craft_providers
 import pytest
 from craft_application import fetch, services
 from craft_application.models import BuildInfo
@@ -97,3 +101,39 @@ def test_create_project_manifest_not_managed(fetch_service, tmp_path, monkeypatc
     assert not manifest_path.exists()
     fetch_service.create_project_manifest([artifact])
     assert not manifest_path.exists()
+
+
+def test_teardown_session_create_manifest(
+    fetch_service, tmp_path, mocker, manifest_data_dir, monkeypatch, fake_project
+):
+    monkeypatch.chdir(tmp_path)
+
+    # A lot of mock setup here but the goal is to have the fake fetch-service
+    # session return the expected report, and the fake CraftManifest return the
+    # expected data.
+
+    # fetch.teardown_session returns a fake session report
+    fake_report = json.loads((manifest_data_dir / "session-report.json").read_text())
+    mocker.patch.object(fetch, "teardown_session", return_value=fake_report)
+
+    # temporarily_pull_file returns a fake project manifest file
+    project_manifest_path = manifest_data_dir / "project-expected.yaml"
+
+    @contextlib.contextmanager
+    def temporarily_pull_file(*, source, missing_ok):
+        assert source == service_module._PROJECT_MANIFEST_MANAGED_PATH
+        assert missing_ok
+        yield project_manifest_path
+
+    mock_instance = mock.Mock(spec=craft_providers.Executor)
+    mock_instance.temporarily_pull_file = temporarily_pull_file
+
+    fetch_service._session_data = {}
+    fetch_service._instance = mock_instance
+
+    fetch_service.teardown_session()
+
+    expected_file = manifest_data_dir / "craft-manifest-expected.json"
+    obtained_file = tmp_path / f"{fake_project.name}_{fake_project.version}_amd64.json"
+
+    assert obtained_file.read_text() + "\n" == expected_file.read_text()
