@@ -144,7 +144,10 @@ def test_craft_environment_handler_error(
 )
 def test_snap_config_handler(snap_config_handler, item: str, content: str):
     snap_item = item.replace("_", "-")
-    with pytest_subprocess.FakeProcess.context() as fp, pytest.MonkeyPatch.context() as mp:
+    with (
+        pytest_subprocess.FakeProcess.context() as fp,
+        pytest.MonkeyPatch.context() as mp,
+    ):
         mp.setattr("snaphelpers._ctl.Popen", subprocess.Popen)
         fp.register(
             ["/usr/bin/snapctl", "get", "-d", snap_item],

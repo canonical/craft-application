@@ -47,10 +47,6 @@ from craft_application import (
     models,
     secrets,
     services,
-    util,
-)
-from craft_application.util import (
-    get_host_architecture,  # pyright: ignore[reportGeneralTypeIssues]
 )
 from craft_cli import emit
 from craft_parts.plugins.plugins import PluginType
@@ -477,7 +473,7 @@ def test_run_managed_success(mocker, app, fake_project, fake_build_plan):
     app.project = fake_project
     app._build_plan = fake_build_plan
     mock_pause = mocker.spy(craft_cli.emit, "pause")
-    arch = get_host_architecture()
+    arch = craft_platforms.DebianArchitecture.from_host()
 
     app.run_managed(None, arch)
 
@@ -501,7 +497,7 @@ def test_run_managed_failure(app, fake_project, fake_build_plan):
     app._build_plan = fake_build_plan
 
     with pytest.raises(craft_providers.ProviderError) as exc_info:
-        app.run_managed(None, get_host_architecture())
+        app.run_managed(None, craft_platforms.DebianArchitecture.from_host())
 
     assert exc_info.value.brief == "Failed to execute testcraft in instance."
 
@@ -523,7 +519,7 @@ def test_run_managed_secrets(app, fake_project, fake_build_plan):
         secret_strings=set(),
     )
 
-    app.run_managed(None, get_host_architecture())
+    app.run_managed(None, craft_platforms.DebianArchitecture.from_host())
 
     # Check that the encoded secrets were propagated to the managed instance.
     assert len(mock_execute.mock_calls) == 1
@@ -869,7 +865,7 @@ def test_run_success_managed(monkeypatch, app, fake_project, mocker):
 def test_run_success_managed_with_arch(monkeypatch, app, fake_project, mocker):
     mocker.patch.object(app, "get_project", return_value=fake_project)
     app.run_managed = mock.Mock()
-    arch = get_host_architecture()
+    arch = craft_platforms.DebianArchitecture.from_host()
     monkeypatch.setattr(sys, "argv", ["testcraft", "pull", f"--build-for={arch}"])
 
     pytest_check.equal(app.run(), 0)
@@ -893,12 +889,12 @@ def test_run_success_managed_with_platform(monkeypatch, app, fake_project, mocke
         ([], mock.call(None, None)),
         (["--platform=s390x"], mock.call("s390x", None)),
         (
-            ["--platform", get_host_architecture()],
-            mock.call(get_host_architecture(), None),
+            ["--platform", craft_platforms.DebianArchitecture.from_host()],
+            mock.call(craft_platforms.DebianArchitecture.from_host(), None),
         ),
         (
-            ["--build-for", get_host_architecture()],
-            mock.call(None, get_host_architecture()),
+            ["--build-for", craft_platforms.DebianArchitecture.from_host()],
+            mock.call(None, craft_platforms.DebianArchitecture.from_host()),
         ),
         (["--build-for", "s390x"], mock.call(None, "s390x")),
         (["--platform", "s390x,riscv64"], mock.call("s390x", None)),
@@ -1298,7 +1294,7 @@ def test_work_dir_project_non_managed(monkeypatch, app_metadata, fake_services):
     app = application.Application(app_metadata, fake_services)
     assert app._work_dir == pathlib.Path.cwd()
 
-    project = app.get_project(build_for=get_host_architecture())
+    project = app.get_project(build_for=craft_platforms.DebianArchitecture.from_host())
 
     # Make sure the project is loaded correctly (from the cwd)
     assert project is not None
@@ -1313,7 +1309,7 @@ def test_work_dir_project_managed(monkeypatch, app_metadata, fake_services):
     app = application.Application(app_metadata, fake_services)
     assert app._work_dir == pathlib.PosixPath("/root")
 
-    project = app.get_project(build_for=get_host_architecture())
+    project = app.get_project(build_for=craft_platforms.DebianArchitecture.from_host())
 
     # Make sure the project is loaded correctly (from the cwd)
     assert project is not None
@@ -1350,7 +1346,6 @@ def environment_project(monkeypatch, tmp_path):
     return project_path
 
 
-@pytest.mark.xfail(reason="craft-platforms does not support 'all'.", strict=True)
 def test_expand_environment_build_for_all(
     monkeypatch, app_metadata, tmp_path, fake_services, emitter
 ):
@@ -1366,7 +1361,7 @@ def test_expand_environment_build_for_all(
             base: ubuntu@24.04
             platforms:
               platform1:
-                build-on: [{util.get_host_architecture()}]
+                build-on: [{craft_platforms.DebianArchitecture.from_host()}]
                 build-for: [all]
             parts:
               mypart:
@@ -1385,12 +1380,12 @@ def test_expand_environment_build_for_all(
     # Make sure the project is loaded correctly (from the cwd)
     assert project is not None
     assert project.parts["mypart"]["build-environment"] == [
-        {"BUILD_ON": util.get_host_architecture()},
-        {"BUILD_FOR": util.get_host_architecture()},
+        {"BUILD_ON": craft_platforms.DebianArchitecture.from_host()},
+        {"BUILD_FOR": craft_platforms.DebianArchitecture.from_host()},
     ]
     emitter.assert_debug(
         "Expanding environment variables with the host architecture "
-        f"{util.get_host_architecture()!r} as the build-for architecture "
+        f"'{craft_platforms.DebianArchitecture.from_host()}' as the build-for architecture "
         "because 'all' was specified."
     )
 
@@ -1398,14 +1393,14 @@ def test_expand_environment_build_for_all(
 @pytest.mark.usefixtures("environment_project")
 def test_application_expand_environment(app_metadata, fake_services):
     app = application.Application(app_metadata, fake_services)
-    project = app.get_project(build_for=get_host_architecture())
+    project = app.get_project(build_for=craft_platforms.DebianArchitecture.from_host())
 
     # Make sure the project is loaded correctly (from the cwd)
     assert project is not None
     assert project.parts["mypart"]["source-tag"] == "v1.2.3"
     assert project.parts["mypart"]["build-environment"] == [
-        {"BUILD_ON": util.get_host_architecture()},
-        {"BUILD_FOR": util.get_host_architecture()},
+        {"BUILD_ON": craft_platforms.DebianArchitecture.from_host()},
+        {"BUILD_FOR": craft_platforms.DebianArchitecture.from_host()},
     ]
 
 
@@ -1444,7 +1439,7 @@ def test_application_build_secrets(app_metadata, fake_services, monkeypatch, moc
     spied_set_secrets = mocker.spy(craft_cli.emit, "set_secrets")
 
     app = application.Application(app_metadata, fake_services)
-    project = app.get_project(build_for=get_host_architecture())
+    project = app.get_project(build_for=craft_platforms.DebianArchitecture.from_host())
 
     # Make sure the project is loaded correctly (from the cwd)
     assert project is not None
@@ -1559,7 +1554,7 @@ def test_extra_yaml_transform(tmp_path, app_metadata, fake_services):
     app.project_dir = tmp_path
     _ = app.get_project(build_for="s390x")
 
-    assert app.build_on == util.get_host_architecture()
+    assert app.build_on == craft_platforms.DebianArchitecture.from_host()
     assert app.build_for == "s390x"
 
 
@@ -1575,7 +1570,7 @@ def test_mandatory_adoptable_fields(tmp_path, app_metadata, fake_services):
     app.project_dir = tmp_path
 
     with pytest.raises(errors.CraftValidationError) as exc_info:
-        _ = app.get_project(build_for=get_host_architecture())
+        _ = app.get_project(build_for=craft_platforms.DebianArchitecture.from_host())
 
     assert (
         str(exc_info.value)
@@ -1727,7 +1722,6 @@ def test_process_grammar_build_for(grammar_app_mini):
     ]
 
 
-@pytest.mark.xfail(reason="craft-platforms does not support 'all'.", strict=True)
 def test_process_grammar_to_all(tmp_path, app_metadata, fake_services):
     """Test that 'to all' is a valid grammar statement."""
     contents = dedent(
@@ -1737,18 +1731,18 @@ def test_process_grammar_to_all(tmp_path, app_metadata, fake_services):
         base: ubuntu@24.04
         platforms:
           myplatform:
-            build-on: [{util.get_host_architecture()}]
+            build-on: [{craft_platforms.DebianArchitecture.from_host()}]
             build-for: [all]
         parts:
           mypart:
             plugin: nil
             build-packages:
             - test-package
-            - on {util.get_host_architecture()} to all:
+            - on {craft_platforms.DebianArchitecture.from_host()} to all:
               - on-host-to-all
             - to all:
               - to-all
-            - on {util.get_host_architecture()} to s390x:
+            - on {craft_platforms.DebianArchitecture.from_host()} to s390x:
               - on-host-to-s390x
             - to s390x:
               - on-amd64-to-s390x
@@ -1858,7 +1852,7 @@ def test_process_yaml_from_extra_transform(
     ]
     assert project.parts["mypart"]["build-environment"] == [
         # evaluate project variables
-        {"hello": get_host_architecture()},
+        {"hello": craft_platforms.DebianArchitecture.from_host()},
         # render secrets
         {"MY_VAR": "secret-value"},
     ]
@@ -1908,7 +1902,7 @@ def environment_partitions_project(monkeypatch, tmp_path):
 @pytest.mark.usefixtures("environment_partitions_project")
 def test_partition_application_expand_environment(app_metadata, fake_services):
     app = FakePartitionsApplication(app_metadata, fake_services)
-    project = app.get_project(build_for=get_host_architecture())
+    project = app.get_project(build_for=craft_platforms.DebianArchitecture.from_host())
 
     assert craft_parts.Features().enable_partitions is True
     # Make sure the project is loaded correctly (from the cwd)

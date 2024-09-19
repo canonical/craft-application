@@ -421,13 +421,11 @@ def test_get_base_packages(provider_service):
     "base_name",
     [
         craft_platforms.DistroBase("ubuntu", "devel"),
+        craft_platforms.DistroBase("ubuntu", "24.10"),
+        craft_platforms.DistroBase("ubuntu", "24.04"),
         craft_platforms.DistroBase("ubuntu", "22.04"),
-        ("ubuntu", "devel"),
-        ("ubuntu", "24.10"),
-        ("ubuntu", "24.04"),
-        ("ubuntu", "22.04"),
-        ("ubuntu", "20.04"),
-        ("almalinux", "9"),
+        craft_platforms.DistroBase("ubuntu", "20.04"),
+        craft_platforms.DistroBase("almalinux", "9"),
     ],
 )
 def test_instance(
@@ -484,9 +482,9 @@ def test_instance_clean_existing(
     mock_provider,
     clean_existing,
 ):
-    arch = util.get_host_architecture()
-    base_name = bases.BaseName("ubuntu", "24.04")
-    build_info = models.BuildInfo("foo", arch, arch, base_name)
+    arch = craft_platforms.DebianArchitecture.from_host()
+    base_name = craft_platforms.DistroBase(distribution="ubuntu", series="24.04")
+    build_info = craft_platforms.BuildInfo("foo", arch, arch, base_name)
 
     with provider_service.instance(
         build_info, work_dir=tmp_path, clean_existing=clean_existing

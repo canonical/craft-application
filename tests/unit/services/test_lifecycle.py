@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU Lesser General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Unit tests for parts lifecycle."""
+
 from __future__ import annotations
 
 import dataclasses
@@ -29,7 +30,6 @@ import pytest
 import pytest_check
 from craft_application import errors, models, util
 from craft_application.errors import InvalidParameterError, PartsLifecycleError
-from craft_application.models.project import BuildInfo
 from craft_application.services import lifecycle
 from craft_application.util import repositories
 from craft_parts import (
@@ -362,44 +362,44 @@ def test_get_primed_stage_packages(lifecycle_service):
         ([], None),
         (
             [
-                BuildInfo(
+                craft_platforms.BuildInfo(
                     "my-platform",
                     build_on="any",
                     build_for="all",
-                    base=bases.BaseName("ubuntu", "24.04"),
+                    build_base=craft_platforms.DistroBase("ubuntu", "24.04"),
                 )
             ],
             None,
         ),
         (
             [
-                BuildInfo(
+                craft_platforms.BuildInfo(
                     "my-platform",
                     build_on="any",
                     build_for="amd64",
-                    base=bases.BaseName("ubuntu", "24.04"),
+                    build_base=craft_platforms.DistroBase("ubuntu", "24.04"),
                 )
             ],
             "amd64",
         ),
         (
             [
-                BuildInfo(
+                craft_platforms.BuildInfo(
                     "my-platform",
                     build_on="any",
                     build_for="arm64",
-                    base=bases.BaseName("ubuntu", "24.04"),
+                    build_base=craft_platforms.DistroBase("ubuntu", "24.04"),
                 )
             ],
             "arm64",
         ),
         (
             [
-                BuildInfo(
+                craft_platforms.BuildInfo(
                     "my-platform",
                     build_on="any",
                     build_for="riscv64",
-                    base=bases.BaseName("ubuntu", "24.04"),
+                    build_base=craft_platforms.DistroBase("ubuntu", "24.04"),
                 )
             ],
             "riscv64",
@@ -409,7 +409,7 @@ def test_get_primed_stage_packages(lifecycle_service):
 def test_get_build_for(
     fake_host_architecture,
     fake_parts_lifecycle: lifecycle.LifecycleService,
-    build_plan: list[BuildInfo],
+    build_plan: list[craft_platforms.BuildInfo],
     expected: str | None,
 ):
     if expected is None:

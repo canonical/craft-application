@@ -27,10 +27,10 @@ import craft_application
 import craft_parts
 import craft_platforms
 import distro
+import pydantic
 import pytest
-from craft_application import application, launchpad, models, services, util
+from craft_application import application, launchpad, models, services
 from craft_cli import EmitterMode, emit
-from craft_providers import bases
 from typing_extensions import override
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -39,12 +39,11 @@ if TYPE_CHECKING:  # pragma: no cover
 
 def _create_fake_build_plan(num_infos: int = 1) -> list[craft_platforms.BuildInfo]:
     """Create a build plan that is able to execute on the running system."""
-    arch = util.get_host_architecture()
     return [
         craft_platforms.BuildInfo(
             "foo",
-            craft_platforms.DebianArchitecture(arch),
-            craft_platforms.DebianArchitecture(arch),
+            craft_platforms.DebianArchitecture.from_host(),
+            craft_platforms.DebianArchitecture.from_host(),
             craft_platforms.DistroBase.from_linux_distribution(
                 distro.LinuxDistribution()
             ),
@@ -129,7 +128,7 @@ def app_metadata_docs(features) -> craft_application.AppMetadata:
 
 @pytest.fixture
 def fake_project() -> models.Project:
-    arch = util.get_host_architecture()
+    arch = craft_platforms.DebianArchitecture.from_host()
     return models.Project(
         name="full-project",  # pyright: ignore[reportArgumentType]
         title="A fully-defined project",  # pyright: ignore[reportArgumentType]
@@ -149,13 +148,13 @@ def fake_project() -> models.Project:
 
 
 @pytest.fixture
-def fake_build_plan(request) -> list[models.BuildInfo]:
+def fake_build_plan(request) -> list[craft_platforms.BuildInfo]:
     num_infos = getattr(request, "param", 1)
     return _create_fake_build_plan(num_infos)
 
 
 @pytest.fixture
-def full_build_plan(mocker) -> list[models.BuildInfo]:
+def full_build_plan(mocker) -> list[craft_platforms.BuildInfo]:
     """A big build plan with multiple bases and build-for targets."""
     host_arch = craft_platforms.DebianArchitecture.from_host()
     build_plan = []
