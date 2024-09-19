@@ -2,6 +2,16 @@
 Changelog
 *********
 
+4.2.4 (2024-Sep-19)
+-------------------
+
+Remote build
+============
+
+- Remote build errors are now a subclass of ``CraftError``.
+
+For a complete list of commits, check out the `4.2.4`_ release on GitHub.
+
 4.2.3 (2024-Sep-18)
 -------------------
 
@@ -278,3 +288,4 @@ For a complete list of commits, check out the `2.7.0`_ release on GitHub.
 .. _4.2.1: https://github.com/canonical/craft-application/releases/tag/4.2.1
 .. _4.2.2: https://github.com/canonical/craft-application/releases/tag/4.2.2
 .. _4.2.3: https://github.com/canonical/craft-application/releases/tag/4.2.3
+.. _4.2.4: https://github.com/canonical/craft-application/releases/tag/4.2.4
