@@ -5,7 +5,7 @@
     hashes:
       sha1: af5834abfa1a537fd383d41f1be33cea47c7b6a7
       sha256: 38cbbf5467682ada956d14168e301a383d96aaa2f1f694cbaa47cee38b47847d
-  architecture: TODO
+  architecture: ''
   type: application/x.apt.translation
   component-author: Ubuntu
   component-vendor: Ubuntu
@@ -19,7 +19,7 @@
     hashes:
       sha1: 370c66437d49460dbc16be011209c4de9977212d
       sha256: 37cb57f1554cbfa71c5a29ee9ffee18a9a8c1782bb0568e0874b7ff4ce8f9c11
-  architecture: TODO
+  architecture: amd64
   type: application/x.apt.packages
   component-author: Ubuntu
   component-vendor: Ubuntu
@@ -33,7 +33,7 @@
     hashes:
       sha1: 376506001849698af3f9e07a236a47ee8cddded0
       sha256: cf7e02ebfdaa898107d2dbf84cf1231cee6c244dd5646580d09cfd6f6cf12577
-  architecture: TODO
+  architecture: amd64
   type: application/x.canonical.snap-package
   component-author: ''
   component-vendor: Canonical

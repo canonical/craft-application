@@ -124,7 +124,8 @@ class SessionArtifactManifest(BaseManifestModel):
                 "component-name": metadata["name"],
                 "component-version": metadata["version"],
                 "component-description": metadata["description"],
-                "architecture": "TODO",
+                # "architecture" is only present on the metadata if applicable.
+                "architecture": metadata.get("architecture", ""),
                 "component-id": {
                     "hashes": {"sha1": metadata["sha1"], "sha256": metadata["sha256"]}
                 },
