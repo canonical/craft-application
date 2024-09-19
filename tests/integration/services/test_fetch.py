@@ -16,6 +16,7 @@
 """Tests for FetchService."""
 import contextlib
 import io
+import json
 import pathlib
 import shutil
 import socket
@@ -27,6 +28,7 @@ import craft_providers
 import pytest
 from craft_application import errors, fetch, services, util
 from craft_application.models import BuildInfo
+from craft_application.services.fetch import _PROJECT_MANIFEST_MANAGED_PATH
 from craft_providers import bases
 
 
@@ -59,6 +61,18 @@ def _set_test_base_dirs(mocker):
 
     cert_dir = _get_fake_certificate_dir()
     mocker.patch.object(fetch, "_get_certificate_dir", return_value=cert_dir)
+
+
+@pytest.fixture
+def mock_instance():
+    @contextlib.contextmanager
+    def temporarily_pull_file(*, source, missing_ok):  # noqa: ARG001 (unused arguments)
+        yield None
+
+    instance = mock.Mock(spec=craft_providers.Executor)
+    instance.temporarily_pull_file = temporarily_pull_file
+
+    return instance
 
 
 @pytest.fixture
@@ -132,30 +146,25 @@ def test_shutdown_service(app_service):
     assert not fetch.is_service_online()
 
 
-def test_create_teardown_session(app_service, mocker, tmp_path, monkeypatch):
+def test_create_teardown_session(
+    app_service, mocker, tmp_path, monkeypatch, mock_instance
+):
     monkeypatch.chdir(tmp_path)
     mocker.patch.object(fetch, "_get_gateway", return_value="127.0.0.1")
     app_service.setup()
 
     assert len(fetch.get_service_status()["active-sessions"]) == 0
 
-    app_service.create_session(
-        instance=mock.MagicMock(spec_set=craft_providers.Executor)
-    )
+    app_service.create_session(instance=mock_instance)
     assert len(fetch.get_service_status()["active-sessions"]) == 1
-
-    # Check that when closing the session its report is dumped to cwd
-    expected_report = tmp_path / "session-report.json"
-    assert not expected_report.is_file()
 
     report = app_service.teardown_session()
     assert len(fetch.get_service_status()["active-sessions"]) == 0
 
     assert "artefacts" in report
-    assert expected_report.is_file()
 
 
-def test_service_logging(app_service, mocker, tmp_path, monkeypatch):
+def test_service_logging(app_service, mocker, tmp_path, monkeypatch, mock_instance):
     monkeypatch.chdir(tmp_path)
     mocker.patch.object(fetch, "_get_gateway", return_value="127.0.0.1")
 
@@ -163,8 +172,6 @@ def test_service_logging(app_service, mocker, tmp_path, monkeypatch):
     assert not logfile.is_file()
 
     app_service.setup()
-
-    mock_instance = mock.MagicMock(spec_set=craft_providers.Executor)
 
     # Create and teardown two sessions
     app_service.create_session(mock_instance)
@@ -247,7 +254,9 @@ def lxd_instance(snap_safe_tmp_path, provider_service):
             executor.delete()
 
 
-def test_build_instance_integration(app_service, lxd_instance, tmp_path, monkeypatch):
+def test_build_instance_integration(
+    app_service, lxd_instance, tmp_path, monkeypatch, fake_project, manifest_data_dir
+):
     monkeypatch.chdir(tmp_path)
 
     app_service.setup()
@@ -272,6 +281,14 @@ def test_build_instance_integration(app_service, lxd_instance, tmp_path, monkeyp
             env=env,
             capture_output=True,
         )
+
+        # Write the "project" manifest inside the instance, as if a regular
+        # packing was taking place
+        lxd_instance.push_file(
+            source=manifest_data_dir / "project-expected.yaml",
+            destination=_PROJECT_MANIFEST_MANAGED_PATH,
+        )
+
     finally:
         report = app_service.teardown_session()
 
@@ -288,3 +305,23 @@ def test_build_instance_integration(app_service, lxd_instance, tmp_path, monkeyp
 
     # Check that the fetching of the "craft-application" wheel went through the inspector.
     assert ("craft-application", "application/x.python.wheel") in artefacts_and_types
+
+    manifest_path = tmp_path / f"{fake_project.name}_{fake_project.version}_foo.json"
+    assert manifest_path.is_file()
+
+    with manifest_path.open("r") as f:
+        manifest_data = json.load(f)
+
+    # Check metadata of the "artifact"
+    assert manifest_data["component-name"] == fake_project.name
+    assert manifest_data["component-version"] == fake_project.version
+    assert manifest_data["architecture"] == "amd64"
+
+    dependencies = {}
+    for dep in manifest_data["dependencies"]:
+        dependencies[dep["component-name"]] = dep
+
+    # Check some of the dependencies
+    assert dependencies["hello"]["type"] == "application/vnd.debian.binary-package"
+    assert dependencies["craft-application"]["type"] == "application/x.python.wheel"
+    assert dependencies["craft-application"]["component-version"] == "3.0.0"

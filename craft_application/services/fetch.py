@@ -26,7 +26,7 @@ from craft_cli import emit
 from typing_extensions import override
 
 from craft_application import fetch, models, services
-from craft_application.models.manifest import ProjectManifest
+from craft_application.models.manifest import CraftManifest, ProjectManifest
 
 if typing.TYPE_CHECKING:
     from craft_application.application import AppMetadata
@@ -54,6 +54,7 @@ class FetchService(services.ProjectService):
 
     _fetch_process: subprocess.Popen[str] | None
     _session_data: fetch.SessionData | None
+    _instance: craft_providers.Executor | None
 
     def __init__(
         self,
@@ -67,6 +68,7 @@ class FetchService(services.ProjectService):
         self._fetch_process = None
         self._session_data = None
         self._build_plan = build_plan
+        self._instance = None
 
     @override
     def setup(self) -> None:
@@ -86,24 +88,29 @@ class FetchService(services.ProjectService):
             )
 
         self._session_data = fetch.create_session()
+        self._instance = instance
         return fetch.configure_instance(instance, self._session_data)
 
     def teardown_session(self) -> dict[str, typing.Any]:
         """Teardown and cleanup a previously-created session."""
-        if self._session_data is None:
+        if self._session_data is None or self._instance is None:
             raise ValueError(
                 "teardown_session() called with no live fetch-service session."
             )
         report = fetch.teardown_session(self._session_data)
 
-        # TODO for now we just dump the session report locally
-        # (will use it in the future to create a manifest)
-        report_path = pathlib.Path("session-report.json")
-        with report_path.open("w") as f:
-            json.dump(report, f, ensure_ascii=False, indent=4)
-        emit.debug(f"Session report dumped to {report_path}")
+        instance = self._instance
+        instance_path = _PROJECT_MANIFEST_MANAGED_PATH
+        with instance.temporarily_pull_file(source=instance_path, missing_ok=True) as f:
+            if f is not None:
+                # Project manifest was generated; we can create the full manifest
+                self._create_craft_manifest(f, report)
+            else:
+                emit.debug("Project manifest file missing in managed instance.")
 
         self._session_data = None
+        self._instance = None
+
         return report
 
     def shutdown(self, *, force: bool = False) -> None:
@@ -132,3 +139,21 @@ class FetchService(services.ProjectService):
             self._project, self._build_plan[0], artifacts[0]
         )
         project_manifest.to_yaml_file(_PROJECT_MANIFEST_MANAGED_PATH)
+
+    def _create_craft_manifest(
+        self, project_manifest: pathlib.Path, session_report: dict[str, typing.Any]
+    ) -> None:
+        name = self._project.name
+        version = self._project.version
+        platform = self._build_plan[0].platform
+
+        manifest_path = pathlib.Path(f"{name}_{version}_{platform}.json")
+        emit.debug(f"Generating craft manifest at {manifest_path}")
+
+        craft_manifest = CraftManifest.create_craft_manifest(
+            project_manifest, session_report
+        )
+        data = craft_manifest.marshal()
+
+        with manifest_path.open("w") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
