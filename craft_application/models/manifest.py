@@ -81,7 +81,10 @@ class ProjectManifest(BaseManifestModel):
 
     @classmethod
     def from_packed_artifact(
-        cls, project: models.Project, build_info: models.BuildInfo, artifact: pathlib.Path
+        cls,
+        project: models.Project,
+        build_info: models.BuildInfo,
+        artifact: pathlib.Path,
     ) -> Self:
         """Create the project manifest for a packed artifact."""
         hashes = Hashes.from_path(artifact)
@@ -113,7 +116,7 @@ class SessionArtifactManifest(BaseManifestModel):
     @classmethod
     def from_session_report(cls, report: dict[str, Any]) -> list[Self]:
         """Create session manifests from a fetch-session report."""
-        artifacts: list[SessionArtifactManifest] = []
+        artifacts: list[Self] = []
         for artifact in report["artefacts"]:
             metadata = artifact["metadata"]
             data = {
