@@ -2,6 +2,15 @@
 Changelog
 *********
 
+X.Y.Z (yyyy-mmm-dd)
+-------------------
+
+Commands
+========
+
+- The ``clean`` command now supports the ``--platform`` argument to filter
+  which build environments to clean.
+
 4.2.4 (2024-Sep-19)
 -------------------
 
