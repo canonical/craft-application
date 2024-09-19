@@ -26,6 +26,7 @@ import re
 import subprocess
 import sys
 import textwrap
+from io import StringIO
 from textwrap import dedent
 from typing import Any
 from unittest import mock
@@ -39,6 +40,7 @@ import pydantic
 import pytest
 import pytest_check
 from craft_application import (
+    ProviderService,
     application,
     commands,
     errors,
@@ -2252,3 +2254,38 @@ def test_check_pro_requirement(
     for call in pro_services.validate.call_args_list:
         if validator_options is not None:  # skip assert if default value is passed
             assert call.kwargs["options"] == validator_options
+
+
+def test_clean_platform(monkeypatch, tmp_path, app_metadata, fake_services, mocker):
+    """Test that calling "clean --platform=x" correctly filters the build plan."""
+    data = util.safe_yaml_load(StringIO(BASIC_PROJECT_YAML))
+    # Put a few different platforms on the project
+    arch = util.get_host_architecture()
+    build_on_for = {
+        "build-on": [arch],
+        "build-for": [arch],
+    }
+    data["platforms"] = {
+        "plat1": build_on_for,
+        "plat2": build_on_for,
+        "plat3": build_on_for,
+    }
+    project_file = tmp_path / "testcraft.yaml"
+    project_file.write_text(util.dump_yaml(data))
+    monkeypatch.setattr(sys, "argv", ["testcraft", "clean", "--platform=plat2"])
+
+    mocked_clean = mocker.patch.object(ProviderService, "_clean_instance")
+    app = FakeApplication(app_metadata, fake_services)
+    app.project_dir = tmp_path
+
+    fake_services.project = None
+
+    app.run()
+
+    expected_info = models.BuildInfo(
+        platform="plat2",
+        build_on=arch,
+        build_for=arch,
+        base=bases.BaseName("ubuntu", "24.04"),
+    )
+    mocked_clean.assert_called_once_with(mocker.ANY, mocker.ANY, expected_info)

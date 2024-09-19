@@ -452,6 +452,12 @@ class CleanCommand(_BaseLifecycleCommand):
             nargs="*",
             help="Optional list of parts to process",
         )
+        parser.add_argument(
+            "--platform",
+            type=str,
+            metavar="name",
+            help="Platform to clean",
+        )
 
     @override
     def _run(
