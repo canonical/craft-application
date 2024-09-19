@@ -20,7 +20,7 @@ from datetime import datetime, timezone
 from typing import Any, Literal
 
 from pydantic import Field
-from typing_extensions import override
+from typing_extensions import Self, override
 
 from craft_application import models
 from craft_application.models import CraftBaseModel
@@ -32,12 +32,12 @@ class Hashes(CraftBaseModel):
     sha1: str
     sha256: str
 
-    @staticmethod
-    def from_path(path: pathlib.Path) -> "Hashes":
+    @classmethod
+    def from_path(cls, path: pathlib.Path) -> Self:
         """Compute digests for a given path."""
         read_bytes = path.read_bytes()
 
-        return Hashes(
+        return cls(
             sha1=hashlib.sha1(  # noqa: S324 (insecure hash function)
                 read_bytes
             ).hexdigest(),
@@ -79,16 +79,16 @@ class ProjectManifest(BaseManifestModel):
             exclude_defaults=False,  # to include 'metadata_generator'
         )
 
-    @staticmethod
+    @classmethod
     def from_packed_artifact(
-        project: models.Project, build_info: models.BuildInfo, artifact: pathlib.Path
-    ) -> "ProjectManifest":
+        cls, project: models.Project, build_info: models.BuildInfo, artifact: pathlib.Path
+    ) -> Self:
         """Create the project manifest for a packed artifact."""
         hashes = Hashes.from_path(artifact)
 
         now = datetime.now(timezone.utc)
 
-        return ProjectManifest.unmarshal(
+        return cls.unmarshal(
             {
                 "component-name": project.name,
                 "component-version": project.version,
@@ -110,8 +110,8 @@ class SessionArtifactManifest(BaseManifestModel):
     size: int
     url: list[str]
 
-    @staticmethod
-    def from_session_report(report: dict[str, Any]) -> list["SessionArtifactManifest"]:
+    @classmethod
+    def from_session_report(cls, report: dict[str, Any]) -> list[Self]:
         """Create session manifests from a fetch-session report."""
         artifacts: list[SessionArtifactManifest] = []
         for artifact in report["artefacts"]:
@@ -130,7 +130,7 @@ class SessionArtifactManifest(BaseManifestModel):
                 "size": metadata["size"],
                 "url": [d["url"] for d in artifact["downloads"]],
             }
-            artifacts.append(SessionArtifactManifest.unmarshal(data))
+            artifacts.append(cls.unmarshal(data))
 
         return artifacts
 
@@ -144,13 +144,13 @@ class CraftManifest(ProjectManifest):
 
     dependencies: list[SessionArtifactManifest]
 
-    @staticmethod
+    @classmethod
     def create_craft_manifest(
-        project_manifest_path: pathlib.Path, session_report: dict[str, Any]
-    ) -> "CraftManifest":
+        cls, project_manifest_path: pathlib.Path, session_report: dict[str, Any]
+    ) -> Self:
         """Create the full Craft manifest from a project and session report."""
         project = ProjectManifest.from_yaml_file(project_manifest_path)
         session_deps = SessionArtifactManifest.from_session_report(session_report)
 
         data = {**project.marshal(), "dependencies": session_deps}
-        return CraftManifest.model_validate(data)
+        return cls.model_validate(data)
