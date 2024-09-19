@@ -894,6 +894,6 @@ def test_check_git_repo_for_remote_build_shallow(empty_working_directory):
 
     with pytest.raises(
         RemoteBuildInvalidGitRepoError,
-        match="Remote build for shallow cloned git repos are no longer supported",
+        match="Remote builds for shallow cloned git repos are not supported",
     ):
         check_git_repo_for_remote_build(git_shallow_path)
