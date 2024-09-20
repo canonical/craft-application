@@ -590,3 +590,42 @@ def repository_with_unannotated_tag(
     subprocess.run(["git", "tag", test_tag], check=True)
     repository_with_commit.tag = test_tag
     return repository_with_commit
+
+
+@pytest.fixture
+def mock_pro_api_call(mocker):
+    mock_responses = {
+        "u.pro.status.is_attached.v1": {
+            "data": {
+                "attributes": {"is_attached": False},
+                "result": "success",
+            }
+        },
+        "u.pro.status.enabled_services.v1": {
+            "data": {"attributes": {"enabled_services": []}},
+            "result": "success",
+        },
+    }
+
+    def set_is_attached(value: bool):  # noqa: FBT001
+        response = mock_responses["u.pro.status.is_attached.v1"]
+        response["data"]["attributes"]["is_attached"] = value
+
+    def set_enabled_services(service_names: list[str]):
+        enabled_services = [
+            {"name": name, "variant_enabled": False, "variant_name": None}
+            for name in service_names
+        ]
+
+        response = mock_responses["u.pro.status.enabled_services.v1"]
+        response["data"]["attributes"]["enabled_services"] = enabled_services
+
+    def mock_pro_api_call(endpoint: str):
+        return mock_responses[endpoint]
+
+    mocker.patch(
+        "craft_application.util.ProServices._pro_api_call",
+        new=mock_pro_api_call,
+    )
+
+    return set_is_attached, set_enabled_services

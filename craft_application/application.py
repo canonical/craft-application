@@ -38,6 +38,7 @@ from platformdirs import user_cache_path
 
 from craft_application import _config, commands, errors, models, util
 from craft_application.errors import PathInvalidError
+from craft_application.util import ValidatorOptions
 
 if TYPE_CHECKING:
     import argparse
@@ -560,6 +561,7 @@ class Application:
         # Some commands might have a project_dir parameter. Those commands and
         # only those commands should get a project directory, but only when
         # not managed.
+
         if self.is_managed():
             self.project_dir = pathlib.Path("/root/project")
         elif project_dir := getattr(args, "project_dir", None):
@@ -591,13 +593,21 @@ class Application:
     def _run_inner(self) -> int:
         """Actual run implementation."""
         dispatcher = self._get_dispatcher()
-        command = cast(
-            commands.AppCommand,
-            dispatcher.load_command(self.app_config),
-        )
-        parsed_args = dispatcher.parsed_args()
-        platform = self.get_arg_or_config(parsed_args, "platform")
-        build_for = self.get_arg_or_config(parsed_args, "build_for")
+        craft_cli.emit.debug("Preparing application...")
+
+        return_code = 1  # General error
+        try:
+            command = cast(
+                commands.AppCommand,
+                dispatcher.load_command(self.app_config),
+            )
+
+            platform = getattr(dispatcher.parsed_args(), "platform", None)
+            build_for = getattr(dispatcher.parsed_args(), "build_for", None)
+            pro_services = getattr(dispatcher.parsed_args(), "pro", None)
+
+            run_managed = command.run_managed(dispatcher.parsed_args())
+            is_managed = self.is_managed()
 
         # Some commands (e.g. remote build) can allow multiple platforms
         # or build-fors, comma-separated. In these cases, we create the
@@ -608,46 +618,53 @@ class Application:
             build_for = build_for.split(",", maxsplit=1)[0]
         craft_cli.emit.debug(f"Build plan: platform={platform}, build_for={build_for}")
 
-        self._pre_run(dispatcher)
+            # Check that pro services are correctly configured. A ProServices instance will
+            # only be available for lifecycle commands, otherwise we default to None
+            if pro_services is not None:
+                # Validate requested pro services on the host if we are running in destructive mode...
+                if not run_managed and not is_managed:
+                    craft_cli.emit.debug(
+                        f"Validating requested Ubuntu Pro status on host: {pro_services}"
+                    )
+                    pro_services.validate()
+                # .. or running in managed mode inside a managed instance
+                elif run_managed and is_managed:
+                    craft_cli.emit.debug(
+                        f"Validating requested Ubuntu Pro status in managed instance: {pro_services}"
+                    )
+                    pro_services.validate()
+                # .. or validate pro attachment and service names on the host before starting a managed instance.
+                elif run_managed and not is_managed:
+                    craft_cli.emit.debug(
+                        f"Validating requested Ubuntu Pro attachment on host: {pro_services}"
+                    )
+                    pro_services.validate(
+                        options=ValidatorOptions.ATTACHMENT | ValidatorOptions.SUPPORT
+                    )
 
-        if command.needs_project(parsed_args):
-            project_service = self.services.get("project")
-            # This branch always runs, except during testing.
-            if not project_service.is_configured:
-                project_service.configure(platform=platform, build_for=build_for)
+            if run_managed or command.needs_project(dispatcher.parsed_args()):
+                self.services.project = self.get_project(
+                    platform=platform, build_for=build_for
+                )
 
-        managed_mode = command.run_managed(parsed_args)
-        provider_name = command.provider_name(parsed_args)
-        self._configure_services(provider_name)
+            craft_cli.emit.debug(
+                f"Build plan: platform={platform}, build_for={build_for}"
+            )
+            self._pre_run(dispatcher)
 
-        return_code = 1  # General error
-        if not managed_mode:
-            # command runs in the outer instance
-            craft_cli.emit.debug(f"Running {self.app.name} {command.name} on host")
-            return_code = dispatcher.run() or os.EX_OK
-        elif not self.is_managed():
-            # command runs in inner instance, but this is the outer instance
-            self.run_managed(platform, build_for)
-            return_code = os.EX_OK
-        else:
-            # command runs in inner instance
-            return_code = dispatcher.run() or 0
+            self._configure_services(provider_name)
 
-        return return_code
-
-    def run(self) -> int:
-        """Bootstrap and run the application."""
-        self._setup_logging()
-        self._configure_early_services()
-        self._initialize_craft_parts()
-        self._load_plugins()
-
-        craft_cli.emit.debug("Preparing application...")
-
-        debug_mode = self.services.get("config").get("debug")
-
-        try:
-            return_code = self._run_inner()
+            if not run_managed:
+                # command runs in the outer instance
+                craft_cli.emit.debug(f"Running {self.app.name} {command.name} on host")
+                return_code = dispatcher.run() or os.EX_OK
+            elif not is_managed:
+                # command runs in inner instance, but this is the outer instance
+                self.run_managed(platform, build_for)
+                return_code = os.EX_OK
+            else:
+                # command runs in inner instance
+                return_code = dispatcher.run() or 0
         except craft_cli.ArgumentParsingError as err:
             print(err, file=sys.stderr)  # to stderr, as argparse normally does
             craft_cli.emit.ended_ok()

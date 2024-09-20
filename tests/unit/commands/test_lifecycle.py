@@ -19,6 +19,7 @@ import argparse
 import pathlib
 import subprocess
 from unittest import mock
+from contextlib import nullcontext
 
 import craft_parts
 import craft_platforms
@@ -44,6 +45,18 @@ from craft_application.services.service_factory import ServiceFactory
 from craft_parts import Features
 
 pytestmark = [pytest.mark.usefixtures("fake_project_file")]
+from craft_application.errors import (
+    InvalidUbuntuProServiceError,
+    InvalidUbuntuProStatusError,
+    UbuntuProAttachedError,
+    UbuntuProDetachedError,
+)
+from craft_application.util import ProServices
+from craft_cli import emit
+from craft_parts import Features
+
+# disable black reformat for improve readability on long parameterisations
+# fmt: off
 
 PARTS_LISTS = [[], ["my-part"], ["my-part", "your-part"]]
 SHELL_PARAMS = [
@@ -61,6 +74,28 @@ BUILD_ENV_COMMANDS = [
     ({"destructive_mode": True, "use_lxd": False}, ["--destructive-mode"]),
     ({"destructive_mode": False, "use_lxd": True}, ["--use-lxd"]),
 ]
+
+# test paring --pro argument with various pro services, and whitespace
+PRO_SERVICE_COMMANDS = [
+    ({"pro": ProServices()},                                []),
+    ({"pro": ProServices(["fips-updates"])},                ["--pro", "fips-updates"]),
+    ({"pro": ProServices(["fips-updates", "esm-infra"])},   ["--pro", "fips-updates,esm-infra"]),
+    ({"pro": ProServices(["fips-updates", "esm-infra"])},   ["--pro", "fips-updates , esm-infra"]),
+    ({"pro": ProServices(["fips-updates"])},                ["--pro", "fips-updates,fips-updates"]),
+]
+
+PRO_SERVICE_CONFIGS = [
+    # is_attached,           enabled_services,           pro_services_args,                  expected_exception
+    (False,                 [],                          [],                                None),
+    (True,                  ["esm-apps"],                ["esm-apps"],                      None),
+    (True,                  ["esm-apps", "fips-updates"],["esm-apps", "fips-updates"],      None),
+    (True,                  ["esm-apps"],                [],                                UbuntuProAttachedError),
+    (False,                 [],                          ["esm-apps"],                      UbuntuProDetachedError),
+    (True,                  ["esm-apps", "fips-updates"],["fips-updates"],                  InvalidUbuntuProStatusError),
+    (True,                  ["esm-apps",],               ["fips-updates", "fips-updates"],  InvalidUbuntuProStatusError),
+    (True,                  ["esm-apps"],                ["esm-apps", "invalid-service"],   InvalidUbuntuProServiceError),
+]
+
 STEP_NAMES = [step.name.lower() for step in craft_parts.Step]
 MANAGED_LIFECYCLE_COMMANDS = (
     PullCommand,
@@ -72,6 +107,8 @@ MANAGED_LIFECYCLE_COMMANDS = (
 UNMANAGED_LIFECYCLE_COMMANDS = (CleanCommand, PackCommand)
 ALL_LIFECYCLE_COMMANDS = MANAGED_LIFECYCLE_COMMANDS + UNMANAGED_LIFECYCLE_COMMANDS
 NON_CLEAN_COMMANDS = (*MANAGED_LIFECYCLE_COMMANDS, PackCommand)
+
+# fmt: on
 
 
 def get_fake_command_class(parent_cls, managed):
@@ -87,6 +124,32 @@ def get_fake_command_class(parent_cls, managed):
             return self._run_managed
 
     return FakeCommand
+
+
+@pytest.mark.parametrize(
+    ("is_attached", "enabled_services", "pro_services_args", "expected_exception"),
+    PRO_SERVICE_CONFIGS,
+)
+def test_validate_pro_services(
+    mock_pro_api_call,
+    is_attached,
+    enabled_services,
+    pro_services_args,
+    expected_exception,
+):
+    # configure api state
+    set_is_attached, set_enabled_service = mock_pro_api_call
+    set_is_attached(is_attached)
+    set_enabled_service(enabled_services)
+
+    exception_context = (
+        pytest.raises(expected_exception) if expected_exception else nullcontext()
+    )
+
+    with exception_context:
+        # create and validate pro services
+        pro_services = ProServices(pro_services_args)
+        pro_services.validate()
 
 
 @pytest.mark.parametrize(
@@ -117,12 +180,15 @@ def test_get_lifecycle_command_group(enable_overlay, commands):
     Features.reset()
 
 
+@pytest.mark.parametrize(("pro_service_dict", "pro_service_args"), PRO_SERVICE_COMMANDS)
 @pytest.mark.parametrize(("build_env_dict", "build_env_args"), BUILD_ENV_COMMANDS)
 @pytest.mark.parametrize(("debug_dict", "debug_args"), DEBUG_PARAMS)
 @pytest.mark.parametrize(("shell_dict", "shell_args"), SHELL_PARAMS)
 def test_lifecycle_command_fill_parser(
     default_app_metadata,
     fake_services,
+    pro_service_dict,
+    pro_service_args,
     build_env_dict,
     build_env_args,
     debug_dict,
@@ -139,11 +205,16 @@ def test_lifecycle_command_fill_parser(
         **shell_dict,
         **debug_dict,
         **build_env_dict,
+        **pro_service_dict,
     }
 
     command.fill_parser(parser)
 
-    args_dict = vars(parser.parse_args([*build_env_args, *debug_args, *shell_args]))
+    args_dict = vars(
+        parser.parse_args(
+            [*pro_service_args, *build_env_args, *debug_args, *shell_args]
+        )
+    )
     assert args_dict == expected
 
 
@@ -291,6 +362,7 @@ def test_run_manager_for_build_plan(
     mock_run_managed.assert_called_once_with(build, fetch)
 
 
+@pytest.mark.parametrize(("pro_service_dict", "pro_service_args"), PRO_SERVICE_COMMANDS)
 @pytest.mark.parametrize(("build_env_dict", "build_env_args"), BUILD_ENV_COMMANDS)
 @pytest.mark.parametrize(("debug_dict", "debug_args"), DEBUG_PARAMS)
 @pytest.mark.parametrize(("shell_dict", "shell_args"), SHELL_PARAMS)
@@ -298,6 +370,8 @@ def test_run_manager_for_build_plan(
 def test_step_command_fill_parser(
     default_app_metadata,
     fake_services,
+    pro_service_dict,
+    pro_service_args,
     parts_args,
     build_env_dict,
     build_env_args,
@@ -315,13 +389,16 @@ def test_step_command_fill_parser(
         **shell_dict,
         **debug_dict,
         **build_env_dict,
+        **pro_service_dict,
     }
     command = cls({"app": default_app_metadata, "services": fake_services})
 
     command.fill_parser(parser)
 
     args_dict = vars(
-        parser.parse_args([*build_env_args, *shell_args, *debug_args, *parts_args])
+        parser.parse_args(
+            [*pro_service_args, *build_env_args, *shell_args, *debug_args, *parts_args]
+        )
     )
     assert args_dict == expected
 
@@ -460,6 +537,44 @@ def test_clean_run_without_parts(
     assert mock_services.provider.clean_instances.called == expected_provider
 
 
+@pytest.mark.parametrize(
+    ("destructive", "build_env", "parts", "expected_run_managed"),
+    [
+        # destructive mode or CRAFT_BUILD_ENV==host should not run managed
+        (True, "lxd", [], False),
+        (True, "host", [], False),
+        (False, "host", [], False),
+        (True, "lxd", ["part1"], False),
+        (True, "host", ["part1"], False),
+        (False, "host", ["part1"], False),
+        (True, "lxd", ["part1", "part2"], False),
+        (True, "host", ["part1", "part2"], False),
+        (False, "host", ["part1", "part2"], False),
+        # destructive mode==False and CRAFT_BUILD_ENV!=host: depends on "parts"
+        # clean specific parts: should run managed
+        (False, "lxd", ["part1"], True),
+        (False, "lxd", ["part1", "part2"], True),
+        # "part-less" clean: shouldn't run managed
+        (False, "lxd", [], False),
+    ],
+)
+def test_clean_run_managed(
+    app_metadata,
+    mock_services,
+    destructive,
+    build_env,
+    parts,
+    expected_run_managed,
+    monkeypatch,
+):
+    monkeypatch.setenv("CRAFT_BUILD_ENVIRONMENT", build_env)
+    parsed_args = argparse.Namespace(parts=parts, destructive_mode=destructive)
+    command = CleanCommand({"app": app_metadata, "services": mock_services})
+
+    assert command.run_managed(parsed_args) == expected_run_managed
+
+
+@pytest.mark.parametrize(("pro_service_dict", "pro_service_args"), PRO_SERVICE_COMMANDS)
 @pytest.mark.parametrize(("build_env_dict", "build_env_args"), BUILD_ENV_COMMANDS)
 @pytest.mark.parametrize(("shell_dict", "shell_args"), SHELL_PARAMS)
 @pytest.mark.parametrize(("debug_dict", "debug_args"), DEBUG_PARAMS)
@@ -467,6 +582,8 @@ def test_clean_run_without_parts(
 def test_pack_fill_parser(
     app_metadata,
     mock_services,
+    pro_service_dict,
+    pro_service_args,
     build_env_dict,
     build_env_args,
     shell_dict,
@@ -486,6 +603,7 @@ def test_pack_fill_parser(
         **shell_dict,
         **debug_dict,
         **build_env_dict,
+        **pro_service_dict,
     }
     command = PackCommand({"app": app_metadata, "services": mock_services})
 
@@ -493,7 +611,7 @@ def test_pack_fill_parser(
 
     args_dict = vars(
         parser.parse_args(
-            [*build_env_args, *shell_args, *debug_args, f"--output={output_arg}"]
+            [*pro_service_args, *build_env_args, *debug_args, f"--output={output_arg}"]
         )
     )
     assert args_dict == expected

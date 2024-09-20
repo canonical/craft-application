@@ -28,6 +28,7 @@ from typing_extensions import override
 
 from craft_application import errors, models, util
 from craft_application.commands import base
+from craft_application.util import ProServices
 
 _PACKED_FILE_LIST_PATH = ".craft/packed-files"
 
@@ -72,18 +73,42 @@ class _BaseLifecycleCommand(base.ExtensibleCommand):
         super()._fill_parser(parser)  # type: ignore[arg-type]
 
         group = parser.add_mutually_exclusive_group()
-        if self._allow_destructive:
-            group.add_argument(
-                "--destructive-mode",
-                action="store_true",
-                help="Build in the current host",
-            )
-        if self._show_lxd_arg:
-            group.add_argument(
-                "--use-lxd",
-                action="store_true",
-                help="Build in a LXD container.",
-            )
+        group.add_argument(
+            "--destructive-mode",
+            action="store_true",
+            help="Build in the current host",
+        )
+        group.add_argument(
+            "--use-lxd",
+            action="store_true",
+            help="Build in a LXD container.",
+        )
+
+        supported_pro_services = ", ".join(
+            [f"'{name}'" for name in ProServices.supported_services]
+        )
+
+        parser.add_argument(
+            "--pro",
+            type=ProServices.from_csv,
+            metavar="<pro-services>",
+            help=(
+                "Enable Ubuntu Pro services for this command. "
+                f"Supported values include: {supported_pro_services}. "
+                "Multiple values can be passed separated by commas. "
+                "Note: This feature requires an Ubuntu Pro compatible host and build base."
+            ),
+            default=ProServices(),
+        )
+
+    # TODO: do we need this?
+    # @override
+    # def get_managed_cmd(self, parsed_args: argparse.Namespace) -> list[str]:
+    #     cmd = super().get_managed_cmd(parsed_args)
+
+    #     cmd.extend(parsed_args.parts)
+
+    #     return cmd
 
     @override
     def provider_name(self, parsed_args: argparse.Namespace) -> str | None:

@@ -384,3 +384,87 @@ class ArtifactCreationError(CraftError):
 
 class StateServiceError(CraftError):
     """Errors related to the state service."""
+
+
+class UbuntuProError(CraftError):
+    """Base Exception class for ProServices."""
+
+
+class UbuntuProApiError(UbuntuProError):
+    """Base class for exceptions raised during Ubuntu Pro Api calls."""
+
+
+class InvalidUbuntuProStateError(UbuntuProError):
+    """Base class for exceptions raised during Ubuntu Pro validation."""
+
+    # TODO: some of the resolution strings may not sense in a managed
+    # environment. What is the best way to get the is_managed method here?
+
+
+class UbuntuProClientNotFoundError(UbuntuProApiError):
+    """Raised when Ubuntu Pro client was not found on the system."""
+
+    def __init__(self, path: str) -> None:
+        message = f'The Ubuntu Pro client was not found on the system at "{path}"'
+
+        super().__init__(message=message)
+
+
+class UbuntuProDetachedError(InvalidUbuntuProStateError):
+    """Raised when Ubuntu Pro is not attached, but Pro services were requested."""
+
+    def __init__(self) -> None:
+        message = "Ubuntu Pro is requested, but was found detached."
+        resolution = 'Attach Ubuntu Pro to continue. See "pro" command for details.'
+
+        super().__init__(message=message, resolution=resolution)
+
+
+class UbuntuProAttachedError(InvalidUbuntuProStateError):
+    """Raised when Ubuntu Pro is attached, but Pro services were not requested."""
+
+    def __init__(self) -> None:
+        message = "Ubuntu Pro is not requested, but was found attached."
+        resolution = 'Detach Ubuntu Pro to continue. See "pro" command for details.'
+
+        super().__init__(message=message, resolution=resolution)
+
+
+class InvalidUbuntuProServiceError(InvalidUbuntuProStateError):
+    """Raised when the requested Ubuntu Pro service is not supported or invalid."""
+
+    # TODO: Should there be separate exceptions for services that not supported vs. invalid?
+    # if so where is the list of supported service names?
+
+    def __init__(self, invalid_services: set[str]) -> None:
+        invalid_services_str = "".join(invalid_services)
+
+        message = "Invalid Ubuntu Pro Services were requested."
+        resolution = (
+            "The services listed are either not supported by this application "
+            "or are invalid Ubuntu Pro Services.\n"
+            f"Invalid Services: {invalid_services_str}\n"
+            'See "--pro" argument details for supported services.'
+        )
+
+        super().__init__(message=message, resolution=resolution)
+
+
+class InvalidUbuntuProStatusError(InvalidUbuntuProStateError):
+    """Raised when the incorrect set of Pro Services are enabled."""
+
+    def __init__(
+        self, requested_services: set[str], available_services: set[str]
+    ) -> None:
+        enable_services_str = " ".join(requested_services - available_services)
+        disable_services_str = " ".join(available_services - requested_services)
+
+        message = "Incorrect Ubuntu Pro Services were enabled."
+        resolution = (
+            "Please enable or disable the following services.\n"
+            f"Enable: {enable_services_str}\n"
+            f"Disable: {disable_services_str}\n"
+            'See "pro" command for details.'
+        )
+
+        super().__init__(message=message, resolution=resolution)
