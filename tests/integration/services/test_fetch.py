@@ -14,6 +14,7 @@
 #  You should have received a copy of the GNU Lesser General Public License
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Tests for FetchService."""
+
 import contextlib
 import io
 import pathlib
@@ -26,8 +27,7 @@ from unittest import mock
 import craft_providers
 import pytest
 from craft_application import errors, fetch, services, util
-from craft_application.models import BuildInfo
-from craft_providers import bases
+from craft_platforms import BuildInfo, DistroBase
 
 
 @cache
@@ -224,7 +224,7 @@ def lxd_instance(snap_safe_tmp_path, provider_service):
     provider_service.get_provider("lxd")
 
     arch = util.get_host_architecture()
-    build_info = BuildInfo("foo", arch, arch, bases.BaseName("ubuntu", "22.04"))
+    build_info = BuildInfo("foo", arch, arch, DistroBase("ubuntu", "22.04"))
     instance = provider_service.instance(build_info, work_dir=snap_safe_tmp_path)
 
     with instance as executor:
