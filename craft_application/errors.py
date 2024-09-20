@@ -17,6 +17,7 @@
 
 All errors inherit from craft_cli.CraftError.
 """
+
 from __future__ import annotations
 
 import os
@@ -25,9 +26,9 @@ from typing import TYPE_CHECKING
 
 import yaml
 from craft_cli import CraftError
+from craft_platforms import BuildInfo
 from craft_providers import bases
 
-from craft_application import models
 from craft_application.util.error_formatting import format_pydantic_errors
 from craft_application.util.string import humanize_list
 
@@ -164,7 +165,7 @@ class EmptyBuildPlanError(CraftError):
 class MultipleBuildsError(CraftError):
     """The build plan contains multiple possible builds."""
 
-    def __init__(self, matching_builds: list[models.BuildInfo] | None = None) -> None:
+    def __init__(self, matching_builds: list[BuildInfo] | None = None) -> None:
         message = "Multiple builds match the current platform"
         if matching_builds:
             message += ": " + humanize_list(
