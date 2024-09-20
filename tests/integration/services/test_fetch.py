@@ -27,7 +27,7 @@ from unittest import mock
 import craft_providers
 import pytest
 from craft_application import errors, fetch, services, util
-from craft_platforms import BuildInfo, DistroBase
+from craft_platforms import BuildInfo, DistroBase, DebianArchitecture
 
 
 @cache
@@ -223,7 +223,7 @@ check_requests = (
 def lxd_instance(snap_safe_tmp_path, provider_service):
     provider_service.get_provider("lxd")
 
-    arch = util.get_host_architecture()
+    arch = DebianArchitecture.from_host()
     build_info = BuildInfo("foo", arch, arch, DistroBase("ubuntu", "22.04"))
     instance = provider_service.instance(build_info, work_dir=snap_safe_tmp_path)
 

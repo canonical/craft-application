@@ -376,33 +376,33 @@ def test_get_primed_stage_packages(lifecycle_service):
                 craft_platforms.BuildInfo(
                     "my-platform",
                     build_on="any",
-                    build_for="amd64",
+                    build_for=craft_platforms.DebianArchitecture.AMD64,
                     build_base=craft_platforms.DistroBase("ubuntu", "24.04"),
                 )
             ],
-            "amd64",
+            craft_platforms.DebianArchitecture.AMD64,
         ),
         (
             [
                 craft_platforms.BuildInfo(
                     "my-platform",
                     build_on="any",
-                    build_for="arm64",
+                    build_for=craft_platforms.DebianArchitecture.ARM64,
                     build_base=craft_platforms.DistroBase("ubuntu", "24.04"),
                 )
             ],
-            "arm64",
+            craft_platforms.DebianArchitecture.ARM64,
         ),
         (
             [
                 craft_platforms.BuildInfo(
                     "my-platform",
                     build_on="any",
-                    build_for="riscv64",
+                    build_for=craft_platforms.DebianArchitecture.RISCV64,
                     build_base=craft_platforms.DistroBase("ubuntu", "24.04"),
                 )
             ],
-            "riscv64",
+            craft_platforms.DebianArchitecture.RISCV64,
         ),
     ],
 )
