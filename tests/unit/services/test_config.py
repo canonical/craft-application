@@ -217,8 +217,8 @@ def test_default_config_handler_success(default_config_handler, item, expected):
 )
 def test_config_service_converts_type(
     monkeypatch: pytest.MonkeyPatch,
+    fake_services,  # Has to be intantiated before `fake_process` as it calls lsb_release
     fake_process: pytest_subprocess.FakeProcess,
-    fake_services,
     item: str,
     environment_variables: dict[str, str],
     expected,
