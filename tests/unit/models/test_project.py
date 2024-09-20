@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Tests for BaseProject"""
+
 import copy
 import pathlib
 import re
@@ -591,18 +592,18 @@ def test_platform_invalid_build_arch(model, field_name, basic_project_dict):
             ],
             id="complex",
         ),
-        # pytest.param(
-        #    {"arm64": {"build-on": ["arm64"], "build-for": ["all"]}},
-        #    [
-        #        craft_platforms.BuildInfo(
-        #            platform="arm64",
-        #            build_on=craft_platforms.DebianArchitecture("arm64"),
-        #            build_for="all",
-        #            build_base=craft_platforms.DistroBase("ubuntu", "24.04"),
-        #        ),
-        #    ],
-        #    id="all",
-        # ),
+        pytest.param(
+            {"arm64": {"build-on": ["arm64"], "build-for": ["all"]}},
+            [
+                craft_platforms.BuildInfo(
+                    platform="arm64",
+                    build_on=craft_platforms.DebianArchitecture("arm64"),
+                    build_for="all",
+                    build_base=craft_platforms.DistroBase("ubuntu", "24.04"),
+                ),
+            ],
+            id="all",
+        ),
     ],
 )
 def test_get_build_plan(platforms, expected_build_info):
