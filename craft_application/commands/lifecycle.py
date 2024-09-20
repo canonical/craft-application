@@ -14,20 +14,19 @@
 """Basic lifecycle commands for a Craft Application."""
 from __future__ import annotations
 
+import argparse
 import os
 import pathlib
 import subprocess
 import textwrap
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from craft_cli import CommandGroup, emit
 from craft_parts.features import Features
 from typing_extensions import override
 
 from craft_application.commands import base
-
-if TYPE_CHECKING:  # pragma: no cover
-    import argparse
+from craft_application.util import ProServices
 
 
 def get_lifecycle_command_group() -> CommandGroup:
@@ -75,6 +74,23 @@ class _BaseLifecycleCommand(base.ExtensibleCommand):
             "--use-lxd",
             action="store_true",
             help="Build in a LXD container.",
+        )
+
+        supported_pro_services = ", ".join(
+            [f"'{name}'" for name in ProServices.supported_services]
+        )
+
+        parser.add_argument(
+            "--pro",
+            type=ProServices.from_csv,
+            metavar="<pro-services>",
+            help=(
+                "Enable Ubuntu Pro services for this command. "
+                f"Supported values include: {supported_pro_services}. "
+                "Multiple values can be passed separated by commas. "
+                "Note: This feature requires an Ubuntu Pro compatible host and build base."
+            ),
+            default=ProServices(),
         )
 
     @override

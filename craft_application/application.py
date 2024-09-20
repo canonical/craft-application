@@ -38,6 +38,7 @@ from platformdirs import user_cache_path
 from craft_application import commands, errors, grammar, models, secrets, util
 from craft_application.errors import PathInvalidError
 from craft_application.models import BuildInfo, GrammarAwareProject
+from craft_application.util import ValidatorOptions
 
 if TYPE_CHECKING:
     from craft_application.services import service_factory
@@ -480,6 +481,7 @@ class Application:
         # Some commands might have a project_dir parameter. Those commands and
         # only those commands should get a project directory, but only when
         # not managed.
+
         if self.is_managed():
             self.project_dir = pathlib.Path("/root/project")
         elif project_dir := getattr(dispatcher.parsed_args(), "project_dir", None):
@@ -506,8 +508,13 @@ class Application:
                 commands.AppCommand,
                 dispatcher.load_command(self.app_config),
             )
+
             platform = getattr(dispatcher.parsed_args(), "platform", None)
             build_for = getattr(dispatcher.parsed_args(), "build_for", None)
+            pro_services = getattr(dispatcher.parsed_args(), "pro", None)
+
+            run_managed = command.run_managed(dispatcher.parsed_args())
+            is_managed = self.is_managed()
 
             # Some commands (e.g. remote build) can allow multiple platforms
             # or build-fors, comma-separated. In these cases, we create the
@@ -519,24 +526,47 @@ class Application:
 
             provider_name = command.provider_name(dispatcher.parsed_args())
 
+            # Check that pro services are correctly configured. A ProServices instance will
+            # only be available for lifecycle commands, otherwise we default to None
+            if pro_services is not None:
+                # Validate requested pro services on the host if we are running in destructive mode...
+                if not run_managed and not is_managed:
+                    craft_cli.emit.debug(
+                        f"Validating requested Ubuntu Pro status on host: {pro_services}"
+                    )
+                    pro_services.validate()
+                # .. or running in managed mode inside a managed instance
+                elif run_managed and is_managed:
+                    craft_cli.emit.debug(
+                        f"Validating requested Ubuntu Pro status in managed instance: {pro_services}"
+                    )
+                    pro_services.validate()
+                # .. or validate pro attachment and service names on the host before starting a managed instance.
+                elif run_managed and not is_managed:
+                    craft_cli.emit.debug(
+                        f"Validating requested Ubuntu Pro attachment on host: {pro_services}"
+                    )
+                    pro_services.validate(
+                        options=ValidatorOptions.ATTACHMENT | ValidatorOptions.SUPPORT
+                    )
+
+            if run_managed or command.needs_project(dispatcher.parsed_args()):
+                self.services.project = self.get_project(
+                    platform=platform, build_for=build_for
+                )
+
             craft_cli.emit.debug(
                 f"Build plan: platform={platform}, build_for={build_for}"
             )
             self._pre_run(dispatcher)
 
-            managed_mode = command.run_managed(dispatcher.parsed_args())
-            if managed_mode or command.needs_project(dispatcher.parsed_args()):
-                self.services.project = self.get_project(
-                    platform=platform, build_for=build_for
-                )
-
             self._configure_services(provider_name)
 
-            if not managed_mode:
+            if not run_managed:
                 # command runs in the outer instance
                 craft_cli.emit.debug(f"Running {self.app.name} {command.name} on host")
                 return_code = dispatcher.run() or os.EX_OK
-            elif not self.is_managed():
+            elif not is_managed:
                 # command runs in inner instance, but this is the outer instance
                 self.run_managed(platform, build_for)
                 return_code = os.EX_OK

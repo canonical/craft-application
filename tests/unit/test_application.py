@@ -658,7 +658,13 @@ def test_craft_lib_log_level(app_metadata, fake_services):
         assert logger.level == logging.DEBUG
 
 
-def test_gets_project(monkeypatch, tmp_path, app_metadata, fake_services):
+def test_gets_project(
+    monkeypatch,
+    tmp_path,
+    app_metadata,
+    fake_services,
+    mock_pro_api_call,  # noqa: ARG001
+):
     project_file = tmp_path / "testcraft.yaml"
     project_file.write_text(BASIC_PROJECT_YAML)
     monkeypatch.setattr(sys, "argv", ["testcraft", "pull", "--destructive-mode"])
@@ -675,7 +681,12 @@ def test_gets_project(monkeypatch, tmp_path, app_metadata, fake_services):
 
 
 def test_fails_without_project(
-    monkeypatch, capsys, tmp_path, app_metadata, fake_services
+    monkeypatch,
+    capsys,
+    tmp_path,
+    app_metadata,
+    fake_services,
+    mock_pro_api_call,  # noqa: ARG001
 ):
     monkeypatch.setattr(sys, "argv", ["testcraft", "prime"])
 
@@ -764,7 +775,11 @@ def test_pre_run_project_dir_success_unmanaged(app, fs, project_dir):
 
 
 @pytest.mark.parametrize("project_dir", ["relative/file", "/absolute/file"])
-def test_pre_run_project_dir_not_a_directory(app, fs, project_dir):
+def test_pre_run_project_dir_not_a_directory(
+    app,
+    fs,
+    project_dir,
+):
     fs.create_file(project_dir)
     dispatcher = mock.Mock(spec_set=craft_cli.Dispatcher)
     dispatcher.parsed_args.return_value.project_dir = project_dir
@@ -776,7 +791,14 @@ def test_pre_run_project_dir_not_a_directory(app, fs, project_dir):
 @pytest.mark.parametrize("load_project", [True, False])
 @pytest.mark.parametrize("return_code", [None, 0, 1])
 def test_run_success_unmanaged(
-    monkeypatch, emitter, check, app, fake_project, return_code, load_project
+    monkeypatch,
+    emitter,
+    check,
+    app,
+    fake_project,
+    return_code,
+    load_project,
+    mock_pro_api_call,  # noqa: ARG001
 ):
     class UnmanagedCommand(commands.AppCommand):
         name = "pass"
@@ -799,7 +821,9 @@ def test_run_success_unmanaged(
         emitter.assert_debug("Running testcraft pass on host")
 
 
-def test_run_success_managed(monkeypatch, app, fake_project, mocker):
+def test_run_success_managed(
+    monkeypatch, app, fake_project, mocker, mock_pro_api_call  # noqa: ARG001
+):
     mocker.patch.object(app, "get_project", return_value=fake_project)
     app.run_managed = mock.Mock()
     monkeypatch.setattr(sys, "argv", ["testcraft", "pull"])
@@ -809,7 +833,9 @@ def test_run_success_managed(monkeypatch, app, fake_project, mocker):
     app.run_managed.assert_called_once_with(None, None)  # --build-for not used
 
 
-def test_run_success_managed_with_arch(monkeypatch, app, fake_project, mocker):
+def test_run_success_managed_with_arch(
+    monkeypatch, app, fake_project, mocker, mock_pro_api_call  # noqa: ARG001
+):
     mocker.patch.object(app, "get_project", return_value=fake_project)
     app.run_managed = mock.Mock()
     arch = get_host_architecture()
@@ -820,7 +846,9 @@ def test_run_success_managed_with_arch(monkeypatch, app, fake_project, mocker):
     app.run_managed.assert_called_once()
 
 
-def test_run_success_managed_with_platform(monkeypatch, app, fake_project, mocker):
+def test_run_success_managed_with_platform(
+    monkeypatch, app, fake_project, mocker, mock_pro_api_call  # noqa: ARG001
+):
     mocker.patch.object(app, "get_project", return_value=fake_project)
     app.run_managed = mock.Mock()
     monkeypatch.setattr(sys, "argv", ["testcraft", "pull", "--platform=foo"])
@@ -849,7 +877,13 @@ def test_run_success_managed_with_platform(monkeypatch, app, fake_project, mocke
     ],
 )
 def test_run_passes_platforms(
-    monkeypatch, app, fake_project, mocker, params, expected_call
+    monkeypatch,
+    app,
+    fake_project,
+    mocker,
+    params,
+    expected_call,
+    mock_pro_api_call,  # noqa: ARG001
 ):
     mocker.patch.object(app, "get_project", return_value=fake_project)
     app.run_managed = mock.Mock(return_value=False)
@@ -862,7 +896,14 @@ def test_run_passes_platforms(
 
 @pytest.mark.parametrize("return_code", [None, 0, 1])
 def test_run_success_managed_inside_managed(
-    monkeypatch, check, app, fake_project, mock_dispatcher, return_code, mocker
+    monkeypatch,
+    check,
+    app,
+    fake_project,
+    mock_dispatcher,
+    return_code,
+    mocker,
+    mock_pro_api_call,  # noqa: ARG001
 ):
     mocker.patch.object(app, "get_project", return_value=fake_project)
     mocker.patch.object(
