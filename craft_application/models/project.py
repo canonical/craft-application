@@ -17,10 +17,11 @@
 
 This defines the structure of the input file (e.g. snapcraft.yaml)
 """
+
 import abc
 import dataclasses
 from collections.abc import Mapping
-from typing import Annotated, Any
+from typing import Annotated, Any, cast
 
 import craft_parts
 import craft_platforms
@@ -200,9 +201,9 @@ class BuildPlanner(base.CraftBaseModel, metaclass=abc.ABCMeta):
         """Obtain the list of architectures and bases from the Project."""
         data = self.marshal()
         build_infos = craft_platforms.get_platforms_build_plan(
-            base=data["base"],
-            platforms=data["platforms"],
-            build_base=data.get("build-base"),
+            base=cast(str, data["base"]),
+            platforms=cast(craft_platforms.Platforms, data["platforms"]),
+            build_base=cast(str | None, data.get("build-base")),
         )
 
         return list(build_infos)

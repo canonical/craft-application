@@ -14,6 +14,7 @@
 #  You should have received a copy of the GNU Lesser General Public License
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Service class for craft-providers."""
+
 from __future__ import annotations
 
 import contextlib
@@ -185,14 +186,14 @@ class ProviderService(base.ProjectService):
                 (
                     base_name.distribution,
                     base_name.series,
-                )
+                )  # type: ignore[arg-type]
             )
         else:
             alias = bases.get_base_alias(
                 (
                     base_name[0],
                     base_name[1],
-                )
+                )  # type: ignore[arg-type]
             )
         base_class = bases.get_base_from_alias(alias)
         if base_class is bases.BuilddBase:
@@ -358,7 +359,7 @@ class ProviderService(base.ProjectService):
         self,
         provider: craft_providers.Provider,
         work_dir: pathlib.Path,
-        info: models.BuildInfo,
+        info: craft_platforms.BuildInfo,
     ) -> None:
         """Clean an instance, if it exists."""
         instance_name = self._get_instance_name(work_dir, info)
