@@ -234,6 +234,7 @@ def test_configure_build_instance(mocker):
         "https_proxy": expected_proxy,
         "REQUESTS_CA_BUNDLE": "/usr/local/share/ca-certificates/local-ca.crt",
         "CARGO_HTTP_CAINFO": "/usr/local/share/ca-certificates/local-ca.crt",
+        "GOPROXY": "direct",
     }
 
     env = fetch.configure_instance(instance, session_data)

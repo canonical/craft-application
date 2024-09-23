@@ -104,6 +104,8 @@ class NetInfo:
             "REQUESTS_CA_BUNDLE": str(_FETCH_CERT_INSTANCE_PATH),
             # Same, but for cargo.
             "CARGO_HTTP_CAINFO": str(_FETCH_CERT_INSTANCE_PATH),
+            # Have go download directly from repositories
+            "GOPROXY": "direct",
         }
 
 
