@@ -170,16 +170,19 @@ def test_start_service_not_installed(mocker):
 
 
 @assert_requests
-def test_create_session():
+@pytest.mark.parametrize(
+    ("strict", "expected_policy"), [(True, "strict"), (False, "permissive")]
+)
+def test_create_session(strict, expected_policy):
     responses.add(
         responses.POST,
         f"http://localhost:{CONTROL}/session",
         json={"id": "my-session-id", "token": "my-session-token"},
         status=200,
-        match=[matchers.json_params_matcher({"policy": "permissive"})],
+        match=[matchers.json_params_matcher({"policy": expected_policy})],
     )
 
-    session_data = fetch.create_session()
+    session_data = fetch.create_session(strict=strict)
 
     assert session_data.session_id == "my-session-id"
     assert session_data.token == "my-session-token"

@@ -357,8 +357,9 @@ class PackCommand(LifecycleCommand):
 
         parser.add_argument(
             "--use-fetch-service",
-            action="store_true",
             help="Use the Fetch Service to inspect downloaded assets.",
+            choices=("strict", "permissive"),
+            metavar="policy",
         )
 
     @override

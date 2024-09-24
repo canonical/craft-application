@@ -433,7 +433,7 @@ def test_pack_fill_parser(
         "platform": None,
         "build_for": None,
         "output": pathlib.Path(output_arg),
-        "use_fetch_service": False,
+        "use_fetch_service": None,
         **shell_dict,
         **debug_dict,
         **build_env_dict,
@@ -487,7 +487,8 @@ def test_pack_run(
 
 
 @pytest.mark.parametrize(
-    ("use_fetch_service", "expect_create_called"), [(True, True), (False, False)]
+    ("use_fetch_service", "expect_create_called"),
+    [("strict", True), ("permissive", True), (None, False)],
 )
 def test_pack_fetch_manifest(
     mock_services, app_metadata, tmp_path, use_fetch_service, expect_create_called

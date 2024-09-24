@@ -64,7 +64,7 @@ class FakeFetchService(services.FetchService):
         ),
         # --use-fetch-service: full expected calls to the FetchService
         (
-            ["--use-fetch-service"],
+            ["--use-fetch-service", "strict"],
             [
                 # One call to setup
                 "setup",

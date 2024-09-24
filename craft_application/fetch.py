@@ -257,13 +257,13 @@ def stop_service(fetch_process: subprocess.Popen[str]) -> None:
         os.killpg(os.getpgid(fetch_process.pid), signal.SIGKILL)
 
 
-def create_session() -> SessionData:
+def create_session(*, strict: bool) -> SessionData:
     """Create a new fetch-service session.
 
+    :param strict: Whether the created session should be strict.
     :return: a SessionData object containing the session's id and token.
     """
-    # For now we'll always create permissive (as opposed to strict) sessions.
-    json = {"policy": "permissive"}
+    json = {"policy": "strict" if strict else "permissive"}
     data = _service_request("post", "session", json=json).json()
 
     return SessionData.unmarshal(data=data)

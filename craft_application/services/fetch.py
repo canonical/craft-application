@@ -63,11 +63,18 @@ class FetchService(services.ProjectService):
         *,
         project: models.Project,
         build_plan: list[models.BuildInfo],
+        session_policy: str,
     ) -> None:
+        """Create a new FetchService.
+
+        :param session_policy: Whether the created fetch-service sessions should
+          be "strict" or "permissive".
+        """
         super().__init__(app, services, project=project)
         self._fetch_process = None
         self._session_data = None
         self._build_plan = build_plan
+        self._session_policy = session_policy
         self._instance = None
 
     @override
@@ -87,7 +94,8 @@ class FetchService(services.ProjectService):
                 "create_session() called but there's already a live fetch-service session."
             )
 
-        self._session_data = fetch.create_session()
+        strict_session = self._session_policy == "strict"
+        self._session_data = fetch.create_session(strict=strict_session)
         self._instance = instance
         return fetch.configure_instance(instance, self._session_data)
 
