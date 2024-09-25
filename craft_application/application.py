@@ -164,6 +164,8 @@ class Application:
 
         # Whether the command execution should use the fetch-service
         self._use_fetch_service = False
+        # The kind of sessions that the fetch-service service should create
+        self._fetch_service_policy = "strict"
 
     @property
     def app_config(self) -> dict[str, Any]:
@@ -253,6 +255,7 @@ class Application:
         self.services.update_kwargs(
             "fetch",
             build_plan=self._build_plan,
+            session_policy=self._fetch_service_policy,
         )
 
     def _resolve_project_path(self, project_dir: pathlib.Path | None) -> pathlib.Path:
@@ -545,7 +548,10 @@ class Application:
                     resolution="Ensure the path entered is correct.",
                 )
 
-        self._use_fetch_service = getattr(args, "use_fetch_service", False)
+        fetch_service_policy: str | None = getattr(args, "fetch_service_policy", None)
+        if fetch_service_policy:
+            self._use_fetch_service = True
+            self._fetch_service_policy = fetch_service_policy
 
     def get_arg_or_config(
         self, parsed_args: argparse.Namespace, item: str

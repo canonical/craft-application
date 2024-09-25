@@ -373,8 +373,10 @@ class PackCommand(LifecycleCommand):
 
         parser.add_argument(
             "--use-fetch-service",
-            action="store_true",
             help="Use the Fetch Service to inspect downloaded assets.",
+            choices=("strict", "permissive"),
+            metavar="policy",
+            dest="fetch_service_policy",
         )
 
     @override
@@ -414,7 +416,7 @@ class PackCommand(LifecycleCommand):
                 _launch_shell()
             raise
 
-        if parsed_args.use_fetch_service and packages:
+        if parsed_args.fetch_service_policy and packages:
             self._services.fetch.create_project_manifest(packages)
 
         if not packages:
