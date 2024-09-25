@@ -520,10 +520,10 @@ class Application:
                     resolution="Ensure the path entered is correct.",
                 )
 
-        use_fetch_service: str | None = getattr(args, "use_fetch_service", None)
-        if use_fetch_service:
+        fetch_service_policy: str | None = getattr(args, "fetch_service_policy", None)
+        if fetch_service_policy:
             self._use_fetch_service = True
-            self._fetch_service_session = use_fetch_service
+            self._fetch_service_policy = fetch_service_policy
 
     def get_arg_or_config(
         self, parsed_args: argparse.Namespace, item: str

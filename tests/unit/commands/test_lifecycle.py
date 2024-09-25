@@ -433,7 +433,7 @@ def test_pack_fill_parser(
         "platform": None,
         "build_for": None,
         "output": pathlib.Path(output_arg),
-        "use_fetch_service": None,
+        "fetch_service_policy": None,
         **shell_dict,
         **debug_dict,
         **build_env_dict,
@@ -467,7 +467,7 @@ def test_pack_run(
 ):
     mock_services.package.pack.return_value = packages
     parsed_args = argparse.Namespace(
-        parts=parts, output=tmp_path, use_fetch_service=False
+        parts=parts, output=tmp_path, fetch_service_policy=None
     )
     command = PackCommand(
         {
@@ -487,16 +487,16 @@ def test_pack_run(
 
 
 @pytest.mark.parametrize(
-    ("use_fetch_service", "expect_create_called"),
+    ("fetch_service_policy", "expect_create_called"),
     [("strict", True), ("permissive", True), (None, False)],
 )
 def test_pack_fetch_manifest(
-    mock_services, app_metadata, tmp_path, use_fetch_service, expect_create_called
+    mock_services, app_metadata, tmp_path, fetch_service_policy, expect_create_called
 ):
     packages = [pathlib.Path("package.zip")]
     mock_services.package.pack.return_value = packages
     parsed_args = argparse.Namespace(
-        output=tmp_path, use_fetch_service=use_fetch_service
+        output=tmp_path, fetch_service_policy=fetch_service_policy
     )
     command = PackCommand(
         {
@@ -626,7 +626,7 @@ def test_shell_after_pack(
     mock_subprocess_run,
 ):
     parsed_args = argparse.Namespace(
-        shell_after=True, output=pathlib.Path(), use_fetch_service=False
+        shell_after=True, output=pathlib.Path(), fetch_service_policy=None
     )
     mock_lifecycle_run = mocker.patch.object(fake_services.lifecycle, "run")
     mock_pack = mocker.patch.object(fake_services.package, "pack")
