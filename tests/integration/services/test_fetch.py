@@ -78,7 +78,11 @@ def mock_instance():
 @pytest.fixture
 def app_service(app_metadata, fake_services, fake_project, fake_build_plan):
     fetch_service = services.FetchService(
-        app_metadata, fake_services, project=fake_project, build_plan=fake_build_plan
+        app_metadata,
+        fake_services,
+        project=fake_project,
+        build_plan=fake_build_plan,
+        session_policy="permissive",
     )
     yield fetch_service
     fetch_service.shutdown(force=True)
