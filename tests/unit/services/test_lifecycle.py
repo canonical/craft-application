@@ -23,6 +23,7 @@ from unittest import mock
 
 import craft_parts
 import craft_parts.callbacks
+import craft_platforms
 import pytest
 import pytest_check
 from craft_application import errors, models, util
@@ -372,7 +373,7 @@ def test_get_primed_stage_packages(lifecycle_service):
                 BuildInfo(
                     "my-platform",
                     build_on="any",
-                    build_for="amd64",
+                    build_for=craft_platforms.DebianArchitecture.AMD64,
                     base=bases.BaseName("ubuntu", "24.04"),
                 )
             ],
