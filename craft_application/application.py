@@ -581,7 +581,7 @@ class Application:
                 return_code = dispatcher.run() or os.EX_OK
             elif not is_managed:
                 # command runs in inner instance, but this is the outer instance
-                self.run_managed(platform, build_for)
+                self.run_managed(platform, build_for, pro_services)
                 return_code = os.EX_OK
             else:
                 # command runs in inner instance
