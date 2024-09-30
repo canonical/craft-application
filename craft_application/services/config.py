@@ -95,6 +95,15 @@ class SnapConfigHandler(ConfigHandler):
             self._snap = snaphelpers.SnapConfig()
         except KeyError:
             raise OSError("Not running as a snap.")
+        except snaphelpers.SnapCtlError:
+            # Most likely to happen in a container that has the snap environment set.
+            # See: https://github.com/canonical/snapcraft/issues/5079
+            emit.progress(
+                "Snap environment is set, but cannot connect to snapd. "
+                "Snap configuration is unavailable.",
+                permanent=True,
+            )
+            raise OSError("Not running as a snap.")
 
     @override
     def get_raw(self, item: str) -> Any:
