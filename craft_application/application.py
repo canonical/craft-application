@@ -373,12 +373,13 @@ class Application:
                     
                     # TODO: check that we support the methods below
                     if pro_services is not None and hasattr(instance, "enable_pro_services"):
-                        craft_cli.emit.trace(f"enable_pro_services found in {instance}")
-                        craft_cli.emit.debug(f"Enabling Ubuntu Pro Services {pro_services}")
+                        # craft_cli.emit.trace(f"enable_pro_services found in {instance}")
+                        # craft_cli.emit.debug(f"Enabling Ubuntu Pro Services {pro_services}")
                         instance.install_pro_client()
                         instance.enable_pro_service(pro_services)
                     else:
-                        craft_cli.emit.trace(f"enable_pro_services not found in {instance}")
+                        # craft_cli.emit.trace(f"enable_pro_services not found in {instance}")
+                        pass
 
 
                 cmd = [self.app.name, *sys.argv[1:]]
