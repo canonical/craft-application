@@ -382,7 +382,7 @@ class Application:
                     #     pass
 
                     instance.install_pro_client()
-                    instance.enable_pro_service(pro_services)
+                    # instance.enable_pro_service(pro_services)
 
 
                 cmd = [self.app.name, *sys.argv[1:]]
