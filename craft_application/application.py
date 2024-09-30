@@ -38,7 +38,7 @@ from platformdirs import user_cache_path
 from craft_application import commands, errors, grammar, models, secrets, util
 from craft_application.errors import PathInvalidError
 from craft_application.models import BuildInfo, GrammarAwareProject
-from craft_application.util import ValidatorOptions
+from craft_application.util import ValidatorOptions, ProServices
 
 if TYPE_CHECKING:
     from craft_application.services import service_factory
@@ -335,7 +335,7 @@ class Application:
         """Shortcut to tell whether we're running in managed mode."""
         return self.services.ProviderClass.is_managed()
 
-    def run_managed(self, platform: str | None, build_for: str | None) -> None:
+    def run_managed(self, platform: str | None, build_for: str | None, pro_services: ProServices | None = None) -> None:
         """Run the application in a managed instance."""
         extra_args: dict[str, Any] = {}
 
@@ -367,13 +367,25 @@ class Application:
             with self.services.provider.instance(
                 build_info, work_dir=self._work_dir
             ) as instance:
+                
+                with craft_cli.emit.pause():
+                    # Pyright doesn't fully understand craft_providers's CompletedProcess.
+                    
+                    # TODO: check that we support the methods below
+                    if pro_services is not None and hasattr(instance, "enable_pro_services"):
+                        craft_cli.emit.trace(f"enable_pro_services found in {instance}")
+                        craft_cli.emit.debug(f"Enabling Ubuntu Pro Services {pro_services}")
+                        instance.install_pro_client()
+                        instance.enable_pro_service(pro_services)
+                    else:
+                        craft_cli.emit.trace(f"enable_pro_services not found in {instance}")
+
+
                 cmd = [self.app.name, *sys.argv[1:]]
                 craft_cli.emit.debug(
                     f"Executing {cmd} in instance location {instance_path} with {extra_args}."
                 )
                 try:
-                    with craft_cli.emit.pause():
-                        # Pyright doesn't fully understand craft_providers's CompletedProcess.
                         instance.execute_run(  # pyright: ignore[reportUnknownMemberType,reportUnknownVariableType]
                             cmd,
                             cwd=instance_path,
