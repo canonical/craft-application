@@ -75,7 +75,7 @@ types = [
     "types-urllib3",
 ]
 docs = [
-    "canonical-sphinx~=0.1",
+    "canonical-sphinx~=0.2.0",
     "sphinx-autobuild==2024.9.3",
     "sphinx-lint==0.9.1",
 ]
