@@ -91,6 +91,8 @@ class SnapConfigHandler(ConfigHandler):
 
     def __init__(self, app: application.AppMetadata) -> None:
         super().__init__(app)
+        if not snaphelpers.is_snap():
+            raise OSError("Not running as a snap.")
         try:
             self._snap = snaphelpers.SnapConfig()
         except KeyError:
