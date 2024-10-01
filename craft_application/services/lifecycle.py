@@ -164,7 +164,7 @@ class LifecycleService(base.ProjectService):
         # something else like clean() is called).
         # We also use the host arch if the build-for is 'all'
         if self._build_plan and self._build_plan[0].build_for != "all":
-            return self._build_plan[0].build_for
+            return str(self._build_plan[0].build_for)
         return util.get_host_architecture()
 
     def _init_lifecycle_manager(self) -> LifecycleManager:
