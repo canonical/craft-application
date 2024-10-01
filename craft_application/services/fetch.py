@@ -81,6 +81,14 @@ class FetchService(services.ProjectService):
     def setup(self) -> None:
         """Start the fetch-service process with proper arguments."""
         super().setup()
+
+        if not self._services.ProviderClass.is_managed():
+            # Emit a warning, but only on the host-side.
+            emit.message(
+                "Warning: the fetch-service integration is experimental "
+                "and still in development."
+            )
+
         self._fetch_process = fetch.start_service()
 
     def create_session(self, instance: craft_providers.Executor) -> dict[str, str]:

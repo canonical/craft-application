@@ -14,20 +14,18 @@
 """Basic lifecycle commands for a Craft Application."""
 from __future__ import annotations
 
+import argparse
 import os
 import pathlib
 import subprocess
 import textwrap
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from craft_cli import CommandGroup, emit
 from craft_parts.features import Features
 from typing_extensions import override
 
 from craft_application.commands import base
-
-if TYPE_CHECKING:  # pragma: no cover
-    import argparse
 
 
 def get_lifecycle_command_group() -> CommandGroup:
@@ -357,7 +355,7 @@ class PackCommand(LifecycleCommand):
 
         parser.add_argument(
             "--use-fetch-service",
-            help="Use the Fetch Service to inspect downloaded assets.",
+            help=argparse.SUPPRESS,
             choices=("strict", "permissive"),
             metavar="policy",
             dest="fetch_service_policy",
