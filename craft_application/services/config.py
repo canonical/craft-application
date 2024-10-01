@@ -103,7 +103,7 @@ class SnapConfigHandler(ConfigHandler):
                 "Snap configuration is unavailable.",
                 permanent=True,
             )
-            raise OSError("Not running as a snap.")
+            raise OSError("Not running as a snap or with snapd disabled.")
 
     @override
     def get_raw(self, item: str) -> Any:
