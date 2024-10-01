@@ -27,11 +27,11 @@ import json
 import re
 from datetime import datetime
 from unittest import mock
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, call
 
 import craft_providers
 import pytest
-from craft_application import fetch, services
+from craft_application import ProviderService, fetch, services
 from craft_application.models import BuildInfo
 from craft_application.services import fetch as service_module
 from craft_providers import bases
@@ -141,3 +141,20 @@ def test_teardown_session_create_manifest(
     obtained_file = tmp_path / f"{fake_project.name}_{fake_project.version}_amd64.json"
 
     assert obtained_file.read_text() + "\n" == expected_file.read_text()
+
+
+@pytest.mark.parametrize("run_on_host", [True, False])
+def test_warning_experimental(mocker, fetch_service, run_on_host, emitter):
+    """The fetch-service warning should only be emitted when running on the host."""
+    mocker.patch.object(fetch, "start_service")
+    mocker.patch.object(ProviderService, "is_managed", return_value=not run_on_host)
+
+    fetch_service.setup()
+
+    warning = (
+        "Warning: the fetch-service integration is experimental "
+        "and still in development."
+    )
+    warning_emitted = call("message", warning) in emitter.interactions
+
+    assert warning_emitted == run_on_host
