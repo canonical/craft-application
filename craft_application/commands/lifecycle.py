@@ -373,7 +373,7 @@ class PackCommand(LifecycleCommand):
 
         parser.add_argument(
             "--use-fetch-service",
-            help="Use the Fetch Service to inspect downloaded assets.",
+            help=argparse.SUPPRESS,
             choices=("strict", "permissive"),
             metavar="policy",
             dest="fetch_service_policy",
