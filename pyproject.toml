@@ -146,6 +146,8 @@ markers = [
 filterwarnings = [
     "ignore:The craft-application BuildPlanner:PendingDeprecationWarning",
     "ignore:BuildInfo:PendingDeprecationWarning",
+    "ignore:ServiceFactory.set_kwargs:PendingDeprecationWarning",
+    "ignore:The BuildPlanner class is deprecated. Override Application.get_build_plan:DeprecationWarning",
 ]
 
 [tool.coverage.run]

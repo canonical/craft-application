@@ -35,7 +35,9 @@ import craft_application
 import craft_application.errors
 import craft_cli
 import craft_parts
+import craft_platforms
 import craft_providers
+import distro
 import pydantic
 import pytest
 import pytest_check
@@ -1616,19 +1618,27 @@ def non_grammar_build_plan(mocker):
 @pytest.fixture
 def grammar_build_plan(mocker):
     """A build plan to build on amd64 to riscv64 and s390x."""
-    host_arch = "amd64"
-    base = util.get_host_base()
+    base = craft_platforms.DistroBase.from_linux_distribution(
+        distro.LinuxDistribution()
+    )
     build_plan = [
-        models.BuildInfo(
+        craft_platforms.BuildInfo(
             f"platform-{build_for}",
-            host_arch,
+            craft_platforms.DebianArchitecture.AMD64,
             build_for,
             base,
         )
-        for build_for in ("riscv64", "s390x")
+        for build_for in (
+            craft_platforms.DebianArchitecture.RISCV64,
+            craft_platforms.DebianArchitecture.S390X,
+        )
     ]
+    classic_build_plan = [models.BuildInfo.from_platforms(info) for info in build_plan]
 
-    mocker.patch.object(models.BuildPlanner, "get_build_plan", return_value=build_plan)
+    mocker.patch.object(
+        models.BuildPlanner, "get_build_plan", return_value=classic_build_plan
+    )
+    mocker.patch("craft_platforms.get_platforms_build_plan", return_value=build_plan)
 
 
 @pytest.fixture

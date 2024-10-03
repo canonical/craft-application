@@ -24,15 +24,18 @@ import pathlib
 import signal
 import subprocess
 import sys
+import warnings
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
 from functools import cached_property
 from importlib import metadata
-from typing import TYPE_CHECKING, Any, cast, final
+from typing import TYPE_CHECKING, Annotated, Any, cast, final
 
 import craft_cli
 import craft_parts
+import craft_platforms
 import craft_providers
+import pydantic
 from craft_parts.plugins.plugins import PluginType
 from platformdirs import user_cache_path
 
@@ -83,7 +86,12 @@ class AppMetadata:
     ConfigModel: type[_config.ConfigModel] = _config.ConfigModel
 
     ProjectClass: type[models.Project] = models.Project
-    BuildPlannerClass: type[models.BuildPlanner] = models.BuildPlanner
+    BuildPlannerClass: Annotated[
+        type[models.BuildPlanner] | None,
+        pydantic.Field(
+            default=None, deprecated="Use craft-platforms build planning functions."
+        ),
+    ] = None
 
     def __post_init__(self) -> None:
         setter = super().__setattr__
@@ -135,8 +143,12 @@ class Application:
         self._command_groups: list[craft_cli.CommandGroup] = []
         self._global_arguments: list[craft_cli.GlobalArgument] = [GLOBAL_VERSION]
         self._cli_loggers = DEFAULT_CLI_LOGGERS | set(extra_loggers)
-        self._full_build_plan: list[models.BuildInfo] = []
-        self._build_plan: list[models.BuildInfo] = []
+        self._full_build_plan: (
+            list[models.BuildInfo] | Sequence[craft_platforms.BuildInfo]
+        ) = []
+        self._build_plan: (
+            list[models.BuildInfo] | Sequence[craft_platforms.BuildInfo]
+        ) = []
         # When build_secrets are enabled, this contains the secret info to pass to
         # managed instances.
         self._secrets: secrets.BuildSecrets | None = None
@@ -261,6 +273,40 @@ class Application:
 
         return (project_dir / f"{self.app.name}.yaml").resolve(strict=True)
 
+    def get_build_plan(
+        self, yaml_data: dict[str, Any]
+    ) -> Sequence[craft_platforms.BuildInfo] | list[models.BuildInfo]:
+        """Get the build plan for the passed project data.
+
+        :param yaml_data: The raw project data from *craft.yaml, loaded is a dictionary.
+        :returns: a Sequence of BuildInfo objects.
+
+        This returns from the BuildPlannerClass if one is set. Otherwise, the default
+        behaviour is to use the craft-platforms default build planner. Applications
+        that need to override this may implement different build planning functionality
+        here instead.
+        """
+        # Compatibility until the next major version removes the BuildPlanner.
+
+        # We cannot simply check identity because the BuildPlannerClass is actually
+        # a pydantic.Field object if not overridden.
+        if self.app.BuildPlannerClass != None:  # noqa: E711
+            warnings.warn(
+                "The BuildPlanner class is deprecated. Override Application.get_build_plan instead.",
+                category=DeprecationWarning,
+                stacklevel=3,
+            )
+            build_planner = self.app.BuildPlannerClass.from_yaml_data(  # type: ignore[union-attr]
+                yaml_data, self._resolve_project_path(self.project_dir)
+            )
+            return build_planner.get_build_plan()
+
+        return craft_platforms.get_platforms_build_plan(
+            base=cast(str, yaml_data.get("base")),
+            build_base=yaml_data.get("build_base"),
+            platforms=cast(craft_platforms.Platforms, yaml_data.get("platforms")),
+        )
+
     def get_project(
         self,
         *,
@@ -291,13 +337,19 @@ class Application:
         craft_cli.emit.debug(f"Loading project file '{project_path!s}'")
 
         with project_path.open() as file:
-            yaml_data = util.safe_yaml_load(file)
+            yaml_data = cast(dict[str, Any], util.safe_yaml_load(file))
 
         host_arch = util.get_host_architecture()
-        build_planner = self.app.BuildPlannerClass.from_yaml_data(
-            yaml_data, project_path
-        )
-        self._full_build_plan = build_planner.get_build_plan()
+        # Types are converted for compatibility. A future major version will
+        # just use the craft_platforms versions.
+        self._full_build_plan = [
+            (
+                info
+                if isinstance(info, models.BuildInfo)
+                else models.BuildInfo.from_platforms(info)
+            )
+            for info in self.get_build_plan(yaml_data)
+        ]
         self._build_plan = filter_plan(
             self._full_build_plan, platform, build_for, host_arch
         )
@@ -378,7 +430,7 @@ class Application:
             instance_path = pathlib.PosixPath("/root/project")
 
             with self.services.provider.instance(
-                build_info,
+                cast(models.BuildInfo, build_info),
                 work_dir=self._work_dir,
                 clean_existing=self._use_fetch_service,
             ) as instance:
@@ -819,17 +871,17 @@ class Application:
 
 
 def filter_plan(
-    build_plan: list[BuildInfo],
+    build_plan: list[BuildInfo] | Sequence[craft_platforms.BuildInfo],
     platform: str | None,
     build_for: str | None,
     host_arch: str | None,
-) -> list[BuildInfo]:
+) -> list[BuildInfo] | Sequence[craft_platforms.BuildInfo]:
     """Filter out build plans that are not matching build-on, build-for, and platform.
 
     If the host_arch is None, ignore the build-on check for remote builds.
     """
-    new_plan_matched_build_for: list[BuildInfo] = []
-    new_plan_matched_platform_name: list[BuildInfo] = []
+    new_plan_matched_build_for: list[BuildInfo | craft_platforms.BuildInfo] = []
+    new_plan_matched_platform_name: list[BuildInfo | craft_platforms.BuildInfo] = []
 
     for build_info in build_plan:
         if platform and build_info.platform != platform:
@@ -849,5 +901,5 @@ def filter_plan(
         new_plan_matched_build_for.append(build_info)
 
     if new_plan_matched_platform_name:
-        return new_plan_matched_platform_name
-    return new_plan_matched_build_for
+        return new_plan_matched_platform_name  # type: ignore[return-value]
+    return new_plan_matched_build_for  # type: ignore[return-value]

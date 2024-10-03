@@ -21,7 +21,7 @@ import craft_application
 import craft_cli
 import pytest
 import pytest_check
-from craft_application import models, secrets, util
+from craft_application import secrets, util
 from craft_application.util import yaml
 from typing_extensions import override
 
@@ -169,7 +169,7 @@ def test_project_destructive(
         ["testcraft", "pack", "--destructive-mode", "--platform", platform],
     )
     app = create_app()
-    app.run()
+    assert not app.run()
 
     assert (tmp_path / "package_1.0.tar.zst").exists()
     captured = capsys.readouterr()
@@ -271,6 +271,7 @@ def test_invalid_command_argument(monkeypatch, capsys, app):
     assert stderr == expected_stderr
 
 
+@pytest.mark.usefixtures("pretend_jammy")
 @pytest.mark.parametrize(
     "arguments",
     [
@@ -282,7 +283,6 @@ def test_invalid_command_argument(monkeypatch, capsys, app):
 def test_global_environment(
     arguments,
     create_app,
-    mocker,
     monkeypatch,
     tmp_path,
 ):
@@ -290,26 +290,12 @@ def test_global_environment(
     monkeypatch.chdir(tmp_path)
     shutil.copytree(VALID_PROJECTS_DIR / "environment", tmp_path, dirs_exist_ok=True)
 
-    # a build plan that builds for s390x (a cross-compiling scenario unless on s390x)
-    mocker.patch.object(
-        models.BuildPlanner,
-        "get_build_plan",
-        return_value=[
-            models.BuildInfo(
-                platform="my-platform",
-                build_on=util.get_host_architecture(),
-                build_for="s390x",
-                base=util.get_host_base(),
-            ),
-        ],
-    )
-
     # Run in destructive mode
     monkeypatch.setattr(
         "sys.argv", ["testcraft", "prime", "--destructive-mode", *arguments]
     )
     app = create_app()
-    app.run()
+    assert not app.run()
 
     # The project's build step stages a "variables.yaml" file containing the values of
     # variables taken from the global environment.

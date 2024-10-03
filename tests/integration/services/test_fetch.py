@@ -17,6 +17,7 @@
 import contextlib
 import io
 import json
+import os
 import pathlib
 import shutil
 import socket
@@ -30,6 +31,13 @@ from craft_application import errors, fetch, services, util
 from craft_application.models import BuildInfo
 from craft_application.services.fetch import _PROJECT_MANIFEST_MANAGED_PATH
 from craft_providers import bases
+
+pytestmark = [
+    pytest.mark.skipif(
+        not os.getenv("CI") and not shutil.which("fetch-service"),
+        reason="Fetch service is not installed.",
+    )
+]
 
 
 @cache

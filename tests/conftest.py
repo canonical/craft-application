@@ -24,11 +24,11 @@ from typing import TYPE_CHECKING, Any
 
 import craft_application
 import craft_parts
+import craft_platforms
 import pydantic
 import pytest
 from craft_application import application, launchpad, models, services, util
 from craft_cli import EmitterMode, emit
-from craft_providers import bases
 from typing_extensions import override
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -91,8 +91,8 @@ def default_app_metadata(fake_config_model) -> craft_application.AppMetadata:
         )
 
 
-@pytest.fixture
-def app_metadata(features, fake_config_model) -> craft_application.AppMetadata:
+@pytest.fixture(params=[pytest.param(None, id="no-build-planner"), models.BuildPlanner])
+def app_metadata(features, fake_config_model, request) -> craft_application.AppMetadata:
     with pytest.MonkeyPatch.context() as m:
         m.setattr(metadata, "version", lambda _: "3.14159")
         return craft_application.AppMetadata(
@@ -102,6 +102,7 @@ def app_metadata(features, fake_config_model) -> craft_application.AppMetadata:
             features=craft_application.AppFeatures(**features),
             docs_url="www.craft-app.com/docs/{version}",
             ConfigModel=fake_config_model,
+            BuildPlannerClass=request.param,
         )
 
 
@@ -148,20 +149,31 @@ def fake_build_plan(request) -> list[models.BuildInfo]:
 @pytest.fixture
 def full_build_plan(mocker) -> list[models.BuildInfo]:
     """A big build plan with multiple bases and build-for targets."""
-    host_arch = util.get_host_architecture()
+    host_arch = craft_platforms.DebianArchitecture.from_host()
+    build_for_archs = (
+        host_arch,
+        craft_platforms.DebianArchitecture.S390X,
+        craft_platforms.DebianArchitecture.RISCV64,
+    )
     build_plan = []
     for release in ("20.04", "22.04", "24.04"):
-        for build_for in (host_arch, "s390x", "riscv64"):
+        for build_for in build_for_archs:
             build_plan.append(
-                models.BuildInfo(
+                craft_platforms.BuildInfo(
                     f"ubuntu-{release}-{build_for}",
                     host_arch,
                     build_for,
-                    bases.BaseName("ubuntu", release),
+                    craft_platforms.DistroBase("ubuntu", release),
                 )
             )
+    legacy_build_plan = [models.BuildInfo.from_platforms(i) for i in build_plan]
 
-    mocker.patch.object(models.BuildPlanner, "get_build_plan", return_value=build_plan)
+    mocker.patch.object(
+        craft_platforms, "get_platforms_build_plan", return_value=build_plan
+    )
+    mocker.patch.object(
+        models.BuildPlanner, "get_build_plan", return_value=legacy_build_plan
+    )
     return build_plan
 
 
