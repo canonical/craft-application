@@ -117,8 +117,22 @@ class BuildInfo:
 class Platform(base.CraftBaseModel):
     """Project platform definition."""
 
-    build_on: UniqueList[str] | None = pydantic.Field(min_length=1)
-    build_for: SingleEntryList[str] | None = None
+    build_on: UniqueList[str] | None = pydantic.Field(
+        min_length=1,
+        description="A list of architectures to build this platform on.",
+        examples=[
+            ["amd64"],
+            ["arm64", "riscv64"]
+        ]
+    )
+    build_for: SingleEntryList[str] | None = pydantic.Field(
+        default=None,
+        description="A single-entry list with the target architecture of this platform.",
+        examples=[
+            ["amd64"],
+            ["arm64"],
+        ]
+    )
 
     @pydantic.field_validator("build_on", "build_for", mode="before")
     @classmethod
@@ -301,7 +315,7 @@ def _validate_part(part: dict[str, Any]) -> dict[str, Any]:
 
 
 class Project(base.CraftBaseModel):
-    """Craft Application project definition."""
+    """A craft project."""
 
     name: ProjectName
     title: ProjectTitle | None = None
@@ -311,19 +325,37 @@ class Project(base.CraftBaseModel):
 
     base: str | None = None
     build_base: str | None = None
-    platforms: dict[str, Platform]
+    platforms: dict[str, Platform] = pydantic.Field(
+        description="Platform definitions for this project.",
+        examples=[
+            {"amd64": None},
+            {
+                "pc": {"build-on": ["amd64"]},
+                "mainframe": {"build-on": ["amd64", "s390x"], "build-for": ["s390x"]},
+            }
+        ]
+    )
 
     contact: str | UniqueStrList | None = None
     issues: str | UniqueStrList | None = None
     source_code: pydantic.AnyUrl | None = None
     license: str | None = None
 
-    adopt_info: str | None = None
+    adopt_info: str | None = pydantic.Field(
+        default=None,
+        description="The name of a part that may provide some project information."
+    )
 
     parts: dict[  # parts are handled by craft-parts
         str,
         Annotated[dict[str, Any], pydantic.BeforeValidator(_validate_part)],
-    ]
+    ] = pydantic.Field(
+        description="A mapping of part names to their build definitions.",
+        examples=[
+            {"does-nothing": {"plugin": "nil"}},
+            {"dump-the-project-dir": {"plugin": "dump", "source": "."}},
+        ]
+    )
 
     package_repositories: (
         list[
