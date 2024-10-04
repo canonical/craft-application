@@ -2,6 +2,11 @@
 Changelog
 *********
 
+4.2.6 (2024-Oct-04)
+-------------------
+
+- Remove the ``requests<2.32.0`` constraint to resolve CVE-2024-35195.
+
 4.2.5 (2024-Oct-04)
 -------------------
 
