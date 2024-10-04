@@ -32,13 +32,14 @@ from typing import TYPE_CHECKING, Any, cast, final
 import craft_cli
 import craft_parts
 import craft_providers
+import craft_providers.lxd
 from craft_parts.plugins.plugins import PluginType
 from platformdirs import user_cache_path
 
 from craft_application import commands, errors, grammar, models, secrets, util
 from craft_application.errors import PathInvalidError
 from craft_application.models import BuildInfo, GrammarAwareProject
-from craft_application.util import ValidatorOptions
+from craft_application.util import ProServices, ValidatorOptions
 
 if TYPE_CHECKING:
     from craft_application.services import service_factory
@@ -149,6 +150,10 @@ class Application:
         # Set a globally usable project directory for the application.
         # This may be overridden by specific application implementations.
         self.project_dir = pathlib.Path.cwd()
+        # Ubuntu ProServices instance containing relevant pro services specified by the user.
+        # Storage of this instance may change in the future as we migrate Pro operations towards
+        # an application service.
+        self._pro_services: ProServices | None = None
 
         if self.is_managed():
             self._work_dir = pathlib.Path("/root")
@@ -367,13 +372,33 @@ class Application:
             with self.services.provider.instance(
                 build_info, work_dir=self._work_dir
             ) as instance:
+                # if pro services are required, ensure the pro client is
+                # installed, attached and the correct services are enabled
+                if self._pro_services:
+                    # Suggestion: create a Pro abstract class used to ensure minimum support by instances.
+                    # we can then check for pro support by inheritance.
+                    if not isinstance(instance, craft_providers.lxd.LXDInstance):
+                        raise errors.UbuntuProNotSupportedError(
+                            "Ubuntu Pro builds are only supported on LXC."
+                        )
+
+                    craft_cli.emit.debug(
+                        f"Enabling Ubuntu Pro Services {self._pro_services} on"
+                    )
+                    # TODO: remove pyright ignores after these methods are merged into main.
+                    # see https://github.com/canonical/craft-providers/pull/664/files
+                    instance.install_pro_client()  #  pyright: ignore[reportUnknownMemberType,reportAttributeAccessIssue]
+                    instance.attach_pro_subscription()  #  pyright: ignore[reportUnknownMemberType,reportAttributeAccessIssue]
+                    instance.enable_pro_service(  #  pyright: ignore[reportUnknownMemberType,reportAttributeAccessIssue]
+                        self._pro_services
+                    )
+
                 cmd = [self.app.name, *sys.argv[1:]]
                 craft_cli.emit.debug(
                     f"Executing {cmd} in instance location {instance_path} with {extra_args}."
                 )
                 try:
                     with craft_cli.emit.pause():
-                        # Pyright doesn't fully understand craft_providers's CompletedProcess.
                         instance.execute_run(  # pyright: ignore[reportUnknownMemberType,reportUnknownVariableType]
                             cmd,
                             cwd=instance_path,
@@ -493,6 +518,34 @@ class Application:
                     resolution="Ensure the path entered is correct.",
                 )
 
+    @staticmethod
+    def _check_pro_requirement(
+        pro_services: ProServices | None,
+        run_managed: bool,  # noqa: FBT001
+        is_managed: bool,  # noqa: FBT001
+    ) -> None:
+        if pro_services is not None:
+            # Validate requested pro services on the host if we are running in destructive mode.
+            if not run_managed and not is_managed:
+                craft_cli.emit.debug(
+                    f"Validating requested Ubuntu Pro status on host: {pro_services}"
+                )
+                pro_services.validate()
+            # Validate requested pro services running in managed mode inside a managed instance.
+            elif run_managed and is_managed:
+                craft_cli.emit.debug(
+                    f"Validating requested Ubuntu Pro status in managed instance: {pro_services}"
+                )
+                pro_services.validate()
+            # Validate pro attachment and service names on the host before starting a managed instance.
+            elif run_managed and not is_managed:
+                craft_cli.emit.debug(
+                    f"Validating requested Ubuntu Pro attachment on host: {pro_services}"
+                )
+                pro_services.validate(
+                    options=ValidatorOptions.ATTACHMENT | ValidatorOptions.SUPPORT
+                )
+
     def run(  # noqa: PLR0912,PLR0915  (too many branches, too many statements)
         self,
     ) -> int:
@@ -511,7 +564,6 @@ class Application:
 
             platform = getattr(dispatcher.parsed_args(), "platform", None)
             build_for = getattr(dispatcher.parsed_args(), "build_for", None)
-            pro_services = getattr(dispatcher.parsed_args(), "pro", None)
 
             run_managed = command.run_managed(dispatcher.parsed_args())
             is_managed = self.is_managed()
@@ -526,29 +578,12 @@ class Application:
 
             provider_name = command.provider_name(dispatcher.parsed_args())
 
-            # Check that pro services are correctly configured. A ProServices instance will
-            # only be available for lifecycle commands, otherwise we default to None
-            if pro_services is not None:
-                # Validate requested pro services on the host if we are running in destructive mode...
-                if not run_managed and not is_managed:
-                    craft_cli.emit.debug(
-                        f"Validating requested Ubuntu Pro status on host: {pro_services}"
-                    )
-                    pro_services.validate()
-                # .. or running in managed mode inside a managed instance
-                elif run_managed and is_managed:
-                    craft_cli.emit.debug(
-                        f"Validating requested Ubuntu Pro status in managed instance: {pro_services}"
-                    )
-                    pro_services.validate()
-                # .. or validate pro attachment and service names on the host before starting a managed instance.
-                elif run_managed and not is_managed:
-                    craft_cli.emit.debug(
-                        f"Validating requested Ubuntu Pro attachment on host: {pro_services}"
-                    )
-                    pro_services.validate(
-                        options=ValidatorOptions.ATTACHMENT | ValidatorOptions.SUPPORT
-                    )
+            # TODO: Move pro operations out to new service for managing Ubuntu Pro
+            # A ProServices instance will only be available for lifecycle commands,
+            # which may consume pro packages,
+            self._pro_services = getattr(dispatcher.parsed_args(), "pro", None)
+            # Check that pro services are correctly configured if available
+            self._check_pro_requirement(self._pro_services, run_managed, is_managed)
 
             if run_managed or command.needs_project(dispatcher.parsed_args()):
                 self.services.project = self.get_project(
