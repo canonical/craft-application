@@ -149,6 +149,7 @@ def test_craft_environment_handler_error(
     ],
 )
 def test_snap_config_handler_create_error(mocker, default_app_metadata, error):
+    mocker.patch("snaphelpers.is_snap", return_value=True)
     mock_snap_config = mocker.patch(
         "snaphelpers.SnapConfig",
         side_effect=error,
@@ -157,6 +158,15 @@ def test_snap_config_handler_create_error(mocker, default_app_metadata, error):
         config.SnapConfigHandler(default_app_metadata)
 
     mock_snap_config.assert_called_once_with()
+
+
+def test_snap_config_handler_not_snap(mocker, default_app_metadata):
+    mock_is_snap = mocker.patch("snaphelpers.is_snap", return_value=False)
+
+    with pytest.raises(OSError, match="Not running as a snap."):
+        config.SnapConfigHandler(default_app_metadata)
+
+    mock_is_snap.asssert_called_once_with()
 
 
 @given(
