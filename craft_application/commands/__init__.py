@@ -22,10 +22,12 @@ from craft_application.commands.lifecycle import (
     LifecycleCommand,
 )
 from craft_application.commands.other import get_other_command_group
+from .init import InitCommand
 
 __all__ = [
     "AppCommand",
     "ExtensibleCommand",
+    "InitCommand",
     "lifecycle",
     "LifecycleCommand",
     "get_lifecycle_command_group",
