@@ -2,6 +2,16 @@
 Changelog
 *********
 
+4.2.5 (2024-Oct-04)
+-------------------
+
+Services
+========
+
+- The config service handles snap issues better.
+
+For a complete list of commits, check out the `4.2.5`_ release on GitHub.
+
 4.2.4 (2024-Sep-19)
 -------------------
 
@@ -289,3 +299,4 @@ For a complete list of commits, check out the `2.7.0`_ release on GitHub.
 .. _4.2.2: https://github.com/canonical/craft-application/releases/tag/4.2.2
 .. _4.2.3: https://github.com/canonical/craft-application/releases/tag/4.2.3
 .. _4.2.4: https://github.com/canonical/craft-application/releases/tag/4.2.4
+.. _4.2.5: https://github.com/canonical/craft-application/releases/tag/4.2.5
