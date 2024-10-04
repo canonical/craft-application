@@ -8,7 +8,7 @@ Changelog
 Services
 ========
 
-- Config service handles snap issues better.
+- The config service handles snap issues better.
 
 For a complete list of commits, check out the `4.2.5`_ release on GitHub.
 
