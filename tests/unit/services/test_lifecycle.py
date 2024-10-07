@@ -27,7 +27,7 @@ import craft_platforms
 import pytest
 import pytest_check
 from craft_application import errors, models, util
-from craft_application.errors import InvalidParameterError, PartsLifecycleError
+from craft_application.errors import PartsLifecycleError
 from craft_application.models.project import BuildInfo
 from craft_application.services import lifecycle
 from craft_application.util import repositories

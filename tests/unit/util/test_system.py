@@ -93,9 +93,7 @@ from craft_application.errors import InvalidParameterError
         ),
     ],
 )
-def test_get_parallel_build_count(
-    monkeypatch, mocker, env_dict, cpu_count, expected
-):
+def test_get_parallel_build_count(monkeypatch, mocker, env_dict, cpu_count, expected):
     mocker.patch("os.cpu_count", return_value=cpu_count)
     for env_dict_key, env_dict_value in env_dict.items():
         monkeypatch.setenv(env_dict_key, env_dict_value)
@@ -164,9 +162,7 @@ def test_get_parallel_build_count(
         ),
     ],
 )
-def test_get_parallel_build_count_error(
-    monkeypatch, mocker, env_dict, cpu_count
-):
+def test_get_parallel_build_count_error(monkeypatch, mocker, env_dict, cpu_count):
 
     mocker.patch("os.cpu_count", return_value=cpu_count)
     for env_dict_key, env_dict_value in env_dict.items():
@@ -176,5 +172,3 @@ def test_get_parallel_build_count_error(
         InvalidParameterError, match=r"^Value '.*' is invalid for parameter '.*'.$"
     ):
         util.get_parallel_build_count("testcraft")
-
-
