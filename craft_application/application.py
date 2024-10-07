@@ -682,6 +682,7 @@ class Application:
             application_name=self.app.name,  # not used in environment expansion
             cache_dir=pathlib.Path(),  # not used in environment expansion
             arch=build_for_arch,
+            parallel_build_count=util.get_parallel_build_count(self.app.name),
             project_name=yaml_data.get("name", ""),
             project_dirs=project_dirs,
             project_vars=environment_vars,
