@@ -17,7 +17,6 @@
 from __future__ import annotations
 
 import contextlib
-import os
 import types
 from typing import TYPE_CHECKING, Any
 

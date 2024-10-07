@@ -23,9 +23,7 @@ from craft_cli import emit
 from craft_application.errors import InvalidParameterError
 
 
-def _verify_parallel_build_count(
-    env_name: str, parallel_build_count: int | str
-) -> int:
+def _verify_parallel_build_count(env_name: str, parallel_build_count: int | str) -> int:
     """Verify the parallel build count is valid.
 
     :param env_name: The name of the environment variable being checked.
@@ -35,9 +33,7 @@ def _verify_parallel_build_count(
     try:
         parallel_build_count = int(parallel_build_count)
     except ValueError as err:
-        raise InvalidParameterError(
-            env_name, str(os.environ[env_name])
-        ) from err
+        raise InvalidParameterError(env_name, str(os.environ[env_name])) from err
 
     # Ensure the value is valid positive integer
     if parallel_build_count < 1:
@@ -90,9 +86,7 @@ def get_parallel_build_count(app_name: str) -> int:
             if os.environ.get(env_name):
                 parallel_build_count = min(
                     cpu_count,
-                    _verify_parallel_build_count(
-                        env_name, os.environ[env_name]
-                    ),
+                    _verify_parallel_build_count(env_name, os.environ[env_name]),
                 )
                 emit.debug(
                     f"Using parallel build count of {parallel_build_count} "
