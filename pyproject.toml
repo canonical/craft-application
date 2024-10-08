@@ -6,9 +6,9 @@ dependencies = [
     "craft-archives>=2.0.0",
     "craft-cli>=2.6.0",
     "craft-grammar>=2.0.0",
-    "craft-parts>=2.0.0",
+    "craft-parts>=2.1.1",
     "craft-platforms>=0.3.1",
-    "craft-providers>=2.0.0",
+    "craft-providers>=2.0.4",
     "snap-helpers>=0.4.2",
     "platformdirs>=3.10",
     "pydantic~=2.0",
@@ -23,7 +23,7 @@ dependencies = [
     # Pygit2 changelog: https://github.com/libgit2/pygit2/blob/master/CHANGELOG.md
     "pygit2>=1.13.0,<1.15.0",
     "PyYaml>=6.0",
-    "requests",
+    "requests~=2.32",
     "typing_extensions>=4.4.0",
 ]
 classifiers = [
@@ -59,8 +59,6 @@ dev = [
     "pytest-rerunfailures==14.0",
     "pytest-subprocess~=1.5.2",
     "pytest-time>=0.3.1",
-    # Pin requests because of https://github.com/msabramo/requests-unixsocket/issues/73
-    "requests<2.32.0",
     "responses~=0.25.0",
     "craft-application[remote]"
 ]

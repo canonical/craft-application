@@ -15,16 +15,19 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Unit tests for the configuration service."""
 
+import io
 import itertools
 import json
 import string
 import subprocess
 from collections.abc import Iterator
+from unittest import mock
 
 import craft_application
 import craft_cli
 import pytest
 import pytest_subprocess
+import snaphelpers
 from craft_application import launchpad
 from craft_application.services import config
 from hypothesis import given, strategies
@@ -134,6 +137,36 @@ def test_craft_environment_handler_error(
 
     with pytest.raises(KeyError):
         assert craft_environment_handler.get_raw(item) == content
+
+
+@pytest.mark.parametrize(
+    "error",
+    [
+        KeyError("SNAP_INSTANCE_NAME something or other"),
+        snaphelpers.SnapCtlError(
+            mock.Mock(returncode=1, stderr=io.BytesIO(b"snapd socket asplode"))
+        ),
+    ],
+)
+def test_snap_config_handler_create_error(mocker, default_app_metadata, error):
+    mocker.patch("snaphelpers.is_snap", return_value=True)
+    mock_snap_config = mocker.patch(
+        "snaphelpers.SnapConfig",
+        side_effect=error,
+    )
+    with pytest.raises(OSError, match="Not running as a snap."):
+        config.SnapConfigHandler(default_app_metadata)
+
+    mock_snap_config.assert_called_once_with()
+
+
+def test_snap_config_handler_not_snap(mocker, default_app_metadata):
+    mock_is_snap = mocker.patch("snaphelpers.is_snap", return_value=False)
+
+    with pytest.raises(OSError, match="Not running as a snap."):
+        config.SnapConfigHandler(default_app_metadata)
+
+    mock_is_snap.asssert_called_once_with()
 
 
 @given(
