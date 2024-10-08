@@ -23,5 +23,6 @@ parts:
         echo "project_version:        \"${CRAFT_PROJECT_VERSION}\""        >> $target_file
         echo "arch_build_for:         \"${CRAFT_ARCH_BUILD_FOR}\""         >> $target_file
         echo "arch_triplet_build_for: \"${CRAFT_ARCH_TRIPLET_BUILD_FOR}\"" >> $target_file
-        echo "arch_build_on:          \"${CRAFT_ARCH_BUILD_ON}\""         >> $target_file
-        echo "arch_triplet_build_on:  \"${CRAFT_ARCH_TRIPLET_BUILD_ON}\"" >> $target_file
+        echo "arch_build_on:          \"${CRAFT_ARCH_BUILD_ON}\""          >> $target_file
+        echo "arch_triplet_build_on:  \"${CRAFT_ARCH_TRIPLET_BUILD_ON}\""  >> $target_file
+        echo "parallel_build_count:   \"${CRAFT_PARALLEL_BUILD_COUNT}\""   >> $target_file
