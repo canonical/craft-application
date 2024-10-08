@@ -8,7 +8,7 @@ X.Y.Z (yyyy-mmm-dd)
 Application
 ===========
 
-- Fix: use CRAFT_PARALLEL_BUILD_COUNT, rather than always building on one CPU.
+- Fix: set CRAFT_PARALLEL_BUILD_COUNT correctly in ``override-`` scripts.
 
 Commands
 ========
