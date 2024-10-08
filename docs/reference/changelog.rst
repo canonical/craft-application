@@ -2,6 +2,11 @@
 Changelog
 *********
 
+X.Y.Z (yyyy-mmm-dd)
+-------------------
+
+- Fix: set CRAFT_PARALLEL_BUILD_COUNT correctly in ``override-`` scripts.
+
 4.2.6 (2024-Oct-04)
 -------------------
 
