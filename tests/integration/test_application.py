@@ -13,7 +13,6 @@
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Integration tests for the Application."""
 import argparse
-import os
 import pathlib
 import shutil
 import textwrap
