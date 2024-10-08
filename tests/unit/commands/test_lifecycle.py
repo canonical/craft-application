@@ -433,6 +433,7 @@ def test_pack_fill_parser(
         "platform": None,
         "build_for": None,
         "output": pathlib.Path(output_arg),
+        "fetch_service_policy": None,
         **shell_dict,
         **debug_dict,
         **build_env_dict,
@@ -465,7 +466,9 @@ def test_pack_run(
     emitter, mock_services, app_metadata, parts, tmp_path, packages, message
 ):
     mock_services.package.pack.return_value = packages
-    parsed_args = argparse.Namespace(parts=parts, output=tmp_path)
+    parsed_args = argparse.Namespace(
+        parts=parts, output=tmp_path, fetch_service_policy=None
+    )
     command = PackCommand(
         {
             "app": app_metadata,
@@ -481,6 +484,34 @@ def test_pack_run(
     )
     emitter.assert_progress("Packing...")
     emitter.assert_progress(message, permanent=True)
+
+
+@pytest.mark.parametrize(
+    ("fetch_service_policy", "expect_create_called"),
+    [("strict", True), ("permissive", True), (None, False)],
+)
+def test_pack_fetch_manifest(
+    mock_services, app_metadata, tmp_path, fetch_service_policy, expect_create_called
+):
+    packages = [pathlib.Path("package.zip")]
+    mock_services.package.pack.return_value = packages
+    parsed_args = argparse.Namespace(
+        output=tmp_path, fetch_service_policy=fetch_service_policy
+    )
+    command = PackCommand(
+        {
+            "app": app_metadata,
+            "services": mock_services,
+        }
+    )
+
+    command.run(parsed_args)
+
+    mock_services.package.pack.assert_called_once_with(
+        mock_services.lifecycle.prime_dir,
+        tmp_path,
+    )
+    assert mock_services.fetch.create_project_manifest.called == expect_create_called
 
 
 def test_pack_run_wrong_step(app_metadata, fake_services):
@@ -594,7 +625,9 @@ def test_shell_after_pack(
     mocker,
     mock_subprocess_run,
 ):
-    parsed_args = argparse.Namespace(shell_after=True, output=pathlib.Path())
+    parsed_args = argparse.Namespace(
+        shell_after=True, output=pathlib.Path(), fetch_service_policy=None
+    )
     mock_lifecycle_run = mocker.patch.object(fake_services.lifecycle, "run")
     mock_pack = mocker.patch.object(fake_services.package, "pack")
     mocker.patch.object(

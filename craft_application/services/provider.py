@@ -116,6 +116,7 @@ class ProviderService(base.ProjectService):
         *,
         work_dir: pathlib.Path,
         allow_unstable: bool = True,
+        clean_existing: bool = False,
         **kwargs: bool | str | None,
     ) -> Generator[craft_providers.Executor, None, None]:
         """Context manager for getting a provider instance.
@@ -123,6 +124,8 @@ class ProviderService(base.ProjectService):
         :param build_info: Build information for the instance.
         :param work_dir: Local path to mount inside the provider instance.
         :param allow_unstable: Whether to allow the use of unstable images.
+        :param clean_existing: Whether pre-existing instances should be wiped
+          and re-created.
         :returns: a context manager of the provider instance.
         """
         instance_name = self._get_instance_name(work_dir, build_info)
@@ -132,6 +135,9 @@ class ProviderService(base.ProjectService):
         provider = self.get_provider(name=self.__provider_name)
 
         provider.ensure_provider_is_available()
+
+        if clean_existing:
+            self._clean_instance(provider, work_dir, build_info)
 
         emit.progress(f"Launching managed {base_name[0]} {base_name[1]} instance...")
         with provider.launched_environment(
@@ -267,9 +273,7 @@ class ProviderService(base.ProjectService):
             emit.progress(f"Cleaning build {target}")
 
         for info in build_plan:
-            instance_name = self._get_instance_name(self._work_dir, info)
-            emit.debug(f"Cleaning instance {instance_name}")
-            provider.clean_project_environments(instance_name=instance_name)
+            self._clean_instance(provider, self._work_dir, info)
 
     def _get_instance_name(
         self, work_dir: pathlib.Path, build_info: models.BuildInfo
@@ -332,3 +336,14 @@ class ProviderService(base.ProjectService):
             content=io.BytesIO(bashrc),
             file_mode="644",
         )
+
+    def _clean_instance(
+        self,
+        provider: craft_providers.Provider,
+        work_dir: pathlib.Path,
+        info: models.BuildInfo,
+    ) -> None:
+        """Clean an instance, if it exists."""
+        instance_name = self._get_instance_name(work_dir, info)
+        emit.debug(f"Cleaning instance {instance_name}")
+        provider.clean_project_environments(instance_name=instance_name)

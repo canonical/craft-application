@@ -137,7 +137,7 @@ def test_project_managed(capsys, monkeypatch, tmp_path, project, create_app):
     app = create_app()
     app._work_dir = tmp_path
 
-    app.run()
+    assert app.run() == 0
 
     assert (tmp_path / "package_1.0.tar.zst").exists()
     captured = capsys.readouterr()

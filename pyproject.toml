@@ -7,6 +7,7 @@ dependencies = [
     "craft-cli>=2.6.0",
     "craft-grammar>=2.0.0",
     "craft-parts>=2.1.1",
+    "craft-platforms>=0.3.1",
     "craft-providers>=2.0.4",
     "snap-helpers>=0.4.2",
     "platformdirs>=3.10",
@@ -22,7 +23,7 @@ dependencies = [
     # Pygit2 changelog: https://github.com/libgit2/pygit2/blob/master/CHANGELOG.md
     "pygit2>=1.13.0,<1.15.0",
     "PyYaml>=6.0",
-    "requests~=2.32",
+    "requests",
     "typing_extensions>=4.4.0",
 ]
 classifiers = [
@@ -53,6 +54,7 @@ dev = [
     "pytest==8.3.2",
     "pytest-check==2.4.1",
     "pytest-cov==5.0.0",
+    "pytest-freezegun==0.4.2",
     "pytest-mock==3.14.0",
     "pytest-rerunfailures==14.0",
     "pytest-subprocess~=1.5.2",
@@ -72,7 +74,7 @@ types = [
     "types-urllib3",
 ]
 docs = [
-    "canonical-sphinx~=0.1.0",
+    "canonical-sphinx~=0.2.0",
     "sphinx-autobuild==2024.9.3",
     "sphinx-lint==0.9.1",
 ]
@@ -138,6 +140,10 @@ testpaths = "tests"
 xfail_strict = true
 markers = [
     "enable_features: Tests that require specific features",
+]
+filterwarnings = [
+    "ignore:The craft-application BuildPlanner:PendingDeprecationWarning",
+    "ignore:BuildInfo:PendingDeprecationWarning",
 ]
 
 [tool.coverage.run]
@@ -281,6 +287,7 @@ lint.ignore = [
     "ANN", # Ignore type annotations in tests
     "S101",  # Allow assertions in tests
     "S103", # Allow `os.chmod` setting a permissive mask `0o555` on file or directory
+    "S105", "S106", "S107",  # Allow hardcoded "passwords" in test files.
     "S108", # Allow Probable insecure usage of temporary file or directory
     "PLR0913",  # Allow many arguments for test functions
     "PT004", # Allow fixtures that don't return anything to not start with underscores

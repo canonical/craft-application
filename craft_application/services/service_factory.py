@@ -43,6 +43,7 @@ class ServiceFactory:
     RemoteBuildClass: type[services.RemoteBuildService] = services.RemoteBuildService
     RequestClass: type[services.RequestService] = services.RequestService
     ConfigClass: type[services.ConfigService] = services.ConfigService
+    FetchClass: type[services.FetchService] = services.FetchService
 
     project: models.Project | None = None
 
@@ -55,6 +56,7 @@ class ServiceFactory:
         remote_build: services.RemoteBuildService = None  # type: ignore[assignment]
         request: services.RequestService = None  # type: ignore[assignment]
         config: services.ConfigService = None  # type: ignore[assignment]
+        fetch: services.FetchService = None  # type: ignore[assignment]
 
     def __post_init__(self) -> None:
         self._service_kwargs: dict[str, dict[str, Any]] = {}
