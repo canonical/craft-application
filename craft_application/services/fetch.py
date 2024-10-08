@@ -20,12 +20,13 @@ import json
 import pathlib
 import subprocess
 import typing
+from functools import partial
 
 import craft_providers
 from craft_cli import emit
 from typing_extensions import override
 
-from craft_application import fetch, models, services
+from craft_application import fetch, models, services, util
 from craft_application.models.manifest import CraftManifest, ProjectManifest
 
 if typing.TYPE_CHECKING:
@@ -173,3 +174,21 @@ class FetchService(services.ProjectService):
 
         with manifest_path.open("w") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
+
+        deps = craft_manifest.dependencies
+        rejections = [dep for dep in deps if dep.rejected]
+
+        if rejections:
+            display = partial(emit.progress, permanent=True)
+            items: list[dict[str, typing.Any]] = []
+            for rejection in rejections:
+                url = rejection.url[0] if len(rejection.url) == 1 else rejection.url
+                items.append({"url": url, "reasons": rejection.rejection_reasons})
+            text = util.dump_yaml(items)
+
+            display(
+                "The following artifacts were marked as rejected by the fetch-service:"
+            )
+            for line in text.splitlines():
+                display(line)
+            display("This build will fail on 'strict' fetch-service sessions.")
