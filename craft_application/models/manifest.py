@@ -112,12 +112,22 @@ class SessionArtifactManifest(BaseManifestModel):
     component_vendor: str
     size: int
     url: list[str]
+    rejected: bool = Field(exclude=True)
+    rejection_reasons: list[str] = Field(exclude=True)
 
     @classmethod
     def from_session_report(cls, report: dict[str, Any]) -> list[Self]:
         """Create session manifests from a fetch-session report."""
         artifacts: list[Self] = []
+
         for artifact in report["artefacts"]:
+            # Figure out if the artifact was rejected, and for which reasons
+            rejected = artifact.get("result") == "Rejected"
+            reasons: set[str] = set()
+            if rejected:
+                reasons.update(_get_reasons(artifact.get("request-inspection", {})))
+                reasons.update(_get_reasons(artifact.get("response-inspection", {})))
+
             metadata = artifact["metadata"]
             data = {
                 "type": metadata["type"],
@@ -133,6 +143,8 @@ class SessionArtifactManifest(BaseManifestModel):
                 "component-vendor": metadata["vendor"],
                 "size": metadata["size"],
                 "url": [d["url"] for d in artifact["downloads"]],
+                "rejected": rejected,
+                "rejection-reasons": sorted(reasons),
             }
             artifacts.append(cls.unmarshal(data))
 
@@ -158,3 +170,13 @@ class CraftManifest(ProjectManifest):
 
         data = {**project.marshal(), "dependencies": session_deps}
         return cls.model_validate(data)
+
+
+def _get_reasons(inspections: dict[str, Any]) -> set[str]:
+    reasons: set[str] = set()
+
+    for inspection in inspections.values():
+        if inspection.get("opinion") in ("Rejected", "Unknown"):
+            reasons.add(inspection["reason"])
+
+    return reasons

@@ -80,3 +80,20 @@ def test_create_craft_manifest(
     expected = (manifest_data_dir / "craft-manifest-expected.json").read_text()
 
     assert obtained == expected
+
+
+def test_session_report_rejections(session_report):
+    deps = SessionArtifactManifest.from_session_report(session_report)
+    rejected = [d for d in deps if d.rejected]
+
+    assert len(rejected) == 2  # noqa: PLR2004 (magic value in comparison)
+
+    assert rejected[0].rejection_reasons == [
+        "fetch is allowed only on a single ref",
+        "fetch is only allowed with depth 1",
+        "git repository does not contain a go.mod file",
+    ]
+    assert rejected[1].rejection_reasons == [
+        "the artefact format is unknown",
+        "the request was not recognized by any format inspector",
+    ]
