@@ -1,16 +1,23 @@
 *********
+:tocdepth: 2
+
 Changelog
 *********
 
-X.Y.Z (yyyy-mmm-dd)
+4.2.7 (2024-Oct-08)
 -------------------
 
+- Don't depend on requests >= 2.32.0.
 - Fix: set CRAFT_PARALLEL_BUILD_COUNT correctly in ``override-`` scripts.
+
+For a complete list of commits, check out the `4.2.7`_ release on GitHub.
 
 4.2.6 (2024-Oct-04)
 -------------------
 
 - Remove the ``requests<2.32.0`` constraint to resolve CVE-2024-35195.
+
+For a complete list of commits, check out the `4.2.6`_ release on GitHub.
 
 4.2.5 (2024-Oct-04)
 -------------------
@@ -310,3 +317,5 @@ For a complete list of commits, check out the `2.7.0`_ release on GitHub.
 .. _4.2.3: https://github.com/canonical/craft-application/releases/tag/4.2.3
 .. _4.2.4: https://github.com/canonical/craft-application/releases/tag/4.2.4
 .. _4.2.5: https://github.com/canonical/craft-application/releases/tag/4.2.5
+.. _4.2.6: https://github.com/canonical/craft-application/releases/tag/4.2.6
+.. _4.2.7: https://github.com/canonical/craft-application/releases/tag/4.2.7
