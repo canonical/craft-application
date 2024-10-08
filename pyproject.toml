@@ -22,7 +22,7 @@ dependencies = [
     # Pygit2 changelog: https://github.com/libgit2/pygit2/blob/master/CHANGELOG.md
     "pygit2>=1.13.0,<1.15.0",
     "PyYaml>=6.0",
-    "requests~=2.32",
+    "requests",
     "typing_extensions>=4.4.0",
 ]
 classifiers = [
