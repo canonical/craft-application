@@ -79,7 +79,7 @@ docs = [
     "sphinx-lint==0.9.1",
 ]
 apt = [
-    "python-apt>=2.4.0;sys_platform=='linux'"
+        "python-apt>=2.4.0;sys_platform=='linux'",
 ]
 
 [build-system]
