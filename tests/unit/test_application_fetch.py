@@ -56,15 +56,15 @@ class FakeFetchService(services.FetchService):
 @pytest.mark.parametrize(
     ("pack_args", "expected_calls", "expected_clean_existing"),
     [
-        # No --use-fetch-service: no calls to the FetchService
+        # No --enable-fetch-service: no calls to the FetchService
         (
             [],
             [],
             False,
         ),
-        # --use-fetch-service: full expected calls to the FetchService
+        # --enable-fetch-service: full expected calls to the FetchService
         (
-            ["--use-fetch-service", "strict"],
+            ["--enable-fetch-service", "strict"],
             [
                 # One call to setup
                 "setup",
