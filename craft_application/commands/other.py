@@ -37,7 +37,7 @@ def get_other_command_group() -> CommandGroup:
 
 
 class VersionCommand(base.AppCommand):
-    """Show the snapcraft version."""
+    """Show the application version."""
 
     name = "version"
     help_msg = "Show the application version and exit"
