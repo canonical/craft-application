@@ -20,6 +20,7 @@ import re
 import textwrap
 from textwrap import dedent
 
+import craft_platforms
 import craft_providers.bases
 import pydantic
 import pytest
@@ -126,6 +127,43 @@ def full_project_dict():
 @pytest.mark.parametrize(
     ("incoming", "expected"),
     [
+        (
+            craft_platforms.BuildInfo(
+                "my-platform",
+                craft_platforms.DebianArchitecture.RISCV64,
+                "all",
+                craft_platforms.DistroBase("ubuntu", "24.04"),
+            ),
+            BuildInfo(
+                "my-platform",
+                "riscv64",
+                "all",
+                craft_providers.bases.BaseName("ubuntu", "24.04"),
+            ),
+        ),
+        (
+            craft_platforms.BuildInfo(
+                "my-platform",
+                craft_platforms.DebianArchitecture.RISCV64,
+                craft_platforms.DebianArchitecture.AMD64,
+                craft_platforms.DistroBase("almalinux", "9"),
+            ),
+            BuildInfo(
+                "my-platform",
+                "riscv64",
+                "amd64",
+                craft_providers.bases.BaseName("almalinux", "9"),
+            ),
+        ),
+    ],
+)
+def test_build_info_from_platforms(incoming, expected):
+    assert BuildInfo.from_platforms(incoming) == expected
+
+
+@pytest.mark.parametrize(
+    ("incoming", "expected"),
+    [
         *(
             pytest.param(
                 {"build-on": arch, "build-for": arch},
@@ -153,6 +191,46 @@ def test_platform_vectorise_architectures(incoming, expected):
     platform = Platform.model_validate(incoming)
 
     assert platform == expected
+
+
+@pytest.mark.parametrize(
+    ("incoming", "expected"),
+    [
+        (
+            {"build-on": ["amd64"], "build-for": ["all"]},
+            Platform(build_on=["amd64"], build_for=["all"]),
+        ),
+    ],
+)
+def test_platform_from_platform_dict(incoming, expected):
+    assert Platform.model_validate(incoming) == expected
+
+
+@pytest.mark.parametrize(
+    ("incoming", "expected"),
+    [
+        pytest.param(
+            {
+                craft_platforms.DebianArchitecture.AMD64: None,
+                craft_platforms.DebianArchitecture.ARM64: None,
+                craft_platforms.DebianArchitecture.RISCV64: None,
+            },
+            {
+                "amd64": Platform(build_on=["amd64"], build_for=["amd64"]),
+                "arm64": Platform(build_on=["arm64"], build_for=["arm64"]),
+                "riscv64": Platform(build_on=["riscv64"], build_for=["riscv64"]),
+            },
+            id="architectures",
+        ),
+        pytest.param(
+            {"any string": {"build-on": ["amd64"], "build-for": ["all"]}},
+            {"any string": Platform(build_on=["amd64"], build_for=["all"])},
+            id="stringy",
+        ),
+    ],
+)
+def test_platform_from_platforms(incoming, expected):
+    assert Platform.from_platforms(incoming) == expected
 
 
 @pytest.mark.parametrize(

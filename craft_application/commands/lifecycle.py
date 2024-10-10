@@ -14,20 +14,18 @@
 """Basic lifecycle commands for a Craft Application."""
 from __future__ import annotations
 
+import argparse
 import os
 import pathlib
 import subprocess
 import textwrap
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from craft_cli import CommandGroup, emit
 from craft_parts.features import Features
 from typing_extensions import override
 
 from craft_application.commands import base
-
-if TYPE_CHECKING:  # pragma: no cover
-    import argparse
 
 
 def get_lifecycle_command_group() -> CommandGroup:
@@ -355,6 +353,14 @@ class PackCommand(LifecycleCommand):
             help="Output directory for created packages.",
         )
 
+        parser.add_argument(
+            "--use-fetch-service",
+            help=argparse.SUPPRESS,
+            choices=("strict", "permissive"),
+            metavar="policy",
+            dest="fetch_service_policy",
+        )
+
     @override
     def _run(
         self,
@@ -392,6 +398,9 @@ class PackCommand(LifecycleCommand):
                 _launch_shell()
             raise
 
+        if parsed_args.fetch_service_policy and packages:
+            self._services.fetch.create_project_manifest(packages)
+
         if not packages:
             emit.progress("No packages created.", permanent=True)
         elif len(packages) == 1:
@@ -426,6 +435,12 @@ class CleanCommand(_BaseLifecycleCommand):
             type=str,
             nargs="*",
             help="Optional list of parts to process",
+        )
+        parser.add_argument(
+            "--platform",
+            type=str,
+            metavar="name",
+            help="Platform to clean",
         )
 
     @override

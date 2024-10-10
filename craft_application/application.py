@@ -156,6 +156,11 @@ class Application:
         else:
             self._work_dir = pathlib.Path.cwd()
 
+        # Whether the command execution should use the fetch-service
+        self._use_fetch_service = False
+        # The kind of sessions that the fetch-service service should create
+        self._fetch_service_policy = "strict"
+
     @property
     def app_config(self) -> dict[str, Any]:
         """Get the configuration passed to dispatcher.load_command().
@@ -237,6 +242,11 @@ class Application:
             work_dir=self._work_dir,
             build_plan=self._build_plan,
             provider_name=provider_name,
+        )
+        self.services.update_kwargs(
+            "fetch",
+            build_plan=self._build_plan,
+            session_policy=self._fetch_service_policy,
         )
 
     def _resolve_project_path(self, project_dir: pathlib.Path | None) -> pathlib.Path:
@@ -368,8 +378,14 @@ class Application:
             instance_path = pathlib.PosixPath("/root/project")
 
             with self.services.provider.instance(
-                build_info, work_dir=self._work_dir
+                build_info,
+                work_dir=self._work_dir,
+                clean_existing=self._use_fetch_service,
             ) as instance:
+                if self._use_fetch_service:
+                    session_env = self.services.fetch.create_session(instance)
+                    env.update(session_env)
+
                 cmd = [self.app.name, *sys.argv[1:]]
                 craft_cli.emit.debug(
                     f"Executing {cmd} in instance location {instance_path} with {extra_args}."
@@ -387,6 +403,12 @@ class Application:
                     raise craft_providers.ProviderError(
                         f"Failed to execute {self.app.name} in instance."
                     ) from exc
+                finally:
+                    if self._use_fetch_service:
+                        self.services.fetch.teardown_session()
+
+        if self._use_fetch_service:
+            self.services.fetch.shutdown(force=True)
 
     def configure(self, global_args: dict[str, Any]) -> None:
         """Configure the application using any global arguments."""
@@ -482,12 +504,14 @@ class Application:
         At the time this is run, the command is loaded in the dispatcher, but
         the project has not yet been loaded.
         """
+        args = dispatcher.parsed_args()
+
         # Some commands might have a project_dir parameter. Those commands and
         # only those commands should get a project directory, but only when
         # not managed.
         if self.is_managed():
             self.project_dir = pathlib.Path("/root/project")
-        elif project_dir := getattr(dispatcher.parsed_args(), "project_dir", None):
+        elif project_dir := getattr(args, "project_dir", None):
             self.project_dir = pathlib.Path(project_dir).expanduser().resolve()
             if self.project_dir.exists() and not self.project_dir.is_dir():
                 raise errors.ProjectFileMissingError(
@@ -495,6 +519,11 @@ class Application:
                     details=f"Not a directory: {project_dir}",
                     resolution="Ensure the path entered is correct.",
                 )
+
+        fetch_service_policy: str | None = getattr(args, "fetch_service_policy", None)
+        if fetch_service_policy:
+            self._use_fetch_service = True
+            self._fetch_service_policy = fetch_service_policy
 
     def get_arg_or_config(
         self, parsed_args: argparse.Namespace, item: str
