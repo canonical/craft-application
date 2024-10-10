@@ -25,6 +25,7 @@ the FetchService class.
 import contextlib
 import json
 import re
+import textwrap
 from datetime import datetime
 from unittest import mock
 from unittest.mock import MagicMock, call
@@ -108,7 +109,13 @@ def test_create_project_manifest_not_managed(fetch_service, tmp_path, monkeypatc
 
 
 def test_teardown_session_create_manifest(
-    fetch_service, tmp_path, mocker, manifest_data_dir, monkeypatch, fake_project
+    fetch_service,
+    tmp_path,
+    mocker,
+    manifest_data_dir,
+    monkeypatch,
+    fake_project,
+    emitter,
 ):
     monkeypatch.chdir(tmp_path)
 
@@ -141,6 +148,27 @@ def test_teardown_session_create_manifest(
     obtained_file = tmp_path / f"{fake_project.name}_{fake_project.version}_amd64.json"
 
     assert obtained_file.read_text() + "\n" == expected_file.read_text()
+
+    expected_output = textwrap.dedent(
+        """\
+        The following artifacts were marked as rejected by the fetch-service:
+        - url: https://github.com:443/canonical/sphinx-docs-starter-pack.git/git-upload-pack
+          reasons:
+          - fetch is allowed only on a single ref
+          - fetch is only allowed with depth 1
+          - git repository does not contain a go.mod file
+        - url: https://proxy.golang.org:443/github.com/go-mmap/mmap/@v/v0.7.0.mod
+          reasons:
+          - the artefact format is unknown
+          - the request was not recognized by any format inspector
+        This build will fail on 'strict' fetch-service sessions.
+        """
+    )
+    for line in expected_output.splitlines():
+        emitter.assert_progress(
+            line,
+            permanent=True,
+        )
 
 
 @pytest.mark.parametrize("run_on_host", [True, False])
