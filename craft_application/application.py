@@ -387,7 +387,7 @@ class Application:
                     )
                     # TODO: remove pyright ignores after these methods are merged into main.
                     # see https://github.com/canonical/craft-providers/pull/664/files
-                    instance.install_pro_client()  #  pyright: ignore[reportUnknownMemberType,reportAttributeAccessIssue]
+                    instance.install_pro_client()  #  pyright: ignore[reportUnknownMemberType,reportAttributeAccessIssue], type: ignore
                     instance.attach_pro_subscription()  #  pyright: ignore[reportUnknownMemberType,reportAttributeAccessIssue]
                     instance.enable_pro_service(  #  pyright: ignore[reportUnknownMemberType,reportAttributeAccessIssue]
                         self._pro_services
