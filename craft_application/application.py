@@ -163,7 +163,7 @@ class Application:
             self._work_dir = pathlib.Path.cwd()
 
         # Whether the command execution should use the fetch-service
-        self._use_fetch_service = False
+        self._enable_fetch_service = False
         # The kind of sessions that the fetch-service service should create
         self._fetch_service_policy = "strict"
 
@@ -389,9 +389,9 @@ class Application:
             with self.services.provider.instance(
                 build_info,
                 work_dir=self._work_dir,
-                clean_existing=self._use_fetch_service,
+                clean_existing=self._enable_fetch_service,
             ) as instance:
-                if self._use_fetch_service:
+                if self._enable_fetch_service:
                     session_env = self.services.fetch.create_session(instance)
                     env.update(session_env)
 
@@ -431,10 +431,10 @@ class Application:
                         f"Failed to execute {self.app.name} in instance."
                     ) from exc
                 finally:
-                    if self._use_fetch_service:
+                    if self._enable_fetch_service:
                         self.services.fetch.teardown_session()
 
-        if self._use_fetch_service:
+        if self._enable_fetch_service:
             self.services.fetch.shutdown(force=True)
 
     def configure(self, global_args: dict[str, Any]) -> None:
@@ -550,7 +550,7 @@ class Application:
 
         fetch_service_policy: str | None = getattr(args, "fetch_service_policy", None)
         if fetch_service_policy:
-            self._use_fetch_service = True
+            self._enable_fetch_service = True
             self._fetch_service_policy = fetch_service_policy
 
     def get_arg_or_config(

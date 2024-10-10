@@ -372,7 +372,7 @@ class PackCommand(LifecycleCommand):
         )
 
         parser.add_argument(
-            "--use-fetch-service",
+            "--enable-fetch-service",
             help=argparse.SUPPRESS,
             choices=("strict", "permissive"),
             metavar="policy",
