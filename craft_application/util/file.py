@@ -18,15 +18,17 @@
 
 import io
 import os
-from _stat import S_IRGRP, S_IROTH, S_IRUSR, S_IXGRP, S_IXOTH, S_IXUSR
+from _stat import S_IRGRP, S_IROTH, S_IRUSR
 
-# handy masks for execution and reading for everybody
-S_IXALL = S_IXUSR | S_IXGRP | S_IXOTH
 S_IRALL = S_IRUSR | S_IRGRP | S_IROTH
+"""0o444 permission mask for execution permissions for everybody."""
 
 
 def make_executable(fh: io.IOBase) -> None:
     """Make open file fh executable.
+
+    Only makes the file executable for the user, group, or other if they already had read permissions.
+
     :param fh: An open file object.
     """
     fileno = fh.fileno()

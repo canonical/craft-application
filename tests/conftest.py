@@ -339,3 +339,14 @@ def app(app_metadata, fake_services):
 @pytest.fixture
 def manifest_data_dir():
     return pathlib.Path(__file__).parent / "data/manifest"
+
+
+@pytest.fixture
+def new_dir(tmp_path):
+    """Change to a new temporary directory."""
+    cwd = pathlib.Path.cwd()
+    os.chdir(tmp_path)
+
+    yield tmp_path
+
+    os.chdir(cwd)

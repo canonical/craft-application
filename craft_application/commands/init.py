@@ -16,20 +16,9 @@
 from __future__ import annotations
 
 import argparse
-import os
 import pathlib
-import shutil
 from textwrap import dedent
-from typing import Any, cast
-
-from craft_cli import emit
-from jinja2 import (
-    Environment,
-    PackageLoader,
-    StrictUndefined,
-)
-
-from craft_application.util import make_executable
+from typing import cast
 
 from . import base
 
@@ -69,107 +58,19 @@ class InitCommand(base.AppCommand):
         """Run the command."""
         project_dir = self._get_project_dir(parsed_args)
         name = self._get_name(parsed_args)
-        context = self._get_context(parsed_args)
-        template_dir = self._get_template_dir(parsed_args)
-        environment = self._get_templates_environment(template_dir)
-        executable_files = self._get_executable_files(parsed_args)
+        self._services.init.run(project_dir=project_dir, name=name)
 
-        self._create_project_dir(project_dir=project_dir, name=name)
-        self._render_project(
-            environment,
-            project_dir,
-            template_dir,
-            context,
-            executable_files,
-        )
+    def _get_name(self, parsed_args: argparse.Namespace) -> str:
+        """Get name of the package that is about to be initialized.
 
-    def _copy_template_file(
-        self,
-        template_name: str,
-        template_dir: pathlib.Path,
-        project_dir: pathlib.Path,
-    ) -> None:
-        """Copy the non-ninja template from template_dir to project_dir.
-
-        If the file already exists in the projects copying is skipped.
-
-        :param project_dir: The directory to render the files into.
-        :param template_dir: The directory where templates are stored.
-        :param template_name: Name of the template to copy.
+        Check if name is set explicitly or fallback to project_dir.
         """
-        emit.debug(f"Copying file {template_name} to {project_dir}")
-        template_file = template_dir / template_name
-        destination_file = project_dir / template_name
-        if destination_file.exists():
-            emit.trace(f"Skipping file {template_name} as it is already present")
-            return
-        destination_file.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(template_file, destination_file, follow_symlinks=False)
+        if parsed_args.name is not None:
+            return cast(str, parsed_args.name)
+        return self._get_project_dir(parsed_args).name
 
-    def _render_project(
-        self,
-        environment: Environment,
-        project_dir: pathlib.Path,
-        template_dir: pathlib.Path,
-        context: dict[str, Any],
-        executable_files: list[str],
-    ) -> None:
-        """Render files for a project from a template.
-
-        :param environment: The Jinja environment to use.
-        :param project_dir: The directory to render the files into.
-        :param template_dir: The directory where templates are stored.
-        :param context: The context to render the templates with.
-        :param executable_files: The list of files that should be executable.
-        """
-        for template_name in environment.list_templates():
-            if not template_name.endswith(".j2"):
-                self._copy_template_file(template_name, template_dir, project_dir)
-                continue
-            template = environment.get_template(template_name)
-
-            # trim off `.j2`
-            rendered_template_name = pathlib.Path(template_name).stem
-            emit.debug(f"Rendering {template_name} to {rendered_template_name}")
-
-            path = project_dir / rendered_template_name
-            if path.exists():
-                emit.trace(f"Skipping file {template_name} as it is already present")
-                continue
-            path.parent.mkdir(parents=True, exist_ok=True)
-            with path.open("wt", encoding="utf8") as file:
-                out = template.render(context)
-                file.write(out)
-                if rendered_template_name in executable_files and os.name == "posix":
-                    make_executable(file)
-                    emit.debug("  made executable")
-        emit.message("Successfully initialised project.")
-
-    def _get_template_dir(
-        self,
-        parsed_args: argparse.Namespace,  # noqa: ARG002 (unused-method-argument)
-    ) -> pathlib.Path:
-        """Return the path to the template directory."""
-        return pathlib.Path("templates")
-
-    def _get_executable_files(
-        self,
-        parsed_args: argparse.Namespace,  # noqa: ARG002 (unused-method-argument)
-    ) -> list[str]:
-        """Return the list of files that should be executable."""
-        return []
-
-    def _get_context(self, parsed_args: argparse.Namespace) -> dict[str, Any]:
-        """Get context to render templates with.
-
-        :returns: A dict of context variables.
-        """
-        name = self._get_name(parsed_args)
-        emit.debug(f"Set project name to '{name}'")
-
-        return {"name": name}
-
-    def _get_project_dir(self, parsed_args: argparse.Namespace) -> pathlib.Path:
+    @staticmethod
+    def _get_project_dir(parsed_args: argparse.Namespace) -> pathlib.Path:
         """Get project dir where project should be initialized.
 
         It applies rules in the following order:
@@ -182,34 +83,3 @@ class InitCommand(base.AppCommand):
 
         # If both args are undefined, default to current dir
         return pathlib.Path.cwd().resolve()
-
-    def _get_name(self, parsed_args: argparse.Namespace) -> str:
-        """Get name of the package that is about to be initialized.
-
-        Check if name is set explicitly or fallback to project_dir.
-        """
-        if parsed_args.name is not None:
-            return cast(str, parsed_args.name)
-        return self._get_project_dir(parsed_args).name
-
-    def _create_project_dir(
-        self,
-        project_dir: pathlib.Path,
-        *,
-        name: str,
-    ) -> None:
-        """Create the project path if it does not already exist."""
-        if not project_dir.exists():
-            project_dir.mkdir(parents=True)
-        emit.debug(f"Using project directory {str(project_dir)!r} for {name}")
-
-    def _get_templates_environment(self, template_dir: pathlib.Path) -> Environment:
-        """Create and return a Jinja environment to deal with the templates."""
-        loader = PackageLoader(self._app.name, str(template_dir))
-        return Environment(
-            loader=loader,
-            autoescape=False,  # noqa: S701 (jinja2-autoescape-false)
-            keep_trailing_newline=True,  # they're not text files if they don't end in newline!
-            optimized=False,  # optimization doesn't make sense for one-offs
-            undefined=StrictUndefined,
-        )  # fail on undefined
