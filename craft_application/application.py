@@ -385,13 +385,11 @@ class Application:
                     craft_cli.emit.debug(
                         f"Enabling Ubuntu Pro Services {self._pro_services} on"
                     )
-                    # TODO: remove pyright ignores after these methods are merged into main.
+                    # TODO: remove ignores after these methods are merged into main in craft-providers.
                     # see https://github.com/canonical/craft-providers/pull/664/files
-                    instance.install_pro_client()  #  pyright: ignore[reportUnknownMemberType,reportAttributeAccessIssue]
-                    instance.attach_pro_subscription()  #  pyright: ignore[reportUnknownMemberType,reportAttributeAccessIssue]
-                    instance.enable_pro_service(  #  pyright: ignore[reportUnknownMemberType,reportAttributeAccessIssue]
-                        self._pro_services
-                    )
+                    instance.install_pro_client()  # type: ignore
+                    instance.attach_pro_subscription()  # type: ignore
+                    instance.enable_pro_service(self._pro_services)  # type: ignore
 
                 cmd = [self.app.name, *sys.argv[1:]]
                 craft_cli.emit.debug(
