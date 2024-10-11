@@ -4,14 +4,27 @@
 Changelog
 *********
 
-X.Y.Z (yyyy-mmm-dd)
+4.3.0 (2024-Oct-11)
 -------------------
+
+Application
+===========
+
+- Added compatibility methods for craft-platforms models.
 
 Commands
 ========
 
 - The ``clean`` command now supports the ``--platform`` argument to filter
   which build environments to clean.
+
+Services
+========
+
+- Added an experimental integration with the fetch-service, to generate
+  manifests listing assets that were downloaded during the build.
+
+For a complete list of commits, check out the `4.3.0`_ release on GitHub.
 
 4.2.7 (2024-Oct-08)
 -------------------
@@ -339,3 +352,4 @@ For a complete list of commits, check out the `2.7.0`_ release on GitHub.
 .. _4.2.5: https://github.com/canonical/craft-application/releases/tag/4.2.5
 .. _4.2.6: https://github.com/canonical/craft-application/releases/tag/4.2.6
 .. _4.2.7: https://github.com/canonical/craft-application/releases/tag/4.2.7
+.. _4.3.0: https://github.com/canonical/craft-application/releases/tag/4.3.0
