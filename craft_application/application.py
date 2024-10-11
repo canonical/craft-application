@@ -387,9 +387,9 @@ class Application:
                     )
                     # TODO: remove ignores after these methods are merged into main in craft-providers.
                     # see https://github.com/canonical/craft-providers/pull/664/files
-                    instance.install_pro_client()  # type: ignore
-                    instance.attach_pro_subscription()  # type: ignore
-                    instance.enable_pro_service(self._pro_services)  # type: ignore
+                    instance.install_pro_client()  # type: ignore  # noqa: PGH003
+                    instance.attach_pro_subscription()  # type: ignore  # noqa: PGH003
+                    instance.enable_pro_service(self._pro_services)  # type: ignore  # noqa: PGH003
 
                 cmd = [self.app.name, *sys.argv[1:]]
                 craft_cli.emit.debug(
