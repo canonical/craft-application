@@ -304,6 +304,10 @@ def test_global_environment(
         ],
     )
 
+    # Check that this odd value makes its way through to the yaml build script
+    build_count = "5"
+    mocker.patch.dict("os.environ", {"TESTCRAFT_PARALLEL_BUILD_COUNT": build_count})
+
     # Run in destructive mode
     monkeypatch.setattr(
         "sys.argv", ["testcraft", "prime", "--destructive-mode", *arguments]
@@ -328,6 +332,7 @@ def test_global_environment(
     assert variables["arch_triplet_build_on"].startswith(
         util.convert_architecture_deb_to_platform(util.get_host_architecture())
     )
+    assert variables["parallel_build_count"] == build_count
 
 
 @pytest.fixture
