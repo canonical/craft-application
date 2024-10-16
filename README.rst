@@ -11,6 +11,7 @@ This project will provide a basis for future projects similar to Snapcraft_, Cha
 Structure
 ---------
 TODO
+test
 
 How to migrate existing projects
 --------------------------------
