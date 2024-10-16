@@ -235,6 +235,9 @@ class Application:
             work_dir=self._work_dir,
             build_plan=self._build_plan,
             partitions=self._partitions,
+            use_host_sources=bool(
+                self._pro_services
+            ),  # TODO: should this be passed as a arg instead?
         )
         self.services.set_kwargs(
             "provider",
