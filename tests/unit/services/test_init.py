@@ -52,12 +52,6 @@ def test_get_context(init_service):
     assert context == {"name": "my-project"}
 
 
-def test_get_template_dir(init_service):
-    template_dir = init_service._get_template_dir()
-
-    assert template_dir == pathlib.Path("templates")
-
-
 def test_get_executable_files(init_service):
     executable_files = init_service._get_executable_files()
 
@@ -67,10 +61,10 @@ def test_get_executable_files(init_service):
 def test_create_project_dir(init_service, tmp_path, emitter):
     project_dir = tmp_path / "my-project"
 
-    init_service._create_project_dir(project_dir=project_dir, name="my-project")
+    init_service._create_project_dir(project_dir=project_dir)
 
     assert project_dir.is_dir()
-    emitter.assert_debug(f"Using project directory {str(project_dir)!r} for my-project")
+    emitter.assert_debug(f"Creating project directory {str(project_dir)!r}.")
 
 
 def test_create_project_dir_exists(init_service, tmp_path, emitter):
@@ -78,10 +72,12 @@ def test_create_project_dir_exists(init_service, tmp_path, emitter):
     project_dir = tmp_path / "my-project"
     project_dir.mkdir()
 
-    init_service._create_project_dir(project_dir=project_dir, name="my-project")
+    init_service._create_project_dir(project_dir=project_dir)
 
     assert project_dir.is_dir()
-    emitter.assert_debug(f"Using project directory {str(project_dir)!r} for my-project")
+    emitter.assert_debug(
+        f"Not creating project directory {str(project_dir)!r} because it already exists."
+    )
 
 
 def test_get_templates_environment(init_service, mocker):

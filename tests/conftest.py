@@ -24,11 +24,13 @@ from typing import TYPE_CHECKING, Any
 
 import craft_application
 import craft_parts
+import jinja2
 import pydantic
 import pytest
 from craft_application import application, launchpad, models, services, util
 from craft_cli import EmitterMode, emit
 from craft_providers import bases
+from jinja2 import FileSystemLoader
 from typing_extensions import override
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -296,14 +298,28 @@ def fake_lifecycle_service_class(tmp_path, fake_build_plan):
 
 
 @pytest.fixture
+def fake_init_service_class(tmp_path):
+    class FakeInitService(services.InitService):
+        def _get_loader(self, template_dir: pathlib.Path) -> jinja2.BaseLoader:
+            return FileSystemLoader(tmp_path / "templates" / template_dir)
+
+    return FakeInitService
+
+
+@pytest.fixture
 def fake_services(
-    app_metadata, fake_project, fake_lifecycle_service_class, fake_package_service_class
+    app_metadata,
+    fake_project,
+    fake_lifecycle_service_class,
+    fake_package_service_class,
+    fake_init_service_class,
 ):
     return services.ServiceFactory(
         app_metadata,
         project=fake_project,
         PackageClass=fake_package_service_class,
         LifecycleClass=fake_lifecycle_service_class,
+        InitClass=fake_init_service_class,
     )
 
 
