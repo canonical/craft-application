@@ -84,7 +84,7 @@ apt = [
 
 [build-system]
 requires = [
-    "setuptools==74.1.3",
+    "setuptools==75.1.0",
     "setuptools_scm[toml]>=8.1"
 ]
 build-backend = "setuptools.build_meta"
