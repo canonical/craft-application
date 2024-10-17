@@ -15,17 +15,16 @@
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Command classes for a craft application."""
 
-from craft_application.commands.base import AppCommand, ExtensibleCommand
-from craft_application.commands import lifecycle
-from craft_application.commands.lifecycle import (
-    get_lifecycle_command_group,
-    LifecycleCommand,
-)
-from craft_application.commands.other import get_other_command_group
+from .base import AppCommand, ExtensibleCommand
+from . import lifecycle
+from .init import InitCommand
+from .lifecycle import get_lifecycle_command_group, LifecycleCommand
+from .other import get_other_command_group
 
 __all__ = [
     "AppCommand",
     "ExtensibleCommand",
+    "InitCommand",
     "lifecycle",
     "LifecycleCommand",
     "get_lifecycle_command_group",
