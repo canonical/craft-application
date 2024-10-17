@@ -16,15 +16,23 @@
 from __future__ import annotations
 
 import argparse
+import importlib.resources
 import pathlib
 from textwrap import dedent
 from typing import cast
+
+import craft_cli
+
+from craft_application.util import humanize_list
 
 from . import base
 
 
 class InitCommand(base.AppCommand):
-    """Command to create initial project files."""
+    """Command to create initial project files.
+
+    The init command should always produce a working and ready-to-build project.
+    """
 
     name = "init"
     help_msg = "Create an initial project filetree"
@@ -32,11 +40,22 @@ class InitCommand(base.AppCommand):
         """
         Initialise a project.
 
-        If <project-dir> is provided, initialise in that directory,
+        If '<project-dir>' is provided, initialise in that directory,
         otherwise initialise in the current working directory.
+
+        If '--name <name>' is provided, the project will be named '<name>'.
+        Otherwise, the project will be named after the directory it is initialised in.
+
+        '--profile <profile>' is used to initialise the project for a specific use case.
+
+        Init can work in an existing project directory. If there are any files in the
+        directory that would be overwritten, then init command will fail.
         """
     )
     common = True
+
+    default_profile = "simple"
+    """The default profile to use when initialising a project."""
 
     def fill_parser(self, parser: argparse.ArgumentParser) -> None:
         """Specify command's specific parameters."""
@@ -45,7 +64,7 @@ class InitCommand(base.AppCommand):
             type=pathlib.Path,
             nargs="?",
             default=None,
-            help="Path to initialize project in; defaults to current working directory.",
+            help="Path to initialise project in; defaults to current working directory.",
         )
         parser.add_argument(
             "--name",
@@ -53,15 +72,55 @@ class InitCommand(base.AppCommand):
             default=None,
             help="The name of project; defaults to the name of <project_dir>",
         )
+        # TODO: this fails to render in `--help` (#530)
+        parser.add_argument(
+            "--profile",
+            type=str,
+            choices=self.profiles,
+            default=self.default_profile,
+            help=(
+                f"Use the specified project profile (default is {self.default_profile}, "
+                f"choices are {humanize_list(self.profiles, 'and')})"
+            ),
+        )
+
+    @property
+    def parent_template_dir(self) -> pathlib.Path:
+        """Return the path to the directory that contains all templates."""
+        with importlib.resources.path(
+            self._app.name, "templates"
+        ) as _parent_template_dir:
+            return _parent_template_dir
+
+    @property
+    def profiles(self) -> list[str]:
+        """A list of profile names generated from template directories."""
+        template_dirs = [
+            path for path in self.parent_template_dir.iterdir() if path.is_dir()
+        ]
+        return sorted([template.name for template in template_dirs])
 
     def run(self, parsed_args: argparse.Namespace) -> None:
         """Run the command."""
         project_dir = self._get_project_dir(parsed_args)
-        name = self._get_name(parsed_args)
-        self._services.init.run(project_dir=project_dir, name=name)
+        project_name = self._get_name(parsed_args)
+        template_dir = pathlib.Path(self.parent_template_dir / parsed_args.profile)
+
+        craft_cli.emit.progress("Checking project directory.")
+        self._services.init.check_for_existing_files(
+            project_dir=project_dir, template_dir=template_dir
+        )
+
+        craft_cli.emit.progress("Initialising project.")
+        self._services.init.initialise_project(
+            project_dir=project_dir,
+            project_name=project_name,
+            template_dir=template_dir,
+        )
+        craft_cli.emit.message("Successfully initialised project.")
 
     def _get_name(self, parsed_args: argparse.Namespace) -> str:
-        """Get name of the package that is about to be initialized.
+        """Get name of the package that is about to be initialised.
 
         Check if name is set explicitly or fallback to project_dir.
         """
@@ -71,7 +130,7 @@ class InitCommand(base.AppCommand):
 
     @staticmethod
     def _get_project_dir(parsed_args: argparse.Namespace) -> pathlib.Path:
-        """Get project dir where project should be initialized.
+        """Get project dir where project should be initialised.
 
         It applies rules in the following order:
         - if <project_dir> is specified explicitly, it returns <project_dir>

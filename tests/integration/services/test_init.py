@@ -17,28 +17,24 @@
 """Tests for init service."""
 
 import pathlib
+import subprocess
 import sys
 import textwrap
 
 import pytest
+from craft_application import errors
 from craft_application.models.project import Project
 from craft_application.services import InitService
-from jinja2 import FileSystemLoader
+from craft_application.util import make_executable
 
 # init operates in the current working directory
 pytestmark = pytest.mark.usefixtures("new_dir")
 
 
 @pytest.fixture
-def init_service(app_metadata, fake_services, mocker, tmp_path):
-    _init_service = InitService(app_metadata, fake_services)
+def init_service(fake_init_service_class, app_metadata, fake_services):
+    _init_service = fake_init_service_class(app_metadata, fake_services)
     _init_service.setup()
-
-    mocker.patch.object(
-        _init_service,
-        "_get_loader",
-        return_value=FileSystemLoader(tmp_path / "templates"),
-    )
 
     return _init_service
 
@@ -55,17 +51,17 @@ def project_yaml_filename() -> str:
     return "testcraft.yaml"
 
 
-# TODO: test nested templates
-
-
 @pytest.fixture
 def template_dir_with_testcraft_yaml_j2(
     fake_empty_template_dir: pathlib.Path,
     project_yaml_filename: str,
 ) -> pathlib.Path:
-    (fake_empty_template_dir / f"{project_yaml_filename}.j2").write_text(
-        textwrap.dedent(
-            """
+    """Creates the same testcraft.yaml file in the top-level and nested directories.
+
+    Normally a project would only have one testcraft.yaml file, but two are created for testing.
+    """
+    template_text = textwrap.dedent(
+        """
         # This file configures testcraft.
 
         # (Required)
@@ -103,8 +99,12 @@ def template_dir_with_testcraft_yaml_j2(
         platforms:
           amd64:
         """
-        )
     )
+    top_level_template = fake_empty_template_dir / f"{project_yaml_filename}.j2"
+    top_level_template.write_text(template_text)
+    nested_template = fake_empty_template_dir / "nested" / f"{project_yaml_filename}.j2"
+    nested_template.parent.mkdir()
+    nested_template.write_text(template_text)
 
     return fake_empty_template_dir
 
@@ -131,6 +131,26 @@ def template_dir_with_symlinks(
 
 
 @pytest.fixture
+def template_dir_with_executables(
+    fake_empty_template_dir: pathlib.Path,
+) -> pathlib.Path:
+    """Create executable templated and non-templated files."""
+    for filename in [
+        "file.sh",
+        "nested/file.sh",
+        "template.sh.j2",
+        "nested/template.sh.j2",
+    ]:
+        filepath = fake_empty_template_dir / filename
+        filepath.parent.mkdir(exist_ok=True)
+        with filepath.open("wt", encoding="utf8") as file:
+            file.write("#!/bin/bash\necho 'Hello, world!'")
+            make_executable(file)
+
+    return fake_empty_template_dir
+
+
+@pytest.fixture
 def fake_empty_project_dir(tmp_path) -> pathlib.Path:
     empty_project_dir_path = pathlib.Path(tmp_path / "fake-project-dir")
     empty_project_dir_path.mkdir()
@@ -149,62 +169,80 @@ def non_empty_project_dir(tmp_path) -> pathlib.Path:
 def test_init_works_with_empty_templates_dir(
     init_service: InitService,
     fake_empty_project_dir: pathlib.Path,
+    fake_empty_template_dir: pathlib.Path,
     emitter,
     check,
 ):
-    """Initialize a project with an empty templates directory."""
-    init_service.run(project_dir=fake_empty_project_dir, name="fake-project-dir")
+    """Initialise a project with an empty templates directory."""
+    init_service.initialise_project(
+        project_dir=fake_empty_project_dir,
+        project_name="fake-project-dir",
+        template_dir=fake_empty_template_dir,
+    )
 
     with check:
-        assert emitter.assert_message("Successfully initialised project.")
+        assert emitter.assert_progress("Rendered project.")
     with check:
         assert not list(
             fake_empty_project_dir.iterdir()
-        ), "Project dir should be initialized empty"
+        ), "Project dir should be initialised empty"
 
 
-@pytest.mark.usefixtures("template_dir_with_testcraft_yaml_j2")
-def test_init_works_with_single_template_file(
+def test_init_works_with_simple_template(
     init_service: InitService,
     fake_empty_project_dir: pathlib.Path,
+    template_dir_with_testcraft_yaml_j2: pathlib.Path,
     project_yaml_filename: str,
     emitter,
     check,
 ):
-    """Initialize a project with a single template file."""
-    init_service.run(project_dir=fake_empty_project_dir, name="fake-project-dir")
+    """Initialise a project with a simple project template."""
+    init_service.initialise_project(
+        project_dir=fake_empty_project_dir,
+        project_name="fake-project-dir",
+        template_dir=template_dir_with_testcraft_yaml_j2,
+    )
 
     with check:
-        assert emitter.assert_message("Successfully initialised project.")
+        assert emitter.assert_progress("Rendered project.")
 
-    project_yaml_path = fake_empty_project_dir / project_yaml_filename
+    project_yaml_paths = [
+        fake_empty_project_dir / project_yaml_filename,
+        fake_empty_project_dir / "nested" / project_yaml_filename,
+    ]
 
-    with check:
-        assert project_yaml_path.exists(), "Project should be initialized with template"
-    project = Project.from_yaml_file(project_yaml_path)
-    with check:
-        assert project.name == fake_empty_project_dir.name
+    for project_yaml_path in project_yaml_paths:
+        with check:
+            assert (
+                project_yaml_path.exists()
+            ), "Project should be initialised with template"
+            project = Project.from_yaml_file(project_yaml_path)
+            assert project.name == fake_empty_project_dir.name
 
 
-@pytest.mark.usefixtures("template_dir_with_testcraft_yaml_j2")
 def test_init_works_with_single_template_and_custom_name(
     init_service: InitService,
     fake_empty_project_dir: pathlib.Path,
+    template_dir_with_testcraft_yaml_j2: pathlib.Path,
     project_yaml_filename: str,
     emitter,
     check,
 ):
-    """Initialize a project with a single template file and custom name."""
+    """Initialise a project with a single template file and custom name."""
     name = "some-other-test-project"
-    init_service.run(project_dir=fake_empty_project_dir, name=name)
+    init_service.initialise_project(
+        project_dir=fake_empty_project_dir,
+        project_name=name,
+        template_dir=template_dir_with_testcraft_yaml_j2,
+    )
 
     with check:
-        assert emitter.assert_message("Successfully initialised project.")
+        assert emitter.assert_progress("Rendered project.")
 
     project_yaml_path = pathlib.Path(fake_empty_project_dir, project_yaml_filename)
 
     with check:
-        assert project_yaml_path.exists(), "Project should be initialized with template"
+        assert project_yaml_path.exists(), "Project should be initialised with template"
     project = Project.from_yaml_file(project_yaml_path)
     with check:
         assert project.name == name
@@ -221,17 +259,21 @@ def check_file_existence_and_content(
         assert file_path.read_text() == content, f"{file_path.name} incorrect content"
 
 
-@pytest.mark.usefixtures("template_dir_with_multiple_non_ninja_files")
 def test_init_works_with_non_jinja2_templates(
     init_service: InitService,
     fake_empty_project_dir: pathlib.Path,
+    template_dir_with_multiple_non_ninja_files: pathlib.Path,
     emitter,
     check,
 ):
-    init_service.run(project_dir=fake_empty_project_dir, name="fake-project-dir")
+    init_service.initialise_project(
+        project_dir=fake_empty_project_dir,
+        project_name="fake-project-dir",
+        template_dir=template_dir_with_multiple_non_ninja_files,
+    )
 
     with check:
-        assert emitter.assert_message("Successfully initialised project.")
+        assert emitter.assert_progress("Rendered project.")
 
     check_file_existence_and_content(
         check, fake_empty_project_dir / "file1.txt", "Content of file1.txt"
@@ -243,14 +285,18 @@ def test_init_works_with_non_jinja2_templates(
     )
 
 
-@pytest.mark.usefixtures("template_dir_with_symlinks")
 def test_init_does_not_follow_symlinks_but_copies_them_as_is(
     init_service: InitService,
     fake_empty_project_dir: pathlib.Path,
+    template_dir_with_symlinks: pathlib.Path,
     project_yaml_filename: str,
     check,
 ):
-    init_service.run(project_dir=fake_empty_project_dir, name="fake-project-dir")
+    init_service.initialise_project(
+        project_dir=fake_empty_project_dir,
+        project_name="fake-project-dir",
+        template_dir=template_dir_with_symlinks,
+    )
 
     project = Project.from_yaml_file(fake_empty_project_dir / project_yaml_filename)
     with check:
@@ -261,34 +307,59 @@ def test_init_does_not_follow_symlinks_but_copies_them_as_is(
         ).is_symlink(), "Symlink should be left intact."
 
 
-@pytest.mark.usefixtures("template_dir_with_testcraft_yaml_j2")
+def test_init_copies_executables(
+    init_service: InitService,
+    fake_empty_project_dir: pathlib.Path,
+    template_dir_with_executables: pathlib.Path,
+    check,
+):
+    """Executability of template files should be preserved."""
+    init_service.initialise_project(
+        project_dir=fake_empty_project_dir,
+        project_name="fake-project-dir",
+        template_dir=template_dir_with_executables,
+    )
+
+    for filename in ["file.sh", "nested/file.sh", "template.sh", "nested/template.sh"]:
+        with check:
+            assert (
+                subprocess.check_output(
+                    [str(fake_empty_project_dir / filename)], text=True
+                )
+                == "Hello, world!\n"
+            )
+
+
 def test_init_does_not_fail_on_non_empty_dir(
     init_service: InitService,
     non_empty_project_dir: pathlib.Path,
+    template_dir_with_testcraft_yaml_j2: pathlib.Path,
     project_yaml_filename: str,
     emitter,
     check,
 ):
-    init_service.run(
-        project_dir=non_empty_project_dir, name="fake-non-empty-project-dir"
+    init_service.initialise_project(
+        project_dir=non_empty_project_dir,
+        project_name="fake-non-empty-project-dir",
+        template_dir=template_dir_with_testcraft_yaml_j2,
     )
 
     with check:
-        assert emitter.assert_message("Successfully initialised project.")
+        assert emitter.assert_progress("Rendered project.")
 
     project_yaml_path = non_empty_project_dir / project_yaml_filename
 
     with check:
-        assert project_yaml_path.exists(), "Project should be initialized with template"
+        assert project_yaml_path.exists(), "Project should be initialised with template"
     project = Project.from_yaml_file(project_yaml_path)
     with check:
         assert project.name == non_empty_project_dir.name
 
 
-@pytest.mark.usefixtures("template_dir_with_testcraft_yaml_j2")
 def test_init_does_not_override_existing_craft_yaml(
     init_service: InitService,
     non_empty_project_dir: pathlib.Path,
+    template_dir_with_testcraft_yaml_j2,
     project_yaml_filename: str,
     fake_project: Project,
     emitter,
@@ -296,63 +367,111 @@ def test_init_does_not_override_existing_craft_yaml(
 ):
     fake_project.to_yaml_file(non_empty_project_dir / project_yaml_filename)
 
-    init_service.run(project_dir=non_empty_project_dir, name="fake-project-dir")
+    init_service.initialise_project(
+        project_dir=non_empty_project_dir,
+        project_name="fake-project-dir",
+        template_dir=template_dir_with_testcraft_yaml_j2,
+    )
 
     with check:
-        assert emitter.assert_message("Successfully initialised project.")
+        assert emitter.assert_progress("Rendered project.")
 
     project_yaml_path = non_empty_project_dir / project_yaml_filename
 
     with check:
-        assert project_yaml_path.exists(), "Project should be initialized with template"
+        assert project_yaml_path.exists(), "Project should be initialised with template"
     project = Project.from_yaml_file(project_yaml_path)
     with check:
         assert project.name == fake_project.name
 
 
-@pytest.mark.usefixtures("template_dir_with_testcraft_yaml_j2")
 def test_init_with_different_name_and_directory(
     init_service: InitService,
     fake_empty_project_dir: pathlib.Path,
+    template_dir_with_testcraft_yaml_j2: pathlib.Path,
     project_yaml_filename: str,
     emitter,
     check,
 ):
     name = "some-custom-project"
 
-    init_service.run(project_dir=fake_empty_project_dir, name=name)
+    init_service.initialise_project(
+        project_dir=fake_empty_project_dir,
+        project_name=name,
+        template_dir=template_dir_with_testcraft_yaml_j2,
+    )
 
     with check:
-        assert emitter.assert_message("Successfully initialised project.")
+        assert emitter.assert_progress("Rendered project.")
 
     project_yaml_path = fake_empty_project_dir / project_yaml_filename
 
     with check:
-        assert project_yaml_path.exists(), "Project should be initialized with template"
+        assert project_yaml_path.exists(), "Project should be initialised with template"
     project = Project.from_yaml_file(project_yaml_path)
     with check:
         assert project.name == name
 
 
-@pytest.mark.usefixtures("template_dir_with_testcraft_yaml_j2")
 def test_init_with_default_arguments_uses_current_directory(
     init_service: InitService,
     fake_empty_project_dir: pathlib.Path,
+    template_dir_with_testcraft_yaml_j2: pathlib.Path,
     project_yaml_filename: str,
     emitter,
     check,
 ):
     expected_project_name = fake_empty_project_dir.name
 
-    init_service.run(project_dir=fake_empty_project_dir, name="fake-project-dir")
+    init_service.initialise_project(
+        project_dir=fake_empty_project_dir,
+        project_name="fake-project-dir",
+        template_dir=template_dir_with_testcraft_yaml_j2,
+    )
 
     with check:
-        assert emitter.assert_message("Successfully initialised project.")
+        assert emitter.assert_progress("Rendered project.")
 
     project_yaml_path = fake_empty_project_dir / project_yaml_filename
 
     with check:
-        assert project_yaml_path.exists(), "Project should be initialized with template"
+        assert project_yaml_path.exists(), "Project should be initialised with template"
     project = Project.from_yaml_file(project_yaml_path)
     with check:
         assert project.name == expected_project_name
+
+
+def test_check_for_existing_files(
+    init_service: InitService,
+    fake_empty_project_dir: pathlib.Path,
+    template_dir_with_testcraft_yaml_j2: pathlib.Path,
+):
+    """No-op if there are no overlapping files."""
+    init_service.check_for_existing_files(
+        project_dir=fake_empty_project_dir,
+        template_dir=template_dir_with_testcraft_yaml_j2,
+    )
+
+
+def test_check_for_existing_files_error(
+    init_service: InitService,
+    fake_empty_project_dir: pathlib.Path,
+    template_dir_with_testcraft_yaml_j2: pathlib.Path,
+):
+    """No-op if there are no overlapping files."""
+    expected_error = textwrap.dedent(
+        f"""\
+        Cannot initialise project in {str(fake_empty_project_dir)!r} because it would overwrite existing files.
+        Existing files are:
+          - nested/testcraft.yaml
+          - testcraft.yaml"""
+    )
+    (fake_empty_project_dir / "testcraft.yaml").touch()
+    (fake_empty_project_dir / "nested").mkdir()
+    (fake_empty_project_dir / "nested" / "testcraft.yaml").touch()
+
+    with pytest.raises(errors.InitError, match=expected_error):
+        init_service.check_for_existing_files(
+            project_dir=fake_empty_project_dir,
+            template_dir=template_dir_with_testcraft_yaml_j2,
+        )

@@ -18,16 +18,28 @@
 
 import io
 import os
+import pathlib
 from _stat import S_IRGRP, S_IROTH, S_IRUSR
 
 S_IRALL = S_IRUSR | S_IRGRP | S_IROTH
 """0o444 permission mask for execution permissions for everybody."""
 
 
+def is_executable(filepath: pathlib.Path) -> bool:
+    """Check if file is executable.
+
+    :param filepath: The file to check.
+
+    :returns: True if file exists and is executable.
+    """
+    return os.access(filepath, os.X_OK)
+
+
 def make_executable(fh: io.IOBase) -> None:
     """Make open file fh executable.
 
     Only makes the file executable for the user, group, or other if they already had read permissions.
+    Effectively, this makes the file executable with the same umask as when the file was created.
 
     :param fh: An open file object.
     """

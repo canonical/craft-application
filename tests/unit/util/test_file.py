@@ -16,7 +16,7 @@
 
 """Unit tests for utility functions and helpers related to path handling."""
 
-from _stat import S_IRGRP, S_IROTH, S_IRUSR, S_IWUSR, S_IXGRP, S_IXOTH, S_IXUSR
+from _stat import S_IEXEC, S_IRGRP, S_IROTH, S_IRUSR, S_IWUSR, S_IXGRP, S_IXOTH, S_IXUSR
 
 import pytest
 from craft_application.util import file
@@ -24,6 +24,20 @@ from craft_application.util import file
 USER = S_IRUSR | S_IWUSR  # 0o600
 USER_GROUP = USER | S_IRGRP  # 0o640
 USER_GROUP_OTHER = USER_GROUP | S_IROTH  # 0o644
+
+
+@pytest.mark.parametrize(
+    ("mode", "executable"),
+    [
+        (USER, False),
+        (USER | S_IEXEC, True),
+    ],
+)
+def test_is_executable(mode, executable, tmp_path):
+    test_file = tmp_path / "test-file"
+    test_file.touch(mode=mode)
+
+    assert file.is_executable(test_file) == executable
 
 
 @pytest.mark.parametrize(
@@ -42,7 +56,7 @@ USER_GROUP_OTHER = USER_GROUP | S_IROTH  # 0o644
         ),
     ],
 )
-def test_make_executable_read_bits(initial_permissions, expected_permissions, tmp_path):
+def test_make_executable(initial_permissions, expected_permissions, tmp_path):
     """make_executable should only operate where the read bits are set."""
     test_file = tmp_path / "test"
     test_file.touch(mode=initial_permissions)

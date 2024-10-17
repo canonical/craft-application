@@ -24,7 +24,8 @@ from typing import Any
 import jinja2
 from craft_cli import emit
 
-from craft_application.util import make_executable
+from craft_application.errors import InitError
+from craft_application.util import is_executable, make_executable
 
 from . import base
 
@@ -32,21 +33,65 @@ from . import base
 class InitService(base.AppService):
     """Service class for initializing a project."""
 
-    def run(self, *, project_dir: pathlib.Path, name: str) -> None:
-        """Initialize a new project."""
-        context = self._get_context(name=name)
-        template_dir = self._get_template_dir()
-        environment = self._get_templates_environment(template_dir)
-        executable_files = self._get_executable_files()
+    def initialise_project(
+        self,
+        *,
+        project_dir: pathlib.Path,
+        project_name: str,
+        template_dir: pathlib.Path,
+    ) -> None:
+        """Initialise a new project from a template.
 
-        self._create_project_dir(project_dir=project_dir, name=name)
-        self._render_project(
-            environment,
-            project_dir,
-            template_dir,
-            context,
-            executable_files,
+        If a file already exists in the project directory, it is not overwritten.
+        Use `check_for_existing_files()` to see if this will occur before initialising
+        the project.
+
+        :param project_dir: The directory to initialise the project in.
+        :param project_name: The name of the project.
+        :param template_dir: The directory containing the templates.
+        """
+        emit.debug(
+            f"Initialising project {project_name!r} in {str(project_dir)!r} from "
+            f"template in {str(template_dir)!r}."
         )
+        context = self._get_context(name=project_name)
+        environment = self._get_templates_environment(template_dir)
+        self._create_project_dir(project_dir=project_dir)
+        self._render_project(environment, project_dir, template_dir, context)
+
+    def check_for_existing_files(
+        self,
+        *,
+        project_dir: pathlib.Path,
+        template_dir: pathlib.Path,
+    ) -> None:
+        """Check if there are any existing files in the project directory that would be overwritten.
+
+        :param project_dir: The directory to initialise the project in.
+        :param template_dir: The directory containing the templates.
+
+        :raises InitError: If there are files in the project directory that would be overwritten.
+        """
+        template_files = self._get_template_files(template_dir)
+        existing_files = [
+            template_file
+            for template_file in template_files
+            if (project_dir / template_file).exists()
+        ]
+
+        if existing_files:
+            existing_files_formatted = "\n  - ".join(existing_files)
+            raise InitError(
+                message=(
+                    f"Cannot initialise project in {str(project_dir)!r} because it "
+                    "would overwrite existing files.\nExisting files are:\n  - "
+                    f"{existing_files_formatted}"
+                ),
+                resolution=(
+                    "Initialise the project in an empty directory or remove the existing files."
+                ),
+                retcode=os.EX_CANTCREAT,
+            )
 
     def _copy_template_file(
         self,
@@ -77,7 +122,6 @@ class InitService(base.AppService):
         project_dir: pathlib.Path,
         template_dir: pathlib.Path,
         context: dict[str, Any],
-        executable_files: list[str],
     ) -> None:
         """Render files for a project from a template.
 
@@ -85,8 +129,8 @@ class InitService(base.AppService):
         :param project_dir: The directory to render the files into.
         :param template_dir: The directory where templates are stored.
         :param context: The context to render the templates with.
-        :param executable_files: The list of files that should be executable.
         """
+        emit.progress("Rendering project.")
         for template_name in environment.list_templates():
             if not template_name.endswith(".j2"):
                 self._copy_template_file(template_name, template_dir, project_dir)
@@ -105,18 +149,10 @@ class InitService(base.AppService):
             with path.open("wt", encoding="utf8") as file:
                 out = template.render(context)
                 file.write(out)
-                if rendered_template_name in executable_files and os.name == "posix":
+                if is_executable(template_dir / template_name) and os.name == "posix":
                     make_executable(file)
                     emit.debug("  made executable")
-        emit.message("Successfully initialised project.")
-
-    def _get_template_dir(self) -> pathlib.Path:
-        """Return the path to the template directory."""
-        return pathlib.Path("templates")
-
-    def _get_executable_files(self) -> list[str]:
-        """Return the list of files that should be executable."""
-        return []
+        emit.progress("Rendered project.")
 
     def _get_context(self, name: str) -> dict[str, Any]:
         """Get context to render templates with.
@@ -127,25 +163,36 @@ class InitService(base.AppService):
 
         return {"name": name}
 
-    def _create_project_dir(
-        self,
-        project_dir: pathlib.Path,
-        *,
-        name: str,
-    ) -> None:
-        """Create the project path if it does not already exist."""
+    @staticmethod
+    def _create_project_dir(project_dir: pathlib.Path) -> None:
+        """Create the project directory if it does not already exist."""
         if not project_dir.exists():
+            emit.debug(f"Creating project directory {str(project_dir)!r}.")
             project_dir.mkdir(parents=True)
-        emit.debug(f"Using project directory {str(project_dir)!r} for {name}")
+        else:
+            emit.debug(
+                f"Not creating project directory {str(project_dir)!r} "
+                "because it already exists."
+            )
 
-    def _get_loader(self, template_dir: pathlib.Path) -> jinja2.PackageLoader:
-        """Return a Jinja template loader for the given template directory."""
+    def _get_loader(self, template_dir: pathlib.Path) -> jinja2.BaseLoader:
+        """Return a Jinja loader for the given template directory.
+
+        :param template_dir: The directory containing the templates.
+
+        :returns: A Jinja loader.
+        """
         return jinja2.PackageLoader(self._app.name, str(template_dir))
 
     def _get_templates_environment(
         self, template_dir: pathlib.Path
     ) -> jinja2.Environment:
-        """Create and return a Jinja environment to deal with the templates."""
+        """Create and return a Jinja environment to deal with the templates.
+
+        :param template_dir: The directory containing the templates.
+
+        :returns: A Jinja environment.
+        """
         return jinja2.Environment(
             loader=self._get_loader(template_dir),
             autoescape=False,  # noqa: S701 (jinja2-autoescape-false)
@@ -153,3 +200,19 @@ class InitService(base.AppService):
             optimized=False,  # optimization doesn't make sense for one-offs
             undefined=jinja2.StrictUndefined,
         )  # fail on undefined
+
+    def _get_template_files(self, template_dir: pathlib.Path) -> list[str]:
+        """Return a list of files that would be created from a template directory.
+
+        Note that the '.j2' suffix is removed from templates.
+
+        :param template_dir: The directory containing the templates.
+
+        :returns: A list of filenames that would be created.
+        """
+        templates = self._get_templates_environment(template_dir).list_templates()
+
+        return [
+            template[:-3] if template.endswith(".j2") else template
+            for template in templates
+        ]

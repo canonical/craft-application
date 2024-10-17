@@ -17,12 +17,12 @@
 """Unit tests for the InitService."""
 
 import pathlib
-from unittest import mock
+import textwrap
 
 import jinja2
 import pytest
 import pytest_check
-from craft_application import services
+from craft_application import errors, services, util
 
 
 @pytest.fixture
@@ -33,17 +33,12 @@ def init_service(app_metadata, fake_services):
 
 
 @pytest.fixture
-def mock_template():
-    _mock_template = mock.Mock(spec=jinja2.Template)
-    _mock_template.render.return_value = "rendered content"
-    return _mock_template
-
-
-@pytest.fixture
-def mock_environment(mock_template):
-    _mock_environment = mock.Mock(spec=jinja2.Environment)
-    _mock_environment.get_template.return_value = mock_template
-    return _mock_environment
+def mock_loader(mocker, tmp_path):
+    """Mock the loader so it does not try to import `testcraft.templates`."""
+    return mocker.patch(
+        "craft_application.services.init.InitService._get_loader",
+        return_value=jinja2.FileSystemLoader(tmp_path / "templates"),
+    )
 
 
 def test_get_context(init_service):
@@ -52,25 +47,13 @@ def test_get_context(init_service):
     assert context == {"name": "my-project"}
 
 
-def test_get_template_dir(init_service):
-    template_dir = init_service._get_template_dir()
-
-    assert template_dir == pathlib.Path("templates")
-
-
-def test_get_executable_files(init_service):
-    executable_files = init_service._get_executable_files()
-
-    assert executable_files == []
-
-
 def test_create_project_dir(init_service, tmp_path, emitter):
     project_dir = tmp_path / "my-project"
 
-    init_service._create_project_dir(project_dir=project_dir, name="my-project")
+    init_service._create_project_dir(project_dir=project_dir)
 
     assert project_dir.is_dir()
-    emitter.assert_debug(f"Using project directory {str(project_dir)!r} for my-project")
+    emitter.assert_debug(f"Creating project directory {str(project_dir)!r}.")
 
 
 def test_create_project_dir_exists(init_service, tmp_path, emitter):
@@ -78,10 +61,12 @@ def test_create_project_dir_exists(init_service, tmp_path, emitter):
     project_dir = tmp_path / "my-project"
     project_dir.mkdir()
 
-    init_service._create_project_dir(project_dir=project_dir, name="my-project")
+    init_service._create_project_dir(project_dir=project_dir)
 
     assert project_dir.is_dir()
-    emitter.assert_debug(f"Using project directory {str(project_dir)!r} for my-project")
+    emitter.assert_debug(
+        f"Not creating project directory {str(project_dir)!r} because it already exists."
+    )
 
 
 def test_get_templates_environment(init_service, mocker):
@@ -100,6 +85,49 @@ def test_get_templates_environment(init_service, mocker):
         undefined=jinja2.StrictUndefined,
     )
     assert environment == mock_environment.return_value
+
+
+@pytest.mark.usefixtures("mock_loader")
+@pytest.mark.parametrize("project_file", [None, "file.txt"])
+def test_check_for_existing_files(init_service, tmp_path, project_file):
+    """No-op if there are no overlapping files."""
+    # create template
+    template_dir = tmp_path / "templates"
+    template_dir.mkdir()
+    (template_dir / "file.txt").touch()
+    # create project with a different file
+    project_dir = tmp_path / "project"
+    if project_file:
+        project_dir.mkdir()
+        (project_dir / "other-file.txt").touch()
+
+    init_service.check_for_existing_files(
+        project_dir=project_dir, template_dir=template_dir
+    )
+
+
+@pytest.mark.usefixtures("mock_loader")
+def test_check_for_existing_files_error(init_service, tmp_path):
+    """Error if there are overlapping files."""
+    expected_error = textwrap.dedent(
+        f"""\
+        Cannot initialise project in {str(tmp_path / 'project')!r} because it would overwrite existing files.
+        Existing files are:
+          - file.txt"""
+    )
+    # create template
+    template_dir = tmp_path / "templates"
+    template_dir.mkdir()
+    (template_dir / "file.txt").touch()
+    # create project with a different file
+    project_dir = tmp_path / "project"
+    project_dir.mkdir()
+    (project_dir / "file.txt").touch()
+
+    with pytest.raises(errors.InitError, match=expected_error):
+        init_service.check_for_existing_files(
+            project_dir=project_dir, template_dir=template_dir
+        )
 
 
 @pytest.mark.parametrize("template_filename", ["file1.txt", "nested/file2.txt"])
@@ -139,67 +167,71 @@ def test_copy_template_file_exists(init_service, tmp_path, template_name, emitte
     )
 
 
-def test_render_project(init_service, tmp_path, mock_environment):
-    template_filenames = [
-        # Jinja2 templates
-        "jinja-file.txt.j2",
-        "nested/jinja-file.txt.j2",
-        # Non-Jinja2 templates (regular files)
-        "non-jinja-file.txt",
-        "nested/non-jinja-file.txt",
-    ]
-    mock_environment.list_templates.return_value = template_filenames
+@pytest.mark.parametrize("filename", ["jinja-file.txt.j2", "nested/jinja-file.txt.j2"])
+@pytest.mark.usefixtures("mock_loader")
+def test_render_project_with_templates(filename, init_service, tmp_path):
+    """Render template files."""
     project_dir = tmp_path / "project"
     project_dir.mkdir()
     template_dir = tmp_path / "templates"
-    for filename in template_filenames:
-        (template_dir / filename).parent.mkdir(parents=True, exist_ok=True)
-        (template_dir / filename).write_text("template content")
+    (template_dir / filename).parent.mkdir(parents=True, exist_ok=True)
+    (template_dir / filename).write_text("{{ name }}")
 
+    environment = init_service._get_templates_environment(template_dir)
     init_service._render_project(
-        environment=mock_environment,
+        environment=environment,
         project_dir=project_dir,
         template_dir=template_dir,
         context={"name": "my-project"},
-        executable_files=[],
     )
 
-    pytest_check.equal((project_dir / "jinja-file.txt").read_text(), "rendered content")
-    pytest_check.equal(
-        (project_dir / "nested/jinja-file.txt").read_text(), "rendered content"
-    )
-    pytest_check.equal(
-        (project_dir / "non-jinja-file.txt").read_text(), "template content"
-    )
-    pytest_check.equal(
-        (project_dir / "nested/non-jinja-file.txt").read_text(), "template content"
-    )
+    assert (project_dir / filename[:-3]).read_text() == "my-project"
 
 
-def test_render_project_executable(init_service, tmp_path, mock_environment):
-    template_filenames = [
-        "executable-1.sh.j2",
-        "executable-2.sh.j2",
-        "executable-3.sh",
-    ]
-    mock_environment.list_templates.return_value = template_filenames
+@pytest.mark.parametrize("filename", ["file.txt", "nested/file.txt"])
+@pytest.mark.usefixtures("mock_loader")
+def test_render_project_non_templates(filename, init_service, tmp_path):
+    """Copy non-template files when rendering a project."""
     project_dir = tmp_path / "project"
     project_dir.mkdir()
     template_dir = tmp_path / "templates"
-    for filename in template_filenames:
-        (template_dir / filename).parent.mkdir(parents=True, exist_ok=True)
-        (template_dir / filename).write_text("template content")
+    (template_dir / filename).parent.mkdir(parents=True, exist_ok=True)
+    (template_dir / filename).write_text("test content")
 
+    environment = init_service._get_templates_environment(template_dir)
     init_service._render_project(
-        environment=mock_environment,
+        environment=environment,
         project_dir=project_dir,
         template_dir=template_dir,
         context={"name": "my-project"},
-        executable_files=["executable-1.sh", "executable-3.sh"],
     )
 
-    import os
+    assert (project_dir / filename).read_text() == "test content"
 
-    pytest_check.is_true(os.access(project_dir / "executable-1.sh", os.X_OK))
-    pytest_check.is_false(os.access(project_dir / "executable-2.sh", os.X_OK))
-    pytest_check.is_false(os.access(project_dir / "executable-3.sh", os.X_OK))
+
+@pytest.mark.usefixtures("mock_loader")
+def test_render_project_executable(init_service, tmp_path):
+    """Test that executable permissions are set on rendered files."""
+    project_dir = tmp_path / "project"
+    project_dir.mkdir()
+    template_dir = tmp_path / "templates"
+    template_dir.mkdir()
+    for filename in ["file-1.sh.j2", "file-2.sh"]:
+        with (template_dir / filename).open("wt", encoding="utf8") as file:
+            file.write("#!/bin/bash\necho 'Hello, world!'")
+            util.make_executable(file)
+    for filename in ["file-3.txt.j2", "file-4.txt"]:
+        (template_dir / filename).write_text("template content")
+
+    environment = init_service._get_templates_environment(template_dir)
+    init_service._render_project(
+        environment=environment,
+        project_dir=project_dir,
+        template_dir=template_dir,
+        context={"name": "my-project"},
+    )
+
+    pytest_check.is_true(util.is_executable(project_dir / "file-1.sh"))
+    pytest_check.is_true(util.is_executable(project_dir / "file-2.sh"))
+    pytest_check.is_false(util.is_executable(project_dir / "file-3.txt"))
+    pytest_check.is_false(util.is_executable(project_dir / "file-4.txt"))
