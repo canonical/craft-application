@@ -13,6 +13,7 @@
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Integration tests for the Application."""
 import argparse
+import os
 import pathlib
 import shutil
 import textwrap
@@ -98,16 +99,22 @@ INVALID_PROJECTS_DIR = TEST_DATA_DIR / "invalid_projects"
 @pytest.mark.parametrize(
     ("argv", "stdout", "stderr", "exit_code"),
     [
-        pytest.param(["help"], "", BASIC_USAGE, 0, id="help"),
-        pytest.param(["--help"], "", BASIC_USAGE, 0, id="--help"),
-        pytest.param(["-h"], "", BASIC_USAGE, 0, id="-h"),
-        pytest.param(["--version"], VERSION_INFO, "", 0, id="--version"),
-        pytest.param(["-V"], VERSION_INFO, "", 0, id="-V"),
-        pytest.param(["-q", "--version"], "", "", 0, id="-q--version"),
+        pytest.param(["help"], "", BASIC_USAGE, os.EX_OK, id="help"),
+        pytest.param(["--help"], "", BASIC_USAGE, os.EX_OK, id="--help"),
+        pytest.param(["-h"], "", BASIC_USAGE, os.EX_OK, id="-h"),
+        pytest.param(["--version"], VERSION_INFO, "", os.EX_OK, id="--version"),
+        pytest.param(["-V"], VERSION_INFO, "", os.EX_OK, id="-V"),
+        pytest.param(["-q", "--version"], "", "", os.EX_OK, id="-q--version"),
         pytest.param(
-            ["--invalid-parameter"], "", BASIC_USAGE, 64, id="--invalid-parameter"
+            ["--invalid-parameter"],
+            "",
+            BASIC_USAGE,
+            os.EX_USAGE,
+            id="--invalid-parameter",
         ),
-        pytest.param(["non-command"], "", INVALID_COMMAND, 64, id="non-command"),
+        pytest.param(
+            ["non-command"], "", INVALID_COMMAND, os.EX_USAGE, id="non-command"
+        ),
     ],
 )
 def test_special_inputs(capsys, monkeypatch, app, argv, stdout, stderr, exit_code):
@@ -137,7 +144,7 @@ def test_project_managed(capsys, monkeypatch, tmp_path, project, create_app):
     app = create_app()
     app._work_dir = tmp_path
 
-    assert app.run() == 0
+    assert app.run() == os.EX_OK
 
     assert (tmp_path / "package_1.0.tar.zst").exists()
     captured = capsys.readouterr()
@@ -223,7 +230,7 @@ def test_run_always_load_project(capsys, monkeypatch, app, cmd):
     monkeypatch.setenv("CRAFT_DEBUG", "1")
     monkeypatch.setattr("sys.argv", ["testcraft", cmd])
 
-    assert app.run() == 66  # noqa: PLR2004
+    assert app.run() == os.EX_NOINPUT
 
     captured = capsys.readouterr()
     assert "'testcraft.yaml' not found" in captured.err
@@ -239,7 +246,7 @@ def test_get_command_help(monkeypatch, emitter, capsys, app, cmd, help_param):
     with pytest.raises(SystemExit) as exit_info:
         app.run()
 
-    assert exit_info.value.code == 0
+    assert exit_info.value.code == os.EX_OK
 
     # Ensure the command got help set to true.
     emitter.assert_trace(".+'help': True.+", regex=True)
@@ -255,8 +262,7 @@ def test_invalid_command_argument(monkeypatch, capsys, app):
 
     return_code = app.run()
 
-    assert return_code == 64  # noqa: PLR2004 (Magic number used in comparison)
-
+    assert return_code == os.EX_USAGE
     expected_stderr = textwrap.dedent(
         """\
         Usage: testcraft [options] command [args]...

@@ -345,7 +345,7 @@ class GitRepo:
 
         if git_proc:
             git_proc.wait()
-            if git_proc.returncode == 0:
+            if git_proc.returncode == os.EX_OK:
                 return
 
         raise GitError(

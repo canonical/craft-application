@@ -438,11 +438,11 @@ class Application:
             if global_args.get("version"):
                 craft_cli.emit.message(f"{self.app.name} {self.app.version}")
                 craft_cli.emit.ended_ok()
-                sys.exit(0)
+                sys.exit(os.EX_OK)
         except craft_cli.ProvideHelpException as err:
             print(err, file=sys.stderr)  # to stderr, as argparse normally does
             craft_cli.emit.ended_ok()
-            sys.exit(0)
+            sys.exit(os.EX_OK)
         except craft_cli.ArgumentParsingError as err:
             print(err, file=sys.stderr)  # to stderr, as argparse normally does
             craft_cli.emit.ended_ok()
@@ -582,7 +582,7 @@ class Application:
             return_code = os.EX_OK
         else:
             # command runs in inner instance
-            return_code = dispatcher.run() or 0
+            return_code = dispatcher.run() or os.EX_OK
 
         return return_code
 
