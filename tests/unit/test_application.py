@@ -21,8 +21,10 @@ import dataclasses
 import importlib
 import importlib.metadata
 import logging
+import os
 import pathlib
 import re
+import stat
 import subprocess
 import sys
 import textwrap
@@ -637,13 +639,13 @@ def test_get_arg_or_config(monkeypatch, app, parsed_args, environ, item, expecte
 @pytest.mark.parametrize(
     ("managed", "error", "exit_code", "message"),
     [
-        (False, craft_cli.ProvideHelpException("Hi"), 0, "Hi\n"),
-        (False, craft_cli.ArgumentParsingError(":-("), 64, r":-\(\n"),
+        (False, craft_cli.ProvideHelpException("Hi"), os.EX_OK, "Hi\n"),
+        (False, craft_cli.ArgumentParsingError(":-("), os.EX_USAGE, r":-\(\n"),
         (False, KeyboardInterrupt(), 130, r"Interrupted.\nFull execution log: '.+'\n"),
         (
             True,
             Exception("RIP"),
-            70,
+            os.EX_SOFTWARE,
             r"Internal error while loading testcraft: Exception\('RIP'\)\n",
         ),
     ],
@@ -713,7 +715,7 @@ def test_fails_without_project(
 
     fake_services.project = None
 
-    assert app.run() == 66  # noqa: PLR2004
+    assert app.run() == os.EX_NOINPUT
 
     assert "Project file 'testcraft.yaml' not found in" in capsys.readouterr().err
 
@@ -803,7 +805,7 @@ def test_pre_run_project_dir_not_a_directory(app, fs, project_dir):
 
 
 @pytest.mark.parametrize("load_project", [True, False])
-@pytest.mark.parametrize("return_code", [None, 0, 1])
+@pytest.mark.parametrize("return_code", [None, os.EX_OK, 1])
 def test_run_success_unmanaged(
     monkeypatch, emitter, check, app, fake_project, return_code, load_project
 ):
@@ -821,7 +823,7 @@ def test_run_success_unmanaged(
     app.add_command_group("test", [UnmanagedCommand])
     app.set_project(fake_project)
 
-    check.equal(app.run(), return_code or 0)
+    check.equal(app.run(), return_code or os.EX_OK)
     with check:
         emitter.assert_debug("Preparing application...")
     with check:
@@ -833,7 +835,7 @@ def test_run_success_managed(monkeypatch, app, fake_project, mocker):
     app.run_managed = mock.Mock()
     monkeypatch.setattr(sys, "argv", ["testcraft", "pull"])
 
-    pytest_check.equal(app.run(), 0)
+    pytest_check.equal(app.run(), os.EX_OK)
 
     app.run_managed.assert_called_once_with(None, None)  # --build-for not used
 
@@ -844,7 +846,7 @@ def test_run_success_managed_with_arch(monkeypatch, app, fake_project, mocker):
     arch = get_host_architecture()
     monkeypatch.setattr(sys, "argv", ["testcraft", "pull", f"--build-for={arch}"])
 
-    pytest_check.equal(app.run(), 0)
+    pytest_check.equal(app.run(), os.EX_OK)
 
     app.run_managed.assert_called_once()
 
@@ -854,7 +856,7 @@ def test_run_success_managed_with_platform(monkeypatch, app, fake_project, mocke
     app.run_managed = mock.Mock()
     monkeypatch.setattr(sys, "argv", ["testcraft", "pull", "--platform=foo"])
 
-    pytest_check.equal(app.run(), 0)
+    pytest_check.equal(app.run(), os.EX_OK)
 
     app.run_managed.assert_called_once_with("foo", None)
 
@@ -884,12 +886,12 @@ def test_run_passes_platforms(
     app.run_managed = mock.Mock(return_value=False)
     monkeypatch.setattr(sys, "argv", ["testcraft", "pull", *params])
 
-    pytest_check.equal(app.run(), 0)
+    pytest_check.equal(app.run(), os.EX_OK)
 
     assert app.run_managed.mock_calls == [expected_call]
 
 
-@pytest.mark.parametrize("return_code", [None, 0, 1])
+@pytest.mark.parametrize("return_code", [None, os.EX_OK, 1])
 def test_run_success_managed_inside_managed(
     monkeypatch, check, app, fake_project, mock_dispatcher, return_code, mocker
 ):
@@ -903,7 +905,7 @@ def test_run_success_managed_inside_managed(
     monkeypatch.setattr(sys, "argv", ["testcraft", "pull"])
     monkeypatch.setenv("CRAFT_MANAGED_MODE", "1")
 
-    check.equal(app.run(), return_code or 0)
+    check.equal(app.run(), return_code or os.EX_OK)
     with check:
         app.run_managed.assert_not_called()
     with check:
@@ -927,15 +929,15 @@ def test_run_success_managed_inside_managed(
             ),
         ),
         (craft_providers.ProviderError("fail to launch"), 1, "fail to launch\n"),
-        (Exception(), 70, "testcraft internal error: Exception()\n"),
+        (Exception(), os.EX_SOFTWARE, "testcraft internal error: Exception()\n"),
         (
             craft_cli.ArgumentParsingError("Argument parsing error"),
-            64,
+            os.EX_USAGE,
             "Argument parsing error\n",
         ),
         (
-            craft_cli.CraftError("Arbitrary return code", retcode=69),
-            69,
+            craft_cli.CraftError("Arbitrary return code", retcode=os.EX_UNAVAILABLE),
+            os.EX_UNAVAILABLE,
             "Arbitrary return code\n",
         ),
     ],
@@ -1469,8 +1471,7 @@ def test_get_cache_dir_is_file(tmp_path, app):
 
 def test_get_cache_dir_parent_read_only(tmp_path, app):
     """Test that the cache dir path is not valid when its parent is read-only."""
-    (tmp_path / "cache").mkdir(parents=True, exist_ok=True)
-    (tmp_path / "cache").chmod(0o400)
+    (tmp_path / "cache").mkdir(parents=True, exist_ok=True, mode=stat.S_IRUSR)
     with mock.patch.dict("os.environ", {"XDG_CACHE_HOME": str(tmp_path / "cache")}):
         with pytest.raises(
             application.PathInvalidError,
