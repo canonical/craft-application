@@ -9,6 +9,7 @@ dependencies = [
     "craft-parts>=2.1.1",
     "craft-platforms>=0.3.1",
     "craft-providers>=2.0.4",
+    "Jinja2~=3.1",
     "snap-helpers>=0.4.2",
     "platformdirs>=3.10",
     "pydantic~=2.0",
