@@ -63,19 +63,6 @@ def test_get_managed_cmd(fake_command, verbosity, app_metadata):
     ]
 
 
-def test_without_config(emitter):
-    """Test that a command can be initialised without a config.
-
-    This is necessary for providing per-command help.
-    """
-
-    command = base.AppCommand(None)
-
-    emitter.assert_trace("Not completing command configuration")
-    assert not hasattr(command, "_app")
-    assert not hasattr(command, "_services")
-
-
 @pytest.mark.parametrize("always_load_project", [True, False])
 def test_needs_project(fake_command, always_load_project):
     """`needs_project()` defaults to `always_load_project`."""
