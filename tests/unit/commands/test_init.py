@@ -86,7 +86,7 @@ def test_init_run_project_dir(init_command, name, mock_services, emitter):
     init_command.run(parsed_args)
 
     mock_services.init.initialise_project.assert_called_once_with(
-        project_dir=project_dir,
+        project_dir=project_dir.expanduser().resolve(),
         project_name=expected_name,
         template_dir=init_command.parent_template_dir / "test-profile",
     )

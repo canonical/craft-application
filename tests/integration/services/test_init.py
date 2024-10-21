@@ -25,7 +25,6 @@ import pytest
 from craft_application import errors
 from craft_application.models.project import Project
 from craft_application.services import InitService
-from craft_application.util import make_executable
 
 # init operates in the current working directory
 pytestmark = pytest.mark.usefixtures("new_dir")
@@ -145,7 +144,7 @@ def template_dir_with_executables(
         filepath.parent.mkdir(exist_ok=True)
         with filepath.open("wt", encoding="utf8") as file:
             file.write("#!/bin/bash\necho 'Hello, world!'")
-            make_executable(file)
+        filepath.chmod(0o755)
 
     return fake_empty_template_dir
 

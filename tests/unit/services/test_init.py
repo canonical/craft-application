@@ -16,13 +16,14 @@
 
 """Unit tests for the InitService."""
 
+import os
 import pathlib
 import textwrap
 
 import jinja2
 import pytest
 import pytest_check
-from craft_application import errors, services, util
+from craft_application import errors, services
 
 
 @pytest.fixture
@@ -47,26 +48,16 @@ def test_get_context(init_service):
     assert context == {"name": "my-project"}
 
 
-def test_create_project_dir(init_service, tmp_path, emitter):
+@pytest.mark.parametrize("create_dir", [True, False])
+def test_create_project_dir(init_service, tmp_path, emitter, create_dir):
     project_dir = tmp_path / "my-project"
+    if create_dir:
+        project_dir.mkdir()
 
     init_service._create_project_dir(project_dir=project_dir)
 
     assert project_dir.is_dir()
     emitter.assert_debug(f"Creating project directory {str(project_dir)!r}.")
-
-
-def test_create_project_dir_exists(init_service, tmp_path, emitter):
-    """Do not error if the project directory already exists."""
-    project_dir = tmp_path / "my-project"
-    project_dir.mkdir()
-
-    init_service._create_project_dir(project_dir=project_dir)
-
-    assert project_dir.is_dir()
-    emitter.assert_debug(
-        f"Not creating project directory {str(project_dir)!r} because it already exists."
-    )
 
 
 def test_get_templates_environment(init_service, mocker):
@@ -217,9 +208,8 @@ def test_render_project_executable(init_service, tmp_path):
     template_dir = tmp_path / "templates"
     template_dir.mkdir()
     for filename in ["file-1.sh.j2", "file-2.sh"]:
-        with (template_dir / filename).open("wt", encoding="utf8") as file:
-            file.write("#!/bin/bash\necho 'Hello, world!'")
-            util.make_executable(file)
+        (template_dir / filename).write_text("#!/bin/bash\necho 'Hello, world!'")
+        (template_dir / filename).chmod(0o755)
     for filename in ["file-3.txt.j2", "file-4.txt"]:
         (template_dir / filename).write_text("template content")
 
@@ -231,7 +221,7 @@ def test_render_project_executable(init_service, tmp_path):
         context={"name": "my-project"},
     )
 
-    pytest_check.is_true(util.is_executable(project_dir / "file-1.sh"))
-    pytest_check.is_true(util.is_executable(project_dir / "file-2.sh"))
-    pytest_check.is_false(util.is_executable(project_dir / "file-3.txt"))
-    pytest_check.is_false(util.is_executable(project_dir / "file-4.txt"))
+    pytest_check.is_true(os.access(project_dir / "file-1.sh", os.X_OK))
+    pytest_check.is_true(os.access(project_dir / "file-2.sh", os.X_OK))
+    pytest_check.is_false(os.access(project_dir / "file-3.txt", os.X_OK))
+    pytest_check.is_false(os.access(project_dir / "file-4.txt", os.X_OK))

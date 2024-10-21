@@ -138,7 +138,7 @@ class InitCommand(base.AppCommand):
         """
         # if set explicitly, just return it
         if parsed_args.project_dir is not None:
-            return pathlib.Path(parsed_args.project_dir)
+            return pathlib.Path(parsed_args.project_dir).expanduser().resolve()
 
         # If both args are undefined, default to current dir
         return pathlib.Path.cwd().resolve()

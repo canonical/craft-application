@@ -4,7 +4,7 @@
 Changelog
 *********
 
-X.Y.Z (2024-MMM-DD)
+X.Y.0 (2024-MMM-DD)
 -------------------
 
 Commands

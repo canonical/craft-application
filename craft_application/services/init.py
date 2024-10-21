@@ -25,7 +25,6 @@ import jinja2
 from craft_cli import emit
 
 from craft_application.errors import InitError
-from craft_application.util import is_executable, make_executable
 
 from . import base
 
@@ -147,11 +146,8 @@ class InitService(base.AppService):
                 continue
             path.parent.mkdir(parents=True, exist_ok=True)
             with path.open("wt", encoding="utf8") as file:
-                out = template.render(context)
-                file.write(out)
-                if is_executable(template_dir / template_name) and os.name == "posix":
-                    make_executable(file)
-                    emit.debug("  made executable")
+                file.write(template.render(context))
+            shutil.copystat((template_dir / template_name), path)
         emit.progress("Rendered project.")
 
     def _get_context(self, name: str) -> dict[str, Any]:
@@ -166,14 +162,8 @@ class InitService(base.AppService):
     @staticmethod
     def _create_project_dir(project_dir: pathlib.Path) -> None:
         """Create the project directory if it does not already exist."""
-        if not project_dir.exists():
-            emit.debug(f"Creating project directory {str(project_dir)!r}.")
-            project_dir.mkdir(parents=True)
-        else:
-            emit.debug(
-                f"Not creating project directory {str(project_dir)!r} "
-                "because it already exists."
-            )
+        emit.debug(f"Creating project directory {str(project_dir)!r}.")
+        project_dir.mkdir(parents=True, exist_ok=True)
 
     def _get_loader(self, template_dir: pathlib.Path) -> jinja2.BaseLoader:
         """Return a Jinja loader for the given template directory.
