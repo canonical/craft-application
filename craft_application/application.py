@@ -527,7 +527,7 @@ class Application:
         run_managed: bool,  # noqa: FBT001
         is_managed: bool,  # noqa: FBT001
     ) -> None:
-        if pro_services is not None:
+        if pro_services:
             # Validate requested pro services on the host if we are running in destructive mode.
             if not run_managed and not is_managed:
                 craft_cli.emit.debug(
