@@ -4,6 +4,15 @@
 Changelog
 *********
 
+4.4.0 (2024-Oct-XX)
+-------------------
+
+Application
+===========
+
+- ``AppCommand`` subclasses now will always receive a valid ``app_config``
+  dict.
+
 4.3.0 (2024-Oct-11)
 -------------------
 

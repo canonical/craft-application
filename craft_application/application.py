@@ -452,15 +452,18 @@ class Application:
 
         try:
             craft_cli.emit.trace("pre-parsing arguments...")
+            app_config = self.app_config
             # Workaround for the fact that craft_cli requires a command.
             # https://github.com/canonical/craft-cli/issues/141
             if "--version" in sys.argv or "-V" in sys.argv:
                 try:
-                    global_args = dispatcher.pre_parse_args(["pull", *sys.argv[1:]])
+                    global_args = dispatcher.pre_parse_args(
+                        ["pull", *sys.argv[1:]], app_config
+                    )
                 except craft_cli.ArgumentParsingError:
-                    global_args = dispatcher.pre_parse_args(sys.argv[1:])
+                    global_args = dispatcher.pre_parse_args(sys.argv[1:], app_config)
             else:
-                global_args = dispatcher.pre_parse_args(sys.argv[1:])
+                global_args = dispatcher.pre_parse_args(sys.argv[1:], app_config)
 
             if global_args.get("version"):
                 craft_cli.emit.message(f"{self.app.name} {self.app.version}")
