@@ -12,12 +12,21 @@ Application
 
 - ``AppCommand`` subclasses now will always receive a valid ``app_config``
   dict.
+- Fixes a bug where the fetch-service integration would try to spawn the
+  fetch-service process when running in managed mode.
+
+Commands
+========
+
+- Adds an ``init`` command for initialising new projects.
 
 Services
 ========
 
-- Fixed a bug where the fetch-service integration would try to spawn the
-  fetch-service process when running in managed mode.
+- Adds an ``InitService`` for initialising new projects.
+
+..
+  For a complete list of commits, check out the `X.Y.Z`_ release on GitHub.
 
 4.3.0 (2024-Oct-11)
 -------------------

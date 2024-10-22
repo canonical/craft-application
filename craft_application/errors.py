@@ -246,3 +246,7 @@ class CancelFailedError(RemoteBuildError):
 
 class FetchServiceError(CraftError):
     """Errors related to the fetch-service."""
+
+
+class InitError(CraftError):
+    """Errors related to initialising a project."""

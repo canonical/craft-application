@@ -102,10 +102,20 @@ class ProviderService(base.ProjectService):
                 # use the aliased name of the snap when injecting
                 name = os.getenv("SNAP_INSTANCE_NAME", self._app.name)
                 channel = None
+                emit.debug(
+                    f"Setting {self._app.name} to be injected from the "
+                    "host into the build environment because it is running "
+                    "as a snap."
+                )
             else:
                 # use the snap name when installing from the store
                 name = self._app.name
                 channel = os.getenv("CRAFT_SNAP_CHANNEL", "latest/stable")
+                emit.debug(
+                    f"Setting {self._app.name} to be installed from the {channel} "
+                    "channel in the build environment because it is not running "
+                    "as a snap."
+                )
 
             self.snaps.append(Snap(name=name, channel=channel, classic=True))
 
