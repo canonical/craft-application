@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import abc
 import argparse
+import warnings
 from typing import Any, Optional, Protocol, final
 
 from craft_cli import BaseCommand, emit
@@ -53,7 +54,15 @@ class AppCommand(BaseCommand):
     always_load_project: bool = False
     """The project is also loaded in non-managed mode."""
 
-    def __init__(self, config: dict[str, Any]) -> None:
+    def __init__(self, config: dict[str, Any] | None) -> None:
+        if config is None:
+            warnings.warn(
+                "Creating an AppCommand without a config dict is pending deprecation.",
+                PendingDeprecationWarning,
+            )
+            emit.trace("Not completing command configuration")
+            return
+
         super().__init__(config)
 
         self._app: application.AppMetadata = config["app"]
