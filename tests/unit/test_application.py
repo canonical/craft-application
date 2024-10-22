@@ -49,6 +49,7 @@ from craft_application import (
     services,
     util,
 )
+from craft_application.commands import AppCommand
 from craft_application.models import BuildInfo
 from craft_application.util import (
     get_host_architecture,  # pyright: ignore[reportGeneralTypeIssues]
@@ -2141,3 +2142,35 @@ def test_clean_platform(monkeypatch, tmp_path, app_metadata, fake_services, mock
         base=bases.BaseName("ubuntu", "24.04"),
     )
     mocked_clean.assert_called_once_with(mocker.ANY, mocker.ANY, expected_info)
+
+
+class AppConfigCommand(AppCommand):
+
+    name: str = "app-config"
+    help_msg: str = "Help text"
+    overview: str = "Overview"
+
+    def fill_parser(self, parser: argparse.ArgumentParser) -> None:
+
+        name = self._app.name
+        parser.add_argument(
+            "app-name",
+            help=f"The name of the app, which is {name!r}.",
+        )
+
+
+@pytest.mark.usefixtures("emitter")
+def test_app_config_in_help(
+    monkeypatch,
+    capsys,
+    app,
+):
+    app.add_command_group("Test", [AppConfigCommand])
+    monkeypatch.setattr(sys, "argv", ["testcraft", "app-config", "-h"])
+
+    with pytest.raises(SystemExit):
+        app.run()
+
+    expected = "app-name:  The name of the app, which is 'testcraft'."
+    _, err = capsys.readouterr()
+    assert expected in err

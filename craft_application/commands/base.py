@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import abc
 import argparse
+import warnings
 from typing import Any, Optional, Protocol, final
 
 from craft_cli import BaseCommand, emit
@@ -55,8 +56,11 @@ class AppCommand(BaseCommand):
 
     def __init__(self, config: dict[str, Any] | None) -> None:
         if config is None:
-            # This should only be the case when the command is not going to be run.
-            # For example, when requesting help on the command.
+            warnings.warn(
+                "Creating an AppCommand without a config dict is pending deprecation.",
+                PendingDeprecationWarning,
+                stacklevel=3,
+            )
             emit.trace("Not completing command configuration")
             return
 
