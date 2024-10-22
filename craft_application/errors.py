@@ -248,6 +248,10 @@ class FetchServiceError(CraftError):
     """Errors related to the fetch-service."""
 
 
+class InitError(CraftError):
+    """Errors related to initialising a project."""
+
+
 class UbuntuProError(CraftError):
     """Base Exception class for ProServices."""
 

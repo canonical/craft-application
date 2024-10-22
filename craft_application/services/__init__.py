@@ -19,6 +19,7 @@ from craft_application.services.base import AppService, ProjectService
 from craft_application.services.config import ConfigService
 from craft_application.services.fetch import FetchService
 from craft_application.services.lifecycle import LifecycleService
+from craft_application.services.init import InitService
 from craft_application.services.package import PackageService
 from craft_application.services.provider import ProviderService
 from craft_application.services.remotebuild import RemoteBuildService
@@ -31,6 +32,7 @@ __all__ = [
     "ProjectService",
     "ConfigService",
     "LifecycleService",
+    "InitService",
     "PackageService",
     "ProviderService",
     "RemoteBuildService",
