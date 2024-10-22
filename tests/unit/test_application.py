@@ -51,8 +51,8 @@ from craft_application.util import (
 )
 from craft_cli import emit
 from craft_parts.plugins.plugins import PluginType
-
-from tests.conftest import FakeApplication
+from craft_providers import bases, lxd
+from overrides import override
 
 EMPTY_COMMAND_GROUP = craft_cli.CommandGroup("FakeCommands", [])
 
@@ -295,6 +295,76 @@ def test_run_managed_failure(app, fake_project):
         app.run_managed(None, get_host_architecture())
 
     assert exc_info.value.brief == "Failed to execute testcraft in instance."
+
+
+def test_run_managed_configure_pro(mocker, app, fake_project, fake_build_plan):
+    """Ensure that Pro is installed and configured in a managed instance."""
+    mock_provider = mocker.MagicMock(spec_set=services.ProviderService)
+    app.services.provider = mock_provider
+    # provide spec to pass type check for pro support
+    mock_instance = mocker.MagicMock(spec=lxd.LXDInstance)
+
+    # TODO: these methods are currently in review, https://github.com/canonical/craft-providers/pull/664/files
+    # Remove when craft-providers with pro support in lxd is merged to main.
+    mock_instance.install_pro_client = mocker.Mock()
+    mock_instance.attach_pro_subscription = mocker.Mock()
+    mock_instance.enable_pro_service = mocker.Mock()
+
+    mock_provider.instance.return_value.__enter__.return_value = mock_instance
+    app.project = fake_project
+    app._build_plan = fake_build_plan
+    app._pro_services = util.ProServices(["esm-apps"])
+    arch = get_host_architecture()
+
+    app.run_managed(None, arch)
+
+    assert mock_instance.install_pro_client.call_count == 1
+    assert mock_instance.attach_pro_subscription.call_count == 1
+    assert mock_instance.enable_pro_service.call_count == 1
+
+
+def test_run_managed_pro_not_supported(mocker, app, fake_project, fake_build_plan):
+    """Ensure that providers that do not support Ubuntu Pro cause an exception
+    when pro services are requested."""
+    mock_provider = mocker.MagicMock(spec_set=services.ProviderService)
+    app.services.provider = mock_provider
+    # Provide an unsupported instance type to raise exception
+    mock_instance = mocker.MagicMock()
+
+    mock_provider.instance.return_value.__enter__.return_value = mock_instance
+    app.project = fake_project
+    app._build_plan = fake_build_plan
+    app._pro_services = util.ProServices(["esm-apps"])
+    arch = get_host_architecture()
+
+    with pytest.raises(errors.UbuntuProNotSupportedError):
+        app.run_managed(None, arch)
+
+
+def test_run_managed_skip_configure_pro(mocker, app, fake_project, fake_build_plan):
+    """Ensure that Pro is not installed and configured when it is not required."""
+    mock_provider = mocker.MagicMock(spec_set=services.ProviderService)
+    app.services.provider = mock_provider
+    # provide spec to pass type check for pro support
+    mock_instance = mocker.MagicMock(spec=lxd.LXDInstance)
+
+    # TODO: Remove when these mocks when methods are present in main.
+    # see TODO in test_run_managed_configure_pro for details.
+    mock_instance.install_pro_client = mocker.Mock()
+    mock_instance.attach_pro_subscription = mocker.Mock()
+    mock_instance.enable_pro_service = mocker.Mock()
+
+    mock_provider.instance.return_value.__enter__.return_value = mock_instance
+    app.project = fake_project
+    app._build_plan = fake_build_plan
+    app._pro_services = util.ProServices([])
+    arch = get_host_architecture()
+
+    app.run_managed(None, arch)
+
+    assert mock_instance.install_pro_client.call_count == 0
+    assert mock_instance.attach_pro_subscription.call_count == 0
+    assert mock_instance.enable_pro_service.call_count == 0
 
 
 def test_run_managed_multiple(app, fake_host_architecture):
@@ -623,6 +693,11 @@ def test_run_success_unmanaged(
 
 
 def test_run_success_managed(
+    monkeypatch,
+    app,
+    fake_project,
+    mocker,
+    mock_pro_api_call,  # noqa: ARG001
     monkeypatch,
     app,
     fake_project,
@@ -1243,3 +1318,28 @@ def test_doc_url_in_command_help(monkeypatch, capsys, app):
     expected = "For more information, check out: www.testcraft.example/docs/3.14159/reference/commands/app-config\n\n"
     _, err = capsys.readouterr()
     assert err.endswith(expected)
+
+
+# fmt: off
+@pytest.mark.parametrize(
+    (   "run_managed",     "is_managed",   "call_count",   "validator_options"),
+    [
+        (False,             False,         1,               None),
+        (True,              True,          1,               None),
+        (True,              False,         1,               util.ValidatorOptions.ATTACHMENT | util.ValidatorOptions.SUPPORT,),
+        (False,             True,          0,               None),
+    ],
+)
+# fmt: on
+def test_check_pro_requirement(
+    mocker, app, run_managed, is_managed, call_count, validator_options
+):
+    """Test that _check_pro_requirement validates Pro Services in the correct situations"""
+    pro_services = mocker.Mock()
+    app._check_pro_requirement(pro_services, run_managed, is_managed)
+
+    assert pro_services.validate.call_count == call_count
+
+    for call in pro_services.validate.call_args_list:
+        if validator_options is not None:  # skip assert if default value is passed
+            assert call.kwargs["options"] == validator_options

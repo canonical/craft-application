@@ -401,6 +401,10 @@ class InvalidUbuntuProStateError(UbuntuProError):
     # environment. What is the best way to get the is_managed method here?
 
 
+class UbuntuProNotSupportedError(UbuntuProError):
+    """Raised when Ubuntu Pro client is not supported on the base or build base."""
+
+
 class UbuntuProClientNotFoundError(UbuntuProApiError):
     """Raised when Ubuntu Pro client was not found on the system."""
 
