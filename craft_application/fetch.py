@@ -23,7 +23,7 @@ import signal
 import subprocess
 import time
 from dataclasses import dataclass
-from typing import Any, cast
+from typing import Any, TextIO, cast
 
 import craft_providers
 import requests
@@ -34,6 +34,8 @@ from requests.auth import HTTPBasicAuth
 from craft_application import errors, util
 from craft_application.models import CraftBaseModel
 from craft_application.util import retry
+
+Stream = TextIO | int | None
 
 
 @dataclass(frozen=True)
@@ -163,6 +165,7 @@ def start_service() -> subprocess.Popen[str] | None:
             archive_key_id,
         ],
         text=True,
+        stderr=subprocess.PIPE,
     )
     env["FETCH_APT_RELEASE_PUBLIC_KEY"] = archive_key
 
@@ -302,10 +305,12 @@ def configure_instance(
     """Configure a build instance to use a given fetch-service session."""
     net_info = NetInfo(instance, session_data)
 
-    _install_certificate(instance)
-    _configure_pip(instance)
-    _configure_snapd(instance, net_info)
-    _configure_apt(instance, net_info)
+    emit.progress("Configuring instance")
+    with emit.open_stream() as stream:
+        _install_certificate(instance, stream=stream)
+        _configure_pip(instance)
+        _configure_snapd(instance, net_info, stream=stream)
+        _configure_apt(instance, net_info, stream=stream)
 
     return net_info.env
 
@@ -343,7 +348,7 @@ def _get_service_base_dir() -> pathlib.Path:
     return pathlib.Path(output.strip())
 
 
-def _install_certificate(instance: craft_providers.Executor) -> None:
+def _install_certificate(instance: craft_providers.Executor, *, stream: Stream) -> None:
 
     # Push the local certificate
     cert, _key = _obtain_certificate()
@@ -355,6 +360,8 @@ def _install_certificate(instance: craft_providers.Executor) -> None:
     instance.execute_run(  # pyright: ignore[reportUnknownMemberType]
         ["/bin/sh", "-c", "/usr/sbin/update-ca-certificates > /dev/null"],
         check=True,
+        stdout=stream,
+        stderr=stream,
     )
 
 
@@ -370,7 +377,9 @@ def _configure_pip(instance: craft_providers.Executor) -> None:
     )
 
 
-def _configure_snapd(instance: craft_providers.Executor, net_info: NetInfo) -> None:
+def _configure_snapd(
+    instance: craft_providers.Executor, net_info: NetInfo, *, stream: Stream
+) -> None:
     """Configure snapd to use the proxy and see our certificate.
 
     Note: This *must* be called *after* _install_certificate(), to ensure that
@@ -381,11 +390,15 @@ def _configure_snapd(instance: craft_providers.Executor, net_info: NetInfo) -> N
     )
     for config in ("proxy.http", "proxy.https"):
         instance.execute_run(  # pyright: ignore[reportUnknownMemberType]
-            ["snap", "set", "system", f"{config}={net_info.http_proxy}"]
+            ["snap", "set", "system", f"{config}={net_info.http_proxy}"],
+            stdout=stream,
+            stderr=stream,
         )
 
 
-def _configure_apt(instance: craft_providers.Executor, net_info: NetInfo) -> None:
+def _configure_apt(
+    instance: craft_providers.Executor, net_info: NetInfo, *, stream: Stream
+) -> None:
     apt_config = f'Acquire::http::Proxy "{net_info.http_proxy}";\n'
     apt_config += f'Acquire::https::Proxy "{net_info.http_proxy}";\n'
 
@@ -399,10 +412,9 @@ def _configure_apt(instance: craft_providers.Executor, net_info: NetInfo) -> Non
         check=True,
     )
     env = cast(dict[str, str | None], net_info.env)
-    with emit.open_stream() as fd:
-        instance.execute_run(  # pyright: ignore[reportUnknownMemberType]
-            ["apt", "update"], env=env, check=True, stdout=fd, stderr=fd
-        )
+    instance.execute_run(  # pyright: ignore[reportUnknownMemberType]
+        ["apt", "update"], env=env, check=True, stdout=stream, stderr=stream
+    )
 
 
 def _get_gateway(instance: craft_providers.Executor) -> str:
@@ -461,6 +473,7 @@ def _obtain_certificate() -> tuple[pathlib.Path, pathlib.Path]:
             "4096",
         ],
         check=True,
+        capture_output=True,
     )
 
     subprocess.run(
@@ -475,6 +488,7 @@ def _obtain_certificate() -> tuple[pathlib.Path, pathlib.Path]:
             key_tmp,
         ],
         check=True,
+        capture_output=True,
     )
 
     # Create a certificate with the key
@@ -497,6 +511,7 @@ def _obtain_certificate() -> tuple[pathlib.Path, pathlib.Path]:
             cert_tmp,
         ],
         check=True,
+        capture_output=True,
     )
 
     cert_tmp.rename(cert)

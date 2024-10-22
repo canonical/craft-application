@@ -117,6 +117,7 @@ def test_start_service(mocker, tmp_path):
             "F6ECB3762474EDA9D21B7022871920D1991BC93C",
         ],
         text=True,
+        stderr=subprocess.PIPE,
     )
 
     assert mock_obtain_certificate.called
@@ -243,11 +244,22 @@ def test_configure_build_instance(mocker):
     env = fetch.configure_instance(instance, session_data)
     assert env == expected_env
 
+    # Use the first call to get the value of the "stdout" and "stderr" parameters,
+    # which must be a single integer and the same for all calls.
+    kwargs = instance.execute_run.mock_calls[0].kwargs
+    stream = kwargs["stdout"]
+
+    assert isinstance(stream, int)
+    assert kwargs["stderr"] == stream
+
+    stream_args = {"stdout": stream, "stderr": stream}
+
     # Execution calls on the instance
     assert instance.execute_run.mock_calls == [
         call(
             ["/bin/sh", "-c", "/usr/sbin/update-ca-certificates > /dev/null"],
             check=True,
+            **stream_args,
         ),
         call(["mkdir", "-p", "/root/.pip"]),
         call(["systemctl", "restart", "snapd"]),
@@ -257,7 +269,8 @@ def test_configure_build_instance(mocker):
                 "set",
                 "system",
                 f"proxy.http={expected_proxy}",
-            ]
+            ],
+            **stream_args,
         ),
         call(
             [
@@ -265,15 +278,15 @@ def test_configure_build_instance(mocker):
                 "set",
                 "system",
                 f"proxy.https={expected_proxy}",
-            ]
+            ],
+            **stream_args,
         ),
         call(["/bin/rm", "-Rf", "/var/lib/apt/lists"], check=True),
         call(
             ["apt", "update"],
             env=expected_env,
             check=True,
-            stdout=mocker.ANY,
-            stderr=mocker.ANY,
+            **stream_args,
         ),
     ]
 
