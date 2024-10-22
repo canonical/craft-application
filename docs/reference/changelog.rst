@@ -13,6 +13,19 @@ Application
 - ``AppCommand`` subclasses now will always receive a valid ``app_config``
   dict.
 
+Commands
+========
+
+- Adds an ``init`` command for initialising new projects.
+
+Services
+========
+
+- Adds an ``InitService`` for initialising new projects.
+
+..
+  For a complete list of commits, check out the `X.Y.Z`_ release on GitHub.
+
 4.3.0 (2024-Oct-11)
 -------------------
 
