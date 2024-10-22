@@ -59,6 +59,7 @@ class AppCommand(BaseCommand):
             warnings.warn(
                 "Creating an AppCommand without a config dict is pending deprecation.",
                 PendingDeprecationWarning,
+                stacklevel=3,
             )
             emit.trace("Not completing command configuration")
             return
