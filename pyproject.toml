@@ -4,7 +4,7 @@ description = "A framework for *craft applications."
 dynamic = ["version", "readme"]
 dependencies = [
     "craft-archives>=2.0.0",
-    "craft-cli>=2.6.0",
+    "craft-cli>=2.9.0",
     "craft-grammar>=2.0.0",
     "craft-parts>=2.1.1",
     "craft-platforms>=0.3.1",
@@ -69,8 +69,8 @@ lint = [
     "yamllint==1.35.1"
 ]
 types = [
-    "mypy[reports]==1.11.2",
-    "pyright==1.1.384",
+    "mypy[reports]==1.12.0",
+    "pyright==1.1.385",
     "types-requests",
     "types-urllib3",
 ]
@@ -85,7 +85,7 @@ apt = [
 
 [build-system]
 requires = [
-    "setuptools==75.1.0",
+    "setuptools==75.2.0",
     "setuptools_scm[toml]>=8.1"
 ]
 build-backend = "setuptools.build_meta"
