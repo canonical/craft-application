@@ -117,6 +117,7 @@ def test_start_service(mocker, tmp_path):
             "F6ECB3762474EDA9D21B7022871920D1991BC93C",
         ],
         text=True,
+        stderr=subprocess.PIPE,
     )
 
     assert mock_obtain_certificate.called
@@ -243,21 +244,30 @@ def test_configure_build_instance(mocker):
     env = fetch.configure_instance(instance, session_data)
     assert env == expected_env
 
+    default_args = {"check": True, "stdout": subprocess.PIPE, "stderr": subprocess.PIPE}
+
     # Execution calls on the instance
     assert instance.execute_run.mock_calls == [
         call(
             ["/bin/sh", "-c", "/usr/sbin/update-ca-certificates > /dev/null"],
-            check=True,
+            **default_args,
         ),
-        call(["mkdir", "-p", "/root/.pip"]),
-        call(["systemctl", "restart", "snapd"]),
+        call(
+            ["mkdir", "-p", "/root/.pip"],
+            **default_args,
+        ),
+        call(
+            ["systemctl", "restart", "snapd"],
+            **default_args,
+        ),
         call(
             [
                 "snap",
                 "set",
                 "system",
                 f"proxy.http={expected_proxy}",
-            ]
+            ],
+            **default_args,
         ),
         call(
             [
@@ -265,15 +275,16 @@ def test_configure_build_instance(mocker):
                 "set",
                 "system",
                 f"proxy.https={expected_proxy}",
-            ]
+            ],
+            **default_args,
         ),
-        call(["/bin/rm", "-Rf", "/var/lib/apt/lists"], check=True),
+        call(
+            ["/bin/rm", "-Rf", "/var/lib/apt/lists"],
+            **default_args,
+        ),
         call(
             ["apt", "update"],
-            env=expected_env,
-            check=True,
-            stdout=mocker.ANY,
-            stderr=mocker.ANY,
+            **default_args,
         ),
     ]
 

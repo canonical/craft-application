@@ -16,6 +16,7 @@
 """Utilities to interact with the fetch-service."""
 import contextlib
 import io
+import logging
 import os
 import pathlib
 import shlex
@@ -34,6 +35,8 @@ from requests.auth import HTTPBasicAuth
 from craft_application import errors, util
 from craft_application.models import CraftBaseModel
 from craft_application.util import retry
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -163,6 +166,7 @@ def start_service() -> subprocess.Popen[str] | None:
             archive_key_id,
         ],
         text=True,
+        stderr=subprocess.PIPE,
     )
     env["FETCH_APT_RELEASE_PUBLIC_KEY"] = archive_key
 
@@ -272,7 +276,7 @@ def create_session(*, strict: bool) -> SessionData:
 def teardown_session(session_data: SessionData) -> dict[str, Any]:
     """Stop and cleanup a running fetch-service session.
 
-    :param SessionData: the data of a previously-created session.
+    :param session_data: the data of a previously-created session.
     :return: A dict containing the session's report (the contents and format
       of this dict are still subject to change).
     """
@@ -345,6 +349,7 @@ def _get_service_base_dir() -> pathlib.Path:
 
 def _install_certificate(instance: craft_providers.Executor) -> None:
 
+    logger.info("Installing certificate")
     # Push the local certificate
     cert, _key = _obtain_certificate()
     instance.push_file(
@@ -352,16 +357,15 @@ def _install_certificate(instance: craft_providers.Executor) -> None:
         destination=_FETCH_CERT_INSTANCE_PATH,
     )
     # Update the certificates db
-    instance.execute_run(  # pyright: ignore[reportUnknownMemberType]
-        ["/bin/sh", "-c", "/usr/sbin/update-ca-certificates > /dev/null"],
-        check=True,
+    _execute_run(
+        instance, ["/bin/sh", "-c", "/usr/sbin/update-ca-certificates > /dev/null"]
     )
 
 
 def _configure_pip(instance: craft_providers.Executor) -> None:
-    instance.execute_run(  # pyright: ignore[reportUnknownMemberType]
-        ["mkdir", "-p", "/root/.pip"]
-    )
+    logger.info("Configuring pip")
+
+    _execute_run(instance, ["mkdir", "-p", "/root/.pip"])
     pip_config = b"[global]\ncert=/usr/local/share/ca-certificates/local-ca.crt"
     instance.push_file_io(
         destination=pathlib.Path("/root/.pip/pip.conf"),
@@ -376,16 +380,16 @@ def _configure_snapd(instance: craft_providers.Executor, net_info: NetInfo) -> N
     Note: This *must* be called *after* _install_certificate(), to ensure that
     when the snapd restart happens the new cert is there.
     """
-    instance.execute_run(  # pyright: ignore[reportUnknownMemberType]
-        ["systemctl", "restart", "snapd"]
-    )
+    logger.info("Configuring snapd")
+    _execute_run(instance, ["systemctl", "restart", "snapd"])
     for config in ("proxy.http", "proxy.https"):
-        instance.execute_run(  # pyright: ignore[reportUnknownMemberType]
-            ["snap", "set", "system", f"{config}={net_info.http_proxy}"]
+        _execute_run(
+            instance, ["snap", "set", "system", f"{config}={net_info.http_proxy}"]
         )
 
 
 def _configure_apt(instance: craft_providers.Executor, net_info: NetInfo) -> None:
+    logger.info("Configuring Apt")
     apt_config = f'Acquire::http::Proxy "{net_info.http_proxy}";\n'
     apt_config += f'Acquire::https::Proxy "{net_info.http_proxy}";\n'
 
@@ -394,15 +398,10 @@ def _configure_apt(instance: craft_providers.Executor, net_info: NetInfo) -> Non
         content=io.BytesIO(apt_config.encode("utf-8")),
         file_mode="0644",
     )
-    instance.execute_run(  # pyright: ignore[reportUnknownMemberType]
-        ["/bin/rm", "-Rf", "/var/lib/apt/lists"],
-        check=True,
-    )
-    env = cast(dict[str, str | None], net_info.env)
-    with emit.open_stream() as fd:
-        instance.execute_run(  # pyright: ignore[reportUnknownMemberType]
-            ["apt", "update"], env=env, check=True, stdout=fd, stderr=fd
-        )
+    _execute_run(instance, ["/bin/rm", "-Rf", "/var/lib/apt/lists"])
+
+    logger.info("Refreshing Apt package listings")
+    _execute_run(instance, ["apt", "update"])
 
 
 def _get_gateway(instance: craft_providers.Executor) -> str:
@@ -461,6 +460,7 @@ def _obtain_certificate() -> tuple[pathlib.Path, pathlib.Path]:
             "4096",
         ],
         check=True,
+        capture_output=True,
     )
 
     subprocess.run(
@@ -475,6 +475,7 @@ def _obtain_certificate() -> tuple[pathlib.Path, pathlib.Path]:
             key_tmp,
         ],
         check=True,
+        capture_output=True,
     )
 
     # Create a certificate with the key
@@ -497,6 +498,7 @@ def _obtain_certificate() -> tuple[pathlib.Path, pathlib.Path]:
             cert_tmp,
         ],
         check=True,
+        capture_output=True,
     )
 
     cert_tmp.rename(cert)
@@ -521,3 +523,11 @@ def _get_log_filepath() -> pathlib.Path:
     base_dir = _get_service_base_dir()
 
     return base_dir / "craft/fetch-log.txt"
+
+
+def _execute_run(
+    instance: craft_providers.Executor, cmd: list[str]
+) -> subprocess.CompletedProcess[str]:
+    return instance.execute_run(  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]
+        cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+    )
