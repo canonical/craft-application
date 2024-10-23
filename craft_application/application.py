@@ -33,7 +33,6 @@ from typing import TYPE_CHECKING, Any, cast, final
 import craft_cli
 import craft_parts
 import craft_providers
-from craft_cli import CommandGroup
 from craft_parts.plugins.plugins import PluginType
 from platformdirs import user_cache_path
 
@@ -208,7 +207,7 @@ class Application:
         *,
         app_commands: craft_cli.CommandGroup | None,
         default_commands: craft_cli.CommandGroup,
-    ) -> CommandGroup:
+    ) -> craft_cli.CommandGroup:
         """Merge default commands with application commands for a particular group.
 
         Default commands are only used if the application does not have a command
