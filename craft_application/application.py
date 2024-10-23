@@ -184,6 +184,8 @@ class Application:
 
         If the application and craft-application provide a command with the same name
         in the same group, the application's command is used.
+
+        Note that a command with the same name cannot exist in multiple groups.
         """
         lifeycle_default_commands = commands.get_lifecycle_command_group()
         other_default_commands = commands.get_other_command_group()
@@ -223,6 +225,8 @@ class Application:
         if not app_commands:
             return default_commands
 
+        craft_cli.emit.trace(f"Merging commands for group {default_commands.name!r}.")
+
         # for lookup of commands by name
         app_commands_dict = {command.name: command for command in app_commands.commands}
 
@@ -231,11 +235,14 @@ class Application:
 
         for default_command in default_commands.commands:
             # prefer the application command if it exists
-            if default_command.name in app_commands_dict:
-                merged_commands.append(app_commands_dict[default_command.name])
-                processed_command_names.add(default_command.name)
+            command_name = default_command.name
+            if command_name in app_commands_dict:
+                craft_cli.emit.trace(f"Using application command for {command_name!r}.")
+                merged_commands.append(app_commands_dict[command_name])
+                processed_command_names.add(command_name)
             # otherwise use the default
             else:
+                craft_cli.emit.trace(f"Using default command for {command_name!r}.")
                 merged_commands.append(default_command)
 
         # append remaining commands from the application
