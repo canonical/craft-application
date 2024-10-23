@@ -12,6 +12,8 @@ Application
 
 - ``AppCommand`` subclasses now will always receive a valid ``app_config``
   dict.
+- Fixes a bug where the fetch-service integration would try to spawn the
+  fetch-service process when running in managed mode.
 
 Commands
 ========

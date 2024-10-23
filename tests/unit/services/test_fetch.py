@@ -186,3 +186,13 @@ def test_warning_experimental(mocker, fetch_service, run_on_host, emitter):
     warning_emitted = call("message", warning) in emitter.interactions
 
     assert warning_emitted == run_on_host
+
+
+def test_setup_managed(mocker, fetch_service):
+    """The fetch-service process should only be checked/started when running on the host."""
+    mock_start = mocker.patch.object(fetch, "start_service")
+    mocker.patch.object(ProviderService, "is_managed", return_value=True)
+
+    fetch_service.setup()
+
+    assert not mock_start.called

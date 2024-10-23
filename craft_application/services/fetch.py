@@ -90,7 +90,7 @@ class FetchService(services.ProjectService):
                 "and still in development."
             )
 
-        self._fetch_process = fetch.start_service()
+            self._fetch_process = fetch.start_service()
 
     def create_session(self, instance: craft_providers.Executor) -> dict[str, str]:
         """Create a new session.
