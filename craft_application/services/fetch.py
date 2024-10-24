@@ -106,6 +106,7 @@ class FetchService(services.ProjectService):
         strict_session = self._session_policy == "strict"
         self._session_data = fetch.create_session(strict=strict_session)
         self._instance = instance
+        emit.progress("Configuring fetch-service integration")
         return fetch.configure_instance(instance, self._session_data)
 
     def teardown_session(self) -> dict[str, typing.Any]:

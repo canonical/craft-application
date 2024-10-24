@@ -55,7 +55,7 @@ DEFAULT_CLI_LOGGERS = frozenset(
         "craft_parts",
         "craft_providers",
         "craft_store",
-        "craft_application.remote",
+        "craft_application",
     }
 )
 
