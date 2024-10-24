@@ -27,8 +27,10 @@ from unittest import mock
 import craft_providers
 import pytest
 from craft_application import errors, fetch, services, util
+from craft_application.application import DEFAULT_CLI_LOGGERS
 from craft_application.models import BuildInfo
 from craft_application.services.fetch import _PROJECT_MANIFEST_MANAGED_PATH
+from craft_cli import EmitterMode, emit
 from craft_providers import bases
 
 
@@ -259,8 +261,16 @@ def lxd_instance(snap_safe_tmp_path, provider_service):
 
 
 def test_build_instance_integration(
-    app_service, lxd_instance, tmp_path, monkeypatch, fake_project, manifest_data_dir
+    app_service,
+    lxd_instance,
+    tmp_path,
+    monkeypatch,
+    fake_project,
+    manifest_data_dir,
+    capsys,
 ):
+    emit.init(EmitterMode.BRIEF, "testcraft", "hi", streaming_brief=True)
+    util.setup_loggers(*DEFAULT_CLI_LOGGERS)
     monkeypatch.chdir(tmp_path)
 
     app_service.setup()
@@ -329,3 +339,19 @@ def test_build_instance_integration(
     assert dependencies["hello"]["type"] == "application/vnd.debian.binary-package"
     assert dependencies["craft-application"]["type"] == "application/x.python.wheel"
     assert dependencies["craft-application"]["component-version"] == "3.0.0"
+
+    # Note: the messages don't show up as
+    # 'Configuring fetch-service integration :: Installing certificate' noqa: ERA001 (commented-out code)
+    # because streaming-brief is disabled in non-terminal runs.
+    expected_err = textwrap.dedent(
+        """\
+        Configuring fetch-service integration
+        Installing certificate
+        Configuring pip
+        Configuring snapd
+        Configuring Apt
+        Refreshing Apt package listings
+        """
+    )
+    _, captured_err = capsys.readouterr()
+    assert expected_err in captured_err

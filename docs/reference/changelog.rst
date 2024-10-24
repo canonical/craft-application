@@ -14,6 +14,7 @@ Application
   dict.
 - Fixes a bug where the fetch-service integration would try to spawn the
   fetch-service process when running in managed mode.
+- Cleans up the output from the fetch-service integration.
 
 Commands
 ========
