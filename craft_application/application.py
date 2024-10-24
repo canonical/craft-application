@@ -176,22 +176,85 @@ class Application:
 
     @property
     def command_groups(self) -> list[craft_cli.CommandGroup]:
-        """Return command groups."""
-        lifecycle_commands = commands.get_lifecycle_command_group()
-        other_commands = commands.get_other_command_group()
+        """Return command groups.
 
-        merged: dict[str, list[type[craft_cli.BaseCommand]]] = {}
-        all_groups = [lifecycle_commands, other_commands, *self._command_groups]
+        Merges command groups provided by the application with craft-application's
+        default commands.
 
-        # Merge the default command groups with those provided by the application,
-        # so that we don't get multiple groups with the same name.
-        for group in all_groups:
-            merged.setdefault(group.name, []).extend(group.commands)
+        If the application and craft-application provide a command with the same name
+        in the same group, the application's command is used.
 
-        return [
-            craft_cli.CommandGroup(name, commands_)
-            for name, commands_ in merged.items()
-        ]
+        Note that a command with the same name cannot exist in multiple groups.
+        """
+        lifeycle_default_commands = commands.get_lifecycle_command_group()
+        other_default_commands = commands.get_other_command_group()
+
+        merged = {group.name: group for group in self._command_groups}
+
+        merged[lifeycle_default_commands.name] = self._merge_defaults(
+            app_commands=merged.get(lifeycle_default_commands.name),
+            default_commands=lifeycle_default_commands,
+        )
+        merged[other_default_commands.name] = self._merge_defaults(
+            app_commands=merged.get(other_default_commands.name),
+            default_commands=other_default_commands,
+        )
+
+        return list(merged.values())
+
+    def _merge_defaults(
+        self,
+        *,
+        app_commands: craft_cli.CommandGroup | None,
+        default_commands: craft_cli.CommandGroup,
+    ) -> craft_cli.CommandGroup:
+        """Merge default commands with application commands for a particular group.
+
+        Default commands are only used if the application does not have a command
+        with the same name.
+
+        The order of the merged commands follow the order of the default commands.
+        Extra application commands are appended to the end of the command list.
+
+        :param app_commands: The application's commands.
+        :param default_commands: Craft Application's default commands.
+
+        :returns: A list of app commands and default commands.
+        """
+        if not app_commands:
+            return default_commands
+
+        craft_cli.emit.debug(f"Merging commands for group {default_commands.name!r}:")
+
+        # for lookup of commands by name
+        app_commands_dict = {command.name: command for command in app_commands.commands}
+
+        merged_commands: list[type[craft_cli.BaseCommand]] = []
+        processed_command_names: set[str] = set()
+
+        for default_command in default_commands.commands:
+            # prefer the application command if it exists
+            command_name = default_command.name
+            if command_name in app_commands_dict:
+                craft_cli.emit.debug(
+                    f"  - using application command for {command_name!r}."
+                )
+                merged_commands.append(app_commands_dict[command_name])
+                processed_command_names.add(command_name)
+            # otherwise use the default
+            else:
+                merged_commands.append(default_command)
+
+        # append remaining commands from the application
+        for app_command in app_commands.commands:
+            if app_command.name not in processed_command_names:
+                merged_commands.append(app_command)
+
+        return craft_cli.CommandGroup(
+            name=default_commands.name,
+            commands=merged_commands,
+            ordered=default_commands.ordered,
+        )
 
     @property
     def log_path(self) -> pathlib.Path | None:

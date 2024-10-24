@@ -20,6 +20,11 @@ Commands
 ========
 
 - Adds an ``init`` command for initialising new projects.
+- Lifecycle commands are ordered in the sequence they run rather than
+  alphabetically in help messages.
+- Preserves order of ``CommandGroups`` defined by the application.
+- Applications can override commands defined by Craft Application in the
+  same ``CommandGroup``.
 
 Services
 ========
@@ -27,7 +32,7 @@ Services
 - Adds an ``InitService`` for initialising new projects.
 
 ..
-  For a complete list of commits, check out the `X.Y.Z`_ release on GitHub.
+  For a complete list of commits, check out the `4.4.0`_ release on GitHub.
 
 4.3.0 (2024-Oct-11)
 -------------------
