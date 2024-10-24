@@ -49,7 +49,11 @@ from craft_application import (
     services,
     util,
 )
-from craft_application.commands import AppCommand
+from craft_application.commands import (
+    AppCommand,
+    get_lifecycle_command_group,
+    get_other_command_group,
+)
 from craft_application.models import BuildInfo
 from craft_application.util import (
     get_host_architecture,  # pyright: ignore[reportGeneralTypeIssues]
@@ -417,9 +421,9 @@ def mock_dispatcher(monkeypatch):
         (
             [[]],
             [
+                EMPTY_COMMAND_GROUP,
                 commands.get_lifecycle_command_group(),
                 commands.get_other_command_group(),
-                EMPTY_COMMAND_GROUP,
             ],
         ),
     ],
@@ -458,6 +462,51 @@ def test_merge_command_groups(app):
         "Other": [c.name for c in other.commands] + ["list"],
         "Specific": ["reticulate"],
     }
+
+
+def test_merge_default_commands(app):
+    """Merge commands with the same name within the same groups."""
+    stage_command = _create_command("stage")
+    extra_lifecycle_command = _create_command("extra")
+    init_command = _create_command("init")
+    extra_other_command = _create_command("extra")
+
+    app.add_command_group("Lifecycle", [stage_command, extra_lifecycle_command])
+    app.add_command_group("Other", [init_command, extra_other_command])
+    command_groups = app.command_groups
+
+    # check against hardcoded list because the order is important
+    assert command_groups == [
+        craft_cli.CommandGroup(
+            name="Lifecycle",
+            commands=[
+                commands.lifecycle.CleanCommand,
+                commands.lifecycle.PullCommand,
+                commands.lifecycle.BuildCommand,
+                stage_command,
+                commands.lifecycle.PrimeCommand,
+                commands.lifecycle.PackCommand,
+                extra_lifecycle_command,
+            ],
+            ordered=True,
+        ),
+        craft_cli.CommandGroup(
+            name="Other",
+            commands=[
+                init_command,
+                commands.other.VersionCommand,
+                extra_other_command,
+            ],
+            ordered=False,
+        ),
+    ]
+
+
+def test_merge_default_commands_only(app):
+    """Use default commands if no app commands are provided."""
+    command_groups = app.command_groups
+
+    assert command_groups == [get_lifecycle_command_group(), get_other_command_group()]
 
 
 @pytest.mark.parametrize(

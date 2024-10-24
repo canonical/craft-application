@@ -76,7 +76,7 @@ Starter commands:
           version:  Show the application version and exit
 
 Commands can be classified as follows:
-        Lifecycle:  build, clean, pack, prime, pull, stage
+        Lifecycle:  clean, pull, build, stage, prime, pack
             Other:  init, version
 
 For more information about a command, run 'testcraft help <command>'.

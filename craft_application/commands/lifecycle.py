@@ -46,6 +46,7 @@ def get_lifecycle_command_group() -> CommandGroup:
     return CommandGroup(
         "Lifecycle",
         commands,  # type: ignore[arg-type] # https://github.com/canonical/craft-cli/pull/157
+        ordered=True,
     )
 
 

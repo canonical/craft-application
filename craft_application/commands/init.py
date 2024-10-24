@@ -72,7 +72,6 @@ class InitCommand(base.AppCommand):
             default=None,
             help="The name of project; defaults to the name of <project_dir>",
         )
-        # TODO: this fails to render in `--help` (#530)
         parser.add_argument(
             "--profile",
             type=str,
