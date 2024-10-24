@@ -670,7 +670,7 @@ def test_craft_lib_log_level(app_metadata, fake_services):
         "craft_parts",
         "craft_providers",
         "craft_store",
-        "craft_application.remote",
+        "craft_application",
     ]
 
     # The logging module is stateful and global, so first lets clear the logging level
