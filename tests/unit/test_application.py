@@ -2223,3 +2223,37 @@ def test_app_config_in_help(
     expected = "app-name:  The name of the app, which is 'testcraft'."
     _, err = capsys.readouterr()
     assert expected in err
+
+
+@pytest.mark.parametrize(
+    "help_args",
+    [
+        pytest.param(["--help"], id="simple help"),
+        pytest.param(["help", "--all"], id="detailed help"),
+    ],
+)
+@pytest.mark.usefixtures("emitter")
+def test_doc_url_in_general_help(help_args, monkeypatch, capsys, app):
+    """General help messages contain a link to the documentation."""
+    monkeypatch.setattr(sys, "argv", ["testcraft", *help_args])
+
+    with pytest.raises(SystemExit):
+        app.run()
+
+    expected = "For more information about testcraft, check out: www.craft-app.com/docs/3.14159\n\n"
+    _, err = capsys.readouterr()
+    assert err.endswith(expected)
+
+
+@pytest.mark.usefixtures("emitter")
+def test_doc_url_in_command_help(monkeypatch, capsys, app):
+    """Command help messages contain a link to the command's doc page."""
+    app.add_command_group("Test", [AppConfigCommand])
+    monkeypatch.setattr(sys, "argv", ["testcraft", "app-config", "-h"])
+
+    with pytest.raises(SystemExit):
+        app.run()
+
+    expected = "For more information, check out: www.craft-app.com/docs/3.14159/reference/commands/app-config\n\n"
+    _, err = capsys.readouterr()
+    assert err.endswith(expected)

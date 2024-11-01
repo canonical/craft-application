@@ -81,6 +81,7 @@ Commands can be classified as follows:
 
 For more information about a command, run 'testcraft help <command>'.
 For a summary of all commands, run 'testcraft help --all'.
+For more information about testcraft, check out: www.craft-app.com/docs/3.14159
 
 """
 INVALID_COMMAND = """\
@@ -248,6 +249,10 @@ def test_get_command_help(monkeypatch, emitter, capsys, app, cmd, help_param):
     stdout, stderr = capsys.readouterr()
 
     assert f"testcraft {cmd} [options]" in stderr
+    assert stderr.endswith(
+        "For more information, check out: "
+        f"www.craft-app.com/docs/3.14159/reference/commands/{cmd}\n\n"
+    )
 
 
 def test_invalid_command_argument(monkeypatch, capsys, app):
