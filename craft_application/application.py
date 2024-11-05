@@ -25,6 +25,7 @@ import signal
 import subprocess
 import sys
 from collections.abc import Iterable, Sequence
+from copy import deepcopy
 from dataclasses import dataclass, field
 from functools import cached_property
 from importlib import metadata
@@ -150,6 +151,9 @@ class Application:
         # Set a globally usable project directory for the application.
         # This may be overridden by specific application implementations.
         self.project_dir = pathlib.Path.cwd()
+
+        # TODO: use something like NestedDict: TypeAlias = dict[str, str | 'NestedDict']
+        self._project_vars_new: dict[str, Any] = {}
 
         if self.is_managed():
             self._work_dir = pathlib.Path("/root")
@@ -299,6 +303,7 @@ class Application:
             work_dir=self._work_dir,
             build_plan=self._build_plan,
             partitions=self._partitions,
+            project_vars_new=self._project_vars_new,
         )
         self.services.update_kwargs(
             "provider",
@@ -310,6 +315,10 @@ class Application:
             "fetch",
             build_plan=self._build_plan,
             session_policy=self._fetch_service_policy,
+        )
+        self.services.update_kwargs(
+            "package",
+            project_vars_new=self._project_vars_new,
         )
 
     def _resolve_project_path(self, project_dir: pathlib.Path | None) -> pathlib.Path:
@@ -385,6 +394,9 @@ class Application:
 
         # Setup partitions, some projects require the yaml data, most will not
         self._partitions = self._setup_partitions(yaml_data)
+
+        self._project_vars_new = self._set_project_vars(yaml_data)
+
         yaml_data = self._transform_project_yaml(yaml_data, build_on, build_for)
         self.__project = self.app.ProjectClass.from_yaml_data(yaml_data, project_path)
 
@@ -399,6 +411,10 @@ class Application:
                 )
 
         return self.__project
+
+    def _set_project_vars(self, yaml_data: dict[str, Any]) -> dict[str, Any]:
+        """Return project variables."""
+        return {variable: None for variable in self.app.project_variables}
 
     @cached_property
     def project(self) -> models.Project:
@@ -780,7 +796,9 @@ class Application:
             parallel_build_count=util.get_parallel_build_count(self.app.name),
             project_name=yaml_data.get("name", ""),
             project_dirs=project_dirs,
+            # XXX: appears to do nothing
             project_vars=environment_vars,
+            project_vars_new=environment_vars,
             partitions=self._partitions,
         )
 
@@ -799,10 +817,12 @@ class Application:
 
     def _get_project_vars(self, yaml_data: dict[str, Any]) -> dict[str, str]:
         """Return a dict with project variables to be expanded."""
-        pvars: dict[str, str] = {}
-        for var in self.app.project_variables:
-            pvars[var] = str(yaml_data.get(var, ""))
-        return pvars
+        # XXX: traverse the project variables and populate them with yaml data
+        # this is used to evaluate `[SNAP]CRAFT_PROJECT_VERSION` and `[SNAP]CRAFT_PROJECT_GRADE`
+        return {
+            "version": yaml_data.get("version", ""),
+            "grade": yaml_data.get("grade", ""),
+        }
 
     def _set_global_environment(self, info: craft_parts.ProjectInfo) -> None:
         """Populate the ProjectInfo's global environment."""

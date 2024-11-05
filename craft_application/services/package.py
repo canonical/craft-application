@@ -17,7 +17,7 @@
 from __future__ import annotations
 
 import abc
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from craft_cli import emit
 
@@ -29,9 +29,25 @@ if TYPE_CHECKING:  # pragma: no cover
 
     from craft_application import models
 
+    from craft_application.application import AppMetadata
+    from craft_application.models import Project
+    from craft_application.services import ServiceFactory
+
 
 class PackageService(base.ProjectService):
     """Business logic for creating packages."""
+
+    def __init__(
+        self,
+        app: AppMetadata,
+        services: ServiceFactory,
+        *,
+        project: Project,
+        project_vars_new: dict[str, str] | None = None,
+    ) -> None:
+        super().__init__(app, services, project=project)
+        self._project_vars_new = project_vars_new
+
 
     @abc.abstractmethod
     def pack(self, prime_dir: pathlib.Path, dest: pathlib.Path) -> list[pathlib.Path]:
@@ -51,7 +67,7 @@ class PackageService(base.ProjectService):
         """Update project fields with dynamic values set during the lifecycle."""
         update_vars: dict[str, str] = {}
         project_info = self._services.lifecycle.project_info
-        for var in self._app.project_variables:
+        for var in self._project_vars_new:
             update_vars[var] = project_info.get_project_var(var)
 
         emit.debug(f"Update project variables: {update_vars}")
