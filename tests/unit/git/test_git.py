@@ -205,6 +205,7 @@ def test_is_repo_error(empty_working_directory, mocker):
         ("4.1.1-0-gad012482d", "4.1.1"),
         ("4.1.1-16-g2d8943dbc", "4.1.1.post16+git2d8943dbc"),
         ("0ae7c04", "0ae7c04"),
+        ("unknown-format", "unknown-format"),
     ],
 )
 def test_parsing_describe(describe: str, expected: str) -> None:
