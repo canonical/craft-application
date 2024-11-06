@@ -27,7 +27,14 @@ from unittest.mock import ANY
 import pygit2
 import pygit2.enums
 import pytest
-from craft_application.git import GitError, GitRepo, GitType, get_git_repo_type, is_repo
+from craft_application.git import (
+    GitError,
+    GitRepo,
+    GitType,
+    get_git_repo_type,
+    is_repo,
+    parse_describe,
+)
 from craft_application.remote import (
     RemoteBuildInvalidGitRepoError,
     check_git_repo_for_remote_build,
@@ -135,6 +142,20 @@ def test_is_repo_error(empty_working_directory, mocker):
     assert raised.value.details == (
         f"Could not check for git repository in {str(empty_working_directory)!r}."
     )
+
+
+@pytest.mark.parametrize(
+    ("describe", "expected"),
+    [
+        ("cdaea14", "cdaea14"),
+        ("4.1.1-0-gad012482d", "4.1.1"),
+        ("4.1.1-16-g2d8943dbc", "4.1.1.post16+git2d8943dbc"),
+        ("0ae7c04", "0ae7c04"),
+    ],
+)
+def test_parsing_describe(describe: str, expected: str) -> None:
+    """Check if describe result is correctly parsed."""
+    assert parse_describe(describe) == expected
 
 
 def test_init_repo(empty_working_directory):

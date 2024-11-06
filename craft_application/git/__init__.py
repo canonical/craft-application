@@ -16,7 +16,7 @@
 
 from ._errors import GitError
 from ._models import GitType
-from ._git_repo import GitRepo, get_git_repo_type, is_repo
+from ._git_repo import GitRepo, get_git_repo_type, is_repo, parse_describe
 
 __all__ = [
     "GitError",
@@ -24,4 +24,5 @@ __all__ = [
     "GitType",
     "get_git_repo_type",
     "is_repo",
+    "parse_describe",
 ]

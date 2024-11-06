@@ -22,6 +22,7 @@ import subprocess
 import time
 from pathlib import Path
 from shlex import quote
+from typing import cast
 
 from craft_parts.utils import os_utils
 from typing_extensions import Self
@@ -89,6 +90,31 @@ def get_git_repo_type(path: Path) -> GitType:
         return GitType.NORMAL
 
     return GitType.INVALID
+
+
+def parse_describe(describe_str: str) -> str:
+    """Parse git describe string to get a human-readable version.
+
+    Examples (git describe -> parse_describe):
+    4.1.1-0-gad012482d -> 4.1.1
+    4.1.1-16-g2d8943dbc -> 4.1.1.post16+git2d8943dbc
+
+    For shallow clones or repositories missing tags:
+    0ae7c04 -> 0ae7c04
+    """
+    if "-" not in describe_str:
+        return describe_str
+    splitted_describe = describe_str.split("-")
+    number_of_elements = 3
+    if len(splitted_describe) != number_of_elements:
+        logger.warning("Cannot determine version basing on describe result.")
+        return describe_str
+
+    version, distance, commit = splitted_describe
+
+    if distance == "0":
+        return version
+    return f"{version}.post{distance}+git{commit[1:]}"
 
 
 class GitRepo:
@@ -352,6 +378,40 @@ class GitRepo:
             f"Could not push {ref!r} to {stripped_url!r} with refspec {refspec!r} "
             f"for the git repository in {str(self.path)!r}."
         )
+
+    def describe(
+        self,
+        *,
+        committish: str | None = None,
+        abbreviated_size: int | None = None,
+        always_use_long_format: bool | None = None,
+        show_commit_oid_as_fallback: bool | None = None,
+    ) -> str:
+        """Return a human readable name base on an available ref.
+
+        :param committish: Commit-ish object name to describe. If None, HEAD will be
+        described
+        :param abbreviated_size: The same as --abbrev of ``git describe`` command
+        :param always_use_long_format: Always use the long format
+        :param show_commit_oid_as_fallback: Show uniquely abbrevaited commit as fallback
+
+        :returns: String that describes given object.
+
+        raises GitError: if object cannot be described
+        """
+        logger.debug(f"Trying to describe {committish or 'HEAD'!r}.")
+        try:
+            return cast(
+                str,
+                self._repo.describe(
+                    committish=committish,
+                    abbreviated_size=abbreviated_size,
+                    always_use_long_format=always_use_long_format,
+                    show_commit_oid_as_fallback=show_commit_oid_as_fallback,
+                ),
+            )
+        except pygit2.GitError as err:
+            raise GitError("Could not describe given object") from err
 
     def _resolve_ref(self, ref: str) -> str:
         """Get a full reference name for a shorthand ref.
