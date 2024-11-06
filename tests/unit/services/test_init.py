@@ -23,9 +23,9 @@ import textwrap
 import jinja2
 import pytest
 import pytest_check
-from craft_cli.pytest_plugin import RecordingEmitter
 from craft_application import errors, services
 from craft_application.git import GitRepo, short_commit_sha
+from craft_cli.pytest_plugin import RecordingEmitter
 
 
 @pytest.fixture
