@@ -19,6 +19,7 @@ import re
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
+from typing import cast
 from unittest.mock import ANY
 
 import pygit2
@@ -1007,8 +1008,20 @@ def test_describing_tags(repository_with_annotated_tag: RepositoryDefinition):
     assert repo.describe() == repository_with_annotated_tag.tag
 
 
+@pytest.fixture(params=[True, False, None], ids=lambda p: f"fallback={p!r}")
+def show_commit_oid_as_fallback(request: pytest.FixtureRequest) -> bool | None:
+    return cast(bool | None, request.param)
+
+
+@pytest.fixture(params=[True, False, None], ids=lambda p: f"long={p!r}")
+def always_use_long_format(request: pytest.FixtureRequest) -> bool | None:
+    return cast(bool | None, request.param)
+
+
 def test_describing_commits_following_tags(
     repository_with_annotated_tag: RepositoryDefinition,
+    show_commit_oid_as_fallback: bool | None,
+    always_use_long_format: bool | None,
 ):
     """Describe should be able to discover commits after tags."""
     repo = GitRepo(repository_with_annotated_tag.repository_path)
@@ -1018,8 +1031,8 @@ def test_describing_commits_following_tags(
     new_commit = repo.commit("commit after tag")
     short_new_commit = short_commit_sha(new_commit)
     describe_result = repo.describe(
-        show_commit_oid_as_fallback=True,
-        always_use_long_format=True,
+        show_commit_oid_as_fallback=show_commit_oid_as_fallback,
+        always_use_long_format=always_use_long_format,
     )
     assert describe_result == f"{tag}-1-g{short_new_commit}"
     assert parse_describe(describe_result) == f"{tag}.post1+git{short_new_commit}"
