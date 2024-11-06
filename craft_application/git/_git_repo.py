@@ -410,7 +410,7 @@ class GitRepo:
                     show_commit_oid_as_fallback=show_commit_oid_as_fallback,
                 ),
             )
-        except pygit2.GitError as err:
+        except (pygit2.GitError, KeyError) as err:
             raise GitError("Could not describe given object") from err
 
     def _resolve_ref(self, ref: str) -> str:

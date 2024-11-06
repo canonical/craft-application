@@ -15,13 +15,10 @@
 
 """Tests for the pygit2 wrapper class."""
 
-import os
-import pathlib
 import re
 import subprocess
-from collections.abc import Iterator
+from dataclasses import dataclass
 from pathlib import Path
-from typing import cast
 from unittest.mock import ANY
 
 import pygit2
@@ -42,21 +39,62 @@ from craft_application.remote import (
 
 
 @pytest.fixture
-def empty_working_directory(tmp_path) -> Iterator[Path]:
-    cwd = pathlib.Path.cwd()
-
+def empty_working_directory(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> Path:
     repo_dir = Path(tmp_path, "test-repo")
     repo_dir.mkdir()
-    os.chdir(repo_dir)
-    yield repo_dir
-
-    os.chdir(cwd)
+    monkeypatch.chdir(repo_dir)
+    return repo_dir
 
 
 @pytest.fixture
-def empty_repository(empty_working_directory) -> Path:
+def empty_repository(empty_working_directory: Path) -> Path:
     subprocess.run(["git", "init"], check=True)
-    return cast(Path, empty_working_directory)
+    return empty_working_directory
+
+
+@dataclass
+class RepositoryDefinition:
+    repository_path: Path
+    commit: str
+    tag: str | None = None
+
+    @property
+    def short_commit(self) -> str:
+        """Return abbreviated commit."""
+        return self.commit[:7]
+
+
+@pytest.fixture
+def repository_with_commit(empty_repository: Path) -> RepositoryDefinition:
+    repo = GitRepo(empty_repository)
+    (empty_repository / "Some file").touch()
+    repo.add_all()
+    commit_sha = repo.commit("1")
+    return RepositoryDefinition(
+        repository_path=empty_repository,
+        commit=commit_sha,
+    )
+
+
+@pytest.fixture
+def repository_with_anotated_tag(
+    repository_with_commit: RepositoryDefinition,
+) -> RepositoryDefinition:
+    repo = GitRepo(repository_with_commit.repository_path)
+    test_tag = "v3.2.1"
+    subprocess.run(
+        ["git", "config", "--local", "user.name", "Testcraft", test_tag], check=True
+    )
+    subprocess.run(
+        ["git", "config", "--local", "user.email", "testcraft@canonical.com", test_tag],
+        check=True,
+    )
+    subprocess.run(["git", "tag", "-a", "-m", "testcraft tag", test_tag], check=True)
+    repository_with_commit.tag = test_tag
+    return repository_with_commit
 
 
 def test_is_repo(empty_working_directory):
@@ -918,3 +956,52 @@ def test_check_git_repo_for_remote_build_shallow(empty_working_directory):
         match="Remote builds for shallow cloned git repos are not supported",
     ):
         check_git_repo_for_remote_build(git_shallow_path)
+
+
+@pytest.mark.parametrize(
+    "always_use_long_format",
+    [True, False, None],
+    ids=lambda p: f"use_long_format={p!s}",
+)
+def test_describing_commit(
+    repository_with_commit: RepositoryDefinition, always_use_long_format: bool | None
+):
+    """Describe an empty repository."""
+    repo = GitRepo(repository_with_commit.repository_path)
+
+    assert (
+        repo.describe(
+            show_commit_oid_as_fallback=True,
+            always_use_long_format=always_use_long_format,
+        )
+        == repository_with_commit.short_commit
+    )
+
+
+def test_describing_repo_fails_in_empty_repo(empty_repository: Path):
+    """Cannot describe an empty repository."""
+    repo = GitRepo(empty_repository)
+
+    with pytest.raises(GitError):
+        repo.describe(show_commit_oid_as_fallback=True)
+
+
+def test_describing_tags(repository_with_anotated_tag: RepositoryDefinition):
+    """Git should be able to describe tags."""
+    repo = GitRepo(repository_with_anotated_tag.repository_path)
+    assert repo.describe() == repository_with_anotated_tag.tag
+
+
+def test_describing_commits_following_tags(
+    repository_with_anotated_tag: RepositoryDefinition,
+):
+    """Git should be able to describe commit after tags."""
+    repo = GitRepo(repository_with_anotated_tag.repository_path)
+    (repository_with_anotated_tag.repository_path / "another_file").touch()
+    tag = repository_with_anotated_tag.tag
+    repo.add_all()
+    new_commit = repo.commit("commit after tag")
+    short_new_commit = new_commit[:7]
+    describe_result = repo.describe()
+    assert describe_result == f"{tag}-1-g{short_new_commit}"
+    assert parse_describe(describe_result) == f"{tag}.post1+git{short_new_commit}"
