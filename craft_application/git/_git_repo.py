@@ -22,7 +22,6 @@ import subprocess
 import time
 from pathlib import Path
 from shlex import quote
-from typing import cast
 
 from craft_parts.utils import os_utils
 from typing_extensions import Self
@@ -401,17 +400,16 @@ class GitRepo:
         """
         logger.debug(f"Trying to describe {committish or 'HEAD'!r}.")
         try:
-            return cast(
-                str,
-                self._repo.describe(
-                    committish=committish,
-                    abbreviated_size=abbreviated_size,
-                    always_use_long_format=always_use_long_format,
-                    show_commit_oid_as_fallback=show_commit_oid_as_fallback,
-                ),
+            described: str = self._repo.describe(
+                committish=committish,
+                abbreviated_size=abbreviated_size,
+                always_use_long_format=always_use_long_format,
+                show_commit_oid_as_fallback=show_commit_oid_as_fallback,
             )
         except (pygit2.GitError, KeyError) as err:
             raise GitError("Could not describe given object") from err
+        else:
+            return described
 
     def _resolve_ref(self, ref: str) -> str:
         """Get a full reference name for a shorthand ref.
