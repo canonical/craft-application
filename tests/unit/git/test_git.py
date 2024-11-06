@@ -80,10 +80,9 @@ def repository_with_commit(empty_repository: Path) -> RepositoryDefinition:
 
 
 @pytest.fixture
-def repository_with_anotated_tag(
+def repository_with_annotated_tag(
     repository_with_commit: RepositoryDefinition,
 ) -> RepositoryDefinition:
-    repo = GitRepo(repository_with_commit.repository_path)
     test_tag = "v3.2.1"
     subprocess.run(
         ["git", "config", "--local", "user.name", "Testcraft", test_tag], check=True
@@ -93,6 +92,21 @@ def repository_with_anotated_tag(
         check=True,
     )
     subprocess.run(["git", "tag", "-a", "-m", "testcraft tag", test_tag], check=True)
+    repository_with_commit.tag = test_tag
+    return repository_with_commit
+
+
+@pytest.fixture
+def repository_with_unannotated_tag(
+    repository_with_commit: RepositoryDefinition,
+) -> RepositoryDefinition:
+    subprocess.run(["git", "config", "--local", "user.name", "Testcraft"], check=True)
+    subprocess.run(
+        ["git", "config", "--local", "user.email", "testcraft@canonical.com"],
+        check=True,
+    )
+    test_tag = "non-annotated"
+    subprocess.run(["git", "tag", test_tag], check=True)
     repository_with_commit.tag = test_tag
     return repository_with_commit
 
@@ -986,22 +1000,43 @@ def test_describing_repo_fails_in_empty_repo(empty_repository: Path):
         repo.describe(show_commit_oid_as_fallback=True)
 
 
-def test_describing_tags(repository_with_anotated_tag: RepositoryDefinition):
-    """Git should be able to describe tags."""
-    repo = GitRepo(repository_with_anotated_tag.repository_path)
-    assert repo.describe() == repository_with_anotated_tag.tag
+def test_describing_tags(repository_with_annotated_tag: RepositoryDefinition):
+    """Describe should be able to handle annotated tags."""
+    repo = GitRepo(repository_with_annotated_tag.repository_path)
+    assert repo.describe() == repository_with_annotated_tag.tag
 
 
 def test_describing_commits_following_tags(
-    repository_with_anotated_tag: RepositoryDefinition,
+    repository_with_annotated_tag: RepositoryDefinition,
 ):
-    """Git should be able to describe commit after tags."""
-    repo = GitRepo(repository_with_anotated_tag.repository_path)
-    (repository_with_anotated_tag.repository_path / "another_file").touch()
-    tag = repository_with_anotated_tag.tag
+    """Describe should be able to discover commits after tags."""
+    repo = GitRepo(repository_with_annotated_tag.repository_path)
+    (repository_with_annotated_tag.repository_path / "another_file").touch()
+    tag = repository_with_annotated_tag.tag
     repo.add_all()
     new_commit = repo.commit("commit after tag")
     short_new_commit = new_commit[:7]
-    describe_result = repo.describe()
+    describe_result = repo.describe(
+        show_commit_oid_as_fallback=True,
+        always_use_long_format=True,
+    )
     assert describe_result == f"{tag}-1-g{short_new_commit}"
     assert parse_describe(describe_result) == f"{tag}.post1+git{short_new_commit}"
+
+
+def test_describing_unanotated_tags(
+    repository_with_unannotated_tag: RepositoryDefinition,
+):
+    """Describe should error out if trying to describe repo without annotated tags."""
+    repo = GitRepo(repository_with_unannotated_tag.repository_path)
+    with pytest.raises(GitError):
+        repo.describe()
+
+
+def test_describing_fallback_to_commit_for_unannotated_tags(
+    repository_with_unannotated_tag: RepositoryDefinition,
+):
+    """Describe should fallback to commit if trying to describe repo without annotated tags."""
+    repo = GitRepo(repository_with_unannotated_tag.repository_path)
+    describe_result = repo.describe(show_commit_oid_as_fallback=True)
+    assert describe_result == repository_with_unannotated_tag.short_commit
