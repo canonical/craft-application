@@ -23,7 +23,9 @@ import textwrap
 import jinja2
 import pytest
 import pytest_check
+from craft_cli.pytest_plugin import RecordingEmitter
 from craft_application import errors, services
+from craft_application.git import GitRepo, short_commit_sha
 
 
 @pytest.fixture
@@ -42,10 +44,57 @@ def mock_loader(mocker, tmp_path):
     )
 
 
-def test_get_context(init_service):
-    context = init_service._get_context(name="my-project")
+def test_get_context(init_service, tmp_path: pathlib.Path):
+    project_dir = tmp_path / "my-project"
+    project_dir.mkdir()
+    context = init_service._get_context(name="my-project", project_dir=project_dir)
 
-    assert context == {"name": "my-project"}
+    assert context == {"name": "my-project", "version": init_service.default_version}
+
+
+@pytest.fixture
+def empty_git_repository(tmp_path: pathlib.Path) -> GitRepo:
+    repository = tmp_path / "my-project-git"
+    repository.mkdir()
+    return GitRepo(repository)
+
+
+@pytest.fixture
+def git_repository_with_commit(tmp_path: pathlib.Path) -> tuple[GitRepo, str]:
+    repository = tmp_path / "my-project-git"
+    repository.mkdir()
+    git_repo = GitRepo(repository)
+    (repository / "some_file").touch()
+    git_repo.add_all()
+    commit_sha = git_repo.commit("feat: initialize repo")
+
+    return git_repo, commit_sha
+
+
+def test_get_context_of_empty_git_repository(
+    init_service, empty_git_repository: GitRepo
+):
+    context = init_service._get_context(
+        name="my-project",
+        project_dir=empty_git_repository.path,
+    )
+
+    assert context == {"name": "my-project", "version": init_service.default_version}
+
+
+def test_get_context_of_git_repository_with_commit(
+    init_service,
+    git_repository_with_commit: tuple[GitRepo, str],
+    emitter: RecordingEmitter,
+):
+    git_repo, commit_sha = git_repository_with_commit
+    expected_version = short_commit_sha(commit_sha)
+    context = init_service._get_context(
+        name="my-project",
+        project_dir=git_repo.path,
+    )
+    assert context == {"name": "my-project", "version": expected_version}
+    emitter.assert_debug(f"Discovered project version: {expected_version!r}")
 
 
 @pytest.mark.parametrize("create_dir", [True, False])

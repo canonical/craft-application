@@ -31,6 +31,7 @@ from craft_application.git import (
     get_git_repo_type,
     is_repo,
     parse_describe,
+    short_commit_sha,
 )
 from craft_application.remote import (
     RemoteBuildInvalidGitRepoError,
@@ -64,7 +65,7 @@ class RepositoryDefinition:
     @property
     def short_commit(self) -> str:
         """Return abbreviated commit."""
-        return self.commit[:7]
+        return short_commit_sha(self.commit)
 
 
 @pytest.fixture
@@ -1015,7 +1016,7 @@ def test_describing_commits_following_tags(
     tag = repository_with_annotated_tag.tag
     repo.add_all()
     new_commit = repo.commit("commit after tag")
-    short_new_commit = new_commit[:7]
+    short_new_commit = short_commit_sha(new_commit)
     describe_result = repo.describe(
         show_commit_oid_as_fallback=True,
         always_use_long_format=True,
