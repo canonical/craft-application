@@ -97,15 +97,19 @@ def parse_describe(describe_str: str) -> str:
     Examples (git describe -> parse_describe):
     4.1.1-0-gad012482d -> 4.1.1
     4.1.1-16-g2d8943dbc -> 4.1.1.post16+git2d8943dbc
+    curl-8_11_0-0-gb1ef0e1 -> curl-8_11_0
 
     For shallow clones or repositories missing tags:
     0ae7c04 -> 0ae7c04
     """
     if "-" not in describe_str:
         return describe_str
-    splitted_describe = describe_str.split("-")
-    number_of_elements = 3
-    if len(splitted_describe) != number_of_elements:
+    number_of_expected_elements = 3
+    splitted_describe = describe_str.rsplit(
+        "-",
+        maxsplit=number_of_expected_elements - 1,
+    )
+    if len(splitted_describe) != number_of_expected_elements:
         logger.warning("Cannot determine version basing on describe result.")
         return describe_str
 

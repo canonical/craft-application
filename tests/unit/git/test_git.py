@@ -204,6 +204,8 @@ def test_is_repo_error(empty_working_directory, mocker):
         ("cdaea14", "cdaea14"),
         ("4.1.1-0-gad012482d", "4.1.1"),
         ("4.1.1-16-g2d8943dbc", "4.1.1.post16+git2d8943dbc"),
+        ("curl-8_11_0-6-g0cdde0f", "curl-8_11_0.post6+git0cdde0f"),
+        ("curl-8_11_0-0-gb1ef0e1", "curl-8_11_0"),
         ("0ae7c04", "0ae7c04"),
         ("unknown-format", "unknown-format"),
     ],
