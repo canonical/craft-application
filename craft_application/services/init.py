@@ -96,7 +96,7 @@ class InitService(base.AppService):
     @property
     def default_version(self) -> str:
         """Return default version that should be used for the InitService context."""
-        return "0.0"
+        return "0.1"
 
     def _copy_template_file(
         self,
