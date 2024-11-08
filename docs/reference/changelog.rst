@@ -4,6 +4,23 @@
 Changelog
 *********
 
+4.5.0 (2024-XX-XX)
+-------------------
+
+Application
+===========
+
+Commands
+========
+
+Services
+========
+
+- Add version to the template generation context of ``InitService``.
+
+..
+  For a complete list of commits, check out the `4.5.0`_ release on GitHub.
+
 4.4.0 (2024-Oct-XX)
 -------------------
 
