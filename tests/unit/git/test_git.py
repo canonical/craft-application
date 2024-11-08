@@ -17,7 +17,6 @@
 
 import re
 import subprocess
-from dataclasses import dataclass
 from pathlib import Path
 from typing import cast
 from unittest.mock import ANY
@@ -39,78 +38,7 @@ from craft_application.remote import (
     check_git_repo_for_remote_build,
 )
 
-
-@pytest.fixture
-def empty_working_directory(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-) -> Path:
-    repo_dir = Path(tmp_path, "test-repo")
-    repo_dir.mkdir()
-    monkeypatch.chdir(repo_dir)
-    return repo_dir
-
-
-@pytest.fixture
-def empty_repository(empty_working_directory: Path) -> Path:
-    subprocess.run(["git", "init"], check=True)
-    return empty_working_directory
-
-
-@dataclass
-class RepositoryDefinition:
-    repository_path: Path
-    commit: str
-    tag: str | None = None
-
-    @property
-    def short_commit(self) -> str:
-        """Return abbreviated commit."""
-        return short_commit_sha(self.commit)
-
-
-@pytest.fixture
-def repository_with_commit(empty_repository: Path) -> RepositoryDefinition:
-    repo = GitRepo(empty_repository)
-    (empty_repository / "Some file").touch()
-    repo.add_all()
-    commit_sha = repo.commit("1")
-    return RepositoryDefinition(
-        repository_path=empty_repository,
-        commit=commit_sha,
-    )
-
-
-@pytest.fixture
-def repository_with_annotated_tag(
-    repository_with_commit: RepositoryDefinition,
-) -> RepositoryDefinition:
-    test_tag = "v3.2.1"
-    subprocess.run(
-        ["git", "config", "--local", "user.name", "Testcraft", test_tag], check=True
-    )
-    subprocess.run(
-        ["git", "config", "--local", "user.email", "testcraft@canonical.com", test_tag],
-        check=True,
-    )
-    subprocess.run(["git", "tag", "-a", "-m", "testcraft tag", test_tag], check=True)
-    repository_with_commit.tag = test_tag
-    return repository_with_commit
-
-
-@pytest.fixture
-def repository_with_unannotated_tag(
-    repository_with_commit: RepositoryDefinition,
-) -> RepositoryDefinition:
-    subprocess.run(["git", "config", "--local", "user.name", "Testcraft"], check=True)
-    subprocess.run(
-        ["git", "config", "--local", "user.email", "testcraft@canonical.com"],
-        check=True,
-    )
-    test_tag = "non-annotated"
-    subprocess.run(["git", "tag", test_tag], check=True)
-    repository_with_commit.tag = test_tag
-    return repository_with_commit
+from tests.conftest import RepositoryDefinition
 
 
 def test_is_repo(empty_working_directory):

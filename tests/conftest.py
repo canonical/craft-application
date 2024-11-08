@@ -19,6 +19,8 @@ from __future__ import annotations
 import os
 import pathlib
 import shutil
+import subprocess
+from dataclasses import dataclass
 from importlib import metadata
 from typing import TYPE_CHECKING, Any
 
@@ -27,7 +29,7 @@ import craft_parts
 import jinja2
 import pydantic
 import pytest
-from craft_application import application, launchpad, models, services, util
+from craft_application import application, git, launchpad, models, services, util
 from craft_cli import EmitterMode, emit
 from craft_providers import bases
 from jinja2 import FileSystemLoader
@@ -366,3 +368,76 @@ def new_dir(tmp_path):
     yield tmp_path
 
     os.chdir(cwd)
+
+
+@pytest.fixture
+def empty_working_directory(
+    tmp_path: pathlib.Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> pathlib.Path:
+    repo_dir = pathlib.Path(tmp_path, "test-repo")
+    repo_dir.mkdir()
+    monkeypatch.chdir(repo_dir)
+    return repo_dir
+
+
+@pytest.fixture
+def empty_repository(empty_working_directory: pathlib.Path) -> pathlib.Path:
+    subprocess.run(["git", "init"], check=True)
+    return empty_working_directory
+
+
+@dataclass
+class RepositoryDefinition:
+    repository_path: pathlib.Path
+    commit: str
+    tag: str | None = None
+
+    @property
+    def short_commit(self) -> str:
+        """Return abbreviated commit."""
+        return git.short_commit_sha(self.commit)
+
+
+@pytest.fixture
+def repository_with_commit(empty_repository: pathlib.Path) -> RepositoryDefinition:
+    repo = git.GitRepo(empty_repository)
+    (empty_repository / "Some file").touch()
+    repo.add_all()
+    commit_sha = repo.commit("1")
+    return RepositoryDefinition(
+        repository_path=empty_repository,
+        commit=commit_sha,
+    )
+
+
+@pytest.fixture
+def repository_with_annotated_tag(
+    repository_with_commit: RepositoryDefinition,
+) -> RepositoryDefinition:
+    test_tag = "v3.2.1"
+    subprocess.run(
+        ["git", "config", "--local", "user.name", "Testcraft", test_tag], check=True
+    )
+    subprocess.run(
+        ["git", "config", "--local", "user.email", "testcraft@canonical.com", test_tag],
+        check=True,
+    )
+    subprocess.run(["git", "tag", "-a", "-m", "testcraft tag", test_tag], check=True)
+    repository_with_commit.tag = test_tag
+    return repository_with_commit
+
+
+@pytest.fixture
+def repository_with_unannotated_tag(
+    repository_with_commit: RepositoryDefinition,
+) -> RepositoryDefinition:
+    subprocess.run(["git", "config", "--local", "user.name", "Testcraft"], check=True)
+    subprocess.run(
+        ["git", "config", "--local", "user.email", "testcraft@canonical.com"],
+        check=True,
+    )
+    test_tag = "non-annotated"
+    subprocess.run(["git", "tag", test_tag], check=True)
+    repository_with_commit.tag = test_tag
+    return repository_with_commit
