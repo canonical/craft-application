@@ -87,9 +87,6 @@ def test_start_service(mocker, tmp_path):
     mock_get_status = mocker.patch.object(
         fetch, "get_service_status", return_value={"uptime": 10}
     )
-    mock_archive_key = mocker.patch.object(
-        subprocess, "check_output", return_value="DEADBEEF"
-    )
 
     fake_cert, fake_key = tmp_path / "cert.crt", tmp_path / "key.pem"
     mock_obtain_certificate = mocker.patch.object(
@@ -106,20 +103,6 @@ def test_start_service(mocker, tmp_path):
     assert mock_is_online.called
     assert mock_base_dir.called
     assert mock_get_status.called
-    mock_archive_key.assert_called_once_with(
-        [
-            "gpg",
-            "--export",
-            "--armor",
-            "--no-default-keyring",
-            "--keyring",
-            "/snap/fetch-service/current/usr/share/keyrings/ubuntu-archive-keyring.gpg",
-            "F6ECB3762474EDA9D21B7022871920D1991BC93C",
-        ],
-        text=True,
-        stderr=subprocess.PIPE,
-    )
-
     assert mock_obtain_certificate.called
 
     popen_call = mock_popen.mock_calls[0]
@@ -142,7 +125,9 @@ def test_start_service(mocker, tmp_path):
             )
             + f" > {fetch._get_log_filepath()}",
         ],
-        env={"FETCH_SERVICE_AUTH": AUTH, "FETCH_APT_RELEASE_PUBLIC_KEY": "DEADBEEF"},
+        env={
+            "FETCH_SERVICE_AUTH": AUTH,
+        },
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,
