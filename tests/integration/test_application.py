@@ -462,3 +462,24 @@ def test_runtime_error_logging(monkeypatch, tmp_path, create_app, mocker):
     # Make sure it's identified as the correct error type
     parts_message = "Parts processing internal error: An unexpected error"
     assert parts_message in log_contents
+
+
+def test_verbosity_greeting(monkeypatch, create_app, capsys):
+    """Test that 'verbose' runs only show the greeting once."""
+
+    # Set the verbosity *both* through the environment variable and the
+    # command line, to ensure that the greeting is only shown once even with
+    # multiple verbosity "settings".
+    monkeypatch.setenv("CRAFT_VERBOSITY_LEVEL", "verbose")
+    monkeypatch.setattr("sys.argv", ["testcraft", "i-dont-exist", "-v"])
+
+    app = create_app()
+    with pytest.raises(SystemExit):
+        app.run()
+
+    _, err = capsys.readouterr()
+    lines = err.splitlines()
+    greetings = [line for line in lines if line.startswith("Starting testcraft")]
+
+    # Exactly one greeting
+    assert len(greetings) == 1
