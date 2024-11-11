@@ -123,7 +123,7 @@ def test_start_service(mocker, tmp_path):
                     "--idle-shutdown=300",
                 ]
             )
-            + f" > {fetch._get_log_filepath()}",
+            + f" > {fetch.get_log_filepath()}",
         ],
         env={
             "FETCH_SERVICE_AUTH": AUTH,

@@ -22,6 +22,7 @@ import pathlib
 import shlex
 import signal
 import subprocess
+import tempfile
 import time
 from dataclasses import dataclass
 from typing import Any, cast
@@ -173,7 +174,7 @@ def start_service() -> subprocess.Popen[str] | None:
     # Shutdown after 5 minutes with no live sessions
     cmd.append("--idle-shutdown=300")
 
-    log_filepath = _get_log_filepath()
+    log_filepath = get_log_filepath()
     log_filepath.parent.mkdir(parents=True, exist_ok=True)
 
     str_cmd = f"{shlex.join(cmd)} > {log_filepath.absolute()}"
@@ -292,6 +293,11 @@ def configure_instance(
     _configure_apt(instance, net_info)
 
     return net_info.env
+
+
+def get_log_filepath() -> pathlib.Path:
+    """Get the path containing the fetch-service's output."""
+    return pathlib.Path(tempfile.gettempdir()) / "craft-fetch-log.txt"
 
 
 def _service_request(
@@ -497,12 +503,6 @@ def _get_certificate_dir() -> pathlib.Path:
 def _check_installed() -> bool:
     """Check whether the fetch-service is installed."""
     return pathlib.Path(_FETCH_BINARY).is_file()
-
-
-def _get_log_filepath() -> pathlib.Path:
-    base_dir = _get_service_base_dir()
-
-    return base_dir / "craft/fetch-log.txt"
 
 
 def _execute_run(

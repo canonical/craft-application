@@ -179,9 +179,10 @@ def test_warning_experimental(mocker, fetch_service, run_on_host, emitter):
 
     fetch_service.setup()
 
+    logpath = fetch.get_log_filepath()
     warning = (
-        "Warning: the fetch-service integration is experimental "
-        "and still in development."
+        "Warning: the fetch-service integration is experimental. "
+        f"Logging output to {str(logpath)!r}."
     )
     warning_emitted = call("message", warning) in emitter.interactions
 

@@ -111,7 +111,8 @@ jobs:
         run: |
           echo "::group::Begin snap install"
           echo "Installing snaps in the background while running apt and pip..."
-          sudo snap install --no-wait --channel=candidate fetch-service
+          # TODO revert this before merging
+          sudo snap install --no-wait --channel=edge fetch-service
           echo "::endgroup::"
           echo "::group::apt-get"
           sudo apt update

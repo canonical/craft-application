@@ -11,7 +11,9 @@ Application
 ===========
 
 - The fetch-service integration now assumes that the fetch-service snap is
-  tracking the ``latest/candidate`` channel.
+  tracking the ``latest/candidate``.
+- Fix an issue where the fetch-service output was not correctly logged when
+  running in a snapped craft tool.
 
 Commands
 ========
