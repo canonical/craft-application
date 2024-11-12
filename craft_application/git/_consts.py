@@ -12,20 +12,8 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-"""Git repository utilities."""
+"""Git repository consts."""
 
-from ._consts import COMMIT_SHORT_SHA_LEN
-from ._errors import GitError
-from ._models import GitType, short_commit_sha
-from ._git_repo import GitRepo, get_git_repo_type, is_repo, parse_describe
+from typing import Final
 
-__all__ = [
-    "GitError",
-    "GitRepo",
-    "GitType",
-    "get_git_repo_type",
-    "is_repo",
-    "parse_describe",
-    "short_commit_sha",
-    "COMMIT_SHORT_SHA_LEN",
-]
+COMMIT_SHORT_SHA_LEN: Final[int] = 7

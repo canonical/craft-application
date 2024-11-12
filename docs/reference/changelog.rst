@@ -13,6 +13,17 @@ Application
 - The fetch-service integration now assumes that the fetch-service snap is
   tracking the ``latest/candidate`` channel.
 
+Commands
+========
+
+Services
+========
+
+- Add version to the template generation context of ``InitService``.
+
+..
+  For a complete list of commits, check out the `4.5.0`_ release on GitHub.
+
 4.4.0 (2024-Nov-08)
 -------------------
 
