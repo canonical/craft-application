@@ -26,6 +26,8 @@ from craft_application import errors
 from craft_application.models.project import Project
 from craft_application.services import InitService
 
+from tests.conftest import RepositoryDefinition
+
 # init operates in the current working directory
 pytestmark = pytest.mark.usefixtures("new_dir")
 
@@ -50,16 +52,8 @@ def project_yaml_filename() -> str:
     return "testcraft.yaml"
 
 
-@pytest.fixture
-def template_dir_with_testcraft_yaml_j2(
-    fake_empty_template_dir: pathlib.Path,
-    project_yaml_filename: str,
-) -> pathlib.Path:
-    """Creates the same testcraft.yaml file in the top-level and nested directories.
-
-    Normally a project would only have one testcraft.yaml file, but two are created for testing.
-    """
-    template_text = textwrap.dedent(
+def get_testcraft_yaml(*, version: str = "git") -> str:
+    return textwrap.dedent(
         """
         # This file configures testcraft.
 
@@ -68,7 +62,7 @@ def template_dir_with_testcraft_yaml_j2(
 
         # (Required)
         # The source package version
-        version: git
+        version: <<version_placeholder>>
 
         # (Required)
         # Version of the build base OS
@@ -97,13 +91,40 @@ def template_dir_with_testcraft_yaml_j2(
             source: .
         platforms:
           amd64:
-        """
+        """.replace(
+            "<<version_placeholder>>", version
+        )
     )
+
+
+@pytest.fixture
+def template_dir_with_testcraft_yaml_j2(
+    fake_empty_template_dir: pathlib.Path,
+    project_yaml_filename: str,
+) -> pathlib.Path:
+    """Creates the same testcraft.yaml file in the top-level and nested directories.
+
+    Normally a project would only have one testcraft.yaml file, but two are created for testing.
+    """
+    template_text = get_testcraft_yaml()
     top_level_template = fake_empty_template_dir / f"{project_yaml_filename}.j2"
     top_level_template.write_text(template_text)
     nested_template = fake_empty_template_dir / "nested" / f"{project_yaml_filename}.j2"
     nested_template.parent.mkdir()
     nested_template.write_text(template_text)
+
+    return fake_empty_template_dir
+
+
+@pytest.fixture
+def template_dir_with_versioned_testcraft_yaml_j2(
+    fake_empty_template_dir: pathlib.Path,
+    project_yaml_filename: str,
+) -> pathlib.Path:
+    """Creates the testcraft.yaml with {{ version }} marker."""
+    template_text = get_testcraft_yaml(version="{{ version }}")
+    top_level_template = fake_empty_template_dir / f"{project_yaml_filename}.j2"
+    top_level_template.write_text(template_text)
 
     return fake_empty_template_dir
 
@@ -474,3 +495,66 @@ def test_check_for_existing_files_error(
             project_dir=fake_empty_project_dir,
             template_dir=template_dir_with_testcraft_yaml_j2,
         )
+
+
+def test_init_service_with_version_without_git_repository(
+    init_service: InitService,
+    empty_working_directory: pathlib.Path,
+    template_dir_with_versioned_testcraft_yaml_j2: pathlib.Path,
+    project_yaml_filename: str,
+    check,
+) -> None:
+    project_path = empty_working_directory
+    init_service.initialise_project(
+        project_dir=project_path,
+        project_name=project_path.name,
+        template_dir=template_dir_with_versioned_testcraft_yaml_j2,
+    )
+    project_yaml_path = project_path / project_yaml_filename
+
+    with check:
+        assert project_yaml_path.exists(), "Project should be initialised with template"
+    project = Project.from_yaml_file(project_yaml_path)
+    assert project.version == init_service.default_version
+
+
+def test_init_service_with_version_based_on_commit(
+    init_service: InitService,
+    repository_with_commit: RepositoryDefinition,
+    template_dir_with_versioned_testcraft_yaml_j2: pathlib.Path,
+    project_yaml_filename: str,
+    check,
+) -> None:
+    project_path = repository_with_commit.repository_path
+    init_service.initialise_project(
+        project_dir=project_path,
+        project_name=project_path.name,
+        template_dir=template_dir_with_versioned_testcraft_yaml_j2,
+    )
+    project_yaml_path = project_path / project_yaml_filename
+
+    with check:
+        assert project_yaml_path.exists(), "Project should be initialised with template"
+    project = Project.from_yaml_file(project_yaml_path)
+    assert project.version == repository_with_commit.short_commit
+
+
+def test_init_service_with_version_based_on_tag(
+    init_service: InitService,
+    repository_with_annotated_tag: RepositoryDefinition,
+    template_dir_with_versioned_testcraft_yaml_j2: pathlib.Path,
+    project_yaml_filename: str,
+    check,
+) -> None:
+    project_path = repository_with_annotated_tag.repository_path
+    init_service.initialise_project(
+        project_dir=project_path,
+        project_name=project_path.name,
+        template_dir=template_dir_with_versioned_testcraft_yaml_j2,
+    )
+    project_yaml_path = project_path / project_yaml_filename
+
+    with check:
+        assert project_yaml_path.exists(), "Project should be initialised with template"
+    project = Project.from_yaml_file(project_yaml_path)
+    assert project.version == repository_with_annotated_tag.tag
