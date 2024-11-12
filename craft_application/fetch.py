@@ -142,33 +142,13 @@ def start_service() -> subprocess.Popen[str] | None:
             "The 'fetch-service' snap is not installed.",
             resolution=(
                 "Install the fetch-service snap via "
-                "'snap install --channel=beta fetch-service'."
+                "'snap install --channel=candidate fetch-service'."
             ),
         )
 
     cmd = [_FETCH_BINARY]
 
     env = {"FETCH_SERVICE_AUTH": _DEFAULT_CONFIG.auth}
-
-    # Add the public key for the Ubuntu archives
-    archive_keyring = (
-        "/snap/fetch-service/current/usr/share/keyrings/ubuntu-archive-keyring.gpg"
-    )
-    archive_key_id = "F6ECB3762474EDA9D21B7022871920D1991BC93C"
-    archive_key = subprocess.check_output(
-        [
-            "gpg",
-            "--export",
-            "--armor",
-            "--no-default-keyring",
-            "--keyring",
-            archive_keyring,
-            archive_key_id,
-        ],
-        text=True,
-        stderr=subprocess.PIPE,
-    )
-    env["FETCH_APT_RELEASE_PUBLIC_KEY"] = archive_key
 
     # Add the ports
     cmd.append(f"--control-port={_DEFAULT_CONFIG.control}")

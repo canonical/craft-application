@@ -4,11 +4,14 @@
 Changelog
 *********
 
-4.5.0 (2024-XX-XX)
+4.5.0 (YYYY-MMM-DD)
 -------------------
 
 Application
 ===========
+
+- The fetch-service integration now assumes that the fetch-service snap is
+  tracking the ``latest/candidate`` channel.
 
 Commands
 ========
