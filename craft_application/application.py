@@ -672,8 +672,11 @@ class Application:
             self._emit_error(err)
             return_code = err.retcode
         except craft_parts.PartsError as err:
+            lifecycle_err = errors.PartsLifecycleError.from_parts_error(err)
+            if isinstance(lifecycle_err, craft_parts.errors.PluginBuildError):
+                lifecycle_err.details = None
             self._emit_error(
-                errors.PartsLifecycleError.from_parts_error(err),
+                lifecycle_err,
                 cause=err,
             )
             return_code = 1
@@ -684,7 +687,7 @@ class Application:
                 ),
                 cause=err,
             )
-            return_code = 1
+            return_code = -1
         except Exception as err:
             self._emit_error(
                 craft_cli.CraftError(f"{self.app.name} internal error: {err!r}"),
