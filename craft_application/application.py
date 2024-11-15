@@ -672,14 +672,14 @@ class Application:
             self._emit_error(err)
             return_code = err.retcode
         except craft_parts.PartsError as err:
-            lifecycle_err = errors.PartsLifecycleError.from_parts_error(err)
-            if isinstance(lifecycle_err, craft_parts.errors.PluginBuildError):
-                lifecycle_err.details = None
-            self._emit_error(
-                lifecycle_err,
-                cause=err,
-            )
-            return_code = 1
+            if isinstance(err, craft_parts.errors.PluginBuildError):
+                return_code = 4
+            else:
+                self._emit_error(
+                    errors.PartsLifecycleError.from_parts_error(err),
+                    cause=err,
+                )
+                return_code = 1
         except craft_providers.ProviderError as err:
             self._emit_error(
                 craft_cli.CraftError(
