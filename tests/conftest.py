@@ -104,7 +104,7 @@ def app_metadata(features, fake_config_model) -> craft_application.AppMetadata:
             "A fake app for testing craft-application",
             source_ignore_patterns=["*.snap", "*.charm", "*.starcraft"],
             features=craft_application.AppFeatures(**features),
-            docs_url="www.craft-app.com/docs/{version}",
+            docs_url="www.testcraft.example/docs/{version}",
             ConfigModel=fake_config_model,
         )
 
@@ -116,7 +116,7 @@ def app_metadata_docs(features) -> craft_application.AppMetadata:
         return craft_application.AppMetadata(
             "testcraft",
             "A fake app for testing craft-application",
-            docs_url="http://craft-app.com",
+            docs_url="http://testcraft.example",
             source_ignore_patterns=["*.snap", "*.charm", "*.starcraft"],
             features=craft_application.AppFeatures(**features),
         )
