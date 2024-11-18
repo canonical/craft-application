@@ -569,6 +569,7 @@ class Application:
             self.command_groups,
             summary=str(self.app.summary),
             extra_global_args=self._global_arguments,
+            docs_base_url=self.app.versioned_docs_url,
         )
 
     def _get_app_plugins(self) -> dict[str, PluginType]:

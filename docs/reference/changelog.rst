@@ -16,6 +16,8 @@ Application
 Commands
 ========
 
+- Provide a documentation link in help messages.
+
 Services
 ========
 
