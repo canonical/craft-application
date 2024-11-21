@@ -133,6 +133,9 @@ class Platform(base.CraftBaseModel):
     def _validate_architectures(cls, values: list[str]) -> list[str]:
         """Validate the architecture entries."""
         for architecture in values:
+            _, architecture = craft_platforms.get_base_and_architecture(
+                architecture=architecture
+            )
             if architecture != "all" and not is_valid_architecture(architecture):
                 raise errors.CraftValidationError(
                     f"Invalid architecture: {architecture!r} "
@@ -174,15 +177,27 @@ def _populate_platforms(platforms: dict[str, Any]) -> dict[str, Any]:
 
     :returns: The dict of platforms with populated entries.
     """
+    new_platforms: dict[str, Any] = {}
     for platform_label, platform in platforms.items():
-        if not platform:
-            # populate "empty" platforms entries from the platform's name
-            platforms[platform_label] = {
+        if platform:
+            new_platforms[platform_label] = platform
+        # populate "empty" platforms entries from the platform's name
+        else:
+            # strip the optional base from the platform name
+            _, platform_without_base = craft_platforms.get_base_and_name(platform_name=platform_label)
+
+            if platform_without_base == "all":
+                raise ValueError(
+                    f"Platform {platform_label!r} cannot specify 'all' in the platform "
+                    "name without specifying 'build-on' and 'build-for'."
+                )
+
+            new_platforms[platform_without_base] = {
                 "build-on": [platform_label],
                 "build-for": [platform_label],
             }
 
-    return platforms
+    return new_platforms
 
 
 class BuildPlanner(base.CraftBaseModel, metaclass=abc.ABCMeta):
