@@ -23,7 +23,10 @@ import textwrap
 import jinja2
 import pytest
 import pytest_check
+import pytest_mock
 from craft_application import errors, services
+from craft_application.git import GitRepo, short_commit_sha
+from craft_cli.pytest_plugin import RecordingEmitter
 
 
 @pytest.fixture
@@ -42,10 +45,71 @@ def mock_loader(mocker, tmp_path):
     )
 
 
-def test_get_context(init_service):
-    context = init_service._get_context(name="my-project")
+def test_get_context(init_service, tmp_path: pathlib.Path):
+    project_dir = tmp_path / "my-project"
+    project_dir.mkdir()
+    context = init_service._get_context(name="my-project", project_dir=project_dir)
 
-    assert context == {"name": "my-project"}
+    assert context == {"name": "my-project", "version": init_service.default_version}
+
+
+@pytest.fixture
+def empty_git_repository(tmp_path: pathlib.Path) -> GitRepo:
+    repository = tmp_path / "my-project-git"
+    repository.mkdir()
+    return GitRepo(repository)
+
+
+@pytest.fixture
+def git_repository_with_commit(tmp_path: pathlib.Path) -> tuple[GitRepo, str]:
+    repository = tmp_path / "my-project-git"
+    repository.mkdir()
+    git_repo = GitRepo(repository)
+    (repository / "some_file").touch()
+    git_repo.add_all()
+    commit_sha = git_repo.commit("feat: initialize repo")
+
+    return git_repo, commit_sha
+
+
+@pytest.fixture
+def project_dir(tmp_path: pathlib.Path) -> pathlib.Path:
+    project_dir = tmp_path / "my-project"
+    project_dir.mkdir()
+    return project_dir
+
+
+@pytest.fixture
+def templates_dir(tmp_path: pathlib.Path) -> pathlib.Path:
+    template_dir = tmp_path / "templates"
+    template_dir.mkdir()
+    return template_dir
+
+
+def test_get_context_of_empty_git_repository(
+    init_service, empty_git_repository: GitRepo
+):
+    context = init_service._get_context(
+        name="my-project",
+        project_dir=empty_git_repository.path,
+    )
+
+    assert context == {"name": "my-project", "version": init_service.default_version}
+
+
+def test_get_context_of_git_repository_with_commit(
+    init_service,
+    git_repository_with_commit: tuple[GitRepo, str],
+    emitter: RecordingEmitter,
+):
+    git_repo, commit_sha = git_repository_with_commit
+    expected_version = short_commit_sha(commit_sha)
+    context = init_service._get_context(
+        name="my-project",
+        project_dir=git_repo.path,
+    )
+    assert context == {"name": "my-project", "version": expected_version}
+    emitter.assert_debug(f"Discovered project version: {expected_version!r}")
 
 
 @pytest.mark.parametrize("create_dir", [True, False])
@@ -173,7 +237,7 @@ def test_render_project_with_templates(filename, init_service, tmp_path):
         environment=environment,
         project_dir=project_dir,
         template_dir=template_dir,
-        context={"name": "my-project"},
+        context={"name": "my-project", "version": init_service.default_version},
     )
 
     assert (project_dir / filename[:-3]).read_text() == "my-project"
@@ -194,7 +258,7 @@ def test_render_project_non_templates(filename, init_service, tmp_path):
         environment=environment,
         project_dir=project_dir,
         template_dir=template_dir,
-        context={"name": "my-project"},
+        context={"name": "my-project", "version": init_service.default_version},
     )
 
     assert (project_dir / filename).read_text() == "test content"
@@ -218,10 +282,48 @@ def test_render_project_executable(init_service, tmp_path):
         environment=environment,
         project_dir=project_dir,
         template_dir=template_dir,
-        context={"name": "my-project"},
+        context={"name": "my-project", "version": init_service.default_version},
     )
 
     pytest_check.is_true(os.access(project_dir / "file-1.sh", os.X_OK))
     pytest_check.is_true(os.access(project_dir / "file-2.sh", os.X_OK))
     pytest_check.is_false(os.access(project_dir / "file-3.txt", os.X_OK))
     pytest_check.is_false(os.access(project_dir / "file-4.txt", os.X_OK))
+
+
+def test_initialise_project(
+    init_service: services.InitService,
+    project_dir: pathlib.Path,
+    templates_dir: pathlib.Path,
+    mocker: pytest_mock.MockerFixture,
+) -> None:
+    project_name = "test-project"
+    fake_env = {"templates": templates_dir}
+    fake_context = {"name": project_name, "version": init_service.default_version}
+    get_templates_mock = mocker.patch.object(
+        init_service, "_get_templates_environment", return_value=fake_env
+    )
+    create_project_dir_mock = mocker.patch.object(
+        init_service,
+        "_create_project_dir",
+    )
+    get_context_mock = mocker.patch.object(
+        init_service,
+        "_get_context",
+        return_value=fake_context,
+    )
+    render_project_mock = mocker.patch.object(
+        init_service,
+        "_render_project",
+    )
+    init_service.initialise_project(
+        project_dir=project_dir,
+        project_name=project_name,
+        template_dir=templates_dir,
+    )
+    get_templates_mock.assert_called_once_with(templates_dir)
+    create_project_dir_mock.assert_called_once_with(project_dir=project_dir)
+    get_context_mock.assert_called_once_with(name=project_name, project_dir=project_dir)
+    render_project_mock.assert_called_once_with(
+        fake_env, project_dir, templates_dir, fake_context
+    )

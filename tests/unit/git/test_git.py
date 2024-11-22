@@ -15,11 +15,8 @@
 
 """Tests for the pygit2 wrapper class."""
 
-import os
-import pathlib
 import re
 import subprocess
-from collections.abc import Iterator
 from pathlib import Path
 from typing import cast
 from unittest.mock import ANY
@@ -27,29 +24,21 @@ from unittest.mock import ANY
 import pygit2
 import pygit2.enums
 import pytest
-from craft_application.git import GitError, GitRepo, GitType, get_git_repo_type, is_repo
+from craft_application.git import (
+    GitError,
+    GitRepo,
+    GitType,
+    get_git_repo_type,
+    is_repo,
+    parse_describe,
+    short_commit_sha,
+)
 from craft_application.remote import (
     RemoteBuildInvalidGitRepoError,
     check_git_repo_for_remote_build,
 )
 
-
-@pytest.fixture
-def empty_working_directory(tmp_path) -> Iterator[Path]:
-    cwd = pathlib.Path.cwd()
-
-    repo_dir = Path(tmp_path, "test-repo")
-    repo_dir.mkdir()
-    os.chdir(repo_dir)
-    yield repo_dir
-
-    os.chdir(cwd)
-
-
-@pytest.fixture
-def empty_repository(empty_working_directory) -> Path:
-    subprocess.run(["git", "init"], check=True)
-    return cast(Path, empty_working_directory)
+from tests.conftest import RepositoryDefinition
 
 
 def test_is_repo(empty_working_directory):
@@ -135,6 +124,23 @@ def test_is_repo_error(empty_working_directory, mocker):
     assert raised.value.details == (
         f"Could not check for git repository in {str(empty_working_directory)!r}."
     )
+
+
+@pytest.mark.parametrize(
+    ("describe", "expected"),
+    [
+        ("cdaea14", "cdaea14"),
+        ("4.1.1-0-gad012482d", "4.1.1"),
+        ("4.1.1-16-g2d8943dbc", "4.1.1.post16+git2d8943dbc"),
+        ("curl-8_11_0-6-g0cdde0f", "curl-8_11_0.post6+git0cdde0f"),
+        ("curl-8_11_0-0-gb1ef0e1", "curl-8_11_0"),
+        ("0ae7c04", "0ae7c04"),
+        ("unknown-format", "unknown-format"),
+    ],
+)
+def test_parsing_describe(describe: str, expected: str) -> None:
+    """Check if describe result is correctly parsed."""
+    assert parse_describe(describe) == expected
 
 
 def test_init_repo(empty_working_directory):
@@ -897,3 +903,85 @@ def test_check_git_repo_for_remote_build_shallow(empty_working_directory):
         match="Remote builds for shallow cloned git repos are not supported",
     ):
         check_git_repo_for_remote_build(git_shallow_path)
+
+
+@pytest.mark.parametrize(
+    "always_use_long_format",
+    [True, False, None],
+    ids=lambda p: f"use_long_format={p!s}",
+)
+def test_describing_commit(
+    repository_with_commit: RepositoryDefinition, always_use_long_format: bool | None
+):
+    """Describe an empty repository."""
+    repo = GitRepo(repository_with_commit.repository_path)
+
+    assert (
+        repo.describe(
+            show_commit_oid_as_fallback=True,
+            always_use_long_format=always_use_long_format,
+        )
+        == repository_with_commit.short_commit
+    )
+
+
+def test_describing_repo_fails_in_empty_repo(empty_repository: Path):
+    """Cannot describe an empty repository."""
+    repo = GitRepo(empty_repository)
+
+    with pytest.raises(GitError):
+        repo.describe(show_commit_oid_as_fallback=True)
+
+
+def test_describing_tags(repository_with_annotated_tag: RepositoryDefinition):
+    """Describe should be able to handle annotated tags."""
+    repo = GitRepo(repository_with_annotated_tag.repository_path)
+    assert repo.describe() == repository_with_annotated_tag.tag
+
+
+@pytest.fixture(params=[True, False, None], ids=lambda p: f"fallback={p!r}")
+def show_commit_oid_as_fallback(request: pytest.FixtureRequest) -> bool | None:
+    return cast(bool | None, request.param)
+
+
+@pytest.fixture(params=[True, False, None], ids=lambda p: f"long={p!r}")
+def always_use_long_format(request: pytest.FixtureRequest) -> bool | None:
+    return cast(bool | None, request.param)
+
+
+def test_describing_commits_following_tags(
+    repository_with_annotated_tag: RepositoryDefinition,
+    show_commit_oid_as_fallback: bool | None,
+    always_use_long_format: bool | None,
+):
+    """Describe should be able to discover commits after tags."""
+    repo = GitRepo(repository_with_annotated_tag.repository_path)
+    (repository_with_annotated_tag.repository_path / "another_file").touch()
+    tag = repository_with_annotated_tag.tag
+    repo.add_all()
+    new_commit = repo.commit("commit after tag")
+    short_new_commit = short_commit_sha(new_commit)
+    describe_result = repo.describe(
+        show_commit_oid_as_fallback=show_commit_oid_as_fallback,
+        always_use_long_format=always_use_long_format,
+    )
+    assert describe_result == f"{tag}-1-g{short_new_commit}"
+    assert parse_describe(describe_result) == f"{tag}.post1+git{short_new_commit}"
+
+
+def test_describing_unanotated_tags(
+    repository_with_unannotated_tag: RepositoryDefinition,
+):
+    """Describe should error out if trying to describe repo without annotated tags."""
+    repo = GitRepo(repository_with_unannotated_tag.repository_path)
+    with pytest.raises(GitError):
+        repo.describe()
+
+
+def test_describing_fallback_to_commit_for_unannotated_tags(
+    repository_with_unannotated_tag: RepositoryDefinition,
+):
+    """Describe should fallback to commit if trying to describe repo without annotated tags."""
+    repo = GitRepo(repository_with_unannotated_tag.repository_path)
+    describe_result = repo.describe(show_commit_oid_as_fallback=True)
+    assert describe_result == repository_with_unannotated_tag.short_commit

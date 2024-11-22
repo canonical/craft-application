@@ -25,6 +25,7 @@ import jinja2
 from craft_cli import emit
 
 from craft_application.errors import InitError
+from craft_application.git import GitError, GitRepo, is_repo, parse_describe
 
 from . import base
 
@@ -53,9 +54,9 @@ class InitService(base.AppService):
             f"Initialising project {project_name!r} in {str(project_dir)!r} from "
             f"template in {str(template_dir)!r}."
         )
-        context = self._get_context(name=project_name)
         environment = self._get_templates_environment(template_dir)
         self._create_project_dir(project_dir=project_dir)
+        context = self._get_context(name=project_name, project_dir=project_dir)
         self._render_project(environment, project_dir, template_dir, context)
 
     def check_for_existing_files(
@@ -91,6 +92,11 @@ class InitService(base.AppService):
                 ),
                 retcode=os.EX_CANTCREAT,
             )
+
+    @property
+    def default_version(self) -> str:
+        """Return default version that should be used for the InitService context."""
+        return "0.1"
 
     def _copy_template_file(
         self,
@@ -150,20 +156,39 @@ class InitService(base.AppService):
             shutil.copystat((template_dir / template_name), path)
         emit.progress("Rendered project.")
 
-    def _get_context(self, name: str) -> dict[str, Any]:
+    def _get_context(self, name: str, *, project_dir: pathlib.Path) -> dict[str, Any]:
         """Get context to render templates with.
 
         :returns: A dict of context variables.
         """
         emit.debug(f"Set project name to '{name}'")
 
-        return {"name": name}
+        version = self._get_version(project_dir=project_dir)
+        if version is not None:
+            emit.debug(f"Discovered project version: {version!r}")
+
+        return {"name": name, "version": version or self.default_version}
 
     @staticmethod
     def _create_project_dir(project_dir: pathlib.Path) -> None:
         """Create the project directory if it does not already exist."""
         emit.debug(f"Creating project directory {str(project_dir)!r}.")
         project_dir.mkdir(parents=True, exist_ok=True)
+
+    def _get_version(self, *, project_dir: pathlib.Path) -> str | None:
+        """Try to determine version if project is the git repository."""
+        try:
+            if is_repo(project_dir):
+                git_repo = GitRepo(project_dir)
+                described = git_repo.describe(
+                    always_use_long_format=True,
+                    show_commit_oid_as_fallback=True,
+                )
+                return parse_describe(described)
+        except GitError as error:
+            emit.debug(f"cannot determine project version: {error.details}")
+
+        return None
 
     def _get_loader(self, template_dir: pathlib.Path) -> jinja2.BaseLoader:
         """Return a Jinja loader for the given template directory.

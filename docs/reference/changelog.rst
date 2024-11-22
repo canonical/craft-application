@@ -4,7 +4,29 @@
 Changelog
 *********
 
-4.4.0 (2024-Oct-XX)
+4.5.0 (YYYY-MMM-DD)
+-------------------
+
+Application
+===========
+
+- The fetch-service integration now assumes that the fetch-service snap is
+  tracking the ``latest/candidate`` channel.
+
+Commands
+========
+
+- Provide a documentation link in help messages.
+
+Services
+========
+
+- Add version to the template generation context of ``InitService``.
+
+..
+  For a complete list of commits, check out the `4.5.0`_ release on GitHub.
+
+4.4.0 (2024-Nov-08)
 -------------------
 
 Application
@@ -31,8 +53,7 @@ Services
 
 - Adds an ``InitService`` for initialising new projects.
 
-..
-  For a complete list of commits, check out the `4.4.0`_ release on GitHub.
+For a complete list of commits, check out the `4.4.0`_ release on GitHub.
 
 4.3.0 (2024-Oct-11)
 -------------------
@@ -383,3 +404,4 @@ For a complete list of commits, check out the `2.7.0`_ release on GitHub.
 .. _4.2.6: https://github.com/canonical/craft-application/releases/tag/4.2.6
 .. _4.2.7: https://github.com/canonical/craft-application/releases/tag/4.2.7
 .. _4.3.0: https://github.com/canonical/craft-application/releases/tag/4.3.0
+.. _4.4.0: https://github.com/canonical/craft-application/releases/tag/4.4.0
