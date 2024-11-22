@@ -429,12 +429,54 @@ def test_lifecycle_error_logging(monkeypatch, tmp_path, create_app):
 
     log_contents = craft_cli.emit._log_filepath.read_text()
 
-    # Make sure there's a traceback
-    assert "Traceback (most recent call last):" in log_contents
+    # Make sure the traceback is omitted for this user error
+    assert "Traceback (most recent call last):" not in log_contents
 
-    # Make sure it's identified as the correct error type
-    parts_message = "craft_parts.errors.ScriptletRunError: 'override-build' in part 'my-part' failed"
+    # Make sure the error is reported properly
+    parts_message = ":: ls: cannot access 'i-dont-exist.txt': No such file or directory"
     assert parts_message in log_contents
+
+    # Make sure the failed component is reported
+    error_origin = "'override-build' in part 'my-part' failed"
+    assert error_origin in log_contents
+
+
+@pytest.mark.usefixtures("pretend_jammy")
+def test_lifecycle_managed_error_logging(
+    monkeypatch, tmp_path, create_app, provider_service, mocker
+):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("CRAFT_DEBUG", 1)
+    monkeypatch.setenv("CRAFT_MANAGED_MODE", 1)
+    shutil.copytree(INVALID_PROJECTS_DIR / "build-error", tmp_path, dirs_exist_ok=True)
+
+    monkeypatch.setattr("sys.argv", ["testcraft", "pack"])
+    app: TestableApplication = create_app()
+    app.services.provider = provider_service
+    app._work_dir = tmp_path
+
+    mocker.patch(
+        __name__ + ".TestableApplication.log_path",
+        new_callable=mocker.PropertyMock,
+        return_value=tmp_path / "testcraft.log",
+    )
+
+    from craft_application.application import USER_ERROR_CODE
+
+    assert app.run() == USER_ERROR_CODE
+
+    log_contents = craft_cli.emit._log_filepath.read_text()
+
+    # Make sure the traceback is omitted for this user error
+    assert "Traceback (most recent call last):" not in log_contents
+
+    # Make sure the error is reported properly
+    parts_message = ":: ls: cannot access 'i-dont-exist.txt': No such file or directory"
+    assert parts_message in log_contents
+
+    # Make sure the failed component is reported
+    error_origin = "'override-build' in part 'my-part' failed"
+    assert error_origin in log_contents
 
 
 @pytest.mark.usefixtures("pretend_jammy", "emitter")
@@ -451,7 +493,6 @@ def test_runtime_error_logging(monkeypatch, tmp_path, create_app, mocker):
 
     monkeypatch.setattr("sys.argv", ["testcraft", "pack", "--destructive-mode"])
     app = create_app()
-
     app.run()
 
     log_contents = craft_cli.emit._log_filepath.read_text()

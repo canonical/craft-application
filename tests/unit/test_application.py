@@ -547,15 +547,15 @@ def test_run_managed_success(mocker, app, fake_project, fake_build_plan):
 def test_run_managed_failure(app, fake_project, fake_build_plan):
     mock_provider = mock.MagicMock(spec_set=services.ProviderService)
     instance = mock_provider.instance.return_value.__enter__.return_value
-    instance.execute_run.side_effect = subprocess.CalledProcessError(1, [])
+    instance.execute_run.side_effect = subprocess.CalledProcessError(4, [])
     app.services.provider = mock_provider
     app.project = fake_project
     app._build_plan = fake_build_plan
 
-    with pytest.raises(craft_providers.ProviderError) as exc_info:
+    with pytest.raises(errors.ManagedUserError) as exc_info:
         app.run_managed(None, get_host_architecture())
 
-    assert exc_info.value.brief == "Failed to execute testcraft in instance."
+    assert exc_info.value.user_error
 
 
 @pytest.mark.enable_features("build_secrets")
@@ -976,7 +976,7 @@ def test_run_success_managed_inside_managed(
             """
             ),
         ),
-        (craft_providers.ProviderError("fail to launch"), 1, "fail to launch\n"),
+        (craft_providers.ProviderError("fail to launch"), -1, "fail to launch\n"),
         (Exception(), 70, "testcraft internal error: Exception()\n"),
         (
             craft_cli.ArgumentParsingError("Argument parsing error"),
