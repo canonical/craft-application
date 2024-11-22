@@ -173,6 +173,8 @@ def test_install_snap(
     monkeypatch.delenv("SNAP", raising=False)
     monkeypatch.delenv("CRAFT_SNAP_CHANNEL", raising=False)
     monkeypatch.delenv("SNAP_INSTANCE_NAME", raising=False)
+    monkeypatch.delenv("SNAP_NAME", raising=False)
+    monkeypatch.delenv("CRAFT_SNAP_CHANNEL", raising=False)
     for name, value in environment.items():
         monkeypatch.setenv(name, value)
     service = provider.ProviderService(
