@@ -135,7 +135,7 @@ class DefaultConfigHandler(ConfigHandler):
             self._cache[item] = field.default
             return field.default
         if field.default_factory is not None:
-            default = field.default_factory()
+            default = field.default_factory()  # type: ignore[call-arg]
             self._cache[item] = default
             return default
 
