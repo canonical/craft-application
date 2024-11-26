@@ -122,3 +122,22 @@ def test_invalid_name(init_command, mock_services):
     )
     with pytest.raises(InitError, match="test-error"):
         init_command.run(parsed_args)
+
+
+def test_invalid_name_directory(init_command, mock_services):
+    mock_services.init.validate_project_name.side_effect = InitError("test-error")
+
+    project_dir = pathlib.Path("invalid--name")
+    parsed_args = argparse.Namespace(
+        project_dir=project_dir,
+        name=None,
+        profile="simple",
+    )
+
+    init_command.run(parsed_args)
+
+    mock_services.init.initialise_project.assert_called_once_with(
+        project_dir=project_dir.expanduser().resolve(),
+        project_name="my-project",
+        template_dir=init_command.parent_template_dir / "simple",
+    )

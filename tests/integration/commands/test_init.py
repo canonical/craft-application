@@ -64,8 +64,13 @@ def fake_template_dirs(tmp_path):
 )
 @pytest.mark.parametrize("project_dir", [None, "project-dir"])
 @pytest.mark.usefixtures("fake_template_dirs")
-def test_init(app, capsys, monkeypatch, profile, expected_file, project_dir):
+def test_init(app, capsys, monkeypatch, profile, expected_file, project_dir, tmp_path):
     """Initialise a project."""
+    # Change into a directory with valid name
+    valid_dir = tmp_path / "valid"
+    valid_dir.mkdir()
+    monkeypatch.chdir(valid_dir)
+
     expected_output = "Successfully initialised project"
     command = ["testcraft", "init"]
     if profile:
