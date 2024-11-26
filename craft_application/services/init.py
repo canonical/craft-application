@@ -21,6 +21,7 @@ import os
 import pathlib
 import shutil
 import typing
+from re import Pattern
 from typing import Any
 
 import jinja2
@@ -46,9 +47,13 @@ class InitService(base.AppService):
         services: ServiceFactory,
         *,
         default_name: str = "my-project",
+        name_regex: Pattern[str] = PROJECT_NAME_COMPILED_REGEX,
+        invalid_name_message: str = MESSAGE_INVALID_NAME,
     ) -> None:
         super().__init__(app, services)
         self._default_name = default_name
+        self._name_regex = name_regex
+        self._invalid_name_message = invalid_name_message
 
     def validate_project_name(self, name: str, *, use_default: bool = False) -> str:
         """Validate that ``name`` is valid as a project name.
@@ -59,10 +64,10 @@ class InitService(base.AppService):
 
         If ``name`` is valid, it is returned.
         """
-        if not PROJECT_NAME_COMPILED_REGEX.match(name):
+        if not self._name_regex.match(name):
             if use_default:
                 return self._default_name
-            raise InitError(MESSAGE_INVALID_NAME)
+            raise InitError(self._invalid_name_message)
 
         return name
 
