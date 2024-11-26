@@ -26,6 +26,7 @@ import pytest_check
 import pytest_mock
 from craft_application import errors, services
 from craft_application.git import GitRepo, short_commit_sha
+from craft_application.models.constraints import MESSAGE_INVALID_NAME
 from craft_cli.pytest_plugin import RecordingEmitter
 
 
@@ -327,3 +328,11 @@ def test_initialise_project(
     render_project_mock.assert_called_once_with(
         fake_env, project_dir, templates_dir, fake_context
     )
+
+
+@pytest.mark.parametrize(
+    "invalid_name", ["invalid--name", "-invalid-name", "invalid-name-"]
+)
+def test_validate_name(init_service, invalid_name):
+    with pytest.raises(errors.InitError, match=MESSAGE_INVALID_NAME):
+        init_service.validate_project_name(invalid_name)

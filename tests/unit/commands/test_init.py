@@ -113,3 +113,12 @@ def test_existing_files(init_command, tmp_path, mock_services):
         init_command.run(parsed_args)
 
     mock_services.init.initialise_project.assert_not_called()
+
+
+def test_invalid_name(init_command, mock_services):
+    mock_services.init.validate_project_name.side_effect = InitError("test-error")
+    parsed_args = argparse.Namespace(
+        name="invalid--name",
+    )
+    with pytest.raises(InitError, match="test-error"):
+        init_command.run(parsed_args)

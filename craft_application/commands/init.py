@@ -101,6 +101,9 @@ class InitCommand(base.AppCommand):
 
     def run(self, parsed_args: argparse.Namespace) -> None:
         """Run the command."""
+        if parsed_args.name is not None:
+            self._services.init.validate_project_name(parsed_args.name)
+
         project_dir = self._get_project_dir(parsed_args)
         project_name = self._get_name(parsed_args)
         template_dir = pathlib.Path(self.parent_template_dir / parsed_args.profile)

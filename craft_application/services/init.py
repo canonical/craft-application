@@ -27,11 +27,20 @@ from craft_cli import emit
 from craft_application.errors import InitError
 from craft_application.git import GitError, GitRepo, is_repo, parse_describe
 
+from ..models.constraints import MESSAGE_INVALID_NAME, PROJECT_NAME_COMPILED_REGEX
 from . import base
 
 
 class InitService(base.AppService):
     """Service class for initializing a project."""
+
+    def validate_project_name(self, name: str) -> None:
+        """Validate that ``name`` is valid as a project name.
+
+        Raises an InitError if ``name`` is invalid.
+        """
+        if not PROJECT_NAME_COMPILED_REGEX.match(name):
+            raise InitError(MESSAGE_INVALID_NAME)
 
     def initialise_project(
         self,
