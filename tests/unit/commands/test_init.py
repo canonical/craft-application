@@ -61,6 +61,7 @@ def test_init_in_cwd(init_command, name, new_dir, mock_services, emitter):
         name=name,
         profile="test-profile",
     )
+    mock_services.init.validate_project_name.return_value = expected_name
 
     init_command.run(parsed_args)
 
@@ -82,6 +83,7 @@ def test_init_run_project_dir(init_command, name, mock_services, emitter):
         name=name,
         profile="test-profile",
     )
+    mock_services.init.validate_project_name.return_value = expected_name
 
     init_command.run(parsed_args)
 
@@ -125,7 +127,12 @@ def test_invalid_name(init_command, mock_services):
 
 
 def test_invalid_name_directory(init_command, mock_services):
-    mock_services.init.validate_project_name.side_effect = InitError("test-error")
+    def _validate_project_name(_name: str, *, use_default: bool = False):
+        if use_default:
+            return "my-project"
+        raise InitError("test-error")
+
+    mock_services.init.validate_project_name = _validate_project_name
 
     project_dir = pathlib.Path("invalid--name")
     parsed_args = argparse.Namespace(

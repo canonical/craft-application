@@ -64,13 +64,17 @@ def fake_template_dirs(tmp_path):
 )
 @pytest.mark.parametrize("project_dir", [None, "project-dir"])
 @pytest.mark.usefixtures("fake_template_dirs")
-def test_init(app, capsys, monkeypatch, profile, expected_file, project_dir, tmp_path):
+def test_init(
+    app,
+    capsys,
+    monkeypatch,
+    profile,
+    expected_file,
+    project_dir,
+    empty_working_directory,
+):
     """Initialise a project."""
-    # Change into a directory with valid name
-    valid_dir = tmp_path / "valid"
-    valid_dir.mkdir()
-    monkeypatch.chdir(valid_dir)
-
+    monkeypatch.chdir(empty_working_directory)
     expected_output = "Successfully initialised project"
     command = ["testcraft", "init"]
     if profile:
@@ -161,3 +165,17 @@ def test_init_nonoverlapping_file(app, capsys, monkeypatch):
     assert return_code == os.EX_OK
     assert expected_output in stdout
     assert pathlib.Path("simple-file").is_file()
+
+
+@pytest.mark.usefixtures("fake_template_dirs")
+def test_init_invalid_directory(app, monkeypatch, tmp_path):
+    """A default name is used if the project dir is not a valid project name."""
+    invalid_dir = tmp_path / "invalid--name"
+    invalid_dir.mkdir()
+    monkeypatch.chdir(invalid_dir)
+
+    monkeypatch.setattr("sys.argv", ["testcraft", "init", "--profile", "simple"])
+    app.run()
+
+    expected_file = invalid_dir / "simple-file"
+    assert expected_file.read_text() == "name=my-project"

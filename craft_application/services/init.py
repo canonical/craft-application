@@ -15,10 +15,12 @@
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """Service for initializing a project."""
+from __future__ import annotations
 
 import os
 import pathlib
 import shutil
+import typing
 from typing import Any
 
 import jinja2
@@ -30,17 +32,39 @@ from craft_application.git import GitError, GitRepo, is_repo, parse_describe
 from ..models.constraints import MESSAGE_INVALID_NAME, PROJECT_NAME_COMPILED_REGEX
 from . import base
 
+if typing.TYPE_CHECKING:  # pragma: no cover
+    from craft_application.application import AppMetadata
+    from craft_application.services import ServiceFactory
+
 
 class InitService(base.AppService):
     """Service class for initializing a project."""
 
-    def validate_project_name(self, name: str) -> None:
+    def __init__(
+        self,
+        app: AppMetadata,
+        services: ServiceFactory,
+        *,
+        default_name: str = "my-project",
+    ) -> None:
+        super().__init__(app, services)
+        self._default_name = default_name
+
+    def validate_project_name(self, name: str, *, use_default: bool = False) -> str:
         """Validate that ``name`` is valid as a project name.
 
-        Raises an InitError if ``name`` is invalid.
+        If ``name`` is invalid and ``use_default`` is False, then an InitError
+        is raised. If ``use_default`` is True, the default project name provided
+        to the service's constructor is returned.
+
+        If ``name`` is valid, it is returned.
         """
         if not PROJECT_NAME_COMPILED_REGEX.match(name):
+            if use_default:
+                return self._default_name
             raise InitError(MESSAGE_INVALID_NAME)
+
+        return name
 
     def initialise_project(
         self,

@@ -23,7 +23,6 @@ from typing import cast
 
 import craft_cli
 
-from craft_application import errors
 from craft_application.util import humanize_list
 
 from . import base
@@ -107,12 +106,11 @@ class InitCommand(base.AppCommand):
             self._services.init.validate_project_name(parsed_args.name)
 
         # However, if the name comes from the directory, we don't fail and
-        # instead fallback to "my-project".
+        # instead fallback to its default.
         project_name = self._get_name(parsed_args)
-        try:
-            self._services.init.validate_project_name(project_name)
-        except errors.InitError:
-            project_name = "my-project"
+        project_name = self._services.init.validate_project_name(
+            project_name, use_default=True
+        )
 
         project_dir = self._get_project_dir(parsed_args)
         template_dir = pathlib.Path(self.parent_template_dir / parsed_args.profile)
