@@ -24,6 +24,7 @@ import signal
 import subprocess
 import time
 from dataclasses import dataclass
+from functools import cache
 from typing import Any, cast
 
 import craft_providers
@@ -329,6 +330,7 @@ def _service_request(
     return response
 
 
+@cache
 def _get_service_base_dir() -> pathlib.Path:
     """Get the base directory to contain the fetch-service's runtime files."""
     input_line = "sh -c 'echo $SNAP_USER_COMMON'"
