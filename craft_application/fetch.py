@@ -22,7 +22,6 @@ import pathlib
 import shlex
 import signal
 import subprocess
-import tempfile
 import time
 from dataclasses import dataclass
 from typing import Any, cast
@@ -176,12 +175,13 @@ def start_service() -> subprocess.Popen[str] | None:
 
     log_filepath = get_log_filepath()
     log_filepath.parent.mkdir(parents=True, exist_ok=True)
+    cmd.append(f"--log-file={log_filepath}")
 
-    str_cmd = f"{shlex.join(cmd)} > {log_filepath.absolute()}"
+    str_cmd = shlex.join(cmd)
     emit.debug(f"Launching fetch-service with '{str_cmd}'")
 
     fetch_process = subprocess.Popen(
-        ["bash", "-c", str_cmd],
+        cmd,
         env=env,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
@@ -297,7 +297,12 @@ def configure_instance(
 
 def get_log_filepath() -> pathlib.Path:
     """Get the path containing the fetch-service's output."""
-    return pathlib.Path(tempfile.gettempdir()) / "craft-fetch-log.txt"
+    # All craft tools log to the same place, because it's a single fetch-service
+    # instance. It needs to be a location that the fetch-service, as a strict
+    # snap, can write to.
+    logdir = _get_service_base_dir() / "craft-logs"
+    logdir.mkdir(exist_ok=True, parents=True)
+    return logdir / "fetch-service.txt"
 
 
 def _service_request(
