@@ -47,7 +47,7 @@ class SimpleSpreadSuite(CraftBaseModel):
 
     summary: str
     systems: list[str]
-    environment: dict[str, str] | None = {}
+    environment: dict[str, str] | None = None
     prepare: str | None = None
     restore: str | None = None
     prepare_each: str | None = None
@@ -202,6 +202,7 @@ class SpreadYaml(SpreadBaseModel):
                 "SUDO_UID": "",
                 "LANG": "C.UTF-8",
                 "LANGUAGE": "en",
+                "PROJECT_PATH": "/home/spread/proj",
             },
             backends=cls._backends_from_simple(simple.backends, craft_backend),
             suites=cls._suites_from_simple(simple.suites),

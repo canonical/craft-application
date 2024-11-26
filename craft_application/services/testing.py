@@ -51,12 +51,14 @@ class TestingService(base.AppService):
         spread_yaml.to_yaml_file(pathlib.Path("spread/spread.yaml"))
 
     def _get_backend(self) -> models.SpreadBackend:
+        name = "lxd-vm"
+
         return models.SpreadBackend(
             type="adhoc",
-            allocate="ADDRESS $(.extension allocate lxd-vm)",
-            discard=".extension discard lxd-vm",
-            prepare=".extension backend-prepare lxd-vm",
-            restore=".extension backend-restore lxd-vm",
-            prepare_each=".extension backend-prepare-each lxd-vm",
-            restore_each=".extension backend-restore-each lxd-vm",
+            allocate=f"ADDRESS $(./.extension allocate {name})",
+            discard=f"./.extension discard {name}",
+            prepare=f'"$PROJECT_PATH"/.extension backend-prepare {name}',
+            restore=f'"$PROJECT_PATH"/.extension backend-restore {name}',
+            prepare_each=f'"$PROJECT_PATH"/.extension backend-prepare-each {name}',
+            restore_each=f'"$PROJECT_PATH"/.extension backend-restore-each {name}',
         )
