@@ -180,9 +180,6 @@ def start_service() -> subprocess.Popen[str] | None:
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,
-        # Start a new session because when killing the service we need to kill
-        # both 'bash' and the 'fetch' it spawns.
-        start_new_session=True,
     )
 
     # Wait a bit for the service to come online
@@ -296,7 +293,7 @@ def get_log_filepath() -> pathlib.Path:
     # snap, can write to.
     logdir = _get_service_base_dir() / "craft-logs"
     logdir.mkdir(exist_ok=True, parents=True)
-    return logdir / "fetch-service.txt"
+    return logdir / "fetch-service.log"
 
 
 def verify_installed() -> None:

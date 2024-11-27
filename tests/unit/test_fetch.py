@@ -116,7 +116,7 @@ def test_start_service(mocker, tmp_path):
             f"--key={fake_key}",
             "--permissive-mode",
             "--idle-shutdown=300",
-            f"--log-file={tmp_path / 'craft-logs/fetch-service.txt'}",
+            f"--log-file={tmp_path / 'craft-logs/fetch-service.log'}",
         ],
         env={
             "FETCH_SERVICE_AUTH": AUTH,
@@ -124,7 +124,6 @@ def test_start_service(mocker, tmp_path):
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,
-        start_new_session=True,
     )
 
 
