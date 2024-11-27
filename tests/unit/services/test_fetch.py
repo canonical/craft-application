@@ -176,6 +176,7 @@ def test_teardown_session_create_manifest(
 def test_warning_experimental(mocker, fetch_service, run_on_host, emitter):
     """The fetch-service warning should only be emitted when running on the host."""
     mocker.patch.object(fetch, "start_service")
+    mocker.patch.object(fetch, "verify_installed")
     mocker.patch.object(fetch, "_get_service_base_dir", return_value=pathlib.Path())
     mocker.patch.object(ProviderService, "is_managed", return_value=not run_on_host)
 

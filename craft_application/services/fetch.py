@@ -84,6 +84,9 @@ class FetchService(services.ProjectService):
         super().setup()
 
         if not self._services.ProviderClass.is_managed():
+            # Early fail if the fetch-service is not installed.
+            fetch.verify_installed()
+
             # Emit a warning, but only on the host-side.
             logpath = fetch.get_log_filepath()
             emit.message(

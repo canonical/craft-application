@@ -138,14 +138,7 @@ def start_service() -> subprocess.Popen[str] | None:
         return None
 
     # Check that the fetch service is actually installed
-    if not _check_installed():
-        raise errors.FetchServiceError(
-            "The 'fetch-service' snap is not installed.",
-            resolution=(
-                "Install the fetch-service snap via "
-                "'snap install --channel=candidate fetch-service'."
-            ),
-        )
+    verify_installed()
 
     cmd = [_FETCH_BINARY]
 
@@ -304,6 +297,18 @@ def get_log_filepath() -> pathlib.Path:
     logdir = _get_service_base_dir() / "craft-logs"
     logdir.mkdir(exist_ok=True, parents=True)
     return logdir / "fetch-service.txt"
+
+
+def verify_installed() -> None:
+    """Verify that the fetch-service is installed, raising an error if it isn't."""
+    if not _check_installed():
+        raise errors.FetchServiceError(
+            "The 'fetch-service' snap is not installed.",
+            resolution=(
+                "Install the fetch-service snap via "
+                "'snap install --channel=candidate fetch-service'."
+            ),
+        )
 
 
 def _service_request(
