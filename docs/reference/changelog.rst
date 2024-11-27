@@ -17,6 +17,13 @@ Commands
 ========
 
 - Provide a documentation link in help messages.
+- Updates to the ``init`` command:
+
+  - If the ``--name`` argument is provided, the command now checks if the value
+    is a valid project name, and returns an error if it isn't.
+  - If the ``--name`` argument is *not* provided, the command now checks whether
+    the project directory is a valid project name. If it isn't, the command sets
+    the project name to ``my-project``.
 
 Services
 ========
