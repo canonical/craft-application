@@ -17,12 +17,9 @@
 import contextlib
 import io
 import logging
-import os
 import pathlib
 import shlex
-import signal
 import subprocess
-import time
 from dataclasses import dataclass
 from functools import cache
 from typing import Any, cast
@@ -221,16 +218,11 @@ def stop_service(fetch_process: subprocess.Popen[str]) -> None:
 
     This function first calls terminate(), and then kill() after a short time.
     """
+    fetch_process.terminate()
     try:
-        os.killpg(os.getpgid(fetch_process.pid), signal.SIGTERM)
-    except ProcessLookupError:
-        return
-
-    # Give the shell and fetch-service a chance to terminate
-    time.sleep(0.2)
-
-    with contextlib.suppress(ProcessLookupError):
-        os.killpg(os.getpgid(fetch_process.pid), signal.SIGKILL)
+        fetch_process.wait(timeout=1.0)
+    except subprocess.TimeoutExpired:
+        fetch_process.kill()
 
 
 def create_session(*, strict: bool) -> SessionData:
