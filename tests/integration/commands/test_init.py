@@ -175,7 +175,8 @@ def test_init_invalid_directory(app, monkeypatch, tmp_path):
     monkeypatch.chdir(invalid_dir)
 
     monkeypatch.setattr("sys.argv", ["testcraft", "init", "--profile", "simple"])
-    app.run()
+    return_code = app.run()
 
+    assert return_code == os.EX_OK
     expected_file = invalid_dir / "simple-file"
     assert expected_file.read_text() == "name=my-project"

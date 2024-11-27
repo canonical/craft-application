@@ -331,15 +331,15 @@ def test_initialise_project(
 
 
 @pytest.mark.parametrize(
-    "invalid_name", ["invalid--name", "-invalid-name", "invalid-name-"]
+    "invalid_name", ["invalid--name", "-invalid-name", "invalid-name-", "0", "0-0", ""]
 )
-def test_validate_name(init_service, invalid_name):
+def test_validate_name_invalid(init_service, invalid_name):
     with pytest.raises(errors.InitError, match=MESSAGE_INVALID_NAME):
         init_service.validate_project_name(invalid_name)
 
 
-def test_validate_name_valid(init_service):
-    valid_name = "valid-name"
+@pytest.mark.parametrize("valid_name", ["valid-name", "a", "a-a", "aaa", "0a"])
+def test_validate_name_valid(init_service, valid_name):
     obtained = init_service.validate_project_name(valid_name)
     assert obtained == valid_name
 
