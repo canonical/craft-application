@@ -4,7 +4,7 @@
 Changelog
 *********
 
-4.5.0 (YYYY-MMM-DD)
+4.5.0 (2024-Nov-28)
 -------------------
 
 Application
@@ -416,3 +416,4 @@ For a complete list of commits, check out the `2.7.0`_ release on GitHub.
 .. _4.2.7: https://github.com/canonical/craft-application/releases/tag/4.2.7
 .. _4.3.0: https://github.com/canonical/craft-application/releases/tag/4.3.0
 .. _4.4.0: https://github.com/canonical/craft-application/releases/tag/4.4.0
+.. _4.5.0: https://github.com/canonical/craft-application/releases/tag/4.5.0
