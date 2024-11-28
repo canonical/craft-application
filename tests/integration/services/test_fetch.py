@@ -174,8 +174,17 @@ def test_service_logging(app_service, mocker, tmp_path, monkeypatch, mock_instan
     monkeypatch.chdir(tmp_path)
     mocker.patch.object(fetch, "_get_gateway", return_value="127.0.0.1")
 
-    logfile = fetch._get_log_filepath()
-    assert not logfile.is_file()
+    # Mock get_log_filepath() so that the test doesn't interfere with whatever
+    # fetch-service is running on the system.
+    original_logpath = fetch.get_log_filepath()
+    mocker.patch.object(
+        fetch,
+        "get_log_filepath",
+        return_value=original_logpath.with_name("fetch-testcraft.log"),
+    )
+
+    logfile = fetch.get_log_filepath()
+    logfile.unlink(missing_ok=True)
 
     app_service.setup()
 

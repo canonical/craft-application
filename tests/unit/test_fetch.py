@@ -15,7 +15,6 @@
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Tests for fetch-service-related functions."""
 import re
-import shlex
 import subprocess
 from pathlib import Path
 from unittest import mock
@@ -108,22 +107,16 @@ def test_start_service(mocker, tmp_path):
     popen_call = mock_popen.mock_calls[0]
     assert popen_call == call(
         [
-            "bash",
-            "-c",
-            shlex.join(
-                [
-                    fetch._FETCH_BINARY,
-                    f"--control-port={CONTROL}",
-                    f"--proxy-port={PROXY}",
-                    f"--config={tmp_path/'config'}",
-                    f"--spool={tmp_path/'spool'}",
-                    f"--cert={fake_cert}",
-                    f"--key={fake_key}",
-                    "--permissive-mode",
-                    "--idle-shutdown=300",
-                ]
-            )
-            + f" > {fetch._get_log_filepath()}",
+            fetch._FETCH_BINARY,
+            f"--control-port={CONTROL}",
+            f"--proxy-port={PROXY}",
+            f"--config={tmp_path / 'config'}",
+            f"--spool={tmp_path / 'spool'}",
+            f"--cert={fake_cert}",
+            f"--key={fake_key}",
+            "--permissive-mode",
+            "--idle-shutdown=300",
+            f"--log-file={tmp_path / 'craft-logs/fetch-service.log'}",
         ],
         env={
             "FETCH_SERVICE_AUTH": AUTH,
@@ -131,7 +124,6 @@ def test_start_service(mocker, tmp_path):
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,
-        start_new_session=True,
     )
 
 
