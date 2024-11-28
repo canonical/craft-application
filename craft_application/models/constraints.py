@@ -91,8 +91,8 @@ Project name rules:
 * May not have two hyphens in a row
 """
 
-_PROJECT_NAME_REGEX = r"^([a-z0-9][a-z0-9-]?)*[a-z]+([a-z0-9-]?[a-z0-9])*$"
-_PROJECT_NAME_COMPILED_REGEX = re.compile(_PROJECT_NAME_REGEX)
+PROJECT_NAME_REGEX = r"^([a-z0-9][a-z0-9-]?)*[a-z]+([a-z0-9-]?[a-z0-9])*$"
+PROJECT_NAME_COMPILED_REGEX = re.compile(PROJECT_NAME_REGEX)
 MESSAGE_INVALID_NAME = (
     "invalid name: Names can only use ASCII lowercase letters, numbers, and hyphens. "
     "They must have at least one letter, may not start or end with a hyphen, "
@@ -102,13 +102,13 @@ MESSAGE_INVALID_NAME = (
 ProjectName = Annotated[
     str,
     pydantic.BeforeValidator(
-        get_validator_by_regex(_PROJECT_NAME_COMPILED_REGEX, MESSAGE_INVALID_NAME)
+        get_validator_by_regex(PROJECT_NAME_COMPILED_REGEX, MESSAGE_INVALID_NAME)
     ),
     pydantic.Field(
         min_length=1,
         max_length=40,
         strict=True,
-        pattern=_PROJECT_NAME_REGEX,
+        pattern=PROJECT_NAME_REGEX,
         description=_PROJECT_NAME_DESCRIPTION,
         title="Project Name",
         examples=[

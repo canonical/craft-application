@@ -101,8 +101,18 @@ class InitCommand(base.AppCommand):
 
     def run(self, parsed_args: argparse.Namespace) -> None:
         """Run the command."""
-        project_dir = self._get_project_dir(parsed_args)
+        # If the user provided a "name" and it's not valid, the command fails.
+        if parsed_args.name is not None:
+            self._services.init.validate_project_name(parsed_args.name)
+
+        # However, if the name comes from the directory, we don't fail and
+        # instead fallback to its default.
         project_name = self._get_name(parsed_args)
+        project_name = self._services.init.validate_project_name(
+            project_name, use_default=True
+        )
+
+        project_dir = self._get_project_dir(parsed_args)
         template_dir = pathlib.Path(self.parent_template_dir / parsed_args.profile)
 
         craft_cli.emit.progress("Checking project directory.")
