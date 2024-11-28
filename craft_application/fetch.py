@@ -17,13 +17,11 @@
 import contextlib
 import io
 import logging
-import os
 import pathlib
 import shlex
-import signal
 import subprocess
-import time
 from dataclasses import dataclass
+from functools import cache
 from typing import Any, cast
 
 import craft_providers
@@ -137,14 +135,7 @@ def start_service() -> subprocess.Popen[str] | None:
         return None
 
     # Check that the fetch service is actually installed
-    if not _check_installed():
-        raise errors.FetchServiceError(
-            "The 'fetch-service' snap is not installed.",
-            resolution=(
-                "Install the fetch-service snap via "
-                "'snap install --channel=candidate fetch-service'."
-            ),
-        )
+    verify_installed()
 
     cmd = [_FETCH_BINARY]
 
@@ -173,21 +164,19 @@ def start_service() -> subprocess.Popen[str] | None:
     # Shutdown after 5 minutes with no live sessions
     cmd.append("--idle-shutdown=300")
 
-    log_filepath = _get_log_filepath()
+    log_filepath = get_log_filepath()
     log_filepath.parent.mkdir(parents=True, exist_ok=True)
+    cmd.append(f"--log-file={log_filepath}")
 
-    str_cmd = f"{shlex.join(cmd)} > {log_filepath.absolute()}"
+    str_cmd = shlex.join(cmd)
     emit.debug(f"Launching fetch-service with '{str_cmd}'")
 
     fetch_process = subprocess.Popen(
-        ["bash", "-c", str_cmd],
+        cmd,
         env=env,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,
-        # Start a new session because when killing the service we need to kill
-        # both 'bash' and the 'fetch' it spawns.
-        start_new_session=True,
     )
 
     # Wait a bit for the service to come online
@@ -229,16 +218,11 @@ def stop_service(fetch_process: subprocess.Popen[str]) -> None:
 
     This function first calls terminate(), and then kill() after a short time.
     """
+    fetch_process.terminate()
     try:
-        os.killpg(os.getpgid(fetch_process.pid), signal.SIGTERM)
-    except ProcessLookupError:
-        return
-
-    # Give the shell and fetch-service a chance to terminate
-    time.sleep(0.2)
-
-    with contextlib.suppress(ProcessLookupError):
-        os.killpg(os.getpgid(fetch_process.pid), signal.SIGKILL)
+        fetch_process.wait(timeout=1.0)
+    except subprocess.TimeoutExpired:
+        fetch_process.kill()
 
 
 def create_session(*, strict: bool) -> SessionData:
@@ -294,6 +278,28 @@ def configure_instance(
     return net_info.env
 
 
+def get_log_filepath() -> pathlib.Path:
+    """Get the path containing the fetch-service's output."""
+    # All craft tools log to the same place, because it's a single fetch-service
+    # instance. It needs to be a location that the fetch-service, as a strict
+    # snap, can write to.
+    logdir = _get_service_base_dir() / "craft-logs"
+    logdir.mkdir(exist_ok=True, parents=True)
+    return logdir / "fetch-service.log"
+
+
+def verify_installed() -> None:
+    """Verify that the fetch-service is installed, raising an error if it isn't."""
+    if not _check_installed():
+        raise errors.FetchServiceError(
+            "The 'fetch-service' snap is not installed.",
+            resolution=(
+                "Install the fetch-service snap via "
+                "'snap install --channel=candidate fetch-service'."
+            ),
+        )
+
+
 def _service_request(
     verb: str, endpoint: str, json: dict[str, Any] | None = None
 ) -> requests.Response:
@@ -318,6 +324,7 @@ def _service_request(
     return response
 
 
+@cache
 def _get_service_base_dir() -> pathlib.Path:
     """Get the base directory to contain the fetch-service's runtime files."""
     input_line = "sh -c 'echo $SNAP_USER_COMMON'"
@@ -497,12 +504,6 @@ def _get_certificate_dir() -> pathlib.Path:
 def _check_installed() -> bool:
     """Check whether the fetch-service is installed."""
     return pathlib.Path(_FETCH_BINARY).is_file()
-
-
-def _get_log_filepath() -> pathlib.Path:
-    base_dir = _get_service_base_dir()
-
-    return base_dir / "craft/fetch-log.txt"
 
 
 def _execute_run(
