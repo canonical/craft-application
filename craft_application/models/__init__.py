@@ -38,7 +38,7 @@ from craft_application.models.project import (
     Project,
 )
 from craft_application.models.spread import (
-    SimpleSpreadYaml,
+    CraftSpreadYaml,
     SpreadBackend,
     SpreadYaml,
 )
@@ -57,7 +57,7 @@ __all__ = [
     "BuildPlanner",
     "ProjectName",
     "ProjectTitle",
-    "SimpleSpreadYaml",
+    "CraftSpreadYaml",
     "SpreadBackend",
     "SpreadYaml",
     "SummaryStr",
