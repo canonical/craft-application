@@ -237,5 +237,5 @@ class SpreadYaml(SpreadBaseModel):
     ) -> dict[str, SpreadSuite]:
         return {
             name: SpreadSuite.from_simple(suite)
-            for for name, suite in simple.items()
+            for name, suite in simple.items()
         }
