@@ -237,7 +237,7 @@ class GitRepo:
         try:
             last_commit = self._repo[self._repo.head.target]
         except pygit2.GitError as error:
-            raise GitError("Could not find last commit") from error
+            raise GitError("could not retrieve last commit") from error
         else:
             commit_message = cast(
                 str,
