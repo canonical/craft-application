@@ -73,11 +73,12 @@ Global options:
 
 Starter commands:
              init:  Create an initial project filetree
+             test:  Run project tests
           version:  Show the application version and exit
 
 Commands can be classified as follows:
         Lifecycle:  clean, pull, build, stage, prime, pack
-            Other:  init, version
+            Other:  init, test, version
 
 For more information about a command, run 'testcraft help <command>'.
 For a summary of all commands, run 'testcraft help --all'.
