@@ -19,6 +19,7 @@ import shutil
 import textwrap
 
 import craft_application
+import craft_application.commands
 import craft_cli
 import pytest
 import pytest_check
@@ -161,9 +162,9 @@ def test_registering_new_commands(
     assert exc_info.value.code == 0, "App should finish without any problems"
 
     captured_help = capsys.readouterr()
-    # if ordered is set to True, craft_cli should not reorder commands
+    # if ordered is set to True, craft_cli should respect command ordering
     expected_command_order_in_help = ", ".join(
-        sorted(command_names) if not ordered else command_names
+        command_names if ordered else sorted(command_names)
     )
     assert (
         f"TestingApplicationGroup:  {expected_command_order_in_help}"
