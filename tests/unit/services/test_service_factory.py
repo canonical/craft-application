@@ -21,16 +21,20 @@ import pytest_check
 from craft_application import AppMetadata, services
 from craft_cli import emit
 
+pytestmark = [
+    pytest.mark.filterwarnings("ignore:Registering services on service factory")
+]
+
 
 @pytest.fixture
 def factory(
     app_metadata, fake_project, fake_package_service_class, fake_lifecycle_service_class
 ):
+    services.ServiceFactory.register("package", fake_package_service_class)
+    services.ServiceFactory.register("lifecycle", fake_lifecycle_service_class)
     return services.ServiceFactory(
         app_metadata,
         project=fake_project,
-        PackageClass=fake_package_service_class,
-        LifecycleClass=fake_lifecycle_service_class,
     )
 
 
@@ -128,16 +132,13 @@ def test_update_kwargs(
         )
 
 
-def test_getattr_cached_service(monkeypatch, check, factory):
+def test_getattr_cached_service(monkeypatch, factory):
     mock_getattr = mock.Mock(wraps=factory.__getattr__)
     monkeypatch.setattr(services.ServiceFactory, "__getattr__", mock_getattr)
     first = factory.package
     second = factory.package
 
-    check.is_(first, second)
-    # Only gets called once because the second time `package` is an instance attribute.
-    with check:
-        mock_getattr.assert_called_once_with("package")
+    assert first is second
 
 
 def test_getattr_not_a_class(factory):

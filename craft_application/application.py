@@ -407,7 +407,7 @@ class Application:
 
     def is_managed(self) -> bool:
         """Shortcut to tell whether we're running in managed mode."""
-        return self.services.ProviderClass.is_managed()
+        return self.services.get_service_class("provider").is_managed()
 
     def run_managed(self, platform: str | None, build_for: str | None) -> None:
         """Run the application in a managed instance."""
