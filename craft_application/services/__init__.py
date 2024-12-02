@@ -20,10 +20,13 @@ from craft_application.services.config import ConfigService
 from craft_application.services.fetch import FetchService
 from craft_application.services.lifecycle import LifecycleService
 from craft_application.services.init import InitService
+from craft_application.services.testing import TestingService
 from craft_application.services.package import PackageService
 from craft_application.services.provider import ProviderService
 from craft_application.services.remotebuild import RemoteBuildService
 from craft_application.services.request import RequestService
+
+# ServiceFactory must be imported after the actual services
 from craft_application.services.service_factory import ServiceFactory
 
 __all__ = [
@@ -33,6 +36,7 @@ __all__ = [
     "ConfigService",
     "LifecycleService",
     "InitService",
+    "TestingService",
     "PackageService",
     "ProviderService",
     "RemoteBuildService",

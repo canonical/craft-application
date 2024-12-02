@@ -45,6 +45,7 @@ class ServiceFactory:
     ConfigClass: type[services.ConfigService] = services.ConfigService
     FetchClass: type[services.FetchService] = services.FetchService
     InitClass: type[services.InitService] = services.InitService
+    TestingClass: type[services.TestingService] = services.TestingService
 
     project: models.Project | None = None
 
@@ -59,6 +60,7 @@ class ServiceFactory:
         config: services.ConfigService = None  # type: ignore[assignment]
         fetch: services.FetchService = None  # type: ignore[assignment]
         init: services.InitService = None  # type: ignore[assignment]
+        testing: services.TestingService = None  # type: ignore[assignment]
 
     def __post_init__(self) -> None:
         self._service_kwargs: dict[str, dict[str, Any]] = {}
