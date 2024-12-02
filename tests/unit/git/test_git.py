@@ -892,6 +892,30 @@ def test_check_git_repo_get_url(mocker, empty_working_directory):
     )
 
 
+def test_check_git_repo_get_push_url(mocker, empty_working_directory):
+    """Check if url is returned correctly using the get_url API."""
+    repo = GitRepo(empty_working_directory)
+    test_fake_existing_remote = "test-remote"
+    test_fake_existing_remote_url = "https://test-remote-url.local"
+
+    class _FakeRemote:
+        @property
+        def url(self) -> str:
+            return cast(str, test_fake_existing_remote_url)
+
+        @property
+        def push_url(self) -> str:
+            return cast(str, test_fake_existing_remote_url)
+
+    mocked_remotes = mocker.patch.object(repo._repo, "remotes")
+    mocked_remotes.__getitem__ = lambda _s, _i: _FakeRemote()
+
+    assert (
+        repo.get_remote_push_url(test_fake_existing_remote)
+        == test_fake_existing_remote_url
+    )
+
+
 def test_check_git_repo_get_url_fails_if_remote_does_not_exist(
     mocker, empty_working_directory
 ):

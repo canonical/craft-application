@@ -234,15 +234,19 @@ class GitRepo:
 
     def get_last_commit(self) -> Commit:
         """Get the last Commit on the current head."""
-        last_commit = self._repo[self._repo.head.target]
-        commit_message = cast(
-            str,
-            last_commit.message,  # pyright: ignore[reportAttributeAccessIssue,reportUnknownMemberType]
-        )
-        return Commit(
-            sha=str(last_commit.id),
-            message=commit_message,
-        )
+        try:
+            last_commit = self._repo[self._repo.head.target]
+        except pygit2.GitError as error:
+            raise GitError("Could not find last commit") from error
+        else:
+            commit_message = cast(
+                str,
+                last_commit.message,  # pyright: ignore[reportAttributeAccessIssue,reportUnknownMemberType]
+            )
+            return Commit(
+                sha=str(last_commit.id),
+                message=commit_message,
+            )
 
     def is_clean(self) -> bool:
         """Check if the repo is clean.

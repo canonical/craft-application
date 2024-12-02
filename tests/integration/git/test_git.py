@@ -18,7 +18,7 @@
 import pathlib
 
 import pytest
-from craft_application.git import Commit, GitError, GitRepo
+from craft_application.git import NO_PUSH_URL, Commit, GitError, GitRepo
 
 
 def test_fetching_hello_repository(
@@ -73,6 +73,14 @@ def test_show_remote_hello(
     assert hello_repository_lp_url in show_remote_output
 
 
+def test_last_commit_on_empty_repository(empty_repository: pathlib.Path) -> None:
+    """Test if last_commit errors out in empty repository."""
+    git_repo = GitRepo(empty_repository)
+    with pytest.raises(GitError) as git_error:
+        git_repo.get_last_commit()
+    assert git_error.value.details == "Could not find last commit"
+
+
 def test_show_remote_that_does_not_exist(
     empty_repository: pathlib.Path,
 ) -> None:
@@ -83,3 +91,48 @@ def test_show_remote_that_does_not_exist(
     with pytest.raises(GitError) as git_error:
         git_repo.show_remote(remote_name_or_url=test_remote)
     assert git_error.value.details == f"cannot inspect remote: {test_remote!r}"
+
+
+def test_set_url(empty_repository: pathlib.Path, hello_repository_lp_url: str) -> None:
+    """Check if remote URL can be set using API."""
+    new_remote_url = "https://non-existing-remote-url.localhost"
+    git_repo = GitRepo(empty_repository)
+    test_remote = "test-remote"
+    git_repo.add_remote(test_remote, hello_repository_lp_url)
+    assert git_repo.get_remote_url(remote_name=test_remote) == hello_repository_lp_url
+    assert git_repo.get_remote_push_url(remote_name=test_remote) is None
+
+    git_repo.set_remote_url(test_remote, new_remote_url)
+    assert git_repo.get_remote_url(remote_name=test_remote) == new_remote_url
+    assert git_repo.get_remote_push_url(remote_name=test_remote) is None
+
+
+def test_set_push_url(
+    empty_repository: pathlib.Path, hello_repository_lp_url: str
+) -> None:
+    """Check if remote push URL can be set using API."""
+    new_remote_push_url = "https://non-existing-remote-push-url.localhost"
+    git_repo = GitRepo(empty_repository)
+    test_remote = "test-remote"
+    git_repo.add_remote(test_remote, hello_repository_lp_url)
+    assert git_repo.get_remote_url(remote_name=test_remote) == hello_repository_lp_url
+    assert git_repo.get_remote_push_url(remote_name=test_remote) is None
+
+    git_repo.set_remote_push_url(test_remote, new_remote_push_url)
+    assert git_repo.get_remote_url(remote_name=test_remote) == hello_repository_lp_url
+    assert git_repo.get_remote_push_url(remote_name=test_remote) == new_remote_push_url
+
+
+def test_set_no_push(
+    empty_repository: pathlib.Path, hello_repository_lp_url: str
+) -> None:
+    """Check if remote push URL can be set using API."""
+    git_repo = GitRepo(empty_repository)
+    test_remote = "test-remote"
+    git_repo.add_remote(test_remote, hello_repository_lp_url)
+    assert git_repo.get_remote_url(remote_name=test_remote) == hello_repository_lp_url
+    assert git_repo.get_remote_push_url(remote_name=test_remote) is None
+
+    git_repo.set_no_push(test_remote)
+    assert git_repo.get_remote_url(remote_name=test_remote) == hello_repository_lp_url
+    assert git_repo.get_remote_push_url(remote_name=test_remote) == NO_PUSH_URL
