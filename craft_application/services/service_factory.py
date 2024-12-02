@@ -44,6 +44,7 @@ _DEFAULT_SERVICES = {
     "provider": "ProviderService",
     "remote_build": "RemoteBuildService",
     "request": "RequestService",
+    "testing": "TestingService",
 }
 _CAMEL_TO_PYTHON_CASE_REGEX = re.compile(r"(?<!^)(?=[A-Z])")
 
