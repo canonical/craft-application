@@ -50,3 +50,36 @@ def test_fetching_remote_that_does_not_exist(
     with pytest.raises(GitError) as git_error:
         git_repo.fetch(remote=test_remote, ref=ref, depth=1)
     assert git_error.value.details == f"cannot fetch remote: {test_remote!r}"
+
+
+@pytest.mark.parametrize("by_name", [True, False], ids=["by_name", "by_url"])
+def test_show_remote_hello(
+    empty_repository: pathlib.Path, hello_repository_lp_url: str, *, by_name: bool
+) -> None:
+    """Check if it is possible to fetch existing remote."""
+    git_repo = GitRepo(empty_repository)
+    test_remote = "test-remote"
+    if by_name:
+        git_repo.add_remote(test_remote, hello_repository_lp_url)
+        show_remote_output = git_repo.show_remote(
+            remote_name_or_url=test_remote,
+            do_not_query_remotes=True,
+        )
+    else:
+        show_remote_output = git_repo.show_remote(
+            remote_name_or_url=hello_repository_lp_url,
+            do_not_query_remotes=True,
+        )
+    assert hello_repository_lp_url in show_remote_output
+
+
+def test_show_remote_that_does_not_exist(
+    empty_repository: pathlib.Path,
+) -> None:
+    """Check if it is possible to fetch existing remote."""
+    git_repo = GitRepo(empty_repository)
+    test_remote = "test-remote"
+    git_repo.add_remote(test_remote, "git+ssh://non-existing-remote.localhost")
+    with pytest.raises(GitError) as git_error:
+        git_repo.show_remote(remote_name_or_url=test_remote)
+    assert git_error.value.details == f"cannot inspect remote: {test_remote!r}"
