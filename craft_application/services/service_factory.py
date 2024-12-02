@@ -81,6 +81,7 @@ class ServiceFactory:
         config: services.ConfigService
         fetch: services.FetchService
         init: services.InitService
+        testing: services.TestingService
 
     def __init__(
         self,
@@ -229,6 +230,11 @@ class ServiceFactory:
     ) -> type[services.RequestService]: ...
     @overload
     @classmethod
+    def get_class(
+        cls, name: Literal["testing", "TestingService", "TestingClass"]
+    ) -> type[services.RequestService]: ...
+    @overload
+    @classmethod
     def get_class(cls, name: str) -> type[services.AppService]: ...
     @classmethod
     def get_class(cls, name: str) -> type[services.AppService]:
@@ -272,6 +278,8 @@ class ServiceFactory:
     def get(self, service: Literal["remote_build"]) -> services.RemoteBuildService: ...
     @overload
     def get(self, service: Literal["request"]) -> services.RequestService: ...
+    @overload
+    def get(self, service: Literal["testing"]) -> services.TestingService: ...
     @overload
     def get(self, service: str) -> services.AppService: ...
     def get(self, service: str) -> services.AppService:
