@@ -16,4 +16,12 @@
 
 from typing import Final
 
+NO_PUSH_URL: Final[str] = "no_push"
+
+COMMIT_SHA_LEN: Final[int] = 40
+
 COMMIT_SHORT_SHA_LEN: Final[int] = 7
+
+CRAFTGIT_BINARY_NAME: Final[str] = "craft.git"
+
+GIT_FALLBACK_BINARY_NAME: Final[str] = "git"

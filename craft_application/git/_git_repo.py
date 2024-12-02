@@ -18,10 +18,14 @@ from __future__ import annotations
 
 import logging
 import os
+import re
+import shutil
 import subprocess
 import time
+from functools import lru_cache
 from pathlib import Path
 from shlex import quote
+from typing import Final, cast
 
 from craft_parts.utils import os_utils
 from typing_extensions import Self
@@ -45,10 +49,24 @@ except Exception:  # noqa: BLE001 (narrower types are provided by the import)
     else:
         del os.environ["SSL_CERT_DIR"]
 
+from ._consts import CRAFTGIT_BINARY_NAME, GIT_FALLBACK_BINARY_NAME, NO_PUSH_URL
 from ._errors import GitError
-from ._models import GitType
+from ._models import Commit, GitType, short_commit_sha
 
 logger = logging.getLogger(__name__)
+
+COMMIT_REGEX: Final[re.Pattern[str]] = re.compile("[0-9a-f]{40}")
+SHORT_COMMIT_REGEX: Final[re.Pattern[str]] = re.compile("[0-9a-f]{7}")
+
+
+def is_commit(ref: str) -> bool:
+    """Check if given commit is a valid git commit sha."""
+    return bool(COMMIT_REGEX.fullmatch(ref))
+
+
+def is_short_commit(ref: str) -> bool:
+    """Check if given short commit is a valid git commit sha."""
+    return bool(SHORT_COMMIT_REGEX.fullmatch(ref))
 
 
 def is_repo(path: Path) -> bool:
@@ -118,6 +136,24 @@ def parse_describe(describe_str: str) -> str:
     if distance == "0":
         return version
     return f"{version}.post{distance}+git{commit[1:]}"
+
+
+@lru_cache(maxsize=1)
+def _get_git_binary_name() -> str:
+    """Get name of the git executable that may be used in subprocesses.
+
+    Fallback to the previous behavior in case of non-snap / local installation or
+    if snap does not provide expected binary.
+    """
+    craftgit_binary = CRAFTGIT_BINARY_NAME
+    if shutil.which(craftgit_binary):
+        return craftgit_binary
+    logger.warning(
+        "Cannot find craftgit binary: %r. Is it a part of snap package?",
+        craftgit_binary,
+    )
+    logger.warning("Falling back to: %r", GIT_FALLBACK_BINARY_NAME)
+    return GIT_FALLBACK_BINARY_NAME
 
 
 class GitRepo:
@@ -195,6 +231,18 @@ class GitRepo:
                 "Could not create a commit for the git repository "
                 f"in {str(self.path)!r}."
             ) from error
+
+    def get_last_commit(self) -> Commit:
+        """Get the last Commit on the current head."""
+        last_commit = self._repo[self._repo.head.target]
+        commit_message = cast(
+            str,
+            last_commit.message,  # pyright: ignore[reportAttributeAccessIssue,reportUnknownMemberType]
+        )
+        return Commit(
+            sha=str(last_commit.id),
+            message=commit_message,
+        )
 
     def is_clean(self) -> bool:
         """Check if the repo is clean.
@@ -286,6 +334,119 @@ class GitRepo:
                 f"cannot rename '{remote_name}' to '{new_remote_name}'"
             ) from error
 
+    def show_remote(
+        self,
+        *,
+        remote_name_or_url: str,
+        do_not_query_remotes: bool = False,
+        disable_prompting: bool = True,
+    ) -> str:
+        """Give some information about the remote <name>.
+
+        :param remote_name_or_url: name of the remote or URL to query
+        :param do_not_query_remotes: if True, remote heads are not queried first with
+        ls-remote
+        :param disable_prompting: disable prompting user for a credentials
+
+        :raises GitError: if remote cannot be inspected
+        """
+        env: dict[str, str] = {}
+        logger.debug("Querying remote: %r", remote_name_or_url)
+        git_binary = self.git_binary()
+        remote_show_cmd = [git_binary, "remote", "show"]
+        if do_not_query_remotes:
+            logger.debug("Skipping querying remotes.")
+            remote_show_cmd.append("-n")
+
+        remote_show_cmd.append(remote_name_or_url)
+        if disable_prompting:
+            env["GIT_ASKPASS"] = str(shutil.which("true") or "/bin/true")
+
+        try:
+            completed_process = subprocess.run(
+                remote_show_cmd,
+                check=True,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                stdin=subprocess.DEVNULL,
+                env=env,
+            )
+        except FileNotFoundError as error:
+            raise GitError(f"{git_binary!r} command not found in the system") from error
+        except subprocess.CalledProcessError as error:
+            raise GitError(f"cannot inspect remote: {remote_name_or_url!r}") from error
+        else:
+            return completed_process.stdout
+
+    def get_remote_url(self, remote_name: str) -> str:
+        """Get URL associated with the given remote.
+
+        Equivalent of git remote get-url <name>
+
+
+        :param remote_name: the remote repository name
+
+        :raises GitError: if remote does not exist
+        """
+        if not self.remote_exists(remote_name=remote_name):
+            raise GitError(f"cannot get URL for non-existing remote '{remote_name}'")
+        return cast(str, self._repo.remotes[remote_name].url)
+
+    def set_remote_url(self, remote_name: str, remote_url: str) -> None:
+        """Set new URL for the existing remote.
+
+        Equivalent of git remote set-url <name> <url>
+
+
+        :param remote_name: the remote repository name
+        :param remote_url: URL to be associated with the given remote
+
+        :raises GitError: if remote does not exist
+        """
+        if not self.remote_exists(remote_name=remote_name):
+            raise GitError(f"cannot set URL for non-existing remote '{remote_name}'")
+        self._repo.remotes.set_url(remote_name, remote_url)
+
+    def get_remote_push_url(self, remote_name: str) -> str:
+        """Get push-only URL associated with the given remote.
+
+        Equivalent of git remote get-url --push <name>
+
+        :param remote_name: the remote repository name
+
+        :raises GitError: if remote does not exist
+        """
+        if not self.remote_exists(remote_name=remote_name):
+            raise GitError(
+                f"cannot get push URL for non-existing remote '{remote_name}'"
+            )
+        return cast(str, self._repo.remotes[remote_name].push_url)
+
+    def set_remote_push_url(self, remote_name: str, remote_push_url: str) -> None:
+        """Set new push-only URL for the existing remote.
+
+        Equivalent of git remote set-url --push <name> <url>
+
+
+        :param remote_name: the remote repository name
+        :param remote_url: push URL to be associated with the given remote
+
+        :raises GitError: if remote does not exist
+        """
+        if not self.remote_exists(remote_name=remote_name):
+            raise GitError(f"cannot set URL for non-existing remote '{remote_name}'")
+        self._repo.remotes.set_push_url(remote_name, remote_push_url)
+
+    def set_no_push(self, remote_name: str) -> None:
+        """Disable pushing to the selected remote.
+
+        :param remote_name: the remote repository name
+
+        :raises GitError: if remote does not exist
+        """
+        self.set_remote_push_url(remote_name, NO_PUSH_URL)
+
     def push_url(  # noqa: PLR0912 (too-many-branches)
         self,
         remote_url: str,
@@ -321,7 +482,14 @@ class GitRepo:
         # Force push in case this repository already exists. The repository is always
         # going to exist solely for remote builds, so the only potential issue here is a
         # race condition with multiple remote builds on the same machine.
-        cmd: list[str] = ["git", "push", "--force", remote_url, refspec, "--progress"]
+        cmd: list[str] = [
+            self.git_binary(),
+            "push",
+            "--force",
+            remote_url,
+            refspec,
+            "--progress",
+        ]
         if push_tags:
             cmd.append("--tags")
 
@@ -380,6 +548,114 @@ class GitRepo:
         raise GitError(
             f"Could not push {ref!r} to {stripped_url!r} with refspec {refspec!r} "
             f"for the git repository in {str(self.path)!r}."
+        )
+
+    def fetch(
+        self,
+        *,
+        remote: str,
+        tags: bool = False,
+        ref: str | None = None,
+        depth: int | None = None,
+    ) -> None:
+        """Fetch the contents of the given remote.
+
+        :param remote: The name of the remote.
+        :param tags: Whether to fetch tags.
+        :param ref: Optional reference to the specific object to fetch.
+        :param depth: Maximum number of commits to fetch (all by default).
+        """
+        fetch_command = [self.git_binary(), "fetch"]
+
+        if not self.remote_exists(remote):
+            raise GitError(f"cannot fetch undefined remote: {remote!r}")
+
+        if tags:
+            fetch_command.append("--tags")
+        if depth is not None:
+            fetch_command.extend(["--depth", f"{depth}"])
+
+        fetch_command.append(remote)
+        if ref is not None:
+            fetch_command.append(ref)
+
+        try:
+            os_utils.process_run(fetch_command, logger.debug, stdin=subprocess.DEVNULL)
+        except FileNotFoundError as error:
+            raise GitError("git command not found in the system") from error
+        except subprocess.CalledProcessError as error:
+            raise GitError(f"cannot fetch remote: {remote!r}") from error
+
+    def remote_contains(
+        self,
+        *,
+        remote: str,
+        commit_sha: str,
+    ) -> bool:
+        """Check if the given commit is pushed to the remote repository."""
+        logger.debug(
+            "Checking if %r was pushed to %r", short_commit_sha(commit_sha), remote
+        )
+        checking_command = [
+            self.git_binary(),
+            "branch",
+            "--remotes",
+            "--contains",
+            commit_sha,
+        ]
+        try:
+            remotes_that_has_given_commit = subprocess.check_output(
+                checking_command,
+                text=True,
+            )
+        except subprocess.CalledProcessError as error:
+            raise GitError("Incorrect commit provided, cannot check") from error
+        else:
+            for line in remotes_that_has_given_commit.splitlines():
+                if line.strip().startswith(f"{remote}/"):
+                    return True
+        return False
+
+    def last_commit_on_branch_or_tag(
+        self,
+        *,
+        remote: str,
+        branch_or_tag: str,
+        fetch: bool = False,
+    ) -> Commit:
+        """Find last commit corresponding to given branch or tag."""
+        if fetch:
+            self.fetch(remote=remote, tags=True)
+        rev_list_output = [
+            self.git_binary(),
+            "rev-list",
+            "-n",
+            "1",
+            branch_or_tag,
+        ]
+        try:
+            rev_parse_output = subprocess.check_output(
+                rev_list_output,
+                text=True,
+                stderr=subprocess.STDOUT,
+            )
+        except subprocess.CalledProcessError as error:
+            error_details = (
+                f"Cannot find ref {branch_or_tag!r}.\nCommand output:\n{error.stdout}"
+            )
+            raise GitError(error_details) from error
+
+        commit_sha = rev_parse_output.strip()
+        commit_obj = self._repo.get(commit_sha)
+        if commit_obj is None:
+            raise GitError(f"Cannot find commit: {short_commit_sha(commit_sha)!r}")
+        commit_message = cast(
+            str,
+            commit_obj.message,  # pyright: ignore[reportAttributeAccessIssue,reportUnknownMemberType]
+        )
+        return Commit(
+            sha=commit_sha,
+            message=commit_message,
         )
 
     def describe(
@@ -461,7 +737,7 @@ class GitRepo:
             raise GitError("Cannot clone to existing repository")
 
         logger.debug("Cloning %s to %s", url, path)
-        clone_cmd = ["git", "clone"]
+        clone_cmd = [cls.git_binary(), "clone"]
         if checkout_branch is not None:
             logger.debug("Checking out to branch: %s", checkout_branch)
             clone_cmd.extend(["--branch", quote(checkout_branch)])
@@ -482,3 +758,8 @@ class GitRepo:
                 f"cannot clone repository: {url} to {str(path)!r}"
             ) from error
         return cls(path)
+
+    @classmethod
+    def git_binary(cls) -> str:
+        """Get path to the git executable that may be used in subprocesses."""
+        return _get_git_binary_name()

@@ -24,12 +24,20 @@ from unittest.mock import ANY
 import pygit2
 import pygit2.enums
 import pytest
+import pytest_mock
+import pytest_subprocess
 from craft_application.git import (
+    COMMIT_SHA_LEN,
+    COMMIT_SHORT_SHA_LEN,
+    CRAFTGIT_BINARY_NAME,
+    GIT_FALLBACK_BINARY_NAME,
     GitError,
     GitRepo,
     GitType,
     get_git_repo_type,
+    is_commit,
     is_repo,
+    is_short_commit,
     parse_describe,
     short_commit_sha,
 )
@@ -865,6 +873,38 @@ def test_check_git_repo_rename_remote_pygit_error_is_wrapped(
     assert ge.value.details == expected_err_msg
 
 
+def test_check_git_repo_get_url(mocker, empty_working_directory):
+    """Check if url is returned correctly using the get_url API."""
+    repo = GitRepo(empty_working_directory)
+    test_fake_existing_remote = "test-remote"
+    test_fake_existing_remote_url = "https://test-remote-url.local"
+
+    class _FakeRemote:
+        @property
+        def url(self) -> str:
+            return cast(str, test_fake_existing_remote_url)
+
+    mocked_remotes = mocker.patch.object(repo._repo, "remotes")
+    mocked_remotes.__getitem__ = lambda _s, _i: _FakeRemote()
+
+    assert (
+        repo.get_remote_url(test_fake_existing_remote) == test_fake_existing_remote_url
+    )
+
+
+def test_check_git_repo_get_url_fails_if_remote_does_not_exist(
+    mocker, empty_working_directory
+):
+    """Check if GitError is raised if remote does not exist."""
+    repo = GitRepo(empty_working_directory)
+    test_fake_existing_remote = "test-remote"
+    mocked_remotes = mocker.patch.object(repo._repo, "remotes")
+    mocked_remotes.__getitem__.side_effect = KeyError
+
+    with pytest.raises(GitError):
+        repo.get_remote_url(test_fake_existing_remote)
+
+
 def test_check_git_repo_for_remote_build_shallow(empty_working_directory):
     """Check if directory is a shallow cloned repo."""
     root_path = Path(empty_working_directory)
@@ -903,6 +943,115 @@ def test_check_git_repo_for_remote_build_shallow(empty_working_directory):
         match="Remote builds for shallow cloned git repos are not supported",
     ):
         check_git_repo_for_remote_build(git_shallow_path)
+
+
+def test_retriving_last_commit(empty_repository: Path) -> None:
+    git_repo = GitRepo(empty_repository)
+    (git_repo.path / "1").write_text("1")
+    git_repo.add_all()
+    test_commit_message = "test: add commit message"
+    git_repo.commit(test_commit_message)
+    commit = git_repo.get_last_commit()
+    assert commit is not None, "Commit should be created and retrieved"
+    assert len(commit.sha) == COMMIT_SHA_LEN, "Commit hash should have full length"
+    assert is_commit(commit.sha), "Returned value should be a valid commit"
+    assert (
+        commit.sha[:COMMIT_SHORT_SHA_LEN] == commit.short_sha
+    ), "Commit should have proper short version"
+
+
+@pytest.mark.parametrize("tags", [True, False], ids=lambda x: f"tags-{x}")
+def test_fetching_remote(
+    empty_repository: Path,
+    fake_process: pytest_subprocess.FakeProcess,
+    expected_git_binary: str,
+    *,
+    tags: bool,
+) -> None:
+    git_repo = GitRepo(empty_repository)
+    remote = "test-remote"
+    git_repo.add_remote(remote, "https://non-existing-repo.localhost")
+    cmd = [expected_git_binary, "fetch"]
+    if tags:
+        cmd.append("--tags")
+    cmd.append(remote)
+    fake_process.register(cmd)
+    git_repo.fetch(remote=remote, tags=tags)
+
+
+def test_fetching_undefined_remote(empty_repository: Path) -> None:
+    git_repo = GitRepo(empty_repository)
+    remote = "test-non-existing-remote"
+    with pytest.raises(GitError) as git_error:
+        git_repo.fetch(remote=remote)
+    assert git_error.value.details == f"cannot fetch undefined remote: {remote!r}"
+
+
+@pytest.mark.parametrize(
+    ("commit_str", "is_valid"),
+    [
+        ("test", False),
+        ("fake-commit", False),
+        ("1234", False),
+        ("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx", False),
+        ("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", True),
+        ("9d51ca832224e9a31e1898dd11b2764374402f09", True),
+        ("9d51ca832224e9a31e1898dd11b2764374402f09a", False),
+        ("9d51ca8", False),
+        ("aaaaaaa", False),
+    ],
+)
+def test_is_commit(commit_str: str, *, is_valid: bool) -> None:
+    """Check function that checks if something is a valid sha."""
+    assert is_commit(commit_str) is is_valid
+
+
+@pytest.mark.parametrize(
+    ("commit_str", "is_valid"),
+    [
+        ("test", False),
+        ("fake-commit", False),
+        ("1234", False),
+        ("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx", False),
+        ("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", False),
+        ("9d51ca832224e9a31e1898dd11b2764374402f09", False),
+        ("9d51ca832224e9a31e1898dd11b2764374402f09a", False),
+        ("9d51ca8", True),
+        ("aaaaaaa", True),
+    ],
+)
+def test_is_short_commit(commit_str: str, *, is_valid: bool) -> None:
+    """Check function that checks if something is a valid sha."""
+    assert is_short_commit(commit_str) is is_valid
+
+
+@pytest.mark.parametrize(
+    ("remote", "command_output", "response"),
+    [
+        ("some-remote", "some-remote-postfix/branch", False),
+        ("some-remote", "some-remote/main", True),
+        ("some-remote", "other-remote/main", False),
+        ("some-remote", "", False),
+    ],
+)
+def test_remote_contains(
+    empty_repository: Path,
+    fake_process: pytest_subprocess.FakeProcess,
+    remote: str,
+    command_output: str,
+    expected_git_binary: str,
+    *,
+    response: bool,
+) -> None:
+    fake_process.register(
+        [expected_git_binary, "branch", "--remotes", "--contains", "fake-commit-sha"],
+        stdout=command_output,
+    )
+    git_repo = GitRepo(empty_repository)
+    assert (
+        git_repo.remote_contains(remote=remote, commit_sha="fake-commit-sha")
+        is response
+    )
 
 
 @pytest.mark.parametrize(
@@ -985,3 +1134,29 @@ def test_describing_fallback_to_commit_for_unannotated_tags(
     repo = GitRepo(repository_with_unannotated_tag.repository_path)
     describe_result = repo.describe(show_commit_oid_as_fallback=True)
     assert describe_result == repository_with_unannotated_tag.short_commit
+
+
+@pytest.mark.usefixtures("clear_git_binary_name_cache")
+@pytest.mark.parametrize(
+    ("craftgit_exists"),
+    [
+        pytest.param(True, id="craftgit_available"),
+        pytest.param(False, id="fallback_to_git"),
+    ],
+)
+def test_craftgit_is_used_for_git_operations(
+    empty_repository: Path,
+    mocker: pytest_mock.MockerFixture,
+    *,
+    craftgit_exists: bool,
+) -> None:
+    which_res = f"/some/path/to/{CRAFTGIT_BINARY_NAME}" if craftgit_exists else None
+    which_mock = mocker.patch("shutil.which", return_value=which_res)
+    git_repo = GitRepo(empty_repository)
+
+    expected_binary = (
+        CRAFTGIT_BINARY_NAME if craftgit_exists else GIT_FALLBACK_BINARY_NAME
+    )
+    assert git_repo.git_binary() == expected_binary
+
+    which_mock.assert_called_once_with(CRAFTGIT_BINARY_NAME)
