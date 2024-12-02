@@ -76,6 +76,7 @@ class ServiceFactory:
     ConfigClass: type[services.ConfigService] = None  # type: ignore[assignment]
     FetchClass: type[services.FetchService] = None  # type: ignore[assignment]
     InitClass: type[services.InitService] = None  # type: ignore[assignment]
+    TestingClass: type[services.TestingService] = None # type: ignore[assignment]
     project: models.Project | None = None
 
     if TYPE_CHECKING:
@@ -88,6 +89,7 @@ class ServiceFactory:
         config: services.ConfigService = None  # type: ignore[assignment]
         fetch: services.FetchService = None  # type: ignore[assignment]
         init: services.InitService = None  # type: ignore[assignment]
+        testing: services.TestingService = None  # type: ignore[assignment]
 
     def __post_init__(self) -> None:
         self._service_kwargs: dict[str, dict[str, Any]] = {}
