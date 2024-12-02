@@ -74,7 +74,7 @@ class CraftSpreadYaml(CraftBaseModel):
 class SpreadBaseModel(CraftBaseModel):
     """Base for spread models."""
 
-    def model_post_init(self, __context: Any) -> None:  # noqa: ANN401
+    def model_post_init(self, /, __context: Any) -> None:  # noqa: ANN401
         """Remove attributes set to None."""
         none_items: list[Any] = []
         for k, v in self.__dict__.items():
