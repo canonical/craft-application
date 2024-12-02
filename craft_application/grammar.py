@@ -52,9 +52,7 @@ def process_part(
     *, part_yaml_data: dict[str, Any], processor: GrammarProcessor
 ) -> dict[str, Any]:
     """Process grammar for a given part."""
-    for key in part_yaml_data:
-        unprocessed_grammar = part_yaml_data[key]
-
+    for key, unprocessed_grammar in part_yaml_data.items():
         # ignore non-grammar keywords
         if key not in get_grammar_aware_part_keywords():
             craft_cli.emit.debug(
@@ -79,7 +77,8 @@ def process_part(
             unprocessed_grammar = cast(list[dict[str, Any] | str], unprocessed_grammar)
         # grammar aware models can be a string
         elif isinstance(unprocessed_grammar, str):
-            unprocessed_grammar = [unprocessed_grammar]
+            # Ignore rule PLW2901 because we do need to overwrite a for loop variable.
+            unprocessed_grammar = [unprocessed_grammar]  # noqa: PLW2901
         # skip all other data types
         else:
             continue
@@ -119,9 +118,9 @@ def process_parts(
     # TODO: make checker optional in craft-grammar.
     processor = GrammarProcessor(arch=arch, target_arch=target_arch, checker=self_check)
 
-    for part_name in parts_yaml_data:
+    for part_name, part_data in parts_yaml_data.items():
         parts_yaml_data[part_name] = process_part(
-            part_yaml_data=parts_yaml_data[part_name], processor=processor
+            part_yaml_data=part_data, processor=processor
         )
 
     return parts_yaml_data
