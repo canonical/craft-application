@@ -340,8 +340,8 @@ class GitRepo:
 
     def show_remote(
         self,
-        *,
         remote_name_or_url: str,
+        *,
         do_not_query_remotes: bool = False,
         disable_prompting: bool = True,
     ) -> str:
@@ -363,8 +363,11 @@ class GitRepo:
             remote_show_cmd.append("-n")
 
         remote_show_cmd.append(remote_name_or_url)
+        stdin = subprocess.PIPE
+
         if disable_prompting:
             env["GIT_ASKPASS"] = str(shutil.which("true") or "/bin/true")
+            stdin = subprocess.DEVNULL
 
         try:
             completed_process = subprocess.run(
@@ -373,7 +376,7 @@ class GitRepo:
                 text=True,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
-                stdin=subprocess.DEVNULL,
+                stdin=stdin,
                 env=env,
             )
         except FileNotFoundError as error:

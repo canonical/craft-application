@@ -1184,3 +1184,56 @@ def test_craftgit_is_used_for_git_operations(
     assert git_repo.git_binary() == expected_binary
 
     which_mock.assert_called_once_with(CRAFTGIT_BINARY_NAME)
+
+
+@pytest.mark.parametrize(
+    ("do_not_query_remotes", "disable_prompting"),
+    [
+        (False, False),
+        (False, True),
+        (True, False),
+        (True, True),
+    ],
+    ids=[
+        "query_remotes-prompt",
+        "query_remote-disable_prompting",
+        "dont_query_remotes-prompt",
+        "dont_query_remotes-disable_prompting",
+    ],
+)
+def test_show_remote(
+    empty_repository: Path,
+    fake_process: pytest_subprocess.FakeProcess,
+    expected_git_binary: str,
+    *,
+    do_not_query_remotes: bool,
+    disable_prompting: bool,
+) -> None:
+    test_remote = "test"
+    cmd = [expected_git_binary, "remote", "show"]
+    if do_not_query_remotes:
+        cmd.append("-n")
+    cmd.append(test_remote)
+    fake_process.register(cmd)
+
+    git_repo = GitRepo(empty_repository)
+    git_repo.show_remote(
+        test_remote,
+        do_not_query_remotes=do_not_query_remotes,
+        disable_prompting=disable_prompting,
+    )
+
+
+def test_show_remote_errors_with_git_error(
+    empty_repository: Path,
+    fake_process: pytest_subprocess.FakeProcess,
+    expected_git_binary: str,
+) -> None:
+    test_remote = "test"
+    cmd = [expected_git_binary, "remote", "show"]
+    cmd.append(test_remote)
+    fake_process.register(cmd, returncode=3)
+
+    git_repo = GitRepo(empty_repository)
+    with pytest.raises(GitError):
+        git_repo.show_remote(test_remote)
