@@ -43,7 +43,7 @@ T = TypeVar("T")
 _ClassName = Annotated[str, annotated_types.Predicate(lambda x: x.endswith("Class"))]
 
 
-@dataclasses.dataclass(init=False)
+@dataclasses.dataclass
 class ServiceFactory:
     """Factory class for lazy-loading service classes.
 
@@ -54,89 +54,41 @@ class ServiceFactory:
     and possibly have its existing service classes overridden.
     """
 
-    def __init__(  # noqa: PLR0913
-        self,
-        app: AppMetadata,
-        # Ignoring N803 because these argument names are previously created.
-        PackageClass: type[services.PackageService] | None = None,  # noqa: N803
-        LifecycleClass: type[services.LifecycleService] | None = None,  # noqa: N803
-        ProviderClass: type[services.ProviderService] | None = None,  # noqa: N803
-        RemoteBuildClass: type[services.RemoteBuildService] | None = None,  # noqa: N803
-        RequestClass: type[services.RequestService] | None = None,  # noqa: N803
-        ConfigClass: type[services.ConfigService] | None = None,  # noqa: N803
-        FetchClass: type[services.FetchService] | None = None,  # noqa: N803
-        InitClass: type[services.InitService] | None = None,  # noqa: N803
-        project: models.Project | None = None,
-    ) -> None:
-        self.app = app
-        self.project = project
+    # These exist so that child ServiceFactory classes can use them.
+    app: AppMetadata
+    PackageClass: type[services.PackageService] | None = None
+    LifecycleClass: type[services.LifecycleService] | None = None
+    ProviderClass: type[services.ProviderService] | None = None
+    RemoteBuildClass: type[services.RemoteBuildService] | None = None
+    RequestClass: type[services.RequestService] | None = None
+    ConfigClass: type[services.ConfigService] | None = None
+    FetchClass: type[services.FetchService] | None = None
+    InitClass: type[services.InitService] | None = None
+    project: models.Project | None = None
+
+    if TYPE_CHECKING:
+        # Cheeky hack that lets static type checkers report the correct types.
+        package: services.PackageService = None  # type: ignore[assignment]
+        lifecycle: services.LifecycleService = None  # type: ignore[assignment]
+        provider: services.ProviderService = None  # type: ignore[assignment]
+        remote_build: services.RemoteBuildService = None  # type: ignore[assignment]
+        request: services.RequestService = None  # type: ignore[assignment]
+        config: services.ConfigService = None  # type: ignore[assignment]
+        fetch: services.FetchService = None  # type: ignore[assignment]
+        init: services.InitService = None  # type: ignore[assignment]
+
+    def __post_init__(self) -> None:
         self._service_kwargs: dict[str, dict[str, Any]] = {}
         self._services: dict[str, services.AppService] = {}
 
-        # Backwards compatibility for assigning service classes on initialisation.
-        if PackageClass:
-            warnings.warn(
-                f'Registering services on service factory instantiation is deprecated. Use ServiceFactory.register("package", {PackageClass.__name__}) instead.',
-                category=DeprecationWarning,
-                stacklevel=2,
-            )
-            self.register("package", PackageClass)
-        if LifecycleClass:
-            warnings.warn(
-                DeprecationWarning(
-                    f'Registering services on service factory instantiation is deprecated. Use ServiceFactory.register("lifecycle", {LifecycleClass.__name__}) instead.'
-                ),
-                stacklevel=2,
-            )
-            self.register("lifecycle", LifecycleClass)
-        if ProviderClass:
-            warnings.warn(
-                DeprecationWarning(
-                    f'Registering services on service factory instantiation is deprecated. Use ServiceFactory.register("provider", {ProviderClass.__name__}) instead.'
-                ),
-                stacklevel=2,
-            )
-            self.register("provider", ProviderClass)
-        if RemoteBuildClass:
-            warnings.warn(
-                DeprecationWarning(
-                    f'Registering services on service factory instantiation is deprecated. Use ServiceFactory.register("remote_build", {RemoteBuildClass.__name__}) instead.'
-                ),
-                stacklevel=2,
-            )
-            self.register("remote_build", RemoteBuildClass)
-        if RequestClass:
-            warnings.warn(
-                DeprecationWarning(
-                    f'Registering services on service factory instantiation is deprecated. Use ServiceFactory.register("request", {RequestClass.__name__}) instead.'
-                ),
-                stacklevel=2,
-            )
-            self.register("request", RequestClass)
-        if ConfigClass:
-            warnings.warn(
-                DeprecationWarning(
-                    f'Registering services on service factory instantiation is deprecated. Use ServiceFactory.register("config", {ConfigClass.__name__}) instead.'
-                ),
-                stacklevel=2,
-            )
-            self.register("config", ConfigClass)
-        if FetchClass:
-            warnings.warn(
-                DeprecationWarning(
-                    f'Registering services on service factory instantiation is deprecated. Use ServiceFactory.register("fetch", {FetchClass.__name__}) instead.'
-                ),
-                stacklevel=2,
-            )
-            self.register("fetch", FetchClass)
-        if InitClass:
-            warnings.warn(
-                DeprecationWarning(
-                    f'Registering services on service factory instantiation is deprecated. Use ServiceFactory.register("init", {InitClass.__name__}) instead.'
-                ),
-                stacklevel=2,
-            )
-            self.register("init", InitClass)
+        factory_dict = dataclasses.asdict(self)
+        for cls_name, value in factory_dict.items():
+            if cls_name.endswith("Class") and value is not None:
+                identifier = _CAMEL_TO_PYTHON_CASE_REGEX.sub("_", cls_name[:-5]).lower()
+                warnings.warn(
+                    f'Registering services on service factory instantiation is deprecated. Use ServiceFactory.register("{identifier}", {value.__name__}) instead.'
+                )
+                self.register(identifier, value)
 
     @classmethod
     def register(
