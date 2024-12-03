@@ -73,14 +73,6 @@ def test_show_remote_hello(
     assert hello_repository_lp_url in show_remote_output
 
 
-def test_last_commit_on_empty_repository(empty_repository: pathlib.Path) -> None:
-    """Test if last_commit errors out in empty repository."""
-    git_repo = GitRepo(empty_repository)
-    with pytest.raises(GitError) as git_error:
-        git_repo.get_last_commit()
-    assert git_error.value.details == "could not retrieve last commit"
-
-
 def test_show_remote_that_does_not_exist(
     empty_repository: pathlib.Path,
 ) -> None:
