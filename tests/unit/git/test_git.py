@@ -1168,6 +1168,21 @@ def test_remote_contains(
     )
 
 
+def test_remote_contains_fails_if_subprocess_fails(
+    empty_repository: Path,
+    fake_process: pytest_subprocess.FakeProcess,
+    expected_git_binary: str,
+) -> None:
+    fake_process.register(
+        [expected_git_binary, "branch", "--remotes", "--contains", "fake-commit-sha"],
+        returncode=1,
+    )
+    git_repo = GitRepo(empty_repository)
+    with pytest.raises(GitError) as git_error:
+        git_repo.remote_contains(remote="fake-remote", commit_sha="fake-commit-sha")
+    assert git_error.value.details == "incorrect commit provided, cannot check"
+
+
 @pytest.mark.parametrize(
     "always_use_long_format",
     [True, False, None],

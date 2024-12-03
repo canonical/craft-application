@@ -616,7 +616,7 @@ class GitRepo:
                 text=True,
             )
         except subprocess.CalledProcessError as error:
-            raise GitError("Incorrect commit provided, cannot check") from error
+            raise GitError("incorrect commit provided, cannot check") from error
         else:
             for line in remotes_that_has_given_commit.splitlines():
                 if line.strip().startswith(f"{remote}/"):
