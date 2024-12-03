@@ -12,19 +12,20 @@ Git
 
 - Extend ``craft_application.git`` module with the following APIs:
 
-  - Add ``is_commit(ref)`` and ``is_short_commit(ref)`` helpers for checking if given
-    ref is a valid commit hash.
+  - Add ``is_commit(ref)`` and ``is_short_commit(ref)`` helpers for checking if
+    given ref is a valid commit hash.
   - Add ``Commit`` model to represent ``get_last_commit()`` result.
 
 - Extend ``GitRepo`` class with additional methods:
 
   - Add ``set_remote_url()`` and ``set_remote_push_url()`` alongside their get
     counterparts.
-  - Add ``set_no_push()`` to explicitely disable ``push`` for specific remotes.
+  - Add ``set_no_push()`` to explicitly disable ``push`` for specific remotes.
   - Add ``get_last_commit()`` to retrieve last commit hash and message.
   - Add ``fetch()`` method for retrieving remote objects.
 
-- Use ``craft.git`` for git-related operations done via ``subprocess`` in ``GitRepo``.
+- Use ``craft.git`` for git-related operations done via ``subprocess`` in
+  ``GitRepo``.
 
 
 .. For a complete list of commits, check out the `4.6.0`_ release on GitHub.
