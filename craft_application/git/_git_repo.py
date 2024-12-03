@@ -587,7 +587,7 @@ class GitRepo:
             fetch_command.append(ref)
 
         try:
-            os_utils.process_run(fetch_command, logger.debug, stdin=subprocess.DEVNULL)
+            os_utils.process_run(fetch_command, logger.debug)
         except FileNotFoundError as error:
             raise GitError("git command not found in the system") from error
         except subprocess.CalledProcessError as error:
