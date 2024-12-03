@@ -83,7 +83,7 @@ class FetchService(services.ProjectService):
         """Start the fetch-service process with proper arguments."""
         super().setup()
 
-        if not self._services.ProviderClass.is_managed():
+        if not self._services.get_class("provider").is_managed():
             # Early fail if the fetch-service is not installed.
             fetch.verify_installed()
 
