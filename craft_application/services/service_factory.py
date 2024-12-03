@@ -1,4 +1,4 @@
-# Copyright 2023 Canonical Ltd.
+# Copyright 2023-2024 Canonical Ltd.
 #
 # This program is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Lesser General Public License version 3, as
@@ -18,7 +18,16 @@ import dataclasses
 import importlib
 import re
 import warnings
-from typing import TYPE_CHECKING, Annotated, Any, Literal, TypeVar, cast, overload
+from typing import (
+    TYPE_CHECKING,
+    Annotated,
+    Any,
+    ClassVar,
+    Literal,
+    TypeVar,
+    cast,
+    overload,
+)
 
 import annotated_types
 
@@ -27,7 +36,6 @@ from craft_application import models, services
 if TYPE_CHECKING:
     from craft_application.application import AppMetadata
 
-_service_classes: dict[str, tuple[str, str] | type[services.AppService]] = {}
 _DEFAULT_SERVICES = {
     "config": "ConfigService",
     "fetch": "FetchService",
@@ -54,16 +62,20 @@ class ServiceFactory:
     and possibly have its existing service classes overridden.
     """
 
+    _service_classes: ClassVar[
+        dict[str, tuple[str, str] | type[services.AppService]]
+    ] = {}
+
     # These exist so that child ServiceFactory classes can use them.
     app: AppMetadata
-    PackageClass: type[services.PackageService] | None = None
-    LifecycleClass: type[services.LifecycleService] | None = None
-    ProviderClass: type[services.ProviderService] | None = None
-    RemoteBuildClass: type[services.RemoteBuildService] | None = None
-    RequestClass: type[services.RequestService] | None = None
-    ConfigClass: type[services.ConfigService] | None = None
-    FetchClass: type[services.FetchService] | None = None
-    InitClass: type[services.InitService] | None = None
+    PackageClass: type[services.PackageService] = None  # type: ignore[assignment]
+    LifecycleClass: type[services.LifecycleService] = None  # type: ignore[assignment]
+    ProviderClass: type[services.ProviderService] = None  # type: ignore[assignment]
+    RemoteBuildClass: type[services.RemoteBuildService] = None  # type: ignore[assignment]
+    RequestClass: type[services.RequestService] = None  # type: ignore[assignment]
+    ConfigClass: type[services.ConfigService] = None  # type: ignore[assignment]
+    FetchClass: type[services.FetchService] = None  # type: ignore[assignment]
+    InitClass: type[services.InitService] = None  # type: ignore[assignment]
     project: models.Project | None = None
 
     if TYPE_CHECKING:
@@ -86,9 +98,16 @@ class ServiceFactory:
             if cls_name.endswith("Class") and value is not None:
                 identifier = _CAMEL_TO_PYTHON_CASE_REGEX.sub("_", cls_name[:-5]).lower()
                 warnings.warn(
-                    f'Registering services on service factory instantiation is deprecated. Use ServiceFactory.register("{identifier}", {value.__name__}) instead.'
+                    f'Registering services on service factory instantiation is deprecated. Use ServiceFactory.register("{identifier}", {value.__name__}) instead.',
+                    category=DeprecationWarning,
+                    stacklevel=3,
                 )
                 self.register(identifier, value)
+
+        if "package" not in self._service_classes:
+            raise TypeError(
+                "A PackageService must be registered before creating the ServiceFactory."
+            )
 
     @classmethod
     def register(
@@ -109,18 +128,18 @@ class ServiceFactory:
         if isinstance(service_class, str):
             if module is None:
                 raise KeyError("Must set module if service_class is set by name.")
-            _service_classes[name] = (module, service_class)
+            cls._service_classes[name] = (module, service_class)
         else:
             if module is not None:
                 raise KeyError(
                     "Must not set module if service_class is passed by value."
                 )
-            _service_classes[name] = service_class
+            cls._service_classes[name] = service_class
 
     @classmethod
     def reset(cls) -> None:
         """Reset the registered services."""
-        _service_classes.clear()
+        cls._service_classes.clear()
         for name, class_name in _DEFAULT_SERVICES.items():
             cls.register(name, class_name, module=f"craft_application.services.{name}")
 
@@ -156,40 +175,50 @@ class ServiceFactory:
         self._service_kwargs.setdefault(service, {}).update(kwargs)
 
     @overload
-    def get_service_class(
-        self, name: Literal["config", "ConfigService", "ConfigClass"]
+    @classmethod
+    def get_class(
+        cls, name: Literal["config", "ConfigService", "ConfigClass"]
     ) -> type[services.ConfigService]: ...
     @overload
-    def get_service_class(
-        self, name: Literal["fetch", "FetchService", "FetchClass"]
+    @classmethod
+    def get_class(
+        cls, name: Literal["fetch", "FetchService", "FetchClass"]
     ) -> type[services.FetchService]: ...
     @overload
-    def get_service_class(
-        self, name: Literal["init", "InitService", "InitClass"]
+    @classmethod
+    def get_class(
+        cls, name: Literal["init", "InitService", "InitClass"]
     ) -> type[services.InitService]: ...
     @overload
-    def get_service_class(
-        self, name: Literal["lifecycle", "LifecycleService", "LifecycleClass"]
+    @classmethod
+    def get_class(
+        cls, name: Literal["lifecycle", "LifecycleService", "LifecycleClass"]
     ) -> type[services.LifecycleService]: ...
     @overload
-    def get_service_class(
-        self, name: Literal["package", "PackageService", "PackageClass"]
+    @classmethod
+    def get_class(
+        cls, name: Literal["package", "PackageService", "PackageClass"]
     ) -> type[services.PackageService]: ...
     @overload
-    def get_service_class(
-        self, name: Literal["provider", "ProviderService", "ProviderClass"]
+    @classmethod
+    def get_class(
+        cls, name: Literal["provider", "ProviderService", "ProviderClass"]
     ) -> type[services.ProviderService]: ...
     @overload
-    def get_service_class(
-        self, name: Literal["remote_build", "RemoteBuildService", "RemoteBuildClass"]
+    @classmethod
+    def get_class(
+        cls, name: Literal["remote_build", "RemoteBuildService", "RemoteBuildClass"]
     ) -> type[services.RemoteBuildService]: ...
     @overload
-    def get_service_class(
-        self, name: Literal["request", "RequestService", "RequestClass"]
+    @classmethod
+    def get_class(
+        cls, name: Literal["request", "RequestService", "RequestClass"]
     ) -> type[services.RequestService]: ...
     @overload
-    def get_service_class(self, name: str) -> type[services.AppService]: ...
-    def get_service_class(self, name: str) -> type[services.AppService]:
+    @classmethod
+    def get_class(cls, name: str) -> type[services.AppService]: ...
+    @classmethod
+    def get_class(cls, name: str) -> type[services.AppService]:
         """Get the class for a service by its name."""
         if name.endswith("Class"):
             service_cls_name = name
@@ -201,17 +230,14 @@ class ServiceFactory:
             service_cls_name = "".join(word.title() for word in name.split("_"))
             service_cls_name += "Class"
             service = name
-        classes = dataclasses.asdict(self)
-        if service in _service_classes:  # Try registered services first.
-            service_info = _service_classes[service]
-            if isinstance(service_info, tuple):
-                module_name, class_name = service_info
-                module = importlib.import_module(module_name)
-                return cast(type[services.AppService], getattr(module, class_name))
-            return service_info
-        if service_cls_name in classes and classes[service_cls_name] is not None:
-            return cast(type[services.AppService], getattr(self, service_cls_name))
-        raise AttributeError(service)
+        if service not in cls._service_classes:
+            raise AttributeError(f"Not a registered service: {service}")
+        service_info = cls._service_classes[service]
+        if isinstance(service_info, tuple):
+            module_name, class_name = service_info
+            module = importlib.import_module(module_name)
+            return cast(type[services.AppService], getattr(module, class_name))
+        return service_info
 
     @overload
     def get(self, service: Literal["config"]) -> services.ConfigService: ...
@@ -242,7 +268,7 @@ class ServiceFactory:
         """
         if service in self._services:
             return self._services[service]
-        cls = self.get_service_class(service)
+        cls = self.get_class(service)
         kwargs = self._service_kwargs.get(service, {})
         if issubclass(cls, services.ProjectService):
             if not self.project:
@@ -256,47 +282,6 @@ class ServiceFactory:
         self._services[service] = instance
         return instance
 
-    # Ignores here are due to: https://github.com/python/mypy/issues/8203
-    @overload
-    def __getattr__(self, name: Literal["ConfigClass"]) -> type[services.ConfigService]: ...  # type: ignore[misc]
-    @overload
-    def __getattr__(self, name: Literal["config"]) -> services.ConfigService: ...  # type: ignore[misc]
-    @overload
-    def __getattr__(self, name: Literal["FetchClass"]) -> type[services.FetchService]: ...  # type: ignore[misc]
-    @overload
-    def __getattr__(self, name: Literal["fetch"]) -> services.FetchService: ...  # type: ignore[misc]
-    @overload
-    def __getattr__(self, name: Literal["InitClass"]) -> type[services.InitService]: ...  # type: ignore[misc]
-    @overload
-    def __getattr__(self, name: Literal["init"]) -> services.InitService: ...  # type: ignore[misc]
-    @overload
-    def __getattr__(self, name: Literal["PackageClass"]) -> type[services.PackageService]: ...  # type: ignore[misc]
-    @overload
-    def __getattr__(self, name: Literal["package"]) -> services.PackageService: ...  # type: ignore[misc]
-    @overload
-    def __getattr__(self, name: Literal["LifecycleClass"]) -> type[services.LifecycleService]: ...  # type: ignore[misc]
-    @overload
-    def __getattr__(  # type: ignore[misc]
-        self, name: Literal["lifecycle"]
-    ) -> services.LifecycleService: ...
-    @overload
-    def __getattr__(self, name: Literal["ProviderClass"]) -> type[services.ProviderService]: ...  # type: ignore[misc]
-    @overload
-    def __getattr__(self, name: Literal["provider"]) -> services.ProviderService: ...  # type: ignore[misc]
-    @overload
-    def __getattr__(self, name: Literal["RemoteBuildClass"]) -> type[services.RemoteBuildService]: ...  # type: ignore[misc]
-    @overload
-    def __getattr__(  # type: ignore[misc]
-        self, name: Literal["remote_build"]
-    ) -> services.RemoteBuildService: ...
-    @overload
-    def __getattr__(self, name: Literal["RequestClass"]) -> type[services.RequestService]: ...  # type: ignore[misc]
-    @overload
-    def __getattr__(self, name: Literal["request"]) -> services.RequestService: ...  # type: ignore[misc]
-    @overload
-    def __getattr__(self, name: _ClassName) -> type[services.AppService]: ...  # type: ignore[misc]
-    @overload
-    def __getattr__(self, name: str) -> services.AppService: ...  # type: ignore[misc]
     def __getattr__(self, name: str) -> services.AppService | type[services.AppService]:
         """Instantiate a service class.
 
@@ -308,12 +293,9 @@ class ServiceFactory:
         instantiated service as an instance attribute, allowing the same service
         instance to be reused for the entire run of the application.
         """
-        if name.endswith("Class"):
-            result = self.get_service_class(name)
-        else:
-            result = self.get(name)
+        result = self.get_class(name) if name.endswith("Class") else self.get(name)
         setattr(self, name, result)
         return result
 
 
-ServiceFactory.reset()  # Set up default services.
+ServiceFactory.reset()  # Set up default services on import.

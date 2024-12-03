@@ -50,7 +50,7 @@ def mock_services(monkeypatch, app_metadata, fake_project, fake_package_service_
     services.ServiceFactory.register(
         "lifecycle", mock.Mock(spec=services.LifecycleService)
     )
-    services.ServiceFactory.register("package", mock.Mock(spec=services.PackageService))
+    services.ServiceFactory.register("package", fake_package_service_class)
     services.ServiceFactory.register(
         "provider", mock.Mock(spec=services.ProviderService)
     )
@@ -62,5 +62,4 @@ def mock_services(monkeypatch, app_metadata, fake_project, fake_package_service_
     monkeypatch.setattr(
         service_factory, "issubclass", mock.Mock(return_value=False), raising=False
     )
-    factory = services.ServiceFactory(app_metadata, project=fake_project)
-    return factory
+    return services.ServiceFactory(app_metadata, project=fake_project)
