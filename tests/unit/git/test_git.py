@@ -31,6 +31,7 @@ from craft_application.git import (
     COMMIT_SHORT_SHA_LEN,
     CRAFTGIT_BINARY_NAME,
     GIT_FALLBACK_BINARY_NAME,
+    NO_PUSH_URL,
     GitError,
     GitRepo,
     GitType,
@@ -873,47 +874,98 @@ def test_check_git_repo_rename_remote_pygit_error_is_wrapped(
     assert ge.value.details == expected_err_msg
 
 
+class _FakeRemote:
+    def __init__(
+        self,
+        fake_remote_url: str,
+        fake_remote_push_url: str | None = None,
+    ) -> None:
+        self._fake_remote_url = fake_remote_url
+        self._fake_remote_push_url = fake_remote_push_url
+
+    @property
+    def url(self) -> str:
+        return self._fake_remote_url
+
+    @property
+    def push_url(self) -> str | None:
+        return self._fake_remote_push_url
+
+    def set_url(self, new_url: str) -> None:
+        self._fake_remote_url = new_url
+
+    def set_push_url(self, new_push_url: str) -> None:
+        self._fake_remote_push_url = new_push_url
+
+
 def test_check_git_repo_get_url(mocker, empty_working_directory):
-    """Check if url is returned correctly using the get_url API."""
     repo = GitRepo(empty_working_directory)
     test_fake_existing_remote = "test-remote"
-    test_fake_existing_remote_url = "https://test-remote-url.local"
-
-    class _FakeRemote:
-        @property
-        def url(self) -> str:
-            return cast(str, test_fake_existing_remote_url)
+    fake_remote_url = "https://test-remote-url.local"
 
     mocked_remotes = mocker.patch.object(repo._repo, "remotes")
-    mocked_remotes.__getitem__ = lambda _s, _i: _FakeRemote()
+    mocked_remotes.__getitem__ = lambda _s, _i: _FakeRemote(fake_remote_url)
 
-    assert (
-        repo.get_remote_url(test_fake_existing_remote) == test_fake_existing_remote_url
-    )
+    assert repo.get_remote_url(test_fake_existing_remote) == fake_remote_url
 
 
 def test_check_git_repo_get_push_url(mocker, empty_working_directory):
-    """Check if url is returned correctly using the get_url API."""
     repo = GitRepo(empty_working_directory)
     test_fake_existing_remote = "test-remote"
-    test_fake_existing_remote_url = "https://test-remote-url.local"
-
-    class _FakeRemote:
-        @property
-        def url(self) -> str:
-            return cast(str, test_fake_existing_remote_url)
-
-        @property
-        def push_url(self) -> str:
-            return cast(str, test_fake_existing_remote_url)
+    fake_remote_url = "https://test-remote-url.local"
 
     mocked_remotes = mocker.patch.object(repo._repo, "remotes")
-    mocked_remotes.__getitem__ = lambda _s, _i: _FakeRemote()
+    mocked_remotes.__getitem__ = lambda _s, _i: _FakeRemote(fake_remote_url)
 
-    assert (
-        repo.get_remote_push_url(test_fake_existing_remote)
-        == test_fake_existing_remote_url
-    )
+    assert repo.get_remote_push_url(test_fake_existing_remote) is None
+
+
+def test_check_git_repo_get_custom_push_url(mocker, empty_working_directory):
+    repo = GitRepo(empty_working_directory)
+    test_fake_existing_remote = "test-remote"
+    fake_remote_url = "https://test-remote-url.local"
+
+    mocked_remotes = mocker.patch.object(repo._repo, "remotes")
+    fake_remote = _FakeRemote(fake_remote_url)
+    custom_push_url = "https://custom-push-url.localhost"
+    fake_remote.set_push_url(custom_push_url)
+
+    mocked_remotes.__getitem__ = lambda _s, _i: fake_remote
+
+    assert repo.get_remote_push_url(test_fake_existing_remote) == custom_push_url
+
+
+def test_check_git_repo_set_push(mocker, empty_working_directory):
+    repo = GitRepo(empty_working_directory)
+    test_remote = "test-remote"
+    updated_remote_url = "https://new-remote-url.localhost"
+
+    mocked_remotes = mocker.patch.object(repo._repo, "remotes")
+    repo.set_remote_url(test_remote, updated_remote_url)
+
+    mocked_remotes.set_url.assert_called_with(test_remote, updated_remote_url)
+
+
+def test_check_git_repo_set_push_url(mocker, empty_working_directory):
+    repo = GitRepo(empty_working_directory)
+    test_remote = "test-remote"
+    updated_remote_url = "https://new-remote-push-url.localhost"
+
+    mocked_remotes = mocker.patch.object(repo._repo, "remotes")
+    repo.set_remote_push_url(test_remote, updated_remote_url)
+
+    mocked_remotes.set_push_url.assert_called_with(test_remote, updated_remote_url)
+
+
+def test_check_git_repo_set_no_push(mocker, empty_working_directory):
+    """Check if url is returned correctly using the get_url API."""
+    repo = GitRepo(empty_working_directory)
+    test_remote = "test-remote"
+
+    mocked_remotes = mocker.patch.object(repo._repo, "remotes")
+    repo.set_no_push(test_remote)
+
+    mocked_remotes.set_push_url.assert_called_with(test_remote, NO_PUSH_URL)
 
 
 def test_check_git_repo_get_url_fails_if_remote_does_not_exist(
@@ -984,11 +1036,29 @@ def test_retriving_last_commit(empty_repository: Path) -> None:
     ), "Commit should have proper short version"
 
 
-@pytest.mark.parametrize("tags", [True, False], ids=lambda x: f"tags-{x}")
+def test_last_commit_on_empty_repository(empty_repository: Path) -> None:
+    """Test if last_commit errors out with correct error."""
+    git_repo = GitRepo(empty_repository)
+    with pytest.raises(GitError) as git_error:
+        git_repo.get_last_commit()
+    assert git_error.value.details == "could not retrieve last commit"
+
+
+@pytest.mark.parametrize(
+    "tags", [True, False], ids=lambda x: "tags" if x else "no_tags"
+)
+@pytest.mark.parametrize(
+    "depth", [None, 1], ids=lambda x: "with_{x}_depth" if x else "no_depth"
+)
+@pytest.mark.parametrize(
+    "ref", [None, "aaaaaaa"], ids=lambda x: f"with_ref_{x}" if x else "no_ref_specified"
+)
 def test_fetching_remote(
     empty_repository: Path,
     fake_process: pytest_subprocess.FakeProcess,
     expected_git_binary: str,
+    depth: int | None,
+    ref: str | None,
     *,
     tags: bool,
 ) -> None:
@@ -998,9 +1068,29 @@ def test_fetching_remote(
     cmd = [expected_git_binary, "fetch"]
     if tags:
         cmd.append("--tags")
+    if depth is not None:
+        cmd.extend(["--depth", str(depth)])
     cmd.append(remote)
+    if ref is not None:
+        cmd.append(ref)
     fake_process.register(cmd)
-    git_repo.fetch(remote=remote, tags=tags)
+    git_repo.fetch(remote=remote, tags=tags, depth=depth, ref=ref)
+
+
+def test_fetching_remote_fails(
+    empty_repository: Path,
+    fake_process: pytest_subprocess.FakeProcess,
+    expected_git_binary: str,
+) -> None:
+    git_repo = GitRepo(empty_repository)
+    remote = "test-remote"
+    git_repo.add_remote(remote, "https://non-existing-repo.localhost")
+    cmd = [expected_git_binary, "fetch"]
+    cmd.append(remote)
+    fake_process.register(cmd, returncode=1)
+    with pytest.raises(GitError) as git_error:
+        git_repo.fetch(remote=remote)
+    assert git_error.value.details == f"cannot fetch remote: {remote!r}"
 
 
 def test_fetching_undefined_remote(empty_repository: Path) -> None:
