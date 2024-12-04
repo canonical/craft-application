@@ -338,54 +338,6 @@ class GitRepo:
                 f"cannot rename '{remote_name}' to '{new_remote_name}'"
             ) from error
 
-    def show_remote(
-        self,
-        remote_name_or_url: str,
-        *,
-        do_not_query_remotes: bool = False,
-        disable_prompting: bool = True,
-    ) -> str:
-        """Give some information about the remote <name>.
-
-        :param remote_name_or_url: name of the remote or URL to query
-        :param do_not_query_remotes: if True, remote heads are not queried first with
-        ls-remote
-        :param disable_prompting: disable prompting user for a credentials
-
-        :raises GitError: if remote cannot be inspected
-        """
-        env: dict[str, str] = {}
-        logger.debug("Querying remote: %r", remote_name_or_url)
-        git_binary = self.git_binary()
-        remote_show_cmd = [git_binary, "remote", "show"]
-        if do_not_query_remotes:
-            logger.debug("Skipping querying remotes.")
-            remote_show_cmd.append("-n")
-
-        remote_show_cmd.append(remote_name_or_url)
-        stdin = subprocess.PIPE
-
-        if disable_prompting:
-            env["GIT_ASKPASS"] = str(shutil.which("true") or "/bin/true")
-            stdin = subprocess.DEVNULL
-
-        try:
-            completed_process = subprocess.run(
-                remote_show_cmd,
-                check=True,
-                text=True,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                stdin=stdin,
-                env=env,
-            )
-        except FileNotFoundError as error:
-            raise GitError(f"{git_binary!r} command not found in the system") from error
-        except subprocess.CalledProcessError as error:
-            raise GitError(f"cannot inspect remote: {remote_name_or_url!r}") from error
-        else:
-            return completed_process.stdout
-
     def get_remote_url(self, remote_name: str) -> str:
         """Get URL associated with the given remote.
 
