@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU Lesser General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Tests for lifecycle commands."""
+
 import argparse
 import pathlib
 import subprocess
@@ -73,15 +74,16 @@ PRO_SERVICE_COMMANDS = [
 ]
 
 PRO_SERVICE_CONFIGS = [
-    # is_attached,           enabled_services,           pro_services_args,                  expected_exception
-    (False,                 [],                          [],                                None),
-    (True,                  ["esm-apps"],                ["esm-apps"],                      None),
-    (True,                  ["esm-apps", "fips-updates"],["esm-apps", "fips-updates"],      None),
-    (True,                  ["esm-apps"],                [],                                UbuntuProAttachedError),
-    (False,                 [],                          ["esm-apps"],                      UbuntuProDetachedError),
-    (True,                  ["esm-apps", "fips-updates"],["fips-updates"],                  InvalidUbuntuProStatusError),
-    (True,                  ["esm-apps",],               ["fips-updates", "fips-updates"],  InvalidUbuntuProStatusError),
-    (True,                  ["esm-apps"],                ["esm-apps", "invalid-service"],   InvalidUbuntuProServiceError),
+    # is_attached, is_managed_mode, enabled_services, pro_services_args, expected_exception
+    (False, True, [], [], None),
+    (True, True, ["esm-apps"], ["esm-apps"], None),
+    (True, True, ["esm-apps", "fips-updates"],["esm-apps", "fips-updates"], None),
+    (True, True, ["esm-apps"], [], None),
+    (True, False, ["esm-apps"], [], UbuntuProAttachedError),
+    (False, True, [], ["esm-apps"], UbuntuProDetachedError),
+    (True, True, ["esm-apps", "fips-updates"],["fips-updates"], None),
+    (True, True, ["esm-apps",], ["fips-updates", "fips-updates"],  InvalidUbuntuProStatusError),
+    (True, True, ["esm-apps"], ["esm-apps", "invalid-service"], InvalidUbuntuProServiceError),
 ]
 
 STEP_NAMES = [step.name.lower() for step in craft_parts.Step]
@@ -115,17 +117,23 @@ def get_fake_command_class(parent_cls, managed):
 
 
 @pytest.mark.parametrize(
-    ("is_attached", "enabled_services", "pro_services_args", "expected_exception"),
+    (
+        "is_attached",
+        "is_managed_mode",
+        "enabled_services",
+        "pro_services_args",
+        "expected_exception",
+    ),
     PRO_SERVICE_CONFIGS,
 )
 def test_validate_pro_services(
     mock_pro_api_call,
     is_attached,
+    is_managed_mode,
     enabled_services,
     pro_services_args,
     expected_exception,
 ):
-
     # configure api state
     set_is_attached, set_enabled_service = mock_pro_api_call
     set_is_attached(is_attached)
@@ -138,6 +146,7 @@ def test_validate_pro_services(
     with exception_context:
         # create and validate pro services
         pro_services = ProServices(pro_services_args)
+        pro_services.managed_mode = is_managed_mode
         pro_services.validate()
 
 
@@ -491,6 +500,7 @@ def test_clean_run_managed(
 
 @pytest.mark.parametrize(("pro_service_dict", "pro_service_args"), PRO_SERVICE_COMMANDS)
 @pytest.mark.parametrize(("build_env_dict", "build_env_args"), BUILD_ENV_COMMANDS)
+@pytest.mark.parametrize(("shell_dict", "shell_args"), SHELL_PARAMS)
 @pytest.mark.parametrize(("debug_dict", "debug_args"), DEBUG_PARAMS)
 @pytest.mark.parametrize("output_arg", [".", "/"])
 def test_pack_fill_parser(
@@ -500,6 +510,8 @@ def test_pack_fill_parser(
     pro_service_args,
     build_env_dict,
     build_env_args,
+    shell_dict,
+    shell_args,
     debug_dict,
     debug_args,
     output_arg,
@@ -509,6 +521,8 @@ def test_pack_fill_parser(
         "platform": None,
         "build_for": None,
         "output": pathlib.Path(output_arg),
+        "fetch_service_policy": None,
+        **shell_dict,
         **debug_dict,
         **build_env_dict,
         **pro_service_dict,
@@ -519,7 +533,13 @@ def test_pack_fill_parser(
 
     args_dict = vars(
         parser.parse_args(
-            [*pro_service_args, *build_env_args, *debug_args, f"--output={output_arg}"]
+            [
+                *pro_service_args,
+                *build_env_args,
+                *shell_args,
+                *debug_args,
+                f"--output={output_arg}",
+            ]
         )
     )
     assert args_dict == expected
@@ -541,7 +561,9 @@ def test_pack_run(
     emitter, mock_services, app_metadata, parts, tmp_path, packages, message
 ):
     mock_services.package.pack.return_value = packages
-    parsed_args = argparse.Namespace(parts=parts, output=tmp_path)
+    parsed_args = argparse.Namespace(
+        parts=parts, output=tmp_path, fetch_service_policy=None
+    )
     command = PackCommand(
         {
             "app": app_metadata,
@@ -557,6 +579,34 @@ def test_pack_run(
     )
     emitter.assert_progress("Packing...")
     emitter.assert_progress(message, permanent=True)
+
+
+@pytest.mark.parametrize(
+    ("fetch_service_policy", "expect_create_called"),
+    [("strict", True), ("permissive", True), (None, False)],
+)
+def test_pack_fetch_manifest(
+    mock_services, app_metadata, tmp_path, fetch_service_policy, expect_create_called
+):
+    packages = [pathlib.Path("package.zip")]
+    mock_services.package.pack.return_value = packages
+    parsed_args = argparse.Namespace(
+        output=tmp_path, fetch_service_policy=fetch_service_policy
+    )
+    command = PackCommand(
+        {
+            "app": app_metadata,
+            "services": mock_services,
+        }
+    )
+
+    command.run(parsed_args)
+
+    mock_services.package.pack.assert_called_once_with(
+        mock_services.lifecycle.prime_dir,
+        tmp_path,
+    )
+    assert mock_services.fetch.create_project_manifest.called == expect_create_called
 
 
 def test_pack_run_wrong_step(app_metadata, fake_services):
@@ -613,6 +663,34 @@ def test_shell(
     mock_subprocess_run.assert_called_once_with(["bash"], check=False)
 
 
+def test_shell_pack(
+    app_metadata,
+    fake_services,
+    mocker,
+    mock_subprocess_run,
+):
+    parsed_args = argparse.Namespace(shell=True)
+    mock_lifecycle_run = mocker.patch.object(fake_services.lifecycle, "run")
+    mock_pack = mocker.patch.object(fake_services.package, "pack")
+    mocker.patch.object(
+        fake_services.lifecycle.project_info, "execution_finished", return_value=True
+    )
+    command = PackCommand(
+        {
+            "app": app_metadata,
+            "services": fake_services,
+        }
+    )
+    command.run(parsed_args)
+
+    # Must run the lifecycle
+    mock_lifecycle_run.assert_called_once_with(step_name="prime")
+
+    # Must call the shell instead of packing
+    mock_subprocess_run.assert_called_once_with(["bash"], check=False)
+    assert not mock_pack.called
+
+
 @pytest.mark.parametrize("command_cls", MANAGED_LIFECYCLE_COMMANDS)
 def test_shell_after(
     app_metadata, fake_services, mocker, mock_subprocess_run, command_cls
@@ -636,6 +714,35 @@ def test_shell_after(
     mock_subprocess_run.assert_called_once_with(["bash"], check=False)
 
 
+def test_shell_after_pack(
+    app_metadata,
+    fake_services,
+    mocker,
+    mock_subprocess_run,
+):
+    parsed_args = argparse.Namespace(
+        shell_after=True, output=pathlib.Path(), fetch_service_policy=None
+    )
+    mock_lifecycle_run = mocker.patch.object(fake_services.lifecycle, "run")
+    mock_pack = mocker.patch.object(fake_services.package, "pack")
+    mocker.patch.object(
+        fake_services.lifecycle.project_info, "execution_finished", return_value=True
+    )
+    command = PackCommand(
+        {
+            "app": app_metadata,
+            "services": fake_services,
+        }
+    )
+    command.run(parsed_args)
+
+    # Must run the lifecycle
+    mock_lifecycle_run.assert_called_once_with(step_name="prime")
+    # Must pack, and then shell
+    mock_pack.assert_called_once_with(fake_services.lifecycle.prime_dir, pathlib.Path())
+    mock_subprocess_run.assert_called_once_with(["bash"], check=False)
+
+
 @pytest.mark.parametrize("command_cls", [*MANAGED_LIFECYCLE_COMMANDS, PackCommand])
 def test_debug(app_metadata, fake_services, mocker, mock_subprocess_run, command_cls):
     parsed_args = argparse.Namespace(parts=None, debug=True)
@@ -646,6 +753,36 @@ def test_debug(app_metadata, fake_services, mocker, mock_subprocess_run, command
         fake_services.lifecycle, "run", side_effect=RuntimeError(error_message)
     )
     command = command_cls(
+        {
+            "app": app_metadata,
+            "services": fake_services,
+        }
+    )
+
+    with pytest.raises(RuntimeError, match=error_message):
+        command.run(parsed_args)
+
+    mock_subprocess_run.assert_called_once_with(["bash"], check=False)
+
+
+def test_debug_pack(
+    app_metadata,
+    fake_services,
+    mocker,
+    mock_subprocess_run,
+):
+    """Same as test_debug(), but checking when the error happens when packing."""
+    parsed_args = argparse.Namespace(debug=True, output=pathlib.Path())
+    error_message = "Packing failed!"
+
+    # Lifecycle.run() should work
+    mocker.patch.object(fake_services.lifecycle, "run")
+    # Package.pack() should fail
+    mocker.patch.object(
+        fake_services.package, "pack", side_effect=RuntimeError(error_message)
+    )
+    mocker.patch.object(fake_services.package, "update_project")
+    command = PackCommand(
         {
             "app": app_metadata,
             "services": fake_services,

@@ -22,6 +22,8 @@ import os
 import pathlib
 import pkgutil
 import sys
+import urllib.request
+from collections.abc import Generator, Iterable
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -36,8 +38,6 @@ from craft_application.services import base
 from craft_application.util import platforms, snap_config
 
 if TYPE_CHECKING:  # pragma: no cover
-    from collections.abc import Generator
-
     import craft_providers
 
     from craft_application import models
@@ -45,7 +45,7 @@ if TYPE_CHECKING:  # pragma: no cover
     from craft_application.services import ServiceFactory
 
 
-DEFAULT_FORWARD_ENVIRONMENT_VARIABLES = ("http_proxy", "https_proxy", "no_proxy")
+DEFAULT_FORWARD_ENVIRONMENT_VARIABLES: Iterable[str] = ()
 
 
 class ProviderService(base.ProjectService):
@@ -93,13 +93,31 @@ class ProviderService(base.ProjectService):
             if name in os.environ:
                 self.environment[name] = os.getenv(name)
 
+        for scheme, value in urllib.request.getproxies().items():
+            self.environment[f"{scheme.lower()}_proxy"] = value
+            self.environment[f"{scheme.upper()}_PROXY"] = value
+
         if self._install_snap:
-            channel = (
-                None
-                if util.is_running_from_snap(self._app.name)
-                else os.getenv("CRAFT_SNAP_CHANNEL", "latest/stable")
-            )
-            self.snaps.append(Snap(name=self._app.name, channel=channel, classic=True))
+            if util.is_running_from_snap(self._app.name):
+                # use the aliased name of the snap when injecting
+                name = os.getenv("SNAP_INSTANCE_NAME", self._app.name)
+                channel = None
+                emit.debug(
+                    f"Setting {self._app.name} to be injected from the "
+                    "host into the build environment because it is running "
+                    "as a snap."
+                )
+            else:
+                # use the snap name when installing from the store
+                name = self._app.name
+                channel = os.getenv("CRAFT_SNAP_CHANNEL", "latest/stable")
+                emit.debug(
+                    f"Setting {self._app.name} to be installed from the {channel} "
+                    "channel in the build environment because it is not running "
+                    "as a snap."
+                )
+
+            self.snaps.append(Snap(name=name, channel=channel, classic=True))
 
     @contextlib.contextmanager
     def instance(
@@ -108,6 +126,7 @@ class ProviderService(base.ProjectService):
         *,
         work_dir: pathlib.Path,
         allow_unstable: bool = True,
+        clean_existing: bool = False,
         **kwargs: bool | str | None,
     ) -> Generator[craft_providers.Executor, None, None]:
         """Context manager for getting a provider instance.
@@ -115,6 +134,8 @@ class ProviderService(base.ProjectService):
         :param build_info: Build information for the instance.
         :param work_dir: Local path to mount inside the provider instance.
         :param allow_unstable: Whether to allow the use of unstable images.
+        :param clean_existing: Whether pre-existing instances should be wiped
+          and re-created.
         :returns: a context manager of the provider instance.
         """
         instance_name = self._get_instance_name(work_dir, build_info)
@@ -124,6 +145,9 @@ class ProviderService(base.ProjectService):
         provider = self.get_provider(name=self.__provider_name)
 
         provider.ensure_provider_is_available()
+
+        if clean_existing:
+            self._clean_instance(provider, work_dir, build_info)
 
         emit.progress(f"Launching managed {base_name[0]} {base_name[1]} instance...")
         with provider.launched_environment(
@@ -206,12 +230,12 @@ class ProviderService(base.ProjectService):
             emit.debug(f"Using provider {name!r} passed as an argument.")
             chosen_provider: str = name
 
-        # (2) get the provider from the environment (CRAFT_BUILD_ENVIRONMENT),
-        elif env_provider := os.getenv("CRAFT_BUILD_ENVIRONMENT"):
-            emit.debug(f"Using provider {env_provider!r} from environment.")
-            chosen_provider = env_provider
+        # (2) get the provider from build_environment
+        elif provider := self._services.config.get("build_environment"):
+            emit.debug(f"Using provider {provider!r} from system configuration.")
+            chosen_provider = provider
 
-        # (3) use provider specified with snap configuration,
+        # (3) use provider specified in snap configuration
         elif snap_provider := self._get_provider_from_snap_config():
             emit.debug(f"Using provider {snap_provider!r} from snap config.")
             chosen_provider = snap_provider
@@ -259,9 +283,7 @@ class ProviderService(base.ProjectService):
             emit.progress(f"Cleaning build {target}")
 
         for info in build_plan:
-            instance_name = self._get_instance_name(self._work_dir, info)
-            emit.debug(f"Cleaning instance {instance_name}")
-            provider.clean_project_environments(instance_name=instance_name)
+            self._clean_instance(provider, self._work_dir, info)
 
     def _get_instance_name(
         self, work_dir: pathlib.Path, build_info: models.BuildInfo
@@ -285,7 +307,7 @@ class ProviderService(base.ProjectService):
 
     def _get_lxd_provider(self) -> LXDProvider:
         """Get the LXD provider for this manager."""
-        lxd_remote = os.getenv("CRAFT_LXD_REMOTE", "local")
+        lxd_remote = self._services.config.get("lxd_remote")
         return LXDProvider(lxd_project=self._app.name, lxd_remote=lxd_remote)
 
     def _get_multipass_provider(self) -> MultipassProvider:
@@ -324,3 +346,14 @@ class ProviderService(base.ProjectService):
             content=io.BytesIO(bashrc),
             file_mode="644",
         )
+
+    def _clean_instance(
+        self,
+        provider: craft_providers.Provider,
+        work_dir: pathlib.Path,
+        info: models.BuildInfo,
+    ) -> None:
+        """Clean an instance, if it exists."""
+        instance_name = self._get_instance_name(work_dir, info)
+        emit.debug(f"Cleaning instance {instance_name}")
+        provider.clean_project_environments(instance_name=instance_name)

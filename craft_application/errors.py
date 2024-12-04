@@ -17,6 +17,7 @@
 
 All errors inherit from craft_cli.CraftError.
 """
+
 from __future__ import annotations
 
 import os
@@ -52,6 +53,8 @@ class YamlError(CraftError, yaml.YAMLError):
     def from_yaml_error(cls, filename: str, error: yaml.YAMLError) -> Self:
         """Convert a pyyaml YAMLError to a craft-application YamlError."""
         message = f"error parsing {filename!r}"
+        if isinstance(error, yaml.MarkedYAMLError):
+            message += f": {error.problem}"
         details = str(error)
         return cls(
             message,
@@ -150,8 +153,11 @@ class EmptyBuildPlanError(CraftError):
     """The build plan filtered out all possible builds."""
 
     def __init__(self) -> None:
-        message = "No build matches the current platform."
-        resolution = 'Check the "--platform" and "--build-for" parameters.'
+        message = "No build matches the current execution environment."
+        resolution = (
+            "Check the project's 'platforms' declaration, and the "
+            "'--platform' and '--build-for' parameters."
+        )
 
         super().__init__(message=message, resolution=resolution)
 
@@ -239,6 +245,14 @@ class CancelFailedError(RemoteBuildError):
         )
 
 
+class FetchServiceError(CraftError):
+    """Errors related to the fetch-service."""
+
+
+class InitError(CraftError):
+    """Errors related to initialising a project."""
+
+
 class UbuntuProError(CraftError):
     """Base Exception class for ProServices."""
 
@@ -262,7 +276,6 @@ class UbuntuProClientNotFoundError(UbuntuProApiError):
     """Raised when Ubuntu Pro client was not found on the system."""
 
     def __init__(self, path: str) -> None:
-
         message = f'The Ubuntu Pro client was not found on the system at "{path}"'
 
         super().__init__(message=message)
@@ -272,7 +285,6 @@ class UbuntuProDetachedError(InvalidUbuntuProStateError):
     """Raised when Ubuntu Pro is not attached, but Pro services were requested."""
 
     def __init__(self) -> None:
-
         message = "Ubuntu Pro is requested, but was found detached."
         resolution = 'Attach Ubuntu Pro to continue. See "pro" command for details.'
 
@@ -283,7 +295,6 @@ class UbuntuProAttachedError(InvalidUbuntuProStateError):
     """Raised when Ubuntu Pro is attached, but Pro services were not requested."""
 
     def __init__(self) -> None:
-
         message = "Ubuntu Pro is not requested, but was found attached."
         resolution = 'Detach Ubuntu Pro to continue. See "pro" command for details.'
 
@@ -297,7 +308,6 @@ class InvalidUbuntuProServiceError(InvalidUbuntuProStateError):
     # if so where is the list of supported service names?
 
     def __init__(self, invalid_services: set[str]) -> None:
-
         invalid_services_str = "".join(invalid_services)
 
         message = "Invalid Ubuntu Pro Services were requested."
@@ -312,20 +322,15 @@ class InvalidUbuntuProServiceError(InvalidUbuntuProStateError):
 
 
 class InvalidUbuntuProStatusError(InvalidUbuntuProStateError):
-    """Raised when the incorrect set of Pro Services are enabled."""
+    """Raised when a set of requested Pro Services are disabled."""
 
-    def __init__(
-        self, requested_services: set[str], available_services: set[str]
-    ) -> None:
+    def __init__(self, requested_services: set[str]) -> None:
+        requested_services_str = ", ".join(requested_services)
 
-        enable_services_str = " ".join(requested_services - available_services)
-        disable_services_str = " ".join(available_services - requested_services)
-
-        message = "Incorrect Ubuntu Pro Services were enabled."
+        message = "Some of the requested Ubuntu Pro Services are disabled."
         resolution = (
-            "Please enable or disable the following services.\n"
-            f"Enable: {enable_services_str}\n"
-            f"Disable: {disable_services_str}\n"
+            "Please enable the following services.\n"
+            f"Enable: {requested_services_str}\n"
             'See "pro" command for details.'
         )
 

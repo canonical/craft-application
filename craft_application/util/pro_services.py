@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU Lesser General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Handling of Ubuntu Pro Services."""
+
 from __future__ import annotations
 
 import json
@@ -72,6 +73,8 @@ class ProServices(set[str]):
     # placeholder for empty sets
     empty_placeholder = "none"
 
+    managed_mode = False
+
     supported_services: set[str] = {
         "esm-apps",
         "esm-infra",
@@ -84,7 +87,6 @@ class ProServices(set[str]):
     pro_executable: Path | None = next(
         (path for path in PRO_CLIENT_PATHS if path.exists()), None
     )
-    # locations to check for pro client
 
     def __str__(self) -> str:
         """Convert to string for display to user."""
@@ -165,7 +167,7 @@ class ProServices(set[str]):
         return response["data"]["attributes"]["is_attached"]  # type: ignore [no-any-return]
 
     @classmethod
-    def get_pro_services(cls) -> ProServices:
+    def _get_pro_services(cls) -> set[str]:
         """Return set of enabled Ubuntu Pro services in the environment.
 
         The returned set only includes services relevant to lifecycle commands.
@@ -176,9 +178,15 @@ class ProServices(set[str]):
         service_names = {service["name"] for service in enabled_services}
 
         # remove any services that aren't relevant to build services
-        service_names = service_names.intersection(cls.supported_services)
+        return service_names.intersection(cls.supported_services)
 
-        return cls(service_names)
+    @classmethod
+    def get_pro_services(cls) -> ProServices:
+        """Return a class of enabled Ubuntu Pro services in the environment.
+
+        The returned set only includes services relevant to lifecycle commands.
+        """
+        return cls(cls._get_pro_services())
 
     def validate(
         self,
@@ -198,22 +206,28 @@ class ProServices(set[str]):
 
             if self.is_pro_attached() != bool(self):
                 if ValidatorOptions._ATTACHED in options and self:  # type: ignore [reportPrivateUsage]
-                    # Ubuntu Pro is requested but not attached
+                    # Pro rock is requested but the host is not attached
                     raise UbuntuProDetachedError
 
-                if ValidatorOptions._DETACHED in options and not self:  # type: ignore [reportPrivateUsage]
-                    # Ubuntu Pro is not requested but attached
+                if (
+                    ValidatorOptions._DETACHED in options  # type: ignore [reportPrivateUsage]
+                    and not self
+                    and not self.managed_mode
+                ):
+                    # Pro rock is not requested but the host is attached
                     raise UbuntuProAttachedError
 
             # second, check that the set of enabled pro services in the environment matches
             # the services specified in this set
-            if ValidatorOptions.ENABLEMENT in options and (
-                (available_services := self.get_pro_services()) != self
+            available_services = self._get_pro_services()
+            if (
+                ValidatorOptions.ENABLEMENT in options
+                and str(self) != self.empty_placeholder
+                and not self.issubset(available_services)
             ):
-                raise InvalidUbuntuProStatusError(self, available_services)
+                raise InvalidUbuntuProStatusError(self)
 
         except UbuntuProClientNotFoundError:
-
             # If The pro client was not found, we may be on a non Ubuntu
             # system, but if Pro services were requested, re-raise error
             if self and not self.pro_client_exists():

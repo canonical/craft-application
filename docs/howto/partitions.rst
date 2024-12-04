@@ -45,45 +45,57 @@ Required application changes
 
 To add partition support to an application, two basic changes are needed:
 
-#. Enable the feature
+#. Enable the feature.
 
-   Use the :class:`Features <craft_parts.Features>` class to specify that the
-   application will use partitions:
+   In your Application subclass, override the following method and invoke the
+   :class:`Features <craft_parts.Features>` class:
 
    .. code-block:: python
 
      from craft_parts import Features
 
-     Features.reset()
-     Features(enable_partitions=True)
+     class ExampleApplication(Application):
 
-   .. NOTE::
-      The ``craft-application`` class :class:`AppFeatures
-      <craft_application.AppFeatures>` has a similar name and serves a similar
-      purpose to ``craft-parts``'s :class:`Features <craft_parts.Features>`,
-      but partitions cannot be enabled via :class:`AppFeatures
-      <craft_application.AppFeatures>`!
+         ...
 
-#. Define the list of partitions
+         @override
+         def _enable_craft_parts_features(self) -> None:
+             Features(enable_partitions=True)
 
-   We need to tell the :class:`LifecycleManager <craft_parts.LifecycleManager>`
-   class about our partitions, but applications do not usually directly
-   instantiate the LifecycleManager.
+   You can only be enable partitions with the :class:`Features
+   <craft_parts.Features>` class from craft-parts. In craft-application
+   there's a similarly-named :class:`AppFeatures
+   <craft_application.AppFeatures>` class which serves a similar purpose,
+   but it can't enable partitions.
 
-   Instead, override your :class:`Application
-   <craft_application.Application>`'s ``_setup_partitions`` method, and return
-   a list of the partitions, which will eventually be passed to the
-   :class:`LifecycleManager <craft_parts.LifecycleManager>`:
+    .. Tip::
+      In unit tests, the :class:`Features <craft_parts.Features>` global
+      singleton may raise exceptions when successive tests repeatedly try to
+      enable partitions.
+
+      To prevent these errors, reset the features at the start of each test:
+
+      .. code-block:: python
+
+        Features.reset()
+
+
+
+#. Define the list of partitions.
+
+   Override the  ``_setup_partitions`` method of your :class:`Application
+   <craft_application.Application>` class and return the list of the
+   partitions.
 
    .. code-block:: python
 
-     class SnackcraftApplication(Application):
+     class ExampleApplication(Application):
 
-       ...
+         ...
 
-       @override
-       def _setup_partitions(self, yaml_data: dict[str, Any]) -> list[str] | None:
-           return ["default", "kernel", "component/bar-baz"]
+         @override
+         def _setup_partitions(self, yaml_data: dict[str, Any]) -> list[str] | None:
+             return ["default", "kernel", "component/bar-baz"]
 
 Using the partitions
 ====================

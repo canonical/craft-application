@@ -100,7 +100,7 @@ def test_secrets_cache(mocker, monkeypatch):
     spied_run.assert_called_once_with("echo ${SECRET_1}")
 
 
-_SECRET = "$(HOST_SECRET:echo ${GIT_VERSION})"  # noqa: S105 (this is not a password)
+_SECRET = "$(HOST_SECRET:echo ${GIT_VERSION})"  # (this is not a password)
 
 
 @pytest.mark.parametrize(
