@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU Lesser General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Tests for lifecycle commands."""
+
 import argparse
 import pathlib
 import subprocess
@@ -73,15 +74,16 @@ PRO_SERVICE_COMMANDS = [
 ]
 
 PRO_SERVICE_CONFIGS = [
-    # is_attached,           enabled_services,           pro_services_args,                  expected_exception
-    (False,                 [],                          [],                                None),
-    (True,                  ["esm-apps"],                ["esm-apps"],                      None),
-    (True,                  ["esm-apps", "fips-updates"],["esm-apps", "fips-updates"],      None),
-    (True,                  ["esm-apps"],                [],                                UbuntuProAttachedError),
-    (False,                 [],                          ["esm-apps"],                      UbuntuProDetachedError),
-    (True,                  ["esm-apps", "fips-updates"],["fips-updates"],                  InvalidUbuntuProStatusError),
-    (True,                  ["esm-apps",],               ["fips-updates", "fips-updates"],  InvalidUbuntuProStatusError),
-    (True,                  ["esm-apps"],                ["esm-apps", "invalid-service"],   InvalidUbuntuProServiceError),
+    # is_attached, is_managed_mode, enabled_services, pro_services_args, expected_exception
+    (False, True, [], [], None),
+    (True, True, ["esm-apps"], ["esm-apps"], None),
+    (True, True, ["esm-apps", "fips-updates"],["esm-apps", "fips-updates"], None),
+    (True, True, ["esm-apps"], [], None),
+    (True, False, ["esm-apps"], [], UbuntuProAttachedError),
+    (False, True, [], ["esm-apps"], UbuntuProDetachedError),
+    (True, True, ["esm-apps", "fips-updates"],["fips-updates"], InvalidUbuntuProStatusError),
+    (True, True, ["esm-apps",], ["fips-updates", "fips-updates"],  InvalidUbuntuProStatusError),
+    (True, True, ["esm-apps"], ["esm-apps", "invalid-service"], InvalidUbuntuProServiceError),
 ]
 
 STEP_NAMES = [step.name.lower() for step in craft_parts.Step]
@@ -115,17 +117,23 @@ def get_fake_command_class(parent_cls, managed):
 
 
 @pytest.mark.parametrize(
-    ("is_attached", "enabled_services", "pro_services_args", "expected_exception"),
+    (
+        "is_attached",
+        "is_managed_mode",
+        "enabled_services",
+        "pro_services_args",
+        "expected_exception",
+    ),
     PRO_SERVICE_CONFIGS,
 )
 def test_validate_pro_services(
     mock_pro_api_call,
     is_attached,
+    is_managed_mode,
     enabled_services,
     pro_services_args,
     expected_exception,
 ):
-
     # configure api state
     set_is_attached, set_enabled_service = mock_pro_api_call
     set_is_attached(is_attached)
@@ -138,6 +146,7 @@ def test_validate_pro_services(
     with exception_context:
         # create and validate pro services
         pro_services = ProServices(pro_services_args)
+        pro_services.managed_mode = is_managed_mode
         pro_services.validate()
 
 
@@ -524,7 +533,13 @@ def test_pack_fill_parser(
 
     args_dict = vars(
         parser.parse_args(
-            [*pro_service_args, *build_env_args, *shell_args, *debug_args, f"--output={output_arg}"]
+            [
+                *pro_service_args,
+                *build_env_args,
+                *shell_args,
+                *debug_args,
+                f"--output={output_arg}",
+            ]
         )
     )
     assert args_dict == expected

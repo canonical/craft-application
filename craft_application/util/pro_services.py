@@ -72,6 +72,8 @@ class ProServices(set[str]):
     # placeholder for empty sets
     empty_placeholder = "none"
 
+    managed_mode = False
+
     supported_services: set[str] = {
         "esm-apps",
         "esm-infra",
@@ -198,12 +200,13 @@ class ProServices(set[str]):
 
             if self.is_pro_attached() != bool(self):
                 if ValidatorOptions._ATTACHED in options and self:  # type: ignore [reportPrivateUsage]
-                    # Ubuntu Pro is requested but not attached
+                    # Pro rock is requested but the host is not attached
                     raise UbuntuProDetachedError
 
                 if ValidatorOptions._DETACHED in options and not self:  # type: ignore [reportPrivateUsage]
-                    # Ubuntu Pro is not requested but attached
-                    raise UbuntuProAttachedError
+                    # Pro rock is not requested but the host is attached
+                    if not self.managed_mode:
+                        raise UbuntuProAttachedError
 
             # second, check that the set of enabled pro services in the environment matches
             # the services specified in this set

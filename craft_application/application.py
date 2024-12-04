@@ -646,18 +646,21 @@ class Application:
                 craft_cli.emit.debug(
                     f"Validating requested Ubuntu Pro status on host: {pro_services}"
                 )
+                pro_services.managed_mode = False
                 pro_services.validate()
             # Validate requested pro services running in managed mode inside a managed instance.
             elif run_managed and is_managed:
                 craft_cli.emit.debug(
                     f"Validating requested Ubuntu Pro status in managed instance: {pro_services}"
                 )
+                pro_services.managed_mode = True
                 pro_services.validate()
             # Validate pro attachment and service names on the host before starting a managed instance.
             elif run_managed and not is_managed:
                 craft_cli.emit.debug(
                     f"Validating requested Ubuntu Pro attachment on host: {pro_services}"
                 )
+                pro_services.managed_mode = True
                 pro_services.validate(
                     options=ValidatorOptions.ATTACHMENT | ValidatorOptions.SUPPORT
                 )
