@@ -22,6 +22,8 @@ Git
     counterparts.
   - Add ``set_no_push()`` to explicitly disable ``push`` for specific remotes.
   - Add ``get_last_commit()`` to retrieve last commit hash and message.
+  - Add ``get_last_commit_on_branch_or_tag()`` to retrieve last commit
+    associated with the given ref.
   - Add ``fetch()`` method for retrieving remote objects.
 
 - Use ``craft.git`` for git-related operations done via ``subprocess`` in
