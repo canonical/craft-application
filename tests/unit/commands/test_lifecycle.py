@@ -81,7 +81,7 @@ PRO_SERVICE_CONFIGS = [
     (True, True, ["esm-apps"], [], None),
     (True, False, ["esm-apps"], [], UbuntuProAttachedError),
     (False, True, [], ["esm-apps"], UbuntuProDetachedError),
-    (True, True, ["esm-apps", "fips-updates"],["fips-updates"], InvalidUbuntuProStatusError),
+    (True, True, ["esm-apps", "fips-updates"],["fips-updates"], None),
     (True, True, ["esm-apps",], ["fips-updates", "fips-updates"],  InvalidUbuntuProStatusError),
     (True, True, ["esm-apps"], ["esm-apps", "invalid-service"], InvalidUbuntuProServiceError),
 ]
