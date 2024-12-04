@@ -31,7 +31,7 @@ def test_fetching_hello_repository(
     ref = "ubuntu/noble"
     git_repo.add_remote(test_remote, hello_repository_lp_url)
     git_repo.fetch(remote=test_remote, ref=ref, depth=1)
-    last_commit_on_fetched_ref = git_repo.last_commit_on_branch_or_tag(
+    last_commit_on_fetched_ref = git_repo.get_last_commit_on_branch_or_tag(
         remote=test_remote, branch_or_tag=f"{test_remote}/{ref}"
     )
     assert isinstance(

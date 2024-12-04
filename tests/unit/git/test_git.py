@@ -1289,3 +1289,57 @@ def test_craftgit_is_used_for_git_operations(
     assert git_repo.git_binary() == expected_binary
 
     which_mock.assert_called_once_with(CRAFTGIT_BINARY_NAME)
+
+
+def test_last_commit_on_branch_or_tag_fails_if_commit_not_found(
+    empty_repository: Path,
+    fake_process: pytest_subprocess.FakeProcess,
+    expected_git_binary: str,
+) -> None:
+    git_repo = GitRepo(empty_repository)
+    branch_or_tag = "test"
+    commit = "non-existent-commit"
+    fake_process.register(
+        [expected_git_binary, "rev-list", "-n", "1", branch_or_tag],
+        stdout=commit,
+    )
+    with pytest.raises(GitError) as git_error:
+        git_repo.get_last_commit_on_branch_or_tag(branch_or_tag)
+    assert (
+        git_error.value.details == f"cannot find commit: {short_commit_sha(commit)!r}"
+    )
+
+
+def test_last_commit_on_branch_or_tag_fails_if_ref_not_found(
+    empty_repository: Path,
+    fake_process: pytest_subprocess.FakeProcess,
+    expected_git_binary: str,
+) -> None:
+    git_repo = GitRepo(empty_repository)
+    branch_or_tag = "test"
+    fake_process.register(
+        [expected_git_binary, "rev-list", "-n", "1", branch_or_tag],
+        returncode=1,
+        stderr=f"fatal: ambiguous argument {branch_or_tag!r}",
+    )
+    with pytest.raises(GitError) as git_error:
+        git_repo.get_last_commit_on_branch_or_tag(branch_or_tag)
+    err_details = cast(str, git_error.value.details)
+    assert err_details.startswith(f"cannot find ref: {branch_or_tag!r}")
+    assert "fatal" in err_details
+
+
+def test_get_last_commit_on_branch_or_tag(
+    repository_with_commit: RepositoryDefinition,
+    fake_process: pytest_subprocess.FakeProcess,
+    expected_git_binary: str,
+) -> None:
+    git_repo = GitRepo(repository_with_commit.repository_path)
+    branch_or_tag = "test"
+    last_commit = git_repo.get_last_commit()
+    fake_process.register(
+        [expected_git_binary, "rev-list", "-n", "1", branch_or_tag],
+        stdout=last_commit.sha,
+    )
+    last_commit_on_branch = git_repo.get_last_commit_on_branch_or_tag(branch_or_tag)
+    assert last_commit_on_branch == last_commit

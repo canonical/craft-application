@@ -248,6 +248,52 @@ class GitRepo:
                 message=commit_message,
             )
 
+    def get_last_commit_on_branch_or_tag(
+        self,
+        branch_or_tag: str,
+        *,
+        remote: str | None = None,
+        fetch: bool = False,
+    ) -> Commit:
+        """Find last commit corresponding to given branch or tag."""
+        if fetch and remote is not None:
+            self.fetch(remote=remote, tags=True)
+        rev_list_output = [
+            self.git_binary(),
+            "rev-list",
+            "-n",
+            "1",
+            branch_or_tag,
+        ]
+        try:
+            rev_parse_output = subprocess.check_output(
+                rev_list_output,
+                text=True,
+                stderr=subprocess.STDOUT,
+            )
+        except subprocess.CalledProcessError as error:
+            error_details = (
+                f"cannot find ref: {branch_or_tag!r}.\nCommand output:\n{error.stdout}"
+            )
+            raise GitError(error_details) from error
+
+        commit_sha = rev_parse_output.strip()
+        try:
+            commit_obj = self._repo.get(commit_sha)
+        except (pygit2.GitError, ValueError) as error:
+            raise GitError(
+                f"cannot find commit: {short_commit_sha(commit_sha)!r}"
+            ) from error
+        else:
+            commit_message = cast(
+                str,
+                commit_obj.message,  # pyright: ignore[reportOptionalMemberAccess,reportAttributeAccessIssue,reportUnknownMemberType]
+            )
+            return Commit(
+                sha=commit_sha,
+                message=commit_message,
+            )
+
     def is_clean(self) -> bool:
         """Check if the repo is clean.
 
@@ -574,48 +620,6 @@ class GitRepo:
                 if line.strip().startswith(f"{remote}/"):
                     return True
         return False
-
-    def last_commit_on_branch_or_tag(
-        self,
-        *,
-        remote: str,
-        branch_or_tag: str,
-        fetch: bool = False,
-    ) -> Commit:
-        """Find last commit corresponding to given branch or tag."""
-        if fetch:
-            self.fetch(remote=remote, tags=True)
-        rev_list_output = [
-            self.git_binary(),
-            "rev-list",
-            "-n",
-            "1",
-            branch_or_tag,
-        ]
-        try:
-            rev_parse_output = subprocess.check_output(
-                rev_list_output,
-                text=True,
-                stderr=subprocess.STDOUT,
-            )
-        except subprocess.CalledProcessError as error:
-            error_details = (
-                f"Cannot find ref {branch_or_tag!r}.\nCommand output:\n{error.stdout}"
-            )
-            raise GitError(error_details) from error
-
-        commit_sha = rev_parse_output.strip()
-        commit_obj = self._repo.get(commit_sha)
-        if commit_obj is None:
-            raise GitError(f"Cannot find commit: {short_commit_sha(commit_sha)!r}")
-        commit_message = cast(
-            str,
-            commit_obj.message,  # pyright: ignore[reportAttributeAccessIssue,reportUnknownMemberType]
-        )
-        return Commit(
-            sha=commit_sha,
-            message=commit_message,
-        )
 
     def describe(
         self,
