@@ -214,8 +214,10 @@ class ProServices(set[str]):
 
             # second, check that the set of enabled pro services in the environment matches
             # the services specified in this set
-            if ValidatorOptions.ENABLEMENT in options and (
-                (available_services := self.get_pro_services()) != self
+            if (
+                ValidatorOptions.ENABLEMENT in options
+                and ((available_services := self.get_pro_services()) != self)
+                and not self.managed_mode
             ):
                 raise InvalidUbuntuProStatusError(self, available_services)
 
