@@ -10,13 +10,13 @@ Changelog
 Git
 ===
 
-- Extend ``craft_application.git`` module with the following APIs:
+- Extend the ``craft_application.git`` module with the following APIs:
 
   - Add ``is_commit(ref)`` and ``is_short_commit(ref)`` helpers for checking if
-    given ref is a valid commit hash.
-  - Add ``Commit`` model to represent ``get_last_commit()`` result.
+    a given ref is a valid commit hash.
+  - Add a ``Commit`` model to represent the result of ``get_last_commit()``.
 
-- Extend ``GitRepo`` class with additional methods:
+- Extend the ``GitRepo`` class with additional methods:
 
   - Add ``set_remote_url()`` and ``set_remote_push_url()`` alongside their get
     counterparts.
