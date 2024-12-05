@@ -250,3 +250,9 @@ class FetchServiceError(CraftError):
 
 class InitError(CraftError):
     """Errors related to initialising a project."""
+
+
+class ManagedUserError(CraftError):
+    """Likely user-errors encountered in managed builds."""
+
+    user_error = True

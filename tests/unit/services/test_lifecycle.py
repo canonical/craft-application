@@ -458,7 +458,6 @@ def test_run_no_step(fake_parts_lifecycle):
         (RuntimeError("yolo"), RuntimeError, "^Parts processing internal error: yolo$"),
         (OSError(0, "Hi"), PartsLifecycleError, "^Hi$"),
         (Exception("u wot m8"), PartsLifecycleError, "^Unknown error: u wot m8$"),
-        (craft_parts.PartsError("parts error"), PartsLifecycleError, "^parts error$"),
     ],
 )
 def test_run_failure(fake_parts_lifecycle, err, exc_class, message_regex):
@@ -466,6 +465,15 @@ def test_run_failure(fake_parts_lifecycle, err, exc_class, message_regex):
 
     with pytest.raises(exc_class, match=message_regex):
         fake_parts_lifecycle.run("pull")
+
+
+def test_run_failure_user_error(fake_parts_lifecycle):
+    fake_parts_lifecycle._lcm.plan.side_effect = craft_parts.PartsError(":(")
+
+    with pytest.raises(craft_parts.PartsError, match=r"^:\($") as exc:
+        fake_parts_lifecycle.run("pull")
+
+    assert exc.value.user_error
 
 
 @pytest.mark.parametrize(

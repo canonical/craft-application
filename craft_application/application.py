@@ -57,6 +57,8 @@ DEFAULT_CLI_LOGGERS = frozenset(
     }
 )
 
+USER_ERROR_CODE = 4
+
 
 @dataclass(frozen=True)
 class AppFeatures:
@@ -463,9 +465,12 @@ class Application:
                             **extra_args,
                         )
                 except subprocess.CalledProcessError as exc:
+                    if exc.returncode == USER_ERROR_CODE:
+                        raise errors.ManagedUserError("Failed to build in instance.")
                     raise craft_providers.ProviderError(
                         f"Failed to execute {self.app.name} in instance."
                     ) from exc
+
                 finally:
                     if self._enable_fetch_service:
                         self.services.fetch.teardown_session()
@@ -645,8 +650,15 @@ class Application:
             return_code = dispatcher.run() or os.EX_OK
         elif not self.is_managed():
             # command runs in inner instance, but this is the outer instance
-            self.run_managed(platform, build_for)
-            return_code = os.EX_OK
+            try:
+                self.run_managed(platform, build_for)
+            except Exception as exc:
+                if getattr(exc, "user_error", False):
+                    return_code = USER_ERROR_CODE
+                else:
+                    raise
+            else:
+                return_code = os.EX_OK
         else:
             # command runs in inner instance
             return_code = dispatcher.run() or 0
@@ -677,7 +689,7 @@ class Application:
                 errors.PartsLifecycleError.from_parts_error(err),
                 cause=err,
             )
-            return_code = 1
+            return_code = USER_ERROR_CODE if err.user_error else 1
         except craft_providers.ProviderError as err:
             self._emit_error(
                 craft_cli.CraftError(
@@ -685,7 +697,7 @@ class Application:
                 ),
                 cause=err,
             )
-            return_code = 1
+            return_code = -1
         except Exception as err:
             self._emit_error(
                 craft_cli.CraftError(f"{self.app.name} internal error: {err!r}"),
@@ -704,7 +716,7 @@ class Application:
     ) -> None:
         """Emit the error in a centralized way so we can alter it consistently."""
         # set the cause, if any
-        if cause is not None:
+        if cause is not None and not getattr(cause, "user_error", False):
             error.__cause__ = cause
 
         # Do not report the internal logpath if running inside an instance
