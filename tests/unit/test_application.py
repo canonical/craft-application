@@ -26,6 +26,7 @@ import re
 import subprocess
 import sys
 import textwrap
+from io import StringIO
 from textwrap import dedent
 from typing import Any
 from unittest import mock
@@ -39,6 +40,7 @@ import pydantic
 import pytest
 import pytest_check
 from craft_application import (
+    ProviderService,
     application,
     commands,
     errors,
@@ -46,6 +48,11 @@ from craft_application import (
     secrets,
     services,
     util,
+)
+from craft_application.commands import (
+    AppCommand,
+    get_lifecycle_command_group,
+    get_other_command_group,
 )
 from craft_application.models import BuildInfo
 from craft_application.util import (
@@ -55,6 +62,8 @@ from craft_cli import emit
 from craft_parts.plugins.plugins import PluginType
 from craft_providers import bases, lxd
 from overrides import override
+
+from tests.conftest import FakeApplication
 
 EMPTY_COMMAND_GROUP = craft_cli.CommandGroup("FakeCommands", [])
 BASIC_PROJECT_YAML = """
@@ -367,35 +376,6 @@ def test_app_metadata_default_mandatory_adoptable_fields():
     assert app.mandatory_adoptable_fields == ["version"]
 
 
-class FakeApplication(application.Application):
-    """An application class explicitly for testing. Adds some convenient test hooks."""
-
-    platform: str = "unknown-platform"
-    build_on: str = "unknown-build-on"
-    build_for: str | None = "unknown-build-for"
-
-    def set_project(self, project):
-        self._Application__project = project
-
-    @override
-    def _extra_yaml_transform(
-        self,
-        yaml_data: dict[str, Any],
-        *,
-        build_on: str,
-        build_for: str | None,
-    ) -> dict[str, Any]:
-        self.build_on = build_on
-        self.build_for = build_for
-
-        return yaml_data
-
-
-@pytest.fixture
-def app(app_metadata, fake_services):
-    return FakeApplication(app_metadata, fake_services)
-
-
 class FakePlugin(craft_parts.plugins.Plugin):
     def __init__(self, properties, part_info):
         pass
@@ -441,9 +421,9 @@ def mock_dispatcher(monkeypatch):
         (
             [[]],
             [
+                EMPTY_COMMAND_GROUP,
                 commands.get_lifecycle_command_group(),
                 commands.get_other_command_group(),
-                EMPTY_COMMAND_GROUP,
             ],
         ),
     ],
@@ -484,6 +464,51 @@ def test_merge_command_groups(app):
     }
 
 
+def test_merge_default_commands(app):
+    """Merge commands with the same name within the same groups."""
+    stage_command = _create_command("stage")
+    extra_lifecycle_command = _create_command("extra")
+    init_command = _create_command("init")
+    extra_other_command = _create_command("extra")
+
+    app.add_command_group("Lifecycle", [stage_command, extra_lifecycle_command])
+    app.add_command_group("Other", [init_command, extra_other_command])
+    command_groups = app.command_groups
+
+    # check against hardcoded list because the order is important
+    assert command_groups == [
+        craft_cli.CommandGroup(
+            name="Lifecycle",
+            commands=[
+                commands.lifecycle.CleanCommand,
+                commands.lifecycle.PullCommand,
+                commands.lifecycle.BuildCommand,
+                stage_command,
+                commands.lifecycle.PrimeCommand,
+                commands.lifecycle.PackCommand,
+                extra_lifecycle_command,
+            ],
+            ordered=True,
+        ),
+        craft_cli.CommandGroup(
+            name="Other",
+            commands=[
+                init_command,
+                commands.other.VersionCommand,
+                extra_other_command,
+            ],
+            ordered=False,
+        ),
+    ]
+
+
+def test_merge_default_commands_only(app):
+    """Use default commands if no app commands are provided."""
+    command_groups = app.command_groups
+
+    assert command_groups == [get_lifecycle_command_group(), get_other_command_group()]
+
+
 @pytest.mark.parametrize(
     ("provider_managed", "expected"),
     [(True, pathlib.PurePosixPath("/tmp/testcraft.log")), (False, None)],
@@ -512,6 +537,7 @@ def test_run_managed_success(mocker, app, fake_project, fake_build_plan):
         mock.call(
             fake_build_plan[0],
             work_dir=mock.ANY,
+            clean_existing=False,
         )
         in mock_provider.instance.mock_calls
     )
@@ -640,8 +666,12 @@ def test_run_managed_multiple(app, fake_project):
 
     app.run_managed(None, None)
 
-    assert mock.call(info2, work_dir=mock.ANY) in mock_provider.instance.mock_calls
-    assert mock.call(info1, work_dir=mock.ANY) in mock_provider.instance.mock_calls
+    extra_args = {
+        "work_dir": mock.ANY,
+        "clean_existing": False,
+    }
+    assert mock.call(info2, **extra_args) in mock_provider.instance.mock_calls
+    assert mock.call(info1, **extra_args) in mock_provider.instance.mock_calls
 
 
 def test_run_managed_specified_arch(app, fake_project):
@@ -656,8 +686,12 @@ def test_run_managed_specified_arch(app, fake_project):
 
     app.run_managed(None, "arch2")
 
-    assert mock.call(info2, work_dir=mock.ANY) in mock_provider.instance.mock_calls
-    assert mock.call(info1, work_dir=mock.ANY) not in mock_provider.instance.mock_calls
+    extra_args = {
+        "work_dir": mock.ANY,
+        "clean_existing": False,
+    }
+    assert mock.call(info2, **extra_args) in mock_provider.instance.mock_calls
+    assert mock.call(info1, **extra_args) not in mock_provider.instance.mock_calls
 
 
 def test_run_managed_specified_platform(app, fake_project):
@@ -672,8 +706,52 @@ def test_run_managed_specified_platform(app, fake_project):
 
     app.run_managed("a2", None)
 
-    assert mock.call(info2, work_dir=mock.ANY) in mock_provider.instance.mock_calls
-    assert mock.call(info1, work_dir=mock.ANY) not in mock_provider.instance.mock_calls
+    extra_args = {
+        "work_dir": mock.ANY,
+        "clean_existing": False,
+    }
+    assert mock.call(info2, **extra_args) in mock_provider.instance.mock_calls
+    assert mock.call(info1, **extra_args) not in mock_provider.instance.mock_calls
+
+
+def test_run_managed_empty_plan(app, fake_project):
+    app.set_project(fake_project)
+
+    app._build_plan = []
+    with pytest.raises(errors.EmptyBuildPlanError):
+        app.run_managed(None, None)
+
+
+@pytest.mark.parametrize(
+    ("parsed_args", "environ", "item", "expected"),
+    [
+        (argparse.Namespace(), {}, "build_for", None),
+        (argparse.Namespace(build_for=None), {}, "build_for", None),
+        (
+            argparse.Namespace(build_for=None),
+            {"CRAFT_BUILD_FOR": "arm64"},
+            "build_for",
+            "arm64",
+        ),
+        (
+            argparse.Namespace(build_for=None),
+            {"TESTCRAFT_BUILD_FOR": "arm64"},
+            "build_for",
+            "arm64",
+        ),
+        (
+            argparse.Namespace(build_for="riscv64"),
+            {"TESTCRAFT_BUILD_FOR": "arm64"},
+            "build_for",
+            "riscv64",
+        ),
+    ],
+)
+def test_get_arg_or_config(monkeypatch, app, parsed_args, environ, item, expected):
+    for var, content in environ.items():
+        monkeypatch.setenv(var, content)
+
+    assert app.get_arg_or_config(parsed_args, item) == expected
 
 
 @pytest.mark.parametrize(
@@ -690,6 +768,7 @@ def test_run_managed_specified_platform(app, fake_project):
         ),
     ],
 )
+@pytest.mark.usefixtures("emitter")
 def test_get_dispatcher_error(
     monkeypatch, check, capsys, app, mock_dispatcher, managed, error, exit_code, message
 ):
@@ -710,7 +789,7 @@ def test_craft_lib_log_level(app_metadata, fake_services):
         "craft_parts",
         "craft_providers",
         "craft_store",
-        "craft_application.remote",
+        "craft_application",
     ]
 
     # The logging module is stateful and global, so first lets clear the logging level
@@ -1034,6 +1113,7 @@ def test_run_success_managed_inside_managed(
         ),
     ],
 )
+@pytest.mark.usefixtures("emitter")
 def test_run_error(
     monkeypatch,
     capsys,
@@ -1074,7 +1154,7 @@ def test_run_error(
                 """\
                 Failed to run the build script for part 'foo'.
                 Recommended resolution: Check the build output and verify the project can work with the 'python' plugin.
-                For more information, check out: http://craft-app.com/reference/plugins.html
+                For more information, check out: http://testcraft.example/reference/plugins.html
                 Full execution log:"""
             ),
         ),
@@ -1103,6 +1183,7 @@ def test_run_error_with_docs_url(
 
 
 @pytest.mark.parametrize("error", [KeyError(), ValueError(), Exception()])
+@pytest.mark.usefixtures("emitter")
 def test_run_error_debug(monkeypatch, mock_dispatcher, app, fake_project, error):
     app.set_project(fake_project)
     mock_dispatcher.load_command.side_effect = error
@@ -2187,9 +2268,9 @@ def test_build_planner_errors(tmp_path, monkeypatch, fake_services):
 def test_emitter_docs_url(monkeypatch, mocker, app):
     """Test that the emitter is initialized with the correct url."""
 
-    assert app.app.docs_url == "www.craft-app.com/docs/{version}"
+    assert app.app.docs_url == "www.testcraft.example/docs/{version}"
     assert app.app.version == "3.14159"
-    expected_url = "www.craft-app.com/docs/3.14159"
+    expected_url = "www.testcraft.example/docs/3.14159"
 
     spied_init = mocker.spy(emit, "init")
 
@@ -2198,6 +2279,107 @@ def test_emitter_docs_url(monkeypatch, mocker, app):
         app.run()
 
     assert spied_init.mock_calls[0].kwargs["docs_base_url"] == expected_url
+
+
+def test_clean_platform(monkeypatch, tmp_path, app_metadata, fake_services, mocker):
+    """Test that calling "clean --platform=x" correctly filters the build plan."""
+    data = util.safe_yaml_load(StringIO(BASIC_PROJECT_YAML))
+    # Put a few different platforms on the project
+    arch = util.get_host_architecture()
+    build_on_for = {
+        "build-on": [arch],
+        "build-for": [arch],
+    }
+    data["platforms"] = {
+        "plat1": build_on_for,
+        "plat2": build_on_for,
+        "plat3": build_on_for,
+    }
+    project_file = tmp_path / "testcraft.yaml"
+    project_file.write_text(util.dump_yaml(data))
+    monkeypatch.setattr(sys, "argv", ["testcraft", "clean", "--platform=plat2"])
+
+    mocked_clean = mocker.patch.object(ProviderService, "_clean_instance")
+    app = FakeApplication(app_metadata, fake_services)
+    app.project_dir = tmp_path
+
+    fake_services.project = None
+
+    app.run()
+
+    expected_info = models.BuildInfo(
+        platform="plat2",
+        build_on=arch,
+        build_for=arch,
+        base=bases.BaseName("ubuntu", "24.04"),
+    )
+    mocked_clean.assert_called_once_with(mocker.ANY, mocker.ANY, expected_info)
+
+
+class AppConfigCommand(AppCommand):
+
+    name: str = "app-config"
+    help_msg: str = "Help text"
+    overview: str = "Overview"
+
+    def fill_parser(self, parser: argparse.ArgumentParser) -> None:
+
+        name = self._app.name
+        parser.add_argument(
+            "app-name",
+            help=f"The name of the app, which is {name!r}.",
+        )
+
+
+@pytest.mark.usefixtures("emitter")
+def test_app_config_in_help(
+    monkeypatch,
+    capsys,
+    app,
+):
+    app.add_command_group("Test", [AppConfigCommand])
+    monkeypatch.setattr(sys, "argv", ["testcraft", "app-config", "-h"])
+
+    with pytest.raises(SystemExit):
+        app.run()
+
+    expected = "app-name:  The name of the app, which is 'testcraft'."
+    _, err = capsys.readouterr()
+    assert expected in err
+
+
+@pytest.mark.parametrize(
+    "help_args",
+    [
+        pytest.param(["--help"], id="simple help"),
+        pytest.param(["help", "--all"], id="detailed help"),
+    ],
+)
+@pytest.mark.usefixtures("emitter")
+def test_doc_url_in_general_help(help_args, monkeypatch, capsys, app):
+    """General help messages contain a link to the documentation."""
+    monkeypatch.setattr(sys, "argv", ["testcraft", *help_args])
+
+    with pytest.raises(SystemExit):
+        app.run()
+
+    expected = "For more information about testcraft, check out: www.testcraft.example/docs/3.14159\n\n"
+    _, err = capsys.readouterr()
+    assert err.endswith(expected)
+
+
+@pytest.mark.usefixtures("emitter")
+def test_doc_url_in_command_help(monkeypatch, capsys, app):
+    """Command help messages contain a link to the command's doc page."""
+    app.add_command_group("Test", [AppConfigCommand])
+    monkeypatch.setattr(sys, "argv", ["testcraft", "app-config", "-h"])
+
+    with pytest.raises(SystemExit):
+        app.run()
+
+    expected = "For more information, check out: www.testcraft.example/docs/3.14159/reference/commands/app-config\n\n"
+    _, err = capsys.readouterr()
+    assert err.endswith(expected)
 
 
 # fmt: off

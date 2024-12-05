@@ -74,12 +74,57 @@ def test_set_kwargs(
         app_metadata, project=fake_project, PackageClass=MockPackageService
     )
 
-    factory.set_kwargs("package", **kwargs)
+    with pytest.warns(PendingDeprecationWarning):
+        factory.set_kwargs("package", **kwargs)
 
     check.equal(factory.package, MockPackageService.mock_class.return_value)
     with check:
         MockPackageService.mock_class.assert_called_once_with(
             app=app_metadata, services=factory, project=fake_project, **kwargs
+        )
+
+
+@pytest.mark.parametrize(
+    ("first_kwargs", "second_kwargs", "expected"),
+    [
+        ({}, {}, {}),
+        (
+            {"arg_1": None},
+            {"arg_b": "something"},
+            {"arg_1": None, "arg_b": "something"},
+        ),
+        (
+            {"overridden": False},
+            {"overridden": True},
+            {"overridden": True},
+        ),
+    ],
+)
+def test_update_kwargs(
+    app_metadata,
+    fake_project,
+    fake_package_service_class,
+    first_kwargs,
+    second_kwargs,
+    expected,
+):
+    class MockPackageService(fake_package_service_class):
+        mock_class = mock.Mock(return_value=mock.Mock(spec_set=services.PackageService))
+
+        def __new__(cls, *args, **kwargs):
+            return cls.mock_class(*args, **kwargs)
+
+    factory = services.ServiceFactory(
+        app_metadata, project=fake_project, PackageClass=MockPackageService
+    )
+
+    factory.update_kwargs("package", **first_kwargs)
+    factory.update_kwargs("package", **second_kwargs)
+
+    pytest_check.is_(factory.package, MockPackageService.mock_class.return_value)
+    with pytest_check.check():
+        MockPackageService.mock_class.assert_called_once_with(
+            app=app_metadata, services=factory, project=fake_project, **expected
         )
 
 

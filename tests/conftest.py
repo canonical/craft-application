@@ -19,15 +19,21 @@ from __future__ import annotations
 import os
 import pathlib
 import shutil
+import subprocess
+from dataclasses import dataclass
 from importlib import metadata
 from typing import TYPE_CHECKING, Any
 
 import craft_application
 import craft_parts
+import jinja2
+import pydantic
 import pytest
-from craft_application import application, models, services, util
+from craft_application import application, git, launchpad, models, services, util
 from craft_cli import EmitterMode, emit
 from craft_providers import bases
+from jinja2 import FileSystemLoader
+from typing_extensions import override
 
 if TYPE_CHECKING:  # pragma: no cover
     from collections.abc import Iterator
@@ -58,19 +64,39 @@ def features(request) -> dict[str, bool]:
     return features
 
 
+class FakeConfigModel(craft_application.ConfigModel):
+
+    my_str: str
+    my_int: int
+    my_bool: bool
+    my_default_str: str = "default"
+    my_default_int: int = -1
+    my_default_bool: bool = True
+    my_default_factory: dict[str, str] = pydantic.Field(
+        default_factory=lambda: {"dict": "yes"}
+    )
+    my_arch: launchpad.Architecture
+
+
 @pytest.fixture(scope="session")
-def default_app_metadata() -> craft_application.AppMetadata:
+def fake_config_model() -> type[FakeConfigModel]:
+    return FakeConfigModel
+
+
+@pytest.fixture(scope="session")
+def default_app_metadata(fake_config_model) -> craft_application.AppMetadata:
     with pytest.MonkeyPatch.context() as m:
         m.setattr(metadata, "version", lambda _: "3.14159")
         return craft_application.AppMetadata(
             "testcraft",
             "A fake app for testing craft-application",
             source_ignore_patterns=["*.snap", "*.charm", "*.starcraft"],
+            ConfigModel=fake_config_model,
         )
 
 
 @pytest.fixture
-def app_metadata(features) -> craft_application.AppMetadata:
+def app_metadata(features, fake_config_model) -> craft_application.AppMetadata:
     with pytest.MonkeyPatch.context() as m:
         m.setattr(metadata, "version", lambda _: "3.14159")
         return craft_application.AppMetadata(
@@ -78,7 +104,8 @@ def app_metadata(features) -> craft_application.AppMetadata:
             "A fake app for testing craft-application",
             source_ignore_patterns=["*.snap", "*.charm", "*.starcraft"],
             features=craft_application.AppFeatures(**features),
-            docs_url="www.craft-app.com/docs/{version}",
+            docs_url="www.testcraft.example/docs/{version}",
+            ConfigModel=fake_config_model,
         )
 
 
@@ -89,7 +116,7 @@ def app_metadata_docs(features) -> craft_application.AppMetadata:
         return craft_application.AppMetadata(
             "testcraft",
             "A fake app for testing craft-application",
-            docs_url="http://craft-app.com",
+            docs_url="http://testcraft.example",
             source_ignore_patterns=["*.snap", "*.charm", "*.starcraft"],
             features=craft_application.AppFeatures(**features),
         )
@@ -273,15 +300,147 @@ def fake_lifecycle_service_class(tmp_path, fake_build_plan):
 
 
 @pytest.fixture
+def fake_init_service_class(tmp_path):
+    class FakeInitService(services.InitService):
+        def _get_loader(self, template_dir: pathlib.Path) -> jinja2.BaseLoader:
+            return FileSystemLoader(tmp_path / "templates" / template_dir)
+
+    return FakeInitService
+
+
+@pytest.fixture
 def fake_services(
-    app_metadata, fake_project, fake_lifecycle_service_class, fake_package_service_class
+    app_metadata,
+    fake_project,
+    fake_lifecycle_service_class,
+    fake_package_service_class,
+    fake_init_service_class,
 ):
     return services.ServiceFactory(
         app_metadata,
         project=fake_project,
         PackageClass=fake_package_service_class,
         LifecycleClass=fake_lifecycle_service_class,
+        InitClass=fake_init_service_class,
     )
+
+
+class FakeApplication(application.Application):
+    """An application class explicitly for testing. Adds some convenient test hooks."""
+
+    platform: str = "unknown-platform"
+    build_on: str = "unknown-build-on"
+    build_for: str | None = "unknown-build-for"
+
+    def set_project(self, project):
+        self._Application__project = project
+
+    @override
+    def _extra_yaml_transform(
+        self,
+        yaml_data: dict[str, Any],
+        *,
+        build_on: str,
+        build_for: str | None,
+    ) -> dict[str, Any]:
+        self.build_on = build_on
+        self.build_for = build_for
+
+        return yaml_data
+
+
+@pytest.fixture
+def app(app_metadata, fake_services):
+    return FakeApplication(app_metadata, fake_services)
+
+
+@pytest.fixture
+def manifest_data_dir():
+    return pathlib.Path(__file__).parent / "data/manifest"
+
+
+@pytest.fixture
+def new_dir(tmp_path):
+    """Change to a new temporary directory."""
+    cwd = pathlib.Path.cwd()
+    os.chdir(tmp_path)
+
+    yield tmp_path
+
+    os.chdir(cwd)
+
+
+@pytest.fixture
+def empty_working_directory(
+    tmp_path: pathlib.Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> pathlib.Path:
+    repo_dir = pathlib.Path(tmp_path, "test-repo")
+    repo_dir.mkdir()
+    monkeypatch.chdir(repo_dir)
+    return repo_dir
+
+
+@pytest.fixture
+def empty_repository(empty_working_directory: pathlib.Path) -> pathlib.Path:
+    subprocess.run(["git", "init"], check=True)
+    return empty_working_directory
+
+
+@dataclass
+class RepositoryDefinition:
+    repository_path: pathlib.Path
+    commit: str
+    tag: str | None = None
+
+    @property
+    def short_commit(self) -> str:
+        """Return abbreviated commit."""
+        return git.short_commit_sha(self.commit)
+
+
+@pytest.fixture
+def repository_with_commit(empty_repository: pathlib.Path) -> RepositoryDefinition:
+    repo = git.GitRepo(empty_repository)
+    (empty_repository / "Some file").touch()
+    repo.add_all()
+    commit_sha = repo.commit("1")
+    return RepositoryDefinition(
+        repository_path=empty_repository,
+        commit=commit_sha,
+    )
+
+
+@pytest.fixture
+def repository_with_annotated_tag(
+    repository_with_commit: RepositoryDefinition,
+) -> RepositoryDefinition:
+    test_tag = "v3.2.1"
+    subprocess.run(
+        ["git", "config", "--local", "user.name", "Testcraft", test_tag], check=True
+    )
+    subprocess.run(
+        ["git", "config", "--local", "user.email", "testcraft@canonical.com", test_tag],
+        check=True,
+    )
+    subprocess.run(["git", "tag", "-a", "-m", "testcraft tag", test_tag], check=True)
+    repository_with_commit.tag = test_tag
+    return repository_with_commit
+
+
+@pytest.fixture
+def repository_with_unannotated_tag(
+    repository_with_commit: RepositoryDefinition,
+) -> RepositoryDefinition:
+    subprocess.run(["git", "config", "--local", "user.name", "Testcraft"], check=True)
+    subprocess.run(
+        ["git", "config", "--local", "user.email", "testcraft@canonical.com"],
+        check=True,
+    )
+    test_tag = "non-annotated"
+    subprocess.run(["git", "tag", test_tag], check=True)
+    repository_with_commit.tag = test_tag
+    return repository_with_commit
 
 
 @pytest.fixture

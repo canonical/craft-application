@@ -47,10 +47,6 @@ if TYPE_CHECKING:  # pragma: no cover
 DEFAULT_POLL_INTERVAL = 30
 
 
-def _get_launchpad_instance(default: str = "production") -> str:
-    return os.getenv("CRAFT_LAUNCHPAD_INSTANCE", default)
-
-
 class RemoteBuildService(base.AppService):
     """Abstract service for performing remote builds."""
 
@@ -254,7 +250,7 @@ class RemoteBuildService(base.AppService):
         with craft_cli.emit.pause():
             return launchpad.Launchpad.login(
                 f"{self._app.name}/{self._app.version}",
-                root=_get_launchpad_instance(),
+                root=self._services.config.get("launchpad_instance"),
                 credentials_file=credentials_filepath,
             )
 

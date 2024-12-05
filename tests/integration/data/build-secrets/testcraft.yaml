@@ -7,7 +7,6 @@ platforms:
   arm64:
   armhf:
   i386:
-  powerpc:
   ppc64el:
   riscv64:
   s390x:

@@ -1,0 +1,70 @@
+- component-name: Translation
+  component-version: ''
+  component-description: ''
+  component-id:
+    hashes:
+      sha1: af5834abfa1a537fd383d41f1be33cea47c7b6a7
+      sha256: 38cbbf5467682ada956d14168e301a383d96aaa2f1f694cbaa47cee38b47847d
+  architecture: ''
+  type: application/x.apt.translation
+  component-author: Ubuntu
+  component-vendor: Ubuntu
+  size: 111544
+  url:
+  - http://archive.ubuntu.com/ubuntu/dists/jammy/multiverse/i18n/by-hash/SHA256/38cbbf5467682ada956d14168e301a383d96aaa2f1f694cbaa47cee38b47847d
+- component-name: Packages.xz
+  component-version: jammy
+  component-description: jammy main Packages file
+  component-id:
+    hashes:
+      sha1: 370c66437d49460dbc16be011209c4de9977212d
+      sha256: 37cb57f1554cbfa71c5a29ee9ffee18a9a8c1782bb0568e0874b7ff4ce8f9c11
+  architecture: amd64
+  type: application/x.apt.packages
+  component-author: Ubuntu
+  component-vendor: Ubuntu
+  size: 1394768
+  url:
+  - http://archive.ubuntu.com/ubuntu/dists/jammy/main/binary-amd64/by-hash/SHA256/37cb57f1554cbfa71c5a29ee9ffee18a9a8c1782bb0568e0874b7ff4ce8f9c11
+- component-name: go
+  component-version: '10660'
+  component-description: The Go programming language
+  component-id:
+    hashes:
+      sha1: 376506001849698af3f9e07a236a47ee8cddded0
+      sha256: cf7e02ebfdaa898107d2dbf84cf1231cee6c244dd5646580d09cfd6f6cf12577
+  architecture: amd64
+  type: application/x.canonical.snap-package
+  component-author: ''
+  component-vendor: Canonical
+  size: 64892928
+  url:
+  - https://canonical-bos01.cdn.snapcraftcontent.com:443/download-origin/canonical-lgw01/Md1HBASHzP4i0bniScAjXGnOII9cEK6e_10660.snap?interactive=1&token=1720738800_68d3c27ac109407168ed776e46653c7883b8ef40
+- component-name: ''
+  component-version: ''
+  component-description: ''
+  component-id:
+    hashes:
+      sha1: e98024bd74a166549e5dad777a48bb25eb6163a4
+      sha256: d0bb57a19474b186870c05a22a29bda1d51e5e01e3d46a0bef27987ec2354896
+  architecture: ''
+  type: application/x.git.upload-pack-result.fetch
+  component-author: ''
+  component-vendor: ''
+  size: 473833
+  url:
+  - https://github.com:443/canonical/sphinx-docs-starter-pack.git/git-upload-pack
+- component-name: ''
+  component-version: ''
+  component-description: ''
+  component-id:
+    hashes:
+      sha1: 4a212f314a41bf21ceac5015da94bb82c39cad60
+      sha256: 84256a52948edee146161970dca15a3440c7011ce53ed7363bd0b4aaa8fe07c4
+  architecture: ''
+  type: text/plain; charset=utf-8
+  component-author: ''
+  component-vendor: ''
+  size: 73
+  url:
+  - https://proxy.golang.org:443/github.com/go-mmap/mmap/@v/v0.7.0.mod

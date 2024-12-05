@@ -60,10 +60,6 @@ jobs:
             3.10
             3.12
           cache: 'pip'
-      - name: Setup LXD
-        uses: canonical/setup-lxd@v0.1.1
-        with:
-          channel: latest/stable
       - name: Configure environment
         run: |
           echo "::group::apt-get"
@@ -111,10 +107,12 @@ jobs:
           cache: 'pip'
       - name: Setup LXD
         uses: canonical/setup-lxd@v0.1.1
-        with:
-          channel: latest/stable
       - name: Configure environment
         run: |
+          echo "::group::Begin snap install"
+          echo "Installing snaps in the background while running apt and pip..."
+          sudo snap install --no-wait --channel=candidate fetch-service
+          echo "::endgroup::"
           echo "::group::apt-get"
           sudo apt update
           sudo apt-get install -y libapt-pkg-dev
@@ -123,6 +121,9 @@ jobs:
           python -m pip install tox
           echo "::endgroup::"
           mkdir -p results
+          echo "::group::Wait for snap to complete"
+          snap watch --last=install
+          echo "::endgroup::"
       - name: Setup Tox environments
         run: tox run -e integration-${{ matrix.python }} --notest
       - name: Integration tests

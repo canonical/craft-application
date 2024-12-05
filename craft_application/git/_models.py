@@ -16,6 +16,13 @@
 
 from enum import Enum
 
+from ._consts import COMMIT_SHORT_SHA_LEN
+
+
+def short_commit_sha(commit_sha: str) -> str:
+    """Return shortened version of the commit."""
+    return commit_sha[:COMMIT_SHORT_SHA_LEN]
+
 
 class GitType(Enum):
     """Type of git repository."""

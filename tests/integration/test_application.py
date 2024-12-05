@@ -72,14 +72,16 @@ Global options:
     -V, --version:  Show the application version and exit
 
 Starter commands:
+             init:  Create an initial project filetree
           version:  Show the application version and exit
 
 Commands can be classified as follows:
-        Lifecycle:  build, clean, pack, prime, pull, stage
-            Other:  version
+        Lifecycle:  clean, pull, build, stage, prime, pack
+            Other:  init, version
 
 For more information about a command, run 'testcraft help <command>'.
 For a summary of all commands, run 'testcraft help --all'.
+For more information about testcraft, check out: www.testcraft.example/docs/3.14159
 
 """
 INVALID_COMMAND = """\
@@ -98,14 +100,16 @@ INVALID_PROJECTS_DIR = TEST_DATA_DIR / "invalid_projects"
 @pytest.mark.parametrize(
     ("argv", "stdout", "stderr", "exit_code"),
     [
-        (["help"], "", BASIC_USAGE, 0),
-        (["--help"], "", BASIC_USAGE, 0),
-        (["-h"], "", BASIC_USAGE, 0),
-        (["--version"], VERSION_INFO, "", 0),
-        (["-V"], VERSION_INFO, "", 0),
-        (["-q", "--version"], "", "", 0),
-        (["--invalid-parameter"], "", BASIC_USAGE, 64),
-        (["non-command"], "", INVALID_COMMAND, 64),
+        pytest.param(["help"], "", BASIC_USAGE, 0, id="help"),
+        pytest.param(["--help"], "", BASIC_USAGE, 0, id="--help"),
+        pytest.param(["-h"], "", BASIC_USAGE, 0, id="-h"),
+        pytest.param(["--version"], VERSION_INFO, "", 0, id="--version"),
+        pytest.param(["-V"], VERSION_INFO, "", 0, id="-V"),
+        pytest.param(["-q", "--version"], "", "", 0, id="-q--version"),
+        pytest.param(
+            ["--invalid-parameter"], "", BASIC_USAGE, 64, id="--invalid-parameter"
+        ),
+        pytest.param(["non-command"], "", INVALID_COMMAND, 64, id="non-command"),
     ],
 )
 def test_special_inputs(capsys, monkeypatch, app, argv, stdout, stderr, exit_code):
@@ -135,7 +139,7 @@ def test_project_managed(capsys, monkeypatch, tmp_path, project, create_app):
     app = create_app()
     app._work_dir = tmp_path
 
-    app.run()
+    assert app.run() == 0
 
     assert (tmp_path / "package_1.0.tar.zst").exists()
     captured = capsys.readouterr()
@@ -197,6 +201,7 @@ def test_version(capsys, monkeypatch, app):
     assert captured.out == "testcraft 3.14159\n"
 
 
+@pytest.mark.usefixtures("emitter")
 def test_non_lifecycle_command_does_not_require_project(monkeypatch, app):
     """Run a command without having a project instance shall not fail."""
     monkeypatch.setattr("sys.argv", ["testcraft", "nothing"])
@@ -244,6 +249,10 @@ def test_get_command_help(monkeypatch, emitter, capsys, app, cmd, help_param):
     stdout, stderr = capsys.readouterr()
 
     assert f"testcraft {cmd} [options]" in stderr
+    assert stderr.endswith(
+        "For more information, check out: "
+        f"www.testcraft.example/docs/3.14159/reference/commands/{cmd}\n\n"
+    )
 
 
 def test_invalid_command_argument(monkeypatch, capsys, app):
@@ -301,6 +310,10 @@ def test_global_environment(
         ],
     )
 
+    # Check that this odd value makes its way through to the yaml build script
+    build_count = "5"
+    mocker.patch.dict("os.environ", {"TESTCRAFT_PARALLEL_BUILD_COUNT": build_count})
+
     # Run in destructive mode
     monkeypatch.setattr(
         "sys.argv", ["testcraft", "prime", "--destructive-mode", *arguments]
@@ -325,6 +338,7 @@ def test_global_environment(
     assert variables["arch_triplet_build_on"].startswith(
         util.convert_architecture_deb_to_platform(util.get_host_architecture())
     )
+    assert variables["parallel_build_count"] == build_count
 
 
 @pytest.fixture
@@ -428,7 +442,7 @@ def test_lifecycle_error_logging(monkeypatch, tmp_path, create_app):
     assert parts_message in log_contents
 
 
-@pytest.mark.usefixtures("pretend_jammy")
+@pytest.mark.usefixtures("pretend_jammy", "emitter")
 def test_runtime_error_logging(monkeypatch, tmp_path, create_app, mocker):
     monkeypatch.chdir(tmp_path)
     shutil.copytree(INVALID_PROJECTS_DIR / "build-error", tmp_path, dirs_exist_ok=True)
@@ -453,3 +467,24 @@ def test_runtime_error_logging(monkeypatch, tmp_path, create_app, mocker):
     # Make sure it's identified as the correct error type
     parts_message = "Parts processing internal error: An unexpected error"
     assert parts_message in log_contents
+
+
+def test_verbosity_greeting(monkeypatch, create_app, capsys):
+    """Test that 'verbose' runs only show the greeting once."""
+
+    # Set the verbosity *both* through the environment variable and the
+    # command line, to ensure that the greeting is only shown once even with
+    # multiple verbosity "settings".
+    monkeypatch.setenv("CRAFT_VERBOSITY_LEVEL", "verbose")
+    monkeypatch.setattr("sys.argv", ["testcraft", "i-dont-exist", "-v"])
+
+    app = create_app()
+    with pytest.raises(SystemExit):
+        app.run()
+
+    _, err = capsys.readouterr()
+    lines = err.splitlines()
+    greetings = [line for line in lines if line.startswith("Starting testcraft")]
+
+    # Exactly one greeting
+    assert len(greetings) == 1

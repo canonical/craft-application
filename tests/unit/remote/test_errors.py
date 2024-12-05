@@ -15,25 +15,21 @@
 from craft_application.remote import errors
 
 
+def test_git_error():
+    """Test RemoteBuildGitError."""
+    error = errors.RemoteBuildGitError(message="failed to push some refs to 'unknown'")
+
+    assert (
+        str(error) == "Git operation failed with: failed to push some refs to 'unknown'"
+    )
+
+
 def test_unsupported_architecture_error():
     """Test UnsupportedArchitectureError."""
     error = errors.UnsupportedArchitectureError(architectures=["amd64", "arm64"])
 
     assert str(error) == (
-        "Architecture not supported by the remote builder.\nThe following "
-        "architectures are not supported by the remote builder: ['amd64', 'arm64'].\n"
-        "Please remove them from the architecture list and try again."
-    )
-    assert repr(error) == (
-        "UnsupportedArchitectureError(brief='Architecture not supported by the remote "
-        "builder.', details=\"The following architectures are not supported by the "
-        "remote builder: ['amd64', 'arm64'].\\nPlease remove them from the "
-        'architecture list and try again.")'
-    )
-
-    assert error.brief == "Architecture not supported by the remote builder."
-    assert error.details == (
         "The following architectures are not supported by the remote builder: "
-        "['amd64', 'arm64'].\nPlease remove them from the architecture list and "
-        "try again."
+        "'amd64' and 'arm64'."
     )
+    assert error.resolution == "Remove them from the architecture list and try again."

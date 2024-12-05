@@ -65,11 +65,11 @@ def test_get_managed_cmd(fake_command, verbosity, app_metadata):
 
 def test_without_config(emitter):
     """Test that a command can be initialised without a config.
-
-    This is necessary for providing per-command help.
+    This is pending deprecation but still supported.
     """
 
-    command = base.AppCommand(None)
+    with pytest.deprecated_call():
+        command = base.AppCommand(None)
 
     emitter.assert_trace("Not completing command configuration")
     assert not hasattr(command, "_app")

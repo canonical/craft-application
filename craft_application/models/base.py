@@ -38,6 +38,7 @@ class CraftBaseModel(pydantic.BaseModel):
         extra="forbid",
         populate_by_name=True,
         alias_generator=alias_generator,
+        coerce_numbers_to_str=True,
     )
 
     def marshal(self) -> dict[str, str | list[str] | dict[str, Any]]:

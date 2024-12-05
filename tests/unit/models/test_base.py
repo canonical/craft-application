@@ -19,6 +19,7 @@ from pathlib import Path
 import pydantic
 import pytest
 from craft_application import errors, models
+from hypothesis import given, strategies
 from overrides import override
 
 
@@ -58,3 +59,22 @@ def test_model_reference_slug_errors():
     )
     assert str(err.value) == expected
     assert err.value.doc_slug == "/mymodel.html"
+
+
+class CoerceModel(models.CraftBaseModel):
+
+    stringy: str
+
+
+@given(
+    strategies.one_of(
+        strategies.integers(),
+        strategies.floats(),
+        strategies.decimals(),
+        strategies.text(),
+    )
+)
+def test_model_coerces_to_strings(value):
+    result = CoerceModel.model_validate({"stringy": value})
+
+    assert result.stringy == str(value)

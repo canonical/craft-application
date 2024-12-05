@@ -25,6 +25,7 @@ from craft_application.remote import (
     validate_architectures,
 )
 from craft_application.remote.utils import _SUPPORTED_ARCHS
+from craft_application.util import humanize_list
 
 ###############################
 # validate architecture tests #
@@ -57,7 +58,7 @@ def test_validate_architectures_error(archs, expected_archs):
 
     assert (
         "The following architectures are not supported by the remote builder: "
-        f"{expected_archs}"
+        f"{humanize_list(expected_archs, 'and')}"
     ) in str(raised.value)
 
 

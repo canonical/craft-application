@@ -14,9 +14,10 @@
 
 """Git repository utilities."""
 
+from ._consts import COMMIT_SHORT_SHA_LEN
 from ._errors import GitError
-from ._models import GitType
-from ._git_repo import GitRepo, get_git_repo_type, is_repo
+from ._models import GitType, short_commit_sha
+from ._git_repo import GitRepo, get_git_repo_type, is_repo, parse_describe
 
 __all__ = [
     "GitError",
@@ -24,4 +25,7 @@ __all__ = [
     "GitType",
     "get_git_repo_type",
     "is_repo",
+    "parse_describe",
+    "short_commit_sha",
+    "COMMIT_SHORT_SHA_LEN",
 ]

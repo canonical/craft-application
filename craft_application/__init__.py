@@ -25,6 +25,7 @@ from craft_application.services import (
     ProviderService,
     ServiceFactory,
 )
+from craft_application._config import ConfigModel
 
 try:
     from ._version import __version__
@@ -42,6 +43,7 @@ __all__ = [
     "AppFeatures",
     "AppMetadata",
     "AppService",
+    "ConfigModel",
     "models",
     "ProjectService",
     "LifecycleService",
