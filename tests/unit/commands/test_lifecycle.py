@@ -524,7 +524,13 @@ def test_pack_fill_parser(
 
     args_dict = vars(
         parser.parse_args(
-            [*pro_service_args, *build_env_args, *shell_args, *debug_args, f"--output={output_arg}"]
+            [
+                *pro_service_args,
+                *build_env_args,
+                *shell_args,
+                *debug_args,
+                f"--output={output_arg}",
+            ]
         )
     )
     assert args_dict == expected
