@@ -59,9 +59,9 @@ def mock_services(app_metadata, fake_project, fake_package_service_class):
 
 @pytest.fixture
 def clear_git_binary_name_cache() -> None:
-    from craft_application.git._git_repo import _get_git_binary_name
+    from craft_application.git import GitRepo
 
-    _get_git_binary_name.cache_clear()
+    GitRepo.get_git_command.cache_clear()
 
 
 @pytest.fixture(
@@ -70,7 +70,7 @@ def clear_git_binary_name_cache() -> None:
         pytest.param(False, id="fallback_to_git"),
     ],
 )
-def expected_git_binary(
+def expected_git_command(
     request: pytest.FixtureRequest,
     mocker: pytest_mock.MockerFixture,
     clear_git_binary_name_cache: None,  # noqa: ARG001 - Unused function argument

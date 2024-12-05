@@ -35,7 +35,7 @@ class GitType(Enum):
 
 @dataclass
 class Commit:
-    """Model representing commit."""
+    """Model representing a commit."""
 
     sha: str
     message: str

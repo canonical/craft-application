@@ -138,24 +138,6 @@ def parse_describe(describe_str: str) -> str:
     return f"{version}.post{distance}+git{commit[1:]}"
 
 
-@lru_cache(maxsize=1)
-def _get_git_binary_name() -> str:
-    """Get name of the git executable that may be used in subprocesses.
-
-    Fallback to the previous behavior in case of non-snap / local installation or
-    if snap does not provide expected binary.
-    """
-    craftgit_binary = CRAFTGIT_BINARY_NAME
-    if shutil.which(craftgit_binary):
-        return craftgit_binary
-    logger.warning(
-        "Cannot find craftgit binary: %r. Is it a part of snap package?",
-        craftgit_binary,
-    )
-    logger.warning("Falling back to: %r", GIT_FALLBACK_BINARY_NAME)
-    return GIT_FALLBACK_BINARY_NAME
-
-
 class GitRepo:
     """Git repository class."""
 
@@ -259,7 +241,7 @@ class GitRepo:
         if fetch and remote is not None:
             self.fetch(remote=remote, tags=True)
         rev_list_output = [
-            self.git_binary(),
+            self.get_git_command(),
             "rev-list",
             "-n",
             "1",
@@ -488,7 +470,7 @@ class GitRepo:
         # going to exist solely for remote builds, so the only potential issue here is a
         # race condition with multiple remote builds on the same machine.
         cmd: list[str] = [
-            self.git_binary(),
+            self.get_git_command(),
             "push",
             "--force",
             remote_url,
@@ -570,7 +552,7 @@ class GitRepo:
         :param ref: Optional reference to the specific object to fetch.
         :param depth: Maximum number of commits to fetch (all by default).
         """
-        fetch_command = [self.git_binary(), "fetch"]
+        fetch_command = [self.get_git_command(), "fetch"]
 
         if not self.remote_exists(remote):
             raise GitError(f"cannot fetch undefined remote: {remote!r}")
@@ -602,7 +584,7 @@ class GitRepo:
             "Checking if %r was pushed to %r", short_commit_sha(commit_sha), remote
         )
         checking_command = [
-            self.git_binary(),
+            self.get_git_command(),
             "branch",
             "--remotes",
             "--contains",
@@ -700,7 +682,7 @@ class GitRepo:
             raise GitError("Cannot clone to existing repository")
 
         logger.debug("Cloning %s to %s", url, path)
-        clone_cmd = [cls.git_binary(), "clone"]
+        clone_cmd = [cls.get_git_command(), "clone"]
         if checkout_branch is not None:
             logger.debug("Checking out to branch: %s", checkout_branch)
             clone_cmd.extend(["--branch", quote(checkout_branch)])
@@ -723,6 +705,19 @@ class GitRepo:
         return cls(path)
 
     @classmethod
-    def git_binary(cls) -> str:
-        """Get path to the git executable that may be used in subprocesses."""
-        return _get_git_binary_name()
+    @lru_cache(maxsize=1)
+    def get_git_command(cls) -> str:
+        """Get name of the git executable that may be used in subprocesses.
+
+        Fallback to the previous behavior in case of non-snap / local installation or
+        if snap does not provide expected binary.
+        """
+        craftgit_binary = CRAFTGIT_BINARY_NAME
+        if shutil.which(craftgit_binary):
+            return craftgit_binary
+        logger.warning(
+            "Cannot find craftgit binary: %r. Is it a part of snap package?",
+            craftgit_binary,
+        )
+        logger.warning("Falling back to: %r", GIT_FALLBACK_BINARY_NAME)
+        return GIT_FALLBACK_BINARY_NAME

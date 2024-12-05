@@ -1056,7 +1056,7 @@ def test_last_commit_on_empty_repository(empty_repository: Path) -> None:
 def test_fetching_remote(
     empty_repository: Path,
     fake_process: pytest_subprocess.FakeProcess,
-    expected_git_binary: str,
+    expected_git_command: str,
     depth: int | None,
     ref: str | None,
     *,
@@ -1065,7 +1065,7 @@ def test_fetching_remote(
     git_repo = GitRepo(empty_repository)
     remote = "test-remote"
     git_repo.add_remote(remote, "https://non-existing-repo.localhost")
-    cmd = [expected_git_binary, "fetch"]
+    cmd = [expected_git_command, "fetch"]
     if tags:
         cmd.append("--tags")
     if depth is not None:
@@ -1080,12 +1080,12 @@ def test_fetching_remote(
 def test_fetching_remote_fails(
     empty_repository: Path,
     fake_process: pytest_subprocess.FakeProcess,
-    expected_git_binary: str,
+    expected_git_command: str,
 ) -> None:
     git_repo = GitRepo(empty_repository)
     remote = "test-remote"
     git_repo.add_remote(remote, "https://non-existing-repo.localhost")
-    cmd = [expected_git_binary, "fetch"]
+    cmd = [expected_git_command, "fetch"]
     cmd.append(remote)
     fake_process.register(cmd, returncode=1)
     with pytest.raises(GitError) as git_error:
@@ -1153,12 +1153,12 @@ def test_remote_contains(
     fake_process: pytest_subprocess.FakeProcess,
     remote: str,
     command_output: str,
-    expected_git_binary: str,
+    expected_git_command: str,
     *,
     response: bool,
 ) -> None:
     fake_process.register(
-        [expected_git_binary, "branch", "--remotes", "--contains", "fake-commit-sha"],
+        [expected_git_command, "branch", "--remotes", "--contains", "fake-commit-sha"],
         stdout=command_output,
     )
     git_repo = GitRepo(empty_repository)
@@ -1171,10 +1171,10 @@ def test_remote_contains(
 def test_remote_contains_fails_if_subprocess_fails(
     empty_repository: Path,
     fake_process: pytest_subprocess.FakeProcess,
-    expected_git_binary: str,
+    expected_git_command: str,
 ) -> None:
     fake_process.register(
-        [expected_git_binary, "branch", "--remotes", "--contains", "fake-commit-sha"],
+        [expected_git_command, "branch", "--remotes", "--contains", "fake-commit-sha"],
         returncode=1,
     )
     git_repo = GitRepo(empty_repository)
@@ -1274,19 +1274,42 @@ def test_describing_fallback_to_commit_for_unannotated_tags(
     ],
 )
 def test_craftgit_is_used_for_git_operations(
-    empty_repository: Path,
     mocker: pytest_mock.MockerFixture,
     *,
     craftgit_exists: bool,
 ) -> None:
     which_res = f"/some/path/to/{CRAFTGIT_BINARY_NAME}" if craftgit_exists else None
     which_mock = mocker.patch("shutil.which", return_value=which_res)
-    git_repo = GitRepo(empty_repository)
 
     expected_binary = (
         CRAFTGIT_BINARY_NAME if craftgit_exists else GIT_FALLBACK_BINARY_NAME
     )
-    assert git_repo.git_binary() == expected_binary
+    assert GitRepo.get_git_command() == expected_binary
+
+    which_mock.assert_called_once_with(CRAFTGIT_BINARY_NAME)
+
+
+@pytest.mark.usefixtures("clear_git_binary_name_cache")
+@pytest.mark.parametrize(
+    ("craftgit_exists"),
+    [
+        pytest.param(True, id="craftgit_available"),
+        pytest.param(False, id="fallback_to_git"),
+    ],
+)
+def test_get_git_command_result_is_cached(
+    mocker: pytest_mock.MockerFixture,
+    *,
+    craftgit_exists: bool,
+) -> None:
+    which_res = f"/some/path/to/{CRAFTGIT_BINARY_NAME}" if craftgit_exists else None
+    which_mock = mocker.patch("shutil.which", return_value=which_res)
+
+    expected_binary = (
+        CRAFTGIT_BINARY_NAME if craftgit_exists else GIT_FALLBACK_BINARY_NAME
+    )
+    for _ in range(3):
+        assert GitRepo.get_git_command() == expected_binary
 
     which_mock.assert_called_once_with(CRAFTGIT_BINARY_NAME)
 
@@ -1294,13 +1317,13 @@ def test_craftgit_is_used_for_git_operations(
 def test_last_commit_on_branch_or_tag_fails_if_commit_not_found(
     empty_repository: Path,
     fake_process: pytest_subprocess.FakeProcess,
-    expected_git_binary: str,
+    expected_git_command: str,
 ) -> None:
     git_repo = GitRepo(empty_repository)
     branch_or_tag = "test"
     commit = "non-existent-commit"
     fake_process.register(
-        [expected_git_binary, "rev-list", "-n", "1", branch_or_tag],
+        [expected_git_command, "rev-list", "-n", "1", branch_or_tag],
         stdout=commit,
     )
     with pytest.raises(GitError) as git_error:
@@ -1313,12 +1336,12 @@ def test_last_commit_on_branch_or_tag_fails_if_commit_not_found(
 def test_last_commit_on_branch_or_tag_fails_if_ref_not_found(
     empty_repository: Path,
     fake_process: pytest_subprocess.FakeProcess,
-    expected_git_binary: str,
+    expected_git_command: str,
 ) -> None:
     git_repo = GitRepo(empty_repository)
     branch_or_tag = "test"
     fake_process.register(
-        [expected_git_binary, "rev-list", "-n", "1", branch_or_tag],
+        [expected_git_command, "rev-list", "-n", "1", branch_or_tag],
         returncode=1,
         stderr=f"fatal: ambiguous argument {branch_or_tag!r}",
     )
@@ -1332,13 +1355,13 @@ def test_last_commit_on_branch_or_tag_fails_if_ref_not_found(
 def test_get_last_commit_on_branch_or_tag(
     repository_with_commit: RepositoryDefinition,
     fake_process: pytest_subprocess.FakeProcess,
-    expected_git_binary: str,
+    expected_git_command: str,
 ) -> None:
     git_repo = GitRepo(repository_with_commit.repository_path)
     branch_or_tag = "test"
     last_commit = git_repo.get_last_commit()
     fake_process.register(
-        [expected_git_binary, "rev-list", "-n", "1", branch_or_tag],
+        [expected_git_command, "rev-list", "-n", "1", branch_or_tag],
         stdout=last_commit.sha,
     )
     last_commit_on_branch = git_repo.get_last_commit_on_branch_or_tag(branch_or_tag)
