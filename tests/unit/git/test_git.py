@@ -1136,6 +1136,20 @@ def test_fetching_remote_fails(
     assert git_error.value.details == f"cannot fetch remote: {remote!r}"
 
 
+def test_fetching_fails_if_git_not_available(
+    empty_repository: Path,
+    mocker: pytest_mock.MockerFixture,
+) -> None:
+    git_repo = GitRepo(empty_repository)
+    remote = "test-remote"
+    git_repo.add_remote(remote, "https://non-existing-repo.localhost")
+    patched_process_run = mocker.patch("craft_parts.utils.os_utils.process_run")
+    patched_process_run.side_effect = FileNotFoundError
+    with pytest.raises(GitError) as git_error:
+        git_repo.fetch(remote=remote)
+    assert git_error.value.details == "git command not found in the system"
+
+
 def test_fetching_undefined_remote(empty_repository: Path) -> None:
     git_repo = GitRepo(empty_repository)
     remote = "test-non-existing-remote"
