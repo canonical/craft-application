@@ -18,15 +18,17 @@ Git
 
 - Extend the ``GitRepo`` class with additional methods:
 
-  - Add ``set_remote_url()`` and ``set_remote_push_url()`` alongside their get
-    counterparts.
-  - Add ``set_no_push()`` to explicitly disable ``push`` for specific remotes.
-  - Add ``get_last_commit()`` to retrieve last commit hash and message.
-  - Add ``get_last_commit_on_branch_or_tag()`` to retrieve last commit
-    associated with the given ref.
-  - Add ``fetch()`` method for retrieving remote objects.
+  - Add ``set_remote_url()`` and ``set_remote_push_url()`` methods and their
+    getter counterparts.
+  - Add ``set_no_push()`` method, which explicitly disables ``push`` for
+    specific remotes.
+  - Add ``get_last_commit()`` method, which retrieves the last commit hash and
+    message.
+  - Add ``get_last_commit_on_branch_or_tag()`` method, which retrieves the last
+    commit associated with a given ref.
+  - Add ``fetch()`` method, which retrieves remote objects.
 
-- Use ``craft.git`` for git-related operations done via ``subprocess`` in
+- Use ``craft.git`` for Git-related operations run with ``subprocess`` in
   ``GitRepo``.
 
 
