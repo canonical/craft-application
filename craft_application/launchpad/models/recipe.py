@@ -443,4 +443,121 @@ class CharmRecipe(_StoreRecipe):
         return self._build(deadline, kwargs)
 
 
+class RockRecipe(_StoreRecipe):
+    """A recipe for a charm.
+
+    https://api.launchpad.net/devel.html#charm_recipe
+    """
+
+    @classmethod
+    def new(  # noqa: PLR0913
+        cls,
+        lp: Launchpad,
+        name: str,
+        owner: str,
+        project: str,
+        *,
+        build_path: str | None = None,
+        # Automatic build options.
+        auto_build: bool = False,
+        auto_build_channels: BuildChannels | None = None,
+        # Store options.
+        store_name: str | None = None,
+        store_channels: Collection[str] = ("latest/edge",),
+        git_ref: str | None = None,
+    ) -> Self:
+        """Create a new charm recipe.
+
+        See: https://api.launchpad.net/devel.html#charm_recipes-new
+
+        :param lp: The Launchpad client to use for this recipe.
+        :param name: The recipe name
+        :param owner: The username of the person or team who owns the recipe
+        :param project: The name of the project to which this recipe should be attached.
+        :param build_path: (Optional) The path to the directory containing
+            charmcraft.yaml (if it's not the root directory).
+        :param git_ref: A link to a git repository and branch from which to build.
+            Mutually exclusive with bzr_branch.
+        :param auto_build: Whether to automatically build on pushes to the branch.
+            (Defaults to False)
+        :param auto_build_channels: (Optional) A dictionary of channels to use for
+            snaps installed in the build environment.
+        :param store_name: (Optional) The name in the store to which to upload this
+            charm.
+        :param store_channels: (Optional) The channels onto which to publish the charm
+            if uploaded.
+        :returns: The Charm recipe.
+        """
+        kwargs: dict[str, Any] = {}
+        if auto_build:
+            kwargs["auto_build_channels"] = auto_build_channels
+        if build_path:
+            kwargs["build_path"] = build_path
+        cls._fill_store_info(
+            kwargs,
+            store_name=store_name,
+            store_channels=store_channels,
+        )
+        cls._fill_repo_info(kwargs, git_ref=git_ref)
+
+        charm_entry = retry(
+            f"create charm recipe {name!r}",
+            lazr.restfulclient.errors.BadRequest,
+            lp.lp.charm_recipes.new,
+            name=name,
+            owner=util.get_person_link(owner),
+            project=f"/{project}",
+            auto_build=auto_build,
+            **kwargs,
+        )
+
+        if not charm_entry:
+            raise ValueError("Failed to create charm recipe")
+
+        return cls(lp, charm_entry)
+
+    @classmethod
+    def get(  # pyright: ignore[reportIncompatibleMethodOverride]
+        cls, lp: Launchpad, name: str, owner: str, project: str | None = None
+    ) -> Self:
+        """Get a charm recipe."""
+        try:
+            return cls(
+                lp,
+                retry(
+                    f"get charm recipe {name!r}",
+                    lazr.restfulclient.errors.NotFound,
+                    lp.lp.charm_recipes.getByName,
+                    name=name,
+                    owner=util.get_person_link(owner),
+                    project=f"/{project}",
+                ),
+            )
+        except lazr.restfulclient.errors.NotFound:
+            raise ValueError(
+                f"Could not find charm recipe {name!r} in project {project!r} with owner {owner!r}",
+            ) from None
+
+    @classmethod
+    def find(  # pyright: ignore[reportIncompatibleMethodOverride]
+        cls, lp: Launchpad, owner: str, *, name: str = ""
+    ) -> Iterable[Self]:
+        """Find a Charm recipe by the owner."""
+        owner = util.get_person_link(owner)
+        lp_recipes = lp.lp.charm_recipes.findByOwner(owner=util.get_person_link(owner))
+        for recipe in lp_recipes:
+            if name and recipe.name != name:
+                continue
+            yield cls(lp, recipe)
+
+    def build(
+        self,
+        channels: BuildChannels | None = None,
+        deadline: int | None = None,
+    ) -> Collection[build.Build]:
+        """Create a new set of builds for this recipe."""
+        kwargs = {"channels": channels} if channels else {}
+        return self._build(deadline, kwargs)
+
+
 Recipe = SnapRecipe | CharmRecipe
