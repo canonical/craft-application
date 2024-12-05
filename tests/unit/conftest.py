@@ -14,12 +14,14 @@
 # You should have received a copy of the GNU Lesser General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Configuration for craft-application unit tests."""
+
 from __future__ import annotations
 
 from unittest import mock
 
 import pytest
-from craft_application import services, util
+import pytest_mock
+from craft_application import git, services, util
 
 
 @pytest.fixture(params=["amd64", "arm64", "riscv64"])
@@ -53,3 +55,27 @@ def mock_services(app_metadata, fake_project, fake_package_service_class):
     factory.fetch = mock.Mock(spec=services.FetchService)
     factory.init = mock.Mock(spec=services.InitService)
     return factory
+
+
+@pytest.fixture
+def clear_git_binary_name_cache() -> None:
+    from craft_application.git import GitRepo
+
+    GitRepo.get_git_command.cache_clear()
+
+
+@pytest.fixture(
+    params=[
+        pytest.param(True, id="craftgit_available"),
+        pytest.param(False, id="fallback_to_git"),
+    ],
+)
+def expected_git_command(
+    request: pytest.FixtureRequest,
+    mocker: pytest_mock.MockerFixture,
+    clear_git_binary_name_cache: None,  # noqa: ARG001 - Unused function argument
+) -> str:
+    craftgit_exists = request.param
+    which_res = f"/some/path/to/{git.CRAFTGIT_BINARY_NAME}" if craftgit_exists else None
+    mocker.patch("shutil.which", return_value=which_res)
+    return git.CRAFTGIT_BINARY_NAME if craftgit_exists else git.GIT_FALLBACK_BINARY_NAME

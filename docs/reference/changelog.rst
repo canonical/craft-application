@@ -4,6 +4,36 @@
 Changelog
 *********
 
+4.6.0 (YYYY-MMM-DD)
+-------------------
+
+Git
+===
+
+- Extend the ``craft_application.git`` module with the following APIs:
+
+  - Add ``is_commit(ref)`` and ``is_short_commit(ref)`` helpers for checking if
+    a given ref is a valid commit hash.
+  - Add a ``Commit`` model to represent the result of ``get_last_commit()``.
+
+- Extend the ``GitRepo`` class with additional methods:
+
+  - Add ``set_remote_url()`` and ``set_remote_push_url()`` methods and their
+    getter counterparts.
+  - Add ``set_no_push()`` method, which explicitly disables ``push`` for
+    specific remotes.
+  - Add ``get_last_commit()`` method, which retrieves the last commit hash and
+    message.
+  - Add ``get_last_commit_on_branch_or_tag()`` method, which retrieves the last
+    commit associated with a given ref.
+  - Add ``fetch()`` method, which retrieves remote objects.
+
+- Use ``craft.git`` for Git-related operations run with ``subprocess`` in
+  ``GitRepo``.
+
+
+.. For a complete list of commits, check out the `4.6.0`_ release on GitHub.
+
 4.5.0 (2024-Nov-28)
 -------------------
 
