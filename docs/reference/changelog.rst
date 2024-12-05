@@ -1,6 +1,212 @@
+:tocdepth: 2
+
 *********
 Changelog
 *********
+
+4.5.0 (2024-Nov-28)
+-------------------
+
+Application
+===========
+
+- The fetch-service integration now assumes that the fetch-service snap is
+  tracking the ``latest/candidate``.
+- Fix an issue where the fetch-service output was not correctly logged when
+  running in a snapped craft tool.
+
+Commands
+========
+
+- Provide a documentation link in help messages.
+- Updates to the ``init`` command:
+
+  - If the ``--name`` argument is provided, the command now checks if the value
+    is a valid project name, and returns an error if it isn't.
+  - If the ``--name`` argument is *not* provided, the command now checks whether
+    the project directory is a valid project name. If it isn't, the command sets
+    the project name to ``my-project``.
+
+Services
+========
+
+- Add version to the template generation context of ``InitService``.
+
+..
+  For a complete list of commits, check out the `4.5.0`_ release on GitHub.
+
+4.4.0 (2024-Nov-08)
+-------------------
+
+Application
+===========
+
+- ``AppCommand`` subclasses now will always receive a valid ``app_config``
+  dict.
+- Fixes a bug where the fetch-service integration would try to spawn the
+  fetch-service process when running in managed mode.
+- Cleans up the output from the fetch-service integration.
+
+Commands
+========
+
+- Adds an ``init`` command for initialising new projects.
+- Lifecycle commands are ordered in the sequence they run rather than
+  alphabetically in help messages.
+- Preserves order of ``CommandGroups`` defined by the application.
+- Applications can override commands defined by Craft Application in the
+  same ``CommandGroup``.
+
+Services
+========
+
+- Adds an ``InitService`` for initialising new projects.
+
+For a complete list of commits, check out the `4.4.0`_ release on GitHub.
+
+4.3.0 (2024-Oct-11)
+-------------------
+
+Application
+===========
+
+- Added compatibility methods for craft-platforms models.
+
+Commands
+========
+
+- The ``clean`` command now supports the ``--platform`` argument to filter
+  which build environments to clean.
+
+Services
+========
+
+- Added an experimental integration with the fetch-service, to generate
+  manifests listing assets that were downloaded during the build.
+
+For a complete list of commits, check out the `4.3.0`_ release on GitHub.
+
+4.2.7 (2024-Oct-08)
+-------------------
+
+- Don't depend on requests >= 2.32.0.
+- Fix: set CRAFT_PARALLEL_BUILD_COUNT correctly in ``override-`` scripts.
+
+For a complete list of commits, check out the `4.2.7`_ release on GitHub.
+
+4.2.6 (2024-Oct-04)
+-------------------
+
+- Remove the ``requests<2.32.0`` constraint to resolve CVE-2024-35195.
+
+For a complete list of commits, check out the `4.2.6`_ release on GitHub.
+
+4.2.5 (2024-Oct-04)
+-------------------
+
+Services
+========
+
+- The config service handles snap issues better.
+
+For a complete list of commits, check out the `4.2.5`_ release on GitHub.
+
+4.2.4 (2024-Sep-19)
+-------------------
+
+Remote build
+============
+
+- Remote build errors are now a subclass of ``CraftError``.
+
+For a complete list of commits, check out the `4.2.4`_ release on GitHub.
+
+4.2.3 (2024-Sep-18)
+-------------------
+
+Application
+===========
+
+- ``get_arg_or_config`` now correctly checks the config service if the passed
+  namespace has ``None`` as the value of the requested item.
+
+For a complete list of commits, check out the `4.2.3`_ release on GitHub.
+
+4.2.2 (2024-Sep-13)
+-------------------
+
+Application
+===========
+
+- Add a ``_run_inner`` method to override or wrap the core run logic.
+
+For a complete list of commits, check out the `4.2.2`_ release on GitHub.
+
+4.2.1 (2024-Sep-13)
+-------------------
+
+Models
+======
+
+- Fix a regression where numeric part properties could not be parsed.
+
+For a complete list of commits, check out the `4.2.1`_ release on GitHub.
+
+4.1.3 (2024-Sep-12)
+-------------------
+
+Models
+======
+
+- Fix a regression where numeric part properties could not be parsed.
+
+For a complete list of commits, check out the `4.1.3`_ release on GitHub.
+
+4.2.0 (2024-Sep-12)
+-------------------
+
+Application
+===========
+
+- Add a configuration service to unify handling of command line arguments,
+  environment variables, snap configurations, and so on.
+- Use the standard library to retrieve the host's proxies.
+
+Commands
+========
+
+- Properly support ``--shell``, ``--shell-after`` and ``--debug`` on the
+  ``pack`` command.
+
+For a complete list of commits, check out the `4.2.0`_ release on GitHub.
+
+4.1.2 (2024-Sep-05)
+-------------------
+
+Application
+===========
+
+- Managed runs now fail if the build plan is empty.
+- Error message tweaks for invalid YAML files.
+
+Models
+======
+
+- Platform models now correctly accept non-vectorised architectures.
+
+For a complete list of commits, check out the `4.1.2`_ release on GitHub.
+
+4.1.1 (2024-Aug-27)
+-------------------
+
+Application
+===========
+
+* When a build fails due to matching multiple platforms, those matching
+  platforms will be specified in the error message.
+* Show nicer error messages for invalid YAML files.
+
+For a complete list of commits, check out the `4.1.1`_ release on GitHub.
 
 4.1.0 (2024-Aug-14)
 -------------------
@@ -195,3 +401,17 @@ For a complete list of commits, check out the `2.7.0`_ release on GitHub.
 .. _3.2.0: https://github.com/canonical/craft-application/releases/tag/3.2.0
 .. _4.0.0: https://github.com/canonical/craft-application/releases/tag/4.0.0
 .. _4.1.0: https://github.com/canonical/craft-application/releases/tag/4.1.0
+.. _4.1.1: https://github.com/canonical/craft-application/releases/tag/4.1.1
+.. _4.1.2: https://github.com/canonical/craft-application/releases/tag/4.1.2
+.. _4.1.3: https://github.com/canonical/craft-application/releases/tag/4.1.3
+.. _4.2.0: https://github.com/canonical/craft-application/releases/tag/4.2.0
+.. _4.2.1: https://github.com/canonical/craft-application/releases/tag/4.2.1
+.. _4.2.2: https://github.com/canonical/craft-application/releases/tag/4.2.2
+.. _4.2.3: https://github.com/canonical/craft-application/releases/tag/4.2.3
+.. _4.2.4: https://github.com/canonical/craft-application/releases/tag/4.2.4
+.. _4.2.5: https://github.com/canonical/craft-application/releases/tag/4.2.5
+.. _4.2.6: https://github.com/canonical/craft-application/releases/tag/4.2.6
+.. _4.2.7: https://github.com/canonical/craft-application/releases/tag/4.2.7
+.. _4.3.0: https://github.com/canonical/craft-application/releases/tag/4.3.0
+.. _4.4.0: https://github.com/canonical/craft-application/releases/tag/4.4.0
+.. _4.5.0: https://github.com/canonical/craft-application/releases/tag/4.5.0

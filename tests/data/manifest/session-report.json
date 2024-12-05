@@ -1,0 +1,143 @@
+{
+    "THIS IS A STRIPPED DOWN SESSION REPORT FOR TESTING PURPOSES": 1,
+    "comment": "Metadata format is unstable and may change without prior notice.",
+    "session-id": "f17e28e952c84d7c955a1eb5277de201",
+    "policy": "",
+    "artefacts": [
+        {
+            "metadata": {
+                "type": "application/x.apt.translation",
+                "sha1": "af5834abfa1a537fd383d41f1be33cea47c7b6a7",
+                "sha256": "38cbbf5467682ada956d14168e301a383d96aaa2f1f694cbaa47cee38b47847d",
+                "size": 111544,
+                "name": "Translation",
+                "version": "",
+                "vendor": "Ubuntu",
+                "description": "",
+                "author": "Ubuntu",
+                "license": ""
+            },
+            "downloads": [
+                {
+                    "url": "http://archive.ubuntu.com/ubuntu/dists/jammy/multiverse/i18n/by-hash/SHA256/38cbbf5467682ada956d14168e301a383d96aaa2f1f694cbaa47cee38b47847d"
+                }
+            ]
+        },
+        {
+            "metadata": {
+                "type": "application/x.apt.packages",
+                "sha1": "370c66437d49460dbc16be011209c4de9977212d",
+                "sha256": "37cb57f1554cbfa71c5a29ee9ffee18a9a8c1782bb0568e0874b7ff4ce8f9c11",
+                "size": 1394768,
+                "name": "Packages.xz",
+                "version": "jammy",
+                "vendor": "Ubuntu",
+                "description": "jammy main Packages file",
+                "author": "Ubuntu",
+                "architecture": "amd64",
+                "license": ""
+            },
+            "downloads": [
+                {
+                    "url": "http://archive.ubuntu.com/ubuntu/dists/jammy/main/binary-amd64/by-hash/SHA256/37cb57f1554cbfa71c5a29ee9ffee18a9a8c1782bb0568e0874b7ff4ce8f9c11"
+                }
+            ]
+        },
+        {
+            "metadata": {
+                "type": "application/x.canonical.snap-package",
+                "sha1": "376506001849698af3f9e07a236a47ee8cddded0",
+                "sha256": "cf7e02ebfdaa898107d2dbf84cf1231cee6c244dd5646580d09cfd6f6cf12577",
+                "size": 64892928,
+                "name": "go",
+                "version": "10660",
+                "vendor": "Canonical",
+                "description": "The Go programming language",
+                "author": "",
+                "architecture": "amd64",
+                "license": ""
+            },
+            "downloads": [
+                {
+                    "url": "https://canonical-bos01.cdn.snapcraftcontent.com:443/download-origin/canonical-lgw01/Md1HBASHzP4i0bniScAjXGnOII9cEK6e_10660.snap?interactive=1&token=1720738800_68d3c27ac109407168ed776e46653c7883b8ef40"
+                }
+            ]
+        },
+        {
+            "A NON-SHALLOW GIT CLONE": true,
+            "artefact-metadata-version": "0.1",
+            "request-inspection": {
+              "git.upload-pack": {
+                "opinion": "Rejected",
+                "reason": "fetch is only allowed with depth 1"
+              },
+              "go.module.git": {
+                "opinion": "Pending",
+                "reason": "valid URL for go module download"
+              }
+            },
+            "response-inspection": {
+              "git.upload-pack": {
+                "opinion": "Rejected",
+                "reason": "fetch is allowed only on a single ref"
+              },
+              "go.module.git": {
+                "opinion": "Unknown",
+                "reason": "git repository does not contain a go.mod file"
+              }
+            },
+            "result": "Rejected",
+            "metadata": {
+              "type": "application/x.git.upload-pack-result.fetch",
+              "sha1": "e98024bd74a166549e5dad777a48bb25eb6163a4",
+              "sha256": "d0bb57a19474b186870c05a22a29bda1d51e5e01e3d46a0bef27987ec2354896",
+              "size": 473833,
+              "name": "",
+              "version": "",
+              "vendor": "",
+              "description": "",
+              "author": "",
+              "license": ""
+            },
+            "downloads": [
+                {
+                  "url": "https://github.com:443/canonical/sphinx-docs-starter-pack.git/git-upload-pack"
+                }
+            ]
+        },
+        {
+            "A GO BUILD WITHOUT GOPROXY=DIRECT": true,
+            "artefact-metadata-version": "0.1",
+            "request-inspection": {
+              "default": {
+                "opinion": "Unknown",
+                "reason": "the request was not recognized by any format inspector"
+              }
+            },
+            "response-inspection": {
+              "default": {
+                "opinion": "Unknown",
+                "reason": "the artefact format is unknown"
+              }
+            },
+            "result": "Rejected",
+            "metadata": {
+              "type": "text/plain; charset=utf-8",
+              "sha1": "4a212f314a41bf21ceac5015da94bb82c39cad60",
+              "sha256": "84256a52948edee146161970dca15a3440c7011ce53ed7363bd0b4aaa8fe07c4",
+              "size": 73,
+              "name": "",
+              "version": "",
+              "vendor": "",
+              "description": "",
+              "author": "",
+              "license": ""
+            },
+            "downloads": [
+              {
+                "url": "https://proxy.golang.org:443/github.com/go-mmap/mmap/@v/v0.7.0.mod"
+              }
+            ]
+        }
+    ]
+}

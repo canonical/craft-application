@@ -1,4 +1,4 @@
-# Copyright (C) 2022,2024 Canonical Ltd
+# Copyright 2024 Canonical Ltd.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License version 3 as
@@ -11,19 +11,9 @@
 #
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-import os
-import pathlib
 
-import pytest
+"""Git repository consts."""
 
+from typing import Final
 
-@pytest.fixture
-def new_dir(tmp_path):
-    """Change to a new temporary directory."""
-
-    cwd = pathlib.Path.cwd()
-    os.chdir(tmp_path)
-
-    yield tmp_path
-
-    os.chdir(cwd)
+COMMIT_SHORT_SHA_LEN: Final[int] = 7

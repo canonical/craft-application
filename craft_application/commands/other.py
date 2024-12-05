@@ -18,7 +18,7 @@ from typing import TYPE_CHECKING
 
 from craft_cli import CommandGroup, emit
 
-from craft_application.commands import base
+from . import InitCommand, base
 
 if TYPE_CHECKING:  # pragma: no cover
     import argparse
@@ -27,6 +27,7 @@ if TYPE_CHECKING:  # pragma: no cover
 def get_other_command_group() -> CommandGroup:
     """Return the lifecycle related command group."""
     commands: list[type[base.AppCommand]] = [
+        InitCommand,
         VersionCommand,
     ]
 
@@ -37,7 +38,7 @@ def get_other_command_group() -> CommandGroup:
 
 
 class VersionCommand(base.AppCommand):
-    """Show the snapcraft version."""
+    """Show the application version."""
 
     name = "version"
     help_msg = "Show the application version and exit"
