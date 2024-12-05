@@ -392,7 +392,7 @@ class GitRepo:
         :raises GitError: if remote does not exist
         """
         if not self.remote_exists(remote_name=remote_name):
-            raise GitError(f"cannot set URL for non-existing remote '{remote_name}'")
+            raise GitError(f"cannot set URL for non-existing remote: {remote_name!r}")
         self._repo.remotes.set_url(remote_name, remote_url)
 
     def get_remote_push_url(self, remote_name: str) -> str:
@@ -406,7 +406,7 @@ class GitRepo:
         """
         if not self.remote_exists(remote_name=remote_name):
             raise GitError(
-                f"cannot get push URL for non-existing remote '{remote_name}'"
+                f"cannot get push URL for non-existing remote: {remote_name!r}"
             )
         return cast(str, self._repo.remotes[remote_name].push_url)
 
@@ -422,7 +422,9 @@ class GitRepo:
         :raises GitError: if remote does not exist
         """
         if not self.remote_exists(remote_name=remote_name):
-            raise GitError(f"cannot set URL for non-existing remote '{remote_name}'")
+            raise GitError(
+                f"cannot set push URL for non-existing remote: {remote_name!r}"
+            )
         self._repo.remotes.set_push_url(remote_name, remote_push_url)
 
     def set_no_push(self, remote_name: str) -> None:
