@@ -268,10 +268,14 @@ class Application:
         self._global_arguments.append(argument)
 
     def add_command_group(
-        self, name: str, commands: Sequence[type[craft_cli.BaseCommand]]
+        self,
+        name: str,
+        commands: Sequence[type[craft_cli.BaseCommand]],
+        *,
+        ordered: bool = False,
     ) -> None:
         """Add a CommandGroup to the Application."""
-        self._command_groups.append(craft_cli.CommandGroup(name, commands))
+        self._command_groups.append(craft_cli.CommandGroup(name, commands, ordered))
 
     @cached_property
     def cache_dir(self) -> pathlib.Path:

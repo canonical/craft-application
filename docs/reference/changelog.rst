@@ -31,6 +31,11 @@ Git
 - Use ``craft.git`` for Git-related operations run with ``subprocess`` in
   ``GitRepo``.
 
+Application
+===========
+
+- Add support for keeping order in help for commands provided to
+  ``add_command_group()``.
 
 .. For a complete list of commits, check out the `4.6.0`_ release on GitHub.
 
