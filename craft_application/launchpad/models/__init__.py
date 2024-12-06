@@ -7,7 +7,7 @@ from .build import BuildTypes, BuildState, Build
 from .code import GitRepository
 from .distro import DistroSeries
 from .project import ProjectType, Project
-from .recipe import RecipeType, SnapRecipe, CharmRecipe, Recipe
+from .recipe import RecipeType, SnapRecipe, CharmRecipe, Recipe, RockRecipe
 
 __all__ = [
     "LaunchpadObject",
@@ -24,4 +24,5 @@ __all__ = [
     "SnapRecipe",
     "CharmRecipe",
     "Recipe",
+    "RockRecipe",
 ]

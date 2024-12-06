@@ -50,6 +50,7 @@ class RecipeType(enum.Enum):
 
     SNAP = "snap"
     CHARM = "charm_recipe"
+    ROCK = "rock_recipe"
 
 
 class BuildChannels(TypedDict, total=False):
@@ -444,9 +445,9 @@ class CharmRecipe(_StoreRecipe):
 
 
 class RockRecipe(_StoreRecipe):
-    """A recipe for a charm.
+    """A recipe for a rock.
 
-    https://api.launchpad.net/devel.html#charm_recipe
+    https://api.launchpad.net/devel.html#rock_recipe
     """
 
     @classmethod
@@ -501,9 +502,9 @@ class RockRecipe(_StoreRecipe):
         cls._fill_repo_info(kwargs, git_ref=git_ref)
 
         charm_entry = retry(
-            f"create charm recipe {name!r}",
+            f"create rock recipe {name!r}",
             lazr.restfulclient.errors.BadRequest,
-            lp.lp.charm_recipes.new,
+            lp.lp.rock_recipes.new,
             name=name,
             owner=util.get_person_link(owner),
             project=f"/{project}",
@@ -512,7 +513,7 @@ class RockRecipe(_StoreRecipe):
         )
 
         if not charm_entry:
-            raise ValueError("Failed to create charm recipe")
+            raise ValueError("Failed to create rock recipe")
 
         return cls(lp, charm_entry)
 
@@ -527,7 +528,7 @@ class RockRecipe(_StoreRecipe):
                 retry(
                     f"get charm recipe {name!r}",
                     lazr.restfulclient.errors.NotFound,
-                    lp.lp.charm_recipes.getByName,
+                    lp.lp.rock_recipes.getByName,
                     name=name,
                     owner=util.get_person_link(owner),
                     project=f"/{project}",
@@ -544,7 +545,7 @@ class RockRecipe(_StoreRecipe):
     ) -> Iterable[Self]:
         """Find a Charm recipe by the owner."""
         owner = util.get_person_link(owner)
-        lp_recipes = lp.lp.charm_recipes.findByOwner(owner=util.get_person_link(owner))
+        lp_recipes = lp.lp.rock_recipes.findByOwner(owner=util.get_person_link(owner))
         for recipe in lp_recipes:
             if name and recipe.name != name:
                 continue
@@ -560,4 +561,4 @@ class RockRecipe(_StoreRecipe):
         return self._build(deadline, kwargs)
 
 
-Recipe = SnapRecipe | CharmRecipe
+Recipe = SnapRecipe | CharmRecipe | RockRecipe
