@@ -18,7 +18,7 @@ import pytest
 from craft_application import services
 
 
-def test_gets_real_services(
+def test_gets_dataclass_services(
     check,
     app_metadata,
     fake_project,
@@ -32,6 +32,27 @@ def test_gets_real_services(
         PackageClass=fake_package_service_class,
         LifecycleClass=fake_lifecycle_service_class,
         ProviderClass=fake_provider_service_class,
+    )
+
+    check.is_instance(factory.package, services.PackageService)
+    check.is_instance(factory.lifecycle, services.LifecycleService)
+    check.is_instance(factory.provider, services.ProviderService)
+
+
+def test_gets_registered_services(
+    check,
+    app_metadata,
+    fake_project,
+    fake_package_service_class,
+    fake_lifecycle_service_class,
+    fake_provider_service_class,
+):
+    services.ServiceFactory.register("package", fake_package_service_class)
+    services.ServiceFactory.register("lifecycle", fake_lifecycle_service_class)
+    services.ServiceFactory.register("provider", fake_provider_service_class)
+    factory = services.ServiceFactory(
+        app_metadata,
+        project=fake_project,
     )
 
     check.is_instance(factory.package, services.PackageService)

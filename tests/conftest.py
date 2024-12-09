@@ -30,6 +30,7 @@ import jinja2
 import pydantic
 import pytest
 from craft_application import application, git, launchpad, models, services, util
+from craft_application.services import service_factory
 from craft_cli import EmitterMode, emit
 from craft_providers import bases
 from jinja2 import FileSystemLoader
@@ -44,6 +45,12 @@ def _create_fake_build_plan(num_infos: int = 1) -> list[models.BuildInfo]:
     arch = util.get_host_architecture()
     base = util.get_host_base()
     return [models.BuildInfo("foo", arch, arch, base)] * num_infos
+
+
+@pytest.fixture(autouse=True)
+def reset_services():
+    yield
+    service_factory.ServiceFactory.reset()
 
 
 @pytest.fixture
@@ -310,19 +317,21 @@ def fake_init_service_class(tmp_path):
 
 @pytest.fixture
 def fake_services(
+    tmp_path,
     app_metadata,
     fake_project,
     fake_lifecycle_service_class,
     fake_package_service_class,
     fake_init_service_class,
 ):
-    return services.ServiceFactory(
-        app_metadata,
-        project=fake_project,
-        PackageClass=fake_package_service_class,
-        LifecycleClass=fake_lifecycle_service_class,
-        InitClass=fake_init_service_class,
+    services.ServiceFactory.register("package", fake_package_service_class)
+    services.ServiceFactory.register("lifecycle", fake_lifecycle_service_class)
+    services.ServiceFactory.register("init", fake_init_service_class)
+    factory = services.ServiceFactory(app_metadata, project=fake_project)
+    factory.update_kwargs(
+        "lifecycle", work_dir=tmp_path, cache_dir=tmp_path / "cache", build_plan=[]
     )
+    return factory
 
 
 class FakeApplication(application.Application):

@@ -22,6 +22,7 @@ from unittest import mock
 import pytest
 import pytest_mock
 from craft_application import git, services, util
+from craft_application.services import service_factory
 
 
 @pytest.fixture(params=["amd64", "arm64", "riscv64"])
@@ -44,17 +45,32 @@ def provider_service(
 
 
 @pytest.fixture
-def mock_services(app_metadata, fake_project, fake_package_service_class):
-    factory = services.ServiceFactory(
-        app_metadata, project=fake_project, PackageClass=fake_package_service_class
+def mock_services(monkeypatch, app_metadata, fake_project):
+    services.ServiceFactory.register("config", mock.Mock(spec=services.ConfigService))
+    services.ServiceFactory.register("fetch", mock.Mock(spec=services.FetchService))
+    services.ServiceFactory.register("init", mock.MagicMock(spec=services.InitService))
+    services.ServiceFactory.register(
+        "lifecycle", mock.Mock(spec=services.LifecycleService)
     )
-    factory.lifecycle = mock.Mock(spec=services.LifecycleService)
-    factory.package = mock.Mock(spec=services.PackageService)
-    factory.provider = mock.Mock(spec=services.ProviderService)
-    factory.remote_build = mock.Mock(spec_set=services.RemoteBuildService)
-    factory.fetch = mock.Mock(spec=services.FetchService)
-    factory.init = mock.Mock(spec=services.InitService)
-    return factory
+    services.ServiceFactory.register("package", mock.Mock(spec=services.PackageService))
+    services.ServiceFactory.register(
+        "provider", mock.Mock(spec=services.ProviderService)
+    )
+    services.ServiceFactory.register(
+        "remote_build", mock.Mock(spec=services.RemoteBuildService)
+    )
+
+    def forgiving_is_subclass(child, parent):
+        if not isinstance(child, type):
+            return False
+        return issubclass(child, parent)
+
+    # Mock out issubclass on the service factory since we're registering mock objects
+    # rather than actual classes.
+    monkeypatch.setattr(
+        service_factory, "issubclass", forgiving_is_subclass, raising=False
+    )
+    return services.ServiceFactory(app_metadata, project=fake_project)
 
 
 @pytest.fixture
