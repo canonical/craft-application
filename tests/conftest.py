@@ -317,6 +317,7 @@ def fake_init_service_class(tmp_path):
 
 @pytest.fixture
 def fake_services(
+    tmp_path,
     app_metadata,
     fake_project,
     fake_lifecycle_service_class,
@@ -326,7 +327,14 @@ def fake_services(
     services.ServiceFactory.register("package", fake_package_service_class)
     services.ServiceFactory.register("lifecycle", fake_lifecycle_service_class)
     services.ServiceFactory.register("init", fake_init_service_class)
-    return services.ServiceFactory(app_metadata, project=fake_project)
+    factory = services.ServiceFactory(app_metadata, project=fake_project)
+    factory.update_kwargs(
+        "lifecycle",
+        work_dir=tmp_path,
+        cache_dir=tmp_path / "cache",
+        build_plan=[]
+    )
+    return factory
 
 
 class FakeApplication(application.Application):

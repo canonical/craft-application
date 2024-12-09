@@ -95,14 +95,16 @@ class ServiceFactory:
 
         factory_dict = dataclasses.asdict(self)
         for cls_name, value in factory_dict.items():
-            if cls_name.endswith("Class") and value is not None:
-                identifier = _CAMEL_TO_PYTHON_CASE_REGEX.sub("_", cls_name[:-5]).lower()
-                warnings.warn(
-                    f'Registering services on service factory instantiation is deprecated. Use ServiceFactory.register("{identifier}", {value.__name__}) instead.',
-                    category=DeprecationWarning,
-                    stacklevel=3,
-                )
-                self.register(identifier, value)
+            if cls_name.endswith("Class"):
+                if value is not None:
+                    identifier = _CAMEL_TO_PYTHON_CASE_REGEX.sub("_", cls_name[:-5]).lower()
+                    warnings.warn(
+                        f'Registering services on service factory instantiation is deprecated. Use ServiceFactory.register("{identifier}", {value.__name__}) instead.',
+                        category=DeprecationWarning,
+                        stacklevel=3,
+                    )
+                    self.register(identifier, value)
+                setattr(self, cls_name, self.get_class(cls_name))
 
         if "package" not in self._service_classes:
             raise TypeError(
@@ -136,12 +138,17 @@ class ServiceFactory:
                 )
             cls._service_classes[name] = service_class
 
+        # For backwards compatibility with class attribute service types.
+        service_cls_name = "".join(word.title() for word in name.split("_")) + "Class"
+        setattr(cls, service_cls_name, cls.get_class(name))
+
     @classmethod
     def reset(cls) -> None:
         """Reset the registered services."""
         cls._service_classes.clear()
         for name, class_name in _DEFAULT_SERVICES.items():
-            cls.register(name, class_name, module=f"craft_application.services.{name}")
+            module_name = name.replace("_", "")
+            cls.register(name, class_name, module=f"craft_application.services.{module_name}")
 
     def set_kwargs(
         self,

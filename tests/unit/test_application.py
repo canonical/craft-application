@@ -515,7 +515,7 @@ def test_merge_default_commands_only(app):
 )
 def test_log_path(monkeypatch, app, provider_managed, expected):
     monkeypatch.setattr(
-        app.services.ProviderClass, "is_managed", lambda: provider_managed
+        app.services.get_class("provider"), "is_managed", lambda: provider_managed
     )
 
     actual = app.log_path
@@ -702,7 +702,7 @@ def test_get_arg_or_config(monkeypatch, app, parsed_args, environ, item, expecte
 def test_get_dispatcher_error(
     monkeypatch, check, capsys, app, mock_dispatcher, managed, error, exit_code, message
 ):
-    monkeypatch.setattr(app.services.ProviderClass, "is_managed", lambda: managed)
+    monkeypatch.setattr(app.services.get_class("provider"), "is_managed", lambda: managed)
     mock_dispatcher.pre_parse_args.side_effect = error
 
     with pytest.raises(SystemExit) as exc_info:

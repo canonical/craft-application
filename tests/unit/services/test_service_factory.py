@@ -32,14 +32,22 @@ class FakeService(services.AppService):
 
 @pytest.fixture
 def factory(
-    app_metadata, fake_project, fake_package_service_class, fake_lifecycle_service_class
+    tmp_path, app_metadata, fake_project, fake_package_service_class, fake_lifecycle_service_class,
 ):
     services.ServiceFactory.register("package", fake_package_service_class)
     services.ServiceFactory.register("lifecycle", fake_lifecycle_service_class)
-    return services.ServiceFactory(
+
+    factory = services.ServiceFactory(
         app_metadata,
         project=fake_project,
     )
+    factory.update_kwargs(
+        "lifecycle",
+        work_dir=tmp_path,
+        cache_dir=tmp_path / "cache",
+        build_plan=[],
+    )
+    return factory
 
 
 @pytest.mark.parametrize(
@@ -55,12 +63,15 @@ def test_register_service_by_path(service_class, module):
     service = services.ServiceFactory.get_class("testy")
     pytest_check.equal(service.__module__, module)
     pytest_check.equal(service.__name__, service_class)
+    pytest_check.is_(service, services.ServiceFactory.TestyClass)
 
 
 def test_register_service_by_reference():
     services.ServiceFactory.register("testy", FakeService)
 
-    assert services.ServiceFactory.get_class("testy") is FakeService
+    service = services.ServiceFactory.get_class("testy")
+    pytest_check.is_(service, FakeService)
+    pytest_check.is_(service, services.ServiceFactory.TestyClass)
 
 
 def test_register_service_by_path_no_module():
@@ -199,7 +210,7 @@ def test_get_default_services(
     factory, fake_package_service_class, fake_lifecycle_service_class
 ):
     pytest_check.is_instance(factory.get("package"), fake_package_service_class)
-    pytest_check.is_instance(factory.get("lifecycle"), fake_lifecycle_service_class)
+    pytest_check.is_instance(factory.get("lifecycle"), services.LifecycleService)
     pytest_check.is_instance(factory.get("config"), services.ConfigService)
     pytest_check.is_instance(factory.get("init"), services.InitService)
 
