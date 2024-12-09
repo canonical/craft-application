@@ -14,6 +14,7 @@
 #  You should have received a copy of the GNU Lesser General Public License
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Configuration for craft-application integration tests."""
+
 import os
 import pathlib
 import sys
@@ -92,3 +93,8 @@ def pretend_jammy(mocker) -> None:
     """Pretend we're running on jammy. Used for tests that use destructive mode."""
     fake_host = bases.BaseName(name="ubuntu", version="22.04")
     mocker.patch("craft_application.util.get_host_base", return_value=fake_host)
+
+
+@pytest.fixture
+def hello_repository_lp_url() -> str:
+    return "https://git.launchpad.net/ubuntu/+source/hello"
