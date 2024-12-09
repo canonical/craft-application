@@ -329,10 +329,7 @@ def fake_services(
     services.ServiceFactory.register("init", fake_init_service_class)
     factory = services.ServiceFactory(app_metadata, project=fake_project)
     factory.update_kwargs(
-        "lifecycle",
-        work_dir=tmp_path,
-        cache_dir=tmp_path / "cache",
-        build_plan=[]
+        "lifecycle", work_dir=tmp_path, cache_dir=tmp_path / "cache", build_plan=[]
     )
     return factory
 

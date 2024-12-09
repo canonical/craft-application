@@ -67,7 +67,10 @@ def test_register_service_by_path(service_class, module):
     service = services.ServiceFactory.get_class("testy")
     pytest_check.equal(service.__module__, module)
     pytest_check.equal(service.__name__, service_class)
-    pytest_check.is_(service, services.ServiceFactory.TestyClass)
+    pytest_check.is_(
+        service,
+        services.ServiceFactory.TestyClass,  # pyright: ignore[reportAttributeAccessIssue]
+    )
 
 
 def test_register_service_by_reference():
@@ -75,7 +78,10 @@ def test_register_service_by_reference():
 
     service = services.ServiceFactory.get_class("testy")
     pytest_check.is_(service, FakeService)
-    pytest_check.is_(service, services.ServiceFactory.TestyClass)
+    pytest_check.is_(
+        service,
+        services.ServiceFactory.TestyClass,  # pyright: ignore[reportAttributeAccessIssue]
+    )
 
 
 def test_register_service_by_path_no_module():

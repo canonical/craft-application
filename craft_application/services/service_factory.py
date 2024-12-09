@@ -97,7 +97,9 @@ class ServiceFactory:
         for cls_name, value in factory_dict.items():
             if cls_name.endswith("Class"):
                 if value is not None:
-                    identifier = _CAMEL_TO_PYTHON_CASE_REGEX.sub("_", cls_name[:-5]).lower()
+                    identifier = _CAMEL_TO_PYTHON_CASE_REGEX.sub(
+                        "_", cls_name[:-5]
+                    ).lower()
                     warnings.warn(
                         f'Registering services on service factory instantiation is deprecated. Use ServiceFactory.register("{identifier}", {value.__name__}) instead.',
                         category=DeprecationWarning,
@@ -148,7 +150,9 @@ class ServiceFactory:
         cls._service_classes.clear()
         for name, class_name in _DEFAULT_SERVICES.items():
             module_name = name.replace("_", "")
-            cls.register(name, class_name, module=f"craft_application.services.{module_name}")
+            cls.register(
+                name, class_name, module=f"craft_application.services.{module_name}"
+            )
 
     def set_kwargs(
         self,
