@@ -23,10 +23,11 @@ from unittest import mock
 
 import craft_parts
 import craft_parts.callbacks
+import craft_platforms
 import pytest
 import pytest_check
 from craft_application import errors, models, util
-from craft_application.errors import InvalidParameterError, PartsLifecycleError
+from craft_application.errors import PartsLifecycleError
 from craft_application.models.project import BuildInfo
 from craft_application.services import lifecycle
 from craft_application.util import repositories
@@ -372,7 +373,7 @@ def test_get_primed_stage_packages(lifecycle_service):
                 BuildInfo(
                     "my-platform",
                     build_on="any",
-                    build_for="amd64",
+                    build_for=craft_platforms.DebianArchitecture.AMD64,
                     base=bases.BaseName("ubuntu", "24.04"),
                 )
             ],
@@ -609,160 +610,6 @@ def test_lifecycle_package_repositories(
         fake_repositories, service._lcm, local_keys_path=local_keys_path
     )
     mock_callback.assert_called_once_with(repositories.install_overlay_repositories)
-
-
-# endregion
-
-# region parallel build count tests
-
-
-@pytest.mark.parametrize(
-    ("env_dict", "cpu_count", "expected"),
-    [
-        (
-            {},
-            None,
-            1,
-        ),
-        (
-            {},
-            100,
-            100,
-        ),
-        (
-            {"TESTCRAFT_PARALLEL_BUILD_COUNT": "100"},
-            1,
-            100,
-        ),
-        (
-            {"CRAFT_PARALLEL_BUILD_COUNT": "200"},
-            1,
-            200,
-        ),
-        (
-            {
-                "TESTCRAFT_MAX_PARALLEL_BUILD_COUNT": "100",
-            },
-            50,
-            50,
-        ),
-        (
-            {
-                "CRAFT_MAX_PARALLEL_BUILD_COUNT": "100",
-            },
-            80,
-            80,
-        ),
-        (
-            {
-                "TESTCRAFT_PARALLEL_BUILD_COUNT": "100",
-                "CRAFT_PARALLEL_BUILD_COUNT": "200",
-            },
-            1,
-            100,
-        ),
-        (
-            {
-                "TESTCRAFT_MAX_PARALLEL_BUILD_COUNT": "100",
-                "CRAFT_MAX_PARALLEL_BUILD_COUNT": "200",
-            },
-            150,
-            100,
-        ),
-        (
-            {
-                "TESTCRAFT_MAX_PARALLEL_BUILD_COUNT": "100",
-                "CRAFT_MAX_PARALLEL_BUILD_COUNT": "200",
-            },
-            None,
-            1,
-        ),
-        (
-            {
-                "TESTCRAFT_PARALLEL_BUILD_COUNT": "100",
-                "CRAFT_PARALLEL_BUILD_COUNT": "200",
-                "TESTCRAFT_MAX_PARALLEL_BUILD_COUNT": "300",
-                "CRAFT_MAX_PARALLEL_BUILD_COUNT": "400",
-            },
-            150,
-            100,
-        ),
-    ],
-)
-def test_get_parallel_build_count(
-    monkeypatch, mocker, fake_parts_lifecycle, env_dict, cpu_count, expected
-):
-    mocker.patch("os.cpu_count", return_value=cpu_count)
-    for env_dict_key, env_dict_value in env_dict.items():
-        monkeypatch.setenv(env_dict_key, env_dict_value)
-
-    assert fake_parts_lifecycle._get_parallel_build_count() == expected
-
-
-@pytest.mark.parametrize(
-    ("env_dict", "cpu_count"),
-    [
-        (
-            {
-                "TESTCRAFT_PARALLEL_BUILD_COUNT": "abc",
-            },
-            1,
-        ),
-        (
-            {
-                "CRAFT_PARALLEL_BUILD_COUNT": "-",
-            },
-            1,
-        ),
-        (
-            {
-                "TESTCRAFT_MAX_PARALLEL_BUILD_COUNT": "*",
-            },
-            1,
-        ),
-        (
-            {
-                "CRAFT_MAX_PARALLEL_BUILD_COUNT": "$COUNT",
-            },
-            1,
-        ),
-        (
-            {
-                "TESTCRAFT_PARALLEL_BUILD_COUNT": "0",
-            },
-            1,
-        ),
-        (
-            {
-                "CRAFT_PARALLEL_BUILD_COUNT": "-1",
-            },
-            1,
-        ),
-        (
-            {
-                "TESTCRAFT_MAX_PARALLEL_BUILD_COUNT": "5.6",
-            },
-            1,
-        ),
-        (
-            {
-                "CRAFT_MAX_PARALLEL_BUILD_COUNT": "inf",
-            },
-            1,
-        ),
-    ],
-)
-def test_get_parallel_build_count_error(
-    monkeypatch, mocker, fake_parts_lifecycle, env_dict, cpu_count
-):
-    mocker.patch("os.cpu_count", return_value=cpu_count)
-    for env_dict_key, env_dict_value in env_dict.items():
-        monkeypatch.setenv(env_dict_key, env_dict_value)
-
-    with pytest.raises(
-        InvalidParameterError, match=r"^Value '.*' is invalid for parameter '.*'.$"
-    ):
-        fake_parts_lifecycle._get_parallel_build_count()
 
 
 # endregion

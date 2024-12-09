@@ -52,6 +52,8 @@ class YamlError(CraftError, yaml.YAMLError):
     def from_yaml_error(cls, filename: str, error: yaml.YAMLError) -> Self:
         """Convert a pyyaml YAMLError to a craft-application YamlError."""
         message = f"error parsing {filename!r}"
+        if isinstance(error, yaml.MarkedYAMLError):
+            message += f": {error.problem}"
         details = str(error)
         return cls(
             message,
@@ -150,8 +152,11 @@ class EmptyBuildPlanError(CraftError):
     """The build plan filtered out all possible builds."""
 
     def __init__(self) -> None:
-        message = "No build matches the current platform."
-        resolution = 'Check the "--platform" and "--build-for" parameters.'
+        message = "No build matches the current execution environment."
+        resolution = (
+            "Check the project's 'platforms' declaration, and the "
+            "'--platform' and '--build-for' parameters."
+        )
 
         super().__init__(message=message, resolution=resolution)
 
@@ -237,6 +242,14 @@ class CancelFailedError(RemoteBuildError):
             reportable=reportable,
             retcode=retcode,
         )
+
+
+class FetchServiceError(CraftError):
+    """Errors related to the fetch-service."""
+
+
+class InitError(CraftError):
+    """Errors related to initialising a project."""
 
 
 class UbuntuProError(CraftError):

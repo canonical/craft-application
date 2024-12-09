@@ -46,6 +46,7 @@ def get_lifecycle_command_group() -> CommandGroup:
     return CommandGroup(
         "Lifecycle",
         commands,  # type: ignore[arg-type] # https://github.com/canonical/craft-cli/pull/157
+        ordered=True,
     )
 
 
@@ -163,14 +164,12 @@ class LifecycleCommand(_BaseLifecycleCommand):
             "--platform",
             type=str,
             metavar="name",
-            default=os.getenv("CRAFT_PLATFORM"),
             help="Set platform to build for",
         )
         group.add_argument(
             "--build-for",
             type=str,
             metavar="arch",
-            default=os.getenv("CRAFT_BUILD_FOR"),
             help="Set architecture to build for",
         )
 
@@ -373,6 +372,14 @@ class PackCommand(LifecycleCommand):
             help="Output directory for created packages.",
         )
 
+        parser.add_argument(
+            "--enable-fetch-service",
+            help=argparse.SUPPRESS,
+            choices=("strict", "permissive"),
+            metavar="policy",
+            dest="fetch_service_policy",
+        )
+
     @override
     def _run(
         self,
@@ -383,13 +390,35 @@ class PackCommand(LifecycleCommand):
         """Run the pack command."""
         if step_name not in ("pack", None):
             raise RuntimeError(f"Step name {step_name} passed to pack command.")
+
+        shell = getattr(parsed_args, "shell", False)
+        shell_after = getattr(parsed_args, "shell_after", False)
+        debug = getattr(parsed_args, "debug", False)
+
+        # Prevent the steps in the prime command from using `--shell` or `--shell-after`
+        parsed_args.shell = False
+        parsed_args.shell_after = False
+
         super()._run(parsed_args, step_name="prime")
         self._run_post_prime_steps()
 
+        if shell:
+            _launch_shell()
+            return
+
         emit.progress("Packing...")
-        packages = self._services.package.pack(
-            self._services.lifecycle.prime_dir, parsed_args.output
-        )
+        try:
+            packages = self._services.package.pack(
+                self._services.lifecycle.prime_dir, parsed_args.output
+            )
+        except Exception as err:
+            if debug:
+                emit.progress(str(err), permanent=True)
+                _launch_shell()
+            raise
+
+        if parsed_args.fetch_service_policy and packages:
+            self._services.fetch.create_project_manifest(packages)
 
         if not packages:
             emit.progress("No packages created.", permanent=True)
@@ -399,10 +428,8 @@ class PackCommand(LifecycleCommand):
             package_names = ", ".join(pkg.name for pkg in packages)
             emit.progress(f"Packed: {package_names}", permanent=True)
 
-    @staticmethod
-    @override
-    def _should_add_shell_args() -> bool:
-        return False
+        if shell_after:
+            _launch_shell()
 
 
 class CleanCommand(_BaseLifecycleCommand):
@@ -427,6 +454,12 @@ class CleanCommand(_BaseLifecycleCommand):
             type=str,
             nargs="*",
             help="Optional list of parts to process",
+        )
+        parser.add_argument(
+            "--platform",
+            type=str,
+            metavar="name",
+            help="Platform to clean",
         )
 
     @override

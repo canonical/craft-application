@@ -1,0 +1,11 @@
+component-name: full-project
+component-version: 1.0.0.post64+git12345678
+component-description: A fully-defined craft-application project.
+component-id:
+  hashes:
+    sha1: 27d3150b433071ec1e2bd5bf04bc6de92b8b12b5
+    sha256: 9d7f74856a64282de8cb743fafdba600f18eef2a6f6049746b7cb842e47a3123
+architecture: amd64
+license: LGPLv3
+metadata-generator: Craft Application
+creation-timestamp: '2024-09-16T01:02:03.456789+00:00'

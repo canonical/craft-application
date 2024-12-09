@@ -17,6 +17,7 @@
 
 from __future__ import annotations
 
+import argparse
 import importlib
 import os
 import pathlib
@@ -36,7 +37,7 @@ import craft_providers.lxd
 from craft_parts.plugins.plugins import PluginType
 from platformdirs import user_cache_path
 
-from craft_application import commands, errors, grammar, models, secrets, util
+from craft_application import _config, commands, errors, grammar, models, secrets, util
 from craft_application.errors import PathInvalidError
 from craft_application.models import BuildInfo, GrammarAwareProject
 from craft_application.util import ProServices, ValidatorOptions
@@ -54,7 +55,7 @@ DEFAULT_CLI_LOGGERS = frozenset(
         "craft_parts",
         "craft_providers",
         "craft_store",
-        "craft_application.remote",
+        "craft_application",
     }
 )
 
@@ -81,6 +82,7 @@ class AppMetadata:
     features: AppFeatures = AppFeatures()
     project_variables: list[str] = field(default_factory=lambda: ["version"])
     mandatory_adoptable_fields: list[str] = field(default_factory=lambda: ["version"])
+    ConfigModel: type[_config.ConfigModel] = _config.ConfigModel
 
     ProjectClass: type[models.Project] = models.Project
     BuildPlannerClass: type[models.BuildPlanner] = models.BuildPlanner
@@ -160,6 +162,11 @@ class Application:
         else:
             self._work_dir = pathlib.Path.cwd()
 
+        # Whether the command execution should use the fetch-service
+        self._enable_fetch_service = False
+        # The kind of sessions that the fetch-service service should create
+        self._fetch_service_policy = "strict"
+
     @property
     def app_config(self) -> dict[str, Any]:
         """Get the configuration passed to dispatcher.load_command().
@@ -175,22 +182,85 @@ class Application:
 
     @property
     def command_groups(self) -> list[craft_cli.CommandGroup]:
-        """Return command groups."""
-        lifecycle_commands = commands.get_lifecycle_command_group()
-        other_commands = commands.get_other_command_group()
+        """Return command groups.
 
-        merged: dict[str, list[type[craft_cli.BaseCommand]]] = {}
-        all_groups = [lifecycle_commands, other_commands, *self._command_groups]
+        Merges command groups provided by the application with craft-application's
+        default commands.
 
-        # Merge the default command groups with those provided by the application,
-        # so that we don't get multiple groups with the same name.
-        for group in all_groups:
-            merged.setdefault(group.name, []).extend(group.commands)
+        If the application and craft-application provide a command with the same name
+        in the same group, the application's command is used.
 
-        return [
-            craft_cli.CommandGroup(name, commands_)
-            for name, commands_ in merged.items()
-        ]
+        Note that a command with the same name cannot exist in multiple groups.
+        """
+        lifeycle_default_commands = commands.get_lifecycle_command_group()
+        other_default_commands = commands.get_other_command_group()
+
+        merged = {group.name: group for group in self._command_groups}
+
+        merged[lifeycle_default_commands.name] = self._merge_defaults(
+            app_commands=merged.get(lifeycle_default_commands.name),
+            default_commands=lifeycle_default_commands,
+        )
+        merged[other_default_commands.name] = self._merge_defaults(
+            app_commands=merged.get(other_default_commands.name),
+            default_commands=other_default_commands,
+        )
+
+        return list(merged.values())
+
+    def _merge_defaults(
+        self,
+        *,
+        app_commands: craft_cli.CommandGroup | None,
+        default_commands: craft_cli.CommandGroup,
+    ) -> craft_cli.CommandGroup:
+        """Merge default commands with application commands for a particular group.
+
+        Default commands are only used if the application does not have a command
+        with the same name.
+
+        The order of the merged commands follow the order of the default commands.
+        Extra application commands are appended to the end of the command list.
+
+        :param app_commands: The application's commands.
+        :param default_commands: Craft Application's default commands.
+
+        :returns: A list of app commands and default commands.
+        """
+        if not app_commands:
+            return default_commands
+
+        craft_cli.emit.debug(f"Merging commands for group {default_commands.name!r}:")
+
+        # for lookup of commands by name
+        app_commands_dict = {command.name: command for command in app_commands.commands}
+
+        merged_commands: list[type[craft_cli.BaseCommand]] = []
+        processed_command_names: set[str] = set()
+
+        for default_command in default_commands.commands:
+            # prefer the application command if it exists
+            command_name = default_command.name
+            if command_name in app_commands_dict:
+                craft_cli.emit.debug(
+                    f"  - using application command for {command_name!r}."
+                )
+                merged_commands.append(app_commands_dict[command_name])
+                processed_command_names.add(command_name)
+            # otherwise use the default
+            else:
+                merged_commands.append(default_command)
+
+        # append remaining commands from the application
+        for app_command in app_commands.commands:
+            if app_command.name not in processed_command_names:
+                merged_commands.append(app_command)
+
+        return craft_cli.CommandGroup(
+            name=default_commands.name,
+            commands=merged_commands,
+            ordered=default_commands.ordered,
+        )
 
     @property
     def log_path(self) -> pathlib.Path | None:
@@ -229,7 +299,7 @@ class Application:
         Any child classes that override this must either call this directly or must
         provide a valid ``project`` to ``self.services``.
         """
-        self.services.set_kwargs(
+        self.services.update_kwargs(
             "lifecycle",
             cache_dir=self.cache_dir,
             work_dir=self._work_dir,
@@ -239,11 +309,16 @@ class Application:
                 self._pro_services
             ),  # TODO: should this be passed as a arg instead?
         )
-        self.services.set_kwargs(
+        self.services.update_kwargs(
             "provider",
             work_dir=self._work_dir,
             build_plan=self._build_plan,
             provider_name=provider_name,
+        )
+        self.services.update_kwargs(
+            "fetch",
+            build_plan=self._build_plan,
+            session_policy=self._fetch_service_policy,
         )
 
     def _resolve_project_path(self, project_dir: pathlib.Path | None) -> pathlib.Path:
@@ -345,8 +420,10 @@ class Application:
 
     def run_managed(self, platform: str | None, build_for: str | None) -> None:
         """Run the application in a managed instance."""
-        extra_args: dict[str, Any] = {}
+        if not self._build_plan:
+            raise errors.EmptyBuildPlanError
 
+        extra_args: dict[str, Any] = {}
         for build_info in self._build_plan:
             if platform and platform != build_info.platform:
                 continue
@@ -373,8 +450,14 @@ class Application:
             instance_path = pathlib.PosixPath("/root/project")
 
             with self.services.provider.instance(
-                build_info, work_dir=self._work_dir
+                build_info,
+                work_dir=self._work_dir,
+                clean_existing=self._enable_fetch_service,
             ) as instance:
+                if self._enable_fetch_service:
+                    session_env = self.services.fetch.create_session(instance)
+                    env.update(session_env)
+
                 # if pro services are required, ensure the pro client is
                 # installed, attached and the correct services are enabled
                 if self._pro_services:
@@ -410,13 +493,20 @@ class Application:
                     raise craft_providers.ProviderError(
                         f"Failed to execute {self.app.name} in instance."
                     ) from exc
+                finally:
+                    if self._enable_fetch_service:
+                        self.services.fetch.teardown_session()
+
+        if self._enable_fetch_service:
+            self.services.fetch.shutdown(force=True)
 
     def configure(self, global_args: dict[str, Any]) -> None:
         """Configure the application using any global arguments."""
 
     def _get_dispatcher(self) -> craft_cli.Dispatcher:
-        """Configure this application. Should be called by the run method.
+        """Configure this application.
 
+        Should be called by the _run_inner method.
         Side-effect: This method may exit the process.
 
         :returns: A ready-to-run Dispatcher object
@@ -425,15 +515,18 @@ class Application:
 
         try:
             craft_cli.emit.trace("pre-parsing arguments...")
+            app_config = self.app_config
             # Workaround for the fact that craft_cli requires a command.
             # https://github.com/canonical/craft-cli/issues/141
             if "--version" in sys.argv or "-V" in sys.argv:
                 try:
-                    global_args = dispatcher.pre_parse_args(["pull", *sys.argv[1:]])
+                    global_args = dispatcher.pre_parse_args(
+                        ["pull", *sys.argv[1:]], app_config
+                    )
                 except craft_cli.ArgumentParsingError:
-                    global_args = dispatcher.pre_parse_args(sys.argv[1:])
+                    global_args = dispatcher.pre_parse_args(sys.argv[1:], app_config)
             else:
-                global_args = dispatcher.pre_parse_args(sys.argv[1:])
+                global_args = dispatcher.pre_parse_args(sys.argv[1:], app_config)
 
             if global_args.get("version"):
                 craft_cli.emit.message(f"{self.app.name} {self.app.version}")
@@ -456,7 +549,7 @@ class Application:
                     f"Internal error while loading {self.app.name}: {err!r}"
                 )
             )
-            if os.getenv("CRAFT_DEBUG") == "1":
+            if self.services.config.get("debug"):
                 raise
             sys.exit(os.EX_SOFTWARE)
 
@@ -476,6 +569,7 @@ class Application:
             self.command_groups,
             summary=str(self.app.summary),
             extra_global_args=self._global_arguments,
+            docs_base_url=self.app.versioned_docs_url,
         )
 
     def _get_app_plugins(self) -> dict[str, PluginType]:
@@ -504,13 +598,15 @@ class Application:
         At the time this is run, the command is loaded in the dispatcher, but
         the project has not yet been loaded.
         """
+        args = dispatcher.parsed_args()
+
         # Some commands might have a project_dir parameter. Those commands and
         # only those commands should get a project directory, but only when
         # not managed.
 
         if self.is_managed():
             self.project_dir = pathlib.Path("/root/project")
-        elif project_dir := getattr(dispatcher.parsed_args(), "project_dir", None):
+        elif project_dir := getattr(args, "project_dir", None):
             self.project_dir = pathlib.Path(project_dir).expanduser().resolve()
             if self.project_dir.exists() and not self.project_dir.is_dir():
                 raise errors.ProjectFileMissingError(
@@ -518,6 +614,25 @@ class Application:
                     details=f"Not a directory: {project_dir}",
                     resolution="Ensure the path entered is correct.",
                 )
+
+        fetch_service_policy: str | None = getattr(args, "fetch_service_policy", None)
+        if fetch_service_policy:
+            self._enable_fetch_service = True
+            self._fetch_service_policy = fetch_service_policy
+
+    def get_arg_or_config(
+        self, parsed_args: argparse.Namespace, item: str
+    ) -> Any:  # noqa: ANN401
+        """Get a configuration option that could be overridden by a command argument.
+
+        :param parsed_args: The argparse Namespace to check.
+        :param item: the name of the namespace or config item.
+        :returns: the requested value.
+        """
+        arg_value = getattr(parsed_args, item, None)
+        if arg_value is not None:
+            return arg_value
+        return self.services.config.get(item)
 
     @staticmethod
     def _check_pro_requirement(
@@ -547,68 +662,70 @@ class Application:
                     options=ValidatorOptions.ATTACHMENT | ValidatorOptions.SUPPORT
                 )
 
-    def run(  # noqa: PLR0912,PLR0915  (too many branches, too many statements)
-        self,
-    ) -> int:
+    def _run_inner(self) -> int:
+        """Actual run implementation."""
+        dispatcher = self._get_dispatcher()
+        command = cast(
+            commands.AppCommand,
+            dispatcher.load_command(self.app_config),
+        )
+        parsed_args = dispatcher.parsed_args()
+        platform = self.get_arg_or_config(parsed_args, "platform")
+        build_for = self.get_arg_or_config(parsed_args, "build_for")
+
+        # Some commands (e.g. remote build) can allow multiple platforms
+        # or build-fors, comma-separated. In these cases, we create the
+        # project using the first defined platform.
+        if platform and "," in platform:
+            platform = platform.split(",", maxsplit=1)[0]
+        if build_for and "," in build_for:
+            build_for = build_for.split(",", maxsplit=1)[0]
+
+        provider_name = command.provider_name(dispatcher.parsed_args())
+
+        managed_mode = command.run_managed(dispatcher.parsed_args())
+
+        # TODO: Move pro operations out to new service for managing Ubuntu Pro
+        # A ProServices instance will only be available for lifecycle commands,
+        # which may consume pro packages,
+        self._pro_services = getattr(dispatcher.parsed_args(), "pro", None)
+        # Check that pro services are correctly configured if available
+        self._check_pro_requirement(self._pro_services, managed_mode, self.is_managed())
+
+        craft_cli.emit.debug(f"Build plan: platform={platform}, build_for={build_for}")
+        self._pre_run(dispatcher)
+
+        if managed_mode or command.needs_project(dispatcher.parsed_args()):
+            self.services.project = self.get_project(
+                platform=platform, build_for=build_for
+            )
+
+        self._configure_services(provider_name)
+
+        return_code = 1  # General error
+        if not managed_mode:
+            # command runs in the outer instance
+            craft_cli.emit.debug(f"Running {self.app.name} {command.name} on host")
+            return_code = dispatcher.run() or os.EX_OK
+        elif not self.is_managed():
+            # command runs in inner instance, but this is the outer instance
+            self.run_managed(platform, build_for)
+            return_code = os.EX_OK
+        else:
+            # command runs in inner instance
+            return_code = dispatcher.run() or 0
+
+        return return_code
+
+    def run(self) -> int:
         """Bootstrap and run the application."""
         self._setup_logging()
         self._initialize_craft_parts()
-        dispatcher = self._get_dispatcher()
+
         craft_cli.emit.debug("Preparing application...")
 
-        return_code = 1  # General error
         try:
-            command = cast(
-                commands.AppCommand,
-                dispatcher.load_command(self.app_config),
-            )
-
-            platform = getattr(dispatcher.parsed_args(), "platform", None)
-            build_for = getattr(dispatcher.parsed_args(), "build_for", None)
-
-            run_managed = command.run_managed(dispatcher.parsed_args())
-            is_managed = self.is_managed()
-
-            # Some commands (e.g. remote build) can allow multiple platforms
-            # or build-fors, comma-separated. In these cases, we create the
-            # project using the first defined platform.
-            if platform and "," in platform:
-                platform = platform.split(",", maxsplit=1)[0]
-            if build_for and "," in build_for:
-                build_for = build_for.split(",", maxsplit=1)[0]
-
-            provider_name = command.provider_name(dispatcher.parsed_args())
-
-            # TODO: Move pro operations out to new service for managing Ubuntu Pro
-            # A ProServices instance will only be available for lifecycle commands,
-            # which may consume pro packages,
-            self._pro_services = getattr(dispatcher.parsed_args(), "pro", None)
-            # Check that pro services are correctly configured if available
-            self._check_pro_requirement(self._pro_services, run_managed, is_managed)
-
-            if run_managed or command.needs_project(dispatcher.parsed_args()):
-                self.services.project = self.get_project(
-                    platform=platform, build_for=build_for
-                )
-
-            craft_cli.emit.debug(
-                f"Build plan: platform={platform}, build_for={build_for}"
-            )
-            self._pre_run(dispatcher)
-
-            self._configure_services(provider_name)
-
-            if not run_managed:
-                # command runs in the outer instance
-                craft_cli.emit.debug(f"Running {self.app.name} {command.name} on host")
-                return_code = dispatcher.run() or os.EX_OK
-            elif not is_managed:
-                # command runs in inner instance, but this is the outer instance
-                self.run_managed(platform, build_for)
-                return_code = os.EX_OK
-            else:
-                # command runs in inner instance
-                return_code = dispatcher.run() or 0
+            return_code = self._run_inner()
         except craft_cli.ArgumentParsingError as err:
             print(err, file=sys.stderr)  # to stderr, as argparse normally does
             craft_cli.emit.ended_ok()
@@ -638,7 +755,7 @@ class Application:
                 craft_cli.CraftError(f"{self.app.name} internal error: {err!r}"),
                 cause=err,
             )
-            if os.getenv("CRAFT_DEBUG") == "1":
+            if self.services.config.get("debug"):
                 raise
             return_code = os.EX_SOFTWARE
         else:
@@ -725,6 +842,7 @@ class Application:
             application_name=self.app.name,  # not used in environment expansion
             cache_dir=pathlib.Path(),  # not used in environment expansion
             arch=build_for_arch,
+            parallel_build_count=util.get_parallel_build_count(self.app.name),
             project_name=yaml_data.get("name", ""),
             project_dirs=project_dirs,
             project_vars=environment_vars,

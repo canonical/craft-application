@@ -133,7 +133,9 @@ class LaunchpadObject:
 
         if item in annotations:
             cls = annotations[item]
-            if isinstance(cls, type) and issubclass(cls, LaunchpadObject):
+            if isinstance(  # pyright: ignore[reportUnnecessaryIsInstance]
+                cls, type
+            ) and issubclass(cls, LaunchpadObject):
                 return cls(self._lp, lp_obj)
             # We expect that this class can take the object.
             return cls(lp_obj)  # type: ignore[call-arg]

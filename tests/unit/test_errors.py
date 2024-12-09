@@ -54,7 +54,7 @@ from typing_extensions import Self
                 ),
             ),
             YamlError(
-                "error parsing 'something.yaml'",
+                "error parsing 'something.yaml': I am a thing",
                 details='I am a thing\n  in "bork", line 1, column 1:\n    Hello there\n    ^',
                 resolution="Ensure something.yaml contains valid YAML",
             ),
