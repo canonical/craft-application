@@ -30,6 +30,7 @@ from __future__ import annotations
 
 import enum
 import time
+from abc import abstractmethod
 from collections.abc import Collection, Iterable
 from typing import TYPE_CHECKING, ClassVar, Literal
 
@@ -333,9 +334,10 @@ class _StandardRecipe(_StoreRecipe):
     """The artifact type this recipe creates: charm, rock, etc."""
 
     @classmethod
-    def _lp_recipe(cls, lp: Launchpad) -> Any:  # noqa: ANN401 (use of any)
+    @abstractmethod
+    def _get_lp_recipe(cls, lp: Launchpad) -> Any:  # noqa: ANN401 (use of any)
         """Get the launchpad utility to manipulate recipes."""
-        raise NotImplementedError
+        raise NotImplementedError("Must be implemented by subclass.")
 
     @classmethod
     def new(  # noqa: PLR0913
@@ -389,7 +391,7 @@ class _StandardRecipe(_StoreRecipe):
         created_entry = retry(
             f"create {cls.ARTIFACT} recipe {name!r}",
             lazr.restfulclient.errors.BadRequest,
-            cls._lp_recipe(lp).new,
+            cls._get_lp_recipe(lp).new,
             name=name,
             owner=util.get_person_link(owner),
             project=f"/{project}",
@@ -413,7 +415,7 @@ class _StandardRecipe(_StoreRecipe):
                 retry(
                     f"get {cls.ARTIFACT} recipe {name!r}",
                     lazr.restfulclient.errors.NotFound,
-                    cls._lp_recipe(lp).getByName,
+                    cls._get_lp_recipe(lp).getByName,
                     name=name,
                     owner=util.get_person_link(owner),
                     project=f"/{project}",
@@ -430,7 +432,9 @@ class _StandardRecipe(_StoreRecipe):
     ) -> Iterable[Self]:
         """Find a recipe by the owner."""
         owner = util.get_person_link(owner)
-        lp_recipes = cls._lp_recipe(lp).findByOwner(owner=util.get_person_link(owner))
+        lp_recipes = cls._get_lp_recipe(lp).findByOwner(
+            owner=util.get_person_link(owner)
+        )
         for recipe in lp_recipes:
             if name and recipe.name != name:
                 continue
@@ -456,7 +460,7 @@ class CharmRecipe(_StandardRecipe):
 
     @override
     @classmethod
-    def _lp_recipe(cls, lp: Launchpad) -> Any:
+    def _get_lp_recipe(cls, lp: Launchpad) -> Any:
         """https://api.launchpad.net/devel.html#charm_recipes."""
         return lp.lp.charm_recipes
 
