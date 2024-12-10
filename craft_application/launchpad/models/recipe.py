@@ -326,7 +326,7 @@ class SnapRecipe(_StoreRecipe):
         return self._build(deadline, request_build_kwargs)
 
 
-class CharmRecipe(_StoreRecipe):
+class _StandardRecipe(_StoreRecipe):
     """A recipe for a charm.
 
     https://api.launchpad.net/devel.html#charm_recipe
@@ -441,6 +441,13 @@ class CharmRecipe(_StoreRecipe):
         """Create a new set of builds for this recipe."""
         kwargs = {"channels": channels} if channels else {}
         return self._build(deadline, kwargs)
+
+
+class CharmRecipe(_StandardRecipe):
+    """A recipe for a charm.
+
+    https://api.launchpad.net/devel.html#charm_recipe
+    """
 
 
 Recipe = SnapRecipe | CharmRecipe
