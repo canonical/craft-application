@@ -19,7 +19,7 @@ import sys
 from craft_cli import emit
 
 
-def confirm_with_user(prompt: str, default: bool = False) -> bool:
+def confirm_with_user(prompt: str, *, default: bool = False) -> bool:
     """Query user for yes/no answer.
 
     If stdin is not a tty, the default value is returned.
@@ -29,9 +29,6 @@ def confirm_with_user(prompt: str, default: bool = False) -> bool:
     :returns: True if answer starts with [yY], False if answer starts with [nN],
         otherwise the default.
     """
-    if is_charmcraft_running_in_managed_mode():
-        raise RuntimeError("confirmation not yet supported in managed-mode")
-
     if not sys.stdin.isatty():
         return default
 
@@ -42,7 +39,6 @@ def confirm_with_user(prompt: str, default: bool = False) -> bool:
 
     if reply and reply[0] == "y":
         return True
-    elif reply and reply[0] == "n":
+    if reply and reply[0] == "n":
         return False
-    else:
-        return default
+    return default
