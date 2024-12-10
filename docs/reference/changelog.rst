@@ -7,6 +7,12 @@ Changelog
 4.6.0 (YYYY-MMM-DD)
 -------------------
 
+Commands
+========
+
+- Add a ``remote-build`` command. This command is not registered by default,
+  but is available for application use.
+
 Git
 ===
 

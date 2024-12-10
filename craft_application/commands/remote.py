@@ -20,13 +20,13 @@ import time
 from collections.abc import Collection
 from typing import Any, cast
 
-from craft_application.commands import ExtensibleCommand
-from craft_application.launchpad.models import Build, BuildState
-from craft_application.remote.utils import get_build_id
 from craft_cli import emit
 from overrides import override  # pyright: ignore[reportUnknownVariableType]
 
-from charmcraft import models, utils
+from craft_application import models, util
+from craft_application.commands import ExtensibleCommand
+from craft_application.launchpad.models import Build, BuildState
+from craft_application.remote.utils import get_build_id
 
 OVERVIEW = """\
 Command remote-build sends the current project to be built
@@ -53,10 +53,10 @@ _CONFIRMATION_PROMPT = (
 
 
 class RemoteBuild(ExtensibleCommand):
-    """Run analysis on a built charm."""
+    """Build a project on Launchpad."""
 
     name = "remote-build"
-    help_msg = "Build a charm remotely on Launchpad."
+    help_msg = "Build a project remotely on Launchpad."
     overview = OVERVIEW
     always_load_project = True
 
@@ -79,8 +79,10 @@ class RemoteBuild(ExtensibleCommand):
         )
 
     def _run(
-        self, parsed_args: argparse.Namespace, **kwargs: Any
-    ) -> int | None:  # noqa: ANN401
+        self,
+        parsed_args: argparse.Namespace,
+        **_kwargs: Any,  # noqa: ANN401 (use of Any)
+    ) -> int | None:
         """Run the remote-build command.
 
         :param parsed_args: parsed argument namespace from craft_cli.
@@ -100,13 +102,15 @@ class RemoteBuild(ExtensibleCommand):
             permanent=True,
         )
 
-        if not parsed_args.launchpad_accept_public_upload:
-            if not utils.confirm_with_user(_CONFIRMATION_PROMPT, default=False):
-                emit.message("Cannot proceed without accepting a public upload.")
-                return 77  # permission denied from sysexits.h
+        if (
+            not parsed_args.launchpad_accept_public_upload
+            and not util.confirm_with_user(_CONFIRMATION_PROMPT, default=False)
+        ):
+            emit.message("Cannot proceed without accepting a public upload.")
+            return 77  # permission denied from sysexits.h
 
         builder = self._services.remote_build
-        project = cast(models.Charm, self._services.project)
+        project = cast(models.Project, self._services.project)
         config = cast(dict[str, Any], self.config)
         project_dir = (
             pathlib.Path(config.get("global_args", {}).get("project_dir") or ".")
@@ -132,7 +136,7 @@ class RemoteBuild(ExtensibleCommand):
         try:
             returncode = self._monitor_and_complete(build_id, builds)
         except KeyboardInterrupt:
-            if utils.confirm_with_user("Cancel builds?", default=True):
+            if util.confirm_with_user("Cancel builds?", default=True):
                 emit.progress("Cancelling builds.")
                 builder.cancel_builds()
                 emit.progress("Cleaning up")
@@ -143,7 +147,7 @@ class RemoteBuild(ExtensibleCommand):
             builder.cleanup()
         return returncode
 
-    def _monitor_and_complete(
+    def _monitor_and_complete(  # noqa: PLR0912 (too many branches)
         self, build_id: str | None, builds: Collection[Build]
     ) -> int:
         builder = self._services.remote_build
@@ -165,11 +169,11 @@ class RemoteBuild(ExtensibleCommand):
                         not_building.add(arch)
                 progress_parts: list[str] = []
                 if not_building:
-                    progress_parts.append("Stopped: " + ",".join(sorted(not_building)))
+                    progress_parts.append("Stopped: " + ", ".join(sorted(not_building)))
                 if building:
                     progress_parts.append("Building: " + ", ".join(sorted(building)))
                 if uploading:
-                    progress_parts.append("Uploading: " + ",".join(sorted(uploading)))
+                    progress_parts.append("Uploading: " + ", ".join(sorted(uploading)))
                 if succeeded:
                     progress_parts.append("Succeeded: " + ", ".join(sorted(succeeded)))
                 emit.progress("; ".join(progress_parts))

@@ -14,22 +14,20 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Tests for cli functions."""
-from unittest.mock import call, patch
+from unittest.mock import call
 
 import pytest
 from craft_application.util import confirm_with_user
 
 
 @pytest.fixture
-def mock_isatty():
-    with patch("sys.stdin.isatty", return_value=True) as mock_isatty:
-        yield mock_isatty
+def mock_isatty(mocker):
+    return mocker.patch("sys.stdin.isatty", return_value=True)
 
 
 @pytest.fixture
-def mock_input():
-    with patch("charmcraft.utils.cli.input", return_value="") as mock_input:
-        yield mock_input
+def mock_input(mocker):
+    return mocker.patch("builtins.input", return_value="")
 
 
 def test_confirm_with_user_defaults_with_tty(mock_input, mock_isatty):
@@ -66,30 +64,22 @@ def test_confirm_with_user_defaults_without_tty(mock_input, mock_isatty):
         ("NO", False),
     ],
 )
-def test_confirm_with_user(user_input, expected, mock_input, mock_isatty):
+@pytest.mark.usefixtures("mock_isatty")
+def test_confirm_with_user(user_input, expected, mock_input):
     mock_input.return_value = user_input
 
     assert confirm_with_user("prompt") == expected
     assert mock_input.mock_calls == [call("prompt [y/N]: ")]
 
 
-def test_confirm_with_user_errors_in_managed_mode(
-    mock_is_charmcraft_running_in_managed_mode,
-):
-    mock_is_charmcraft_running_in_managed_mode.return_value = True
-
-    with pytest.raises(RuntimeError):
-        confirm_with_user("prompt")
-
-
-def test_confirm_with_user_pause_emitter(mock_isatty, emitter):
+def test_confirm_with_user_pause_emitter(mock_isatty, emitter, mocker):
     """The emitter should be paused when using the terminal."""
     mock_isatty.return_value = True
 
-    def fake_input(prompt):
+    def fake_input(_prompt):
         """Check if the Emitter is paused."""
         assert emitter.paused
         return ""
 
-    with patch("charmcraft.utils.cli.input", fake_input):
-        confirm_with_user("prompt")
+    mocker.patch("builtins.input", fake_input)
+    confirm_with_user("prompt")
