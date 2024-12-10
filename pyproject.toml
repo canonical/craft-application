@@ -3,6 +3,7 @@ name = "craft-application"
 description = "A framework for *craft applications."
 dynamic = ["version", "readme"]
 dependencies = [
+    "annotated-types>=0.6.0",
     "craft-archives>=2.0.0",
     "craft-cli>=2.10.1",
     "craft-grammar>=2.0.0",
