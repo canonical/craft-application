@@ -16,11 +16,15 @@
 from __future__ import annotations
 
 import argparse
+import os
+import pathlib
 from textwrap import dedent
 
 import craft_cli
 
 from . import base
+
+TEMP_FILE_NAME = ".spread.tmp"
 
 
 class TestCommand(base.AppCommand):
@@ -42,6 +46,10 @@ class TestCommand(base.AppCommand):
     def run(self, parsed_args: argparse.Namespace) -> None:  # noqa: ARG002
         """Run the command."""
         craft_cli.emit.progress("Testing project.")
-        self._services.testing.process_spread_yaml()
-        # TODO: execute spread test
-        # craft_cli.emit.message("Successfully tested project.")  # noqa: ERA001
+
+        dest = pathlib.Path(TEMP_FILE_NAME)
+        try:
+            self._services.testing.process_spread_yaml(dest)
+            self._services.testing.run_spread(dest)
+        finally:
+            dest.unlink()

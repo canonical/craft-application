@@ -16,7 +16,9 @@
 
 """Service for testing a project."""
 
+import os
 import pathlib
+import subprocess
 
 from craft_cli import emit
 
@@ -28,7 +30,7 @@ from . import base
 class TestingService(base.AppService):
     """Service class for testing a project."""
 
-    def process_spread_yaml(self) -> None:
+    def process_spread_yaml(self, dest: pathlib.Path) -> None:
         """Process the spread configuration file.
 
         :param project_dir: The directory to initialise the project in.
@@ -48,11 +50,26 @@ class TestingService(base.AppService):
             craft_backend=craft_backend,
         )
 
-        spread_yaml.to_yaml_file(pathlib.Path("spread/spread.yaml"))
+        spread_yaml.to_yaml_file(dest)
+
+    def run_spread(self, dest: pathlib.Path) -> None:
+        os.environ["SPREAD_PROJECT_FILE"] = str(dest)
+        subprocess.run(["spread", "-v", "craft:"])
 
     def _get_backend(self) -> models.SpreadBackend:
-        name = "lxd-vm"
+        if os.environ.get("CI"):
+            name = "ci"
+            return models.SpreadBackend(
+                type="adhoc",
+                allocate=f"ADDRESS $(./.extension allocate {name})",
+                discard=f"./.extension discard {name}",
+                prepare=f'"$PROJECT_PATH"/.extension backend-prepare {name}',
+                restore=f'"$PROJECT_PATH"/.extension backend-restore {name}',
+                prepare_each=f'"$PROJECT_PATH"/.extension backend-prepare-each {name}',
+                restore_each=f'"$PROJECT_PATH"/.extension backend-restore-each {name}',
+            )
 
+        name = "lxd-vm"
         return models.SpreadBackend(
             type="adhoc",
             allocate=f"ADDRESS $(./.extension allocate {name})",
