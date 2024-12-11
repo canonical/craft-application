@@ -12,12 +12,14 @@
 # You should have received a copy of the GNU Lesser General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Integration tests for the Application."""
+
 import argparse
 import pathlib
 import shutil
 import textwrap
 
 import craft_application
+import craft_application.commands
 import craft_cli
 import pytest
 import pytest_check
@@ -125,6 +127,49 @@ def test_special_inputs(capsys, monkeypatch, app, argv, stdout, stderr, exit_cod
 
     pytest_check.equal(captured.out, stdout, "stdout does not match")
     pytest_check.equal(captured.err, stderr, "stderr does not match")
+
+
+def _create_command(command_name):
+    class _FakeCommand(craft_application.commands.AppCommand):
+        name = command_name
+
+    return _FakeCommand
+
+
+@pytest.mark.parametrize(
+    "ordered",
+    [True, False],
+    ids=lambda ordered: f"keep_order={ordered}",
+)
+def test_registering_new_commands(
+    app: TestableApplication,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    *,
+    ordered: bool,
+) -> None:
+    command_names = ["second", "first"]
+    app.add_command_group(
+        "TestingApplicationGroup",
+        [_create_command(name) for name in command_names],
+        ordered=ordered,
+    )
+
+    monkeypatch.setattr("sys.argv", ["testcraft", "help"])
+
+    with pytest.raises(SystemExit) as exc_info:
+        app.run()
+    assert exc_info.value.code == 0, "App should finish without any problems"
+
+    captured_help = capsys.readouterr()
+    # if ordered is set to True, craft_cli should respect command ordering
+    expected_command_order_in_help = ", ".join(
+        command_names if ordered else sorted(command_names)
+    )
+    assert (
+        f"TestingApplicationGroup:  {expected_command_order_in_help}"
+        in captured_help.err
+    ), "Commands are positioned in the wrong order"
 
 
 @pytest.mark.usefixtures("pretend_jammy")
