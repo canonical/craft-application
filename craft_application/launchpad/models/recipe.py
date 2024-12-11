@@ -51,6 +51,7 @@ class RecipeType(enum.Enum):
 
     SNAP = "snap"
     CHARM = "charm_recipe"
+    ROCK = "rock_recipe"
 
 
 class BuildChannels(TypedDict, total=False):
@@ -465,4 +466,33 @@ class CharmRecipe(_StandardRecipe):
         return lp.lp.charm_recipes
 
 
-Recipe = SnapRecipe | CharmRecipe
+class RockRecipe(_StandardRecipe):
+    """A recipe for a rock.
+
+    https://api.launchpad.net/devel.html#rock_recipe
+    """
+
+    ARTIFACT: ClassVar[Literal["rock"]] = "rock"  # type: ignore[reportIncompatibleVariableOverride]
+
+    @override
+    @classmethod
+    def _get_lp_recipe(cls, lp: Launchpad) -> Any:
+        """https://api.launchpad.net/devel.html#rock_recipes."""
+        return lp.lp.rock_recipes
+
+
+Recipe = SnapRecipe | CharmRecipe | RockRecipe
+
+_RECIPE_TYPE_TO_CLASS: dict[RecipeType, type[Recipe]] = {
+    RecipeType.SNAP: SnapRecipe,
+    RecipeType.CHARM: CharmRecipe,
+    RecipeType.ROCK: RockRecipe,
+}
+
+
+def get_recipe_class(type_: RecipeType) -> type[Recipe]:
+    """Get the concrete Recipe class for a given RecipeType."""
+    try:
+        return _RECIPE_TYPE_TO_CLASS[type_]
+    except KeyError:
+        raise TypeError(f"Unknown recipe type: {type_}") from None

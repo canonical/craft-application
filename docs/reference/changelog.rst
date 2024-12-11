@@ -7,6 +7,11 @@ Changelog
 4.6.0 (YYYY-MMM-DD)
 -------------------
 
+Application
+===========
+
+- Add support for rock launchpad recipes, allowing the remote build of rocks.
+
 Commands
 ========
 
