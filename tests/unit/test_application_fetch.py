@@ -19,8 +19,9 @@ from unittest import mock
 
 import craft_providers
 import pytest
-from craft_application import services
 from typing_extensions import override
+
+from craft_application import services
 
 
 class FakeFetchService(services.FetchService):

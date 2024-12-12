@@ -16,6 +16,7 @@
 """Unit tests for source repositories."""
 
 import pytest
+
 from craft_application.launchpad.models import InformationType, code
 
 

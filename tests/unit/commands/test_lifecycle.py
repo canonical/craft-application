@@ -20,6 +20,9 @@ import subprocess
 
 import craft_parts
 import pytest
+from craft_cli import emit
+from craft_parts import Features
+
 from craft_application.commands.lifecycle import (
     BuildCommand,
     CleanCommand,
@@ -32,8 +35,6 @@ from craft_application.commands.lifecycle import (
     StageCommand,
     get_lifecycle_command_group,
 )
-from craft_cli import emit
-from craft_parts import Features
 
 PARTS_LISTS = [[], ["my-part"], ["my-part", "your-part"]]
 SHELL_PARAMS = [
@@ -73,7 +74,7 @@ def get_fake_command_class(parent_cls, managed):
         help_msg = "help"
         overview = "overview"
 
-        def run_managed(self, parsed_args: argparse.Namespace) -> bool:  # noqa: ARG002
+        def run_managed(self, parsed_args: argparse.Namespace) -> bool:
             return self._run_managed
 
     return FakeCommand

@@ -33,11 +33,12 @@ from unittest.mock import MagicMock, call
 
 import craft_providers
 import pytest
+from craft_providers import bases
+from freezegun import freeze_time
+
 from craft_application import ProviderService, fetch, services
 from craft_application.models import BuildInfo
 from craft_application.services import fetch as service_module
-from craft_providers import bases
-from freezegun import freeze_time
 
 
 @pytest.fixture

@@ -311,7 +311,7 @@ class RemoteBuildService(base.AppService):
         self,
         name: str,
         repository: launchpad.models.GitRepository,
-        **kwargs: Any,  # noqa: ANN401
+        **kwargs: Any,
     ) -> launchpad.models.Recipe:
         """Get a recipe or create it if it doesn't exist."""
         with contextlib.suppress(ValueError):  # Recipe doesn't exist
@@ -324,7 +324,7 @@ class RemoteBuildService(base.AppService):
         self,
         name: str,
         repository: launchpad.models.GitRepository,
-        **kwargs: Any,  # noqa: ANN401
+        **kwargs: Any,
     ) -> launchpad.models.Recipe:
         """Create a new recipe for the given repository."""
         repository.lp_refresh()  # Prevents a race condition on new repositories.

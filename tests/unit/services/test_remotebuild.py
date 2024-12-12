@@ -23,12 +23,12 @@ import lazr.restfulclient.errors
 import lazr.restfulclient.resource
 import platformdirs
 import pytest
+
 from craft_application import errors, git, launchpad, services
 from craft_application.remote.errors import (
     RemoteBuildGitError,
     RemoteBuildInvalidGitRepoError,
 )
-
 from tests.unit.services.conftest import (
     get_mock_callable,
 )

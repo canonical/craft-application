@@ -24,9 +24,10 @@ import launchpadlib.launchpad
 import launchpadlib.uris
 import lazr.restfulclient.errors
 import pytest
+from lazr.restfulclient.resource import Entry
+
 from craft_application import launchpad
 from craft_application.launchpad import models
-from lazr.restfulclient.resource import Entry
 
 
 def flatten_enum(e: type[enum.Enum]) -> list:
@@ -206,7 +207,7 @@ def test_recipe_snap_new_retry(emitter, mocker):
     )
 
     assert isinstance(recipe, models.SnapRecipe)
-    assert mock_launchpad.lp.snaps.new.call_count == 2  # noqa: PLR2004
+    assert mock_launchpad.lp.snaps.new.call_count == 2
 
     emitter.assert_debug("Trying to create snap recipe 'my_recipe' (attempt 1/6)")
     emitter.assert_debug("Trying to create snap recipe 'my_recipe' (attempt 2/6)")
@@ -256,7 +257,7 @@ def test_recipe_charm_new_retry(emitter, mocker):
     )
 
     assert isinstance(recipe, models.CharmRecipe)
-    assert mock_launchpad.lp.charm_recipes.new.call_count == 2  # noqa: PLR2004
+    assert mock_launchpad.lp.charm_recipes.new.call_count == 2
 
     emitter.assert_debug("Trying to create charm recipe 'my_recipe' (attempt 1/6)")
     emitter.assert_debug("Trying to create charm recipe 'my_recipe' (attempt 2/6)")

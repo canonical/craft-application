@@ -1,6 +1,7 @@
 """Tests for anonymous access."""
 
 import pytest
+
 from craft_application import launchpad
 
 

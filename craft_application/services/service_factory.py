@@ -157,7 +157,7 @@ class ServiceFactory:
     def set_kwargs(
         self,
         service: str,
-        **kwargs: Any,  # noqa: ANN401 this is intentionally duck-typed.
+        **kwargs: Any,
     ) -> None:
         """Set up the keyword arguments to pass to a particular service class.
 
@@ -174,7 +174,7 @@ class ServiceFactory:
     def update_kwargs(
         self,
         service: str,
-        **kwargs: Any,  # noqa: ANN401 this is intentionally duck-typed.
+        **kwargs: Any,
     ) -> None:
         """Update the keyword arguments to pass to a particular service class.
 

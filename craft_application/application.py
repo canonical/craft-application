@@ -75,7 +75,7 @@ class AppMetadata:
     summary: str | None = None
     version: str = field(init=False)
     docs_url: str | None = None
-    source_ignore_patterns: list[str] = field(default_factory=lambda: [])
+    source_ignore_patterns: list[str] = field(default_factory=list)
     managed_instance_project_path = pathlib.PurePosixPath("/root/project")
     features: AppFeatures = AppFeatures()
     project_variables: list[str] = field(default_factory=lambda: ["version"])

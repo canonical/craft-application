@@ -23,11 +23,12 @@ from unittest import mock
 
 import craft_providers
 import pytest
+from craft_providers import bases, lxd, multipass
+from craft_providers.actions.snap_installer import Snap
+
 from craft_application import errors, models, util
 from craft_application.services import provider
 from craft_application.util import platforms, snap_config
-from craft_providers import bases, lxd, multipass
-from craft_providers.actions.snap_installer import Snap
 
 
 @pytest.fixture
@@ -36,7 +37,7 @@ def mock_provider(monkeypatch, provider_service):
     monkeypatch.setattr(
         provider_service,
         "get_provider",
-        lambda name: mocked_provider,  # noqa: ARG005 (unused argument)
+        lambda name: mocked_provider,
     )
 
     return mocked_provider
@@ -532,7 +533,7 @@ def test_load_bashrc_missing(
     monkeypatch.setattr(
         provider_service,
         "get_provider",
-        lambda name: mock_provider,  # noqa: ARG005 (unused argument)
+        lambda name: mock_provider,
     )
     arch = util.get_host_architecture()
     build_info = models.BuildInfo("foo", arch, arch, base_name)
@@ -560,7 +561,7 @@ def setup_fetch_logs_provider(monkeypatch, provider_service, tmp_path):
         monkeypatch.setattr(
             provider_service,
             "get_provider",
-            lambda name: mock_provider,  # noqa: ARG005 (unused argument)
+            lambda name: mock_provider,
         )
 
         # This ugly call is to mock the "instance" returned by the "launched_environment"
