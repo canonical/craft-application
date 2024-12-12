@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU Lesser General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Shared data for all craft-application tests."""
+
 from __future__ import annotations
 
 import os
@@ -72,7 +73,6 @@ def features(request) -> dict[str, bool]:
 
 
 class FakeConfigModel(craft_application.ConfigModel):
-
     my_str: str
     my_int: int
     my_bool: bool

@@ -15,6 +15,7 @@
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """Tests for init command."""
+
 import os
 import pathlib
 import textwrap

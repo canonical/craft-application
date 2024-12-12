@@ -15,6 +15,7 @@
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """Grammar-aware project for *craft applications."""
+
 from typing import Any
 
 import pydantic

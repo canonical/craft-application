@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU Lesser General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Unit tests for the interaction between the Application and the FetchService."""
+
 from typing import Any
 from unittest import mock
 

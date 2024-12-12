@@ -91,9 +91,7 @@ def get_testcraft_yaml(*, version: str = "git") -> str:
             source: .
         platforms:
           amd64:
-        """.replace(
-            "<<version_placeholder>>", version
-        )
+        """.replace("<<version_placeholder>>", version)
     )
 
 

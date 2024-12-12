@@ -117,9 +117,7 @@ def test_getattr_with_callable_annotation(fake_launchpad, mock_lplib_entry):
     mock_annotation = mock.Mock()
 
     class AnnotationsObject(FakeLaunchpadObject):
-        some_attribute_right_here: (
-            mock_annotation  # pyright: ignore[reportInvalidTypeForm]
-        )
+        some_attribute_right_here: mock_annotation  # pyright: ignore[reportInvalidTypeForm]
 
     test_obj = AnnotationsObject(fake_launchpad, mock_lplib_entry)
 

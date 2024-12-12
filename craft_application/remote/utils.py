@@ -13,6 +13,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """Remote build utilities."""
+
 from __future__ import annotations
 
 import shutil
@@ -109,7 +110,9 @@ def rmtree(directory: Path) -> None:
 
 
 def _remove_readonly(
-    func: Callable[..., Any], filepath: str, _: Any  # noqa: ANN401
+    func: Callable[..., Any],
+    filepath: str,
+    _: Any,  # noqa: ANN401
 ) -> None:
     """Shutil onerror function to make read-only files writable.
 
