@@ -4,6 +4,7 @@ import pytest
 from craft_application import launchpad
 
 
+@pytest.mark.slow
 def test_anonymous_login(tmp_path):
     cache_dir = tmp_path / "cache"
     assert not cache_dir.exists()
@@ -28,6 +29,7 @@ def test_anonymous_login(tmp_path):
 #         assert recipe.owner_name == "lengau"
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize(
     ("name", "path"),
     [
@@ -42,6 +44,7 @@ def test_get_real_repository_by_path(anonymous_lp, name, path):
     assert repo.name == name
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize(
     ("name", "owner", "project"),
     [

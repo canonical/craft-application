@@ -24,6 +24,7 @@ from craft_application.util import get_host_architecture
 from craft_providers import bases
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize(
     "base_name",
     [
@@ -82,6 +83,7 @@ def test_provider_lifecycle(
     assert proc_result.stdout.startswith("#!/bin/bash")
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize("base", [bases.BaseName("ubuntu", "22.04")])
 @pytest.mark.parametrize(
     "proxy_vars",

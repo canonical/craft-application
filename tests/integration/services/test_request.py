@@ -21,6 +21,7 @@ import pytest
 import pytest_check
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize(
     ("url", "checksum", "size"),
     [
@@ -46,6 +47,7 @@ def test_get_real_file(tmp_path, emitter, request_service, url, checksum, size):
     )
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize(
     "files",
     [
