@@ -164,15 +164,15 @@ def full_build_plan(mocker) -> list[models.BuildInfo]:
     host_arch = util.get_host_architecture()
     build_plan = []
     for release in ("20.04", "22.04", "24.04"):
-        for build_for in (host_arch, "s390x", "riscv64"):
-            build_plan.append(
-                models.BuildInfo(
-                    f"ubuntu-{release}-{build_for}",
-                    host_arch,
-                    build_for,
-                    bases.BaseName("ubuntu", release),
-                )
+        build_plan.extend(
+            models.BuildInfo(
+                f"ubuntu-{release}-{build_for}",
+                host_arch,
+                build_for,
+                bases.BaseName("ubuntu", release),
             )
+            for build_for in (host_arch, "s390x", "riscv64")
+        )
 
     mocker.patch.object(models.BuildPlanner, "get_build_plan", return_value=build_plan)
     return build_plan
