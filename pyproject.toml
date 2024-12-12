@@ -209,6 +209,7 @@ testpaths = "tests"
 xfail_strict = true
 markers = [
     "enable_features: Tests that require specific features",
+    "slow: Tests that run slowly"
 ]
 filterwarnings = [
     "ignore:The craft-application BuildPlanner:PendingDeprecationWarning",
