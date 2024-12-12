@@ -9,7 +9,7 @@
 /craft_application/secrets.py  @tigarmo @lengau
 
 # Fetch service: Tiago
-/craft_application/serices/fetch.py  @tigarmo @lengau
+/craft_application/services/fetch.py  @tigarmo @lengau
 /craft_application/fetch.py  @tigarmo @lengau
 
 # Documentation owners
