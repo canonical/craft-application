@@ -47,6 +47,8 @@ else
 	sudo $(APT) install libyaml-dev python3-dev python3-pip python3-setuptools python3-venv python3-wheel
 	# Needed for python-apt.
 	sudo $(APT) install python-apt-dev libapt-pkg-dev clang
+	# For overlay tests
+	sudo $(APT) install fuse-overlayfs
 endif
 ifneq ($(shell which snap),)
 	sudo snap install lxd
