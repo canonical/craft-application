@@ -116,7 +116,7 @@ def process_parts(
             value == value  # pylint: disable=comparison-with-itself  # noqa: PLR0124
         )
 
-    # TODO: make checker optional in craft-grammar.
+    # TODO: make checker optional in craft-grammar.  # noqa: FIX002
     processor = GrammarProcessor(arch=arch, target_arch=target_arch, checker=self_check)
 
     for part_name, part_data in parts_yaml_data.items():
