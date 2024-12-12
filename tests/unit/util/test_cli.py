@@ -30,10 +30,8 @@ def mock_input(mocker):
     return mocker.patch("builtins.input", return_value="")
 
 
-def test_confirm_with_user_defaults_with_tty(mock_input, mock_isatty):
-    mock_input.return_value = ""
-    mock_isatty.return_value = True
-
+@pytest.mark.usefixtures("mock_isatty")
+def test_confirm_with_user_defaults_with_tty(mock_input):
     assert confirm_with_user("prompt", default=True) is True
     assert mock_input.mock_calls == [call("prompt [Y/n]: ")]
     mock_input.reset_mock()

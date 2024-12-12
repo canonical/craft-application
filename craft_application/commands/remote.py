@@ -30,7 +30,7 @@ from craft_application.remote.utils import get_build_id
 
 OVERVIEW = """\
 Command remote-build sends the current project to be built
-remotely.  After the build is complete, packages for each
+remotely. After the build is complete, packages for each
 architecture are retrieved and will be available in the
 local filesystem.
 
@@ -189,11 +189,11 @@ class RemoteBuild(ExtensibleCommand):
             )
             return 75  # Temporary failure
 
-        emit.progress(f"Fetching {len(builds)} build logs...")
-        logs = builder.fetch_logs(pathlib.Path.cwd())
-
         emit.progress("Fetching build artifacts...")
         artifacts = builder.fetch_artifacts(pathlib.Path.cwd())
+
+        emit.progress(f"Fetching {len(builds)} build logs...")
+        logs = builder.fetch_logs(pathlib.Path.cwd())
 
         log_names = sorted(path.name for path in logs.values() if path)
         artifact_names = sorted(path.name for path in artifacts)
