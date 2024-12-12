@@ -16,7 +16,6 @@
 from __future__ import annotations
 
 import argparse
-import os
 import pathlib
 from textwrap import dedent
 
