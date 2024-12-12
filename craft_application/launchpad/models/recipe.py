@@ -356,6 +356,7 @@ class _StandardRecipe(_StoreRecipe):
         store_name: str | None = None,
         store_channels: Collection[str] = ("latest/edge",),
         git_ref: str | None = None,
+        architectures: Collection[str] | None = None,
     ) -> Self:
         """Create a new recipe.
 
@@ -375,8 +376,16 @@ class _StandardRecipe(_StoreRecipe):
             asset.
         :param store_channels: (Optional) The channels onto which to publish the asset
             if uploaded.
+        :param architectures: (Optional) The architectures to build. Note that this
+            parameter is unused and exists here to provide a standard API for building
+            recipes (since SnapRecipe supports it) - _StandardRecipes do **not** support
+            defining build architectures at this moment.
         :returns: The recipe.
         """
+        if architectures:
+            msg = f"{cls.ARTIFACT} recipes do not support architectures"
+            raise ValueError(msg)
+
         kwargs: dict[str, Any] = {}
         if auto_build:
             kwargs["auto_build_channels"] = auto_build_channels

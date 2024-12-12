@@ -14,6 +14,8 @@
 #  You should have received a copy of the GNU Lesser General Public License
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Unit tests for launchpad recipe models."""
+from unittest import mock
+
 import pytest
 from craft_application.launchpad import CharmRecipe, RecipeType, RockRecipe, SnapRecipe
 from craft_application.launchpad.models import get_recipe_class
@@ -35,3 +37,14 @@ def test_get_recipe_class_invalid():
 def test_get_recipe_class_exhaustive(recipe_type):
     obtained = get_recipe_class(recipe_type)
     assert issubclass(obtained, BaseRecipe)
+
+
+def test_standard_recipe_architectures():
+    with pytest.raises(ValueError, match="charm recipes do not support architectures"):
+        CharmRecipe.new(
+            lp=mock.Mock(),
+            name="recipe",
+            owner="owner",
+            project="project",
+            architectures=["amd64"],
+        )
