@@ -50,6 +50,7 @@ else
 endif
 ifneq ($(shell which snap),)
 	sudo snap install lxd
+	sudo snap install --beta fetch-service
 endif
 ifneq ($(shell which lxd),)
 	sudo lxd init --auto
