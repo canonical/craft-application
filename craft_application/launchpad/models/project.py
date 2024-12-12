@@ -38,12 +38,12 @@ from lazr.restfulclient.resource import Entry  # type: ignore[import-untyped]
 from typing_extensions import Self, Any
 from typing import TYPE_CHECKING
 
-from ..models.base import InformationType, LaunchpadObject
-from .. import errors
-from ...util import retry
+from craft_application.launchpad.models.base import InformationType, LaunchpadObject
+from craft_application.launchpad import errors
+from craft_application.util import retry
 
 if TYPE_CHECKING:
-    from .. import Launchpad
+    from craft_application.launchpad import Launchpad
 
 
 class ProjectType(enum.Enum):

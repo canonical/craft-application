@@ -246,9 +246,11 @@ class Application:
                 merged_commands.append(default_command)
 
         # append remaining commands from the application
-        for app_command in app_commands.commands:
-            if app_command.name not in processed_command_names:
-                merged_commands.append(app_command)
+        merged_commands.extend(
+            app_command
+            for app_command in app_commands.commands
+            if app_command.name not in processed_command_names
+        )
 
         return craft_cli.CommandGroup(
             name=default_commands.name,

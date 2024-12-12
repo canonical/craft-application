@@ -14,7 +14,7 @@
 
 """Remote-build and related utilities."""
 
-# TODO: below import should be removed in next incompatible release
+# Git imports should be removed in next incompatible release
 from craft_application.git import GitRepo, GitError, GitType, get_git_repo_type, is_repo
 from .errors import (
     RemoteBuildError,

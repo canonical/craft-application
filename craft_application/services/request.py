@@ -104,11 +104,8 @@ class RequestService(base.AppService):
         with craft_cli.emit.progress_bar(title, total_size) as progress:
             while downloads:
                 for dl in downloads.copy():
-                    try:
-                        chunk_size = next(dl)
-                    except StopIteration:
-                        downloads.remove(dl)
-                    else:
+                    for chunk_size in dl:
                         progress.advance(chunk_size)
+                    downloads.remove(dl)
 
         return files

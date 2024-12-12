@@ -29,8 +29,11 @@ from craft_cli import emit
 
 from craft_application.errors import InitError
 from craft_application.git import GitError, GitRepo, is_repo, parse_describe
+from craft_application.models.constraints import (
+    MESSAGE_INVALID_NAME,
+    PROJECT_NAME_COMPILED_REGEX,
+)
 
-from ..models.constraints import MESSAGE_INVALID_NAME, PROJECT_NAME_COMPILED_REGEX
 from . import base
 
 if typing.TYPE_CHECKING:  # pragma: no cover
