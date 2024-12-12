@@ -6,6 +6,7 @@ import launchpadlib.launchpad
 import launchpadlib.uris
 import platformdirs
 import pytest
+
 from craft_application.launchpad import Launchpad
 
 

@@ -1,8 +1,9 @@
 import logging
 
 import pytest_check
-from craft_application import util
 from hypothesis import given, strategies
+
+from craft_application import util
 
 
 @given(names=strategies.lists(strategies.text()))

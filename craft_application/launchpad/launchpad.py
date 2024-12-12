@@ -84,7 +84,7 @@ class Launchpad:
         cache_dir: pathlib.Path | None = DEFAULT_CACHE_PATH,
         credentials_file: pathlib.Path | None = None,
         version: str = "devel",
-        **kwargs: Any,  # noqa: ANN401 (Intentionally duck-typed)
+        **kwargs: Any,
     ) -> Self:
         """Login to Launchpad."""
         if cache_dir:

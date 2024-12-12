@@ -78,7 +78,7 @@ class Project(LaunchpadObject):
         summary: str,
         *,
         description: str | None = None,
-        **kwargs: Any,  # noqa: ANN401
+        **kwargs: Any,
     ) -> Self:
         """Create a new project.
 
