@@ -315,6 +315,9 @@ ignore-decorators = [  # Functions with these decorators don't have to have docs
 max-args = 8
 
 [tool.ruff.lint.per-file-ignores]
+"docs/**.py" = [
+    "INP001"  # Implicit namespace
+]
 "tests/**.py" = [  # Some things we want for the main project are unnecessary in tests.
     "D",  # Ignore docstring rules in tests
     "ANN",  # Ignore type annotations in tests
