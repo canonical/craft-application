@@ -104,6 +104,10 @@ apt-plucky = [
     "python-apt>=2.9.0;sys_platform=='linux'",
 ]
 
+[[tool.uv.index]]
+name = "python-apt-wheels"
+url = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels/"
+
 [tool.uv]
 conflicts = [
     [
