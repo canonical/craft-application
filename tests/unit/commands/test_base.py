@@ -100,9 +100,7 @@ def fake_extensible_cls():
         def get_run_count(self) -> dict[str, int]:
             return {"fake": self.__run_count}
 
-        def _run(
-            self, parsed_args: argparse.Namespace, **kwargs
-        ) -> int | None:
+        def _run(self, parsed_args: argparse.Namespace, **kwargs) -> int | None:
             self.__run_count += 1
             return self.__run_count
 
@@ -123,9 +121,7 @@ def fake_extensible_child(fake_extensible_cls):
             counts["child"] = self.__run_count
             return counts
 
-        def _run(
-            self, parsed_args: argparse.Namespace, **kwargs
-        ) -> int | None:
+        def _run(self, parsed_args: argparse.Namespace, **kwargs) -> int | None:
             self.__run_count += 1
             return super()._run(parsed_args)
 
