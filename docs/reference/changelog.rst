@@ -31,6 +31,9 @@ Git
 - Use ``craft.git`` for Git-related operations run with ``subprocess`` in
   ``GitRepo``.
 
+- Bump ``pygit2`` minimum version to ``1.14.0``. ``craft-application`` was
+  already not compatible with ``1.13``, but this was only discovered recently.
+
 Application
 ===========
 
