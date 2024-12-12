@@ -52,7 +52,7 @@ def process_part(
     *, part_yaml_data: dict[str, Any], processor: GrammarProcessor
 ) -> dict[str, Any]:
     """Process grammar for a given part."""
-    for key in part_yaml_data:
+    for key in part_yaml_data.items():
         unprocessed_grammar = part_yaml_data[key]
 
         # ignore non-grammar keywords
@@ -119,7 +119,7 @@ def process_parts(
     # TODO: make checker optional in craft-grammar.
     processor = GrammarProcessor(arch=arch, target_arch=target_arch, checker=self_check)
 
-    for part_name in parts_yaml_data:
+    for part_name in parts_yaml_data.items():
         parts_yaml_data[part_name] = process_part(
             part_yaml_data=parts_yaml_data[part_name], processor=processor
         )
