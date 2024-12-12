@@ -1,4 +1,14 @@
 PROJECT=craft_application
+ifneq ($(wildcard /etc/os-release),)
+include /etc/os-release
+export
+endif
+
+ifneq ($(VERSION_CODENAME),)
+SETUP_TESTS_EXTRA_ARGS=--group apt-$(VERSION_CODENAME)
+endif
+
+UV_FROZEN=true
 
 include common.mk
 
