@@ -15,5 +15,6 @@ jobs:
   test:
     uses: canonical/starflow/.github/workflows/test-python.yaml@main
     with:
-      fast-test-platforms: '[["jammy", "amd64"], ["noble", "arm64"], "macos-14-large"]'
+      fast-test-platforms: '[["jammy", "amd64"], ["noble", "amd64"], "macos-14-large"]'
       slow-test-platforms: '["jammy", "macos-14-large"]'
+      lowest-test-platform: jammy
