@@ -87,8 +87,32 @@ dev = [
     "responses~=0.25",
     "craft-application[remote]",
 ]
+apt-jammy = [
+    # Stay on 2.4 for Jammy
+    "python-apt~=2.4.0;sys_platform=='linux'",
+]
+apt-noble = [
+    # 2.7 for Noble
+    "python-apt~=2.7.0;sys_platform=='linux'",
+]
+apt-oracular = [
+    # 2.9 for Oracular+
+    "python-apt>=2.9.0;sys_platform=='linux'",
+]
+apt-plucky = [
+    # 2.9 for Oracular+
+    "python-apt>=2.9.0;sys_platform=='linux'",
+]
 
 [tool.uv]
+conflicts = [
+    [
+        { group = "apt-jammy" },
+        { group = "apt-noble" },
+        { group = "apt-oracular" },
+        { group = "apt-plucky" },
+    ]
+]
 constraint-dependencies = [
     # Basic constraints to allow --resolution=lowest
     "build>=0.7.0",
