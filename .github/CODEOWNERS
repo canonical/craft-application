@@ -1,0 +1,19 @@
+# GitHub CODEOWNERS. See:
+# https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+# Remember, the last match takes precedence.
+
+# Global owner, used as a last resort.
+*       @lengau
+
+# Tiago owns secrets
+/craft_application/secrets.py  @tigarmo @lengau
+
+# Fetch service: Tiago
+/craft_application/serices/fetch.py  @tigarmo @lengau
+/craft_application/fetch.py  @tigarmo @lengau
+
+# Documentation owners
+/docs/  @medubelko @lengau
+
+# Finally, all CODEOWNERS changes need to be approved by The Man, Himself.
+/.github/CODEOWNERS     @sergiusens
