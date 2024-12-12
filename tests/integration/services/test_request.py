@@ -14,6 +14,7 @@
 #  You should have received a copy of the GNU Lesser General Public License
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Integration tests for the Request service."""
+
 import hashlib
 from unittest.mock import call
 
@@ -21,6 +22,7 @@ import pytest
 import pytest_check
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize(
     ("url", "checksum", "size"),
     [
@@ -46,6 +48,7 @@ def test_get_real_file(tmp_path, emitter, request_service, url, checksum, size):
     )
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize(
     "files",
     [

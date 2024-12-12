@@ -21,6 +21,7 @@ import pytest
 from craft_application.git import NO_PUSH_URL, Commit, GitError, GitRepo
 
 
+@pytest.mark.slow
 def test_fetching_hello_repository(
     empty_repository: pathlib.Path,
     hello_repository_lp_url: str,
@@ -39,6 +40,7 @@ def test_fetching_hello_repository(
     ), "There should be a commit after fetching"
 
 
+@pytest.mark.slow
 def test_fetching_remote_that_does_not_exist(
     empty_repository: pathlib.Path,
 ) -> None:

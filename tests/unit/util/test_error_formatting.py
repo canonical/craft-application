@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Tests for error formatting."""
+
 import textwrap
 
 import pytest
@@ -112,7 +113,8 @@ def test_format_pydantic_error_normalization():
     ]
 
     result = format_pydantic_errors(
-        errors, file_name="this.yaml"  # pyright: ignore[reportArgumentType]
+        errors,
+        file_name="this.yaml",  # pyright: ignore[reportArgumentType]
     )
     expected = textwrap.dedent(
         """

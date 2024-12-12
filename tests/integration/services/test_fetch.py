@@ -14,6 +14,7 @@
 #  You should have received a copy of the GNU Lesser General Public License
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Tests for FetchService."""
+
 import contextlib
 import io
 import json
@@ -90,12 +91,14 @@ def app_service(app_metadata, fake_services, fake_project, fake_build_plan):
     fetch_service.shutdown(force=True)
 
 
+@pytest.mark.slow
 def test_start_service(app_service):
     assert not fetch.is_service_online()
     app_service.setup()
     assert fetch.is_service_online()
 
 
+@pytest.mark.slow
 def test_start_service_already_up(app_service, request):
     # Create a fetch-service "manually"
     fetch_process = fetch.start_service()
@@ -136,6 +139,7 @@ def test_start_service_port_taken(app_service, request, port):
         app_service.setup()
 
 
+@pytest.mark.slow
 def test_shutdown_service(app_service):
     assert not fetch.is_service_online()
 
@@ -152,6 +156,7 @@ def test_shutdown_service(app_service):
     assert not fetch.is_service_online()
 
 
+@pytest.mark.slow
 def test_create_teardown_session(
     app_service, mocker, tmp_path, monkeypatch, mock_instance
 ):
@@ -170,6 +175,7 @@ def test_create_teardown_session(
     assert "artefacts" in report
 
 
+@pytest.mark.slow
 def test_service_logging(app_service, mocker, tmp_path, monkeypatch, mock_instance):
     monkeypatch.chdir(tmp_path)
     mocker.patch.object(fetch, "_get_gateway", return_value="127.0.0.1")
@@ -269,6 +275,7 @@ def lxd_instance(snap_safe_tmp_path, provider_service):
             executor.delete()
 
 
+@pytest.mark.slow
 def test_build_instance_integration(
     app_service,
     lxd_instance,

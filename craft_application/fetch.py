@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU Lesser General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Utilities to interact with the fetch-service."""
+
 import contextlib
 import io
 import logging
@@ -335,7 +336,6 @@ def _get_service_base_dir() -> pathlib.Path:
 
 
 def _install_certificate(instance: craft_providers.Executor) -> None:
-
     logger.info("Installing certificate")
     # Push the local certificate
     cert, _key = _obtain_certificate()

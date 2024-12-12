@@ -2196,13 +2196,11 @@ def test_clean_platform(monkeypatch, tmp_path, app_metadata, fake_services, mock
 
 
 class AppConfigCommand(AppCommand):
-
     name: str = "app-config"
     help_msg: str = "Help text"
     overview: str = "Overview"
 
     def fill_parser(self, parser: argparse.ArgumentParser) -> None:
-
         name = self._app.name
         parser.add_argument(
             "app-name",

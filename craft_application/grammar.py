@@ -72,7 +72,8 @@ def process_part(
             # all keys in the dictionary must be a string
             for item in unprocessed_grammar:  # type: ignore[reportUnknownVariableType]
                 if isinstance(item, dict) and any(
-                    not isinstance(key, str) for key in item  # type: ignore[reportUnknownVariableType]
+                    not isinstance(key, str)
+                    for key in item  # type: ignore[reportUnknownVariableType]
                 ):
                     continue
 

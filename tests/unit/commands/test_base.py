@@ -12,6 +12,7 @@
 #  You should have received a copy of the GNU Lesser General Public License
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Tests for AppCommand."""
+
 from __future__ import annotations
 
 import argparse
@@ -100,7 +101,9 @@ def fake_extensible_cls():
             return {"fake": self.__run_count}
 
         def _run(
-            self, parsed_args: argparse.Namespace, **kwargs  # noqa: ARG002
+            self,
+            parsed_args: argparse.Namespace,  # noqa: ARG002
+            **kwargs,  # noqa: ARG002
         ) -> int | None:
             self.__run_count += 1
             return self.__run_count
@@ -123,7 +126,9 @@ def fake_extensible_child(fake_extensible_cls):
             return counts
 
         def _run(
-            self, parsed_args: argparse.Namespace, **kwargs  # noqa: ARG002
+            self,
+            parsed_args: argparse.Namespace,
+            **kwargs,  # noqa: ARG002
         ) -> int | None:
             self.__run_count += 1
             return super()._run(parsed_args)
