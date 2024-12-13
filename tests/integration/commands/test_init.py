@@ -17,6 +17,7 @@
 """Tests for init command."""
 import os
 import pathlib
+import sys
 import textwrap
 
 import pytest
@@ -113,7 +114,12 @@ def test_init_name(app, capsys, monkeypatch, project_dir, expected_file):
 @pytest.mark.usefixtures("fake_template_dirs")
 def test_init_invalid_profile(app, capsys, monkeypatch):
     """Give a helpful error message for invalid profiles."""
-    expected_error = "Error: argument --profile: invalid choice: 'bad' (choose from 'other-template', 'simple')"
+    choices = "other-template, simple"
+    if sys.version_info < (3, 12, 8):
+        choices = "'other-template', 'simple'"
+    expected_error = (
+        f"Error: argument --profile: invalid choice: 'bad' (choose from {choices})"
+    )
     monkeypatch.setattr("sys.argv", ["testcraft", "init", "--profile", "bad"])
 
     return_code = app.run()
