@@ -23,6 +23,7 @@ import subprocess
 from dataclasses import dataclass
 from importlib import metadata
 from typing import TYPE_CHECKING, Any
+from unittest.mock import Mock
 
 import craft_application
 import craft_parts
@@ -316,6 +317,16 @@ def fake_init_service_class(tmp_path):
 
 
 @pytest.fixture
+def fake_remote_build_service_class():
+    class FakeRemoteBuild(services.RemoteBuildService):
+        @override
+        def _get_lp_client(self) -> launchpad.Launchpad:
+            return Mock(spec=launchpad.Launchpad)
+
+    return FakeRemoteBuild
+
+
+@pytest.fixture
 def fake_services(
     tmp_path,
     app_metadata,
@@ -323,10 +334,12 @@ def fake_services(
     fake_lifecycle_service_class,
     fake_package_service_class,
     fake_init_service_class,
+    fake_remote_build_service_class,
 ):
     services.ServiceFactory.register("package", fake_package_service_class)
     services.ServiceFactory.register("lifecycle", fake_lifecycle_service_class)
     services.ServiceFactory.register("init", fake_init_service_class)
+    services.ServiceFactory.register("remote_build", fake_remote_build_service_class)
     factory = services.ServiceFactory(app_metadata, project=fake_project)
     factory.update_kwargs(
         "lifecycle", work_dir=tmp_path, cache_dir=tmp_path / "cache", build_plan=[]
