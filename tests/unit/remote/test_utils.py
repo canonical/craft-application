@@ -18,6 +18,7 @@ import re
 from pathlib import Path
 
 import pytest
+
 from craft_application.remote import (
     UnsupportedArchitectureError,
     get_build_id,

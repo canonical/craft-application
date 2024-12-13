@@ -36,10 +36,10 @@ import lazr.restfulclient.errors  # type: ignore[import-untyped]
 from lazr.restfulclient.resource import Entry  # type: ignore[import-untyped]
 from typing_extensions import Any
 
-from .. import errors, util
+from craft_application.launchpad import errors, util
 
 if TYPE_CHECKING:
-    from ..launchpad import Launchpad
+    from craft_application.launchpad import Launchpad
 
 
 class InformationType(enum.Enum):

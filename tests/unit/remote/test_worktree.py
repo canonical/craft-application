@@ -18,6 +18,7 @@ from pathlib import Path
 from unittest.mock import call
 
 import pytest
+
 from craft_application.git import GitError
 from craft_application.remote import RemoteBuildGitError, WorkTree
 

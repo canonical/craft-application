@@ -427,7 +427,7 @@ def _obtain_certificate() -> tuple[pathlib.Path, pathlib.Path]:
 
     if cert.is_file() and key.is_file():
         # Certificate and key already generated
-        # TODO check that the certificate hasn't expired
+        # TODO check that the certificate hasn't expired  # noqa: FIX002
         return cert, key
 
     # At least one is missing, regenerate both

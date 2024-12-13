@@ -36,11 +36,12 @@ from typing import TYPE_CHECKING, cast
 
 from typing_extensions import Self
 
-from .. import errors
+from craft_application.launchpad import errors
+
 from .base import InformationType, LaunchpadObject
 
 if TYPE_CHECKING:
-    from ..launchpad import Launchpad
+    from craft_application.launchpad import Launchpad
 
 
 class _BaseRepository(LaunchpadObject, metaclass=ABCMeta):

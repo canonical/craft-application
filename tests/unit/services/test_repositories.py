@@ -19,6 +19,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
+
 from craft_application.util import repositories
 
 

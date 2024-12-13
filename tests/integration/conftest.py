@@ -22,9 +22,10 @@ import tempfile
 from unittest import mock
 
 import pytest
+from craft_providers import bases, lxd, multipass
+
 from craft_application import launchpad
 from craft_application.services import provider, remotebuild
-from craft_providers import bases, lxd, multipass
 
 
 def pytest_configure(config: pytest.Config):

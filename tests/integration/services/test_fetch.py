@@ -26,12 +26,13 @@ from unittest import mock
 
 import craft_providers
 import pytest
+from craft_cli import EmitterMode, emit
+from craft_providers import bases
+
 from craft_application import errors, fetch, services, util
 from craft_application.application import DEFAULT_CLI_LOGGERS
 from craft_application.models import BuildInfo
 from craft_application.services.fetch import _PROJECT_MANIFEST_MANAGED_PATH
-from craft_cli import EmitterMode, emit
-from craft_providers import bases
 
 
 @cache
@@ -68,7 +69,7 @@ def _set_test_base_dirs(mocker):
 @pytest.fixture
 def mock_instance():
     @contextlib.contextmanager
-    def temporarily_pull_file(*, source, missing_ok):  # noqa: ARG001 (unused arguments)
+    def temporarily_pull_file(*, source, missing_ok):
         yield None
 
     instance = mock.Mock(spec=craft_providers.Executor)

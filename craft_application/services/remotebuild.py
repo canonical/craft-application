@@ -210,18 +210,15 @@ class RemoteBuildService(base.AppService):
             raise RuntimeError(
                 "RemoteBuildService must be set up using start_builds or resume_builds before cancelling builds."
             )
-        cancel_failed = []
+        cancel_failed: list[str] = []
         for build in self._builds:
             try:
                 build.cancel()
-            except launchpad.errors.BuildError as exc:
-                cancel_failed.append(  # pyright: ignore[reportUnknownMemberType]
-                    exc.args[0]
-                )
+            # We have to try-except in a loop here.
+            except launchpad.errors.BuildError as exc:  # noqa: PERF203
+                cancel_failed.append(exc.args[0])
         if cancel_failed:
-            raise errors.CancelFailedError(
-                cancel_failed  # pyright: ignore[reportUnknownArgumentType]
-            )
+            raise errors.CancelFailedError(cancel_failed)
 
     def cleanup(self) -> None:
         """Clean up the recipe and repository."""
@@ -311,7 +308,7 @@ class RemoteBuildService(base.AppService):
         self,
         name: str,
         repository: launchpad.models.GitRepository,
-        **kwargs: Any,  # noqa: ANN401
+        **kwargs: Any,
     ) -> launchpad.models.Recipe:
         """Get a recipe or create it if it doesn't exist."""
         with contextlib.suppress(ValueError):  # Recipe doesn't exist
@@ -324,7 +321,7 @@ class RemoteBuildService(base.AppService):
         self,
         name: str,
         repository: launchpad.models.GitRepository,
-        **kwargs: Any,  # noqa: ANN401
+        **kwargs: Any,
     ) -> launchpad.models.Recipe:
         """Create a new recipe for the given repository."""
         repository.lp_refresh()  # Prevents a race condition on new repositories.

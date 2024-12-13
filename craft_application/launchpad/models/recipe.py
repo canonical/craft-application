@@ -37,13 +37,14 @@ from typing import TYPE_CHECKING, ClassVar, Literal
 import lazr.restfulclient.errors  # type: ignore[import-untyped]
 from typing_extensions import Any, Self, TypedDict, override
 
-from ...util import retry
-from .. import errors, util
+from craft_application.launchpad import errors, util
+from craft_application.util import retry
+
 from . import build
 from .base import LaunchpadObject, Pocket
 
 if TYPE_CHECKING:
-    from .. import Launchpad
+    from craft_application.launchpad import Launchpad
 
 
 class RecipeType(enum.Enum):
