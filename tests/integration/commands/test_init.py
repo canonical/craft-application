@@ -124,7 +124,7 @@ def test_init_name(app, capsys, monkeypatch, project_dir, expected_file):
 def test_init_invalid_profile(app, capsys, monkeypatch):
     """Give a helpful error message for invalid profiles."""
     choices = "other-template, simple"
-    if sys.version_info < (3, 12):
+    if sys.version_info < (3, 12, 8):
         choices = "'other-template', 'simple'"
     expected_error = (
         f"Error: argument --profile: invalid choice: 'bad' (choose from {choices})"
