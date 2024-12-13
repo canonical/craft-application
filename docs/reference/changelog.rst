@@ -4,6 +4,22 @@
 Changelog
 *********
 
+4.8.1 (2025-MMM-DD)
+-------------------
+
+Application
+===========
+
+- Do not log encoded secrets in managed mode if ``build_secrets``
+  ``AppFeature`` is enabled.
+
+Documentation
+=============
+
+- Add missing links to the GitHub releases.
+
+For a complete list of commits, check out the `4.8.1`_ release on GitHub.
+
 4.8.0 (2025-Jan-13)
 -------------------
 
@@ -21,6 +37,8 @@ Utils
 - Add ``is_managed_mode()`` helper to check if running in managed mode.
 - Add ``get_hostname()`` helper to get a name of current host.
 
+For a complete list of commits, check out the `4.8.0`_ release on GitHub.
+
 4.7.0 (2024-Dec-19)
 -------------------
 
@@ -28,6 +46,8 @@ Application
 ===========
 
 - Allow applications to implement multi-base build plans.
+
+For a complete list of commits, check out the `4.7.0`_ release on GitHub.
 
 4.6.0 (2024-Dec-13)
 -------------------
@@ -69,7 +89,7 @@ Git
 - Use ``craft.git`` for Git-related operations run with ``subprocess`` in
   ``GitRepo``.
 
-.. For a complete list of commits, check out the `4.6.0`_ release on GitHub.
+For a complete list of commits, check out the `4.6.0`_ release on GitHub.
 
 4.5.0 (2024-Nov-28)
 -------------------
@@ -99,8 +119,8 @@ Services
 
 - Add version to the template generation context of ``InitService``.
 
-..
-  For a complete list of commits, check out the `4.5.0`_ release on GitHub.
+
+For a complete list of commits, check out the `4.5.0`_ release on GitHub.
 
 4.4.0 (2024-Nov-08)
 -------------------
@@ -483,3 +503,6 @@ For a complete list of commits, check out the `2.7.0`_ release on GitHub.
 .. _4.4.0: https://github.com/canonical/craft-application/releases/tag/4.4.0
 .. _4.5.0: https://github.com/canonical/craft-application/releases/tag/4.5.0
 .. _4.6.0: https://github.com/canonical/craft-application/releases/tag/4.6.0
+.. _4.7.0: https://github.com/canonical/craft-application/releases/tag/4.7.0
+.. _4.8.0: https://github.com/canonical/craft-application/releases/tag/4.8.0
+.. _4.8.1: https://github.com/canonical/craft-application/releases/tag/4.8.1
