@@ -4,6 +4,16 @@
 Changelog
 *********
 
+4.7.0 (YYYY-MMM-DD)
+-------------------
+
+Application
+===========
+
+- Do not log encoded secrets in managed mode if ``build_secrets``
+  ``AppFeature`` is enabled.
+
+
 4.6.0 (2024-Dec-13)
 -------------------
 
