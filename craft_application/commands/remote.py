@@ -23,7 +23,7 @@ from typing import Any, cast
 from craft_cli import emit
 from overrides import override  # pyright: ignore[reportUnknownVariableType]
 
-from craft_application import models, util
+from craft_application import models
 from craft_application.commands import ExtensibleCommand
 from craft_application.launchpad.models import Build, BuildState
 from craft_application.remote.utils import get_build_id
@@ -102,9 +102,8 @@ class RemoteBuild(ExtensibleCommand):
             permanent=True,
         )
 
-        if (
-            not parsed_args.launchpad_accept_public_upload
-            and not util.confirm_with_user(_CONFIRMATION_PROMPT, default=False)
+        if not parsed_args.launchpad_accept_public_upload and not emit.confirm(
+            _CONFIRMATION_PROMPT, default=False
         ):
             emit.message("Cannot proceed without accepting a public upload.")
             return 77  # permission denied from sysexits.h
@@ -136,7 +135,7 @@ class RemoteBuild(ExtensibleCommand):
         try:
             returncode = self._monitor_and_complete(build_id, builds)
         except KeyboardInterrupt:
-            if util.confirm_with_user("Cancel builds?", default=True):
+            if emit.confirm("Cancel builds?", default=True):
                 emit.progress("Cancelling builds.")
                 builder.cancel_builds()
                 emit.progress("Cleaning up")
