@@ -4,12 +4,14 @@
 Changelog
 *********
 
-4.6.0 (YYYY-MMM-DD)
+4.6.0 (2024-Dec-13)
 -------------------
 
 Application
 ===========
 
+- Add support for keeping order in help for commands provided to
+  ``add_command_group()``.
 - Add support for rock launchpad recipes, allowing the remote build of rocks.
 
 Commands
@@ -41,12 +43,6 @@ Git
 
 - Use ``craft.git`` for Git-related operations run with ``subprocess`` in
   ``GitRepo``.
-
-Application
-===========
-
-- Add support for keeping order in help for commands provided to
-  ``add_command_group()``.
 
 .. For a complete list of commits, check out the `4.6.0`_ release on GitHub.
 
@@ -461,3 +457,4 @@ For a complete list of commits, check out the `2.7.0`_ release on GitHub.
 .. _4.3.0: https://github.com/canonical/craft-application/releases/tag/4.3.0
 .. _4.4.0: https://github.com/canonical/craft-application/releases/tag/4.4.0
 .. _4.5.0: https://github.com/canonical/craft-application/releases/tag/4.5.0
+.. _4.6.0: https://github.com/canonical/craft-application/releases/tag/4.6.0
