@@ -94,6 +94,6 @@ def test_session_report_rejections(session_report):
         "git repository does not contain a go.mod file",
     ]
     assert rejected[1].rejection_reasons == [
-        "the artefact format is unknown",
+        "the artifact format is unknown",
         "the request was not recognized by any format inspector",
     ]
