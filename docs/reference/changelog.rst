@@ -4,7 +4,7 @@
 Changelog
 *********
 
-4.7.0 (YYYY-MMM-DD)
+4.6.1 (2024-Dec-17)
 -------------------
 
 Application
