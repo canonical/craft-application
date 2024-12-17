@@ -158,6 +158,7 @@ def test_repr(fake_launchpad):
 def test_get_recipe_finds_type(monkeypatch, fake_launchpad, type_):
     monkeypatch.setattr(models.SnapRecipe, "get", mock.Mock())
     monkeypatch.setattr(models.CharmRecipe, "get", mock.Mock())
+    monkeypatch.setattr(models.RockRecipe, "get", mock.Mock())
 
     fake_launchpad.get_recipe(type_, "my_recipe", "test_user", "my_project")
 
@@ -226,9 +227,7 @@ def test_get_recipe_charm(fake_launchpad, type_):
 
 
 def test_get_recipe_charm_has_project(fake_launchpad):
-    with pytest.raises(
-        ValueError, match="A charm recipe must be associated with a project."
-    ):
+    with pytest.raises(ValueError, match="A recipe must be associated with a project."):
         fake_launchpad.get_recipe(models.RecipeType.CHARM, "my_recipe")
 
 

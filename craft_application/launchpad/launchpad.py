@@ -125,6 +125,15 @@ class Launchpad:
         project: str,
     ) -> models.CharmRecipe: ...
 
+    @overload
+    def get_recipe(
+        self,
+        type_: Literal["rock", "ROCK", models.RecipeType.ROCK],
+        name: str,
+        owner: str | None,
+        project: str,
+    ) -> models.RockRecipe: ...
+
     def get_recipe(
         self,
         type_: models.RecipeType | str,
@@ -153,14 +162,15 @@ class Launchpad:
         if owner is None:
             owner = self.username
 
+        # Snaps don't need a project to create/get a recipe
         if type_ is models.RecipeType.SNAP:
             return models.SnapRecipe.get(self, name, owner)
-        if type_ is models.RecipeType.CHARM:
-            if not project:
-                raise ValueError("A charm recipe must be associated with a project.")
-            return models.CharmRecipe.get(self, name, owner, project)
 
-        raise TypeError(f"Unknown recipe type: {type_}")
+        # Other types do
+        recipe_class = models.get_recipe_class(type_)
+        if not project:
+            raise ValueError("A recipe must be associated with a project.")
+        return recipe_class.get(self, name, owner, project)
 
     def get_project(self, name: str) -> models.Project:
         """Get a project."""

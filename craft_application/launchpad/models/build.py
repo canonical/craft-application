@@ -44,6 +44,7 @@ class BuildTypes(enum.Enum):
 
     SNAP_BUILD = "snap_build"
     CHARM_BUILD = "charm_recipe_build"
+    ROCK_BUILD = "rock_recipe_build"
 
 
 class BuildState(enum.Enum):

@@ -51,6 +51,7 @@ class RecipeType(enum.Enum):
 
     SNAP = "snap"
     CHARM = "charm_recipe"
+    ROCK = "rock_recipe"
 
 
 class BuildChannels(TypedDict, total=False):
@@ -355,6 +356,7 @@ class _StandardRecipe(_StoreRecipe):
         store_name: str | None = None,
         store_channels: Collection[str] = ("latest/edge",),
         git_ref: str | None = None,
+        architectures: Collection[str] | None = None,
     ) -> Self:
         """Create a new recipe.
 
@@ -374,8 +376,16 @@ class _StandardRecipe(_StoreRecipe):
             asset.
         :param store_channels: (Optional) The channels onto which to publish the asset
             if uploaded.
+        :param architectures: (Optional) The architectures to build. Note that this
+            parameter is unused and exists here to provide a standard API for building
+            recipes (since SnapRecipe supports it) - _StandardRecipes do **not** support
+            defining build architectures at this moment.
         :returns: The recipe.
         """
+        if architectures:
+            msg = f"{cls.ARTIFACT} recipes do not support architectures"
+            raise ValueError(msg)
+
         kwargs: dict[str, Any] = {}
         if auto_build:
             kwargs["auto_build_channels"] = auto_build_channels
@@ -465,4 +475,33 @@ class CharmRecipe(_StandardRecipe):
         return lp.lp.charm_recipes
 
 
-Recipe = SnapRecipe | CharmRecipe
+class RockRecipe(_StandardRecipe):
+    """A recipe for a rock.
+
+    https://api.launchpad.net/devel.html#rock_recipe
+    """
+
+    ARTIFACT: ClassVar[Literal["rock"]] = "rock"  # type: ignore[reportIncompatibleVariableOverride]
+
+    @override
+    @classmethod
+    def _get_lp_recipe(cls, lp: Launchpad) -> Any:
+        """https://api.launchpad.net/devel.html#rock_recipes."""
+        return lp.lp.rock_recipes
+
+
+Recipe = SnapRecipe | CharmRecipe | RockRecipe
+
+_RECIPE_TYPE_TO_CLASS: dict[RecipeType, type[Recipe]] = {
+    RecipeType.SNAP: SnapRecipe,
+    RecipeType.CHARM: CharmRecipe,
+    RecipeType.ROCK: RockRecipe,
+}
+
+
+def get_recipe_class(type_: RecipeType) -> type[Recipe]:
+    """Get the concrete Recipe class for a given RecipeType."""
+    try:
+        return _RECIPE_TYPE_TO_CLASS[type_]
+    except KeyError:
+        raise TypeError(f"Unknown recipe type: {type_}") from None
