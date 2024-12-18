@@ -43,7 +43,6 @@ from craft_application.models.constraints import (
     UniqueStrList,
     VersionStr,
 )
-from craft_application.util import is_valid_architecture
 
 
 @dataclasses.dataclass
@@ -131,13 +130,14 @@ class Platform(base.CraftBaseModel):
     @pydantic.field_validator("build_on", "build_for", mode="after")
     @classmethod
     def _validate_architectures(cls, values: list[str]) -> list[str]:
-        """Validate the architecture entries."""
-        for architecture in values:
-            if architecture != "all" and not is_valid_architecture(architecture):
-                raise errors.CraftValidationError(
-                    f"Invalid architecture: {architecture!r} "
-                    "must be a valid debian architecture."
-                )
+        """Validate the architecture entries.
+
+        Entries must be a valid debian architecture or 'all'. Architectures
+        may have an optional base prefix formatted as '[<base>:]<arch>'.
+
+        :raises ValueError: If any of the architectures are not valid.
+        """
+        [craft_platforms.parse_base_and_architecture(arch) for arch in values]
 
         return values
 
@@ -167,8 +167,10 @@ class Platform(base.CraftBaseModel):
         return result
 
 
-def _populate_platforms(platforms: dict[str, Any]) -> dict[str, Any]:
-    """Populate empty platform entries.
+def _expand_shorthand_platforms(platforms: dict[str, Any]) -> dict[str, Any]:
+    """Expand shorthand platform entries into standard form.
+
+    Assumes the platform label is a valid architecture.
 
     :param platforms: The platform data.
 
@@ -210,9 +212,9 @@ class BuildPlanner(base.CraftBaseModel, metaclass=abc.ABCMeta):
 
     @pydantic.field_validator("platforms", mode="before")
     @classmethod
-    def _populate_platforms(cls, platforms: dict[str, Any]) -> dict[str, Any]:
-        """Populate empty platform entries."""
-        return _populate_platforms(platforms)
+    def _expand_shorthand_platforms(cls, platforms: dict[str, Any]) -> dict[str, Any]:
+        """Expand shorthand platform entries into standard form."""
+        return _expand_shorthand_platforms(platforms)
 
     @pydantic.field_validator("platforms", mode="after")
     @classmethod
@@ -233,9 +235,9 @@ class BuildPlanner(base.CraftBaseModel, metaclass=abc.ABCMeta):
 
         # validate `all` inside each platform:
         for platform in platforms.values():
-            if platform.build_on and "all" in platform.build_on:
+            if platform and platform.build_on and "all" in platform.build_on:
                 raise ValueError("'all' cannot be used for 'build-on'")
-            if platform.build_for and "all" in platform.build_for:
+            if platform and platform.build_for and "all" in platform.build_for:
                 is_all_used = True
 
         # validate `all` across all platforms:
@@ -336,9 +338,11 @@ class Project(base.CraftBaseModel):
 
     @pydantic.field_validator("platforms", mode="before")
     @classmethod
-    def _populate_platforms(cls, platforms: dict[str, Platform]) -> dict[str, Platform]:
-        """Populate empty platform entries."""
-        return _populate_platforms(platforms)
+    def _expand_shorthand_platforms(
+        cls, platforms: dict[str, Platform]
+    ) -> dict[str, Platform]:
+        """Expand shorthand platform entries into standard form."""
+        return _expand_shorthand_platforms(platforms)
 
     @property
     def effective_base(self) -> Any:  # noqa: ANN401 app specific classes can improve
