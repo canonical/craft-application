@@ -4,6 +4,14 @@
 Changelog
 *********
 
+4.7.0 (2024-Dec-19)
+-------------------
+
+Application
+===========
+
+- Allow applications to implement multi-base build plans.
+
 4.6.0 (2024-Dec-13)
 -------------------
 
