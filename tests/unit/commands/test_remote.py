@@ -17,9 +17,10 @@
 import argparse
 
 import pytest
+from craft_cli import emit
+
 from craft_application.commands import RemoteBuild
 from craft_application.launchpad.models import BuildState
-from craft_cli import emit
 
 
 @pytest.fixture
@@ -35,7 +36,7 @@ def test_remote_build_no_accept_upload(remote_build, mocker):
     parsed_args = argparse.Namespace(launchpad_accept_public_upload=False)
 
     mocker.patch.object(emit, "confirm", return_value=False)
-    assert remote_build.run(parsed_args) == 77  # noqa: PLR2004 (magic value)
+    assert remote_build.run(parsed_args) == 77
 
 
 def test_remote_build_run(remote_build, mocker, fake_services, tmp_path, emitter):

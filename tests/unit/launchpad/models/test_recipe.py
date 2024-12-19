@@ -17,6 +17,7 @@
 from unittest import mock
 
 import pytest
+
 from craft_application.launchpad import CharmRecipe, RecipeType, RockRecipe, SnapRecipe
 from craft_application.launchpad.models import get_recipe_class
 from craft_application.launchpad.models.recipe import BaseRecipe
