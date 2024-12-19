@@ -35,7 +35,6 @@ from craft_application.models import (
     Project,
     constraints,
 )
-from craft_application.util import platforms
 
 PROJECTS_DIR = pathlib.Path(__file__).parent / "project_models"
 PARTS_DICT = {"my-part": {"plugin": "nil"}}
@@ -170,7 +169,7 @@ def test_build_info_from_platforms(incoming, expected):
                 Platform(build_on=[arch], build_for=[arch]),
                 id=arch,
             )
-            for arch in platforms._ARCH_TRANSLATIONS_DEB_TO_PLATFORM
+            for arch in craft_platforms.DebianArchitecture
         ),
         *(
             pytest.param(
@@ -178,7 +177,7 @@ def test_build_info_from_platforms(incoming, expected):
                 Platform(build_on=[arch]),
                 id=f"build-on-only-{arch}",
             )
-            for arch in platforms._ARCH_TRANSLATIONS_DEB_TO_PLATFORM
+            for arch in craft_platforms.DebianArchitecture
         ),
         pytest.param(
             {"build-on": "amd64", "build-for": "riscv64"},
@@ -562,30 +561,39 @@ def test_unmarshal_invalid_repositories(
 
 
 @pytest.mark.parametrize("model", [Project, BuildPlanner])
-def test_platform_invalid_arch(model, basic_project_dict):
-    basic_project_dict["platforms"] = {"unknown": None}
+@pytest.mark.parametrize("platform_label", ["unknown", "ubuntu@24.04:unknown"])
+def test_platform_invalid_arch(model, platform_label, basic_project_dict):
+    basic_project_dict["platforms"] = {platform_label: None}
     project_path = pathlib.Path("myproject.yaml")
 
     with pytest.raises(CraftValidationError) as error:
         model.from_yaml_data(basic_project_dict, project_path)
 
     assert error.value.args[0] == (
-        "Invalid architecture: 'unknown' must be a valid debian architecture."
+        "Bad myproject.yaml content:\n"
+        f"- 'unknown' is not a valid DebianArchitecture (in field 'platforms.{platform_label}.build-on')\n"
+        f"- 'unknown' is not a valid DebianArchitecture (in field 'platforms.{platform_label}.build-for')"
     )
 
 
 @pytest.mark.parametrize("model", [Project, BuildPlanner])
+@pytest.mark.parametrize("arch", ["unknown", "ubuntu@24.04:unknown"])
 @pytest.mark.parametrize("field_name", ["build-on", "build-for"])
-def test_platform_invalid_build_arch(model, field_name, basic_project_dict):
-    basic_project_dict["platforms"] = {"amd64": {field_name: ["unknown"]}}
+def test_platform_invalid_build_arch(model, arch, field_name, basic_project_dict):
+    basic_project_dict["platforms"] = {"amd64": {field_name: [arch]}}
     project_path = pathlib.Path("myproject.yaml")
 
     with pytest.raises(CraftValidationError) as error:
         model.from_yaml_data(basic_project_dict, project_path)
 
-    assert error.value.args[0] == (
-        "Invalid architecture: 'unknown' must be a valid debian architecture."
-    )
+    error_lines = [
+        "Bad myproject.yaml content:",
+        "- field 'build-on' required in 'platforms.amd64' configuration",
+        f"- 'unknown' is not a valid DebianArchitecture (in field 'platforms.amd64.{field_name}')",
+    ]
+    if field_name == "build-on":
+        error_lines.pop(1)
+    assert error.value.args[0] == "\n".join(error_lines)
 
 
 @pytest.mark.parametrize(
