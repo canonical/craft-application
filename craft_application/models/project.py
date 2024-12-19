@@ -338,9 +338,7 @@ class Project(base.CraftBaseModel):
 
     @pydantic.field_validator("platforms", mode="before")
     @classmethod
-    def _populate_platforms(
-        cls, platforms: dict[str, Platform]
-    ) -> dict[str, Platform]:
+    def _populate_platforms(cls, platforms: dict[str, Platform]) -> dict[str, Platform]:
         """Expand shorthand platform entries into standard form."""
         return _expand_shorthand_platforms(platforms)
 
