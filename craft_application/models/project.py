@@ -212,7 +212,7 @@ class BuildPlanner(base.CraftBaseModel, metaclass=abc.ABCMeta):
 
     @pydantic.field_validator("platforms", mode="before")
     @classmethod
-    def _expand_shorthand_platforms(cls, platforms: dict[str, Any]) -> dict[str, Any]:
+    def _populate_platforms(cls, platforms: dict[str, Any]) -> dict[str, Any]:
         """Expand shorthand platform entries into standard form."""
         return _expand_shorthand_platforms(platforms)
 
@@ -338,7 +338,7 @@ class Project(base.CraftBaseModel):
 
     @pydantic.field_validator("platforms", mode="before")
     @classmethod
-    def _expand_shorthand_platforms(
+    def _populate_platforms(
         cls, platforms: dict[str, Platform]
     ) -> dict[str, Platform]:
         """Expand shorthand platform entries into standard form."""
