@@ -132,10 +132,10 @@ class Platform(base.CraftBaseModel):
     def _validate_architectures(cls, values: list[str]) -> list[str]:
         """Validate the architecture entries.
 
-        Entries must be a valid debian architecture or 'all'. Architectures
-        may have an optional base prefix formatted as '[<base>:]<arch>'.
+        Entries must be a valid debian architecture or 'all'. Architectures may
+        be preceded by an optional base prefix formatted as '[<base>:]<arch>'.
 
-        :raises ValueError: If any of the architectures are not valid.
+        :raises ValueError: If any of the bases or architectures are not valid.
         """
         [craft_platforms.parse_base_and_architecture(arch) for arch in values]
 
@@ -170,7 +170,7 @@ class Platform(base.CraftBaseModel):
 def _expand_shorthand_platforms(platforms: dict[str, Any]) -> dict[str, Any]:
     """Expand shorthand platform entries into standard form.
 
-    Assumes the platform label is a valid architecture.
+    Assumes the platform label is a valid as a build-on and build-for entry.
 
     :param platforms: The platform data.
 
