@@ -25,17 +25,18 @@ from importlib import metadata
 from typing import TYPE_CHECKING, Any
 from unittest.mock import Mock
 
-import craft_application
 import craft_parts
 import jinja2
 import pydantic
 import pytest
-from craft_application import application, git, launchpad, models, services, util
-from craft_application.services import service_factory
 from craft_cli import EmitterMode, emit
 from craft_providers import bases
 from jinja2 import FileSystemLoader
 from typing_extensions import override
+
+import craft_application
+from craft_application import application, git, launchpad, models, services, util
+from craft_application.services import service_factory
 
 if TYPE_CHECKING:  # pragma: no cover
     from collections.abc import Iterator
@@ -163,15 +164,15 @@ def full_build_plan(mocker) -> list[models.BuildInfo]:
     host_arch = util.get_host_architecture()
     build_plan = []
     for release in ("20.04", "22.04", "24.04"):
-        for build_for in (host_arch, "s390x", "riscv64"):
-            build_plan.append(
-                models.BuildInfo(
-                    f"ubuntu-{release}-{build_for}",
-                    host_arch,
-                    build_for,
-                    bases.BaseName("ubuntu", release),
-                )
+        build_plan.extend(
+            models.BuildInfo(
+                f"ubuntu-{release}-{build_for}",
+                host_arch,
+                build_for,
+                bases.BaseName("ubuntu", release),
             )
+            for build_for in (host_arch, "s390x", "riscv64")
+        )
 
     mocker.patch.object(models.BuildPlanner, "get_build_plan", return_value=build_plan)
     return build_plan

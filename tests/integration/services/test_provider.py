@@ -19,9 +19,10 @@ import subprocess
 
 import craft_providers
 import pytest
+from craft_providers import bases
+
 from craft_application.models import BuildInfo
 from craft_application.util import get_host_architecture
-from craft_providers import bases
 
 
 @pytest.mark.parametrize(

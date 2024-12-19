@@ -18,14 +18,15 @@ import pathlib
 import shutil
 import textwrap
 
-import craft_application
-import craft_application.commands
 import craft_cli
 import pytest
 import pytest_check
+from typing_extensions import override
+
+import craft_application
+import craft_application.commands
 from craft_application import models, secrets, util
 from craft_application.util import yaml
-from typing_extensions import override
 
 
 class TestableApplication(craft_application.Application):
@@ -270,7 +271,7 @@ def test_run_always_load_project(capsys, monkeypatch, app, cmd):
     monkeypatch.setenv("CRAFT_DEBUG", "1")
     monkeypatch.setattr("sys.argv", ["testcraft", cmd])
 
-    assert app.run() == 66  # noqa: PLR2004
+    assert app.run() == 66
 
     captured = capsys.readouterr()
     assert "'testcraft.yaml' not found" in captured.err
@@ -306,7 +307,7 @@ def test_invalid_command_argument(monkeypatch, capsys, app):
 
     return_code = app.run()
 
-    assert return_code == 64  # noqa: PLR2004 (Magic number used in comparison)
+    assert return_code == 64
 
     expected_stderr = textwrap.dedent(
         """\

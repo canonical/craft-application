@@ -31,14 +31,19 @@ from textwrap import dedent
 from typing import Any
 from unittest import mock
 
-import craft_application
-import craft_application.errors
 import craft_cli
 import craft_parts
 import craft_providers
 import pydantic
 import pytest
 import pytest_check
+from craft_cli import emit
+from craft_parts.plugins.plugins import PluginType
+from craft_providers import bases
+from overrides import override
+
+import craft_application
+import craft_application.errors
 from craft_application import (
     ProviderService,
     application,
@@ -58,11 +63,6 @@ from craft_application.models import BuildInfo
 from craft_application.util import (
     get_host_architecture,  # pyright: ignore[reportGeneralTypeIssues]
 )
-from craft_cli import emit
-from craft_parts.plugins.plugins import PluginType
-from craft_providers import bases
-from overrides import override
-
 from tests.conftest import FakeApplication
 
 EMPTY_COMMAND_GROUP = craft_cli.CommandGroup("FakeCommands", [])
@@ -765,7 +765,7 @@ def test_fails_without_project(
 
     fake_services.project = None
 
-    assert app.run() == 66  # noqa: PLR2004
+    assert app.run() == 66
 
     assert "Project file 'testcraft.yaml' not found in" in capsys.readouterr().err
 
@@ -865,7 +865,7 @@ def test_run_success_unmanaged(
         overview = "Return without doing anything"
         always_load_project = load_project
 
-        def run(self, parsed_args: argparse.Namespace):  # noqa: ARG002
+        def run(self, parsed_args: argparse.Namespace):
             return return_code
 
     monkeypatch.setattr(sys, "argv", ["testcraft", "pass"])
@@ -1686,8 +1686,8 @@ def grammar_build_plan(mocker):
 @pytest.fixture
 def grammar_app_mini(
     tmp_path,
-    grammar_project_mini,  # noqa: ARG001
-    grammar_build_plan,  # noqa: ARG001
+    grammar_project_mini,
+    grammar_build_plan,
     app_metadata,
     fake_services,
 ):
@@ -1700,8 +1700,8 @@ def grammar_app_mini(
 @pytest.fixture
 def non_grammar_app_full(
     tmp_path,
-    non_grammar_project_full,  # noqa: ARG001
-    non_grammar_build_plan,  # noqa: ARG001
+    non_grammar_project_full,
+    non_grammar_build_plan,
     app_metadata,
     fake_services,
 ):
@@ -1714,8 +1714,8 @@ def non_grammar_app_full(
 @pytest.fixture
 def grammar_app_full(
     tmp_path,
-    grammar_project_full,  # noqa: ARG001
-    grammar_build_plan,  # noqa: ARG001
+    grammar_project_full,
+    grammar_build_plan,
     app_metadata,
     fake_services,
 ):
@@ -1819,8 +1819,8 @@ class FakeApplicationWithYamlTransform(FakeApplication):
         self,
         yaml_data: dict[str, Any],
         *,
-        build_on: str,  # noqa: ARG002 (Unused method argument)
-        build_for: str | None,  # noqa: ARG002 (Unused method argument)
+        build_on: str,
+        build_for: str | None,
     ) -> dict[str, Any]:
         # do not modify the dict passed in
         new_yaml_data = copy.deepcopy(yaml_data)

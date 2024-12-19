@@ -18,6 +18,7 @@ from unittest import mock
 
 import lazr.restfulclient.resource
 import pytest
+
 from craft_application.launchpad import Launchpad
 
 

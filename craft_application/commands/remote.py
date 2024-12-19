@@ -81,7 +81,7 @@ class RemoteBuild(ExtensibleCommand):
     def _run(
         self,
         parsed_args: argparse.Namespace,
-        **_kwargs: Any,  # noqa: ANN401 (use of Any)
+        **_kwargs: Any,
     ) -> int | None:
         """Run the remote-build command.
 

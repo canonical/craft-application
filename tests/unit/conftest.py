@@ -21,6 +21,7 @@ from unittest import mock
 
 import pytest
 import pytest_mock
+
 from craft_application import git, services, util
 from craft_application.services import service_factory
 
@@ -89,7 +90,7 @@ def clear_git_binary_name_cache() -> None:
 def expected_git_command(
     request: pytest.FixtureRequest,
     mocker: pytest_mock.MockerFixture,
-    clear_git_binary_name_cache: None,  # noqa: ARG001 - Unused function argument
+    clear_git_binary_name_cache: None,
 ) -> str:
     craftgit_exists = request.param
     which_res = f"/some/path/to/{git.CRAFTGIT_BINARY_NAME}" if craftgit_exists else None
