@@ -24,6 +24,8 @@ from craft_application.util.platforms import (
     convert_architecture_deb_to_platform,
     get_host_base,
     is_valid_architecture,
+    get_hostname,
+    is_managed_mode,
 )
 from craft_application.util.retry import retry
 from craft_application.util.snap_config import (
@@ -34,6 +36,7 @@ from craft_application.util.snap_config import (
 from craft_application.util.string import humanize_list, strtobool
 from craft_application.util.system import get_parallel_build_count
 from craft_application.util.yaml import dump_yaml, safe_yaml_load
+from craft_application.util.cli import format_timestamp
 
 __all__ = [
     "get_unique_callbacks",
@@ -54,4 +57,7 @@ __all__ = [
     "safe_yaml_load",
     "retry",
     "get_parallel_build_count",
+    "get_hostname",
+    "is_managed_mode",
+    "format_timestamp",
 ]
