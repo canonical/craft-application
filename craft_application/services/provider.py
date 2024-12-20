@@ -56,7 +56,7 @@ class ProviderService(base.ProjectService):
     :param install_snap: Whether to install this app's snap from the host (default True)
     """
 
-    managed_mode_env_var = util.platforms.ENVIRONMENT_CRAFT_MANAGED_MODE
+    managed_mode_env_var = platforms.ENVIRONMENT_CRAFT_MANAGED_MODE
 
     def __init__(
         self,

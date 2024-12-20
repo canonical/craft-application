@@ -14,19 +14,19 @@
 # You should have received a copy of the GNU Lesser General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 """OS and architecture helpers for craft applications."""
-
 from __future__ import annotations
 
 import functools
 import os
 import platform
+from typing import Final
 
 from craft_parts.utils import os_utils
 from craft_providers import bases
 
 from .string import strtobool
 
-ENVIRONMENT_CRAFT_MANAGED_MODE = "CRAFT_MANAGED_MODE"
+ENVIRONMENT_CRAFT_MANAGED_MODE: Final[str] = "CRAFT_MANAGED_MODE"
 
 
 @functools.lru_cache(maxsize=1)

@@ -20,7 +20,10 @@ import pytest
 import pytest_mock
 
 from craft_application import util
-from craft_application.util.platforms import _ARCH_TRANSLATIONS_DEB_TO_PLATFORM
+from craft_application.util.platforms import (
+    _ARCH_TRANSLATIONS_DEB_TO_PLATFORM,
+    ENVIRONMENT_CRAFT_MANAGED_MODE,
+)
 
 
 @pytest.mark.parametrize("arch", _ARCH_TRANSLATIONS_DEB_TO_PLATFORM.keys())
@@ -53,7 +56,7 @@ def test_get_hostname_override(hostname: str) -> None:
 
 
 def test_is_managed_is_false_if_env_unset(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.delenv(util.platforms.ENVIRONMENT_CRAFT_MANAGED_MODE, raising=False)
+    monkeypatch.delenv(ENVIRONMENT_CRAFT_MANAGED_MODE, raising=False)
     assert util.is_managed_mode() is False
 
 
@@ -71,5 +74,5 @@ def test_is_managed_is_false_if_env_unset(monkeypatch: pytest.MonkeyPatch) -> No
 def test_is_managed_mode(
     monkeypatch: pytest.MonkeyPatch, managed_mode_env: str, *, expected: bool
 ) -> None:
-    monkeypatch.setenv(util.platforms.ENVIRONMENT_CRAFT_MANAGED_MODE, managed_mode_env)
+    monkeypatch.setenv(ENVIRONMENT_CRAFT_MANAGED_MODE, managed_mode_env)
     assert util.is_managed_mode() is expected
