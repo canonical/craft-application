@@ -42,6 +42,11 @@ def test_get_hostname_returns_unknown(mocker: pytest_mock.MockerFixture) -> None
     assert util.get_hostname() == "UNKNOWN"
 
 
+@pytest.mark.parametrize("empty_hostname", ["", " ", "\n\t"])
+def test_get_hostname_does_not_allow_empty(empty_hostname: str) -> None:
+    assert util.get_hostname(empty_hostname) == "UNKNOWN"
+
+
 @pytest.mark.parametrize("hostname", ["test-hostname", "another-hostname"])
 def test_get_hostname_override(hostname: str) -> None:
     assert util.get_hostname(hostname) == hostname

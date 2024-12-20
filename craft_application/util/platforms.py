@@ -63,6 +63,7 @@ def get_hostname(hostname: str | None = None) -> str:
     """Return the computer's network name or UNNKOWN if it cannot be determined."""
     if hostname is None:
         hostname = platform.node()
+    hostname = hostname.strip()
     if not hostname:
         hostname = "UNKNOWN"
     return hostname
