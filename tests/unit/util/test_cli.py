@@ -20,6 +20,12 @@ import pytest
 
 from craft_application.util import format_timestamp
 
+pytestmark = [
+    pytest.mark.filterwarnings(
+        "ignore:Timezone-naive datetime used. Replace with a timezone-aware one if possible.",
+    )
+]
+
 
 @pytest.mark.parametrize(
     ("dt_obj", "expected"),

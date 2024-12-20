@@ -16,6 +16,7 @@
 """CLI-related utilities."""
 
 import datetime
+import warnings
 
 
 def format_timestamp(dt: datetime.datetime) -> str:
@@ -34,4 +35,9 @@ def format_timestamp(dt: datetime.datetime) -> str:
     else:
         # timezone naive, assume it's UTC
         dtz = dt
+        warnings.warn(
+            "Timezone-naive datetime used. Replace with a timezone-aware one if possible.",
+            category=UserWarning,
+            stacklevel=2,
+        )
     return dtz.strftime("%Y-%m-%dT%H:%M:%SZ")
