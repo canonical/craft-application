@@ -3,7 +3,7 @@
     "comment": "Metadata format is unstable and may change without prior notice.",
     "session-id": "f17e28e952c84d7c955a1eb5277de201",
     "policy": "",
-    "artefacts": [
+    "artifacts": [
         {
             "metadata": {
                 "type": "application/x.apt.translation",
@@ -65,7 +65,7 @@
         },
         {
             "A NON-SHALLOW GIT CLONE": true,
-            "artefact-metadata-version": "0.1",
+            "artifact-metadata-version": "0.1",
             "request-inspection": {
               "git.upload-pack": {
                 "opinion": "Rejected",
@@ -107,7 +107,7 @@
         },
         {
             "A GO BUILD WITHOUT GOPROXY=DIRECT": true,
-            "artefact-metadata-version": "0.1",
+            "artifact-metadata-version": "0.1",
             "request-inspection": {
               "default": {
                 "opinion": "Unknown",
@@ -117,7 +117,7 @@
             "response-inspection": {
               "default": {
                 "opinion": "Unknown",
-                "reason": "the artefact format is unknown"
+                "reason": "the artifact format is unknown"
               }
             },
             "result": "Rejected",
