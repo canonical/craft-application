@@ -14,13 +14,19 @@
 # You should have received a copy of the GNU Lesser General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 """OS and architecture helpers for craft applications."""
+
 from __future__ import annotations
 
 import functools
+import os
 import platform
 
 from craft_parts.utils import os_utils
 from craft_providers import bases
+
+from .string import strtobool
+
+ENVIRONMENT_CRAFT_MANAGED_MODE = "CRAFT_MANAGED_MODE"
 
 
 @functools.lru_cache(maxsize=1)
@@ -51,6 +57,21 @@ def get_host_base() -> bases.BaseName:
     os_id = release.id()
     version_id = release.version_id()
     return bases.BaseName(os_id, version_id)
+
+
+def get_hostname(hostname: str | None = None) -> str:
+    """Return the computer's network name or UNNKOWN if it cannot be determined."""
+    if hostname is None:
+        hostname = platform.node()
+    if not hostname:
+        hostname = "UNKNOWN"
+    return hostname
+
+
+def is_managed_mode() -> bool:
+    """Check if craft is running in a managed environment."""
+    managed_flag = os.getenv("CRAFT_MANAGED_MODE", "n")
+    return strtobool(managed_flag)
 
 
 # architecture translations from the platform syntax to the deb/snap syntax
