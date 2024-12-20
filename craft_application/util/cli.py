@@ -21,11 +21,12 @@ import datetime
 def format_timestamp(dt: datetime.datetime) -> str:
     """Convert a datetime object (with or without timezone) to a string.
 
-    The format is
+    The format is an ISO 8601-compliant UTC date and time stamp formatted as:
 
         <DATE>T<TIME>Z
 
-    Always in UTC.
+    Timezone-aware datetime objects are converted to UTC. Timezone-naive ones
+    are assumed to be UTC.
     """
     if dt.tzinfo is not None and dt.tzinfo.utcoffset(None) is not None:
         # timezone aware

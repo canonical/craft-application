@@ -71,7 +71,7 @@ def get_hostname(hostname: str | None = None) -> str:
 
 def is_managed_mode() -> bool:
     """Check if craft is running in a managed environment."""
-    managed_flag = os.getenv("CRAFT_MANAGED_MODE", "n")
+    managed_flag = os.getenv(ENVIRONMENT_CRAFT_MANAGED_MODE, "n")
     return strtobool(managed_flag)
 
 
