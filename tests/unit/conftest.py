@@ -96,3 +96,8 @@ def expected_git_command(
     which_res = f"/some/path/to/{git.CRAFTGIT_BINARY_NAME}" if craftgit_exists else None
     mocker.patch("shutil.which", return_value=which_res)
     return git.CRAFTGIT_BINARY_NAME if craftgit_exists else git.GIT_FALLBACK_BINARY_NAME
+
+
+@pytest.fixture
+def managed_mode(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv(util.platforms.ENVIRONMENT_CRAFT_MANAGED_MODE, "1")
