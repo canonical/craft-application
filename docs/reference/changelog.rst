@@ -13,7 +13,7 @@ Utils
 - Add ``format_timestamp()`` helper that helps with formatting time
   in command responses.
 - Add ``is_managed_mode()`` helper to check if running in managed mode.
-- Add ``get_hostname()`` helper to get a name of current hostname.
+- Add ``get_hostname()`` helper to get a name of current host.
 
 4.7.0 (2024-Dec-19)
 -------------------
