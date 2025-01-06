@@ -4,8 +4,14 @@
 Changelog
 *********
 
-4.8.0 (2025-MMM-DD)
+4.8.0 (2025-Jan-13)
 -------------------
+
+Services
+========
+
+- Fix a bug where the same build environment was reused for platforms with
+  the same build-on and build-for architectures.
 
 Utils
 =====

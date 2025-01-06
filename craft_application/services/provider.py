@@ -289,10 +289,11 @@ class ProviderService(base.ProjectService):
         self, work_dir: pathlib.Path, build_info: models.BuildInfo
     ) -> str:
         work_dir_inode = work_dir.stat().st_ino
-        return (
-            f"{self._app.name}-{self._project.name}-on-{build_info.build_on}-"
-            f"for-{build_info.build_for}-{work_dir_inode}"
-        )
+
+        # craft-providers will remove invalid characters from the name but replacing
+        # characters improves readability for multi-base platforms like "ubuntu@24.04:amd64"
+        platform = build_info.platform.replace(":", "-").replace("@", "-")
+        return f"{self._app.name}-{self._project.name}-{platform}-{work_dir_inode}"
 
     def _get_provider_by_name(self, name: str) -> craft_providers.Provider:
         """Get a provider by its name."""
