@@ -10,7 +10,11 @@ from craft_application import launchpad
     [
         pytest.param(
             "staging",
-            marks=pytest.mark.xfail(strict=True),
+            marks=pytest.mark.xfail(
+                # Only xfail until the end of January.
+                datetime.date.today() < datetime.date(2025, 2, 1)
+                strict=False,
+            ),
             id="staging endpoint is offline",
         ),
         "production",
