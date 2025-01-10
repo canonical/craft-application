@@ -5,12 +5,23 @@ import pytest
 from craft_application import launchpad
 
 
-def test_anonymous_login(tmp_path):
+@pytest.mark.parametrize(
+    "root",
+    [
+        pytest.param(
+            "staging",
+            marks=pytest.mark.xfail(strict=True),
+            id="staging endpoint is offline",
+        ),
+        "production",
+    ],
+)
+def test_anonymous_login(tmp_path, root):
     cache_dir = tmp_path / "cache"
     assert not cache_dir.exists()
 
     launchpad.Launchpad.anonymous(
-        "craft-application-integration-tests", root="staging", cache_dir=cache_dir
+        "craft-application-integration-tests", root=root, cache_dir=cache_dir
     )
 
     assert cache_dir.is_dir()
