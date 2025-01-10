@@ -1,5 +1,7 @@
 """Tests for anonymous access."""
 
+import datetime
+
 import pytest
 
 from craft_application import launchpad
@@ -14,8 +16,8 @@ from craft_application import launchpad
                 # Only xfail until the end of January.
                 datetime.date.today() < datetime.date(2025, 2, 1),
                 strict=False,
+                reason="staging endpoint is offline",
             ),
-            id="staging endpoint is offline",
         ),
         "production",
     ],
