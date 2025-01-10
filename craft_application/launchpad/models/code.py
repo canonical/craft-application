@@ -1,3 +1,4 @@
+# noqa: A005 (stdlib-module-shadowing)
 #  This file is part of craft-application.
 #
 #  Copyright 2024 Canonical Ltd.
