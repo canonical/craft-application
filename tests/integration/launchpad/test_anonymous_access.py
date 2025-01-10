@@ -12,7 +12,7 @@ from craft_application import launchpad
             "staging",
             marks=pytest.mark.xfail(
                 # Only xfail until the end of January.
-                datetime.date.today() < datetime.date(2025, 2, 1)
+                datetime.date.today() < datetime.date(2025, 2, 1),
                 strict=False,
             ),
             id="staging endpoint is offline",
