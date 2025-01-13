@@ -58,6 +58,7 @@ class CraftSpreadSuite(CraftBaseModel):
 class CraftSpreadYaml(CraftBaseModel):
     """Simplified spread project configuration."""
 
+    project: str
     backends: dict[str, CraftSpreadBackend]
     suites: dict[str, CraftSpreadSuite]
     exclude: list[str] | None = None
@@ -181,6 +182,7 @@ class SpreadYaml(SpreadBaseModel):
     suites: dict[str, SpreadSuite]
     exclude: list[str]
     path: str
+    reroot: str | None
     prepare: str | None
     restore: str | None
     prepare_each: str | None
@@ -196,7 +198,7 @@ class SpreadYaml(SpreadBaseModel):
     ) -> Self:
         """Create the spread configuration from the simplified version."""
         return cls(
-            project="craft-test",
+            project=simple.project,
             environment={
                 "SUDO_USER": "",
                 "SUDO_UID": "",
@@ -213,6 +215,7 @@ class SpreadYaml(SpreadBaseModel):
             prepare_each=simple.prepare_each,
             restore_each=simple.restore_each,
             kill_timeout=simple.kill_timeout or "1h",  # TODO: add time limit
+            reroot="..",
         )
 
     @staticmethod
