@@ -559,7 +559,28 @@ def test_run_managed_failure(app, fake_project, fake_build_plan):
 
 
 @pytest.mark.enable_features("build_secrets")
-def test_run_managed_secrets(app, fake_project, fake_build_plan):
+@pytest.mark.parametrize(
+    "fake_encoded_environment",
+    [
+        pytest.param({}, id="empty"),
+        pytest.param(
+            {
+                "CRAFT_TEST": "banana",
+            },
+            id="fake-env",
+        ),
+        pytest.param(
+            {
+                "CRAFT_TEST_FRUIT": "banana",
+                "CRAFT_TEST_VEGETABLE": "cucumber",
+            },
+            id="multiple-entries-env",
+        ),
+    ],
+)
+def test_run_managed_secrets(
+    app, fake_project, fake_build_plan, fake_encoded_environment: dict[str, str], check
+):
     mock_provider = mock.MagicMock(spec_set=services.ProviderService)
     instance = mock_provider.instance.return_value.__enter__.return_value
     mock_execute = instance.execute_run
@@ -567,9 +588,6 @@ def test_run_managed_secrets(app, fake_project, fake_build_plan):
     app.project = fake_project
     app._build_plan = fake_build_plan
 
-    fake_encoded_environment = {
-        "CRAFT_TEST": "banana",
-    }
     app._secrets = secrets.BuildSecrets(
         environment=fake_encoded_environment,
         secret_strings=set(),
@@ -581,7 +599,13 @@ def test_run_managed_secrets(app, fake_project, fake_build_plan):
     assert len(mock_execute.mock_calls) == 1
     call = mock_execute.mock_calls[0]
     execute_env = call.kwargs["env"]
-    assert execute_env["CRAFT_TEST"] == "banana"
+    for secret_key, secret_val in fake_encoded_environment.items():
+        with check:
+            # value is passed to the underlying provider
+            assert execute_env[secret_key] == secret_val
+            assert secret_key in craft_cli.emit._log_filepath.read_text()
+            # value is not leaking in logs
+            assert secret_val not in craft_cli.emit._log_filepath.read_text()
 
 
 def test_run_managed_multiple(app, fake_project):
