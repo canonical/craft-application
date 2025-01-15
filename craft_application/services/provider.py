@@ -51,9 +51,14 @@ DEFAULT_FORWARD_ENVIRONMENT_VARIABLES: Iterable[str] = ()
 class ProviderService(base.ProjectService):
     """Manager for craft_providers in an application.
 
-    :param app: Metadata about this application.
+    :param app: Metadata about this application
+    :param services: Factory class for lazy-loading service classes
     :param project: The project model
+    :param work_dir: The working directory for parts processing
+    :param build_plan: The filtered build plan of platforms that are valid for
+    :param provider_name: The provider to use - "lxd" or "multipass"
     :param install_snap: Whether to install this app's snap from the host (default True)
+    :param intercept_mknod: If the host can, tell LXD instance to intercept mknod
     """
 
     managed_mode_env_var = platforms.ENVIRONMENT_CRAFT_MANAGED_MODE
@@ -68,6 +73,7 @@ class ProviderService(base.ProjectService):
         build_plan: list[models.BuildInfo],
         provider_name: str | None = None,
         install_snap: bool = True,
+        intercept_mknod: bool = True,
     ) -> None:
         super().__init__(app, services, project=project)
         self._provider: craft_providers.Provider | None = None
@@ -75,6 +81,8 @@ class ProviderService(base.ProjectService):
         self._build_plan = build_plan
         self.snaps: list[Snap] = []
         self._install_snap = install_snap
+        self._intercept_mknod = intercept_mknod
+
         self.environment: dict[str, str | None] = {self.managed_mode_env_var: "1"}
         self.packages: list[str] = []
         # this is a private attribute because it may not reflect the actual
@@ -309,7 +317,11 @@ class ProviderService(base.ProjectService):
     def _get_lxd_provider(self) -> LXDProvider:
         """Get the LXD provider for this manager."""
         lxd_remote = self._services.config.get("lxd_remote")
-        return LXDProvider(lxd_project=self._app.name, lxd_remote=lxd_remote)
+        return LXDProvider(
+            lxd_project=self._app.name,
+            lxd_remote=lxd_remote,
+            intercept_mknod=self._intercept_mknod,
+        )
 
     def _get_multipass_provider(self) -> MultipassProvider:
         """Get the Multipass provider for this manager."""
