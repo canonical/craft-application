@@ -161,7 +161,7 @@ def test_teardown_session_create_manifest(
           - git repository does not contain a go.mod file
         - url: https://proxy.golang.org:443/github.com/go-mmap/mmap/@v/v0.7.0.mod
           reasons:
-          - the artefact format is unknown
+          - the artifact format is unknown
           - the request was not recognized by any format inspector
         This build will fail on 'strict' fetch-service sessions.
         """
