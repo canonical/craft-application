@@ -474,8 +474,9 @@ class Application:
                     # TODO: remove ignores after these methods are merged into main in craft-providers.
                     # see https://github.com/canonical/craft-providers/pull/664/files
                     instance.install_pro_client()  # type: ignore  # noqa: PGH003
-                    instance.attach_pro_subscription()  # type: ignore  # noqa: PGH003
-                    instance.enable_pro_service(self._pro_services)  # type: ignore  # noqa: PGH003
+                    if self._pro_services:
+                        instance.attach_pro_subscription()  # type: ignore  # noqa: PGH003
+                        instance.enable_pro_service(self._pro_services)  # type: ignore  # noqa: PGH003
 
                 cmd = [self.app.name, *sys.argv[1:]]
                 craft_cli.emit.debug(
@@ -620,9 +621,7 @@ class Application:
             self._enable_fetch_service = True
             self._fetch_service_policy = fetch_service_policy
 
-    def get_arg_or_config(
-        self, parsed_args: argparse.Namespace, item: str
-    ) -> Any:  # noqa: ANN401
+    def get_arg_or_config(self, parsed_args: argparse.Namespace, item: str) -> Any:  # noqa: ANN401
         """Get a configuration option that could be overridden by a command argument.
 
         :param parsed_args: The argparse Namespace to check.
