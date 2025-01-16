@@ -167,7 +167,7 @@ def test_create_teardown_session(
     report = app_service.teardown_session()
     assert len(fetch.get_service_status()["active-sessions"]) == 0
 
-    assert "artefacts" in report
+    assert "artifacts" in report
 
 
 def test_service_logging(app_service, mocker, tmp_path, monkeypatch, mock_instance):
@@ -306,19 +306,19 @@ def test_build_instance_integration(
     finally:
         report = app_service.teardown_session()
 
-    artefacts_and_types: list[tuple[str, str]] = []
+    artifacts_and_types: list[tuple[str, str]] = []
 
-    for artefact in report["artefacts"]:
-        metadata_name = artefact["metadata"]["name"]
-        metadata_type = artefact["metadata"]["type"]
+    for artifact in report["artifacts"]:
+        metadata_name = artifact["metadata"]["name"]
+        metadata_type = artifact["metadata"]["type"]
 
-        artefacts_and_types.append((metadata_name, metadata_type))
+        artifacts_and_types.append((metadata_name, metadata_type))
 
     # Check that the installation of the "hello" deb went through the inspector.
-    assert ("hello", "application/vnd.debian.binary-package") in artefacts_and_types
+    assert ("hello", "application/vnd.debian.binary-package") in artifacts_and_types
 
     # Check that the fetching of the "craft-application" wheel went through the inspector.
-    assert ("craft-application", "application/x.python.wheel") in artefacts_and_types
+    assert ("craft-application", "application/x.python.wheel") in artifacts_and_types
 
     manifest_path = tmp_path / f"{fake_project.name}_{fake_project.version}_foo.json"
     assert manifest_path.is_file()
