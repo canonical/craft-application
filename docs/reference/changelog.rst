@@ -4,7 +4,17 @@
 Changelog
 *********
 
-4.8.1 (2025-MMM-DD)
+4.8.2 (2025-Jan-16)
+-------------------
+
+Application
+===========
+
+- Fix an issue with processing fetch-service output.
+
+For a complete list of commits, check out the `4.8.2`_ release on GitHub.
+
+4.8.1 (2025-Jan-13)
 -------------------
 
 Application
@@ -506,3 +516,4 @@ For a complete list of commits, check out the `2.7.0`_ release on GitHub.
 .. _4.7.0: https://github.com/canonical/craft-application/releases/tag/4.7.0
 .. _4.8.0: https://github.com/canonical/craft-application/releases/tag/4.8.0
 .. _4.8.1: https://github.com/canonical/craft-application/releases/tag/4.8.1
+.. _4.8.2: https://github.com/canonical/craft-application/releases/tag/4.8.2
