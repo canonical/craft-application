@@ -120,7 +120,7 @@ class SessionArtifactManifest(BaseManifestModel):
         """Create session manifests from a fetch-session report."""
         artifacts: list[Self] = []
 
-        for artifact in report["artefacts"]:
+        for artifact in report["artifacts"]:
             # Figure out if the artifact was rejected, and for which reasons
             rejected = artifact.get("result") == "Rejected"
             reasons: set[str] = set()
