@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU Lesser General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Handling of Ubuntu Pro Services."""
+
 from __future__ import annotations
 
 import json
@@ -56,10 +57,6 @@ class ValidatorOptions(Flag):
     SUPPORT = auto()
     _ATTACHED = auto()
     _DETACHED = auto()
-    # TODO: remove AVAILABILITY if not needed. This flag is useful if we can manually control
-    # if a managed instance is pro or not. It allows us to check if the host has
-    # any pro services to support a pro build. In this case, if pro is not requested
-    # the managed instance would not be attached.
     AVAILABILITY = _ATTACHED
     ATTACHMENT = _ATTACHED | _DETACHED
     ENABLEMENT = auto()
@@ -196,14 +193,23 @@ class ProServices(set[str]):
             # Since we extend the set class, cast ourselves to bool to check if we empty. if we are not
             # empty, this implies we require pro services.
 
-            if self.is_pro_attached() != bool(self):
-                if ValidatorOptions._ATTACHED in options and self:  # type: ignore [reportPrivateUsage]
-                    # Ubuntu Pro is requested but not attached
-                    raise UbuntuProDetachedError
+            is_pro_attached = self.is_pro_attached()
 
-                if ValidatorOptions._DETACHED in options and not self:  # type: ignore [reportPrivateUsage]
-                    # Ubuntu Pro is not requested but attached
-                    raise UbuntuProAttachedError
+            if (
+                ValidatorOptions._ATTACHED in options
+                and bool(self)
+                and not is_pro_attached
+            ):
+                # Ubuntu Pro is requested but not attached
+                raise UbuntuProDetachedError
+
+            if (
+                ValidatorOptions._DETACHED in options
+                and not bool(self)
+                and is_pro_attached
+            ):
+                # Ubuntu Pro is not requested but attached
+                raise UbuntuProAttachedError
 
             # second, check that the set of enabled pro services in the environment matches
             # the services specified in this set
@@ -213,7 +219,6 @@ class ProServices(set[str]):
                 raise InvalidUbuntuProStatusError(self, available_services)
 
         except UbuntuProClientNotFoundError:
-
             # If The pro client was not found, we may be on a non Ubuntu
             # system, but if Pro services were requested, re-raise error
             if self and not self.pro_client_exists():

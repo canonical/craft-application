@@ -658,7 +658,7 @@ class Application:
                     f"Validating requested Ubuntu Pro attachment on host: {pro_services}"
                 )
                 pro_services.validate(
-                    options=ValidatorOptions.ATTACHMENT | ValidatorOptions.SUPPORT
+                    options=ValidatorOptions.AVAILABILITY | ValidatorOptions.SUPPORT
                 )
 
     def _run_inner(self) -> int:
