@@ -42,6 +42,12 @@ from craft_application.errors import PathInvalidError
 from craft_application.models import BuildInfo, GrammarAwareProject
 from craft_application.util import ProServices, ValidatorOptions
 
+
+from pathlib import Path
+
+# PRO_SERVICES_YAML = Path("/tmp/pro-services.yaml")  # TODO: move this somewhere better
+PRO_SERVICES_YAML = Path("/root/pro-services.yaml")  # TODO: move this somewhere better
+
 if TYPE_CHECKING:
     from craft_application.services import service_factory
 
@@ -449,11 +455,39 @@ class Application:
             )
             instance_path = pathlib.PosixPath("/root/project")
 
-            with self.services.provider.instance(
-                build_info,
-                work_dir=self._work_dir,
-                clean_existing=self._enable_fetch_service,
-            ) as instance:
+            clean_existing_instance = self._enable_fetch_service
+
+            if self._pro_services is not None:
+                with self.services.provider.instance(
+                    build_info,
+                    work_dir=self._work_dir,
+                ) as instance:
+                    craft_cli.emit.debug("3")
+                    with instance.modify_file(
+                        source=PRO_SERVICES_YAML,
+                        missing_ok=True,
+                    ) as instance_pro_services:
+                        with open(instance_pro_services, "r") as fh:
+                            craft_cli.emit.debug(f"original content: {fh.read()}")
+                        if instance_pro_services.read_text():
+                            with open(instance_pro_services, "r") as fh:
+                                instance_pro_services = ProServices.load_yaml(fh)
+                            compatible_pro_Servivces = (
+                                instance_pro_services != self._pro_services
+                            )
+                            if compatible_pro_Servivces:
+                                craft_cli.emit.debug(
+                                    f"Missmatch in pro services between instance {instance_pro_services} and request {self._pro_services}"
+                                )
+                                clean_existing_instance = compatible_pro_Servivces
+
+            with (
+                self.services.provider.instance(
+                    build_info,
+                    work_dir=self._work_dir,
+                    clean_existing=clean_existing_instance,  # This is the flag to invalidate the managed instance
+                ) as instance
+            ):
                 if self._enable_fetch_service:
                     session_env = self.services.fetch.create_session(instance)
                     env.update(session_env)
@@ -465,18 +499,24 @@ class Application:
                     # we can then check for pro support by inheritance.
                     if not isinstance(instance, craft_providers.lxd.LXDInstance):
                         raise errors.UbuntuProNotSupportedError(
-                            "Ubuntu Pro builds are only supported on LXC."
+                            "Ubuntu Pro builds are only supported with LXC backend."
                         )
 
                     craft_cli.emit.debug(
-                        f"Enabling Ubuntu Pro Services {self._pro_services} on"
+                        f"Enabling Ubuntu Pro Services {self._pro_services}, {set(self._pro_services)}"
                     )
                     # TODO: remove ignores after these methods are merged into main in craft-providers.
                     # see https://github.com/canonical/craft-providers/pull/664/files
                     instance.install_pro_client()  # type: ignore  # noqa: PGH003
-                    if self._pro_services:
-                        instance.attach_pro_subscription()  # type: ignore  # noqa: PGH003
-                        instance.enable_pro_service(self._pro_services)  # type: ignore  # noqa: PGH003
+                    instance.attach_pro_subscription()  # type: ignore  # noqa: PGH003
+                    instance.enable_pro_service(self._pro_services)  # type: ignore  # noqa: PGH003
+
+                    with instance.modify_file(
+                        source=PRO_SERVICES_YAML,
+                        missing_ok=True,
+                    ) as instance_pro_services:
+                        with open(instance_pro_services, "w") as fh:
+                            self._pro_services.save_yaml(fh)
 
                 cmd = [self.app.name, *sys.argv[1:]]
                 craft_cli.emit.debug(
@@ -639,6 +679,9 @@ class Application:
         run_managed: bool,  # noqa: FBT001
         is_managed: bool,  # noqa: FBT001
     ) -> None:
+        craft_cli.emit.debug(
+            f"pro_services: {pro_services}, run_managed: {run_managed}, is_managed: {is_managed}"
+        )
         if pro_services is not None:  # should not be None for all lifecycle commands.
             # Validate requested pro services on the host if we are running in destructive mode.
             if not run_managed and not is_managed:

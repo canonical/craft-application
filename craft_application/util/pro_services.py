@@ -23,6 +23,7 @@ import subprocess as sub
 from enum import Flag, auto
 from pathlib import Path
 from typing import Any
+import yaml
 
 from craft_application.errors import (
     InvalidUbuntuProServiceError,
@@ -67,7 +68,7 @@ class ProServices(set[str]):
     """Class for managing pro-services within the lifecycle."""
 
     # placeholder for empty sets
-    empty_placeholder = "none"
+    empty_placeholder = "None"
 
     supported_services: set[str] = {
         "esm-apps",
@@ -85,7 +86,16 @@ class ProServices(set[str]):
 
     def __str__(self) -> str:
         """Convert to string for display to user."""
-        return ", ".join(self) if self else self.empty_placeholder
+        services = ", ".join(self) if self else self.empty_placeholder
+        return f"<ProServices: {services}>"
+
+    @classmethod
+    def load_yaml(cls, f):  # TODO give f a type
+        serialized_data = yaml.safe_load(f)
+        return cls(serialized_data)
+
+    def save_yaml(self, f):  # TODO give f a type
+        yaml.safe_dump(set(self), f)
 
     @classmethod
     def from_csv(cls, services: str) -> ProServices:
