@@ -45,8 +45,6 @@ from craft_application.util import ProServices, ValidatorOptions
 
 from pathlib import Path
 
-# PRO_SERVICES_YAML = Path("/tmp/pro-services.yaml")  # TODO: move this somewhere better
-PRO_SERVICES_YAML = Path("/root/pro-services.yaml")  # TODO: move this somewhere better
 
 if TYPE_CHECKING:
     from craft_application.services import service_factory
@@ -457,29 +455,21 @@ class Application:
 
             clean_existing_instance = self._enable_fetch_service
 
-            if self._pro_services is not None:
-                with self.services.provider.instance(
-                    build_info,
-                    work_dir=self._work_dir,
-                ) as instance:
-                    craft_cli.emit.debug("3")
-                    with instance.modify_file(
-                        source=PRO_SERVICES_YAML,
-                        missing_ok=True,
-                    ) as instance_pro_services:
-                        with open(instance_pro_services, "r") as fh:
-                            craft_cli.emit.debug(f"original content: {fh.read()}")
-                        if instance_pro_services.read_text():
-                            with open(instance_pro_services, "r") as fh:
-                                instance_pro_services = ProServices.load_yaml(fh)
-                            compatible_pro_Servivces = (
-                                instance_pro_services != self._pro_services
-                            )
-                            if compatible_pro_Servivces:
-                                craft_cli.emit.debug(
-                                    f"Missmatch in pro services between instance {instance_pro_services} and request {self._pro_services}"
-                                )
-                                clean_existing_instance = compatible_pro_Servivces
+            with self.services.provider.instance(
+                build_info,
+                work_dir=self._work_dir,
+            ) as instance:
+                if (
+                    isinstance(instance, craft_providers.lxd.LXDInstance)
+                    and instance.pro_services is not None
+                    and instance.pro_services != self._pro_services
+                ):
+                    clean_existing_instance = True
+                    craft_cli.emit.debug(
+                        f"Mismatch in pro services requested ({set(self._pro_services)}) "
+                        f"and services cached in instance ({instance.pro_services}). "
+                        "Cleaning existing instance."
+                    )
 
             with (
                 self.services.provider.instance(
@@ -511,12 +501,9 @@ class Application:
                     instance.attach_pro_subscription()  # type: ignore  # noqa: PGH003
                     instance.enable_pro_service(self._pro_services)  # type: ignore  # noqa: PGH003
 
-                    with instance.modify_file(
-                        source=PRO_SERVICES_YAML,
-                        missing_ok=True,
-                    ) as instance_pro_services:
-                        with open(instance_pro_services, "w") as fh:
-                            self._pro_services.save_yaml(fh)
+                # cache the current pro services state in the instance
+                if self._pro_services is not None:
+                    instance.pro_services = self._pro_services
 
                 cmd = [self.app.name, *sys.argv[1:]]
                 craft_cli.emit.debug(
