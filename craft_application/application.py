@@ -38,13 +38,9 @@ from craft_parts.plugins.plugins import PluginType
 from platformdirs import user_cache_path
 
 from craft_application import _config, commands, errors, grammar, models, secrets, util
-from craft_application.errors import PathInvalidError
+from craft_application.errors import PathInvalidError, InvalidUbuntuProStatusError
 from craft_application.models import BuildInfo, GrammarAwareProject
 from craft_application.util import ProServices, ValidatorOptions
-
-
-from pathlib import Path
-
 
 if TYPE_CHECKING:
     from craft_application.services import service_factory
@@ -453,31 +449,22 @@ class Application:
             )
             instance_path = pathlib.PosixPath("/root/project")
 
-            clean_existing_instance = self._enable_fetch_service
-
             with self.services.provider.instance(
                 build_info,
                 work_dir=self._work_dir,
+                clean_existing=self._enable_fetch_service,
             ) as instance:
+                # Check if the instance has pro services enabled and if they match the requested services.
+                # If not, raise an Exception and bail out.
                 if (
                     isinstance(instance, craft_providers.lxd.LXDInstance)
                     and instance.pro_services is not None
                     and instance.pro_services != self._pro_services
                 ):
-                    clean_existing_instance = True
-                    craft_cli.emit.debug(
-                        f"Mismatch in pro services requested ({set(self._pro_services)}) "
-                        f"and services cached in instance ({instance.pro_services}). "
-                        "Cleaning existing instance."
+                    raise InvalidUbuntuProStatusError(
+                        self._pro_services, instance.pro_services
                     )
 
-            with (
-                self.services.provider.instance(
-                    build_info,
-                    work_dir=self._work_dir,
-                    clean_existing=clean_existing_instance,  # This is the flag to invalidate the managed instance
-                ) as instance
-            ):
                 if self._enable_fetch_service:
                     session_env = self.services.fetch.create_session(instance)
                     env.update(session_env)
@@ -501,7 +488,7 @@ class Application:
                     instance.attach_pro_subscription()  # type: ignore  # noqa: PGH003
                     instance.enable_pro_service(self._pro_services)  # type: ignore  # noqa: PGH003
 
-                # cache the current pro services state in the instance
+                # Cache the current pro services, for prior checks in reentrant calls.
                 if self._pro_services is not None:
                     instance.pro_services = self._pro_services
 
