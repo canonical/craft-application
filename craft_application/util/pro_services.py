@@ -24,6 +24,7 @@ from enum import Flag, auto
 from pathlib import Path
 from typing import Any
 import yaml
+from io import TextIOWrapper
 
 from craft_application.errors import (
     InvalidUbuntuProServiceError,
@@ -74,6 +75,8 @@ class ProServices(set[str]):
         "esm-apps",
         "esm-infra",
         "fips",
+        # TODO: fips-preview is not part of the spec, but
+        # it should be added. Bring this up at regular sync.
         "fips-preview",
         "fips-updates",
     }
@@ -90,11 +93,13 @@ class ProServices(set[str]):
         return f"<ProServices: {services}>"
 
     @classmethod
-    def load_yaml(cls, f):  # TODO give f a type
+    def load_yaml(cls, f: TextIOWrapper) -> ProServices:
+        """Create a new ProServices instance from a yaml file."""
         serialized_data = yaml.safe_load(f)
         return cls(serialized_data)
 
-    def save_yaml(self, f):  # TODO give f a type
+    def save_yaml(self, f: TextIOWrapper) -> None:
+        """Save the ProServices instance to a yaml file."""
         yaml.safe_dump(set(self), f)
 
     @classmethod
