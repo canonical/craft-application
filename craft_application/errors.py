@@ -17,6 +17,7 @@
 
 All errors inherit from craft_cli.CraftError.
 """
+
 from __future__ import annotations
 
 import os
@@ -275,7 +276,6 @@ class UbuntuProClientNotFoundError(UbuntuProApiError):
     """Raised when Ubuntu Pro client was not found on the system."""
 
     def __init__(self, path: str) -> None:
-
         message = f'The Ubuntu Pro client was not found on the system at "{path}"'
 
         super().__init__(message=message)
@@ -285,7 +285,6 @@ class UbuntuProDetachedError(InvalidUbuntuProStateError):
     """Raised when Ubuntu Pro is not attached, but Pro services were requested."""
 
     def __init__(self) -> None:
-
         message = "Ubuntu Pro is requested, but was found detached."
         resolution = 'Attach Ubuntu Pro to continue. See "pro" command for details.'
 
@@ -296,7 +295,6 @@ class UbuntuProAttachedError(InvalidUbuntuProStateError):
     """Raised when Ubuntu Pro is attached, but Pro services were not requested."""
 
     def __init__(self) -> None:
-
         message = "Ubuntu Pro is not requested, but was found attached."
         resolution = 'Detach Ubuntu Pro to continue. See "pro" command for details.'
 
@@ -310,7 +308,6 @@ class InvalidUbuntuProServiceError(InvalidUbuntuProStateError):
     # if so where is the list of supported service names?
 
     def __init__(self, invalid_services: set[str]) -> None:
-
         invalid_services_str = "".join(invalid_services)
 
         message = "Invalid Ubuntu Pro Services were requested."
@@ -330,16 +327,22 @@ class InvalidUbuntuProStatusError(InvalidUbuntuProStateError):
     def __init__(
         self, requested_services: set[str], available_services: set[str]
     ) -> None:
-
         enable_services_str = " ".join(requested_services - available_services)
         disable_services_str = " ".join(available_services - requested_services)
 
         message = "Incorrect Ubuntu Pro Services were enabled."
-        resolution = (
-            "Please enable or disable the following services.\n"
-            f"Enable: {enable_services_str}\n"
-            f"Disable: {disable_services_str}\n"
-            'See "pro" command for details.'
-        )
+
+        if "container" in os.environ:
+            resolution = (
+                "Please enable or disable the following services.\n"
+                f"Enable: {enable_services_str}\n"
+                f"Disable: {disable_services_str}\n"
+                'See "pro" command for details.'
+            )
+        else:
+            app_name = os.environ.get("SNAP_INSTANCE_NAME", "*craft")
+            resolution = (
+                f'Please run "{app_name} clean" to reset Ubuntu Pro Services.\n'
+            )
 
         super().__init__(message=message, resolution=resolution)
