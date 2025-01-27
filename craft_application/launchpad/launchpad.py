@@ -28,6 +28,7 @@ from __future__ import annotations
 import pathlib
 from typing import Any, Literal, overload
 
+import craft_cli
 import launchpadlib.launchpad  # type: ignore[import-untyped]
 import launchpadlib.uris  # type: ignore[import-untyped]
 import lazr.restfulclient.errors  # type: ignore[import-untyped]
@@ -246,9 +247,21 @@ class Launchpad:
         :param owner: (Optional) the username of the owner (defaults to oneself).
         :param project: (Optional) the project to which the repository will be attached.
         """
+        kwargs: dict[str, Any] = {}
         if isinstance(project, models.Project):
+            kwargs = {"information_type": project.information_type}
             project = project.name
+        else:
+            craft_cli.emit.progress(
+                "Warning: Creating a repository without a project model is deprecated."
+                "and will always create public repositories.",
+                permanent=True,
+            )
         if owner is None:
             owner = self.username
 
-        return models.GitRepository.new(self, name, owner, project)
+        craft_cli.emit.debug(
+            f"Creating new repository {name} for {owner} in project {project} with kwargs {kwargs}"
+        )
+
+        return models.GitRepository.new(self, name, owner, project, **kwargs)

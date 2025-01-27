@@ -34,10 +34,11 @@ from abc import abstractmethod
 from collections.abc import Collection, Iterable
 from typing import TYPE_CHECKING, ClassVar, Literal
 
+import craft_cli
 import lazr.restfulclient.errors  # type: ignore[import-untyped]
 from typing_extensions import Any, Self, TypedDict, override
 
-from craft_application.launchpad import errors, util
+from craft_application.launchpad import errors, models, util
 from craft_application.util import retry
 
 from . import build
@@ -185,7 +186,7 @@ class SnapRecipe(_StoreRecipe):
         *,
         architectures: Collection[str] | None = None,
         description: str | None = None,
-        project: str | None = None,
+        project: str | models.Project | None = None,
         # Repository. Must be either a git repository or a Bazaar branch but not both.
         git_ref: str | None = None,
         bzr_branch: str | None = None,
@@ -230,6 +231,16 @@ class SnapRecipe(_StoreRecipe):
             kwargs["processors"] = [util.get_processor(arch) for arch in architectures]
         if description:
             kwargs["description"] = description
+        craft_cli.emit.progress(f"{type(project)=}")
+        if isinstance(project, models.Project):
+            kwargs["information_type"] = project.information_type.value
+            project = project.name
+        else:
+            craft_cli.emit.progress(
+                "Warning: Creating a recipe without a project model is deprecated."
+                "and will always create public recipes.",
+                permanent=True,
+            )
         if project:
             kwargs["project"] = f"/{project}"
         cls._fill_repo_info(kwargs, git_ref=git_ref, bzr_branch=bzr_branch)
@@ -347,7 +358,7 @@ class _StandardRecipe(_StoreRecipe):
         lp: Launchpad,
         name: str,
         owner: str,
-        project: str,
+        project: str | models.Project,
         *,
         build_path: str | None = None,
         # Automatic build options.
@@ -392,6 +403,15 @@ class _StandardRecipe(_StoreRecipe):
             kwargs["auto_build_channels"] = auto_build_channels
         if build_path:
             kwargs["build_path"] = build_path
+        if isinstance(project, models.Project):
+            kwargs["information_type"] = project.information_type.value
+            project = project.name
+        else:
+            craft_cli.emit.progress(
+                "Warning: Creating a recipe without a project model is deprecated."
+                "and will always create public recipes.",
+                permanent=True,
+            )
         cls._fill_store_info(
             kwargs,
             store_name=store_name,

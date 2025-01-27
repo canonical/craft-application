@@ -254,7 +254,10 @@ def test_create_new_recipe(remote_build_service, mock_lp_project):
     """Test that _new_recipe works correctly."""
     remote_build_service._lp_project = mock_lp_project
     remote_build_service.RecipeClass = mock.Mock()
-    repo = mock.Mock(git_https_url="https://localhost/~me/some-project/+git/my-repo")
+    repo = mock.Mock(
+        git_https_url="https://localhost/~me/some-project/+git/my-repo",
+        private=False,
+    )
 
     remote_build_service._new_recipe("test-recipe", repo)
 
@@ -263,7 +266,7 @@ def test_create_new_recipe(remote_build_service, mock_lp_project):
         "test-recipe",
         "craft_test_user",
         git_ref="/~me/some-project/+git/my-repo/+ref/main",
-        project="craft_test_user-craft-remote-build",
+        project=mock_lp_project,
     )
 
 
@@ -288,7 +291,10 @@ def test_create_new_recipe_archs(
     """Test that _new_recipe works correctly with architectures."""
     remote_build_service._lp_project = mock_lp_project
     remote_build_service.RecipeClass = mock.Mock()
-    repo = mock.Mock(git_https_url="https://localhost/~me/some-project/+git/my-repo")
+    repo = mock.Mock(
+        git_https_url="https://localhost/~me/some-project/+git/my-repo",
+        private=False,
+    )
 
     remote_build_service._new_recipe("test-recipe", repo, architectures=archs)
 
@@ -297,7 +303,7 @@ def test_create_new_recipe_archs(
         "test-recipe",
         "craft_test_user",
         git_ref="/~me/some-project/+git/my-repo/+ref/main",
-        project="craft_test_user-craft-remote-build",
+        project=mock_lp_project,
         architectures=expected_archs,
     )
 
