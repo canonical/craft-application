@@ -2388,7 +2388,7 @@ def test_doc_url_in_command_help(monkeypatch, capsys, app):
     [
         (False,             False,         1,               None),
         (True,              True,          1,               None),
-        (True,              False,         1,               util.ValidatorOptions.ATTACHMENT | util.ValidatorOptions.SUPPORT,),
+        (True,              False,         1,               util.ValidatorOptions.AVAILABILITY | util.ValidatorOptions.SUPPORT,),
         (False,             True,          0,               None),
     ],
 )
