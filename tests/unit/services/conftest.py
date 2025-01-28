@@ -66,6 +66,7 @@ def mock_git_repository():
         "git_repository",
         issueAccessToken=mock.Mock(spec=Callable, return_value="super_secret_token"),
         git_https_url="https://git.launchpad.net/",
+        git_ssh_url="ssh:git.launchpad.net/",
         private=False,
     )
 

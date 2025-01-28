@@ -147,7 +147,7 @@ class LaunchpadObject:
             return
         annotations = util.get_annotations(self.__class__)
         if key in annotations:
-            attr_path = self._attr_map.get(key, default=key)
+            attr_path = self._attr_map.get(key, key)
             util.set_innermost_attr(self._obj, attr_path, value)
         elif key in self._attr_map:
             util.set_innermost_attr(self._obj, self._attr_map[key], value)

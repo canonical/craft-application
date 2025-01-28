@@ -146,25 +146,47 @@ def test_is_project_private_error(remote_build_service):
         remote_build_service.is_project_private()
 
 
+@pytest.mark.parametrize(
+    ("information_type", "push_url"),
+    [
+        # exercise one public type and one private type
+        (
+            launchpad.models.InformationType.PUBLIC,
+            "https://craft_test_user:super_secret_token@git.launchpad.net/~user/+git/my_repo",
+        ),
+        (
+            launchpad.models.InformationType.PROPRIETARY,
+            "git+ssh://craft_test_user@git.launchpad.net/~user/+git/my_repo",
+        ),
+    ],
+)
 def test_ensure_repository_creation(
-    monkeypatch, tmp_path, remote_build_service, mock_lp_project, mock_push_url
+    monkeypatch,
+    tmp_path,
+    remote_build_service,
+    mock_lp_project,
+    mock_push_url,
+    information_type,
+    push_url,
 ):
     wrapped_repository = mock.Mock(
         spec=launchpad.models.GitRepository,
         git_https_url="https://git.launchpad.net/~user/+git/my_repo",
+        git_ssh_url="git+ssh://git.launchpad.net/~user/+git/my_repo",
         **{"get_access_token.return_value": "super_secret_token"},
     )
     repository_new = mock.Mock(return_value=wrapped_repository)
     monkeypatch.setattr(launchpad.models.GitRepository, "new", repository_new)
     sentinel = tmp_path / "sentinel_file"
     sentinel.write_text("I am a sentinel file.")
+    mock_lp_project.information_type = information_type
     remote_build_service._lp_project = mock_lp_project
 
     work_tree, lp_repository = remote_build_service._ensure_repository(tmp_path)
 
     assert (work_tree.repo_dir / "sentinel_file").read_text() == sentinel.read_text()
     mock_push_url.assert_called_once_with(
-        "https://craft_test_user:super_secret_token@git.launchpad.net/~user/+git/my_repo",
+        push_url,
         "main",
         push_tags=True,
     )
@@ -177,6 +199,9 @@ def test_ensure_repository_creation(
     # time zone the expiry time is still in the future.
     tz = datetime.timezone(datetime.timedelta(hours=14))
     assert expiry > datetime.datetime.now(tz=tz)
+
+    # the project's information type is passed to the repository
+    assert repository_new.call_args.kwargs["information_type"] == information_type
 
 
 @pytest.mark.usefixtures("mock_push_url_raises_git_error")
