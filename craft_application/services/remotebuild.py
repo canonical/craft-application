@@ -339,6 +339,8 @@ class RemoteBuildService(base.AppService):
     ) -> launchpad.models.Recipe:
         """Create a new recipe for the given repository."""
         repository.lp_refresh()  # Prevents a race condition on new repositories.
+
+        # public repos use https for backward compatibility
         url = repository.git_ssh_url if repository.private else repository.git_https_url
         git_ref = parse.urlparse(str(url)).path + "/+ref/main"
 

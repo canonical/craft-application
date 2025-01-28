@@ -28,7 +28,6 @@ from __future__ import annotations
 import pathlib
 from typing import Any, Literal, overload
 
-import craft_cli
 import launchpadlib.launchpad  # type: ignore[import-untyped]
 import launchpadlib.uris  # type: ignore[import-untyped]
 import lazr.restfulclient.errors  # type: ignore[import-untyped]
@@ -240,28 +239,28 @@ class Launchpad:
         name: str,
         owner: str | None = None,
         project: str | models.Project | None = None,
+        information_type: models.InformationType | None = None,
     ) -> models.GitRepository:
         """Create a new git repository.
 
         :param name: The name of the repository.
         :param owner: (Optional) the username of the owner (defaults to oneself).
         :param project: (Optional) the project to which the repository will be attached.
+            Defines the information type of the repository if 'information_type' is not set.
+        :param information_type: (Optional) The information type of the repository
+            This overrides the project's information type. Defaults to public.
         """
         kwargs: dict[str, Any] = {}
+        if information_type:
+            kwargs["information_type"] = information_type
+        elif isinstance(project, models.Project):
+            kwargs["information_type"] = project.information_type
+
         if isinstance(project, models.Project):
-            kwargs = {"information_type": project.information_type}
             project = project.name
-        else:
-            craft_cli.emit.progress(
-                "Warning: Creating a repository without a project model is deprecated."
-                "and will always create public repositories.",
-                permanent=True,
-            )
+
         if owner is None:
             owner = self.username
 
-        craft_cli.emit.debug(
-            f"Creating new repository {name} for {owner} in project {project} with kwargs {kwargs}"
-        )
-
+        # repos default to public if information_type is not set
         return models.GitRepository.new(self, name, owner, project, **kwargs)
