@@ -275,9 +275,7 @@ class RemoteBuildService(base.AppService):
         work_tree = WorkTree(self._app.name, self._name, project_dir)
         work_tree.init_repo()
         try:
-            lp_repository = self.lp.new_repository(
-                self._name, project=self._lp_project.name
-            )
+            lp_repository = self.lp.new_repository(self._name, project=self._lp_project)
         except launchpadlib.errors.HTTPError:
             lp_repository = self.lp.get_repository(
                 name=self._name, project=self._lp_project.name
@@ -288,10 +286,7 @@ class RemoteBuildService(base.AppService):
             expiry=datetime.datetime.now(tz=datetime.timezone.utc)
             + datetime.timedelta(seconds=300),
         )
-        repo_url = parse.urlparse(str(lp_repository.git_https_url))
-        push_url = repo_url._replace(
-            netloc=f"{self.lp.lp.me.name}:{token}@{repo_url.netloc}"  # pyright: ignore[reportOptionalMemberAccess,reportAttributeAccessIssue,reportUnknownMemberType]
-        )
+        push_url = self._get_push_url(lp_repository, token)
 
         try:
             local_repository = GitRepo(work_tree.repo_dir)
@@ -302,6 +297,25 @@ class RemoteBuildService(base.AppService):
             ) from git_error
         else:
             return work_tree, lp_repository
+
+    def _get_push_url(
+        self, lp_repository: launchpad.models.GitRepository, token: str
+    ) -> urllib.parse.ParseResult:
+        if self.is_project_private():
+            # private repositories can only be accessed via ssh
+            repo_url = parse.urlparse(str(lp_repository.git_ssh_url))
+            push_url = repo_url._replace(
+                netloc=f"{self.lp.lp.me.name}@{repo_url.netloc}"  # pyright: ignore[reportOptionalMemberAccess,reportAttributeAccessIssue,reportUnknownMemberType]
+            )
+            craft_cli.emit.debug(f"Using ssh url for private repository: {push_url}")
+        else:
+            repo_url = parse.urlparse(str(lp_repository.git_https_url))
+            push_url = repo_url._replace(
+                netloc=f"{self.lp.lp.me.name}:{token}@{repo_url.netloc}"  # pyright: ignore[reportOptionalMemberAccess,reportAttributeAccessIssue,reportUnknownMemberType]
+            )
+            craft_cli.emit.debug(f"Using https url for public repository: {push_url}")
+
+        return push_url
 
     def _get_repository(self) -> launchpad.models.GitRepository:
         """Get an existing repository on Launchpad."""
@@ -328,7 +342,10 @@ class RemoteBuildService(base.AppService):
     ) -> launchpad.models.Recipe:
         """Create a new recipe for the given repository."""
         repository.lp_refresh()  # Prevents a race condition on new repositories.
-        git_ref = parse.urlparse(str(repository.git_https_url)).path + "/+ref/main"
+
+        # public repos use https for backward compatibility
+        url = repository.git_ssh_url if repository.private else repository.git_https_url
+        git_ref = parse.urlparse(str(url)).path + "/+ref/main"
 
         # if kwargs has a collection of 'architectures',  replace 'all' with 'amd64'
         # because the amd64 runners are fast to build on
@@ -342,7 +359,7 @@ class RemoteBuildService(base.AppService):
             name,
             self.lp.username,
             git_ref=git_ref,
-            project=self._lp_project.name,
+            project=self._lp_project,
             **kwargs,
         )
 

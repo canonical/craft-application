@@ -37,7 +37,7 @@ import lazr.restfulclient.errors  # type: ignore[import-untyped]
 from typing_extensions import Any, Self, TypedDict, override
 
 from ...util import retry
-from .. import errors, util
+from .. import errors, models, util
 from . import build
 from .base import LaunchpadObject, Pocket
 
@@ -182,7 +182,8 @@ class SnapRecipe(_StoreRecipe):
         *,
         architectures: Collection[str] | None = None,
         description: str | None = None,
-        project: str | None = None,
+        project: str | models.Project | None = None,
+        information_type: models.InformationType | None = None,
         # Repository. Must be either a git repository or a Bazaar branch but not both.
         git_ref: str | None = None,
         bzr_branch: str | None = None,
@@ -204,7 +205,11 @@ class SnapRecipe(_StoreRecipe):
         :param architectures: A collection of architecture names to build the recipe.
             If None, detects the architectures from `snapcraft.yaml`
         :param description: (Optional) A description of the recipe.
-        :param project: (Optional) The name of the project to which to attach this recipe.
+        :param project: (Optional) The project or name of the project to which to
+            attach this recipe. Defines the information type of the repository if
+            'information_type' is not set.
+        :param information_type: (Optional) The information type of the recipe.
+            This overrides the project's information type. Defaults to public.
         :param git_ref: A link to a git repository and branch from which to build.
             Mutually exclusive with bzr_branch.
         :param bzr_branch: A link to a bazaar branch from which to build.
@@ -227,8 +232,18 @@ class SnapRecipe(_StoreRecipe):
             kwargs["processors"] = [util.get_processor(arch) for arch in architectures]
         if description:
             kwargs["description"] = description
+
+        # set information type from the arg or the project
+        if information_type:
+            kwargs["information_type"] = information_type.value
+        elif isinstance(project, models.Project):
+            kwargs["information_type"] = project.information_type.value
+
+        if isinstance(project, models.Project):
+            project = project.name
         if project:
             kwargs["project"] = f"/{project}"
+
         cls._fill_repo_info(kwargs, git_ref=git_ref, bzr_branch=bzr_branch)
         cls._fill_store_info(
             kwargs,
@@ -338,9 +353,10 @@ class CharmRecipe(_StoreRecipe):
         lp: Launchpad,
         name: str,
         owner: str,
-        project: str,
+        project: str | models.Project,
         *,
         build_path: str | None = None,
+        information_type: models.InformationType | None = None,
         # Automatic build options.
         auto_build: bool = False,
         auto_build_channels: BuildChannels | None = None,
@@ -357,8 +373,13 @@ class CharmRecipe(_StoreRecipe):
         :param name: The recipe name
         :param owner: The username of the person or team who owns the recipe
         :param project: The name of the project to which this recipe should be attached.
+        :param project: The project or name of the project to which to attach this
+            recipe. Defines the information type of the repository if 'information_type'
+            is not set.
         :param build_path: (Optional) The path to the directory containing
             charmcraft.yaml (if it's not the root directory).
+        :param information_type: (Optional) The information type of the recipe.
+            This overrides the project's information type. Defaults to public.
         :param git_ref: A link to a git repository and branch from which to build.
             Mutually exclusive with bzr_branch.
         :param auto_build: Whether to automatically build on pushes to the branch.
@@ -376,6 +397,16 @@ class CharmRecipe(_StoreRecipe):
             kwargs["auto_build_channels"] = auto_build_channels
         if build_path:
             kwargs["build_path"] = build_path
+
+        # set information type from the arg or the project
+        if information_type:
+            kwargs["information_type"] = information_type.value
+        elif isinstance(project, models.Project):
+            kwargs["information_type"] = project.information_type.value
+
+        if isinstance(project, models.Project):
+            project = project.name
+
         cls._fill_store_info(
             kwargs,
             store_name=store_name,

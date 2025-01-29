@@ -33,6 +33,14 @@ def flatten_enum(e: type[enum.Enum]) -> list:
     return [*e, *(val.name for val in e), *(val.value for val in e)]
 
 
+@pytest.fixture
+def mock_project():
+    _mock_project = mock.Mock(spec=models.Project)
+    _mock_project.name = "test-name"
+    _mock_project.information_type = models.InformationType.PUBLIC
+    return _mock_project
+
+
 @pytest.mark.parametrize(
     "cache_path",
     [
@@ -179,6 +187,84 @@ def test_get_recipe_snap(fake_launchpad, type_, owner):
 
     mock_get.assert_called_once_with(
         fake_launchpad, "my_recipe", owner or fake_launchpad.username
+    )
+
+
+@pytest.mark.parametrize("information_type", list(models.InformationType))
+@pytest.mark.parametrize("project", [None, "test-project", mock_project])
+@pytest.mark.parametrize(
+    ("recipe", "recipe_name"),
+    [
+        (models.SnapRecipe, "snaps"),
+        (models.CharmRecipe, "charm_recipes"),
+    ],
+)
+def test_recipe_new_info_type(information_type, project, recipe, recipe_name):
+    """Pass the information_type to the recipe."""
+    mock_launchpad = mock.Mock(spec=launchpad.Launchpad)
+    mock_launchpad.lp = mock.Mock(spec=launchpadlib.launchpad.Launchpad)
+    mock_recipe = mock.Mock()
+
+    mock_entry = mock.Mock(spec=Entry)
+    mock_entry.resource_type_link = "http://blah/#snap"
+    mock_entry.name = "test-snap"
+
+    mock_recipe.new = mock.Mock(return_value=mock_entry)
+    setattr(mock_launchpad.lp, f"{recipe_name}", mock_recipe)
+
+    actual_recipe = recipe.new(
+        mock_launchpad,
+        "my_recipe",
+        "test_user",
+        git_ref="my_ref",
+        # `information_type` overrides the project's information_type
+        project=project,
+        information_type=information_type,
+    )
+
+    assert isinstance(actual_recipe, recipe)
+    assert (
+        mock_recipe.new.mock_calls[0].kwargs["information_type"]
+        == information_type.value
+    )
+
+
+@pytest.mark.parametrize("information_type", list(models.InformationType))
+@pytest.mark.parametrize(
+    ("recipe", "recipe_name"),
+    [
+        (models.SnapRecipe, "snaps"),
+        (models.CharmRecipe, "charm_recipes"),
+    ],
+)
+def test_recipe_new_info_type_in_project(
+    mock_project, information_type, recipe, recipe_name
+):
+    """Use the info type from the project."""
+    mock_launchpad = mock.Mock(spec=launchpad.Launchpad)
+    mock_launchpad.lp = mock.Mock(spec=launchpadlib.launchpad.Launchpad)
+    mock_recipe = mock.Mock()
+
+    mock_entry = mock.Mock(spec=Entry)
+    mock_entry.resource_type_link = "http://blah/#snap"
+    mock_entry.name = "test-snap"
+
+    mock_recipe.new = mock.Mock(return_value=mock_entry)
+    setattr(mock_launchpad.lp, f"{recipe_name}", mock_recipe)
+    mock_project.information_type = information_type
+
+    actual_recipe = recipe.new(
+        mock_launchpad,
+        "my_recipe",
+        "test_user",
+        project=mock_project,
+        git_ref="my_ref",
+    )
+
+    assert isinstance(actual_recipe, recipe)
+    assert (
+        mock_recipe.new.mock_calls[0].kwargs["information_type"]
+        == information_type.value
     )
 
 

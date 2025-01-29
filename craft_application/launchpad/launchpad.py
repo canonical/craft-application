@@ -229,16 +229,28 @@ class Launchpad:
         name: str,
         owner: str | None = None,
         project: str | models.Project | None = None,
+        information_type: models.InformationType | None = None,
     ) -> models.GitRepository:
         """Create a new git repository.
 
         :param name: The name of the repository.
         :param owner: (Optional) the username of the owner (defaults to oneself).
         :param project: (Optional) the project to which the repository will be attached.
+            Defines the information type of the repository if 'information_type' is not set.
+        :param information_type: (Optional) The information type of the repository
+            This overrides the project's information type. Defaults to public.
         """
+        kwargs: dict[str, Any] = {}
+        if information_type:
+            kwargs["information_type"] = information_type
+        elif isinstance(project, models.Project):
+            kwargs["information_type"] = project.information_type
+
         if isinstance(project, models.Project):
             project = project.name
+
         if owner is None:
             owner = self.username
 
-        return models.GitRepository.new(self, name, owner, project)
+        # repos default to public if information_type is not set
+        return models.GitRepository.new(self, name, owner, project, **kwargs)
