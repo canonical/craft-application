@@ -4,6 +4,18 @@
 Changelog
 *********
 
+X.Y.Z (2025-MMM-DD)
+-------------------
+
+Remote build
+============
+
+* Fix a bug where repositories and recipes for private Launchpad projects
+  would be public while the build was in progress.
+
+..
+  For a complete list of commits, check out the `X.Y.Z`_ release on GitHub.
+
 4.8.2 (2025-Jan-16)
 -------------------
 
