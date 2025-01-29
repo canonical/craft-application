@@ -14,7 +14,7 @@ repos:
       - id: mixed-line-ending
   - repo: https://github.com/charliermarsh/ruff-pre-commit
     # renovate: datasource=pypi;depName=ruff
-    rev: "v0.9.0"
+    rev: "v0.9.3"
     hooks:
       - id: ruff
         args: [--fix, --exit-non-zero-on-fix]
