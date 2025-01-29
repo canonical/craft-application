@@ -35,8 +35,7 @@ architecture are retrieved and will be available in the
 local filesystem.
 
 Interrupted remote builds can be resumed using the --recover
-option, followed by the build number informed when the remote
-build was originally dispatched.
+option.
 
 To set a timeout on the remote-build command, use the option
 ``--launchpad-timeout=<seconds>``. The timeout is local, so
