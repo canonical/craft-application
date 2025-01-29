@@ -56,7 +56,7 @@ def mock_project_entry():
     return get_mock_lazr_entry(
         resource_type="project",
         name="craft_test_user-craft-remote-build",
-        information_type="Public",
+        information_type=launchpad.models.InformationType.PUBLIC.value,
     )
 
 
