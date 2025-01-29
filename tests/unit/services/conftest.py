@@ -56,6 +56,7 @@ def mock_project_entry():
     return get_mock_lazr_entry(
         resource_type="project",
         name="craft_test_user-craft-remote-build",
+        information_type=launchpad.models.InformationType.PUBLIC.value,
     )
 
 
@@ -65,6 +66,8 @@ def mock_git_repository():
         "git_repository",
         issueAccessToken=mock.Mock(spec=Callable, return_value="super_secret_token"),
         git_https_url="https://git.launchpad.net/",
+        git_ssh_url="ssh:git.launchpad.net/",
+        private=False,
     )
 
 
