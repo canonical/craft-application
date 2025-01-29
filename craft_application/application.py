@@ -24,6 +24,7 @@ import pathlib
 import signal
 import subprocess
 import sys
+import tempfile
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
 from functools import cached_property
@@ -160,6 +161,9 @@ class Application:
         self._enable_fetch_service = False
         # The kind of sessions that the fetch-service service should create
         self._fetch_service_policy = "strict"
+
+        # Whether testing should run on packed artifacts
+        self._enable_testing = False
 
     @property
     def app_config(self) -> dict[str, Any]:
@@ -482,6 +486,9 @@ class Application:
         if self._enable_fetch_service:
             self.services.fetch.shutdown(force=True)
 
+        if self._enable_testing:
+            self._run_tests()
+
     def configure(self, global_args: dict[str, Any]) -> None:
         """Configure the application using any global arguments."""
 
@@ -600,6 +607,14 @@ class Application:
         if fetch_service_policy:
             self._enable_fetch_service = True
             self._fetch_service_policy = fetch_service_policy
+
+        command = cast(
+            commands.AppCommand,
+            dispatcher.load_command(self.app_config),
+        )
+
+        if command.name == "test":
+            self._enable_testing = True
 
     def get_arg_or_config(
         self, parsed_args: argparse.Namespace, item: str
@@ -893,6 +908,18 @@ class Application:
         """Perform craft-parts-specific initialization, like features and plugins."""
         self._enable_craft_parts_features()
         self._register_default_plugins()
+
+    def _run_tests(self) -> None:
+        """Execute tests on the specified artifacts."""
+        packages = self.services.lifecycle.load_pack_state()
+        for test_artifact in packages:
+            craft_cli.emit.progress(f"Testing {test_artifact}...")
+
+            with tempfile.TemporaryDirectory(prefix=".craft-", dir=".") as tempdir:
+                destdir = pathlib.Path(tempdir)
+                test_env = {"TEST_ARTIFACT": f"$PROJECT_PATH/{test_artifact}"}
+                self.services.testing.process_spread_yaml(destdir, test_env)
+                self.services.testing.run_spread(destdir)
 
 
 def filter_plan(

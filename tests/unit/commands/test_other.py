@@ -21,7 +21,7 @@ import pytest
 from craft_application.commands import InitCommand
 from craft_application.commands.other import VersionCommand, get_other_command_group
 
-OTHER_COMMANDS = {InitCommand, TestCommand, VersionCommand}
+OTHER_COMMANDS = {InitCommand, VersionCommand}
 
 
 @pytest.mark.parametrize("commands", [OTHER_COMMANDS])

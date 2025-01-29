@@ -486,6 +486,7 @@ def test_merge_default_commands(app):
                 stage_command,
                 commands.lifecycle.PrimeCommand,
                 commands.lifecycle.PackCommand,
+                commands.lifecycle.TestCommand,
                 extra_lifecycle_command,
             ],
             ordered=True,
@@ -494,7 +495,6 @@ def test_merge_default_commands(app):
             name="Other",
             commands=[
                 init_command,
-                commands.other.TestCommand,
                 commands.other.VersionCommand,
                 extra_other_command,
             ],

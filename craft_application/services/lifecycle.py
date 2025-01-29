@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 import contextlib
+import pathlib
 import types
 from typing import TYPE_CHECKING, Any
 
@@ -330,6 +331,23 @@ class LifecycleService(base.ProjectService):
         overridden by subclasses that do.
         """
         return None
+
+    def save_pack_state(self, packages: list[str]) -> None:
+        """Persist the names of packed artifacts.
+
+        XXX: This is a PoC shortcut and must be properly reimplemented.
+        """
+        with pathlib.Path("pack_state.txt").open("w") as file:
+            for p in packages:
+                print(p, file=file)
+
+    def load_pack_state(self) -> list[str]:
+        """Recover the list of packed artifacts.
+
+        XXX: This is a PoC shortcut and must be properly reimplemented.
+        """
+        with pathlib.Path("pack_state.txt").open() as file:
+            return [line.strip() for line in file]
 
 
 def _validate_build_plan(build_plan: list[models.BuildInfo]) -> None:

@@ -30,7 +30,9 @@ from . import base
 class TestingService(base.AppService):
     """Service class for testing a project."""
 
-    def process_spread_yaml(self, destdir: pathlib.Path) -> None:
+    def process_spread_yaml(
+        self, destdir: pathlib.Path, test_env: dict[str, str]
+    ) -> None:
         """Process the spread configuration file.
 
         :param project_dir: The directory to initialise the project in.
@@ -43,11 +45,12 @@ class TestingService(base.AppService):
         with pathlib.Path("spread.yaml").open() as file:
             data = util.safe_yaml_load(file)
 
-        simple = models.CraftSpreadYaml.unmarshal(data)
+        csy = models.CraftSpreadYaml.unmarshal(data)
 
         spread_yaml = models.SpreadYaml.from_craft(
-            simple,
+            csy,
             craft_backend=craft_backend,
+            env=test_env,
         )
 
         spread_yaml.to_yaml_file(destdir / "spread.yaml")
