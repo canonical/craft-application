@@ -45,10 +45,10 @@ class TestingService(base.AppService):
         with pathlib.Path("spread.yaml").open() as file:
             data = util.safe_yaml_load(file)
 
-        csy = models.CraftSpreadYaml.unmarshal(data)
+        craft_spread_yaml = models.CraftSpreadYaml.unmarshal(data)
 
         spread_yaml = models.SpreadYaml.from_craft(
-            csy,
+            craft_spread_yaml,
             craft_backend=craft_backend,
             env=test_env,
         )
