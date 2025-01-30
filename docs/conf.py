@@ -22,6 +22,12 @@ author = "Canonical Group Ltd"
 
 copyright = f"2023-{datetime.date.today().year}, {author}"  # noqa: A001
 
+# links to ignore when checking links
+linkcheck_ignore = [
+    # Ignore releases, since we'll include the next release before it exists.
+    "https://github.com/canonical/[a-z]*craft[a-z-]*/releases/.*",
+]
+
 # region Configuration for canonical-sphinx
 ogp_site_url = "https://canonical-craft-application.readthedocs-hosted.com/"
 ogp_site_name = project
