@@ -27,7 +27,6 @@ __all__ = [
     "ExtensibleCommand",
     "InitCommand",
     "RemoteBuild",
-    "TestCommand",
     "lifecycle",
     "LifecycleCommand",
     "get_lifecycle_command_group",

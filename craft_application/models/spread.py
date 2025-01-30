@@ -169,7 +169,7 @@ class SpreadSuite(SpreadBaseModel):
             restore=csuite.restore,
             prepare_each=csuite.prepare_each,
             restore_each=csuite.restore_each,
-            kill_timeout=csuite.kill_timeout,  # TODO: add time limit
+            kill_timeout=csuite.kill_timeout,  # XXX: add time limit
         )
 
 
@@ -216,7 +216,7 @@ class SpreadYaml(SpreadBaseModel):
             restore=csy.restore,
             prepare_each=csy.prepare_each,
             restore_each=csy.restore_each,
-            kill_timeout=csy.kill_timeout or "1h",  # TODO: add time limit
+            kill_timeout=csy.kill_timeout or "1h",  # XXX: add time limit
             reroot="..",
         )
 
