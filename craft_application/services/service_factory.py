@@ -77,7 +77,7 @@ class ServiceFactory:
     ConfigClass: type[services.ConfigService] = None  # type: ignore[assignment]
     FetchClass: type[services.FetchService] = None  # type: ignore[assignment]
     InitClass: type[services.InitService] = None  # type: ignore[assignment]
-    TestingClass: type[services.TestingService] = None # type: ignore[assignment]
+    TestingClass: type[services.TestingService] = None  # type: ignore[assignment]
     project: models.Project | None = None
 
     if TYPE_CHECKING:
