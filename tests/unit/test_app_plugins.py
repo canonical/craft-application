@@ -40,7 +40,9 @@ def entry_points_faker():
     # Save unmodified sys.modules
     og_modules = sys.modules
 
-    def entry_points_faker(entry_points: list[tuple[str, str, callable]] | None = None):
+    def entry_points_faker(
+        entry_points: list[tuple[str, str, callable]] | None = None  # type: ignore[reportGeneralTypeIssues]
+    ):
         # All go under this group for our purposes
         entry_points_txt = f"[{PLUGIN_GROUP_NAME}]\n"
 
@@ -78,7 +80,7 @@ def entry_points_faker():
                 return [FakeDistribution(entry_points_txt)]
 
         # Set up the fakery
-        sys.meta_path.append(FakeDistributionFinder)
+        sys.meta_path.append(FakeDistributionFinder)  # type: ignore[reportArgumentType]
 
     yield entry_points_faker
 
