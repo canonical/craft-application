@@ -40,7 +40,7 @@ def entry_points_faker():
     # Save unmodified sys.modules
     og_modules = sys.modules
 
-    def entry_points_faker(entry_points: list[tuple[str, str, object]] | None = None):
+    def entry_points_faker(entry_points: list[tuple[str, str, callable]] | None = None):
         # All go under this group for our purposes
         entry_points_txt = f"[{PLUGIN_GROUP_NAME}]\n"
 
