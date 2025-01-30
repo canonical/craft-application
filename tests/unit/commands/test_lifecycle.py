@@ -22,6 +22,9 @@ from contextlib import nullcontext
 
 import craft_parts
 import pytest
+from craft_cli import emit
+from craft_parts import Features
+
 from craft_application.commands.lifecycle import (
     BuildCommand,
     CleanCommand,
@@ -41,8 +44,6 @@ from craft_application.errors import (
     UbuntuProDetachedError,
 )
 from craft_application.util import ProServices
-from craft_cli import emit
-from craft_parts import Features
 
 # disable black reformat for improve readability on long parameterisations
 # fmt: off
@@ -109,7 +110,7 @@ def get_fake_command_class(parent_cls, managed):
         help_msg = "help"
         overview = "overview"
 
-        def run_managed(self, parsed_args: argparse.Namespace) -> bool:  # noqa: ARG002
+        def run_managed(self, parsed_args: argparse.Namespace) -> bool:
             return self._run_managed
 
     return FakeCommand

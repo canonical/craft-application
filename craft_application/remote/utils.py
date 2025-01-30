@@ -36,10 +36,9 @@ def validate_architectures(architectures: list[str]) -> None:
     :raises UnsupportedArchitectureError: if any architecture in the list in not
     supported for remote building.
     """
-    unsupported_archs: list[str] = []
-    for arch in architectures:
-        if arch not in _SUPPORTED_ARCHS:
-            unsupported_archs.append(arch)
+    unsupported_archs: list[str] = [
+        arch for arch in architectures if arch not in _SUPPORTED_ARCHS
+    ]
     if unsupported_archs:
         raise UnsupportedArchitectureError(architectures=unsupported_archs)
 

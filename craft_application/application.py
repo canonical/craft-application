@@ -77,7 +77,7 @@ class AppMetadata:
     summary: str | None = None
     version: str = field(init=False)
     docs_url: str | None = None
-    source_ignore_patterns: list[str] = field(default_factory=lambda: [])
+    source_ignore_patterns: list[str] = field(default_factory=list)
     managed_instance_project_path = pathlib.PurePosixPath("/root/project")
     features: AppFeatures = AppFeatures()
     project_variables: list[str] = field(default_factory=lambda: ["version"])
@@ -252,9 +252,11 @@ class Application:
                 merged_commands.append(default_command)
 
         # append remaining commands from the application
-        for app_command in app_commands.commands:
-            if app_command.name not in processed_command_names:
-                merged_commands.append(app_command)
+        merged_commands.extend(
+            app_command
+            for app_command in app_commands.commands
+            if app_command.name not in processed_command_names
+        )
 
         return craft_cli.CommandGroup(
             name=default_commands.name,
@@ -274,10 +276,14 @@ class Application:
         self._global_arguments.append(argument)
 
     def add_command_group(
-        self, name: str, commands: Sequence[type[craft_cli.BaseCommand]]
+        self,
+        name: str,
+        commands: Sequence[type[craft_cli.BaseCommand]],
+        *,
+        ordered: bool = False,
     ) -> None:
         """Add a CommandGroup to the Application."""
-        self._command_groups.append(craft_cli.CommandGroup(name, commands))
+        self._command_groups.append(craft_cli.CommandGroup(name, commands, ordered))
 
     @cached_property
     def cache_dir(self) -> pathlib.Path:
@@ -416,7 +422,7 @@ class Application:
 
     def is_managed(self) -> bool:
         """Shortcut to tell whether we're running in managed mode."""
-        return self.services.ProviderClass.is_managed()
+        return self.services.get_class("provider").is_managed()
 
     def run_managed(self, platform: str | None, build_for: str | None) -> None:
         """Run the application in a managed instance."""
@@ -440,6 +446,9 @@ class Application:
                 # If using build secrets, put them in the environment of the managed
                 # instance.
                 secret_values = cast(secrets.BuildSecrets, self._secrets)
+                # disable logging CRAFT_SECRETS value passed to the managed instance
+                craft_cli.emit.set_secrets(list(secret_values.environment.values()))
+
                 env.update(secret_values.environment)
 
             extra_args["env"] = env

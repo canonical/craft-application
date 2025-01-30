@@ -31,14 +31,19 @@ from textwrap import dedent
 from typing import Any
 from unittest import mock
 
-import craft_application
-import craft_application.errors
 import craft_cli
 import craft_parts
 import craft_providers
 import pydantic
 import pytest
 import pytest_check
+from craft_cli import emit
+from craft_parts.plugins.plugins import PluginType
+from craft_providers import bases, lxd
+from overrides import override
+
+import craft_application
+import craft_application.errors
 from craft_application import (
     ProviderService,
     application,
@@ -58,11 +63,6 @@ from craft_application.models import BuildInfo
 from craft_application.util import (
     get_host_architecture,  # pyright: ignore[reportGeneralTypeIssues]
 )
-from craft_cli import emit
-from craft_parts.plugins.plugins import PluginType
-from craft_providers import bases, lxd
-from overrides import override
-
 from tests.conftest import FakeApplication
 
 EMPTY_COMMAND_GROUP = craft_cli.CommandGroup("FakeCommands", [])
@@ -515,7 +515,7 @@ def test_merge_default_commands_only(app):
 )
 def test_log_path(monkeypatch, app, provider_managed, expected):
     monkeypatch.setattr(
-        app.services.ProviderClass, "is_managed", lambda: provider_managed
+        app.services.get_class("provider"), "is_managed", lambda: provider_managed
     )
 
     actual = app.log_path
@@ -629,7 +629,28 @@ def test_run_managed_skip_configure_pro(mocker, app, fake_project, fake_build_pl
 
 
 @pytest.mark.enable_features("build_secrets")
-def test_run_managed_secrets(app, fake_project, fake_build_plan):
+@pytest.mark.parametrize(
+    "fake_encoded_environment",
+    [
+        pytest.param({}, id="empty"),
+        pytest.param(
+            {
+                "CRAFT_TEST": "banana",
+            },
+            id="fake-env",
+        ),
+        pytest.param(
+            {
+                "CRAFT_TEST_FRUIT": "banana",
+                "CRAFT_TEST_VEGETABLE": "cucumber",
+            },
+            id="multiple-entries-env",
+        ),
+    ],
+)
+def test_run_managed_secrets(
+    app, fake_project, fake_build_plan, fake_encoded_environment: dict[str, str], check
+):
     mock_provider = mock.MagicMock(spec_set=services.ProviderService)
     instance = mock_provider.instance.return_value.__enter__.return_value
     mock_execute = instance.execute_run
@@ -637,9 +658,6 @@ def test_run_managed_secrets(app, fake_project, fake_build_plan):
     app.project = fake_project
     app._build_plan = fake_build_plan
 
-    fake_encoded_environment = {
-        "CRAFT_TEST": "banana",
-    }
     app._secrets = secrets.BuildSecrets(
         environment=fake_encoded_environment,
         secret_strings=set(),
@@ -651,7 +669,13 @@ def test_run_managed_secrets(app, fake_project, fake_build_plan):
     assert len(mock_execute.mock_calls) == 1
     call = mock_execute.mock_calls[0]
     execute_env = call.kwargs["env"]
-    assert execute_env["CRAFT_TEST"] == "banana"
+    for secret_key, secret_val in fake_encoded_environment.items():
+        with check:
+            # value is passed to the underlying provider
+            assert execute_env[secret_key] == secret_val
+            assert secret_key in craft_cli.emit._log_filepath.read_text()
+            # value is not leaking in logs
+            assert secret_val not in craft_cli.emit._log_filepath.read_text()
 
 
 def test_run_managed_multiple(app, fake_project):
@@ -772,7 +796,9 @@ def test_get_arg_or_config(monkeypatch, app, parsed_args, environ, item, expecte
 def test_get_dispatcher_error(
     monkeypatch, check, capsys, app, mock_dispatcher, managed, error, exit_code, message
 ):
-    monkeypatch.setattr(app.services.ProviderClass, "is_managed", lambda: managed)
+    monkeypatch.setattr(
+        app.services.get_class("provider"), "is_managed", lambda: managed
+    )
     mock_dispatcher.pre_parse_args.side_effect = error
 
     with pytest.raises(SystemExit) as exc_info:
@@ -844,7 +870,7 @@ def test_fails_without_project(
 
     fake_services.project = None
 
-    assert app.run() == 66  # noqa: PLR2004
+    assert app.run() == 66
 
     assert "Project file 'testcraft.yaml' not found in" in capsys.readouterr().err
 
@@ -955,7 +981,7 @@ def test_run_success_unmanaged(
         overview = "Return without doing anything"
         always_load_project = load_project
 
-        def run(self, parsed_args: argparse.Namespace):  # noqa: ARG002
+        def run(self, parsed_args: argparse.Namespace):
             return return_code
 
     monkeypatch.setattr(sys, "argv", ["testcraft", "pass"])
@@ -1807,8 +1833,8 @@ def grammar_build_plan(mocker):
 @pytest.fixture
 def grammar_app_mini(
     tmp_path,
-    grammar_project_mini,  # noqa: ARG001
-    grammar_build_plan,  # noqa: ARG001
+    grammar_project_mini,
+    grammar_build_plan,
     app_metadata,
     fake_services,
 ):
@@ -1821,8 +1847,8 @@ def grammar_app_mini(
 @pytest.fixture
 def non_grammar_app_full(
     tmp_path,
-    non_grammar_project_full,  # noqa: ARG001
-    non_grammar_build_plan,  # noqa: ARG001
+    non_grammar_project_full,
+    non_grammar_build_plan,
     app_metadata,
     fake_services,
 ):
@@ -1835,8 +1861,8 @@ def non_grammar_app_full(
 @pytest.fixture
 def grammar_app_full(
     tmp_path,
-    grammar_project_full,  # noqa: ARG001
-    grammar_build_plan,  # noqa: ARG001
+    grammar_project_full,
+    grammar_build_plan,
     app_metadata,
     fake_services,
 ):
@@ -1940,8 +1966,8 @@ class FakeApplicationWithYamlTransform(FakeApplication):
         self,
         yaml_data: dict[str, Any],
         *,
-        build_on: str,  # noqa: ARG002 (Unused method argument)
-        build_for: str | None,  # noqa: ARG002 (Unused method argument)
+        build_on: str,
+        build_for: str | None,
     ) -> dict[str, Any]:
         # do not modify the dict passed in
         new_yaml_data = copy.deepcopy(yaml_data)

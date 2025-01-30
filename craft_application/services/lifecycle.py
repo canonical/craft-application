@@ -134,7 +134,7 @@ class LifecycleService(base.ProjectService):
         cache_dir: Path | str,
         build_plan: list[models.BuildInfo],
         partitions: list[str] | None = None,
-        **lifecycle_kwargs: Any,  # noqa: ANN401 - eventually used in an Any
+        **lifecycle_kwargs: Any,
     ) -> None:
         super().__init__(app, services, project=project)
         self._work_dir = work_dir

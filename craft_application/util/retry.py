@@ -36,7 +36,7 @@ class RetryCallable(Protocol[R_co]):
     can declare that it returns whatever ``call_to_retry`` returns.
     """
 
-    def __call__(self, *args: Any, **kwargs: Any) -> R_co:  # noqa: ANN401 (Use of Any)
+    def __call__(self, *args: Any, **kwargs: Any) -> R_co:
         """Call the callable."""
         ...
 
@@ -46,8 +46,8 @@ def retry(
     retry_exception: type[Exception] | tuple[type[Exception], ...],
     call_to_retry: RetryCallable[R_co],
     /,
-    *call_args: Any,  # noqa: ANN401 (Use of Any)
-    **call_kwargs: Any,  # noqa: ANN401 (Use of Any)
+    *call_args: Any,
+    **call_kwargs: Any,
 ) -> R_co:
     """Retry a flaky call multiple times.
 

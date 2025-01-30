@@ -21,6 +21,8 @@ from typing import cast
 
 import pydantic.errors
 import pytest
+from hypothesis import given, strategies
+
 from craft_application.models import constraints
 from craft_application.models.constraints import (
     LicenseStr,
@@ -29,7 +31,6 @@ from craft_application.models.constraints import (
     SpdxLicenseStr,
     VersionStr,
 )
-from hypothesis import given, strategies
 
 ALPHA_NUMERIC = [*ascii_letters, *digits]
 LOWER_ALPHA_NUMERIC = [*ascii_lowercase, *digits]

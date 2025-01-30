@@ -18,23 +18,84 @@ from unittest import mock
 
 import pytest
 import pytest_check
-from craft_application import AppMetadata, services
 from craft_cli import emit
+
+from craft_application import AppMetadata, services
+
+pytestmark = [
+    pytest.mark.filterwarnings("ignore:Registering services on service factory")
+]
+
+
+class FakeService(services.AppService):
+    """A fake service for testing."""
 
 
 @pytest.fixture
 def factory(
-    app_metadata, fake_project, fake_package_service_class, fake_lifecycle_service_class
+    tmp_path,
+    app_metadata,
+    fake_project,
+    fake_package_service_class,
+    fake_lifecycle_service_class,
 ):
-    return services.ServiceFactory(
+    services.ServiceFactory.register("package", fake_package_service_class)
+    services.ServiceFactory.register("lifecycle", fake_lifecycle_service_class)
+
+    factory = services.ServiceFactory(
         app_metadata,
         project=fake_project,
-        PackageClass=fake_package_service_class,
-        LifecycleClass=fake_lifecycle_service_class,
+    )
+    factory.update_kwargs(
+        "lifecycle",
+        work_dir=tmp_path,
+        cache_dir=tmp_path / "cache",
+        build_plan=[],
+    )
+    return factory
+
+
+@pytest.mark.parametrize(
+    ("service_class", "module"),
+    [
+        ("ConfigService", "craft_application.services.config"),
+        ("InitService", "craft_application.services.init"),
+    ],
+)
+def test_register_service_by_path(service_class, module):
+    services.ServiceFactory.register("testy", service_class, module=module)
+
+    service = services.ServiceFactory.get_class("testy")
+    pytest_check.equal(service.__module__, module)
+    pytest_check.equal(service.__name__, service_class)
+    pytest_check.is_(
+        service,
+        services.ServiceFactory.TestyClass,  # pyright: ignore[reportAttributeAccessIssue]
     )
 
 
-def test_correct_init(
+def test_register_service_by_reference():
+    services.ServiceFactory.register("testy", FakeService)
+
+    service = services.ServiceFactory.get_class("testy")
+    pytest_check.is_(service, FakeService)
+    pytest_check.is_(
+        service,
+        services.ServiceFactory.TestyClass,  # pyright: ignore[reportAttributeAccessIssue]
+    )
+
+
+def test_register_service_by_path_no_module():
+    with pytest.raises(KeyError, match="Must set module"):
+        services.ServiceFactory.register("testy", "FakeService")
+
+
+def test_register_service_by_reference_with_module():
+    with pytest.raises(KeyError, match="Must not set module"):
+        services.ServiceFactory.register("testy", FakeService, module="__main__")
+
+
+def test_register_services_in_init(
     app_metadata,
     fake_project,
     fake_package_service_class,
@@ -49,9 +110,9 @@ def test_correct_init(
         ProviderClass=fake_provider_service_class,
     )
 
-    pytest_check.is_instance(factory.package, services.PackageService)
-    pytest_check.is_instance(factory.lifecycle, services.LifecycleService)
-    pytest_check.is_instance(factory.provider, services.ProviderService)
+    pytest_check.is_instance(factory.package, fake_package_service_class)
+    pytest_check.is_instance(factory.lifecycle, fake_lifecycle_service_class)
+    pytest_check.is_instance(factory.provider, fake_provider_service_class)
 
 
 @pytest.mark.parametrize(
@@ -128,16 +189,79 @@ def test_update_kwargs(
         )
 
 
-def test_getattr_cached_service(monkeypatch, check, factory):
+def test_get_class():
+    mock_service = mock.Mock(spec=services.AppService)
+    services.ServiceFactory.register("test_service", mock_service)
+
+    pytest_check.is_(services.ServiceFactory.get_class("test_service"), mock_service)
+    pytest_check.is_(
+        services.ServiceFactory.get_class("TestServiceClass"), mock_service
+    )
+    pytest_check.is_(
+        services.ServiceFactory.get_class("TestServiceService"), mock_service
+    )
+
+
+def test_get_class_not_registered():
+    with pytest.raises(
+        AttributeError, match="Not a registered service: not_registered"
+    ):
+        services.ServiceFactory.get_class("not_registered")
+    with pytest.raises(
+        AttributeError, match="Not a registered service: not_registered"
+    ):
+        services.ServiceFactory.get_class("NotRegisteredService")
+    with pytest.raises(
+        AttributeError, match="Not a registered service: not_registered"
+    ):
+        services.ServiceFactory.get_class("NotRegisteredClass")
+
+
+def test_get_default_services(
+    factory, fake_package_service_class, fake_lifecycle_service_class
+):
+    pytest_check.is_instance(factory.get("package"), fake_package_service_class)
+    pytest_check.is_instance(factory.get("lifecycle"), fake_lifecycle_service_class)
+    pytest_check.is_instance(factory.get("config"), services.ConfigService)
+    pytest_check.is_instance(factory.get("init"), services.InitService)
+
+
+def test_get_registered_service(factory):
+    factory.register("testy", FakeService)
+
+    first_result = factory.get("testy")
+    pytest_check.is_instance(first_result, FakeService)
+    pytest_check.is_(first_result, factory.get("testy"))
+
+
+def test_get_unregistered_service(factory):
+    with pytest.raises(
+        AttributeError, match="Not a registered service: not_registered"
+    ):
+        factory.get("not_registered")
+    with pytest.raises(
+        AttributeError, match="Not a registered service: not_registered"
+    ):
+        factory.get("NotRegisteredService")
+    with pytest.raises(
+        AttributeError, match="Not a registered service: not_registered"
+    ):
+        factory.get("NotRegisteredClass")
+
+
+def test_get_project_service_error(factory):
+    factory.project = None
+    with pytest.raises(ValueError, match="LifecycleService requires a project"):
+        factory.get("lifecycle")
+
+
+def test_getattr_cached_service(monkeypatch, factory):
     mock_getattr = mock.Mock(wraps=factory.__getattr__)
     monkeypatch.setattr(services.ServiceFactory, "__getattr__", mock_getattr)
     first = factory.package
     second = factory.package
 
-    check.is_(first, second)
-    # Only gets called once because the second time `package` is an instance attribute.
-    with check:
-        mock_getattr.assert_called_once_with("package")
+    assert first is second
 
 
 def test_getattr_not_a_class(factory):
@@ -206,3 +330,14 @@ def test_mandatory_adoptable_field(
     )
 
     _ = factory.lifecycle
+
+
+@pytest.mark.parametrize(
+    ("name", "cls"),
+    [
+        ("PackageClass", services.PackageService),
+    ],
+)
+def test_services_on_instantiation_deprecated(app_metadata, name, cls):
+    with pytest.warns(DeprecationWarning, match="Use ServiceFactory.register"):
+        services.ServiceFactory(**{"app": app_metadata, name: cls})

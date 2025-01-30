@@ -19,8 +19,9 @@ from unittest import mock
 
 import craft_providers
 import pytest
-from craft_application import services
 from typing_extensions import override
+
+from craft_application import services
 
 
 class FakeFetchService(services.FetchService):
@@ -99,8 +100,8 @@ def test_run_managed_fetch_service(
     app._build_plan = fake_build_plan
 
     fetch_calls: list[str] = []
-    app.services.FetchClass = FakeFetchService
-    app.services.set_kwargs("fetch", fetch_calls=fetch_calls)
+    app.services.register("fetch", FakeFetchService)
+    app.services.update_kwargs("fetch", fetch_calls=fetch_calls)
 
     monkeypatch.setattr("sys.argv", ["testcraft", "pack", *pack_args])
     app.run()

@@ -17,6 +17,9 @@ import json
 from datetime import datetime
 
 import pytest
+from craft_providers import bases
+from freezegun import freeze_time
+
 from craft_application import util
 from craft_application.models import BuildInfo
 from craft_application.models.manifest import (
@@ -24,8 +27,6 @@ from craft_application.models.manifest import (
     ProjectManifest,
     SessionArtifactManifest,
 )
-from craft_providers import bases
-from freezegun import freeze_time
 
 
 @pytest.fixture
@@ -86,7 +87,7 @@ def test_session_report_rejections(session_report):
     deps = SessionArtifactManifest.from_session_report(session_report)
     rejected = [d for d in deps if d.rejected]
 
-    assert len(rejected) == 2  # noqa: PLR2004 (magic value in comparison)
+    assert len(rejected) == 2
 
     assert rejected[0].rejection_reasons == [
         "fetch is allowed only on a single ref",
@@ -94,6 +95,6 @@ def test_session_report_rejections(session_report):
         "git repository does not contain a go.mod file",
     ]
     assert rejected[1].rejection_reasons == [
-        "the artefact format is unknown",
+        "the artifact format is unknown",
         "the request was not recognized by any format inspector",
     ]

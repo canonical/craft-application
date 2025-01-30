@@ -4,6 +4,103 @@
 Changelog
 *********
 
+4.8.2 (2025-Jan-16)
+-------------------
+
+Application
+===========
+
+- Fix an issue with processing fetch-service output.
+
+For a complete list of commits, check out the `4.8.2`_ release on GitHub.
+
+4.8.1 (2025-Jan-13)
+-------------------
+
+Application
+===========
+
+- Do not log encoded secrets in managed mode if ``build_secrets``
+  ``AppFeature`` is enabled.
+
+Documentation
+=============
+
+- Add missing links to the GitHub releases.
+
+For a complete list of commits, check out the `4.8.1`_ release on GitHub.
+
+4.8.0 (2025-Jan-13)
+-------------------
+
+Services
+========
+
+- Fix a bug where the same build environment was reused for platforms with
+  the same build-on and build-for architectures.
+
+Utils
+=====
+
+- Add ``format_timestamp()`` helper that helps with formatting time
+  in command responses.
+- Add ``is_managed_mode()`` helper to check if running in managed mode.
+- Add ``get_hostname()`` helper to get a name of current host.
+
+For a complete list of commits, check out the `4.8.0`_ release on GitHub.
+
+4.7.0 (2024-Dec-19)
+-------------------
+
+Application
+===========
+
+- Allow applications to implement multi-base build plans.
+
+For a complete list of commits, check out the `4.7.0`_ release on GitHub.
+
+4.6.0 (2024-Dec-13)
+-------------------
+
+Application
+===========
+
+- Add support for keeping order in help for commands provided to
+  ``add_command_group()``.
+- Add support for rock launchpad recipes, allowing the remote build of rocks.
+
+Commands
+========
+
+- Add a ``remote-build`` command. This command is not registered by default,
+  but is available for application use.
+
+Git
+===
+
+- Extend the ``craft_application.git`` module with the following APIs:
+
+  - Add ``is_commit(ref)`` and ``is_short_commit(ref)`` helpers for checking if
+    a given ref is a valid commit hash.
+  - Add a ``Commit`` model to represent the result of ``get_last_commit()``.
+
+- Extend the ``GitRepo`` class with additional methods:
+
+  - Add ``set_remote_url()`` and ``set_remote_push_url()`` methods and their
+    getter counterparts.
+  - Add ``set_no_push()`` method, which explicitly disables ``push`` for
+    specific remotes.
+  - Add ``get_last_commit()`` method, which retrieves the last commit hash and
+    message.
+  - Add ``get_last_commit_on_branch_or_tag()`` method, which retrieves the last
+    commit associated with a given ref.
+  - Add ``fetch()`` method, which retrieves remote objects.
+
+- Use ``craft.git`` for Git-related operations run with ``subprocess`` in
+  ``GitRepo``.
+
+For a complete list of commits, check out the `4.6.0`_ release on GitHub.
+
 4.5.0 (2024-Nov-28)
 -------------------
 
@@ -32,8 +129,8 @@ Services
 
 - Add version to the template generation context of ``InitService``.
 
-..
-  For a complete list of commits, check out the `4.5.0`_ release on GitHub.
+
+For a complete list of commits, check out the `4.5.0`_ release on GitHub.
 
 4.4.0 (2024-Nov-08)
 -------------------
@@ -415,3 +512,8 @@ For a complete list of commits, check out the `2.7.0`_ release on GitHub.
 .. _4.3.0: https://github.com/canonical/craft-application/releases/tag/4.3.0
 .. _4.4.0: https://github.com/canonical/craft-application/releases/tag/4.4.0
 .. _4.5.0: https://github.com/canonical/craft-application/releases/tag/4.5.0
+.. _4.6.0: https://github.com/canonical/craft-application/releases/tag/4.6.0
+.. _4.7.0: https://github.com/canonical/craft-application/releases/tag/4.7.0
+.. _4.8.0: https://github.com/canonical/craft-application/releases/tag/4.8.0
+.. _4.8.1: https://github.com/canonical/craft-application/releases/tag/4.8.1
+.. _4.8.2: https://github.com/canonical/craft-application/releases/tag/4.8.2

@@ -16,6 +16,7 @@
 """Tests for build secrets."""
 
 import pytest
+
 from craft_application import errors, secrets
 
 
