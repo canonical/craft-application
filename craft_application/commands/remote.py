@@ -130,7 +130,7 @@ class RemoteBuild(ExtensibleCommand):
             builds = builder.start_builds(project_dir)
 
         try:
-            returncode = self._monitor_and_complete(build_id, builds)
+            returncode = self._monitor_and_complete(builds=builds)
         except KeyboardInterrupt:
             if emit.confirm("Cancel builds?", default=True):
                 emit.progress("Cancelling builds.")
@@ -138,52 +138,50 @@ class RemoteBuild(ExtensibleCommand):
                 emit.progress("Cleaning up")
                 builder.cleanup()
             returncode = 0
+        except TimeoutError:
+            resume_command = f"{self._app.name} remote-build --recover"
+            emit.message(
+                f"Timed out waiting for build.\nTo resume, run {resume_command!r}"
+            )
+            return 75  # os.EX_TEMPFAIL
         else:
             emit.progress("Cleaning up")
             builder.cleanup()
         return returncode
 
-    def _monitor_and_complete(  # noqa: PLR0912 (too many branches)
-        self, build_id: str | None, builds: Collection[Build]
-    ) -> int:
+    def _monitor_and_complete(self, *, builds: Collection[Build]) -> int:
+        """Monitor the builds and complete them when done.
+
+        :param builds: A collection of Builds to monitor.
+        :returns: The expected exit code of the application.
+        :raises: TimeoutError if a build timeout was reached.
+        """
         builder = self._services.remote_build
         emit.progress("Monitoring build")
-        try:
-            for states in builder.monitor_builds():
-                building: set[str] = set()
-                succeeded: set[str] = set()
-                uploading: set[str] = set()
-                not_building: set[str] = set()
-                for arch, build_state in states.items():
-                    if build_state.is_running:
-                        building.add(arch)
-                    elif build_state == BuildState.SUCCESS:
-                        succeeded.add(arch)
-                    elif build_state == BuildState.UPLOADING:
-                        uploading.add(arch)
-                    else:
-                        not_building.add(arch)
-                progress_parts: list[str] = []
-                if not_building:
-                    progress_parts.append("Stopped: " + ", ".join(sorted(not_building)))
-                if building:
-                    progress_parts.append("Building: " + ", ".join(sorted(building)))
-                if uploading:
-                    progress_parts.append("Uploading: " + ", ".join(sorted(uploading)))
-                if succeeded:
-                    progress_parts.append("Succeeded: " + ", ".join(sorted(succeeded)))
-                emit.progress("; ".join(progress_parts))
-        except TimeoutError:
-            if build_id:
-                resume_command = (
-                    f"{self._app.name} remote-build --recover --build-id={build_id}"
-                )
-            else:
-                resume_command = f"{self._app.name} remote-build --recover"
-            emit.message(
-                f"Timed out waiting for build.\nTo resume, run {resume_command!r}"
-            )
-            return 75  # Temporary failure
+        for states in builder.monitor_builds():
+            building: set[str] = set()
+            succeeded: set[str] = set()
+            uploading: set[str] = set()
+            not_building: set[str] = set()
+            for arch, build_state in states.items():
+                if build_state.is_running:
+                    building.add(arch)
+                elif build_state == BuildState.SUCCESS:
+                    succeeded.add(arch)
+                elif build_state == BuildState.UPLOADING:
+                    uploading.add(arch)
+                else:
+                    not_building.add(arch)
+            progress_parts: list[str] = []
+            if not_building:
+                progress_parts.append("Stopped: " + ", ".join(sorted(not_building)))
+            if building:
+                progress_parts.append("Building: " + ", ".join(sorted(building)))
+            if uploading:
+                progress_parts.append("Uploading: " + ", ".join(sorted(uploading)))
+            if succeeded:
+                progress_parts.append("Succeeded: " + ", ".join(sorted(succeeded)))
+            emit.progress("; ".join(progress_parts))
 
         emit.progress("Fetching build artifacts...")
         artifacts = builder.fetch_artifacts(pathlib.Path.cwd())
