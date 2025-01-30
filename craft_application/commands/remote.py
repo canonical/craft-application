@@ -28,17 +28,14 @@ from craft_application.commands import ExtensibleCommand
 from craft_application.launchpad.models import Build, BuildState
 from craft_application.remote.utils import get_build_id
 
-OVERVIEW = """\
+OVERVIEW = """
 Command remote-build sends the current project to be built
 remotely. After the build is complete, packages for each
 architecture are retrieved and will be available in the
 local filesystem.
 
 Interrupted remote builds can be resumed using the --recover
-option, followed by the build number informed when the remote
-build was originally dispatched. The current state of the
-remote build for each architecture can be checked using the
---status option.
+option.
 
 To set a timeout on the remote-build command, use the option
 ``--launchpad-timeout=<seconds>``. The timeout is local, so
