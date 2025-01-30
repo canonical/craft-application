@@ -168,6 +168,7 @@ class Application:
     @final
     def _load_plugins(self) -> None:
         """Load application plugins."""
+        # https://packaging.python.org/en/latest/specifications/entry-points/#data-model
         for plugin_entry_point in metadata.entry_points(group="craft_application_plugins.application"):
             craft_cli.emit.progress(f"Loading app plugin {plugin_entry_point.name}")
             app_plugin = plugin_entry_point.load()
