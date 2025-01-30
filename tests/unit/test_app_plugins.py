@@ -16,12 +16,17 @@
 
 """Unit tests for craft-application app plugins."""
 
+import argparse
+import os
 import sys
+import textwrap
 from importlib.metadata import Distribution, DistributionFinder
 
 import pytest
+from craft_cli import emit
+from overrides import override
 
-from craft_application import Application, AppService, services
+from craft_application import Application, AppService, commands, services
 
 FAKE_APP = "boopcraft"
 PLUGIN_GROUP_NAME = "craft_application_plugins.application"
@@ -126,3 +131,91 @@ def test_app_two_plugins_loaded(
     Application(app_metadata, fake_services)
     emitter.assert_progress(f"Loading app plugin {PLUGIN_ENTRY_POINT_NAME}")
     emitter.assert_progress("Loading app plugin anothername")
+
+
+@pytest.mark.usefixtures("fake_project_file")
+def test_app_plugin_adds_service(
+    app_metadata, fake_service, fake_services, emitter, entry_points_faker
+):
+    class FakeService(AppService):
+        def get_a_thing(self):
+            return "a thing"
+
+    class FakeServiceAdderPlugin:
+        def configure(self, app: Application) -> None:
+            services.ServiceFactory.register("fake", FakeService)
+
+    entry_points_faker(
+        [(PLUGIN_ENTRY_POINT_NAME, PLUGIN_MODULE_NAME, FakeServiceAdderPlugin)]
+    )
+    app = Application(app_metadata, fake_services)
+
+    assert app.services.fake.get_a_thing() == "a thing"
+
+
+@pytest.mark.usefixtures("fake_project_file")
+def test_app_plugin_adds_commands(
+    mocker,
+    capsys,
+    app_metadata,
+    fake_service,
+    fake_services,
+    emitter,
+    entry_points_faker,
+):
+    class FakeCommand(commands.AppCommand):
+        name = "fake"
+        help_msg = "Make <name> fake"
+        overview = textwrap.dedent(
+            """
+            Fake an available <name> with something fake,
+            making your organisation a faker."""
+        )
+
+        @override
+        def fill_parser(self, parser: argparse.ArgumentParser) -> None:
+            parser.add_argument(
+                "name",
+                type=str,
+                help="Name of fake thing",
+            )
+            parser.add_argument(
+                "--real",
+                action="store_true",
+                help="Register the fake thing as real",
+            )
+
+        @override
+        def run(self, parsed_args: argparse.Namespace) -> None:
+            emit.message(
+                f"Faked faking {parsed_args.name} ({'NOT' if not parsed_args.real else ''} real)"
+            )
+
+    class FakeCommandAdderPlugin:
+        def configure(self, app: Application) -> None:
+            app.add_command_group("Fake management", [FakeCommand])
+
+    entry_points_faker(
+        [(PLUGIN_ENTRY_POINT_NAME, PLUGIN_MODULE_NAME, FakeCommandAdderPlugin)]
+    )
+
+    emit_mock = mocker.patch("craft_cli.emit")
+
+    mocker.patch.object(sys, "argv", [FAKE_APP, "help"])
+    app = Application(app_metadata, fake_services)
+    with pytest.raises(SystemExit) as e:
+        app.run()
+
+    assert e.value.code == os.EX_OK
+    emit_mock.ended_ok.assert_called_once_with()
+
+    out, err = capsys.readouterr()
+    assert not out
+
+    # Make sure the command exists in the help output
+    found_fake_line = False
+    for line in err.splitlines():
+        if line.strip() == "Fake management:  fake":
+            found_fake_line = True
+            break
+    assert found_fake_line
