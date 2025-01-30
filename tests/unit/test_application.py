@@ -565,7 +565,7 @@ def test_run_managed_configure_pro(mocker, app, fake_project, fake_build_plan):
     # provide spec to pass type check for pro support
     mock_instance = mocker.MagicMock(spec=lxd.LXDInstance)
 
-    # TODO: these methods are currently in review, https://github.com/canonical/craft-providers/pull/664/files
+    # TODO: these methods are currently in review, https://github.com/canonical/craft-providers/pull/664/files  # noqa: FIX002
     # Remove when craft-providers with pro support in lxd is merged to main.
     mock_instance.install_pro_client = mocker.Mock()
     mock_instance.attach_pro_subscription = mocker.Mock()
@@ -609,7 +609,7 @@ def test_run_managed_skip_configure_pro(mocker, app, fake_project, fake_build_pl
     # provide spec to pass type check for pro support
     mock_instance = mocker.MagicMock(spec=lxd.LXDInstance)
 
-    # TODO: Remove when these mocks when methods are present in main.
+    # TODO: Remove when these mocks when methods are present in main. # noqa: FIX002
     # see TODO in test_run_managed_configure_pro for details.
     mock_instance.install_pro_client = mocker.Mock()
     mock_instance.attach_pro_subscription = mocker.Mock()
@@ -838,7 +838,7 @@ def test_gets_project(
     tmp_path,
     app_metadata,
     fake_services,
-    mock_pro_api_call,  # noqa: ARG001
+    mock_pro_api_call,
 ):
     project_file = tmp_path / "testcraft.yaml"
     project_file.write_text(BASIC_PROJECT_YAML)
@@ -861,7 +861,7 @@ def test_fails_without_project(
     tmp_path,
     app_metadata,
     fake_services,
-    mock_pro_api_call,  # noqa: ARG001
+    mock_pro_api_call,
 ):
     monkeypatch.setattr(sys, "argv", ["testcraft", "prime"])
 
@@ -973,7 +973,7 @@ def test_run_success_unmanaged(
     fake_project,
     return_code,
     load_project,
-    mock_pro_api_call,  # noqa: ARG001
+    mock_pro_api_call,
 ):
     class UnmanagedCommand(commands.AppCommand):
         name = "pass"
@@ -1001,7 +1001,7 @@ def test_run_success_managed(
     app,
     fake_project,
     mocker,
-    mock_pro_api_call,  # noqa: ARG001
+    mock_pro_api_call,
 ):
     mocker.patch.object(app, "get_project", return_value=fake_project)
     app.run_managed = mock.Mock()
@@ -1017,7 +1017,7 @@ def test_run_success_managed_with_arch(
     app,
     fake_project,
     mocker,
-    mock_pro_api_call,  # noqa: ARG001
+    mock_pro_api_call,
 ):
     mocker.patch.object(app, "get_project", return_value=fake_project)
     app.run_managed = mock.Mock()
@@ -1034,7 +1034,7 @@ def test_run_success_managed_with_platform(
     app,
     fake_project,
     mocker,
-    mock_pro_api_call,  # noqa: ARG001
+    mock_pro_api_call,
 ):
     mocker.patch.object(app, "get_project", return_value=fake_project)
     app.run_managed = mock.Mock()
@@ -1070,7 +1070,7 @@ def test_run_passes_platforms(
     mocker,
     params,
     expected_call,
-    mock_pro_api_call,  # noqa: ARG001
+    mock_pro_api_call,
 ):
     mocker.patch.object(app, "get_project", return_value=fake_project)
     app.run_managed = mock.Mock(return_value=False)
@@ -1090,7 +1090,7 @@ def test_run_success_managed_inside_managed(
     mock_dispatcher,
     return_code,
     mocker,
-    mock_pro_api_call,  # noqa: ARG001
+    mock_pro_api_call,
 ):
     mocker.patch.object(app, "get_project", return_value=fake_project)
     mocker.patch.object(
@@ -2412,7 +2412,7 @@ def test_doc_url_in_command_help(monkeypatch, capsys, app):
     [
         (False,             False,         1,               None),
         (True,              True,          1,               None),
-        (True,              False,         1,               util.ValidatorOptions.AVAILABILITY | util.ValidatorOptions.SUPPORT,),
+        (True,              False,         1,               util.ValidatorOptions.AVAILABILITY | util.ValidatorOptions.SUPPORT),
         (False,             True,          0,               None),
     ],
 )

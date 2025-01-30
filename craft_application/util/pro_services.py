@@ -21,10 +21,11 @@ import json
 import logging
 import subprocess as sub
 from enum import Flag, auto
+from io import TextIOWrapper
 from pathlib import Path
 from typing import Any
+
 import yaml
-from io import TextIOWrapper
 
 from craft_application.errors import (
     InvalidUbuntuProServiceError,
@@ -38,8 +39,7 @@ from craft_application.errors import (
 logger = logging.getLogger(__name__)
 
 
-# locations to search for pro executable
-# TODO: which path will we support in long term?
+# check for pro client in these paths for backwards compatibility.
 PRO_CLIENT_PATHS = [
     Path("/usr/bin/ubuntu-advantage"),
     Path("/usr/bin/ua"),
@@ -57,10 +57,10 @@ class ValidatorOptions(Flag):
     """
 
     SUPPORT = auto()
-    _ATTACHED = auto()
-    _DETACHED = auto()
-    AVAILABILITY = _ATTACHED
-    ATTACHMENT = _ATTACHED | _DETACHED
+    ATTACHED = auto()
+    DETACHED = auto()
+    AVAILABILITY = ATTACHED
+    ATTACHMENT = ATTACHED | DETACHED
     ENABLEMENT = auto()
     DEFAULT = SUPPORT | ATTACHMENT | ENABLEMENT
 
@@ -75,7 +75,7 @@ class ProServices(set[str]):
         "esm-apps",
         "esm-infra",
         "fips",
-        # TODO: fips-preview is not part of the spec, but
+        # TODO: fips-preview is not part of the spec, but  # noqa: FIX002
         # it should be added. Bring this up at regular sync.
         "fips-preview",
         "fips-updates",
@@ -211,7 +211,7 @@ class ProServices(set[str]):
             is_pro_attached = self.is_pro_attached()
 
             if (
-                ValidatorOptions._ATTACHED in options
+                ValidatorOptions.ATTACHED in options
                 and bool(self)
                 and not is_pro_attached
             ):
@@ -219,7 +219,7 @@ class ProServices(set[str]):
                 raise UbuntuProDetachedError
 
             if (
-                ValidatorOptions._DETACHED in options
+                ValidatorOptions.DETACHED in options
                 and not bool(self)
                 and is_pro_attached
             ):
