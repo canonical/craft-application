@@ -168,10 +168,10 @@ class Application:
     @final
     def _load_plugins(self) -> None:
         """Load application plugins."""
-        for plugin_entry_point in metadata.entry_points(group="craft-application-plugins.application"):
+        for plugin_entry_point in metadata.entry_points(group="craft_application_plugins.application"):
             craft_cli.emit.progress(f"Loading app plugin {plugin_entry_point.name}")
             app_plugin = plugin_entry_point.load()
-            print(app_plugin)
+            app_plugin.configure(self)
 
 
     @property

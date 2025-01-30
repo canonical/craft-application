@@ -21,48 +21,111 @@ from importlib.metadata import Distribution, DistributionFinder
 
 import pytest
 
-from craft_application import Application
+from craft_application import Application, AppService, services
 
 FAKE_APP = "boopcraft"
-PLUGIN_GROUP_NAME = "craft-application-plugins.application"
+PLUGIN_GROUP_NAME = "craft_application_plugins.application"
 PLUGIN_ENTRY_POINT_NAME = f"{FAKE_APP}_plugin"
 PLUGIN_MODULE_NAME = f"{FAKE_APP}_module"
 
 
 class FakeCraftApplicationPlugin:
-    def __init__(self):
+    def configure(self, application: Application) -> None:
+        print("CALLED BACK YO")
+        print(application.services.fake)
+
+
+@pytest.fixture
+def entry_points_faker():
+    # Save unmodified sys.modules
+    og_modules = sys.modules
+
+    def entry_points_faker(entry_points: list[tuple[str, str, object]] | None = None):
+        # All go under this group for our purposes
+        entry_points_txt = f"[{PLUGIN_GROUP_NAME}]\n"
+
+        if not entry_points:
+            # Simple case
+            entry_points = [
+                (
+                    PLUGIN_ENTRY_POINT_NAME,
+                    PLUGIN_MODULE_NAME,
+                    FakeCraftApplicationPlugin
+                )
+            ]
+
+        for entry_point_name, module_name, module_callable in entry_points:
+            entry_points_txt += f"{entry_point_name} = {module_name}\n"
+            sys.modules[module_name] = module_callable()
+
+        class FakeDistribution(Distribution):
+            def __init__(self, entry_points):
+                self._entry_points = entry_points
+
+            def read_text(self, filename):
+                if filename == "entry_points.txt":
+                    return self._entry_points
+                # These cases ensure things don't explode inside importlib
+                if filename == "METADATA":
+                    return "Name: wef"
+                return ""
+
+            def locate_file(self, path):
+                raise NotImplementedError
+
+        class FakeDistributionFinder(DistributionFinder):
+            def find_distributions(self, context=None):
+                return [FakeDistribution(entry_points_txt)]
+
+        # Set up the fakery
+        sys.meta_path.append(FakeDistributionFinder)
+    yield entry_points_faker
+
+    # Restore environment
+    sys.modules = og_modules
+    sys.meta_path.pop()
+
+
+@pytest.fixture
+def fake_service():
+    class FakeService(AppService):
         ...
-
-    def wef(self):
-        print("WEF!")
+    services.ServiceFactory.register("fake", FakeService)
 
 
-class FakeDistribution(Distribution):
-    def read_text(self, filename):
-        if filename == "entry_points.txt":
-            return f"""
-[{PLUGIN_GROUP_NAME}]
-{PLUGIN_ENTRY_POINT_NAME} = {PLUGIN_MODULE_NAME}
-"""
-        if filename == "METADATA":
-            return """Name: wef"""
-        return ""
-
-    def locate_file(self, path):
-        raise NotImplementedError
-
-
-class FakeDistributionFinder(DistributionFinder):
-    def find_distributions(self, context=None):
-        return [FakeDistribution()]
+def test_app_no_plugins(monkeypatch, app_metadata, fake_services, emitter):
+    Application(app_metadata, fake_services)
+    with pytest.raises(AssertionError):
+        emitter.assert_progress("Loading app plugin .*", regex=True)
 
 
 @pytest.mark.usefixtures("fake_project_file")
-def test_app_plugin(monkeypatch, app_metadata, fake_services):
-    # Set up the fakery
-    sys.meta_path.append(FakeDistributionFinder)
-    sys.modules[PLUGIN_MODULE_NAME] = FakeCraftApplicationPlugin()
+def test_app_plugin_loaded(
+    app_metadata,
+    fake_service,
+    fake_services,
+    emitter,
+    entry_points_faker
+):
+    entry_points_faker()
 
-    app = Application(app_metadata, fake_services)
-    print(app)
-    raise AssertionError
+    Application(app_metadata, fake_services)
+    emitter.assert_progress(f"Loading app plugin {PLUGIN_ENTRY_POINT_NAME}")
+
+
+@pytest.mark.usefixtures("fake_project_file")
+def test_app_two_plugins_loaded(
+    app_metadata,
+    fake_service,
+    fake_services,
+    emitter,
+    entry_points_faker
+):
+    entry_points_faker([
+        (PLUGIN_ENTRY_POINT_NAME, PLUGIN_MODULE_NAME, FakeCraftApplicationPlugin),
+        ("anothername", "anothermodule", FakeCraftApplicationPlugin),
+    ])
+
+    Application(app_metadata, fake_services)
+    emitter.assert_progress(f"Loading app plugin {PLUGIN_ENTRY_POINT_NAME}")
+    emitter.assert_progress("Loading app plugin anothername")
