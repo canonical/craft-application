@@ -338,8 +338,8 @@ class LifecycleService(base.ProjectService):
         XXX: This is a PoC shortcut and must be properly reimplemented.
         """
         with pathlib.Path("pack_state.txt").open("w") as file:
-            for p in packages:
-                print(p, file=file)
+            for package in packages:
+                print(package, file=file)
 
     def load_pack_state(self) -> list[str]:
         """Recover the list of packed artifacts.
