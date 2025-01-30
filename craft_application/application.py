@@ -161,6 +161,19 @@ class Application:
         # The kind of sessions that the fetch-service service should create
         self._fetch_service_policy = "strict"
 
+        # Load the plugins after initialization but before run
+        self._load_plugins()
+
+
+    @final
+    def _load_plugins(self) -> None:
+        """Load application plugins."""
+        for plugin_entry_point in metadata.entry_points(group="craft-application-plugins.application"):
+            craft_cli.emit.progress(f"Loading app plugin {plugin_entry_point.name}")
+            app_plugin = plugin_entry_point.load()
+            print(app_plugin)
+
+
     @property
     def app_config(self) -> dict[str, Any]:
         """Get the configuration passed to dispatcher.load_command().

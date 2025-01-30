@@ -64,18 +64,9 @@ from craft_application.util import (
     get_host_architecture,  # pyright: ignore[reportGeneralTypeIssues]
 )
 from tests.conftest import FakeApplication
+from tests.unit.conftest import BASIC_PROJECT_YAML
 
 EMPTY_COMMAND_GROUP = craft_cli.CommandGroup("FakeCommands", [])
-BASIC_PROJECT_YAML = """
-name: myproject
-version: 1.0
-base: ubuntu@24.04
-platforms:
-  arm64:
-parts:
-  mypart:
-    plugin: nil
-"""
 
 FULL_PROJECT_YAML = """
 name: myproject
@@ -1311,17 +1302,6 @@ _i386_on_i386_for_i386 = BuildInfo(
 def test_filter_plan(mocker, plan, platform, build_for, host_arch, result):
     mocker.patch("craft_application.util.get_host_architecture", return_value=host_arch)
     assert application.filter_plan(plan, platform, build_for, host_arch) == result
-
-
-@pytest.fixture
-def fake_project_file(monkeypatch, tmp_path):
-    project_dir = tmp_path / "project"
-    project_dir.mkdir()
-    project_path = project_dir / "testcraft.yaml"
-    project_path.write_text(BASIC_PROJECT_YAML)
-    monkeypatch.chdir(project_dir)
-
-    return project_path
 
 
 @pytest.mark.usefixtures("fake_project_file")

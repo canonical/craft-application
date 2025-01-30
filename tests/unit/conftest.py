@@ -25,6 +25,16 @@ import pytest_mock
 from craft_application import git, services, util
 from craft_application.services import service_factory
 
+BASIC_PROJECT_YAML = """
+name: myproject
+version: 1.0
+base: ubuntu@24.04
+platforms:
+  arm64:
+parts:
+  mypart:
+    plugin: nil
+"""
 
 @pytest.fixture(params=["amd64", "arm64", "riscv64"])
 def fake_host_architecture(monkeypatch, request) -> str:
@@ -96,3 +106,14 @@ def expected_git_command(
     which_res = f"/some/path/to/{git.CRAFTGIT_BINARY_NAME}" if craftgit_exists else None
     mocker.patch("shutil.which", return_value=which_res)
     return git.CRAFTGIT_BINARY_NAME if craftgit_exists else git.GIT_FALLBACK_BINARY_NAME
+
+
+@pytest.fixture
+def fake_project_file(monkeypatch, tmp_path):
+    project_dir = tmp_path / "project"
+    project_dir.mkdir()
+    project_path = project_dir / "testcraft.yaml"
+    project_path.write_text(BASIC_PROJECT_YAML)
+    monkeypatch.chdir(project_dir)
+
+    return project_path
