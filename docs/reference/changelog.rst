@@ -4,17 +4,20 @@
 Changelog
 *********
 
-X.Y.Z (2025-MMM-DD)
+4.8.3 (2025-Jan-31)
 -------------------
 
 Remote build
 ============
 
-* Fix a bug where repositories and recipes for private Launchpad projects
+- Fix a bug where repositories and recipes for private Launchpad projects
   would be public while the build was in progress.
+- Fix a bug where the remote-build command would suggest running an invalid
+  command.
+- Fix a bug where a timeout would cause the remote builder to remove an
+  ongoing build.
 
-..
-  For a complete list of commits, check out the `X.Y.Z`_ release on GitHub.
+For a complete list of commits, check out the `4.8.3`_ release on GitHub.
 
 4.8.2 (2025-Jan-16)
 -------------------
@@ -529,3 +532,4 @@ For a complete list of commits, check out the `2.7.0`_ release on GitHub.
 .. _4.8.0: https://github.com/canonical/craft-application/releases/tag/4.8.0
 .. _4.8.1: https://github.com/canonical/craft-application/releases/tag/4.8.1
 .. _4.8.2: https://github.com/canonical/craft-application/releases/tag/4.8.2
+.. _4.8.3: https://github.com/canonical/craft-application/releases/tag/4.8.3
