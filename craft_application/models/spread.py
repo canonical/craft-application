@@ -208,7 +208,9 @@ class SpreadYaml(SpreadBaseModel):
                 "PROJECT_PATH": "/home/spread/proj",
                 **env,
             },
-            backends=cls._backends_from_craft(craft_spread_yaml.backends, craft_backend),
+            backends=cls._backends_from_craft(
+                craft_spread_yaml.backends, craft_backend
+            ),
             suites=cls._suites_from_craft(craft_spread_yaml.suites),
             exclude=craft_spread_yaml.exclude or [".git", ".tox"],
             path="/home/spread/proj",
@@ -222,7 +224,8 @@ class SpreadYaml(SpreadBaseModel):
 
     @staticmethod
     def _backends_from_craft(
-        craft_spread_backends: dict[str, CraftSpreadBackend], craft_backend: SpreadBackend
+        craft_spread_backends: dict[str, CraftSpreadBackend],
+        craft_backend: SpreadBackend,
     ) -> dict[str, SpreadBackend]:
         backends: dict[str, SpreadBackend] = {}
         for name, backend in craft_spread_backends.items():
@@ -240,4 +243,7 @@ class SpreadYaml(SpreadBaseModel):
     def _suites_from_craft(
         craft_spread_suites: dict[str, CraftSpreadSuite]
     ) -> dict[str, SpreadSuite]:
-        return {name: SpreadSuite.from_craft(suite) for name, suite in craft_spread_suites.items()}
+        return {
+            name: SpreadSuite.from_craft(suite)
+            for name, suite in craft_spread_suites.items()
+        }
