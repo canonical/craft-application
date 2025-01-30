@@ -36,6 +36,7 @@ parts:
     plugin: nil
 """
 
+
 @pytest.fixture(params=["amd64", "arm64", "riscv64"])
 def fake_host_architecture(monkeypatch, request) -> str:
     monkeypatch.setattr(util, "get_host_architecture", lambda: request.param)

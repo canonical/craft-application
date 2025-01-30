@@ -50,7 +50,7 @@ def entry_points_faker():
                 (
                     PLUGIN_ENTRY_POINT_NAME,
                     PLUGIN_MODULE_NAME,
-                    FakeCraftApplicationPlugin
+                    FakeCraftApplicationPlugin,
                 )
             ]
 
@@ -79,6 +79,7 @@ def entry_points_faker():
 
         # Set up the fakery
         sys.meta_path.append(FakeDistributionFinder)
+
     yield entry_points_faker
 
     # Restore environment
@@ -88,8 +89,8 @@ def entry_points_faker():
 
 @pytest.fixture
 def fake_service():
-    class FakeService(AppService):
-        ...
+    class FakeService(AppService): ...
+
     services.ServiceFactory.register("fake", FakeService)
 
 
@@ -101,11 +102,7 @@ def test_app_no_plugins(monkeypatch, app_metadata, fake_services, emitter):
 
 @pytest.mark.usefixtures("fake_project_file")
 def test_app_plugin_loaded(
-    app_metadata,
-    fake_service,
-    fake_services,
-    emitter,
-    entry_points_faker
+    app_metadata, fake_service, fake_services, emitter, entry_points_faker
 ):
     entry_points_faker()
 
@@ -115,16 +112,14 @@ def test_app_plugin_loaded(
 
 @pytest.mark.usefixtures("fake_project_file")
 def test_app_two_plugins_loaded(
-    app_metadata,
-    fake_service,
-    fake_services,
-    emitter,
-    entry_points_faker
+    app_metadata, fake_service, fake_services, emitter, entry_points_faker
 ):
-    entry_points_faker([
-        (PLUGIN_ENTRY_POINT_NAME, PLUGIN_MODULE_NAME, FakeCraftApplicationPlugin),
-        ("anothername", "anothermodule", FakeCraftApplicationPlugin),
-    ])
+    entry_points_faker(
+        [
+            (PLUGIN_ENTRY_POINT_NAME, PLUGIN_MODULE_NAME, FakeCraftApplicationPlugin),
+            ("anothername", "anothermodule", FakeCraftApplicationPlugin),
+        ]
+    )
 
     Application(app_metadata, fake_services)
     emitter.assert_progress(f"Loading app plugin {PLUGIN_ENTRY_POINT_NAME}")
