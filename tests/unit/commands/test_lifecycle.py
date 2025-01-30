@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU Lesser General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Tests for lifecycle commands."""
+
 import argparse
 import pathlib
 import subprocess
@@ -125,7 +126,6 @@ def test_validate_pro_services(
     pro_services_args,
     expected_exception,
 ):
-
     # configure api state
     set_is_attached, set_enabled_service = mock_pro_api_call
     set_is_attached(is_attached)
