@@ -20,6 +20,7 @@ import argparse
 import os
 import sys
 import textwrap
+from typing import cast
 from importlib.metadata import Distribution, DistributionFinder
 
 import pytest
@@ -155,7 +156,7 @@ def test_app_plugin_adds_service(
     )
     app = Application(app_metadata, fake_services)
 
-    assert app.services.fake.get_a_thing() == "a thing"
+    assert cast(FakeService, app.services.fake).get_a_thing() == "a thing"
 
 
 @pytest.mark.usefixtures("fake_project_file")
