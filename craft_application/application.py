@@ -172,8 +172,11 @@ class Application:
             group="craft_application_plugins.application"
         ):
             craft_cli.emit.debug(f"Loading app plugin {plugin_entry_point.name}")
-            app_plugin = plugin_entry_point.load()
-            app_plugin.configure(self)
+            try:
+                app_plugin = plugin_entry_point.load()
+                app_plugin.configure(self)
+            except Exception as e:
+                craft_cli.emit.debug(f"Plugin failed: {e}")
 
     @property
     def app_config(self) -> dict[str, Any]:
