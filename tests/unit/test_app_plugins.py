@@ -219,9 +219,4 @@ def test_app_plugin_adds_commands(
     assert not out
 
     # Make sure the command exists in the help output
-    found_fake_line = False
-    for line in err.splitlines():
-        if line.strip() == "Fake management:  fake":
-            found_fake_line = True
-            break
-    assert found_fake_line
+    assert "Fake management:  fake" in err
