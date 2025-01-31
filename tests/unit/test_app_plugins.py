@@ -21,7 +21,7 @@ import os
 import sys
 import textwrap
 from importlib.metadata import Distribution, DistributionFinder
-from types import FunctionType, ModuleType
+from types import ModuleType
 from typing import cast
 
 import pytest
@@ -51,7 +51,7 @@ def entry_points_faker():
     og_modules = sys.modules
 
     def entry_points_faker(
-        entry_points: list[tuple[str, str, FunctionType]] | None = None  # type: ignore[reportGeneralTypeIssues]
+        entry_points: list[tuple[str, str, callable]] | None = None  # type: ignore[reportGeneralTypeIssues]
     ):
         # All go under this group for our purposes
         entry_points_txt = f"[{PLUGIN_GROUP_NAME}]\n"
@@ -69,7 +69,7 @@ def entry_points_faker():
         for entry_point_name, module_name, configure_func in entry_points:
             entry_points_txt += f"{entry_point_name} = {module_name}\n"
             module = ModuleType(module_name)
-            module.configure = configure_func
+            module.configure = configure_func  # type: ignore[reportAttributeAccessIssue]
             sys.modules[module_name] = module
 
         class FakeDistribution(Distribution):
