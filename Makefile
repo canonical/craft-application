@@ -24,18 +24,11 @@ lint: lint-ruff lint-codespell lint-mypy lint-prettier lint-pyright lint-shellch
 .PHONY: pack
 pack: pack-pip  ## Build all packages
 
-.PHONY: pack-snap
-pack-snap: snap/snapcraft.yaml  ##- Build snap package
-ifeq ($(shell which snapcraft),)
-	sudo snap install --classic snapcraft
-endif
-	snapcraft pack
-
 .PHONY: publish
 publish: publish-pypi  ## Publish packages
 
 .PHONY: publish-pypi
-publish-pypi: clean package-pip lint-twine  ##- Publish Python packages to pypi
+publish-pypi: clean pack-pip lint-twine  ##- Publish Python packages to pypi
 	uv tool run twine upload dist/*
 
 # Find dependencies that need installing
@@ -49,10 +42,20 @@ endif
 ifeq ($(wildcard /usr/share/doc/python3-venv/copyright),)
 APT_PACKAGES += python3-venv
 endif
+ifeq ($(wildcard /usr/share/doc/libapt-pkg-dev/copyright),)
+APT_PACKAGES += libapt-pkg-dev
+endif
+ifeq ($(wildcard /usr/share/doc/libgit2-dev/copyright),)
+APT_PACKAGES += libgit2-dev
+endif
+ifeq ($(wildcard /usr/share/doc/fuse-overlayfs/copyright),)
+APT_PACKAGES += fuse-overlayfs
+endif
+
 
 # Used for installing build dependencies in CI.
 .PHONY: install-build-deps
-install-build-deps: install-lint-build-deps
+install-build-deps: install-lint-build-deps install-fetch-service install-lxd
 ifeq ($(APT_PACKAGES),)
 else ifeq ($(shell which apt-get),)
 	$(warning Cannot install build dependencies without apt.)
@@ -64,3 +67,25 @@ endif
 # If additional build dependencies need installing in order to build the linting env.
 .PHONY: install-lint-build-deps
 install-lint-build-deps:
+
+.PHONY: install-fetch-service
+install-fetch-service:
+ifneq ($(shell which fetch-service),)
+else ifneq ($(shell which snap),)
+	sudo snap install fetch-service --beta
+else
+	$(warning Fetch service not installed. Please install it yourself.)
+endif
+
+.PHONY: install-lxd
+install-lxd:
+ifneq ($(shell which lxd),)
+else ifneq ($(shell which snap),)
+	sudo snap install lxd --beta
+	sudo lxd init --minimal
+else
+	$(warning LXD not installed. Please install it yourself.)
+endif
+ifdef CI  # Always init lxd in CI
+	sudo lxd init --minimal
+endif
