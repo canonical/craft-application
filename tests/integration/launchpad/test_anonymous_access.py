@@ -22,6 +22,7 @@ from craft_application import launchpad
         "production",
     ],
 )
+@pytest.mark.slow
 def test_anonymous_login(tmp_path, root):
     cache_dir = tmp_path / "cache"
     assert not cache_dir.exists()
@@ -35,6 +36,7 @@ def test_anonymous_login(tmp_path, root):
 
 # TODO: Re-enable this
 # https://github.com/canonical/craft-application/issues/306
+# @pytest.mark.slow
 # def test_get_basic_items(anonymous_lp):
 #     snapstore_server = anonymous_lp.get_project("snapstore-server")
 #     assert snapstore_server.name == "snapstore-server"
@@ -53,6 +55,7 @@ def test_anonymous_login(tmp_path, root):
         ("charmcraft", "~charmcraft-team/charmcraft/+git/charmcraft"),
     ],
 )
+@pytest.mark.slow
 def test_get_real_repository_by_path(anonymous_lp, name, path):
     repo = anonymous_lp.get_repository(path=path)
 
@@ -68,6 +71,7 @@ def test_get_real_repository_by_path(anonymous_lp, name, path):
         ("snapcraft", "canonical-starcraft", "snapcraft"),
     ],
 )
+@pytest.mark.slow
 def test_get_real_repository_by_name(anonymous_lp, name, owner, project):
     repo = anonymous_lp.get_repository(name=name, owner=owner, project=project)
 
