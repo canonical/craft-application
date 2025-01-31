@@ -49,6 +49,11 @@ remote = [
     # Support for remote-build is optional.
     "launchpadlib>=1.10.16",
 ]
+apt = [
+    "python-apt>=2.4.0;sys_platform=='linux'",
+]
+
+[dependency-groups]
 dev = [
     "coverage[toml]==7.6.10",
     "hypothesis>=6.0",
@@ -80,8 +85,17 @@ docs = [
     "sphinx-autobuild==2024.10.3",
     "sphinx-lint==1.0.0",
 ]
-apt = [
-    "python-apt>=2.4.0;sys_platform=='linux'",
+dev-jammy = [
+    "python-apt~=2.4.0;sys_platform=='linux'",
+]
+dev-noble = [
+    "python-apt~=2.7.0;sys_platform=='linux'",
+]
+dev-oracular = [
+    "python-apt~=2.9.0;sys_platform=='linux'",
+]
+dev-plucky = [
+    "python-apt>=2.9.0;sys_platform=='linux'",
 ]
 
 [build-system]
@@ -142,6 +156,7 @@ testpaths = "tests"
 xfail_strict = true
 markers = [
     "enable_features: Tests that require specific features",
+    "slow: Tests that take a long time",
 ]
 filterwarnings = [
     "ignore:The craft-application BuildPlanner:PendingDeprecationWarning",
@@ -334,3 +349,17 @@ max-args = 8
 # TODO: Revert this
 # https://github.com/canonical/craft-application/issues/306
 "tests/integration/launchpad/test_anonymous_access.py" = ["ERA001", "FIX002"]
+
+[tool.uv]
+conflicts = [
+    [
+        { group = "dev-jammy" },
+        { group = "dev-noble" },
+        { group = "dev-oracular" },
+        { group = "dev-plucky" },
+    ]
+]
+
+[[tool.uv.index]]
+name = "python-apt-wheels"
+url = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels/"  # workaround to get python-apt to install across multiple platforms
