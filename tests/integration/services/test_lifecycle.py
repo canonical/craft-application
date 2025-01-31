@@ -51,6 +51,7 @@ def parts_lifecycle(
     return service
 
 
+@pytest.mark.slow
 def test_run_and_clean_all_parts(parts_lifecycle, emitter, check, tmp_path):
     parts_lifecycle.run("prime")
 
