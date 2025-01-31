@@ -26,7 +26,13 @@ import pytest
 from craft_cli import emit
 from overrides import override
 
-from craft_application import Application, AppService, commands, services
+from craft_application import (
+    Application,
+    AppService,
+    CraftApplicationPluginProtocol,
+    commands,
+    services,
+)
 
 FAKE_APP = "boopcraft"
 PLUGIN_GROUP_NAME = "craft_application_plugins.application"
@@ -34,7 +40,7 @@ PLUGIN_ENTRY_POINT_NAME = f"{FAKE_APP}_plugin"
 PLUGIN_MODULE_NAME = f"{FAKE_APP}_module"
 
 
-class FakeCraftApplicationPlugin:
+class FakeCraftApplicationPlugin(CraftApplicationPluginProtocol):
     def configure(self, application: Application) -> None:
         print("CALLED BACK YO")
         print(application.services.fake)
@@ -141,7 +147,7 @@ def test_app_plugin_adds_service(
         def get_a_thing(self):
             return "a thing"
 
-    class FakeServiceAdderPlugin:
+    class FakeServiceAdderPlugin(CraftApplicationPluginProtocol):
         def configure(self, app: Application) -> None:
             services.ServiceFactory.register("fake", FakeService)
 
@@ -191,7 +197,7 @@ def test_app_plugin_adds_commands(
                 f"Faked faking {parsed_args.name} ({'NOT' if not parsed_args.real else ''} real)"
             )
 
-    class FakeCommandAdderPlugin:
+    class FakeCommandAdderPlugin(CraftApplicationPluginProtocol):
         def configure(self, app: Application) -> None:
             app.add_command_group("Fake management", [FakeCommand])
 

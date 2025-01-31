@@ -28,7 +28,7 @@ from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
 from functools import cached_property
 from importlib import metadata
-from typing import TYPE_CHECKING, Any, cast, final
+from typing import TYPE_CHECKING, Any, Protocol, cast, final, runtime_checkable
 
 import craft_cli
 import craft_parts
@@ -114,6 +114,15 @@ class AppMetadata:
         return util.render_doc_url(self.docs_url, self.version)
 
 
+@runtime_checkable
+class CraftApplicationPluginProtocol(Protocol):
+    """Defines a protocol for application plugins."""
+
+    def configure(self, app: Application) -> None:
+        """Implement this to modify the Application object immediately after app init."""
+        ...
+
+
 class Application:
     """Craft Application Builder.
 
@@ -173,9 +182,9 @@ class Application:
         ):
             craft_cli.emit.debug(f"Loading app plugin {plugin_entry_point.name}")
             try:
-                app_plugin = plugin_entry_point.load()
+                app_plugin: CraftApplicationPluginProtocol = plugin_entry_point.load()
                 app_plugin.configure(self)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 craft_cli.emit.debug(f"Plugin failed: {e}")
 
     @property
