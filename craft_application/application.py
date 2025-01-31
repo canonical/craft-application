@@ -185,7 +185,8 @@ class Application:
                 app_plugin: CraftApplicationPluginProtocol = plugin_entry_point.load()
                 app_plugin.configure(self)
             except Exception as e:  # noqa: BLE001
-                craft_cli.emit.debug(f"Plugin failed: {e}")
+                craft_cli.emit.progress(f"Failed to load plugin {plugin_entry_point.name}", permanent=True)
+                craft_cli.emit.debug(repr(e))
 
     @property
     def app_config(self) -> dict[str, Any]:
