@@ -20,8 +20,8 @@ import argparse
 import os
 import sys
 import textwrap
-from typing import cast
 from importlib.metadata import Distribution, DistributionFinder
+from typing import cast
 
 import pytest
 from craft_cli import emit
