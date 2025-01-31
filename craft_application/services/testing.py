@@ -60,11 +60,13 @@ class TestingService(base.AppService):
 
         :param project_path: The processed project file.
         """
-        with emit.pause():
+        with emit.open_stream() as stream:
             os.environ["SPREAD_PROJECT_FILE"] = str(project_path)
             subprocess.run(
                 ["spread", "craft:"],
                 cwd=project_path,
+                stdout=stream,
+                stderr=stream,
                 check=True,
             )
 
