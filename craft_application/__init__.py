@@ -19,7 +19,6 @@ from craft_application.application import (
     Application,
     AppFeatures,
     AppMetadata,
-    CraftApplicationPluginProtocol,
 )
 from craft_application import models
 from craft_application.services import (
@@ -49,7 +48,6 @@ __all__ = [
     "AppMetadata",
     "AppService",
     "ConfigModel",
-    "CraftApplicationPluginProtocol",
     "models",
     "ProjectService",
     "LifecycleService",

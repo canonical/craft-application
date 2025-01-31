@@ -21,6 +21,7 @@ import os
 import sys
 import textwrap
 from importlib.metadata import Distribution, DistributionFinder
+from types import FunctionType, ModuleType
 from typing import cast
 
 import pytest
@@ -30,7 +31,6 @@ from overrides import override
 from craft_application import (
     Application,
     AppService,
-    CraftApplicationPluginProtocol,
     commands,
     services,
 )
@@ -41,9 +41,8 @@ PLUGIN_ENTRY_POINT_NAME = f"{FAKE_APP}_plugin"
 PLUGIN_MODULE_NAME = f"{FAKE_APP}_module"
 
 
-class FakeCraftApplicationPlugin(CraftApplicationPluginProtocol):
-    def configure(self, app: Application) -> None:
-        assert app.services.get("fake"), "Fake service is not provided by app."
+def configure(app: Application) -> None:
+    assert app.services.get("fake"), "Fake service is not provided by app."
 
 
 @pytest.fixture
@@ -52,7 +51,7 @@ def entry_points_faker():
     og_modules = sys.modules
 
     def entry_points_faker(
-        entry_points: list[tuple[str, str, callable]] | None = None  # type: ignore[reportGeneralTypeIssues]
+        entry_points: list[tuple[str, str, FunctionType]] | None = None  # type: ignore[reportGeneralTypeIssues]
     ):
         # All go under this group for our purposes
         entry_points_txt = f"[{PLUGIN_GROUP_NAME}]\n"
@@ -63,13 +62,15 @@ def entry_points_faker():
                 (
                     PLUGIN_ENTRY_POINT_NAME,
                     PLUGIN_MODULE_NAME,
-                    FakeCraftApplicationPlugin,
+                    configure,
                 )
             ]
 
-        for entry_point_name, module_name, module_callable in entry_points:
+        for entry_point_name, module_name, configure_func in entry_points:
             entry_points_txt += f"{entry_point_name} = {module_name}\n"
-            sys.modules[module_name] = module_callable()
+            module = ModuleType(module_name)
+            module.configure = configure_func
+            sys.modules[module_name] = module
 
         class FakeDistribution(Distribution):
             def __init__(self, entry_points):
@@ -129,8 +130,8 @@ def test_app_two_plugins_loaded(
 ):
     entry_points_faker(
         [
-            (PLUGIN_ENTRY_POINT_NAME, PLUGIN_MODULE_NAME, FakeCraftApplicationPlugin),
-            ("anothername", "anothermodule", FakeCraftApplicationPlugin),
+            (PLUGIN_ENTRY_POINT_NAME, PLUGIN_MODULE_NAME, configure),
+            ("anothername", "anothermodule", configure),
         ]
     )
 
@@ -147,12 +148,11 @@ def test_app_plugin_adds_service(
         def get_a_thing(self):
             return "a thing"
 
-    class FakeServiceAdderPlugin(CraftApplicationPluginProtocol):
-        def configure(self, app: Application) -> None:
-            services.ServiceFactory.register("fake", FakeService)
+    def configure(app: Application) -> None:
+        services.ServiceFactory.register("fake", FakeService)
 
     entry_points_faker(
-        [(PLUGIN_ENTRY_POINT_NAME, PLUGIN_MODULE_NAME, FakeServiceAdderPlugin)]
+        [(PLUGIN_ENTRY_POINT_NAME, PLUGIN_MODULE_NAME, configure)]
     )
     app = Application(app_metadata, fake_services)
 
@@ -197,12 +197,11 @@ def test_app_plugin_adds_commands(
                 f"Faked faking {parsed_args.name} ({'NOT' if not parsed_args.real else ''} real)"
             )
 
-    class FakeCommandAdderPlugin(CraftApplicationPluginProtocol):
-        def configure(self, app: Application) -> None:
-            app.add_command_group("Fake management", [FakeCommand])
+    def configure(app: Application) -> None:
+        app.add_command_group("Fake management", [FakeCommand])
 
     entry_points_faker(
-        [(PLUGIN_ENTRY_POINT_NAME, PLUGIN_MODULE_NAME, FakeCommandAdderPlugin)]
+        [(PLUGIN_ENTRY_POINT_NAME, PLUGIN_MODULE_NAME, configure)]
     )
 
     emit_mock = mocker.patch("craft_cli.emit")
