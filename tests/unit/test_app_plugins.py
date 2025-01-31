@@ -41,7 +41,7 @@ PLUGIN_MODULE_NAME = f"{FAKE_APP}_module"
 
 
 class FakeCraftApplicationPlugin(CraftApplicationPluginProtocol):
-    def configure(self, application: Application) -> None:
+    def configure(self, app: Application) -> None:
         assert application.services.fake
 
 
