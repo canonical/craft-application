@@ -171,7 +171,7 @@ class Application:
         for plugin_entry_point in metadata.entry_points(
             group="craft_application_plugins.application"
         ):
-            craft_cli.emit.progress(f"Loading app plugin {plugin_entry_point.name}")
+            craft_cli.emit.debug(f"Loading app plugin {plugin_entry_point.name}")
             app_plugin = plugin_entry_point.load()
             app_plugin.configure(self)
 
