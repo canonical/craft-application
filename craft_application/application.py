@@ -486,9 +486,6 @@ class Application:
         if self._enable_fetch_service:
             self.services.fetch.shutdown(force=True)
 
-        if self._enable_testing:
-            self._run_tests()
-
     def configure(self, global_args: dict[str, Any]) -> None:
         """Configure the application using any global arguments."""
 
@@ -674,6 +671,9 @@ class Application:
         else:
             # command runs in inner instance
             return_code = dispatcher.run() or 0
+
+        if self._enable_testing and (not managed_mode or not self.is_managed()):
+            self._run_tests()
 
         return return_code
 
@@ -912,7 +912,8 @@ class Application:
     def _run_tests(self) -> None:
         """Execute tests on the specified artifacts."""
         packages = self.services.lifecycle.load_pack_state()
-        for test_artifact in packages:
+        if packages:
+            test_artifact = packages[0]
             craft_cli.emit.progress(f"Testing {test_artifact}...")
 
             with tempfile.TemporaryDirectory(prefix=".craft-", dir=".") as tempdir:
