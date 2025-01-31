@@ -43,7 +43,7 @@ PLUGIN_MODULE_NAME = f"{FAKE_APP}_module"
 
 class FakeCraftApplicationPlugin(CraftApplicationPluginProtocol):
     def configure(self, app: Application) -> None:
-        assert app.services.fake
+        assert app.services.get("fake"), "Fake service is not provided by app."
 
 
 @pytest.fixture
