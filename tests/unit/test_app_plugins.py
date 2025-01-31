@@ -151,9 +151,7 @@ def test_app_plugin_adds_service(
     def configure(app: Application) -> None:
         services.ServiceFactory.register("fake", FakeService)
 
-    entry_points_faker(
-        [(PLUGIN_ENTRY_POINT_NAME, PLUGIN_MODULE_NAME, configure)]
-    )
+    entry_points_faker([(PLUGIN_ENTRY_POINT_NAME, PLUGIN_MODULE_NAME, configure)])
     app = Application(app_metadata, fake_services)
 
     assert cast(FakeService, app.services.get("fake")).get_a_thing() == "a thing"
@@ -200,9 +198,7 @@ def test_app_plugin_adds_commands(
     def configure(app: Application) -> None:
         app.add_command_group("Fake management", [FakeCommand])
 
-    entry_points_faker(
-        [(PLUGIN_ENTRY_POINT_NAME, PLUGIN_MODULE_NAME, configure)]
-    )
+    entry_points_faker([(PLUGIN_ENTRY_POINT_NAME, PLUGIN_MODULE_NAME, configure)])
 
     emit_mock = mocker.patch("craft_cli.emit")
 
