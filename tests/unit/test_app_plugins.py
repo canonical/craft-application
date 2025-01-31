@@ -42,8 +42,7 @@ PLUGIN_MODULE_NAME = f"{FAKE_APP}_module"
 
 class FakeCraftApplicationPlugin(CraftApplicationPluginProtocol):
     def configure(self, application: Application) -> None:
-        print("CALLED BACK YO")
-        print(application.services.fake)
+        assert application.services.fake
 
 
 @pytest.fixture
