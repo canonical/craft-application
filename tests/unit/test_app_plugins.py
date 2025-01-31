@@ -104,7 +104,7 @@ def fake_service():
 def test_app_no_plugins(monkeypatch, app_metadata, fake_services, emitter):
     Application(app_metadata, fake_services)
     with pytest.raises(AssertionError):
-        emitter.assert_progress("Loading app plugin .*", regex=True)
+        emitter.assert_debug("Loading app plugin .*", regex=True)
 
 
 @pytest.mark.usefixtures("fake_project_file")
@@ -114,7 +114,7 @@ def test_app_plugin_loaded(
     entry_points_faker()
 
     Application(app_metadata, fake_services)
-    emitter.assert_progress(f"Loading app plugin {PLUGIN_ENTRY_POINT_NAME}")
+    emitter.assert_debug(f"Loading app plugin {PLUGIN_ENTRY_POINT_NAME}")
 
 
 @pytest.mark.usefixtures("fake_project_file")
@@ -129,8 +129,8 @@ def test_app_two_plugins_loaded(
     )
 
     Application(app_metadata, fake_services)
-    emitter.assert_progress(f"Loading app plugin {PLUGIN_ENTRY_POINT_NAME}")
-    emitter.assert_progress("Loading app plugin anothername")
+    emitter.assert_debug(f"Loading app plugin {PLUGIN_ENTRY_POINT_NAME}")
+    emitter.assert_debug("Loading app plugin anothername")
 
 
 @pytest.mark.usefixtures("fake_project_file")
