@@ -22,6 +22,7 @@ import pytest
 from craft_application.git import NO_PUSH_URL, Commit, GitError, GitRepo
 
 
+@pytest.mark.slow
 def test_fetching_hello_repository(
     empty_repository: pathlib.Path,
     hello_repository_lp_url: str,

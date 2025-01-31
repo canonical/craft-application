@@ -173,6 +173,7 @@ def test_registering_new_commands(
     ), "Commands are positioned in the wrong order"
 
 
+@pytest.mark.slow
 @pytest.mark.usefixtures("pretend_jammy")
 @pytest.mark.parametrize("project", (d.name for d in VALID_PROJECTS_DIR.iterdir()))
 def test_project_managed(capsys, monkeypatch, tmp_path, project, create_app):
@@ -195,6 +196,7 @@ def test_project_managed(capsys, monkeypatch, tmp_path, project, create_app):
     )
 
 
+@pytest.mark.slow
 @pytest.mark.usefixtures("full_build_plan", "pretend_jammy")
 @pytest.mark.parametrize("project", (d.name for d in VALID_PROJECTS_DIR.iterdir()))
 def test_project_destructive(
@@ -379,7 +381,7 @@ def test_global_environment(
     assert variables["project_version"] == "1.0"
     assert variables["arch_build_for"] == "s390x"
     assert variables["arch_triplet_build_for"] == "s390x-linux-gnu"
-    assert variables["arch_build_on"] == "amd64"
+    assert variables["arch_build_on"] == util.get_host_architecture()
     # craft-application doesn't have utility for getting arch triplets
     assert variables["arch_triplet_build_on"].startswith(
         util.convert_architecture_deb_to_platform(util.get_host_architecture())
@@ -426,6 +428,7 @@ def check_secrets_output(tmp_path, capsys):
     return _inner
 
 
+@pytest.mark.slow
 @pytest.mark.usefixtures("pretend_jammy")
 @pytest.mark.enable_features("build_secrets")
 def test_build_secrets_destructive(
@@ -443,6 +446,7 @@ def test_build_secrets_destructive(
     check_secrets_output()
 
 
+@pytest.mark.slow
 @pytest.mark.usefixtures("pretend_jammy")
 @pytest.mark.enable_features("build_secrets")
 def test_build_secrets_managed(
