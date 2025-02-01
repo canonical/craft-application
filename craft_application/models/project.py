@@ -17,6 +17,7 @@
 
 This defines the structure of the input file (e.g. snapcraft.yaml)
 """
+
 import abc
 import dataclasses
 import warnings

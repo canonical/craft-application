@@ -36,9 +36,9 @@ def test_fetching_hello_repository(
     last_commit_on_fetched_ref = git_repo.get_last_commit_on_branch_or_tag(
         remote=test_remote, branch_or_tag=f"{test_remote}/{ref}"
     )
-    assert isinstance(
-        last_commit_on_fetched_ref, Commit
-    ), "There should be a commit after fetching"
+    assert isinstance(last_commit_on_fetched_ref, Commit), (
+        "There should be a commit after fetching"
+    )
 
 
 def test_fetching_remote_that_does_not_exist(

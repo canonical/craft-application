@@ -98,8 +98,7 @@ def test_unmarshal_extra_data_error():
         SnapConfig.unmarshal({"provider": "lxd", "test": "test"})
 
     assert str(raised.value) == (
-        "Bad snap config content:\n"
-        "- extra inputs are not permitted (in field 'test')"
+        "Bad snap config content:\n- extra inputs are not permitted (in field 'test')"
     )
 
 

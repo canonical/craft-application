@@ -15,13 +15,13 @@ parts:
   my-part:
     plugin: nil
     override-build: |
-        target_file=${CRAFT_PART_INSTALL}/variables.yaml
-        touch $target_file
-        echo "project_name:           \"${CRAFT_PROJECT_NAME}\""           >> $target_file
-        echo "project_dir:            \"${CRAFT_PROJECT_DIR}\""            >> $target_file
-        echo "project_version:        \"${CRAFT_PROJECT_VERSION}\""        >> $target_file
-        echo "arch_build_for:         \"${CRAFT_ARCH_BUILD_FOR}\""         >> $target_file
-        echo "arch_triplet_build_for: \"${CRAFT_ARCH_TRIPLET_BUILD_FOR}\"" >> $target_file
-        echo "arch_build_on:          \"${CRAFT_ARCH_BUILD_ON}\""          >> $target_file
-        echo "arch_triplet_build_on:  \"${CRAFT_ARCH_TRIPLET_BUILD_ON}\""  >> $target_file
-        echo "parallel_build_count:   \"${CRAFT_PARALLEL_BUILD_COUNT}\""   >> $target_file
+      target_file=${CRAFT_PART_INSTALL}/variables.yaml
+      touch $target_file
+      echo "project_name:           \"${CRAFT_PROJECT_NAME}\""           >> $target_file
+      echo "project_dir:            \"${CRAFT_PROJECT_DIR}\""            >> $target_file
+      echo "project_version:        \"${CRAFT_PROJECT_VERSION}\""        >> $target_file
+      echo "arch_build_for:         \"${CRAFT_ARCH_BUILD_FOR}\""         >> $target_file
+      echo "arch_triplet_build_for: \"${CRAFT_ARCH_TRIPLET_BUILD_FOR}\"" >> $target_file
+      echo "arch_build_on:          \"${CRAFT_ARCH_BUILD_ON}\""          >> $target_file
+      echo "arch_triplet_build_on:  \"${CRAFT_ARCH_TRIPLET_BUILD_ON}\""  >> $target_file
+      echo "parallel_build_count:   \"${CRAFT_PARALLEL_BUILD_COUNT}\""   >> $target_file

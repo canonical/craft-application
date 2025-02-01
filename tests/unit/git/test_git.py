@@ -644,8 +644,7 @@ def test_clone_repository_wraps_called_process_error(
     with pytest.raises(GitError) as raised:
         GitRepo.clone_repository(url=fake_repo_url, path=empty_working_directory)
     assert raised.value.details == (
-        f"cannot clone repository: {fake_repo_url} "
-        f"to {str(empty_working_directory)!r}"
+        f"cannot clone repository: {fake_repo_url} to {str(empty_working_directory)!r}"
     )
 
 
@@ -775,9 +774,9 @@ def test_check_git_repo_remote_not_exists(mocker, empty_working_directory):
     mocked_remotes = mocker.patch.object(repo._repo, "remotes")
     mocked_remotes.__getitem__.side_effect = KeyError
 
-    assert (
-        repo.remote_exists(non_existing_remote) is False
-    ), f"Remote {non_existing_remote} should not exist"
+    assert repo.remote_exists(non_existing_remote) is False, (
+        f"Remote {non_existing_remote} should not exist"
+    )
     mocked_remotes.__getitem__.assert_called_with(non_existing_remote)
 
 
@@ -817,8 +816,7 @@ def test_check_git_repo_add_remote_pygit_error_is_wrapped(
     with pytest.raises(GitError) as ge:
         repo.add_remote(new_remote_name, "https://git.fake-remote-url.localhost")
     expected_err_msg = (
-        "could not add remote to a git "
-        f"repository in {str(empty_working_directory)!r}."
+        f"could not add remote to a git repository in {str(empty_working_directory)!r}."
     )
     assert ge.value.details == expected_err_msg
 
@@ -1074,9 +1072,9 @@ def test_retriving_last_commit(empty_repository: Path) -> None:
     assert commit is not None, "Commit should be created and retrieved"
     assert len(commit.sha) == COMMIT_SHA_LEN, "Commit hash should have full length"
     assert is_commit(commit.sha), "Returned value should be a valid commit"
-    assert (
-        commit.sha[:COMMIT_SHORT_SHA_LEN] == commit.short_sha
-    ), "Commit should have proper short version"
+    assert commit.sha[:COMMIT_SHORT_SHA_LEN] == commit.short_sha, (
+        "Commit should have proper short version"
+    )
 
 
 def test_last_commit_on_empty_repository(empty_repository: Path) -> None:

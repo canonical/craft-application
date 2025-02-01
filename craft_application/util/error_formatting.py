@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU Lesser General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Helper utilities for formatting error messages."""
+
 from __future__ import annotations
 
 from collections.abc import Iterable
