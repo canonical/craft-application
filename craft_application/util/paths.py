@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU Lesser General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Utility functions and helpers related to path handling."""
+
 from __future__ import annotations
 
 import pathlib

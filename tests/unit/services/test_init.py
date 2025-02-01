@@ -168,7 +168,7 @@ def test_check_for_existing_files_error(init_service, tmp_path):
     """Error if there are overlapping files."""
     expected_error = textwrap.dedent(
         f"""\
-        Cannot initialise project in {str(tmp_path / 'project')!r} because it would overwrite existing files.
+        Cannot initialise project in {str(tmp_path / "project")!r} because it would overwrite existing files.
         Existing files are:
           - file.txt"""
     )
