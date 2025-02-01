@@ -22,6 +22,7 @@ Note that most of the fetch-service functionality is already tested either on:
 As such, this module mostly unit-tests error paths coming from wrong usage of
 the FetchService class.
 """
+
 import contextlib
 import json
 import pathlib

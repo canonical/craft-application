@@ -3,4 +3,4 @@
 - [ ] Have you successfully run `tox`?
 - [ ] Have you added an entry to the changelog (`docs/reference/changelog.rst`)?
 
------
+---
