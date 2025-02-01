@@ -151,8 +151,8 @@ def _check_for_secrets(data: Any) -> None:  # noqa: ANN401 (using Any on purpose
 
 
 def _check_str(
-    value: Any,
-    field_name: str,  # noqa: ANN401 (using Any on purpose)
+    value: Any,  # noqa: ANN401
+    field_name: str,
 ) -> None:
     if isinstance(value, str) and (match := SECRET_REGEX.search(value)):
         raise errors.SecretsFieldError(

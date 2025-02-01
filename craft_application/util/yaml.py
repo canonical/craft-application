@@ -114,9 +114,9 @@ def safe_yaml_load(stream: TextIO) -> Any:  # noqa: ANN401 - The YAML could be a
 
 @overload
 def dump_yaml(
-    data: Any,
+    data: Any,  # noqa: ANN401 # Any gets passed to pyyaml
     stream: TextIO,
-    **kwargs: Any,  # noqa: ANN401 # Any gets passed to pyyaml
+    **kwargs: Any,
 ) -> None: ...  # pragma: no cover
 
 
@@ -124,7 +124,7 @@ def dump_yaml(
 def dump_yaml(
     data: Any,  # noqa: ANN401 # Any gets passed to pyyaml
     stream: None = None,
-    **kwargs: Any,  # Any gets passed to pyyaml
+    **kwargs: Any,
 ) -> str: ...  # pragma: no cover
 
 
