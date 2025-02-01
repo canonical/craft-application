@@ -39,7 +39,7 @@ from platformdirs import user_cache_path
 
 from craft_application import _config, commands, errors, grammar, models, secrets, util
 from craft_application.errors import PathInvalidError
-from craft_application.models import BuildInfo, GrammarAwareProject
+from craft_application.models import BuildInfo, GrammarAwareProject, PackState
 
 if TYPE_CHECKING:
     from craft_application.services import service_factory
@@ -164,6 +164,7 @@ class Application:
 
         # Whether testing should run on packed artifacts
         self._enable_testing = False
+        self._pack_state = PackState(artifacts=[])
 
     @property
     def app_config(self) -> dict[str, Any]:
@@ -483,6 +484,12 @@ class Application:
                     if self._enable_fetch_service:
                         self.services.fetch.teardown_session()
 
+                    if self._enable_testing:
+                        state_path = util.get_managed_pack_state_path(self.app)
+                        with instance.temporarily_pull_file(source=state_path) as temp:
+                            if temp:
+                                self._pack_state = PackState.from_yaml_file(temp)
+
         if self._enable_fetch_service:
             self.services.fetch.shutdown(force=True)
 
@@ -664,6 +671,8 @@ class Application:
             # command runs in the outer instance
             craft_cli.emit.debug(f"Running {self.app.name} {command.name} on host")
             return_code = dispatcher.run() or os.EX_OK
+            state_path = util.get_managed_pack_state_path(self.app)
+            self._pack_state = PackState.from_yaml_file(state_path)
         elif not self.is_managed():
             # command runs in inner instance, but this is the outer instance
             self.run_managed(platform, build_for)
@@ -911,16 +920,18 @@ class Application:
 
     def _run_tests(self) -> None:
         """Execute tests on the specified artifacts."""
-        packages = self.services.lifecycle.load_pack_state()
-        if packages:
-            test_artifact = packages[0]
-            craft_cli.emit.progress(f"Testing {test_artifact}...")
+        packages = self._pack_state.artifacts
+        if not packages:
+            return
 
-            with tempfile.TemporaryDirectory(prefix=".craft-", dir=".") as tempdir:
-                destdir = pathlib.Path(tempdir)
-                test_env = {"TEST_ARTIFACT": f"$PROJECT_PATH/{test_artifact}"}
-                self.services.testing.process_spread_yaml(destdir, test_env)
-                self.services.testing.run_spread(destdir)
+        test_artifact = packages[0]
+        craft_cli.emit.progress(f"Testing {test_artifact}...")
+
+        with tempfile.TemporaryDirectory(prefix=".craft-", dir=".") as tempdir:
+            destdir = pathlib.Path(tempdir)
+            test_env = {"TEST_ARTIFACT": f"$PROJECT_PATH/{test_artifact}"}
+            self.services.testing.process_spread_yaml(destdir, test_env)
+            self.services.testing.run_spread(destdir)
 
 
 def filter_plan(

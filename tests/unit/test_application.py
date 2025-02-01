@@ -958,7 +958,7 @@ def test_run_passes_platforms(
     monkeypatch, app, fake_project, mocker, params, expected_call
 ):
     mocker.patch.object(app, "get_project", return_value=fake_project)
-    app.run_managed = mock.Mock(return_value=False)
+    app.run_managed = mock.Mock()
     monkeypatch.setattr(sys, "argv", ["testcraft", "pull", *params])
 
     pytest_check.equal(app.run(), 0)

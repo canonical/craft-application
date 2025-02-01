@@ -358,3 +358,16 @@ class ProviderService(base.ProjectService):
         instance_name = self._get_instance_name(work_dir, info)
         emit.debug(f"Cleaning instance {instance_name}")
         provider.clean_project_environments(instance_name=instance_name)
+
+    def get_pack_state_from_instance(self, instance: craft_providers.Executor) -> None:
+        """Fetch the pack state from the instance and save its contents."""
+        pack_state_path = util.get_managed_pack_state_path(self._app)
+        with instance.temporarily_pull_file(
+            source=pack_state_path, missing_ok=True
+        ) as state_path:
+            if state_path:
+                emit.debug("Pack state retrieved from managed instance.")
+            else:
+                emit.debug(
+                    f"Could not find pack state file {pack_state_path.as_posix()} in instance."
+                )

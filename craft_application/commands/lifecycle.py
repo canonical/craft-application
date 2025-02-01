@@ -25,7 +25,9 @@ from craft_cli import CommandGroup, emit
 from craft_parts.features import Features
 from typing_extensions import override
 
+from craft_application import util
 from craft_application.commands import base
+from craft_application.models import PackState
 
 
 def get_lifecycle_command_group() -> CommandGroup:
@@ -411,7 +413,8 @@ class PackCommand(LifecycleCommand):
             package_names = ", ".join(pkg.name for pkg in packages)
             emit.progress(f"Packed: {package_names}", permanent=True)
 
-        self._services.lifecycle.save_pack_state([p.name for p in packages])
+        state = PackState(artifacts=[p.name for p in packages])
+        state.to_yaml_file(util.get_managed_pack_state_path(self._app))
 
         if shell_after:
             _launch_shell()

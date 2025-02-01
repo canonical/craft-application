@@ -42,6 +42,7 @@ from craft_application.models.spread import (
     SpreadBackend,
     SpreadYaml,
 )
+from craft_application.models.state import PackState
 
 
 __all__ = [
@@ -55,6 +56,7 @@ __all__ = [
     "Platform",
     "Project",
     "BuildPlanner",
+    "PackState",
     "ProjectName",
     "ProjectTitle",
     "CraftSpreadYaml",
