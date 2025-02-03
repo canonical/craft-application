@@ -14,6 +14,7 @@
 #  You should have received a copy of the GNU Lesser General Public License
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Integration tests for provider service."""
+
 import contextlib
 import subprocess
 
@@ -52,6 +53,7 @@ from craft_application.util import get_host_architecture
 # This is due to an upstream LXD bug that appears to still be present in LXD 5.14:
 # https://github.com/lxc/lxd/issues/11422
 @pytest.mark.flaky(reruns=3, reruns_delay=2)
+@pytest.mark.slow
 def test_provider_lifecycle(
     snap_safe_tmp_path, app_metadata, provider_service, name, base_name
 ):
@@ -95,6 +97,7 @@ def test_provider_lifecycle(
     ],
 )
 @pytest.mark.parametrize("provider_name", [pytest.param("lxd", marks=pytest.mark.lxd)])
+@pytest.mark.slow
 def test_proxy_variables_forwarded(
     monkeypatch, snap_safe_tmp_path, provider_service, base, proxy_vars, provider_name
 ):

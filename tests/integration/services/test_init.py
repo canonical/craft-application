@@ -91,9 +91,7 @@ def get_testcraft_yaml(*, version: str = "git") -> str:
             source: .
         platforms:
           amd64:
-        """.replace(
-            "<<version_placeholder>>", version
-        )
+        """.replace("<<version_placeholder>>", version)
     )
 
 
@@ -203,9 +201,9 @@ def test_init_works_with_empty_templates_dir(
     with check:
         assert emitter.assert_progress("Rendered project.")
     with check:
-        assert not list(
-            fake_empty_project_dir.iterdir()
-        ), "Project dir should be initialised empty"
+        assert not list(fake_empty_project_dir.iterdir()), (
+            "Project dir should be initialised empty"
+        )
 
 
 def test_init_works_with_simple_template(
@@ -233,9 +231,9 @@ def test_init_works_with_simple_template(
 
     for project_yaml_path in project_yaml_paths:
         with check:
-            assert (
-                project_yaml_path.exists()
-            ), "Project should be initialised with template"
+            assert project_yaml_path.exists(), (
+                "Project should be initialised with template"
+            )
             project = Project.from_yaml_file(project_yaml_path)
             assert project.name == fake_empty_project_dir.name
 
@@ -322,9 +320,9 @@ def test_init_does_not_follow_symlinks_but_copies_them_as_is(
     with check:
         assert project.name == fake_empty_project_dir.name
     with check:
-        assert (
-            fake_empty_project_dir / "py3_symlink"
-        ).is_symlink(), "Symlink should be left intact."
+        assert (fake_empty_project_dir / "py3_symlink").is_symlink(), (
+            "Symlink should be left intact."
+        )
 
 
 def test_init_copies_executables(
