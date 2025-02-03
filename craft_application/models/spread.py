@@ -58,6 +58,7 @@ class CraftSpreadSuite(CraftBaseModel):
 class CraftSpreadYaml(CraftBaseModel):
     """Simplified spread project configuration."""
 
+    project: str
     backends: dict[str, CraftSpreadBackend]
     suites: dict[str, CraftSpreadSuite]
     exclude: list[str] | None = None
@@ -94,9 +95,9 @@ class SpreadSystem(SpreadBaseModel):
     workers: int | None = None
 
     @classmethod
-    def from_craft(cls, simple: CraftSpreadSystem | None) -> Self:
+    def from_craft(cls, craft_spread_system: CraftSpreadSystem | None) -> Self:
         """Create a spread system configuration from the simplified version."""
-        workers = simple.workers if simple else 1
+        workers = craft_spread_system.workers if craft_spread_system else 1
         return cls(
             workers=workers,
             username="spread",
@@ -117,26 +118,26 @@ class SpreadBackend(SpreadBaseModel):
     restore_each: str | None = None
 
     @classmethod
-    def from_craft(cls, simple: CraftSpreadBackend) -> Self:
+    def from_craft(cls, craft_spread_backend: CraftSpreadBackend) -> Self:
         """Create a spread backend configuration from the simplified version."""
         return cls(
-            type=simple.type,
-            allocate=simple.allocate,
-            discard=simple.discard,
-            systems=cls.systems_from_craft(simple.systems),
-            prepare=simple.prepare,
-            restore=simple.restore,
-            prepare_each=simple.prepare_each,
-            restore_each=simple.restore_each,
+            type=craft_spread_backend.type,
+            allocate=craft_spread_backend.allocate,
+            discard=craft_spread_backend.discard,
+            systems=cls.systems_from_craft(craft_spread_backend.systems),
+            prepare=craft_spread_backend.prepare,
+            restore=craft_spread_backend.restore,
+            prepare_each=craft_spread_backend.prepare_each,
+            restore_each=craft_spread_backend.restore_each,
         )
 
     @staticmethod
     def systems_from_craft(
-        simple: list[dict[str, CraftSpreadSystem | None]],
+        craft_spread_systems: list[dict[str, CraftSpreadSystem | None]],
     ) -> list[dict[str, SpreadSystem]]:
         """Create spread systems from the simplified version."""
         systems: list[dict[str, SpreadSystem]] = []
-        for item in simple:
+        for item in craft_spread_systems:
             entry: dict[str, SpreadSystem] = {}
             for name, ssys in item.items():
                 entry[name] = SpreadSystem.from_craft(ssys)
@@ -158,17 +159,17 @@ class SpreadSuite(SpreadBaseModel):
     kill_timeout: str | None = None
 
     @classmethod
-    def from_craft(cls, simple: CraftSpreadSuite) -> Self:
+    def from_craft(cls, craft_spread_suite: CraftSpreadSuite) -> Self:
         """Create a spread suite configuration from the simplified version."""
         return cls(
-            summary=simple.summary,
-            systems=simple.systems,
-            environment=simple.environment,
-            prepare=simple.prepare,
-            restore=simple.restore,
-            prepare_each=simple.prepare_each,
-            restore_each=simple.restore_each,
-            kill_timeout=simple.kill_timeout,  # TODO: add time limit
+            summary=craft_spread_suite.summary,
+            systems=craft_spread_suite.systems,
+            environment=craft_spread_suite.environment,
+            prepare=craft_spread_suite.prepare,
+            restore=craft_spread_suite.restore,
+            prepare_each=craft_spread_suite.prepare_each,
+            restore_each=craft_spread_suite.restore_each,
+            kill_timeout=craft_spread_suite.kill_timeout,  # XXX: add time limit
         )
 
 
@@ -181,6 +182,7 @@ class SpreadYaml(SpreadBaseModel):
     suites: dict[str, SpreadSuite]
     exclude: list[str]
     path: str
+    reroot: str | None
     prepare: str | None
     restore: str | None
     prepare_each: str | None
@@ -190,37 +192,43 @@ class SpreadYaml(SpreadBaseModel):
     @classmethod
     def from_craft(
         cls,
-        simple: CraftSpreadYaml,
+        craft_spread_yaml: CraftSpreadYaml,
         *,
         craft_backend: SpreadBackend,
+        env: dict[str, str],
     ) -> Self:
         """Create the spread configuration from the simplified version."""
         return cls(
-            project="craft-test",
+            project=craft_spread_yaml.project,
             environment={
                 "SUDO_USER": "",
                 "SUDO_UID": "",
                 "LANG": "C.UTF-8",
                 "LANGUAGE": "en",
                 "PROJECT_PATH": "/home/spread/proj",
+                **env,
             },
-            backends=cls._backends_from_craft(simple.backends, craft_backend),
-            suites=cls._suites_from_craft(simple.suites),
-            exclude=simple.exclude or [".git", ".tox"],
+            backends=cls._backends_from_craft(
+                craft_spread_yaml.backends, craft_backend
+            ),
+            suites=cls._suites_from_craft(craft_spread_yaml.suites),
+            exclude=craft_spread_yaml.exclude or [".git", ".tox"],
             path="/home/spread/proj",
-            prepare=simple.prepare,
-            restore=simple.restore,
-            prepare_each=simple.prepare_each,
-            restore_each=simple.restore_each,
-            kill_timeout=simple.kill_timeout or "1h",  # TODO: add time limit
+            prepare=craft_spread_yaml.prepare,
+            restore=craft_spread_yaml.restore,
+            prepare_each=craft_spread_yaml.prepare_each,
+            restore_each=craft_spread_yaml.restore_each,
+            kill_timeout=craft_spread_yaml.kill_timeout or "1h",  # XXX: add time limit
+            reroot="..",
         )
 
     @staticmethod
     def _backends_from_craft(
-        simple: dict[str, CraftSpreadBackend], craft_backend: SpreadBackend
+        craft_spread_backends: dict[str, CraftSpreadBackend],
+        craft_backend: SpreadBackend,
     ) -> dict[str, SpreadBackend]:
         backends: dict[str, SpreadBackend] = {}
-        for name, backend in simple.items():
+        for name, backend in craft_spread_backends.items():
             if name == "craft":
                 craft_backend.systems = SpreadBackend.systems_from_craft(
                     backend.systems
@@ -233,6 +241,9 @@ class SpreadYaml(SpreadBaseModel):
 
     @staticmethod
     def _suites_from_craft(
-        simple: dict[str, CraftSpreadSuite]
+        craft_spread_suites: dict[str, CraftSpreadSuite]
     ) -> dict[str, SpreadSuite]:
-        return {name: SpreadSuite.from_craft(suite) for name, suite in simple.items()}
+        return {
+            name: SpreadSuite.from_craft(suite)
+            for name, suite in craft_spread_suites.items()
+        }

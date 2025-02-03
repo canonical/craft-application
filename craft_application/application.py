@@ -24,6 +24,7 @@ import pathlib
 import signal
 import subprocess
 import sys
+import tempfile
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
 from functools import cached_property
@@ -38,7 +39,7 @@ from platformdirs import user_cache_path
 
 from craft_application import _config, commands, errors, grammar, models, secrets, util
 from craft_application.errors import PathInvalidError
-from craft_application.models import BuildInfo, GrammarAwareProject
+from craft_application.models import BuildInfo, GrammarAwareProject, PackState
 
 if TYPE_CHECKING:
     from craft_application.services import service_factory
@@ -160,6 +161,10 @@ class Application:
         self._enable_fetch_service = False
         # The kind of sessions that the fetch-service service should create
         self._fetch_service_policy = "strict"
+
+        # Whether testing should run on packed artifacts
+        self._enable_testing = False
+        self._pack_state = PackState(artifacts=[])
 
     @property
     def app_config(self) -> dict[str, Any]:
@@ -479,6 +484,12 @@ class Application:
                     if self._enable_fetch_service:
                         self.services.fetch.teardown_session()
 
+                    if self._enable_testing:
+                        state_path = util.get_managed_pack_state_path(self.app)
+                        with instance.temporarily_pull_file(source=state_path) as temp:
+                            if temp:
+                                self._pack_state = PackState.from_yaml_file(temp)
+
         if self._enable_fetch_service:
             self.services.fetch.shutdown(force=True)
 
@@ -601,6 +612,14 @@ class Application:
             self._enable_fetch_service = True
             self._fetch_service_policy = fetch_service_policy
 
+        command = cast(
+            commands.AppCommand,
+            dispatcher.load_command(self.app_config),
+        )
+
+        if command.name == "test":
+            self._enable_testing = True
+
     def get_arg_or_config(
         self, parsed_args: argparse.Namespace, item: str
     ) -> Any:  # noqa: ANN401
@@ -652,6 +671,9 @@ class Application:
             # command runs in the outer instance
             craft_cli.emit.debug(f"Running {self.app.name} {command.name} on host")
             return_code = dispatcher.run() or os.EX_OK
+            if self._enable_testing:
+                state_path = util.get_managed_pack_state_path(self.app)
+                self._pack_state = PackState.from_yaml_file(state_path)
         elif not self.is_managed():
             # command runs in inner instance, but this is the outer instance
             self.run_managed(platform, build_for)
@@ -659,6 +681,9 @@ class Application:
         else:
             # command runs in inner instance
             return_code = dispatcher.run() or 0
+
+        if self._enable_testing and (not managed_mode or not self.is_managed()):
+            self._run_tests()
 
         return return_code
 
@@ -893,6 +918,21 @@ class Application:
         """Perform craft-parts-specific initialization, like features and plugins."""
         self._enable_craft_parts_features()
         self._register_default_plugins()
+
+    def _run_tests(self) -> None:
+        """Execute tests on the specified artifacts."""
+        packages = self._pack_state.artifacts
+        if not packages:
+            return
+
+        test_artifact = packages[0]
+        craft_cli.emit.progress(f"Testing {test_artifact}...")
+
+        with tempfile.TemporaryDirectory(prefix=".craft-", dir=".") as tempdir:
+            destdir = pathlib.Path(tempdir)
+            test_env = {"TEST_ARTIFACT": f"$PROJECT_PATH/{test_artifact}"}
+            self.services.testing.process_spread_yaml(destdir, test_env)
+            self.services.testing.run_spread(destdir)
 
 
 def filter_plan(

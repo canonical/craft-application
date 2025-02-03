@@ -30,7 +30,9 @@ from . import base
 class TestingService(base.AppService):
     """Service class for testing a project."""
 
-    def process_spread_yaml(self, dest: pathlib.Path) -> None:
+    def process_spread_yaml(
+        self, destdir: pathlib.Path, test_env: dict[str, str]
+    ) -> None:
         """Process the spread configuration file.
 
         :param project_dir: The directory to initialise the project in.
@@ -43,23 +45,30 @@ class TestingService(base.AppService):
         with pathlib.Path("spread.yaml").open() as file:
             data = util.safe_yaml_load(file)
 
-        simple = models.CraftSpreadYaml.unmarshal(data)
+        craft_spread_yaml = models.CraftSpreadYaml.unmarshal(data)
 
         spread_yaml = models.SpreadYaml.from_craft(
-            simple,
+            craft_spread_yaml,
             craft_backend=craft_backend,
+            env=test_env,
         )
 
-        spread_yaml.to_yaml_file(dest)
+        spread_yaml.to_yaml_file(destdir / "spread.yaml")
 
     def run_spread(self, project_path: pathlib.Path) -> None:
         """Run spread on the processed project file.
 
         :param project_path: The processed project file.
         """
-        with emit.pause():
+        with emit.open_stream() as stream:
             os.environ["SPREAD_PROJECT_FILE"] = str(project_path)
-            subprocess.run(["spread", "-v", "craft:"], check=True)
+            subprocess.run(
+                ["spread", "craft:"],
+                cwd=project_path,
+                stdout=stream,
+                stderr=stream,
+                check=True,
+            )
 
     def _get_backend(self) -> models.SpreadBackend:
         name = "ci" if os.environ.get("CI") else "lxd-vm"

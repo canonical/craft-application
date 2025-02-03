@@ -33,6 +33,7 @@ from craft_application.commands.lifecycle import (
     PrimeCommand,
     PullCommand,
     StageCommand,
+    TestCommand,
     get_lifecycle_command_group,
 )
 
@@ -60,9 +61,9 @@ MANAGED_LIFECYCLE_COMMANDS = (
     StageCommand,
     PrimeCommand,
 )
-UNMANAGED_LIFECYCLE_COMMANDS = (CleanCommand, PackCommand)
+UNMANAGED_LIFECYCLE_COMMANDS = (CleanCommand, PackCommand, TestCommand)
 ALL_LIFECYCLE_COMMANDS = MANAGED_LIFECYCLE_COMMANDS + UNMANAGED_LIFECYCLE_COMMANDS
-NON_CLEAN_COMMANDS = (*MANAGED_LIFECYCLE_COMMANDS, PackCommand)
+NON_CLEAN_COMMANDS = (*MANAGED_LIFECYCLE_COMMANDS, PackCommand, TestCommand)
 
 
 def get_fake_command_class(parent_cls, managed):
@@ -93,6 +94,7 @@ def get_fake_command_class(parent_cls, managed):
                 StageCommand,
                 PrimeCommand,
                 PackCommand,
+                TestCommand,
             },
         ),
     ],
