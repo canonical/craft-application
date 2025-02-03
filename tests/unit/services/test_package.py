@@ -20,6 +20,7 @@ import dataclasses
 from pathlib import Path
 
 import pytest
+
 from craft_application import errors, models
 from craft_application.services import package
 
@@ -69,7 +70,7 @@ def test_update_project_variable_unset(
         project=fake_project,
     )
 
-    def _get_project_var(name: str, *, raw_read: bool = False) -> str:  # noqa: ARG001
+    def _get_project_var(name: str, *, raw_read: bool = False) -> str:
         return "foo" if name == "version" else ""
 
     service._services.lifecycle.project_info.get_project_var = _get_project_var
@@ -98,7 +99,7 @@ def test_update_project_variable_optional(
         project=fake_project,
     )
 
-    def _get_project_var(name: str, *, raw_read: bool = False) -> str:  # noqa: ARG001
+    def _get_project_var(name: str, *, raw_read: bool = False) -> str:
         return "foo" if name == "version" else ""
 
     service._services.lifecycle.project_info.get_project_var = _get_project_var

@@ -135,7 +135,7 @@ class DefaultConfigHandler(ConfigHandler):
             self._cache[item] = field.default
             return field.default
         if field.default_factory is not None:
-            # TODO: remove the type ignore after pydantic/pydantic#10945 is fixed
+            # Remove the type ignore after pydantic/pydantic#10945 is fixed
             default = field.default_factory()  # type: ignore[call-arg]
             self._cache[item] = default
             return default
@@ -185,7 +185,7 @@ class ConfigService(base.AppService):
         for handler in self._handlers:
             try:
                 value = handler.get_raw(item)
-            except KeyError:
+            except KeyError:  # noqa: PERF203
                 continue
             else:
                 break

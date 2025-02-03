@@ -30,19 +30,21 @@ from __future__ import annotations
 
 import enum
 import time
+from abc import abstractmethod
 from collections.abc import Collection, Iterable
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar, Literal
 
 import lazr.restfulclient.errors  # type: ignore[import-untyped]
 from typing_extensions import Any, Self, TypedDict, override
 
-from ...util import retry
-from .. import errors, util
+from craft_application.launchpad import errors, models, util
+from craft_application.util import retry
+
 from . import build
 from .base import LaunchpadObject, Pocket
 
 if TYPE_CHECKING:
-    from .. import Launchpad
+    from craft_application.launchpad import Launchpad
 
 
 class RecipeType(enum.Enum):
@@ -50,6 +52,7 @@ class RecipeType(enum.Enum):
 
     SNAP = "snap"
     CHARM = "charm_recipe"
+    ROCK = "rock_recipe"
 
 
 class BuildChannels(TypedDict, total=False):
@@ -182,7 +185,8 @@ class SnapRecipe(_StoreRecipe):
         *,
         architectures: Collection[str] | None = None,
         description: str | None = None,
-        project: str | None = None,
+        project: str | models.Project | None = None,
+        information_type: models.InformationType | None = None,
         # Repository. Must be either a git repository or a Bazaar branch but not both.
         git_ref: str | None = None,
         bzr_branch: str | None = None,
@@ -204,7 +208,11 @@ class SnapRecipe(_StoreRecipe):
         :param architectures: A collection of architecture names to build the recipe.
             If None, detects the architectures from `snapcraft.yaml`
         :param description: (Optional) A description of the recipe.
-        :param project: (Optional) The name of the project to which to attach this recipe.
+        :param project: (Optional) The project or name of the project to which to
+            attach this recipe. Defines the information type of the repository if
+            'information_type' is not set.
+        :param information_type: (Optional) The information type of the recipe.
+            This overrides the project's information type. Defaults to public.
         :param git_ref: A link to a git repository and branch from which to build.
             Mutually exclusive with bzr_branch.
         :param bzr_branch: A link to a bazaar branch from which to build.
@@ -227,8 +235,18 @@ class SnapRecipe(_StoreRecipe):
             kwargs["processors"] = [util.get_processor(arch) for arch in architectures]
         if description:
             kwargs["description"] = description
+
+        # set information type from the arg or the project
+        if information_type:
+            kwargs["information_type"] = information_type.value
+        elif isinstance(project, models.Project):
+            kwargs["information_type"] = project.information_type.value
+
+        if isinstance(project, models.Project):
+            project = project.name
         if project:
             kwargs["project"] = f"/{project}"
+
         cls._fill_repo_info(kwargs, git_ref=git_ref, bzr_branch=bzr_branch)
         cls._fill_store_info(
             kwargs,
@@ -326,11 +344,17 @@ class SnapRecipe(_StoreRecipe):
         return self._build(deadline, request_build_kwargs)
 
 
-class CharmRecipe(_StoreRecipe):
-    """A recipe for a charm.
+class _StandardRecipe(_StoreRecipe):
+    """A base class for recipes with common launchpad builds."""
 
-    https://api.launchpad.net/devel.html#charm_recipe
-    """
+    ARTIFACT: ClassVar[str]
+    """The artifact type this recipe creates: charm, rock, etc."""
+
+    @classmethod
+    @abstractmethod
+    def _get_lp_recipe(cls, lp: Launchpad) -> Any:  # noqa: ANN401 (use of any)
+        """Get the launchpad utility to manipulate recipes."""
+        raise NotImplementedError("Must be implemented by subclass.")
 
     @classmethod
     def new(  # noqa: PLR0913
@@ -338,9 +362,10 @@ class CharmRecipe(_StoreRecipe):
         lp: Launchpad,
         name: str,
         owner: str,
-        project: str,
+        project: str | models.Project,
         *,
         build_path: str | None = None,
+        information_type: models.InformationType | None = None,
         # Automatic build options.
         auto_build: bool = False,
         auto_build_channels: BuildChannels | None = None,
@@ -348,17 +373,21 @@ class CharmRecipe(_StoreRecipe):
         store_name: str | None = None,
         store_channels: Collection[str] = ("latest/edge",),
         git_ref: str | None = None,
+        architectures: Collection[str] | None = None,
     ) -> Self:
-        """Create a new charm recipe.
-
-        See: https://api.launchpad.net/devel.html#charm_recipes-new
+        """Create a new recipe.
 
         :param lp: The Launchpad client to use for this recipe.
         :param name: The recipe name
         :param owner: The username of the person or team who owns the recipe
         :param project: The name of the project to which this recipe should be attached.
+        :param project: The project or name of the project to which to attach this
+            recipe. Defines the information type of the repository if 'information_type'
+            is not set.
         :param build_path: (Optional) The path to the directory containing
-            charmcraft.yaml (if it's not the root directory).
+            the project file (if it's not the root directory).
+        :param information_type: (Optional) The information type of the recipe.
+            This overrides the project's information type. Defaults to public.
         :param git_ref: A link to a git repository and branch from which to build.
             Mutually exclusive with bzr_branch.
         :param auto_build: Whether to automatically build on pushes to the branch.
@@ -366,16 +395,34 @@ class CharmRecipe(_StoreRecipe):
         :param auto_build_channels: (Optional) A dictionary of channels to use for
             snaps installed in the build environment.
         :param store_name: (Optional) The name in the store to which to upload this
-            charm.
-        :param store_channels: (Optional) The channels onto which to publish the charm
+            asset.
+        :param store_channels: (Optional) The channels onto which to publish the asset
             if uploaded.
-        :returns: The Charm recipe.
+        :param architectures: (Optional) The architectures to build. Note that this
+            parameter is unused and exists here to provide a standard API for building
+            recipes (since SnapRecipe supports it) - _StandardRecipes do **not** support
+            defining build architectures at this moment.
+        :returns: The recipe.
         """
+        if architectures:
+            msg = f"{cls.ARTIFACT} recipes do not support architectures"
+            raise ValueError(msg)
+
         kwargs: dict[str, Any] = {}
         if auto_build:
             kwargs["auto_build_channels"] = auto_build_channels
         if build_path:
             kwargs["build_path"] = build_path
+
+        # set information type from the arg or the project
+        if information_type:
+            kwargs["information_type"] = information_type.value
+        elif isinstance(project, models.Project):
+            kwargs["information_type"] = project.information_type.value
+
+        if isinstance(project, models.Project):
+            project = project.name
+
         cls._fill_store_info(
             kwargs,
             store_name=store_name,
@@ -383,10 +430,10 @@ class CharmRecipe(_StoreRecipe):
         )
         cls._fill_repo_info(kwargs, git_ref=git_ref)
 
-        charm_entry = retry(
-            f"create charm recipe {name!r}",
+        created_entry = retry(
+            f"create {cls.ARTIFACT} recipe {name!r}",
             lazr.restfulclient.errors.BadRequest,
-            lp.lp.charm_recipes.new,
+            cls._get_lp_recipe(lp).new,
             name=name,
             owner=util.get_person_link(owner),
             project=f"/{project}",
@@ -394,23 +441,23 @@ class CharmRecipe(_StoreRecipe):
             **kwargs,
         )
 
-        if not charm_entry:
-            raise ValueError("Failed to create charm recipe")
+        if not created_entry:
+            raise ValueError(f"Failed to create {cls.ARTIFACT} recipe")
 
-        return cls(lp, charm_entry)
+        return cls(lp, created_entry)
 
     @classmethod
     def get(  # pyright: ignore[reportIncompatibleMethodOverride]
         cls, lp: Launchpad, name: str, owner: str, project: str | None = None
     ) -> Self:
-        """Get a charm recipe."""
+        """Get a recipe."""
         try:
             return cls(
                 lp,
                 retry(
-                    f"get charm recipe {name!r}",
+                    f"get {cls.ARTIFACT} recipe {name!r}",
                     lazr.restfulclient.errors.NotFound,
-                    lp.lp.charm_recipes.getByName,
+                    cls._get_lp_recipe(lp).getByName,
                     name=name,
                     owner=util.get_person_link(owner),
                     project=f"/{project}",
@@ -418,16 +465,18 @@ class CharmRecipe(_StoreRecipe):
             )
         except lazr.restfulclient.errors.NotFound:
             raise ValueError(
-                f"Could not find charm recipe {name!r} in project {project!r} with owner {owner!r}",
+                f"Could not find {cls.ARTIFACT} recipe {name!r} in project {project!r} with owner {owner!r}",
             ) from None
 
     @classmethod
     def find(  # pyright: ignore[reportIncompatibleMethodOverride]
         cls, lp: Launchpad, owner: str, *, name: str = ""
     ) -> Iterable[Self]:
-        """Find a Charm recipe by the owner."""
+        """Find a recipe by the owner."""
         owner = util.get_person_link(owner)
-        lp_recipes = lp.lp.charm_recipes.findByOwner(owner=util.get_person_link(owner))
+        lp_recipes = cls._get_lp_recipe(lp).findByOwner(
+            owner=util.get_person_link(owner)
+        )
         for recipe in lp_recipes:
             if name and recipe.name != name:
                 continue
@@ -443,4 +492,48 @@ class CharmRecipe(_StoreRecipe):
         return self._build(deadline, kwargs)
 
 
-Recipe = SnapRecipe | CharmRecipe
+class CharmRecipe(_StandardRecipe):
+    """A recipe for a charm.
+
+    https://api.launchpad.net/devel.html#charm_recipe
+    """
+
+    ARTIFACT: ClassVar[Literal["charm"]] = "charm"  # type: ignore[reportIncompatibleVariableOverride]
+
+    @override
+    @classmethod
+    def _get_lp_recipe(cls, lp: Launchpad) -> Any:
+        """https://api.launchpad.net/devel.html#charm_recipes."""
+        return lp.lp.charm_recipes
+
+
+class RockRecipe(_StandardRecipe):
+    """A recipe for a rock.
+
+    https://api.launchpad.net/devel.html#rock_recipe
+    """
+
+    ARTIFACT: ClassVar[Literal["rock"]] = "rock"  # type: ignore[reportIncompatibleVariableOverride]
+
+    @override
+    @classmethod
+    def _get_lp_recipe(cls, lp: Launchpad) -> Any:
+        """https://api.launchpad.net/devel.html#rock_recipes."""
+        return lp.lp.rock_recipes
+
+
+Recipe = SnapRecipe | CharmRecipe | RockRecipe
+
+_RECIPE_TYPE_TO_CLASS: dict[RecipeType, type[Recipe]] = {
+    RecipeType.SNAP: SnapRecipe,
+    RecipeType.CHARM: CharmRecipe,
+    RecipeType.ROCK: RockRecipe,
+}
+
+
+def get_recipe_class(type_: RecipeType) -> type[Recipe]:
+    """Get the concrete Recipe class for a given RecipeType."""
+    try:
+        return _RECIPE_TYPE_TO_CLASS[type_]
+    except KeyError:
+        raise TypeError(f"Unknown recipe type: {type_}") from None

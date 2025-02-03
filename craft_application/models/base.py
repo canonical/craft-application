@@ -104,7 +104,6 @@ class CraftBaseModel(pydantic.BaseModel):
         :param error: The ValidationError generated when trying to create this
           model.
         """
-        pass
 
     @classmethod
     def model_reference_slug(cls) -> str | None:

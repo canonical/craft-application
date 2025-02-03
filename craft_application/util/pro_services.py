@@ -14,14 +14,18 @@
 # You should have received a copy of the GNU Lesser General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Handling of Ubuntu Pro Services."""
+
 from __future__ import annotations
 
 import json
 import logging
 import subprocess as sub
 from enum import Flag, auto
+from io import TextIOWrapper
 from pathlib import Path
 from typing import Any
+
+import yaml
 
 from craft_application.errors import (
     InvalidUbuntuProServiceError,
@@ -35,8 +39,7 @@ from craft_application.errors import (
 logger = logging.getLogger(__name__)
 
 
-# locations to search for pro executable
-# TODO: which path will we support in long term?
+# check for pro client in these paths for backwards compatibility.
 PRO_CLIENT_PATHS = [
     Path("/usr/bin/ubuntu-advantage"),
     Path("/usr/bin/ua"),
@@ -54,14 +57,10 @@ class ValidatorOptions(Flag):
     """
 
     SUPPORT = auto()
-    _ATTACHED = auto()
-    _DETACHED = auto()
-    # TODO: remove AVAILABILITY if not needed. This flag is useful if we can manually control
-    # if a managed instance is pro or not. It allows us to check if the host has
-    # any pro services to support a pro build. In this case, if pro is not requested
-    # the managed instance would not be attached.
-    AVAILABILITY = _ATTACHED
-    ATTACHMENT = _ATTACHED | _DETACHED
+    ATTACHED = auto()
+    DETACHED = auto()
+    AVAILABILITY = ATTACHED
+    ATTACHMENT = ATTACHED | DETACHED
     ENABLEMENT = auto()
     DEFAULT = SUPPORT | ATTACHMENT | ENABLEMENT
 
@@ -70,12 +69,14 @@ class ProServices(set[str]):
     """Class for managing pro-services within the lifecycle."""
 
     # placeholder for empty sets
-    empty_placeholder = "none"
+    empty_placeholder = "None"
 
     supported_services: set[str] = {
         "esm-apps",
         "esm-infra",
         "fips",
+        # TODO: fips-preview is not part of the spec, but  # noqa: FIX002
+        # it should be added. Bring this up at regular sync.
         "fips-preview",
         "fips-updates",
     }
@@ -88,7 +89,18 @@ class ProServices(set[str]):
 
     def __str__(self) -> str:
         """Convert to string for display to user."""
-        return ", ".join(self) if self else self.empty_placeholder
+        services = ", ".join(self) if self else self.empty_placeholder
+        return f"<ProServices: {services}>"
+
+    @classmethod
+    def load_yaml(cls, f: TextIOWrapper) -> ProServices:
+        """Create a new ProServices instance from a yaml file."""
+        serialized_data = yaml.safe_load(f)
+        return cls(serialized_data)
+
+    def save_yaml(self, f: TextIOWrapper) -> None:
+        """Save the ProServices instance to a yaml file."""
+        yaml.safe_dump(set(self), f)
 
     @classmethod
     def from_csv(cls, services: str) -> ProServices:
@@ -196,14 +208,23 @@ class ProServices(set[str]):
             # Since we extend the set class, cast ourselves to bool to check if we empty. if we are not
             # empty, this implies we require pro services.
 
-            if self.is_pro_attached() != bool(self):
-                if ValidatorOptions._ATTACHED in options and self:  # type: ignore [reportPrivateUsage]
-                    # Ubuntu Pro is requested but not attached
-                    raise UbuntuProDetachedError
+            is_pro_attached = self.is_pro_attached()
 
-                if ValidatorOptions._DETACHED in options and not self:  # type: ignore [reportPrivateUsage]
-                    # Ubuntu Pro is not requested but attached
-                    raise UbuntuProAttachedError
+            if (
+                ValidatorOptions.ATTACHED in options
+                and bool(self)
+                and not is_pro_attached
+            ):
+                # Ubuntu Pro is requested but not attached
+                raise UbuntuProDetachedError
+
+            if (
+                ValidatorOptions.DETACHED in options
+                and not bool(self)
+                and is_pro_attached
+            ):
+                # Ubuntu Pro is not requested but attached
+                raise UbuntuProAttachedError
 
             # second, check that the set of enabled pro services in the environment matches
             # the services specified in this set
@@ -213,7 +234,6 @@ class ProServices(set[str]):
                 raise InvalidUbuntuProStatusError(self, available_services)
 
         except UbuntuProClientNotFoundError:
-
             # If The pro client was not found, we may be on a non Ubuntu
             # system, but if Pro services were requested, re-raise error
             if self and not self.pro_client_exists():

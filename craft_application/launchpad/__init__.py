@@ -21,7 +21,14 @@ This module is self-contained as it could be moved into its own package.
 from . import errors
 from .errors import LaunchpadError
 from .launchpad import Launchpad
-from .models import LaunchpadObject, RecipeType, Recipe, SnapRecipe, CharmRecipe
+from .models import (
+    LaunchpadObject,
+    RecipeType,
+    Recipe,
+    SnapRecipe,
+    CharmRecipe,
+    RockRecipe,
+)
 from .util import Architecture
 
 __all__ = [
@@ -34,4 +41,5 @@ __all__ = [
     "SnapRecipe",
     "CharmRecipe",
     "Architecture",
+    "RockRecipe",
 ]

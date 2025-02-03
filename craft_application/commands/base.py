@@ -43,7 +43,7 @@ class RunCallback(Protocol):
     def __call__(
         cmd: ExtensibleCommand,
         parsed_args: argparse.Namespace,
-        **kwargs: Any,  # noqa: ANN401
+        **kwargs: Any,
     ) -> int | None:
         """Call the prologue or epilogue. Takes the same parameters as run."""
 
@@ -184,14 +184,12 @@ class ExtensibleCommand(AppCommand):
             callback(self, parser)
 
     @abc.abstractmethod
-    def _run(
-        self: Self, parsed_args: argparse.Namespace, **kwargs: Any  # noqa: ANN401
-    ) -> int | None:
+    def _run(self: Self, parsed_args: argparse.Namespace, **kwargs: Any) -> int | None:
         """Run the real run method for an ExtensibleCommand."""
 
     @final
     def run(
-        self: Self, parsed_args: argparse.Namespace, **kwargs: Any  # noqa: ANN401
+        self: Self, parsed_args: argparse.Namespace, **kwargs: Any
     ) -> Optional[int]:  # noqa: UP007
         """Run any prologue callbacks, the main command, and any epilogue callbacks."""
         result = None

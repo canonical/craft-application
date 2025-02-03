@@ -84,7 +84,7 @@ class Launchpad:
         cache_dir: pathlib.Path | None = DEFAULT_CACHE_PATH,
         credentials_file: pathlib.Path | None = None,
         version: str = "devel",
-        **kwargs: Any,  # noqa: ANN401 (Intentionally duck-typed)
+        **kwargs: Any,
     ) -> Self:
         """Login to Launchpad."""
         if cache_dir:
@@ -125,6 +125,15 @@ class Launchpad:
         project: str,
     ) -> models.CharmRecipe: ...
 
+    @overload
+    def get_recipe(
+        self,
+        type_: Literal["rock", "ROCK", models.RecipeType.ROCK],
+        name: str,
+        owner: str | None,
+        project: str,
+    ) -> models.RockRecipe: ...
+
     def get_recipe(
         self,
         type_: models.RecipeType | str,
@@ -153,14 +162,15 @@ class Launchpad:
         if owner is None:
             owner = self.username
 
+        # Snaps don't need a project to create/get a recipe
         if type_ is models.RecipeType.SNAP:
             return models.SnapRecipe.get(self, name, owner)
-        if type_ is models.RecipeType.CHARM:
-            if not project:
-                raise ValueError("A charm recipe must be associated with a project.")
-            return models.CharmRecipe.get(self, name, owner, project)
 
-        raise TypeError(f"Unknown recipe type: {type_}")
+        # Other types do
+        recipe_class = models.get_recipe_class(type_)
+        if not project:
+            raise ValueError("A recipe must be associated with a project.")
+        return recipe_class.get(self, name, owner, project)
 
     def get_project(self, name: str) -> models.Project:
         """Get a project."""
@@ -229,16 +239,28 @@ class Launchpad:
         name: str,
         owner: str | None = None,
         project: str | models.Project | None = None,
+        information_type: models.InformationType | None = None,
     ) -> models.GitRepository:
         """Create a new git repository.
 
         :param name: The name of the repository.
         :param owner: (Optional) the username of the owner (defaults to oneself).
         :param project: (Optional) the project to which the repository will be attached.
+            Defines the information type of the repository if 'information_type' is not set.
+        :param information_type: (Optional) The information type of the repository
+            This overrides the project's information type. Defaults to public.
         """
+        kwargs: dict[str, Any] = {}
+        if information_type:
+            kwargs["information_type"] = information_type
+        elif isinstance(project, models.Project):
+            kwargs["information_type"] = project.information_type
+
         if isinstance(project, models.Project):
             project = project.name
+
         if owner is None:
             owner = self.username
 
-        return models.GitRepository.new(self, name, owner, project)
+        # repos default to public if information_type is not set
+        return models.GitRepository.new(self, name, owner, project, **kwargs)

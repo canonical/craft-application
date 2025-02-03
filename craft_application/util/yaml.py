@@ -121,7 +121,7 @@ def dump_yaml(
 def dump_yaml(
     data: Any,  # noqa: ANN401 # Any gets passed to pyyaml
     stream: None = None,
-    **kwargs: Any,  # noqa: ANN401 # Any gets passed to pyyaml
+    **kwargs: Any,  # Any gets passed to pyyaml
 ) -> str: ...  # pragma: no cover
 
 

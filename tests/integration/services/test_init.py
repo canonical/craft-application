@@ -22,10 +22,10 @@ import sys
 import textwrap
 
 import pytest
+
 from craft_application import errors
 from craft_application.models.project import Project
 from craft_application.services import InitService
-
 from tests.conftest import RepositoryDefinition
 
 # init operates in the current working directory
