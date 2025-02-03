@@ -671,8 +671,9 @@ class Application:
             # command runs in the outer instance
             craft_cli.emit.debug(f"Running {self.app.name} {command.name} on host")
             return_code = dispatcher.run() or os.EX_OK
-            state_path = util.get_managed_pack_state_path(self.app)
-            self._pack_state = PackState.from_yaml_file(state_path)
+            if self._enable_testing:
+                state_path = util.get_managed_pack_state_path(self.app)
+                self._pack_state = PackState.from_yaml_file(state_path)
         elif not self.is_managed():
             # command runs in inner instance, but this is the outer instance
             self.run_managed(platform, build_for)
