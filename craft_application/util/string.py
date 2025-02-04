@@ -51,10 +51,10 @@ def humanize_list(
     :param item_format: format string to use per item.
     :param sort: if true, sort the list.
     """
-    quoted_items = [item_format.format(item) for item in items]
+    if not items:
+        return ""
 
-    if not quoted_items:
-        return
+    quoted_items = [item_format.format(item) for item in items]
 
     if sort:
         quoted_items = sorted(quoted_items)
