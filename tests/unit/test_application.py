@@ -616,6 +616,8 @@ def test_run_managed_skip_configure_pro(mocker, app, fake_project, fake_build_pl
     mock_instance.install_pro_client = mocker.Mock()
     mock_instance.attach_pro_subscription = mocker.Mock()
     mock_instance.enable_pro_service = mocker.Mock()
+    # pretend to be a fresh instance w/o any services installed
+    mock_instance.pro_services = None
 
     mock_provider.instance.return_value.__enter__.return_value = mock_instance
     app.project = fake_project
