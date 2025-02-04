@@ -330,13 +330,8 @@ class InvalidUbuntuProStatusError(InvalidUbuntuProStateError):
         requested_services_set = requested_services or set()
         available_services_set = available_services or set()
 
-        enable_services_str = humanize_list(
-            requested_services_set - available_services_set, conjunction="and"
-        )
-        disable_services_str = humanize_list(
-            available_services_set - requested_services_set, conjunction="and"
-        )
-
+        enable_services_str = str(requested_services_set - available_services_set)
+        disable_services_str = str(available_services_set - requested_services_set)
         message = "Incorrect Ubuntu Pro Services were enabled."
 
         if "container" in os.environ:
