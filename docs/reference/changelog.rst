@@ -4,6 +4,24 @@
 Changelog
 *********
 
+4.4.1 (2025-Feb-04)
+-------------------
+
+Application
+===========
+
+- Fix an issue with processing fetch-service output.
+- The fetch-service integration now assumes that the fetch-service snap is
+  tracking the ``latest/candidate`` channel.
+
+Remote build
+============
+
+- Fix a bug where repositories and recipes for private Launchpad projects
+  would be public while the build was in progress.
+
+For a complete list of commits, check out the `4.4.1`_ release on GitHub.
+
 4.4.0 (2024-Nov-08)
 -------------------
 
@@ -383,3 +401,4 @@ For a complete list of commits, check out the `2.7.0`_ release on GitHub.
 .. _4.2.7: https://github.com/canonical/craft-application/releases/tag/4.2.7
 .. _4.3.0: https://github.com/canonical/craft-application/releases/tag/4.3.0
 .. _4.4.0: https://github.com/canonical/craft-application/releases/tag/4.4.0
+.. _4.4.1: https://github.com/canonical/craft-application/releases/tag/4.4.1
