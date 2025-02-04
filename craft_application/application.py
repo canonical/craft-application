@@ -645,7 +645,9 @@ class Application:
             self._enable_fetch_service = True
             self._fetch_service_policy = fetch_service_policy
 
-    def get_arg_or_config(self, parsed_args: argparse.Namespace, item: str) -> Any:  # noqa: ANN401
+    def get_arg_or_config(
+        self, parsed_args: argparse.Namespace, item: str
+    ) -> Any:  # noqa: ANN401
         """Get a configuration option that could be overridden by a command argument.
 
         :param parsed_args: The argparse Namespace to check.
