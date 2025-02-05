@@ -18,9 +18,10 @@
 from unittest import mock
 
 import pytest
-from craft_application.launchpad import models, util
 from hypothesis import given, strategies
 from lazr.restfulclient.resource import Entry
+
+from craft_application.launchpad import models, util
 
 
 @given(

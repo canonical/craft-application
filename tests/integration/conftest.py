@@ -24,6 +24,8 @@ from unittest import mock
 
 import craft_platforms
 import pytest
+from craft_providers import bases, lxd, multipass
+
 from craft_application import launchpad
 from craft_application.services import provider, remotebuild
 from craft_providers import lxd, multipass

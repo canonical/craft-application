@@ -24,6 +24,9 @@ from contextlib import nullcontext
 import craft_parts
 import craft_platforms
 import pytest
+from craft_cli import emit
+from craft_parts import Features
+
 import pytest_mock
 from craft_application import errors, models
 from craft_application.application import AppMetadata
@@ -52,8 +55,6 @@ from craft_application.errors import (
     UbuntuProDetachedError,
 )
 from craft_application.util import ProServices
-from craft_cli import emit
-from craft_parts import Features
 
 # disable black reformat for improve readability on long parameterisations
 # fmt: off
@@ -92,7 +93,7 @@ PRO_SERVICE_CONFIGS = [
     (True,                  ["esm-apps"],                [],                                UbuntuProAttachedError),
     (False,                 [],                          ["esm-apps"],                      UbuntuProDetachedError),
     (True,                  ["esm-apps", "fips-updates"],["fips-updates"],                  InvalidUbuntuProStatusError),
-    (True,                  ["esm-apps",],               ["fips-updates", "fips-updates"],  InvalidUbuntuProStatusError),
+    (True,                  ["esm-apps"],               ["fips-updates", "fips-updates"],  InvalidUbuntuProStatusError),
     (True,                  ["esm-apps"],                ["esm-apps", "invalid-service"],   InvalidUbuntuProServiceError),
 ]
 

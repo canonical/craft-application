@@ -20,7 +20,6 @@ from unittest import mock
 
 import pytest
 import pytest_check
-from craft_application import AppMetadata, services
 from craft_cli import emit
 
 if TYPE_CHECKING:

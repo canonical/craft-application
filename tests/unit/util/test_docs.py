@@ -16,6 +16,7 @@
 """Tests for documentation functions."""
 
 import pytest
+
 from craft_application.util import docs
 
 

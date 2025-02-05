@@ -20,7 +20,7 @@ import datetime
 project = "Craft Application"
 author = "Canonical"
 
-copyright = "2023-%s, %s" % (datetime.date.today().year, author)
+copyright = f"2023-{datetime.date.today().year}, {author}"  # noqa: A001
 
 # region Configuration for canonical-sphinx
 ogp_site_url = "https://canonical-craft-application.readthedocs-hosted.com/"

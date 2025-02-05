@@ -16,6 +16,7 @@
 """Tests for internal str autilities."""
 
 import pytest
+
 from craft_application.util import string
 
 

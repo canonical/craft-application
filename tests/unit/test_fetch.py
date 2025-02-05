@@ -24,9 +24,10 @@ from unittest.mock import call
 
 import pytest
 import responses
-from craft_application import errors, fetch
 from craft_providers.lxd import LXDInstance
 from responses import matchers
+
+from craft_application import errors, fetch
 
 CONTROL = fetch._DEFAULT_CONFIG.control
 PROXY = fetch._DEFAULT_CONFIG.proxy

@@ -23,14 +23,15 @@ import subprocess
 from collections.abc import Iterator
 from unittest import mock
 
-import craft_application
 import craft_cli
 import pytest
 import pytest_subprocess
 import snaphelpers
+from hypothesis import given, strategies
+
+import craft_application
 from craft_application import launchpad
 from craft_application.services import config
-from hypothesis import given, strategies
 
 CRAFT_APPLICATION_TEST_ENTRY_VALUES = [
     *(

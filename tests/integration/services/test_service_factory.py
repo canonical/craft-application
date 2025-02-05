@@ -16,6 +16,7 @@
 """Integration tests for ServiceFactory."""
 
 import pytest
+
 from craft_application import services
 
 

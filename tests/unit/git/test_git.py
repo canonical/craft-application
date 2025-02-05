@@ -46,7 +46,6 @@ from craft_application.remote import (
     RemoteBuildInvalidGitRepoError,
     check_git_repo_for_remote_build,
 )
-
 from tests.conftest import RepositoryDefinition
 
 

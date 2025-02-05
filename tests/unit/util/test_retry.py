@@ -19,6 +19,7 @@ import time
 from unittest.mock import call
 
 import pytest
+
 from craft_application.util import retry
 
 

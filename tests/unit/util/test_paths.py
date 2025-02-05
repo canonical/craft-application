@@ -19,9 +19,10 @@ import pathlib
 import shutil
 
 import pytest
+from hypothesis import given, provisional
+
 from craft_application import util
 from craft_application.util.paths import get_filename_from_url_path
-from hypothesis import given, provisional
 
 
 def test_get_managed_logpath(app_metadata):
