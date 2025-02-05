@@ -57,6 +57,15 @@ class RemoteBuild(ExtensibleCommand):
     overview = OVERVIEW
     always_load_project = True
 
+    def _pre_build(self, parsed_args: argparse.Namespace) -> None:
+        """Run steps to take before building, e.g. validations."""
+
+    def _get_build_args(
+        self, parsed_args: argparse.Namespace  # noqa: ARG002 (unused parameter)
+    ) -> dict[str, Any]:
+        """Get arguments to pass to the builder."""
+        return {}
+
     @override
     def _fill_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
@@ -105,6 +114,9 @@ class RemoteBuild(ExtensibleCommand):
             emit.message("Cannot proceed without accepting a public upload.")
             return 77  # permission denied from sysexits.h
 
+        self._pre_build(parsed_args)
+        build_args = self._get_build_args(parsed_args)
+
         builder = self._services.remote_build
         project = cast(models.Project, self._services.project)
         config = cast(dict[str, Any], self.config)
@@ -127,7 +139,7 @@ class RemoteBuild(ExtensibleCommand):
             emit.progress(
                 "Starting new build. It may take a while to upload large projects."
             )
-            builds = builder.start_builds(project_dir)
+            builds = builder.start_builds(project_dir, **build_args)
 
         try:
             returncode = self._monitor_and_complete(builds=builds)
