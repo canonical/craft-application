@@ -19,6 +19,7 @@ import pathlib
 
 import pytest
 import pytest_check
+
 from craft_application import errors
 from craft_application.util import yaml
 

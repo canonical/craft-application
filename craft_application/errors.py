@@ -17,6 +17,7 @@
 
 All errors inherit from craft_cli.CraftError.
 """
+
 from __future__ import annotations
 
 import os
@@ -263,7 +264,7 @@ class UbuntuProApiError(UbuntuProError):
 class InvalidUbuntuProStateError(UbuntuProError):
     """Base class for exceptions raised during Ubuntu Pro validation."""
 
-    # TODO: some of the resolution strings may not sense in a managed
+    # TODO: some of the resolution strings may not sense in a managed  # noqa: FIX002
     # environment. What is the best way to get the is_managed method here?
 
 
@@ -275,7 +276,6 @@ class UbuntuProClientNotFoundError(UbuntuProApiError):
     """Raised when Ubuntu Pro client was not found on the system."""
 
     def __init__(self, path: str) -> None:
-
         message = f'The Ubuntu Pro client was not found on the system at "{path}"'
 
         super().__init__(message=message)
@@ -285,7 +285,6 @@ class UbuntuProDetachedError(InvalidUbuntuProStateError):
     """Raised when Ubuntu Pro is not attached, but Pro services were requested."""
 
     def __init__(self) -> None:
-
         message = "Ubuntu Pro is requested, but was found detached."
         resolution = 'Attach Ubuntu Pro to continue. See "pro" command for details.'
 
@@ -296,7 +295,6 @@ class UbuntuProAttachedError(InvalidUbuntuProStateError):
     """Raised when Ubuntu Pro is attached, but Pro services were not requested."""
 
     def __init__(self) -> None:
-
         message = "Ubuntu Pro is not requested, but was found attached."
         resolution = 'Detach Ubuntu Pro to continue. See "pro" command for details.'
 
@@ -306,12 +304,9 @@ class UbuntuProAttachedError(InvalidUbuntuProStateError):
 class InvalidUbuntuProServiceError(InvalidUbuntuProStateError):
     """Raised when the requested Ubuntu Pro service is not supported or invalid."""
 
-    # TODO: Should there be separate exceptions for services that not supported vs. invalid?
-    # if so where is the list of supported service names?
-
-    def __init__(self, invalid_services: set[str]) -> None:
-
-        invalid_services_str = "".join(invalid_services)
+    def __init__(self, invalid_services: set[str] | None) -> None:
+        invalid_services_set = invalid_services or set()
+        invalid_services_str = "".join(invalid_services_set)
 
         message = "Invalid Ubuntu Pro Services were requested."
         resolution = (
@@ -328,18 +323,28 @@ class InvalidUbuntuProStatusError(InvalidUbuntuProStateError):
     """Raised when the incorrect set of Pro Services are enabled."""
 
     def __init__(
-        self, requested_services: set[str], available_services: set[str]
+        self,
+        requested_services: set[str] | None,
+        available_services: set[str] | None,
     ) -> None:
+        requested_services_set = requested_services or set()
+        available_services_set = available_services or set()
 
-        enable_services_str = " ".join(requested_services - available_services)
-        disable_services_str = " ".join(available_services - requested_services)
-
+        enable_services_str = str(requested_services_set - available_services_set)
+        disable_services_str = str(available_services_set - requested_services_set)
         message = "Incorrect Ubuntu Pro Services were enabled."
-        resolution = (
-            "Please enable or disable the following services.\n"
-            f"Enable: {enable_services_str}\n"
-            f"Disable: {disable_services_str}\n"
-            'See "pro" command for details.'
-        )
+
+        if "container" in os.environ:
+            resolution = (
+                "Please enable or disable the following services.\n"
+                f"Enable: {enable_services_str}\n"
+                f"Disable: {disable_services_str}\n"
+                'See "pro" command for details.'
+            )
+        else:
+            app_name = os.environ.get("SNAP_INSTANCE_NAME", "*craft")
+            resolution = (
+                f'Please run "{app_name} clean" to reset Ubuntu Pro Services.\n'
+            )
 
         super().__init__(message=message, resolution=resolution)

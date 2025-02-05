@@ -17,6 +17,7 @@
 import argparse
 
 import pytest
+
 from craft_application.commands import InitCommand
 from craft_application.commands.other import VersionCommand, get_other_command_group
 

@@ -31,7 +31,8 @@ import enum
 import lazr.restfulclient.errors  # type: ignore[import-untyped]
 from typing_extensions import Self
 
-from .. import errors, util
+from craft_application.launchpad import errors, util
+
 from . import distro
 from .base import LaunchpadObject
 
@@ -44,6 +45,7 @@ class BuildTypes(enum.Enum):
 
     SNAP_BUILD = "snap_build"
     CHARM_BUILD = "charm_recipe_build"
+    ROCK_BUILD = "rock_recipe_build"
 
 
 class BuildState(enum.Enum):

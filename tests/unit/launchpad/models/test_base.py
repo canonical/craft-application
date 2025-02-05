@@ -21,9 +21,10 @@ from typing import Any
 from unittest import mock
 
 import pytest
-from craft_application.launchpad import Launchpad, LaunchpadObject
 from lazr.restfulclient.resource import Entry
 from typing_extensions import Self
+
+from craft_application.launchpad import Launchpad, LaunchpadObject
 
 
 class Type(enum.Enum):

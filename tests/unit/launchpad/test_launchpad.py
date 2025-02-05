@@ -24,13 +24,22 @@ import launchpadlib.launchpad
 import launchpadlib.uris
 import lazr.restfulclient.errors
 import pytest
+from lazr.restfulclient.resource import Entry
+
 from craft_application import launchpad
 from craft_application.launchpad import models
-from lazr.restfulclient.resource import Entry
 
 
 def flatten_enum(e: type[enum.Enum]) -> list:
     return [*e, *(val.name for val in e), *(val.value for val in e)]
+
+
+@pytest.fixture
+def mock_project():
+    _mock_project = mock.Mock(spec=models.Project)
+    _mock_project.name = "test-name"
+    _mock_project.information_type = models.InformationType.PUBLIC
+    return _mock_project
 
 
 @pytest.mark.parametrize(
@@ -158,6 +167,7 @@ def test_repr(fake_launchpad):
 def test_get_recipe_finds_type(monkeypatch, fake_launchpad, type_):
     monkeypatch.setattr(models.SnapRecipe, "get", mock.Mock())
     monkeypatch.setattr(models.CharmRecipe, "get", mock.Mock())
+    monkeypatch.setattr(models.RockRecipe, "get", mock.Mock())
 
     fake_launchpad.get_recipe(type_, "my_recipe", "test_user", "my_project")
 
@@ -179,6 +189,86 @@ def test_get_recipe_snap(fake_launchpad, type_, owner):
 
     mock_get.assert_called_once_with(
         fake_launchpad, "my_recipe", owner or fake_launchpad.username
+    )
+
+
+@pytest.mark.parametrize("information_type", list(models.InformationType))
+@pytest.mark.parametrize("project", [None, "test-project", mock_project])
+@pytest.mark.parametrize(
+    ("recipe", "recipe_name"),
+    [
+        (models.SnapRecipe, "snaps"),
+        (models.CharmRecipe, "charm_recipes"),
+        (models.RockRecipe, "rock_recipes"),
+    ],
+)
+def test_recipe_new_info_type(information_type, project, recipe, recipe_name):
+    """Pass the information_type to the recipe."""
+    mock_launchpad = mock.Mock(spec=launchpad.Launchpad)
+    mock_launchpad.lp = mock.Mock(spec=launchpadlib.launchpad.Launchpad)
+    mock_recipe = mock.Mock()
+
+    mock_entry = mock.Mock(spec=Entry)
+    mock_entry.resource_type_link = "http://blah/#snap"
+    mock_entry.name = "test-snap"
+
+    mock_recipe.new = mock.Mock(return_value=mock_entry)
+    setattr(mock_launchpad.lp, f"{recipe_name}", mock_recipe)
+
+    actual_recipe = recipe.new(
+        mock_launchpad,
+        "my_recipe",
+        "test_user",
+        git_ref="my_ref",
+        # `information_type` overrides the project's information_type
+        project=project,
+        information_type=information_type,
+    )
+
+    assert isinstance(actual_recipe, recipe)
+    assert (
+        mock_recipe.new.mock_calls[0].kwargs["information_type"]
+        == information_type.value
+    )
+
+
+@pytest.mark.parametrize("information_type", list(models.InformationType))
+@pytest.mark.parametrize(
+    ("recipe", "recipe_name"),
+    [
+        (models.SnapRecipe, "snaps"),
+        (models.CharmRecipe, "charm_recipes"),
+        (models.RockRecipe, "rock_recipes"),
+    ],
+)
+def test_recipe_new_info_type_in_project(
+    mock_project, information_type, recipe, recipe_name
+):
+    """Use the info type from the project."""
+    mock_launchpad = mock.Mock(spec=launchpad.Launchpad)
+    mock_launchpad.lp = mock.Mock(spec=launchpadlib.launchpad.Launchpad)
+    mock_recipe = mock.Mock()
+
+    mock_entry = mock.Mock(spec=Entry)
+    mock_entry.resource_type_link = "http://blah/#snap"
+    mock_entry.name = "test-snap"
+
+    mock_recipe.new = mock.Mock(return_value=mock_entry)
+    setattr(mock_launchpad.lp, f"{recipe_name}", mock_recipe)
+    mock_project.information_type = information_type
+
+    actual_recipe = recipe.new(
+        mock_launchpad,
+        "my_recipe",
+        "test_user",
+        project=mock_project,
+        git_ref="my_ref",
+    )
+
+    assert isinstance(actual_recipe, recipe)
+    assert (
+        mock_recipe.new.mock_calls[0].kwargs["information_type"]
+        == information_type.value
     )
 
 
@@ -206,7 +296,7 @@ def test_recipe_snap_new_retry(emitter, mocker):
     )
 
     assert isinstance(recipe, models.SnapRecipe)
-    assert mock_launchpad.lp.snaps.new.call_count == 2  # noqa: PLR2004
+    assert mock_launchpad.lp.snaps.new.call_count == 2
 
     emitter.assert_debug("Trying to create snap recipe 'my_recipe' (attempt 1/6)")
     emitter.assert_debug("Trying to create snap recipe 'my_recipe' (attempt 2/6)")
@@ -226,9 +316,7 @@ def test_get_recipe_charm(fake_launchpad, type_):
 
 
 def test_get_recipe_charm_has_project(fake_launchpad):
-    with pytest.raises(
-        ValueError, match="A charm recipe must be associated with a project."
-    ):
+    with pytest.raises(ValueError, match="A recipe must be associated with a project."):
         fake_launchpad.get_recipe(models.RecipeType.CHARM, "my_recipe")
 
 
@@ -256,7 +344,7 @@ def test_recipe_charm_new_retry(emitter, mocker):
     )
 
     assert isinstance(recipe, models.CharmRecipe)
-    assert mock_launchpad.lp.charm_recipes.new.call_count == 2  # noqa: PLR2004
+    assert mock_launchpad.lp.charm_recipes.new.call_count == 2
 
     emitter.assert_debug("Trying to create charm recipe 'my_recipe' (attempt 1/6)")
     emitter.assert_debug("Trying to create charm recipe 'my_recipe' (attempt 2/6)")

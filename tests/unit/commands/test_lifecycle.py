@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU Lesser General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Tests for lifecycle commands."""
+
 import argparse
 import pathlib
 import subprocess
@@ -21,6 +22,9 @@ from contextlib import nullcontext
 
 import craft_parts
 import pytest
+from craft_cli import emit
+from craft_parts import Features
+
 from craft_application.commands.lifecycle import (
     BuildCommand,
     CleanCommand,
@@ -40,8 +44,6 @@ from craft_application.errors import (
     UbuntuProDetachedError,
 )
 from craft_application.util import ProServices
-from craft_cli import emit
-from craft_parts import Features
 
 # disable black reformat for improve readability on long parameterisations
 # fmt: off
@@ -80,7 +82,7 @@ PRO_SERVICE_CONFIGS = [
     (True,                  ["esm-apps"],                [],                                UbuntuProAttachedError),
     (False,                 [],                          ["esm-apps"],                      UbuntuProDetachedError),
     (True,                  ["esm-apps", "fips-updates"],["fips-updates"],                  InvalidUbuntuProStatusError),
-    (True,                  ["esm-apps",],               ["fips-updates", "fips-updates"],  InvalidUbuntuProStatusError),
+    (True,                  ["esm-apps"],               ["fips-updates", "fips-updates"],  InvalidUbuntuProStatusError),
     (True,                  ["esm-apps"],                ["esm-apps", "invalid-service"],   InvalidUbuntuProServiceError),
 ]
 
@@ -108,7 +110,7 @@ def get_fake_command_class(parent_cls, managed):
         help_msg = "help"
         overview = "overview"
 
-        def run_managed(self, parsed_args: argparse.Namespace) -> bool:  # noqa: ARG002
+        def run_managed(self, parsed_args: argparse.Namespace) -> bool:
             return self._run_managed
 
     return FakeCommand
@@ -125,7 +127,6 @@ def test_validate_pro_services(
     pro_services_args,
     expected_exception,
 ):
-
     # configure api state
     set_is_attached, set_enabled_service = mock_pro_api_call
     set_is_attached(is_attached)

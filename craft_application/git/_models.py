@@ -14,6 +14,7 @@
 
 """Git repository models."""
 
+from dataclasses import dataclass
 from enum import Enum
 
 from ._consts import COMMIT_SHORT_SHA_LEN
@@ -30,3 +31,16 @@ class GitType(Enum):
     INVALID = 0
     NORMAL = 1
     SHALLOW = 2
+
+
+@dataclass
+class Commit:
+    """Model representing a commit."""
+
+    sha: str
+    message: str
+
+    @property
+    def short_sha(self) -> str:
+        """Get short commit sha."""
+        return short_commit_sha(self.sha)

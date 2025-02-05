@@ -31,14 +31,19 @@ from textwrap import dedent
 from typing import Any
 from unittest import mock
 
-import craft_application
-import craft_application.errors
 import craft_cli
 import craft_parts
 import craft_providers
 import pydantic
 import pytest
 import pytest_check
+from craft_cli import emit
+from craft_parts.plugins.plugins import PluginType
+from craft_providers import bases, lxd
+from overrides import override
+
+import craft_application
+import craft_application.errors
 from craft_application import (
     ProviderService,
     application,
@@ -58,11 +63,6 @@ from craft_application.models import BuildInfo
 from craft_application.util import (
     get_host_architecture,  # pyright: ignore[reportGeneralTypeIssues]
 )
-from craft_cli import emit
-from craft_parts.plugins.plugins import PluginType
-from craft_providers import bases, lxd
-from overrides import override
-
 from tests.conftest import FakeApplication
 
 EMPTY_COMMAND_GROUP = craft_cli.CommandGroup("FakeCommands", [])
@@ -515,7 +515,7 @@ def test_merge_default_commands_only(app):
 )
 def test_log_path(monkeypatch, app, provider_managed, expected):
     monkeypatch.setattr(
-        app.services.ProviderClass, "is_managed", lambda: provider_managed
+        app.services.get_class("provider"), "is_managed", lambda: provider_managed
     )
 
     actual = app.log_path
@@ -565,11 +565,13 @@ def test_run_managed_configure_pro(mocker, app, fake_project, fake_build_plan):
     # provide spec to pass type check for pro support
     mock_instance = mocker.MagicMock(spec=lxd.LXDInstance)
 
-    # TODO: these methods are currently in review, https://github.com/canonical/craft-providers/pull/664/files
+    # TODO: these methods are currently in review, https://github.com/canonical/craft-providers/pull/664/files  # noqa: FIX002
     # Remove when craft-providers with pro support in lxd is merged to main.
     mock_instance.install_pro_client = mocker.Mock()
     mock_instance.attach_pro_subscription = mocker.Mock()
     mock_instance.enable_pro_service = mocker.Mock()
+    # pretend to be a fresh instance w/o any services installed
+    mock_instance.pro_services = None
 
     mock_provider.instance.return_value.__enter__.return_value = mock_instance
     app.project = fake_project
@@ -609,11 +611,13 @@ def test_run_managed_skip_configure_pro(mocker, app, fake_project, fake_build_pl
     # provide spec to pass type check for pro support
     mock_instance = mocker.MagicMock(spec=lxd.LXDInstance)
 
-    # TODO: Remove when these mocks when methods are present in main.
+    # TODO: Remove when these mocks when methods are present in main. # noqa: FIX002
     # see TODO in test_run_managed_configure_pro for details.
     mock_instance.install_pro_client = mocker.Mock()
     mock_instance.attach_pro_subscription = mocker.Mock()
     mock_instance.enable_pro_service = mocker.Mock()
+    # pretend to be a fresh instance w/o any services installed
+    mock_instance.pro_services = None
 
     mock_provider.instance.return_value.__enter__.return_value = mock_instance
     app.project = fake_project
@@ -629,7 +633,28 @@ def test_run_managed_skip_configure_pro(mocker, app, fake_project, fake_build_pl
 
 
 @pytest.mark.enable_features("build_secrets")
-def test_run_managed_secrets(app, fake_project, fake_build_plan):
+@pytest.mark.parametrize(
+    "fake_encoded_environment",
+    [
+        pytest.param({}, id="empty"),
+        pytest.param(
+            {
+                "CRAFT_TEST": "banana",
+            },
+            id="fake-env",
+        ),
+        pytest.param(
+            {
+                "CRAFT_TEST_FRUIT": "banana",
+                "CRAFT_TEST_VEGETABLE": "cucumber",
+            },
+            id="multiple-entries-env",
+        ),
+    ],
+)
+def test_run_managed_secrets(
+    app, fake_project, fake_build_plan, fake_encoded_environment: dict[str, str], check
+):
     mock_provider = mock.MagicMock(spec_set=services.ProviderService)
     instance = mock_provider.instance.return_value.__enter__.return_value
     mock_execute = instance.execute_run
@@ -637,9 +662,6 @@ def test_run_managed_secrets(app, fake_project, fake_build_plan):
     app.project = fake_project
     app._build_plan = fake_build_plan
 
-    fake_encoded_environment = {
-        "CRAFT_TEST": "banana",
-    }
     app._secrets = secrets.BuildSecrets(
         environment=fake_encoded_environment,
         secret_strings=set(),
@@ -651,7 +673,13 @@ def test_run_managed_secrets(app, fake_project, fake_build_plan):
     assert len(mock_execute.mock_calls) == 1
     call = mock_execute.mock_calls[0]
     execute_env = call.kwargs["env"]
-    assert execute_env["CRAFT_TEST"] == "banana"
+    for secret_key, secret_val in fake_encoded_environment.items():
+        with check:
+            # value is passed to the underlying provider
+            assert execute_env[secret_key] == secret_val
+            assert secret_key in craft_cli.emit._log_filepath.read_text()
+            # value is not leaking in logs
+            assert secret_val not in craft_cli.emit._log_filepath.read_text()
 
 
 def test_run_managed_multiple(app, fake_project):
@@ -772,7 +800,9 @@ def test_get_arg_or_config(monkeypatch, app, parsed_args, environ, item, expecte
 def test_get_dispatcher_error(
     monkeypatch, check, capsys, app, mock_dispatcher, managed, error, exit_code, message
 ):
-    monkeypatch.setattr(app.services.ProviderClass, "is_managed", lambda: managed)
+    monkeypatch.setattr(
+        app.services.get_class("provider"), "is_managed", lambda: managed
+    )
     mock_dispatcher.pre_parse_args.side_effect = error
 
     with pytest.raises(SystemExit) as exc_info:
@@ -812,7 +842,7 @@ def test_gets_project(
     tmp_path,
     app_metadata,
     fake_services,
-    mock_pro_api_call,  # noqa: ARG001
+    mock_pro_api_call,
 ):
     project_file = tmp_path / "testcraft.yaml"
     project_file.write_text(BASIC_PROJECT_YAML)
@@ -835,7 +865,7 @@ def test_fails_without_project(
     tmp_path,
     app_metadata,
     fake_services,
-    mock_pro_api_call,  # noqa: ARG001
+    mock_pro_api_call,
 ):
     monkeypatch.setattr(sys, "argv", ["testcraft", "prime"])
 
@@ -844,7 +874,7 @@ def test_fails_without_project(
 
     fake_services.project = None
 
-    assert app.run() == 66  # noqa: PLR2004
+    assert app.run() == 66
 
     assert "Project file 'testcraft.yaml' not found in" in capsys.readouterr().err
 
@@ -947,7 +977,7 @@ def test_run_success_unmanaged(
     fake_project,
     return_code,
     load_project,
-    mock_pro_api_call,  # noqa: ARG001
+    mock_pro_api_call,
 ):
     class UnmanagedCommand(commands.AppCommand):
         name = "pass"
@@ -955,7 +985,7 @@ def test_run_success_unmanaged(
         overview = "Return without doing anything"
         always_load_project = load_project
 
-        def run(self, parsed_args: argparse.Namespace):  # noqa: ARG002
+        def run(self, parsed_args: argparse.Namespace):
             return return_code
 
     monkeypatch.setattr(sys, "argv", ["testcraft", "pass"])
@@ -975,7 +1005,7 @@ def test_run_success_managed(
     app,
     fake_project,
     mocker,
-    mock_pro_api_call,  # noqa: ARG001
+    mock_pro_api_call,
 ):
     mocker.patch.object(app, "get_project", return_value=fake_project)
     app.run_managed = mock.Mock()
@@ -991,7 +1021,7 @@ def test_run_success_managed_with_arch(
     app,
     fake_project,
     mocker,
-    mock_pro_api_call,  # noqa: ARG001
+    mock_pro_api_call,
 ):
     mocker.patch.object(app, "get_project", return_value=fake_project)
     app.run_managed = mock.Mock()
@@ -1008,7 +1038,7 @@ def test_run_success_managed_with_platform(
     app,
     fake_project,
     mocker,
-    mock_pro_api_call,  # noqa: ARG001
+    mock_pro_api_call,
 ):
     mocker.patch.object(app, "get_project", return_value=fake_project)
     app.run_managed = mock.Mock()
@@ -1044,7 +1074,7 @@ def test_run_passes_platforms(
     mocker,
     params,
     expected_call,
-    mock_pro_api_call,  # noqa: ARG001
+    mock_pro_api_call,
 ):
     mocker.patch.object(app, "get_project", return_value=fake_project)
     app.run_managed = mock.Mock(return_value=False)
@@ -1064,7 +1094,7 @@ def test_run_success_managed_inside_managed(
     mock_dispatcher,
     return_code,
     mocker,
-    mock_pro_api_call,  # noqa: ARG001
+    mock_pro_api_call,
 ):
     mocker.patch.object(app, "get_project", return_value=fake_project)
     mocker.patch.object(
@@ -1807,8 +1837,8 @@ def grammar_build_plan(mocker):
 @pytest.fixture
 def grammar_app_mini(
     tmp_path,
-    grammar_project_mini,  # noqa: ARG001
-    grammar_build_plan,  # noqa: ARG001
+    grammar_project_mini,
+    grammar_build_plan,
     app_metadata,
     fake_services,
 ):
@@ -1821,8 +1851,8 @@ def grammar_app_mini(
 @pytest.fixture
 def non_grammar_app_full(
     tmp_path,
-    non_grammar_project_full,  # noqa: ARG001
-    non_grammar_build_plan,  # noqa: ARG001
+    non_grammar_project_full,
+    non_grammar_build_plan,
     app_metadata,
     fake_services,
 ):
@@ -1835,8 +1865,8 @@ def non_grammar_app_full(
 @pytest.fixture
 def grammar_app_full(
     tmp_path,
-    grammar_project_full,  # noqa: ARG001
-    grammar_build_plan,  # noqa: ARG001
+    grammar_project_full,
+    grammar_build_plan,
     app_metadata,
     fake_services,
 ):
@@ -1940,8 +1970,8 @@ class FakeApplicationWithYamlTransform(FakeApplication):
         self,
         yaml_data: dict[str, Any],
         *,
-        build_on: str,  # noqa: ARG002 (Unused method argument)
-        build_for: str | None,  # noqa: ARG002 (Unused method argument)
+        build_on: str,
+        build_for: str | None,
     ) -> dict[str, Any]:
         # do not modify the dict passed in
         new_yaml_data = copy.deepcopy(yaml_data)
@@ -2317,13 +2347,11 @@ def test_clean_platform(monkeypatch, tmp_path, app_metadata, fake_services, mock
 
 
 class AppConfigCommand(AppCommand):
-
     name: str = "app-config"
     help_msg: str = "Help text"
     overview: str = "Overview"
 
     def fill_parser(self, parser: argparse.ArgumentParser) -> None:
-
         name = self._app.name
         parser.add_argument(
             "app-name",
@@ -2388,7 +2416,7 @@ def test_doc_url_in_command_help(monkeypatch, capsys, app):
     [
         (False,             False,         1,               None),
         (True,              True,          1,               None),
-        (True,              False,         1,               util.ValidatorOptions.ATTACHMENT | util.ValidatorOptions.SUPPORT,),
+        (True,              False,         1,               util.ValidatorOptions.AVAILABILITY | util.ValidatorOptions.SUPPORT),
         (False,             True,          0,               None),
     ],
 )

@@ -23,11 +23,12 @@ from unittest import mock
 
 import craft_providers
 import pytest
+from craft_providers import bases, lxd, multipass
+from craft_providers.actions.snap_installer import Snap
+
 from craft_application import errors, models, util
 from craft_application.services import provider
 from craft_application.util import platforms, snap_config
-from craft_providers import bases, lxd, multipass
-from craft_providers.actions.snap_installer import Snap
 
 
 @pytest.fixture
@@ -36,7 +37,7 @@ def mock_provider(monkeypatch, provider_service):
     monkeypatch.setattr(
         provider_service,
         "get_provider",
-        lambda name: mocked_provider,  # noqa: ARG005 (unused argument)
+        lambda name: mocked_provider,
     )
 
     return mocked_provider
@@ -172,6 +173,9 @@ def test_install_snap(
 ):
     monkeypatch.delenv("SNAP", raising=False)
     monkeypatch.delenv("CRAFT_SNAP_CHANNEL", raising=False)
+    monkeypatch.delenv("SNAP_INSTANCE_NAME", raising=False)
+    monkeypatch.delenv("SNAP_NAME", raising=False)
+    monkeypatch.delenv("CRAFT_SNAP_CHANNEL", raising=False)
     for name, value in environment.items():
         monkeypatch.setenv(name, value)
     service = provider.ProviderService(
@@ -235,6 +239,29 @@ def test_get_lxd_provider(monkeypatch, provider_service, lxd_remote, check):
         mock_provider.assert_called_once_with(
             lxd_project="testcraft", lxd_remote=lxd_remote
         )
+
+
+@pytest.mark.parametrize(
+    ("platform", "platform_str"),
+    [
+        pytest.param("test-platform", "test-platform", id="simple"),
+        pytest.param(
+            "ubuntu@24.04:amd64", "ubuntu-24.04-amd64", id="special-characters"
+        ),
+    ],
+)
+def test_get_instance_name(platform, platform_str, new_dir, provider_service):
+    build_info = models.BuildInfo(
+        platform, "riscv64", "riscv64", bases.BaseName("ubuntu", "24.04")
+    )
+    inode_number = str(new_dir.stat().st_ino)
+    provider_service._build_plan = [build_info]
+    expected_name = f"testcraft-full-project-{platform_str}-{inode_number}"
+
+    assert (
+        provider_service._get_instance_name(work_dir=new_dir, build_info=build_info)
+        == expected_name
+    )
 
 
 class TestGetProvider:
@@ -488,7 +515,7 @@ def test_instance_clean_existing(
 
     if clean_existing:
         work_dir_inode = tmp_path.stat().st_ino
-        expected_name = f"testcraft-full-project-on-{arch}-for-{arch}-{work_dir_inode}"
+        expected_name = f"testcraft-full-project-{build_info.platform}-{work_dir_inode}"
         mock_provider.clean_project_environments.assert_called_once_with(
             instance_name=expected_name
         )
@@ -529,7 +556,7 @@ def test_load_bashrc_missing(
     monkeypatch.setattr(
         provider_service,
         "get_provider",
-        lambda name: mock_provider,  # noqa: ARG005 (unused argument)
+        lambda name: mock_provider,
     )
     arch = util.get_host_architecture()
     build_info = models.BuildInfo("foo", arch, arch, base_name)
@@ -557,7 +584,7 @@ def setup_fetch_logs_provider(monkeypatch, provider_service, tmp_path):
         monkeypatch.setattr(
             provider_service,
             "get_provider",
-            lambda name: mock_provider,  # noqa: ARG005 (unused argument)
+            lambda name: mock_provider,
         )
 
         # This ugly call is to mock the "instance" returned by the "launched_environment"
@@ -689,7 +716,7 @@ _test_base = bases.BaseName("ubuntu", "22.04")
         # A single build info, matching the current architecture
         (
             [models.BuildInfo("foo", "current", "current", _test_base)],
-            ["on-current-for-current"],
+            ["foo"],
         ),
         # Two build infos, both matching the current architecture
         (
@@ -697,7 +724,7 @@ _test_base = bases.BaseName("ubuntu", "22.04")
                 models.BuildInfo("foo", "current", "current", _test_base),
                 models.BuildInfo("foo2", "current", "other", _test_base),
             ],
-            ["on-current-for-current", "on-current-for-other"],
+            ["foo", "foo2"],
         ),
         # Three build infos, only one matches current architecture
         (
@@ -706,7 +733,7 @@ _test_base = bases.BaseName("ubuntu", "22.04")
                 models.BuildInfo("foo2", "other", "other", _test_base),
                 models.BuildInfo("foo3", "other", "other2", _test_base),
             ],
-            ["on-current-for-current"],
+            ["foo"],
         ),
         # Two build infos, none matches current architecture
         (

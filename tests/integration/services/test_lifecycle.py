@@ -20,6 +20,7 @@ import textwrap
 import craft_cli
 import pytest
 import pytest_check
+
 from craft_application.services.lifecycle import LifecycleService
 
 

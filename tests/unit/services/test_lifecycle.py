@@ -26,11 +26,6 @@ import craft_parts.callbacks
 import craft_platforms
 import pytest
 import pytest_check
-from craft_application import errors, models, util
-from craft_application.errors import PartsLifecycleError
-from craft_application.models.project import BuildInfo
-from craft_application.services import lifecycle
-from craft_application.util import repositories
 from craft_parts import (
     Action,
     ActionType,
@@ -45,6 +40,12 @@ from craft_parts.executor import (
     ExecutionContext,  # pyright: ignore[reportPrivateImportUsage]
 )
 from craft_providers import bases
+
+from craft_application import errors, models, util
+from craft_application.errors import PartsLifecycleError
+from craft_application.models.project import BuildInfo
+from craft_application.services import lifecycle
+from craft_application.util import repositories
 
 
 # region Local fixtures
