@@ -4,6 +4,14 @@
 Changelog
 *********
 
+X.X.X (YYYY-MMM-DD)
+-------------------
+
+Remote build
+============
+
+- Add hooks to further customize functionality
+
 4.8.3 (2025-Jan-31)
 -------------------
 
