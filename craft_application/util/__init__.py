@@ -27,6 +27,7 @@ from craft_application.util.platforms import (
     get_hostname,
     is_managed_mode,
 )
+from craft_application.util.prompt import prompt
 from craft_application.util.retry import retry
 from craft_application.util.snap_config import (
     SnapConfig,
@@ -60,4 +61,5 @@ __all__ = [
     "get_hostname",
     "is_managed_mode",
     "format_timestamp",
+    "prompt",
 ]

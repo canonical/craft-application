@@ -118,3 +118,8 @@ def fake_project_file(monkeypatch, tmp_path):
     monkeypatch.chdir(project_dir)
 
     return project_path
+
+
+@pytest.fixture
+def managed_mode(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("CRAFT_MANAGED_MODE", "1")
