@@ -4,6 +4,15 @@
 Changelog
 *********
 
+X.X.X (YYYY-MMM-DD)
+-------------------
+
+Remote build
+============
+
+- Add a `--project` parameter for finer-tuned safety for potentially
+  uploading private content to a public Launchpad project.
+
 4.8.3 (2025-Jan-31)
 -------------------
 
