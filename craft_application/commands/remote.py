@@ -119,7 +119,7 @@ class RemoteBuild(ExtensibleCommand):
                     "`--launchpad-accept-public-upload`."
                 ),
                 reportable=False,
-                retcode=77,
+                retcode=77,  # os.EX_NOPERM
             )
 
         if parsed_args.project:
