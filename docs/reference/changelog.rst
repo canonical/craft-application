@@ -10,7 +10,8 @@ X.X.X (YYYY-MMM-DD)
 Remote build
 ============
 
-- Add a ``--project`` parameter for user-defined Launchpad projects, including private projects.
+- Add a ``--project`` parameter for user-defined Launchpad projects, including
+  private projects.
 
 4.8.3 (2025-Jan-31)
 -------------------
