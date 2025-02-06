@@ -20,7 +20,9 @@ import pytest
 from craft_cli import emit
 
 from craft_application.commands import RemoteBuild
+from craft_application.errors import RemoteBuildError
 from craft_application.launchpad.models import BuildState
+from craft_application.services import RemoteBuildService
 
 
 @pytest.fixture
@@ -30,13 +32,6 @@ def remote_build(
 ):
     config = {"app": app_metadata, "services": fake_services}
     return RemoteBuild(config)
-
-
-def test_remote_build_no_accept_upload(remote_build, mocker):
-    parsed_args = argparse.Namespace(launchpad_accept_public_upload=False)
-
-    mocker.patch.object(emit, "confirm", return_value=False)
-    assert remote_build.run(parsed_args) == 77
 
 
 def test_remote_build_run(remote_build, mocker, fake_services, tmp_path, emitter):
@@ -85,7 +80,10 @@ def test_remote_build_run(remote_build, mocker, fake_services, tmp_path, emitter
     mocker.patch.object(builder, "fetch_artifacts", return_value=artifacts)
 
     parsed_args = argparse.Namespace(
-        launchpad_accept_public_upload=True, launchpad_timeout=None, recover=False
+        launchpad_accept_public_upload=True,
+        launchpad_timeout=None,
+        recover=False,
+        project=None,
     )
     assert remote_build.run(parsed_args) is None
 
@@ -103,3 +101,71 @@ def test_remote_build_run(remote_build, mocker, fake_services, tmp_path, emitter
         "Log files: log1.txt, log2.txt, log3.txt\n"
         "Artifacts: art1.zip, art2.zip, art3.zip"
     )
+
+
+@pytest.mark.parametrize(
+    ("accept_public", "is_private", "project", "confirm"),
+    [
+        pytest.param(True, False, None, False, id="accepted-public"),
+        pytest.param(False, True, None, False, id="private-proj"),
+        pytest.param(False, False, "my-project", False, id="named-proj"),
+        pytest.param(False, False, None, True, id="accepted-cli"),
+    ],
+)
+def test_set_project_succeeds(
+    mocker,
+    remote_build: RemoteBuild,
+    accept_public: bool,
+    is_private: bool,
+    project: str | None,
+    confirm: bool,
+) -> None:
+    # Remote build should succeed if any of the following were done:
+    # - The `--launchpad-accept-public-upload` flag was used
+    # - The set project is private
+    # - A project name was explicitly provided
+    # - The user confirms from CLI that they accept public uploads
+    mocker.patch.object(
+        RemoteBuildService, "is_project_private", return_value=is_private
+    )
+    mocker.patch.object(emit, "confirm", return_value=confirm)
+    parsed_args = argparse.Namespace(
+        launchpad_accept_public_upload=accept_public,
+        project=project,
+        launchpad_timeout=0,
+        recover=False,
+    )
+
+    # Don't actually start a build
+    mocker.patch.object(RemoteBuildService, "start_builds", return_value=[])
+    mocker.patch.object(RemoteBuild, "_monitor_and_complete", return_value=0)
+    assert remote_build.run(parsed_args) is None
+
+
+@pytest.mark.parametrize(
+    ("is_private", "project"),
+    [
+        pytest.param(False, None, id="no-positives"),
+        pytest.param(False, "my_project", id="named-proj"),
+        pytest.param(True, None, id="is_private"),
+    ],
+)
+def test_set_project_failures(
+    mocker, remote_build: RemoteBuild, is_private: bool, project: str | None
+) -> None:
+    # Remote build should fail if there is no confirmation and either:
+    # - Project is public
+    # - No project name was specified
+    # - Both of the above
+    mocker.patch.object(
+        RemoteBuildService, "is_project_private", return_value=is_private
+    )
+    mocker.patch.object(emit, "confirm", return_value=False)
+    parsed_args = argparse.Namespace(
+        launchpad_accept_public_upload=False, project=project
+    )
+
+    with pytest.raises(RemoteBuildError) as exc:
+        remote_build.run(parsed_args)
+
+    assert exc.value.retcode == 77

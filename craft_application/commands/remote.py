@@ -23,7 +23,7 @@ from typing import Any, cast
 from craft_cli import emit
 from overrides import override  # pyright: ignore[reportUnknownVariableType]
 
-from craft_application import models
+from craft_application import errors, models
 from craft_application.commands import ExtensibleCommand
 from craft_application.launchpad.models import Build, BuildState
 from craft_application.remote.utils import get_build_id
@@ -74,6 +74,9 @@ class RemoteBuild(ExtensibleCommand):
             metavar="<seconds>",
             help="Time in seconds to wait for launchpad to build.",
         )
+        parser.add_argument(
+            "--project", help="upload to the specified Launchpad project"
+        )
 
     def _run(
         self,
@@ -84,7 +87,8 @@ class RemoteBuild(ExtensibleCommand):
 
         :param parsed_args: parsed argument namespace from craft_cli.
 
-        :raises AcceptPublicUploadError: If the user does not agree to upload data.
+        :raises RemoteBuildError: If the user both does not specify their project and
+        does not agree to upload data.
         """
         if os.getenv("SUDO_USER") and os.geteuid() == 0:
             emit.progress(
@@ -99,11 +103,27 @@ class RemoteBuild(ExtensibleCommand):
             permanent=True,
         )
 
-        if not parsed_args.launchpad_accept_public_upload and not emit.confirm(
-            _CONFIRMATION_PROMPT, default=False
+        if (
+            not parsed_args.launchpad_accept_public_upload
+            and (
+                not parsed_args.project
+                or not self._services.remote_build.is_project_private()
+            )
+            and not emit.confirm(_CONFIRMATION_PROMPT, default=False)
         ):
-            emit.message("Cannot proceed without accepting a public upload.")
-            return 77  # permission denied from sysexits.h
+            raise errors.RemoteBuildError(
+                "Remote build needs explicit acknowledgement that data sent to build servers "
+                "is public.",
+                details=(
+                    "In non-interactive runs, please use the option "
+                    "`--launchpad-accept-public-upload`."
+                ),
+                reportable=False,
+                retcode=77,
+            )
+
+        if parsed_args.project:
+            self._services.remote_build.set_project(parsed_args.project)
 
         builder = self._services.remote_build
         project = cast(models.Project, self._services.project)
