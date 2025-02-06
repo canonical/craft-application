@@ -107,9 +107,8 @@ def test_remote_build_run(remote_build, mocker, fake_services, tmp_path, emitter
     ("accept_public", "is_private", "project", "confirm"),
     [
         pytest.param(True, False, None, False, id="accepted-public"),
-        pytest.param(False, True, None, False, id="private-proj"),
-        pytest.param(False, False, "my-project", False, id="named-proj"),
         pytest.param(False, False, None, True, id="accepted-cli"),
+        pytest.param(False, True, "my-project", False, id="named-priv-proj"),
     ],
 )
 def test_set_project_succeeds(
@@ -122,8 +121,7 @@ def test_set_project_succeeds(
 ) -> None:
     # Remote build should succeed if any of the following were done:
     # - The `--launchpad-accept-public-upload` flag was used
-    # - The set project is private
-    # - A project name was explicitly provided
+    # - The project has been specified and happens to be private
     # - The user confirms from CLI that they accept public uploads
     mocker.patch.object(
         RemoteBuildService, "is_project_private", return_value=is_private
