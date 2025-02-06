@@ -10,6 +10,7 @@ X.X.X (YYYY-MMM-DD)
 Remote build
 ============
 
+- Add hooks to further customize functionality
 - Add a ``--project`` parameter for finer-tuned safety for potentially
   uploading private content to a public Launchpad project.
 
