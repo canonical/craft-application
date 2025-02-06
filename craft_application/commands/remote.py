@@ -115,7 +115,7 @@ class RemoteBuild(ExtensibleCommand):
                 "Remote build needs explicit acknowledgement that data sent to build servers "
                 "is public.",
                 details=(
-                    "In non-interactive runs, please use the option "
+                    "In non-interactive runs, use the option "
                     "`--launchpad-accept-public-upload`."
                 ),
                 reportable=False,
