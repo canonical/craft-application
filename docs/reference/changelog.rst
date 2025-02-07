@@ -10,6 +10,7 @@ X.X.X (YYYY-MMM-DD)
 Remote build
 ============
 
+- Add hooks to further customize functionality
 - Add a ``--project`` parameter for user-defined Launchpad projects, including
   private projects.
 - Add "pending" as a displayed status for in-progress remote builds
