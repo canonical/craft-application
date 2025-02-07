@@ -4,6 +4,14 @@
 Changelog
 *********
 
+X.X.X (YYYY-MMM-DD)
+------------------
+
+Remote build
+============
+
+- Add "pending" as a displayed status for in-progress remote builds
+
 4.4.1 (2025-Feb-05)
 -------------------
 
