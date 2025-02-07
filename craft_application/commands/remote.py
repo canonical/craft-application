@@ -61,7 +61,8 @@ class RemoteBuild(ExtensibleCommand):
         """Run steps to take before building, e.g. validations."""
 
     def _get_build_args(
-        self, parsed_args: argparse.Namespace  # noqa: ARG002 (unused parameter)
+        self,
+        parsed_args: argparse.Namespace,  # noqa: ARG002 (unused parameter)
     ) -> dict[str, Any]:
         """Get arguments to pass to the builder."""
         return {}
