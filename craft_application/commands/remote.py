@@ -23,7 +23,7 @@ from typing import Any, cast
 from craft_cli import emit
 from overrides import override  # pyright: ignore[reportUnknownVariableType]
 
-from craft_application import models
+from craft_application import errors, models
 from craft_application.commands import ExtensibleCommand
 from craft_application.launchpad.models import Build, BuildState
 from craft_application.remote.utils import get_build_id
@@ -69,12 +69,12 @@ class RemoteBuild(ExtensibleCommand):
     @override
     def _fill_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
-            "--recover", action="store_true", help="recover an interrupted build"
+            "--recover", action="store_true", help="Recover an interrupted build"
         )
         parser.add_argument(
             "--launchpad-accept-public-upload",
             action="store_true",
-            help="acknowledge that uploaded code will be publicly available.",
+            help="Acknowledge that uploaded code will be publicly available",
         )
         parser.add_argument(
             "--launchpad-timeout",
@@ -82,6 +82,9 @@ class RemoteBuild(ExtensibleCommand):
             default=0,
             metavar="<seconds>",
             help="Time in seconds to wait for launchpad to build.",
+        )
+        parser.add_argument(
+            "--project", help="Upload to the specified Launchpad project"
         )
 
     def _run(
@@ -93,7 +96,8 @@ class RemoteBuild(ExtensibleCommand):
 
         :param parsed_args: parsed argument namespace from craft_cli.
 
-        :raises AcceptPublicUploadError: If the user does not agree to upload data.
+        :raises RemoteBuildError: If the user both does not specify their project and
+        does not agree to upload data.
         """
         if os.getenv("SUDO_USER") and os.geteuid() == 0:
             emit.progress(
@@ -108,11 +112,27 @@ class RemoteBuild(ExtensibleCommand):
             permanent=True,
         )
 
-        if not parsed_args.launchpad_accept_public_upload and not emit.confirm(
-            _CONFIRMATION_PROMPT, default=False
+        if parsed_args.project:
+            self._services.remote_build.set_project(parsed_args.project)
+
+        if (
+            not parsed_args.launchpad_accept_public_upload
+            and (
+                not parsed_args.project
+                or not self._services.remote_build.is_project_private()
+            )
+            and not emit.confirm(_CONFIRMATION_PROMPT, default=False)
         ):
-            emit.message("Cannot proceed without accepting a public upload.")
-            return 77  # permission denied from sysexits.h
+            raise errors.RemoteBuildError(
+                "Remote build needs explicit acknowledgement that data sent to build servers "
+                "is public.",
+                details=(
+                    "In non-interactive runs, use the option "
+                    "`--launchpad-accept-public-upload`."
+                ),
+                reportable=False,
+                retcode=77,  # os.EX_NOPERM
+            )
 
         self._pre_build(parsed_args)
         build_args = self._get_build_args(parsed_args)
@@ -174,6 +194,7 @@ class RemoteBuild(ExtensibleCommand):
             building: set[str] = set()
             succeeded: set[str] = set()
             uploading: set[str] = set()
+            pending: set[str] = set()
             not_building: set[str] = set()
             for arch, build_state in states.items():
                 if build_state.is_running:
@@ -182,6 +203,8 @@ class RemoteBuild(ExtensibleCommand):
                     succeeded.add(arch)
                 elif build_state == BuildState.UPLOADING:
                     uploading.add(arch)
+                elif build_state == BuildState.PENDING:
+                    pending.add(arch)
                 else:
                     not_building.add(arch)
             progress_parts: list[str] = []
@@ -193,6 +216,8 @@ class RemoteBuild(ExtensibleCommand):
                 progress_parts.append("Uploading: " + ", ".join(sorted(uploading)))
             if succeeded:
                 progress_parts.append("Succeeded: " + ", ".join(sorted(succeeded)))
+            if pending:
+                progress_parts.append("Pending: " + ", ".join(sorted(pending)))
             emit.progress("; ".join(progress_parts))
 
         emit.progress("Fetching build artifacts...")
