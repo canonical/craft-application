@@ -12,6 +12,7 @@ Remote build
 
 - Add a ``--project`` parameter for user-defined Launchpad projects, including
   private projects.
+- Add "pending" as a displayed status for in-progress remote builds
 
 4.4.1 (2025-Feb-05)
 -------------------
