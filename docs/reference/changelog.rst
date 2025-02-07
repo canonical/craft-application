@@ -4,8 +4,19 @@
 Changelog
 *********
 
-X.X.X (YYYY-MMM-DD)
+4.9.0 (2025-Feb-10)
 -------------------
+
+All bug fixes from the 4.8 and 4.4 series are included in 4.9.0.
+
+Application
+===========
+
+- Add a feature to allow `Python plugins
+  https://packaging.python.org/en/latest/guides/creating-and-discovering-plugins/>`_
+  to extend or modify the behaviour of applications that use craft-application as a
+  framework. The plugin packages must be installed in the same virtual environment
+  as the application.
 
 Remote build
 ============
@@ -14,6 +25,8 @@ Remote build
 - Add a ``--project`` parameter for user-defined Launchpad projects, including
   private projects.
 - Add "pending" as a displayed status for in-progress remote builds
+
+For a complete list of commits, check out the `4.9.0`_ release on GitHub.
 
 4.4.1 (2025-Feb-05)
 -------------------
@@ -563,3 +576,4 @@ For a complete list of commits, check out the `2.7.0`_ release on GitHub.
 .. _4.8.1: https://github.com/canonical/craft-application/releases/tag/4.8.1
 .. _4.8.2: https://github.com/canonical/craft-application/releases/tag/4.8.2
 .. _4.8.3: https://github.com/canonical/craft-application/releases/tag/4.8.3
+.. _4.9.0: https://github.com/canonical/craft-application/releases/tag/4.9.0
