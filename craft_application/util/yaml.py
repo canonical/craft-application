@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU Lesser General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 """YAML helpers for craft applications."""
+
 from __future__ import annotations
 
 import contextlib
@@ -113,7 +114,9 @@ def safe_yaml_load(stream: TextIO) -> Any:  # noqa: ANN401 - The YAML could be a
 
 @overload
 def dump_yaml(
-    data: Any, stream: TextIO, **kwargs: Any  # noqa: ANN401 # Any gets passed to pyyaml
+    data: Any,  # noqa: ANN401 # Any gets passed to pyyaml
+    stream: TextIO,
+    **kwargs: Any,
 ) -> None: ...  # pragma: no cover
 
 
@@ -121,7 +124,7 @@ def dump_yaml(
 def dump_yaml(
     data: Any,  # noqa: ANN401 # Any gets passed to pyyaml
     stream: None = None,
-    **kwargs: Any,  # Any gets passed to pyyaml
+    **kwargs: Any,
 ) -> str: ...  # pragma: no cover
 
 
