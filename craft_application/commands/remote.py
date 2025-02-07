@@ -60,12 +60,12 @@ class RemoteBuild(ExtensibleCommand):
     @override
     def _fill_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
-            "--recover", action="store_true", help="recover an interrupted build"
+            "--recover", action="store_true", help="Recover an interrupted build"
         )
         parser.add_argument(
             "--launchpad-accept-public-upload",
             action="store_true",
-            help="acknowledge that uploaded code will be publicly available.",
+            help="Acknowledge that uploaded code will be publicly available.",
         )
         parser.add_argument(
             "--launchpad-timeout",
