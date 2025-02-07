@@ -48,7 +48,7 @@ class SecretsService(base.AppService):
 
     def setup(self) -> None:
         super().setup()
-        if self._services.provider.is_managed():
+        if _is_managed():
             self.__secrets = _load_from_environment()
         else:
             self.__secrets = {}
@@ -60,8 +60,7 @@ class SecretsService(base.AppService):
 
     def __serialize(self) -> str:
         """Convert the current set of secrets to a base64-encoded JSON string."""
-        jsonified = json.dumps(self.__secrets)
-        return base64.b64encode(jsonified.encode("utf-8")).decode("ascii")
+        return _serialize(self.__secrets)
 
     def __render_secret(self, original: str) -> str:
         if not (match := _SECRET_REGEX.search(original)):
@@ -70,7 +69,7 @@ class SecretsService(base.AppService):
         host_directive = match.group(0)
 
         if not (output := self.__secrets.get(command)):
-            if self._services.provider.is_managed():
+            if _is_managed():
                 # In managed mode the command *must* be in the cache; this is an error.
                 raise errors.SecretsManagedError(host_directive)
 
@@ -140,6 +139,10 @@ class SecretsService(base.AppService):
         return {"CRAFT_SECRETS": value}
 
 
+def _is_managed() -> bool:
+    return os.getenv("CRAFT_MANAGED_MODE") == "1"
+
+
 def _find_secrets(data: Any) -> dict[Sequence[str | int], str]:  # noqa: ANN401
     """Find the paths of all secrets in the given data structure."""
     secrets: dict[Sequence[str | int], str] = {}
@@ -173,6 +176,11 @@ def _load_from_environment() -> dict[str, str]:
 
     json_bytes = base64.b64decode(raw)
     return json.loads(json_bytes.decode("utf-8"))
+
+
+def _serialize(secrets: dict[str, str]) -> str:
+    jsonified = json.dumps(secrets)
+    return base64.b64encode(jsonified.encode("utf-8")).decode("ascii")
 
 
 def _run_command(command: str) -> str:

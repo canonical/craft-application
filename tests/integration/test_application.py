@@ -25,7 +25,8 @@ from typing_extensions import override
 
 import craft_application
 import craft_application.commands
-from craft_application import models, secrets, util
+from craft_application import models, util
+from craft_application.services import _secrets
 from craft_application.util import yaml
 
 
@@ -47,9 +48,8 @@ def create_app(app_metadata, fake_package_service_class):
     def _inner():
         # Create a factory without a project, to simulate a real application use
         # and force loading from disk.
-        services = craft_application.ServiceFactory(
-            app_metadata, PackageClass=fake_package_service_class
-        )
+        craft_application.ServiceFactory.register("package", fake_package_service_class)
+        services = craft_application.ServiceFactory(app_metadata)
         return TestableApplication(app_metadata, services)
 
     return _inner
@@ -465,8 +465,7 @@ def test_build_secrets_managed(
         "echo ${HOST_SOURCE_FOLDER}": "secret-source",
         "echo ${HOST_SECRET_VAR}": "my-secret",
     }
-    encoded = secrets._encode_commands(commands)
-    monkeypatch.setenv("CRAFT_SECRETS", encoded["CRAFT_SECRETS"])
+    monkeypatch.setenv("CRAFT_SECRETS", _secrets._serialize(commands))
 
     app.run()
 
