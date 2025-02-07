@@ -75,7 +75,7 @@ class RemoteBuild(ExtensibleCommand):
             help="Time in seconds to wait for launchpad to build.",
         )
         parser.add_argument(
-            "--project", help="upload to the specified Launchpad project"
+            "--project", help="Upload to the specified Launchpad project"
         )
 
     def _run(
