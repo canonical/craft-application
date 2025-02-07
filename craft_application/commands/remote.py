@@ -65,7 +65,7 @@ class RemoteBuild(ExtensibleCommand):
         parser.add_argument(
             "--launchpad-accept-public-upload",
             action="store_true",
-            help="Acknowledge that uploaded code will be publicly available.",
+            help="Acknowledge that uploaded code will be publicly available",
         )
         parser.add_argument(
             "--launchpad-timeout",
