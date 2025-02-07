@@ -33,7 +33,7 @@ from craft_application.util.snap_config import (
     get_snap_config,
     is_running_from_snap,
 )
-from craft_application.util.string import humanize_list, strtobool
+from craft_application.util.string import get_struct_path_str, humanize_list, strtobool
 from craft_application.util.system import get_parallel_build_count
 from craft_application.util.yaml import dump_yaml, safe_yaml_load
 from craft_application.util.cli import format_timestamp
@@ -50,6 +50,7 @@ __all__ = [
     "is_running_from_snap",
     "is_valid_architecture",
     "SnapConfig",
+    "get_struct_path_str",
     "humanize_list",
     "strtobool",
     "get_host_base",

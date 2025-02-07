@@ -45,12 +45,10 @@ from overrides import override
 import craft_application
 import craft_application.errors
 from craft_application import (
-    ProviderService,
     application,
     commands,
     errors,
     models,
-    secrets,
     services,
     util,
 )
@@ -551,27 +549,19 @@ def test_run_managed_failure(app, fake_project, fake_build_plan):
 
 @pytest.mark.enable_features("build_secrets")
 @pytest.mark.parametrize(
-    "fake_encoded_environment",
+    "encoded_secrets",
     [
-        pytest.param({}, id="empty"),
+        pytest.param("e30=", id="empty"),
         pytest.param(
-            {
-                "CRAFT_TEST": "banana",
-            },
-            id="fake-env",
-        ),
-        pytest.param(
-            {
-                "CRAFT_TEST_FRUIT": "banana",
-                "CRAFT_TEST_VEGETABLE": "cucumber",
-            },
-            id="multiple-entries-env",
+            "eyJlY2hvICR7U0VDUkVUX0VOVl9WQVJ9IjogInZlcnkgc2VjcmV0In0=",
+            id="standard-secret",
         ),
     ],
 )
 def test_run_managed_secrets(
-    app, fake_project, fake_build_plan, fake_encoded_environment: dict[str, str], check
+    monkeypatch, app, fake_project, fake_build_plan, encoded_secrets, check
 ):
+    monkeypatch.setenv("CRAFT_SECRETS", encoded_secrets)
     mock_provider = mock.MagicMock(spec_set=services.ProviderService)
     instance = mock_provider.instance.return_value.__enter__.return_value
     mock_execute = instance.execute_run
@@ -579,24 +569,15 @@ def test_run_managed_secrets(
     app.project = fake_project
     app._build_plan = fake_build_plan
 
-    app._secrets = secrets.BuildSecrets(
-        environment=fake_encoded_environment,
-        secret_strings=set(),
-    )
-
     app.run_managed(None, get_host_architecture())
 
     # Check that the encoded secrets were propagated to the managed instance.
     assert len(mock_execute.mock_calls) == 1
     call = mock_execute.mock_calls[0]
-    execute_env = call.kwargs["env"]
-    for secret_key, secret_val in fake_encoded_environment.items():
-        with check:
-            # value is passed to the underlying provider
-            assert execute_env[secret_key] == secret_val
-            assert secret_key in craft_cli.emit._log_filepath.read_text()
-            # value is not leaking in logs
-            assert secret_val not in craft_cli.emit._log_filepath.read_text()
+    assert call.kwargs["env"]["CRAFT_SECRETS"] == encoded_secrets
+    log = craft_cli.emit._log_filepath.read_text()
+    assert "CRAFT_SECRETS" in log
+    assert encoded_secrets not in log
 
 
 def test_run_managed_multiple(app, fake_project):
@@ -1465,7 +1446,7 @@ def test_application_build_secrets(app_metadata, fake_services, monkeypatch, moc
     assert mypart["source"] == "source-folder/project"
     assert mypart["build-environment"][0]["MY_VAR"] == "secret-value"
 
-    spied_set_secrets.assert_called_once_with(list({"source-folder", "secret-value"}))
+    spied_set_secrets.assert_called_with(["source-folder", "secret-value"])
 
 
 @pytest.mark.usefixtures("fake_project_file")
@@ -2164,7 +2145,14 @@ def test_emitter_docs_url(monkeypatch, mocker, app):
     assert spied_init.mock_calls[0].kwargs["docs_base_url"] == expected_url
 
 
-def test_clean_platform(monkeypatch, tmp_path, app_metadata, fake_services, mocker):
+def test_clean_platform(
+    monkeypatch,
+    tmp_path,
+    app_metadata,
+    fake_services,
+    fake_provider_service_class,
+    mocker,
+):
     """Test that calling "clean --platform=x" correctly filters the build plan."""
     data = util.safe_yaml_load(StringIO(BASIC_PROJECT_YAML))
     # Put a few different platforms on the project
@@ -2182,7 +2170,7 @@ def test_clean_platform(monkeypatch, tmp_path, app_metadata, fake_services, mock
     project_file.write_text(util.dump_yaml(data))
     monkeypatch.setattr(sys, "argv", ["testcraft", "clean", "--platform=plat2"])
 
-    mocked_clean = mocker.patch.object(ProviderService, "_clean_instance")
+    mocked_clean = mocker.patch.object(fake_provider_service_class, "_clean_instance")
     app = FakeApplication(app_metadata, fake_services)
     app.project_dir = tmp_path
 
@@ -2200,13 +2188,11 @@ def test_clean_platform(monkeypatch, tmp_path, app_metadata, fake_services, mock
 
 
 class AppConfigCommand(AppCommand):
-
     name: str = "app-config"
     help_msg: str = "Help text"
     overview: str = "Overview"
 
     def fill_parser(self, parser: argparse.ArgumentParser) -> None:
-
         name = self._app.name
         parser.add_argument(
             "app-name",

@@ -12,6 +12,7 @@
 # You should have received a copy of the GNU Lesser General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Factory class for lazy-loading service classes."""
+
 from __future__ import annotations
 
 import dataclasses
@@ -31,9 +32,11 @@ from typing import (
 
 import annotated_types
 
-from craft_application import models, services
+from craft_application import models
+from craft_application.services import base
 
 if TYPE_CHECKING:
+    from craft_application import services
     from craft_application.application import AppMetadata
 
 _DEFAULT_SERVICES = {
@@ -44,6 +47,7 @@ _DEFAULT_SERVICES = {
     "provider": "ProviderService",
     "remote_build": "RemoteBuildService",
     "request": "RequestService",
+    "secrets": "SecretsService",
 }
 _CAMEL_TO_PYTHON_CASE_REGEX = re.compile(r"(?<!^)(?=[A-Z])")
 
@@ -150,9 +154,16 @@ class ServiceFactory:
         cls._service_classes.clear()
         for name, class_name in _DEFAULT_SERVICES.items():
             module_name = name.replace("_", "")
-            cls.register(
-                name, class_name, module=f"craft_application.services.{module_name}"
-            )
+            try:
+                cls.register(
+                    name, class_name, module=f"craft_application.services.{module_name}"
+                )
+            except ModuleNotFoundError:
+                cls.register(
+                    name,
+                    class_name,
+                    module=f"craft_application.services._{module_name}",
+                )
 
     def set_kwargs(
         self,
@@ -227,6 +238,11 @@ class ServiceFactory:
     ) -> type[services.RequestService]: ...
     @overload
     @classmethod
+    def get_class(
+        cls, name: Literal["secrets", "SecretsService", "SecretsClass"]
+    ) -> type[services.SecretsService]: ...
+    @overload
+    @classmethod
     def get_class(cls, name: str) -> type[services.AppService]: ...
     @classmethod
     def get_class(cls, name: str) -> type[services.AppService]:
@@ -247,7 +263,7 @@ class ServiceFactory:
         if isinstance(service_info, tuple):
             module_name, class_name = service_info
             module = importlib.import_module(module_name)
-            return cast(type[services.AppService], getattr(module, class_name))
+            return cast("type[services.AppService]", getattr(module, class_name))
         return service_info
 
     @overload
@@ -267,6 +283,8 @@ class ServiceFactory:
     @overload
     def get(self, service: Literal["request"]) -> services.RequestService: ...
     @overload
+    def get(self, service: Literal["secrets"]) -> services.SecretsService: ...
+    @overload
     def get(self, service: str) -> services.AppService: ...
     def get(self, service: str) -> services.AppService:
         """Get a service by name.
@@ -281,7 +299,7 @@ class ServiceFactory:
             return self._services[service]
         cls = self.get_class(service)
         kwargs = self._service_kwargs.get(service, {})
-        if issubclass(cls, services.ProjectService):
+        if issubclass(cls, base.ProjectService):
             if not self.project:
                 raise ValueError(
                     f"{cls.__name__} requires a project to be available before creation."

@@ -36,7 +36,7 @@ import craft_providers
 from craft_parts.plugins.plugins import PluginType
 from platformdirs import user_cache_path
 
-from craft_application import _config, commands, errors, grammar, models, secrets, util
+from craft_application import _config, commands, errors, grammar, models, util
 from craft_application.errors import PathInvalidError
 from craft_application.models import BuildInfo, GrammarAwareProject
 
@@ -137,9 +137,6 @@ class Application:
         self._cli_loggers = DEFAULT_CLI_LOGGERS | set(extra_loggers)
         self._full_build_plan: list[models.BuildInfo] = []
         self._build_plan: list[models.BuildInfo] = []
-        # When build_secrets are enabled, this contains the secret info to pass to
-        # managed instances.
-        self._secrets: secrets.BuildSecrets | None = None
         self._partitions: list[str] | None = None
         # Cached project object, allows only the first time we load the project
         # to specify things like the project directory.
@@ -456,11 +453,7 @@ class Application:
             if self.app.features.build_secrets:
                 # If using build secrets, put them in the environment of the managed
                 # instance.
-                secret_values = cast(secrets.BuildSecrets, self._secrets)
-                # disable logging CRAFT_SECRETS value passed to the managed instance
-                craft_cli.emit.set_secrets(list(secret_values.environment.values()))
-
-                env.update(secret_values.environment)
+                env.update(self.services.get("secrets").get_environment())
 
             extra_args["env"] = env
 
@@ -621,9 +614,7 @@ class Application:
             self._enable_fetch_service = True
             self._fetch_service_policy = fetch_service_policy
 
-    def get_arg_or_config(
-        self, parsed_args: argparse.Namespace, item: str
-    ) -> Any:  # noqa: ANN401
+    def get_arg_or_config(self, parsed_args: argparse.Namespace, item: str) -> Any:  # noqa: ANN401
         """Get a configuration option that could be overridden by a command argument.
 
         :param parsed_args: The argparse Namespace to check.
@@ -844,16 +835,7 @@ class Application:
 
     def _render_secrets(self, yaml_data: dict[str, Any]) -> None:
         """Render build-secrets, in-place."""
-        secret_values = secrets.render_secrets(
-            yaml_data, managed_mode=self.is_managed()
-        )
-
-        num_secrets = len(secret_values.secret_strings)
-        craft_cli.emit.debug(f"Project has {num_secrets} build-secret(s).")
-
-        craft_cli.emit.set_secrets(list(secret_values.secret_strings))
-
-        self._secrets = secret_values
+        self.services.get("secrets").render(yaml_data)
 
     def _extra_yaml_transform(
         self,

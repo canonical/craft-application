@@ -51,7 +51,7 @@ def entry_points_faker():
     og_modules = sys.modules
 
     def entry_points_faker(
-        entry_points: list[tuple[str, str, callable]] | None = None  # type: ignore[reportGeneralTypeIssues]
+        entry_points: list[tuple[str, str, callable]] | None = None,  # type: ignore[reportGeneralTypeIssues]
     ):
         # All go under this group for our purposes
         entry_points_txt = f"[{PLUGIN_GROUP_NAME}]\n"

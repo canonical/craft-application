@@ -17,6 +17,7 @@
 
 All errors inherit from craft_cli.CraftError.
 """
+
 from __future__ import annotations
 
 import os
@@ -29,7 +30,7 @@ from craft_providers import bases
 
 from craft_application import models
 from craft_application.util.error_formatting import format_pydantic_errors
-from craft_application.util.string import humanize_list
+from craft_application.util.string import get_struct_path_str, humanize_list
 
 if TYPE_CHECKING:  # pragma: no cover
     import craft_parts
@@ -100,7 +101,9 @@ class PartsLifecycleError(CraftError):
     @classmethod
     def from_os_error(cls, err: OSError) -> Self:
         """Create a PartsLifecycleError from an OSError."""
-        message = f"{err.filename}: {err.strerror}" if err.filename else err.strerror
+        message = (
+            f"{err.filename}: {err.strerror}" if err.filename else str(err.strerror)
+        )
         details = err.__class__.__name__
         if err.filename:
             details += f": filename: {err.filename!r}"
@@ -116,6 +119,32 @@ class SecretsCommandError(CraftError):
         message = f'Error when processing secret "{host_directive}"'
         details = f"Command output: {error_message}"
         super().__init__(message=message, details=details)
+
+
+class SecretsInFieldsError(CraftError):
+    """Error when using a build-secret in a disallowed field."""
+
+    def __init__(self, field_directives: dict[Sequence[str | int], str]) -> None:
+        field_names = {path[-1] for path in field_directives}
+        fields_str = ", ".join(repr(name) for name in sorted(field_names))
+        message = (
+            f"{len(field_directives)} build secrets in disallowed fields: {fields_str}"
+        )
+        field_paths = {
+            get_struct_path_str(field): value
+            for field, value in field_directives.items()
+        }
+        field_paths_str = "\n".join(
+            f"- {path}: {value}" for path, value in sorted(field_paths.items())
+        )
+        details = f"Full paths and secrets:\n {field_paths_str}"
+        super().__init__(
+            message=message,
+            details=details,
+            resolution="Remove secrets directives from disallowed fields.",
+            logpath_report=False,
+            reportable=False,
+        )
 
 
 class SecretsFieldError(CraftError):

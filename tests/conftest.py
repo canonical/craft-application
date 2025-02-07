@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU Lesser General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Shared data for all craft-application tests."""
+
 from __future__ import annotations
 
 import os
@@ -74,7 +75,6 @@ def features(request) -> dict[str, bool]:
 
 
 class FakeConfigModel(craft_application.ConfigModel):
-
     my_str: str
     my_int: int
     my_bool: bool
@@ -236,6 +236,11 @@ def request_service(app_metadata, fake_services) -> services.RequestService:
     return services.RequestService(app=app_metadata, services=fake_services)
 
 
+@pytest.fixture
+def secrets_service(app_metadata, fake_services) -> services.SecretsService:
+    return services.SecretsService(app=app_metadata, services=fake_services)
+
+
 @pytest.fixture(params=list(EmitterMode))
 def emitter_verbosity(request):
     reset_verbosity = emit.get_mode()
@@ -245,7 +250,7 @@ def emitter_verbosity(request):
 
 
 @pytest.fixture
-def fake_provider_service_class(fake_build_plan):
+def fake_provider_service_class(fake_build_plan, tmp_path):
     class FakeProviderService(services.ProviderService):
         def __init__(
             self,
@@ -253,13 +258,17 @@ def fake_provider_service_class(fake_build_plan):
             services: services.ServiceFactory,
             *,
             project: models.Project,
+            work_dir: pathlib.Path = tmp_path,
+            build_plan=fake_build_plan,
+            provider_name="fake_provider",
         ):
             super().__init__(
                 app,
                 services,
                 project=project,
-                work_dir=pathlib.Path(),
-                build_plan=fake_build_plan,
+                work_dir=work_dir,
+                build_plan=build_plan,
+                provider_name=provider_name,
             )
 
     return FakeProviderService
@@ -334,12 +343,14 @@ def fake_services(
     fake_project,
     fake_lifecycle_service_class,
     fake_package_service_class,
+    fake_provider_service_class,
     fake_init_service_class,
     fake_remote_build_service_class,
 ):
     services.ServiceFactory.register("package", fake_package_service_class)
     services.ServiceFactory.register("lifecycle", fake_lifecycle_service_class)
     services.ServiceFactory.register("init", fake_init_service_class)
+    services.ServiceFactory.register("provider", fake_provider_service_class)
     services.ServiceFactory.register("remote_build", fake_remote_build_service_class)
     factory = services.ServiceFactory(app_metadata, project=fake_project)
     factory.update_kwargs(
