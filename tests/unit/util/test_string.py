@@ -81,6 +81,19 @@ def test_strtobool_error(data):
         string.strtobool(data)
 
 
+@pytest.mark.parametrize(
+    ("path", "expected"),
+    [
+        ([], ""),
+        ([0], "[0]"),
+        (["place"], "place"),
+        (["first", 2, "third", "fourth"], "first[2].third.fourth"),
+    ],
+)
+def test_get_struct_path_str(path, expected):
+    assert string.get_struct_path_str(path) == expected
+
+
 #################
 # Humanize List #
 #################

@@ -16,7 +16,7 @@
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """String related functions."""
 
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 
 
 def strtobool(value: str) -> bool:
@@ -34,6 +34,21 @@ def strtobool(value: str) -> bool:
     if value in {"false", "f", "no", "n", "off", "0"}:
         return False
     raise ValueError(f"Invalid boolean value: {value}")
+
+
+def get_struct_path_str(path: Sequence[str | int]) -> str:
+    """Get a path string from a sequence of items."""
+    if not path:
+        return ""
+    result, *others = path
+    if not isinstance(result, str):
+        result = f"[{result}]"
+    for item in others:
+        if isinstance(item, str):
+            result += f".{item}"
+        else:
+            result += f"[{item}]"
+    return result
 
 
 def humanize_list(

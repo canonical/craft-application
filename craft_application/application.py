@@ -459,7 +459,6 @@ class Application:
                 secret_values = cast(secrets.BuildSecrets, self._secrets)
                 # disable logging CRAFT_SECRETS value passed to the managed instance
                 craft_cli.emit.set_secrets(list(secret_values.environment.values()))
-
                 env.update(secret_values.environment)
 
             extra_args["env"] = env

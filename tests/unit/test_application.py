@@ -45,7 +45,6 @@ from overrides import override
 import craft_application
 import craft_application.errors
 from craft_application import (
-    ProviderService,
     application,
     commands,
     errors,
@@ -2164,7 +2163,14 @@ def test_emitter_docs_url(monkeypatch, mocker, app):
     assert spied_init.mock_calls[0].kwargs["docs_base_url"] == expected_url
 
 
-def test_clean_platform(monkeypatch, tmp_path, app_metadata, fake_services, mocker):
+def test_clean_platform(
+    monkeypatch,
+    tmp_path,
+    app_metadata,
+    fake_services,
+    fake_provider_service_class,
+    mocker,
+):
     """Test that calling "clean --platform=x" correctly filters the build plan."""
     data = util.safe_yaml_load(StringIO(BASIC_PROJECT_YAML))
     # Put a few different platforms on the project
@@ -2182,7 +2188,7 @@ def test_clean_platform(monkeypatch, tmp_path, app_metadata, fake_services, mock
     project_file.write_text(util.dump_yaml(data))
     monkeypatch.setattr(sys, "argv", ["testcraft", "clean", "--platform=plat2"])
 
-    mocked_clean = mocker.patch.object(ProviderService, "_clean_instance")
+    mocked_clean = mocker.patch.object(fake_provider_service_class, "_clean_instance")
     app = FakeApplication(app_metadata, fake_services)
     app.project_dir = tmp_path
 

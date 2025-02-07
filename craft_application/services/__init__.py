@@ -24,6 +24,7 @@ from craft_application.services.package import PackageService
 from craft_application.services.provider import ProviderService
 from craft_application.services.remotebuild import RemoteBuildService
 from craft_application.services.request import RequestService
+from ._secrets import SecretsService
 from craft_application.services.service_factory import ServiceFactory
 
 __all__ = [
@@ -37,5 +38,6 @@ __all__ = [
     "ProviderService",
     "RemoteBuildService",
     "RequestService",
+    "SecretsService",
     "ServiceFactory",
 ]
