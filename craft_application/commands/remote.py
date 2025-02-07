@@ -103,6 +103,9 @@ class RemoteBuild(ExtensibleCommand):
             permanent=True,
         )
 
+        if parsed_args.project:
+            self._services.remote_build.set_project(parsed_args.project)
+
         if (
             not parsed_args.launchpad_accept_public_upload
             and (
@@ -121,9 +124,6 @@ class RemoteBuild(ExtensibleCommand):
                 reportable=False,
                 retcode=77,  # os.EX_NOPERM
             )
-
-        if parsed_args.project:
-            self._services.remote_build.set_project(parsed_args.project)
 
         builder = self._services.remote_build
         project = cast(models.Project, self._services.project)
