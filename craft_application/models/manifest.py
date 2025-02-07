@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Models representing manifests for projects and fetch-service assets."""
+
 import hashlib
 import pathlib
 from datetime import datetime, timezone
