@@ -162,6 +162,7 @@ class RemoteBuild(ExtensibleCommand):
             building: set[str] = set()
             succeeded: set[str] = set()
             uploading: set[str] = set()
+            pending: set[str] = set()
             not_building: set[str] = set()
             for arch, build_state in states.items():
                 if build_state.is_running:
@@ -170,6 +171,8 @@ class RemoteBuild(ExtensibleCommand):
                     succeeded.add(arch)
                 elif build_state == BuildState.UPLOADING:
                     uploading.add(arch)
+                elif build_state == BuildState.PENDING:
+                    pending.add(arch)
                 else:
                     not_building.add(arch)
             progress_parts: list[str] = []
@@ -181,6 +184,8 @@ class RemoteBuild(ExtensibleCommand):
                 progress_parts.append("Uploading: " + ", ".join(sorted(uploading)))
             if succeeded:
                 progress_parts.append("Succeeded: " + ", ".join(sorted(succeeded)))
+            if pending:
+                progress_parts.append("Pending: " + ", ".join(sorted(pending)))
             emit.progress("; ".join(progress_parts))
 
         emit.progress("Fetching build artifacts...")

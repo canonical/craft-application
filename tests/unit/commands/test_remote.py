@@ -44,34 +44,38 @@ def test_remote_build_run(remote_build, mocker, fake_services, tmp_path, emitter
     builder = fake_services.remote_build
 
     build_states = [
-        # All 3 builds still pending
+        # All 4 builds still pending
         {
             "arch1": BuildState.PENDING,
             "arch2": BuildState.PENDING,
             "arch3": BuildState.PENDING,
+            "arch4": BuildState.PENDING,
         },
-        # 2 builds running, 1 pending
+        # 2 builds running, 2 pending
         {
             "arch1": BuildState.BUILDING,
             "arch2": BuildState.BUILDING,
             "arch3": BuildState.PENDING,
+            "arch4": BuildState.PENDING,
         },
-        # 1 uploading, 1 building, 1 pending
+        # 1 uploading, 1 building, 1 pending, 1 stopped
         {
             "arch1": BuildState.UPLOADING,
             "arch2": BuildState.BUILDING,
             "arch3": BuildState.PENDING,
+            "arch4": BuildState.SUPERSEDED,
         },
-        # All 3 succeeded
+        # 3 succeeded, 1 stopped
         {
             "arch1": BuildState.SUCCESS,
             "arch2": BuildState.SUCCESS,
             "arch3": BuildState.SUCCESS,
+            "arch4": BuildState.SUPERSEDED,
         },
     ]
 
     mocker.patch.object(
-        builder, "start_builds", return_value=["arch1", "arch2", "arch3"]
+        builder, "start_builds", return_value=["arch1", "arch2", "arch3", "arch4"]
     )
     mocker.patch.object(builder, "monitor_builds", side_effect=[build_states])
 
@@ -79,10 +83,16 @@ def test_remote_build_run(remote_build, mocker, fake_services, tmp_path, emitter
         "arch1": tmp_path / "log1.txt",
         "arch2": tmp_path / "log2.txt",
         "arch3": tmp_path / "log3.txt",
+        "arch4": tmp_path / "log4.txt",
     }
     mocker.patch.object(builder, "fetch_logs", return_value=logs)
 
-    artifacts = [tmp_path / "art1.zip", tmp_path / "art2.zip", tmp_path / "art3.zip"]
+    artifacts = [
+        tmp_path / "art1.zip",
+        tmp_path / "art2.zip",
+        tmp_path / "art3.zip",
+        tmp_path / "art4.zip",
+    ]
     mocker.patch.object(builder, "fetch_artifacts", return_value=artifacts)
 
     parsed_args = argparse.Namespace(
@@ -93,14 +103,16 @@ def test_remote_build_run(remote_build, mocker, fake_services, tmp_path, emitter
     emitter.assert_progress(
         "Starting new build. It may take a while to upload large projects."
     )
-    emitter.assert_progress("Stopped: arch1, arch2, arch3")
-    emitter.assert_progress("Stopped: arch3; Building: arch1, arch2")
-    emitter.assert_progress("Stopped: arch3; Building: arch2; Uploading: arch1")
-    emitter.assert_progress("Succeeded: arch1, arch2, arch3")
-    emitter.assert_progress("Fetching 3 build logs...")
+    emitter.assert_progress("Pending: arch1, arch2, arch3, arch4")
+    emitter.assert_progress("Building: arch1, arch2; Pending: arch3, arch4")
+    emitter.assert_progress(
+        "Stopped: arch4; Building: arch2; Uploading: arch1; Pending: arch3"
+    )
+    emitter.assert_progress("Stopped: arch4; Succeeded: arch1, arch2, arch3")
+    emitter.assert_progress("Fetching 4 build logs...")
     emitter.assert_progress("Fetching build artifacts...")
     emitter.assert_message(
         "Build completed.\n"
-        "Log files: log1.txt, log2.txt, log3.txt\n"
-        "Artifacts: art1.zip, art2.zip, art3.zip"
+        "Log files: log1.txt, log2.txt, log3.txt, log4.txt\n"
+        "Artifacts: art1.zip, art2.zip, art3.zip, art4.zip"
     )
