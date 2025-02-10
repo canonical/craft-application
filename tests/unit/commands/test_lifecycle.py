@@ -38,6 +38,7 @@ from craft_application.commands.lifecycle import (
     get_lifecycle_command_group,
 )
 from craft_application.errors import (
+    InvalidUbuntuProBaseError,
     InvalidUbuntuProServiceError,
     InvalidUbuntuProStatusError,
     UbuntuProAttachedError,
@@ -86,6 +87,18 @@ PRO_SERVICE_CONFIGS = [
     (True,                  ["esm-apps"],                ["esm-apps", "invalid-service"],   InvalidUbuntuProServiceError),
 ]
 
+PRO_PROJECT_CONFIGS = [
+    # base              build_base      pro_services_args   expected_exception
+    ("ubuntu@20.04",    None,           "esm-apps",         None),
+    ("ubuntu@20.04",    "ubuntu@20.04", "esm-apps",         None),
+    ("devel",           None,           "esm-apps",         InvalidUbuntuProBaseError),
+    ("ubuntu@20.04",    "devel",        "esm-apps",         InvalidUbuntuProBaseError),
+    ("devel",           "ubuntu@20.04", "esm-apps",         InvalidUbuntuProBaseError),
+    ("devel",           None,           None,               None),
+    ("ubuntu@20.04",    "devel",        None,               None),
+    ("devel",           "ubuntu@20.04", None,               None),
+]
+
 STEP_NAMES = [step.name.lower() for step in craft_parts.Step]
 MANAGED_LIFECYCLE_COMMANDS = (
     PullCommand,
@@ -120,7 +133,7 @@ def get_fake_command_class(parent_cls, managed):
     ("is_attached", "enabled_services", "pro_services_args", "expected_exception"),
     PRO_SERVICE_CONFIGS,
 )
-def test_validate_pro_services(
+def pro_services_validate_environment(
     mock_pro_api_call,
     is_attached,
     enabled_services,
@@ -139,7 +152,33 @@ def test_validate_pro_services(
     with exception_context:
         # create and validate pro services
         pro_services = ProServices(pro_services_args)
-        pro_services.validate()
+        pro_services.validate_environment()
+
+
+@pytest.mark.parametrize(
+    ("base", "build_base", "pro_services_args", "expected_exception"),
+    PRO_PROJECT_CONFIGS,
+)
+def pro_services_validate_project(
+    mocker,
+    base,
+    build_base,
+    pro_services_args,
+    expected_exception,
+):
+    # configure project
+    project = mocker.Mock()
+    project.base = base
+    project.build_base = build_base
+
+    exception_context = (
+        pytest.raises(expected_exception) if expected_exception else nullcontext()
+    )
+
+    with exception_context:
+        # create and validate pro services
+        pro_services = ProServices(pro_services_args)
+        pro_services.validate_project(project)
 
 
 @pytest.mark.parametrize(

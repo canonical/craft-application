@@ -27,7 +27,9 @@ from typing import Any
 
 import yaml
 
+from craft_application import models
 from craft_application.errors import (
+    InvalidUbuntuProBaseError,
     InvalidUbuntuProServiceError,
     InvalidUbuntuProStatusError,
     UbuntuProApiError,
@@ -51,7 +53,7 @@ class ValidatorOptions(Flag):
     """Options for ProServices.validate method.
 
     SUPPORT: Check names in ProServices set against supported services.
-    AVAILABILITY: Check Ubuntu Pro is attached if ProServices set is not empty
+    AVAILABILITY: Check Ubuntu Pro is attached if ProServices are valid.
     ATTACHMENT: Check Ubuntu Pro is attached or detached to match ProServices set.
     ENABLEMENT: Check enabled Ubuntu Pro enablement matches ProServices set.
     """
@@ -59,10 +61,10 @@ class ValidatorOptions(Flag):
     SUPPORT = auto()
     ATTACHED = auto()
     DETACHED = auto()
-    AVAILABILITY = ATTACHED
     ATTACHMENT = ATTACHED | DETACHED
     ENABLEMENT = auto()
     DEFAULT = SUPPORT | ATTACHMENT | ENABLEMENT
+    AVAILABILITY = ATTACHED | SUPPORT
 
 
 class ProServices(set[str]):
@@ -192,7 +194,15 @@ class ProServices(set[str]):
 
         return cls(service_names)
 
-    def validate(
+    def validate_project(self, project: models.Project) -> None:
+        """Ensure no unsupported interim bases are used in Ubuntu Pro builds."""
+        if bool(self) and (
+            (project.base is not None and project.base == "devel")
+            or (project.build_base is not None and project.build_base == "devel")
+        ):
+            raise InvalidUbuntuProBaseError
+
+    def validate_environment(
         self,
         options: ValidatorOptions = ValidatorOptions.DEFAULT,
     ) -> None:

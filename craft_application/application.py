@@ -645,9 +645,7 @@ class Application:
             self._enable_fetch_service = True
             self._fetch_service_policy = fetch_service_policy
 
-    def get_arg_or_config(
-        self, parsed_args: argparse.Namespace, item: str
-    ) -> Any:  # noqa: ANN401
+    def get_arg_or_config(self, parsed_args: argparse.Namespace, item: str) -> Any:  # noqa: ANN401
         """Get a configuration option that could be overridden by a command argument.
 
         :param parsed_args: The argparse Namespace to check.
@@ -664,6 +662,7 @@ class Application:
         pro_services: ProServices | None,
         run_managed: bool,  # noqa: FBT001
         is_managed: bool,  # noqa: FBT001
+        project: models.Project,
     ) -> None:
         craft_cli.emit.debug(
             f"pro_services: {pro_services}, run_managed: {run_managed}, is_managed: {is_managed}"
@@ -674,20 +673,22 @@ class Application:
                 craft_cli.emit.debug(
                     f"Validating requested Ubuntu Pro status on host: {pro_services}"
                 )
-                pro_services.validate()
+                pro_services.validate_project(project)
+                pro_services.validate_environment()
             # Validate requested pro services running in managed mode inside a managed instance.
             elif run_managed and is_managed:
                 craft_cli.emit.debug(
                     f"Validating requested Ubuntu Pro status in managed instance: {pro_services}"
                 )
-                pro_services.validate()
+                pro_services.validate_environment()
             # Validate pro attachment and service names on the host before starting a managed instance.
             elif run_managed and not is_managed:
                 craft_cli.emit.debug(
                     f"Validating requested Ubuntu Pro attachment on host: {pro_services}"
                 )
-                pro_services.validate(
-                    options=ValidatorOptions.AVAILABILITY | ValidatorOptions.SUPPORT
+                pro_services.validate_project(project)
+                pro_services.validate_environment(
+                    options=ValidatorOptions.AVAILABILITY,
                 )
 
     def _run_inner(self) -> int:
@@ -717,7 +718,9 @@ class Application:
         # which may consume pro packages,
         self._pro_services = getattr(dispatcher.parsed_args(), "pro", None)
         # Check that pro services are correctly configured if available
-        self._check_pro_requirement(self._pro_services, managed_mode, self.is_managed())
+        self._check_pro_requirement(
+            self._pro_services, managed_mode, self.is_managed(), self.get_project()
+        )
 
         craft_cli.emit.debug(f"Build plan: platform={platform}, build_for={build_for}")
         self._pre_run(dispatcher)
