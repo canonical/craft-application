@@ -1331,23 +1331,27 @@ def test_doc_url_in_command_help(monkeypatch, capsys, app):
 
 # fmt: off
 @pytest.mark.parametrize(
-    (   "run_managed",     "is_managed",   "call_count",   "validator_options"),
+    (   "run_managed",     "is_managed",   "val_env_calls",   "val_prj_calls",   "validator_options"),
     [
-        (False,             False,         1,               None),
-        (True,              True,          1,               None),
-        (True,              False,         1,               util.ValidatorOptions.AVAILABILITY | util.ValidatorOptions.SUPPORT),
-        (False,             True,          0,               None),
+        (False,             False,         1,               1,               None),
+        (True,              True,          1,               0,               None),
+        (True,              False,         1,               1,               util.ValidatorOptions.AVAILABILITY),
+        (False,             True,          0,               0,               None),
     ],
 )
 # fmt: on
 def test_check_pro_requirement(
-    mocker, app, run_managed, is_managed, call_count, validator_options
+    mocker, app, run_managed, is_managed, val_env_calls, val_prj_calls, validator_options
 ):
     """Test that _check_pro_requirement validates Pro Services in the correct situations"""
     pro_services = mocker.Mock()
-    app._check_pro_requirement(pro_services, run_managed, is_managed)
+    project = mocker.Mock()
+    project.base = None
+    project.build_base = None
+    app._check_pro_requirement(pro_services, run_managed, is_managed, project)
 
-    assert pro_services.validate.call_count == call_count
+    assert pro_services.validate_environment.call_count == val_env_calls
+    assert pro_services.validate_project.call_count == val_prj_calls
 
     for call in pro_services.validate.call_args_list:
         if validator_options is not None:  # skip assert if default value is passed

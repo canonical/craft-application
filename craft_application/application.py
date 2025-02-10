@@ -635,6 +635,7 @@ class Application:
         pro_services: ProServices | None,
         run_managed: bool,  # noqa: FBT001
         is_managed: bool,  # noqa: FBT001
+        project: models.Project,
     ) -> None:
         craft_cli.emit.debug(
             f"pro_services: {pro_services}, run_managed: {run_managed}, is_managed: {is_managed}"
@@ -645,20 +646,22 @@ class Application:
                 craft_cli.emit.debug(
                     f"Validating requested Ubuntu Pro status on host: {pro_services}"
                 )
-                pro_services.validate()
+                pro_services.validate_project(project)
+                pro_services.validate_environment()
             # Validate requested pro services running in managed mode inside a managed instance.
             elif run_managed and is_managed:
                 craft_cli.emit.debug(
                     f"Validating requested Ubuntu Pro status in managed instance: {pro_services}"
                 )
-                pro_services.validate()
+                pro_services.validate_environment()
             # Validate pro attachment and service names on the host before starting a managed instance.
             elif run_managed and not is_managed:
                 craft_cli.emit.debug(
                     f"Validating requested Ubuntu Pro attachment on host: {pro_services}"
                 )
-                pro_services.validate(
-                    options=ValidatorOptions.AVAILABILITY | ValidatorOptions.SUPPORT
+                pro_services.validate_project(project)
+                pro_services.validate_environment(
+                    options=ValidatorOptions.AVAILABILITY,
                 )
 
         fetch_service_policy: str | None = getattr(args, "fetch_service_policy", None)
@@ -709,7 +712,9 @@ class Application:
         # which may consume pro packages,
         self._pro_services = getattr(dispatcher.parsed_args(), "pro", None)
         # Check that pro services are correctly configured if available
-        self._check_pro_requirement(self._pro_services, managed_mode, self.is_managed())
+        self._check_pro_requirement(
+            self._pro_services, managed_mode, self.is_managed(), self.get_project()
+        )
 
             if run_managed or command.needs_project(dispatcher.parsed_args()):
                 self.services.project = self.get_project(
