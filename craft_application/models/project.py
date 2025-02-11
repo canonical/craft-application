@@ -99,17 +99,28 @@ class BuildInfo:
     @classmethod
     def from_platforms(cls, info: craft_platforms.BuildInfo) -> Self:
         """Convert a craft-platforms BuildInfo to a craft-application BuildInfo."""
-        build_for = (
-            "all"
-            if info.build_for == "all"
-            else craft_platforms.DebianArchitecture(info.build_for)
-        )
+        build_for = "all" if info.build_for == "all" else info.build_for.value
         return cls(
             platform=info.platform,
             build_on=craft_platforms.DebianArchitecture(info.build_on),
             build_for=build_for,
             base=craft_providers.bases.BaseName(
                 name=info.build_base.distribution, version=info.build_base.series
+            ),
+        )
+
+    def to_platforms(self) -> craft_platforms.BuildInfo:
+        return craft_platforms.BuildInfo(
+            platform=self.platform,
+            build_base=craft_platforms.DistroBase(
+                distribution=self.base.name,
+                series=self.base.version,
+            ),
+            build_on=craft_platforms.DebianArchitecture(self.build_on),
+            build_for=(
+                "all"
+                if self.build_for == "all"
+                else craft_platforms.DebianArchitecture(self.build_for)
             ),
         )
 

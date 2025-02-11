@@ -22,12 +22,14 @@ import io
 import os
 import pathlib
 import pkgutil
+import subprocess
 import sys
 import urllib.request
 from collections.abc import Generator, Iterable
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+import craft_platforms
 from craft_cli import CraftError, emit
 from craft_providers import bases
 from craft_providers.actions.snap_installer import Snap
@@ -120,10 +122,58 @@ class ProviderService(base.ProjectService):
 
             self.snaps.append(Snap(name=name, channel=channel, classic=True))
 
+    def run_managed_build(
+        self,
+        build_info: craft_platforms.BuildInfo,
+        use_fetch_service: bool = False,
+        inner_cwd: pathlib.Path = pathlib.Path("/root/project"),
+    ) -> subprocess.CompletedProcess[str]:
+        """Run this command in a managed instance based on the given BuildInfolllllllllllllllll]]]]()."""
+        if self.is_managed():
+            raise CraftError("Cannot nest managed instances")
+        host_arch = craft_platforms.DebianArchitecture.from_host()
+        if build_info.build_on != host_arch:
+            raise CraftError(
+                f"Cannot build on {build_info.build_on.value}. Host architecture is {host_arch.value}."
+            )
+
+        inner_env = {
+            "CRAFT_PLATFORM": build_info.platform,
+            "CRAFT_VERBOSITY_LEVEL": emit.get_mode().name,
+        }
+        emit.debug(
+            f"Running {self._app.name}:{build_info.platform} in {build_info.build_for} instance..."
+        )
+
+        cmd = [self._app.name, *sys.argv[1:]]
+        with self.instance(
+            build_info,
+            work_dir=self._work_dir,
+            clean_existing=use_fetch_service,
+        ) as instance:
+            if use_fetch_service:
+                inner_env.update(self._services.get("fetch").create_session(instance))
+            try:
+                with emit.pause():
+                    # Pyright doesn't fully understand craft_providers's CompletedProcess.
+                    return instance.execute_run(  # pyright: ignore[reportUnknownMemberType,reportUnknownVariableType]
+                        cmd,
+                        cwd=inner_cwd,
+                        check=True,
+                        env=inner_env,
+                    )
+            except subprocess.CalledProcessError as exc:
+                raise craft_providers.ProviderError(
+                    f"Failed to execute {self._app.name} in instance."
+                ) from exc
+            finally:
+                if use_fetch_service:
+                    self._services.get("fetch").teardown_session()
+
     @contextlib.contextmanager
     def instance(
         self,
-        build_info: models.BuildInfo,
+        build_info: models.BuildInfo | craft_platforms.BuildInfo,
         *,
         work_dir: pathlib.Path,
         allow_unstable: bool = True,
@@ -139,9 +189,11 @@ class ProviderService(base.ProjectService):
           and re-created.
         :returns: a context manager of the provider instance.
         """
+        if isinstance(build_info, models.BuildInfo):
+            build_info = build_info.to_platforms()
         instance_name = self._get_instance_name(work_dir, build_info)
         emit.debug(f"Preparing managed instance {instance_name!r}")
-        base_name = build_info.base
+        base_name = build_info.build_base
         base = self.get_base(base_name, instance_name=instance_name, **kwargs)
         provider = self.get_provider(name=self.__provider_name)
 
@@ -150,7 +202,7 @@ class ProviderService(base.ProjectService):
         if clean_existing:
             self._clean_instance(provider, work_dir, build_info)
 
-        emit.progress(f"Launching managed {base_name[0]} {base_name[1]} instance...")
+        emit.progress(f"Launching managed {str(base_name)} instance...")
         with provider.launched_environment(
             project_name=self._project.name,
             project_path=work_dir,
@@ -173,7 +225,7 @@ class ProviderService(base.ProjectService):
 
     def get_base(
         self,
-        base_name: bases.BaseName,
+        base_name: bases.BaseName | craft_platforms.DistroBase,
         *,
         instance_name: str,
         **kwargs: bool | str | pathlib.Path | None,
@@ -187,6 +239,11 @@ class ProviderService(base.ProjectService):
         This method should be overridden by a specific application if it intends to
         use base names that don't align to a "distro:version" naming convention.
         """
+        if isinstance(base_name, craft_platforms.DistroBase):
+            base_name = bases.BaseName(
+                name=base_name.distribution,
+                version=base_name.series,
+            )
         alias = bases.get_base_alias(base_name)
         base_class = bases.get_base_from_alias(alias)
         if base_class is bases.BuilddBase:
@@ -287,7 +344,9 @@ class ProviderService(base.ProjectService):
             self._clean_instance(provider, self._work_dir, info)
 
     def _get_instance_name(
-        self, work_dir: pathlib.Path, build_info: models.BuildInfo
+        self,
+        work_dir: pathlib.Path,
+        build_info: craft_platforms.BuildInfo | models.BuildInfo,
     ) -> str:
         work_dir_inode = work_dir.stat().st_ino
 
@@ -353,7 +412,7 @@ class ProviderService(base.ProjectService):
         self,
         provider: craft_providers.Provider,
         work_dir: pathlib.Path,
-        info: models.BuildInfo,
+        info: models.BuildInfo | craft_platforms.BuildInfo,
     ) -> None:
         """Clean an instance, if it exists."""
         instance_name = self._get_instance_name(work_dir, info)

@@ -38,6 +38,7 @@ if TYPE_CHECKING:
     from craft_application.application import AppMetadata
 
 _DEFAULT_SERVICES = {
+    "build_plan": "BuildPlanService",
     "config": "ConfigService",
     "fetch": "FetchService",
     "init": "InitService",

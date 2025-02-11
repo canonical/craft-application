@@ -20,13 +20,15 @@ import os
 import pathlib
 import subprocess
 import textwrap
-from typing import Any
+from typing import Any, Literal, cast
 
 from craft_cli import CommandGroup, emit
 from craft_parts.features import Features
 from typing_extensions import override
 
+from craft_application import services
 from craft_application.commands import base
+from craft_application.services import buildplan
 
 
 def get_lifecycle_command_group() -> CommandGroup:
@@ -78,14 +80,6 @@ class _BaseLifecycleCommand(base.ExtensibleCommand):
         )
 
     @override
-    def get_managed_cmd(self, parsed_args: argparse.Namespace) -> list[str]:
-        cmd = super().get_managed_cmd(parsed_args)
-
-        cmd.extend(parsed_args.parts)
-
-        return cmd
-
-    @override
     def provider_name(self, parsed_args: argparse.Namespace) -> str | None:
         return "lxd" if parsed_args.use_lxd else None
 
@@ -96,20 +90,7 @@ class _BaseLifecycleCommand(base.ExtensibleCommand):
         The command will run in managed mode unless the `--destructive-mode` flag
         is passed OR `CRAFT_BUILD_ENVIRONMENT` is set to `host`.
         """
-        if parsed_args.destructive_mode:
-            emit.debug(
-                "Not running managed mode because `--destructive-mode` was passed"
-            )
-            return False
-
-        build_env = os.getenv("CRAFT_BUILD_ENVIRONMENT")
-        if build_env and build_env.lower().strip() == "host":
-            emit.debug(
-                f"Not running managed mode because CRAFT_BUILD_ENVIRONMENT={build_env}"
-            )
-            return False
-
-        return True
+        return False  # We manage ourselves.
 
 
 class LifecycleCommand(_BaseLifecycleCommand):
@@ -157,23 +138,6 @@ class LifecycleCommand(_BaseLifecycleCommand):
         )
 
     @override
-    def get_managed_cmd(self, parsed_args: argparse.Namespace) -> list[str]:
-        """Get the command to run in managed mode.
-
-        :param parsed_args: The parsed arguments used.
-        :returns: A list of strings ready to be passed into a craft-providers executor.
-        :raises: RuntimeError if this command is not supposed to run managed.
-        """
-        cmd = super().get_managed_cmd(parsed_args)
-
-        if getattr(parsed_args, "shell", False):
-            cmd.append("--shell")
-        if getattr(parsed_args, "shell_after", False):
-            cmd.append("--shell-after")
-
-        return cmd
-
-    @override
     def _run(
         self,
         parsed_args: argparse.Namespace,
@@ -181,8 +145,41 @@ class LifecycleCommand(_BaseLifecycleCommand):
         **kwargs: Any,
     ) -> None:
         """Run a lifecycle step command."""
+        mode: Literal["manager", "managed", "destructive"] = "manager"
+        build_env = self._services.config.get("build_environment")
+        if parsed_args.destructive_mode:
+            mode = "destructive"
+            emit.debug(
+                "Not running managed mode because `--destructive-mode` was passed"
+            )
+        elif build_env and build_env.lower() == "host":
+            mode = "managed"
+            emit.debug(
+                f"Running as managed on host because CRAFT_BUILD_ENVIRONMENT=host"
+            )
+        if mode in ("managed", "destructive"):
+            return self._run_managed(parsed_args=parsed_args, step_name=step_name, kwargs=kwargs)
+
         super()._run(parsed_args)
 
+        build_plan_service = cast(
+            buildplan.BuildPlanService,
+            self._services.get("build_plan"),
+        )
+
+        project_data = self._services.project.marshal()
+
+
+        for build_info in build_plan_service.gen_build_plan(
+            project_data=project_data,
+            platforms=
+        )
+
+
+    def _run_managed(
+        self, parsed_args: argparse.Namespace, step_name: str | None = None,
+        **kwargs: Any,
+    ) -> None:
         shell = getattr(parsed_args, "shell", False)
         shell_after = getattr(parsed_args, "shell_after", False)
         debug = getattr(parsed_args, "debug", False)
