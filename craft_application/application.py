@@ -19,11 +19,13 @@ from __future__ import annotations
 
 import argparse
 import importlib
+import logging
 import os
 import pathlib
 import signal
 import subprocess
 import sys
+import traceback
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
 from functools import cached_property
@@ -39,6 +41,8 @@ from platformdirs import user_cache_path
 from craft_application import _config, commands, errors, grammar, models, secrets, util
 from craft_application.errors import PathInvalidError
 from craft_application.models import BuildInfo, GrammarAwareProject
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from craft_application.services import service_factory
@@ -171,15 +175,13 @@ class Application:
         for plugin_entry_point in metadata.entry_points(
             group="craft_application_plugins.application"
         ):
-            craft_cli.emit.debug(f"Loading app plugin {plugin_entry_point.name}")
+            logger.debug(f"Loading app plugin {plugin_entry_point.name}")
             try:
                 app_plugin_module = plugin_entry_point.load()
                 app_plugin_module.configure(self)
-            except Exception as e:  # noqa: BLE001
-                craft_cli.emit.progress(
-                    f"Failed to load plugin {plugin_entry_point.name}", permanent=True
-                )
-                craft_cli.emit.debug(repr(e))
+            except Exception:  # noqa: BLE001
+                logger.error(f"Failed to load plugin {plugin_entry_point.name}:")
+                logger.error(traceback.format_exc())
 
     @property
     def app_config(self) -> dict[str, Any]:
