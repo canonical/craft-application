@@ -25,7 +25,6 @@ import pathlib
 import signal
 import subprocess
 import sys
-import traceback
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
 from functools import cached_property
@@ -179,9 +178,8 @@ class Application:
             try:
                 app_plugin_module = plugin_entry_point.load()
                 app_plugin_module.configure(self)
-            except Exception:  # noqa: BLE001
-                logger.error(f"Failed to load plugin {plugin_entry_point.name}:")
-                logger.error(traceback.format_exc())
+            except Exception:
+                logger.exception(f"Failed to load plugin {plugin_entry_point.name}")
 
     @property
     def app_config(self) -> dict[str, Any]:
