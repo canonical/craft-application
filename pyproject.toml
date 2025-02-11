@@ -98,13 +98,6 @@ dev-plucky = [
     "python-apt>=2.9.0;sys_platform=='linux'",
 ]
 
-#dev-jammy-manual = [
-#    "python-apt @ https://launchpad.net/ubuntu/+archive/primary/+sourcefiles/python-apt/2.4.0ubuntu2/python-apt_2.4.0ubuntu2.tar.xz ; sys_platform == 'linux'"
-#]
-#dev-noble-manual = [
-#    "python-apt @ https://launchpad.net/ubuntu/+archive/primary/+sourcefiles/python-apt/2.7.6/python-apt_2.7.6.tar.xz ; sys_platform == 'linux'"
-#]
-
 [build-system]
 requires = [
     "setuptools==75.8.0",
@@ -372,10 +365,6 @@ conflicts = [
         { group = "dev-oracular" },
         { group = "dev-plucky" },
     ],
-#    [
-#        { group = "dev-jammy-manual" },
-#        { group = "dev-noble-manual" },
-#    ],
 ]
 
 [[tool.uv.index]]
