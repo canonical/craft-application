@@ -133,13 +133,14 @@ def get_fake_command_class(parent_cls, managed):
     ("is_attached", "enabled_services", "pro_services_args", "expected_exception"),
     PRO_SERVICE_CONFIGS,
 )
-def pro_services_validate_environment(
+def test_pro_services_validate_environment(
     mock_pro_api_call,
     is_attached,
     enabled_services,
     pro_services_args,
     expected_exception,
 ):
+    """Run through all validation scenarios for Pro enabled environments."""
     # configure api state
     set_is_attached, set_enabled_service = mock_pro_api_call
     set_is_attached(is_attached)
@@ -159,13 +160,14 @@ def pro_services_validate_environment(
     ("base", "build_base", "pro_services_args", "expected_exception"),
     PRO_PROJECT_CONFIGS,
 )
-def pro_services_validate_project(
+def test_pro_services_validate_project(
     mocker,
     base,
     build_base,
     pro_services_args,
     expected_exception,
 ):
+    """Test project validation to ensure "devel" builds are not built with --pro."""
     # configure project
     project = mocker.Mock()
     project.base = base
