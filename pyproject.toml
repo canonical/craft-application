@@ -371,7 +371,11 @@ conflicts = [
         { group = "dev-noble" },
         { group = "dev-oracular" },
         { group = "dev-plucky" },
-    ]
+    ],
+    [
+        { group = "dev-jammy-manual" },
+        { group = "dev-noble-manual" },
+    ],
 ]
 
 [[tool.uv.index]]
