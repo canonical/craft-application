@@ -41,6 +41,7 @@ from craft_application import _config, commands, errors, grammar, models, secret
 from craft_application.errors import PathInvalidError
 from craft_application.models import BuildInfo, GrammarAwareProject
 
+# For logging things before the emitter is initialized
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
@@ -52,6 +53,7 @@ GLOBAL_VERSION = craft_cli.GlobalArgument(
 
 DEFAULT_CLI_LOGGERS = frozenset(
     {
+        __name__,
         "craft_archives",
         "craft_parts",
         "craft_providers",
