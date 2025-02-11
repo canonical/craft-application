@@ -174,7 +174,7 @@ class Application:
         for plugin_entry_point in metadata.entry_points(
             group="craft_application_plugins.application"
         ):
-            logger.debug(f"Loading app plugin {plugin_entry_point.name}")
+            logger.debug("Loading app plugin %s", plugin_entry_point.name)
             try:
                 app_plugin_module = plugin_entry_point.load()
                 app_plugin_module.configure(self)
