@@ -4,6 +4,16 @@
 Changelog
 *********
 
+4.9.1 (2025-Feb-12)
+-------------------
+
+Application
+===========
+
+- Load python plugins after the emitter has been initialized so they can be logged.
+
+For a complete list of commits, check out the `4.9.1`_ release on GitHub.
+
 4.9.0 (2025-Feb-10)
 -------------------
 
@@ -577,3 +587,4 @@ For a complete list of commits, check out the `2.7.0`_ release on GitHub.
 .. _4.8.2: https://github.com/canonical/craft-application/releases/tag/4.8.2
 .. _4.8.3: https://github.com/canonical/craft-application/releases/tag/4.8.3
 .. _4.9.0: https://github.com/canonical/craft-application/releases/tag/4.9.0
+.. _4.9.1: https://github.com/canonical/craft-application/releases/tag/4.9.1
