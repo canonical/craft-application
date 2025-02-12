@@ -4,6 +4,14 @@
 Changelog
 *********
 
+4.9.1 (2025-Feb-12)
+-------------------
+
+Application
+===========
+
+- Load python plugins after the emitter has been initialized so they can be logged.
+
 4.9.0 (2025-Feb-10)
 -------------------
 
