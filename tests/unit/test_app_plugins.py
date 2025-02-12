@@ -133,9 +133,12 @@ def test_app_plugin_load_fails(
     app._load_plugins()
 
     emitter.assert_debug(f"Loading app plugin {PLUGIN_ENTRY_POINT_NAME}")
-    emitter.assert_debug(f"Failed to load plugin {PLUGIN_ENTRY_POINT_NAME}")
+    emitter.assert_progress(
+        f"Failed to load plugin {PLUGIN_ENTRY_POINT_NAME}",
+        permanent=True,
+    )
     for msg in emitter.interactions:
-        if msg.args[1].startswith("Traceback"):
+        if msg.args[0] == "debug" and msg.args[1].startswith("Traceback"):
             assert msg.args[1].endswith("Exception: Help!\n")
             return
     raise AssertionError("Didn't find traceback")

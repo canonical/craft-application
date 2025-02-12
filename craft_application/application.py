@@ -174,7 +174,10 @@ class Application:
                 app_plugin_module = plugin_entry_point.load()
                 app_plugin_module.configure(self)
             except Exception:  # noqa: BLE001
-                craft_cli.emit.debug(f"Failed to load plugin {plugin_entry_point.name}")
+                craft_cli.emit.progress(
+                    f"Failed to load plugin {plugin_entry_point.name}",
+                    permanent=True,
+                )
                 craft_cli.emit.debug(traceback.format_exc())
 
     @property
