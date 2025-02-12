@@ -19,12 +19,12 @@ from __future__ import annotations
 
 import argparse
 import importlib
-import logging
 import os
 import pathlib
 import signal
 import subprocess
 import sys
+import traceback
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
 from functools import cached_property
@@ -41,9 +41,6 @@ from craft_application import _config, commands, errors, grammar, models, secret
 from craft_application.errors import PathInvalidError
 from craft_application.models import BuildInfo, GrammarAwareProject
 
-# For logging things before the emitter is initialized
-logger = logging.getLogger(__name__)
-
 if TYPE_CHECKING:
     from craft_application.services import service_factory
 
@@ -53,7 +50,6 @@ GLOBAL_VERSION = craft_cli.GlobalArgument(
 
 DEFAULT_CLI_LOGGERS = frozenset(
     {
-        __name__,
         "craft_archives",
         "craft_parts",
         "craft_providers",
@@ -166,9 +162,6 @@ class Application:
         # The kind of sessions that the fetch-service service should create
         self._fetch_service_policy = "strict"
 
-        # Load the plugins after initialization but before run
-        self._load_plugins()
-
     @final
     def _load_plugins(self) -> None:
         """Load application plugins."""
@@ -176,12 +169,13 @@ class Application:
         for plugin_entry_point in metadata.entry_points(
             group="craft_application_plugins.application"
         ):
-            logger.debug("Loading app plugin %s", plugin_entry_point.name)
+            craft_cli.emit.debug(f"Loading app plugin {plugin_entry_point.name}")
             try:
                 app_plugin_module = plugin_entry_point.load()
                 app_plugin_module.configure(self)
-            except Exception:
-                logger.exception(f"Failed to load plugin {plugin_entry_point.name}")
+            except Exception:  # noqa: BLE001
+                craft_cli.emit.debug(f"Failed to load plugin {plugin_entry_point.name}")
+                craft_cli.emit.debug(traceback.format_exc())
 
     @property
     def app_config(self) -> dict[str, Any]:
@@ -685,6 +679,7 @@ class Application:
     def run(self) -> int:
         """Bootstrap and run the application."""
         self._setup_logging()
+        self._load_plugins()
         self._initialize_craft_parts()
 
         craft_cli.emit.debug("Preparing application...")

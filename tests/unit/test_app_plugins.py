@@ -17,7 +17,6 @@
 """Unit tests for craft-application app plugins."""
 
 import argparse
-import logging
 import os
 import sys
 import textwrap
@@ -109,26 +108,29 @@ def fake_service():
     services.ServiceFactory.register("fake", FakeService)
 
 
-def test_app_no_plugins(monkeypatch, app_metadata, fake_services, caplog):
-    with caplog.at_level(logging.DEBUG):
-        Application(app_metadata, fake_services)
-    assert "Loading app plugin" not in caplog.text
+def test_app_no_plugins(monkeypatch, app_metadata, fake_services, emitter):
+    app = Application(app_metadata, fake_services)
+    app._setup_logging()
+    app._load_plugins()
+    with pytest.raises(AssertionError):
+        emitter.assert_debug("Loading app plugin .*", regex=True)
 
 
 @pytest.mark.usefixtures("fake_project_file")
 def test_app_plugin_loaded(
-    app_metadata, fake_service, fake_services, caplog, entry_points_faker
+    app_metadata, fake_service, fake_services, emitter, entry_points_faker
 ):
     entry_points_faker()
 
-    with caplog.at_level(logging.DEBUG):
-        Application(app_metadata, fake_services)
-    assert f"Loading app plugin {PLUGIN_ENTRY_POINT_NAME}" in caplog.text
+    app = Application(app_metadata, fake_services)
+    app._setup_logging()
+    app._load_plugins()
+    emitter.assert_debug(f"Loading app plugin {PLUGIN_ENTRY_POINT_NAME}")
 
 
 @pytest.mark.usefixtures("fake_project_file")
 def test_app_two_plugins_loaded(
-    app_metadata, fake_service, fake_services, caplog, entry_points_faker
+    app_metadata, fake_service, fake_services, emitter, entry_points_faker
 ):
     entry_points_faker(
         [
@@ -137,10 +139,11 @@ def test_app_two_plugins_loaded(
         ]
     )
 
-    with caplog.at_level(logging.DEBUG):
-        Application(app_metadata, fake_services)
-    assert f"Loading app plugin {PLUGIN_ENTRY_POINT_NAME}" in caplog.text
-    assert "Loading app plugin anothername" in caplog.text
+    app = Application(app_metadata, fake_services)
+    app._setup_logging()
+    app._load_plugins()
+    emitter.assert_debug(f"Loading app plugin {PLUGIN_ENTRY_POINT_NAME}")
+    emitter.assert_debug("Loading app plugin anothername")
 
 
 @pytest.mark.usefixtures("fake_project_file")
@@ -156,6 +159,8 @@ def test_app_plugin_adds_service(
 
     entry_points_faker([(PLUGIN_ENTRY_POINT_NAME, PLUGIN_MODULE_NAME, configure)])
     app = Application(app_metadata, fake_services)
+    app._setup_logging()
+    app._load_plugins()
 
     assert cast(FakeService, app.services.get("fake")).get_a_thing() == "a thing"
 
