@@ -117,6 +117,31 @@ def test_app_no_plugins(monkeypatch, app_metadata, fake_services, emitter):
 
 
 @pytest.mark.usefixtures("fake_project_file")
+def test_app_plugin_load_fails(
+    app_metadata, fake_service, fake_services, emitter, entry_points_faker
+):
+    def broken_configure(app: Application):
+        raise Exception("Help!")  # noqa: TRY002
+
+    entry_points_faker(
+        [(PLUGIN_ENTRY_POINT_NAME, PLUGIN_MODULE_NAME, broken_configure)]
+    )
+    app = Application(app_metadata, fake_services)
+    app._setup_logging()
+
+    # Should not raise an exception
+    app._load_plugins()
+
+    emitter.assert_debug(f"Loading app plugin {PLUGIN_ENTRY_POINT_NAME}")
+    emitter.assert_debug(f"Failed to load plugin {PLUGIN_ENTRY_POINT_NAME}")
+    for msg in emitter.interactions:
+        if msg.args[1].startswith("Traceback"):
+            assert msg.args[1].endswith("Exception: Help!\n")
+            return
+    raise AssertionError("Didn't find traceback")
+
+
+@pytest.mark.usefixtures("fake_project_file")
 def test_app_plugin_loaded(
     app_metadata, fake_service, fake_services, emitter, entry_points_faker
 ):
