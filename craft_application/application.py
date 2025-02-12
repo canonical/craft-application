@@ -24,6 +24,7 @@ import pathlib
 import signal
 import subprocess
 import sys
+import traceback
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
 from functools import cached_property
@@ -161,9 +162,6 @@ class Application:
         # The kind of sessions that the fetch-service service should create
         self._fetch_service_policy = "strict"
 
-        # Load the plugins after initialization but before run
-        self._load_plugins()
-
     @final
     def _load_plugins(self) -> None:
         """Load application plugins."""
@@ -175,11 +173,12 @@ class Application:
             try:
                 app_plugin_module = plugin_entry_point.load()
                 app_plugin_module.configure(self)
-            except Exception as e:  # noqa: BLE001
+            except Exception:  # noqa: BLE001
                 craft_cli.emit.progress(
-                    f"Failed to load plugin {plugin_entry_point.name}", permanent=True
+                    f"Failed to load plugin {plugin_entry_point.name}",
+                    permanent=True,
                 )
-                craft_cli.emit.debug(repr(e))
+                craft_cli.emit.debug(traceback.format_exc())
 
     @property
     def app_config(self) -> dict[str, Any]:
@@ -683,6 +682,7 @@ class Application:
     def run(self) -> int:
         """Bootstrap and run the application."""
         self._setup_logging()
+        self._load_plugins()
         self._initialize_craft_parts()
 
         craft_cli.emit.debug("Preparing application...")
