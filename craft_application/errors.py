@@ -21,8 +21,9 @@ All errors inherit from craft_cli.CraftError.
 from __future__ import annotations
 
 import os
-from collections.abc import Sequence
-from typing import TYPE_CHECKING
+import pathlib
+from collections.abc import Collection, Sequence
+from typing import TYPE_CHECKING, Any, Literal
 
 import yaml
 from craft_cli import CraftError
@@ -38,12 +39,87 @@ if TYPE_CHECKING:  # pragma: no cover
     from typing_extensions import Self
 
 
-class ProjectFileMissingError(CraftError, FileNotFoundError):
+class PathInvalidError(CraftError, OSError):
+    """Error that the given path is not usable."""
+
+
+class ProjectFileError(CraftError):
+    """Errors to do with the project file or directory."""
+
+
+class ProjectFileMissingError(ProjectFileError, FileNotFoundError):
     """Error finding project file."""
 
 
-class PathInvalidError(CraftError, OSError):
-    """Error that the given path is not usable."""
+class ProjectDirectoryMissingError(ProjectFileError, FileNotFoundError):
+    """The project directory doesn't exist"""
+
+    def __init__(
+        self,
+        directory: pathlib.Path,
+        *,
+        details: str | None = None,
+        resolution: str | None = None,
+        docs_url: str | None = None,
+        doc_slug: str | None = None,
+    ) -> None:
+        super().__init__(
+            f"Project directory missing: {directory}",
+            details=details,
+            resolution=resolution,
+            docs_url=docs_url,
+            logpath_report=False,
+            reportable=False,
+            retcode=os.EX_NOINPUT,
+            doc_slug=doc_slug,
+        )
+
+
+class ProjectDirectoryTypeError(ProjectFileError, FileNotFoundError):
+    """The project directory doesn't exist"""
+
+    def __init__(
+        self,
+        directory: pathlib.Path,
+        *,
+        details: str | None = None,
+        resolution: str | None = None,
+        docs_url: str | None = None,
+        doc_slug: str | None = None,
+    ) -> None:
+        super().__init__(
+            f"Given project directory path is not a directory: {directory}",
+            details=details,
+            resolution=resolution,
+            docs_url=docs_url,
+            logpath_report=False,
+            reportable=False,
+            retcode=os.EX_NOINPUT,
+            doc_slug=doc_slug,
+        )
+
+
+class ProjectFileInvalidError(ProjectFileError):
+    """Error that the project file is valid YAML, but not a valid project file."""
+
+    def __init__(
+        self,
+        project_data: Any,
+        *,
+        resolution: str | None = None,
+        docs_url: str | None = None,
+        doc_slug: str | None = None,
+    ) -> None:
+        super().__init__(
+            "Invalid project file.",
+            details=f"Project file should be a YAML mapping, not a {type(project_data)}",
+            resolution=resolution,
+            docs_url=docs_url,
+            logpath_report=False,
+            reportable=False,
+            retcode=os.EX_NOINPUT,
+            doc_slug=doc_slug,
+        )
 
 
 class YamlError(CraftError, yaml.YAMLError):
@@ -141,7 +217,11 @@ class SecretsManagedError(CraftError):
         super().__init__(message=message)
 
 
-class InvalidPlatformError(CraftError):
+class PlatformDefinitionError(CraftError):
+    """Errors with the platform definitions."""
+
+
+class InvalidPlatformError(PlatformDefinitionError):
     """The selected build plan platform is invalid."""
 
     def __init__(self, platform: str, all_platforms: Sequence[str]) -> None:
@@ -149,6 +229,28 @@ class InvalidPlatformError(CraftError):
         details = f"Valid platforms are: {', '.join(all_platforms)}."
 
         super().__init__(message=message, details=details)
+
+
+class ArchitectureNotInPlatformError(PlatformDefinitionError):
+    """The selected build-for is not in the selected platform."""
+
+    def __init__(
+        self,
+        build_key: Literal["build-on", "build-for"],
+        build_for: str,
+        platform: str,
+        build_fors: Collection[str],
+        *,
+        docs_url: str | None = None,
+        doc_slug: str | None = None,
+    ) -> None:
+        super().__init__(
+            f"Platform {platform!r} does not contain {build_key!r} {build_for}.",
+            details=f"Valid {build_key!r} values: {humanize_list(build_fors, 'and')}",
+            reportable=False,
+            docs_url=docs_url,
+            doc_slug=doc_slug,
+        )
 
 
 class EmptyBuildPlanError(CraftError):

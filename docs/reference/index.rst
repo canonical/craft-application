@@ -10,6 +10,7 @@ Reference
    environment-variables
    platforms
    pytest-plugin
+   services/index
 
 Indices and tables
 ==================

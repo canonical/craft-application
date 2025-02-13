@@ -28,7 +28,14 @@ linkcheck_ignore = [
     "https://github.com/canonical/[a-z]*craft[a-z-]*/releases/.*",
 ]
 
-# region Configuration for canonical-sphinx
+extensions = ["canonical_sphinx", "sphinx.ext.autodoc", "sphinx.ext.intersphinx"]
+
+rst_epilog = """
+.. include:: /reuse/links.txt
+"""
+
+
+# Canonical-sphinx
 ogp_site_url = "https://canonical-craft-application.readthedocs-hosted.com/"
 ogp_site_name = project
 
@@ -37,14 +44,14 @@ html_context = {
     "github_url": "https://github.com/canonical/craft-application",
 }
 
-extensions = [
-    "canonical_sphinx",
-    "sphinx.ext.autodoc",
-]
-# endregion
-
-# region Options for extensions
 # Github config
 github_username = "canonical"
 github_repository = "craft-application"
-# endregion
+
+intersphinx_mapping = {
+    "craft-grammar": ("https://craft-grammar.readthedocs.io/en/latest", None),
+    "craft-parts": (
+        "https://canonical-craft-parts.readthedocs-hosted.com/en/latest",
+        None,
+    ),
+}

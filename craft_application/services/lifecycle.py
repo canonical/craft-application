@@ -112,7 +112,8 @@ def _get_step(step_name: str) -> Step:
         raise RuntimeError(f"Invalid target step {step_name!r}") from None
 
 
-class LifecycleService(base.ProjectService):
+# TODO: This was a ProjectService.
+class LifecycleService(base.AppService):
     """Create and manage the parts lifecycle.
 
     :param app: An AppMetadata object containing metadata about the application.
