@@ -15,12 +15,13 @@
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Service classes for the business logic of various categories of command."""
 
-from craft_application.services.base import AppService, ProjectService
+from craft_application.services.base import AppService
 from craft_application.services.config import ConfigService
 from craft_application.services.fetch import FetchService
 from craft_application.services.lifecycle import LifecycleService
 from craft_application.services.init import InitService
 from craft_application.services.package import PackageService
+from craft_application.services.project import ProjectService
 from craft_application.services.provider import ProviderService
 from craft_application.services.remotebuild import RemoteBuildService
 from craft_application.services.request import RequestService

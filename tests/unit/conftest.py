@@ -24,6 +24,7 @@ import pytest_mock
 
 from craft_application import git, services, util
 from craft_application.services import service_factory
+from craft_application.services.project import ProjectService
 
 BASIC_PROJECT_YAML = """
 name: myproject
@@ -41,6 +42,15 @@ parts:
 def fake_host_architecture(monkeypatch, request) -> str:
     monkeypatch.setattr(util, "get_host_architecture", lambda: request.param)
     return request.param
+
+
+@pytest.fixture
+def project_service(app_metadata, fake_services, tmp_path):
+    return ProjectService(
+        app_metadata,
+        fake_services,
+        project_dir=tmp_path,
+    )
 
 
 @pytest.fixture

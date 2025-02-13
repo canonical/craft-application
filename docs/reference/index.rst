@@ -9,6 +9,7 @@ Reference
    changelog
    environment-variables
    platforms
+   services/index
 
 Indices and tables
 ==================
