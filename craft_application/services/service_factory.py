@@ -15,7 +15,6 @@
 
 from __future__ import annotations
 
-import dataclasses
 import importlib
 import re
 import warnings
@@ -52,7 +51,6 @@ T = TypeVar("T")
 _ClassName = Annotated[str, annotated_types.Predicate(lambda x: x.endswith("Class"))]
 
 
-@dataclasses.dataclass
 class ServiceFactory:
     """Factory class for lazy-loading service classes.
 
@@ -67,35 +65,32 @@ class ServiceFactory:
         dict[str, tuple[str, str] | type[services.AppService]]
     ] = {}
 
-    # These exist so that child ServiceFactory classes can use them.
-    app: AppMetadata
-    PackageClass: type[services.PackageService] = None  # type: ignore[assignment]
-    LifecycleClass: type[services.LifecycleService] = None  # type: ignore[assignment]
-    ProviderClass: type[services.ProviderService] = None  # type: ignore[assignment]
-    RemoteBuildClass: type[services.RemoteBuildService] = None  # type: ignore[assignment]
-    RequestClass: type[services.RequestService] = None  # type: ignore[assignment]
-    ConfigClass: type[services.ConfigService] = None  # type: ignore[assignment]
-    FetchClass: type[services.FetchService] = None  # type: ignore[assignment]
-    InitClass: type[services.InitService] = None  # type: ignore[assignment]
-    project: models.Project | None = None
-
     if TYPE_CHECKING:
         # Cheeky hack that lets static type checkers report the correct types.
-        package: services.PackageService = None  # type: ignore[assignment]
-        lifecycle: services.LifecycleService = None  # type: ignore[assignment]
-        provider: services.ProviderService = None  # type: ignore[assignment]
-        remote_build: services.RemoteBuildService = None  # type: ignore[assignment]
-        request: services.RequestService = None  # type: ignore[assignment]
-        config: services.ConfigService = None  # type: ignore[assignment]
-        fetch: services.FetchService = None  # type: ignore[assignment]
-        init: services.InitService = None  # type: ignore[assignment]
+        # This does not need any new types added as the ``__getattr__`` method is
+        # deprecated and we should encourage using ``get()`` instead.
+        package: services.PackageService
+        lifecycle: services.LifecycleService
+        provider: services.ProviderService
+        remote_build: services.RemoteBuildService
+        request: services.RequestService
+        config: services.ConfigService
+        fetch: services.FetchService
+        init: services.InitService
 
-    def __post_init__(self) -> None:
+    def __init__(
+        self,
+        app: AppMetadata,
+        *,
+        project: models.Project | None = None,
+        **kwargs: type[services.AppService] | None,
+    ) -> None:
+        self.app = app
+        self.project = project
         self._service_kwargs: dict[str, dict[str, Any]] = {}
         self._services: dict[str, services.AppService] = {}
 
-        factory_dict = dataclasses.asdict(self)
-        for cls_name, value in factory_dict.items():
+        for cls_name, value in kwargs.items():
             if cls_name.endswith("Class"):
                 if value is not None:
                     identifier = _CAMEL_TO_PYTHON_CASE_REGEX.sub(
