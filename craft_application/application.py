@@ -25,6 +25,7 @@ import signal
 import subprocess
 import sys
 import traceback
+import warnings
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
 from functools import cached_property
@@ -39,7 +40,7 @@ from platformdirs import user_cache_path
 
 from craft_application import _config, commands, errors, grammar, models, util
 from craft_application.errors import PathInvalidError
-from craft_application.models import BuildInfo, GrammarAwareProject
+from craft_application.models import BuildInfo
 
 if TYPE_CHECKING:
     from craft_application.services import service_factory
@@ -314,6 +315,10 @@ class Application:
             partitions=self._partitions,
         )
         self.services.update_kwargs(
+            "project",
+            project_dir=self.project_dir,
+        )
+        self.services.update_kwargs(
             "provider",
             work_dir=self._work_dir,
             build_plan=self._build_plan,
@@ -332,6 +337,7 @@ class Application:
         directory. Applications may wish to override this if the project file could be
          in multiple places within the project directory.
         """
+        warnings.warn(DeprecationWarning("NEEDS REMOVING BEFORE MERGE TO MAIN"))
         if project_dir is None:
             project_dir = self.project_dir
 
@@ -352,66 +358,16 @@ class Application:
         :param build_for: the architecture to build this project for.
         :returns: A transformed, loaded project model.
         """
-        if self.__project is not None:
-            return self.__project
-
-        try:
-            project_path = self._resolve_project_path(self.project_dir)
-        except FileNotFoundError as err:
-            raise errors.ProjectFileMissingError(
-                f"Project file '{self.app.name}.yaml' not found in '{self.project_dir}'.",
-                details="The project file could not be found.",
-                resolution="Ensure the project file exists.",
-                retcode=os.EX_NOINPUT,
-            ) from err
-        craft_cli.emit.debug(f"Loading project file '{project_path!s}'")
-
-        with project_path.open() as file:
-            yaml_data = util.safe_yaml_load(file)
-
-        host_arch = util.get_host_architecture()
-        build_planner = self.app.BuildPlannerClass.from_yaml_data(
-            yaml_data, project_path
+        warnings.warn(
+            DeprecationWarning(
+                "Do not get the project directly from the Application. Get it from the "
+                "project service."
+            )
         )
-        self._full_build_plan = build_planner.get_build_plan()
-        self._build_plan = filter_plan(
-            self._full_build_plan, platform, build_for, host_arch
-        )
-
-        if not build_for:
-            # get the build-for arch from the platform
-            if platform:
-                all_platforms = {b.platform: b for b in self._full_build_plan}
-                if platform not in all_platforms:
-                    raise errors.InvalidPlatformError(
-                        platform, list(all_platforms.keys())
-                    )
-                build_for = all_platforms[platform].build_for
-            # otherwise get the build-for arch from the build plan
-            elif self._build_plan:
-                build_for = self._build_plan[0].build_for
-
-        # validate project grammar
-        GrammarAwareProject.validate_grammar(yaml_data)
-
-        build_on = host_arch
-
-        # Setup partitions, some projects require the yaml data, most will not
-        self._partitions = self._setup_partitions(yaml_data)
-        yaml_data = self._transform_project_yaml(yaml_data, build_on, build_for)
-        self.__project = self.app.ProjectClass.from_yaml_data(yaml_data, project_path)
-
-        # check if mandatory adoptable fields exist if adopt-info not used
-        for name in self.app.mandatory_adoptable_fields:
-            if (
-                not getattr(self.__project, name, None)
-                and not self.__project.adopt_info
-            ):
-                raise errors.CraftValidationError(
-                    f"Required field '{name}' is not set and 'adopt-info' not used."
-                )
-
-        return self.__project
+        project_service = self.services.get("project")
+        if project_service.is_rendered:
+            return project_service.get()
+        return project_service.render_once(platform=platform, build_for=build_for)
 
     @cached_property
     def project(self) -> models.Project:

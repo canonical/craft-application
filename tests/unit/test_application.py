@@ -711,7 +711,7 @@ def test_gets_project(monkeypatch, tmp_path, app_metadata, fake_services):
     app = FakeApplication(app_metadata, fake_services)
     app.project_dir = tmp_path
 
-    fake_services.project = None
+    # fake_services.project = None
 
     app.run()
 
@@ -720,11 +720,10 @@ def test_gets_project(monkeypatch, tmp_path, app_metadata, fake_services):
 
 
 def test_fails_without_project(
-    monkeypatch, capsys, tmp_path, app_metadata, fake_services
+    monkeypatch, capsys, tmp_path, app_metadata, fake_services, app
 ):
     monkeypatch.setattr(sys, "argv", ["testcraft", "prime"])
 
-    app = FakeApplication(app_metadata, fake_services)
     app.project_dir = tmp_path
 
     fake_services.project = None
@@ -1252,9 +1251,11 @@ def test_filter_plan(mocker, plan, platform, build_for, host_arch, result):
     assert application.filter_plan(plan, platform, build_for, host_arch) == result
 
 
-@pytest.mark.usefixtures("fake_project_file")
+@pytest.mark.usefixtures("fake_project_file", "in_project_dir")
 def test_work_dir_project_non_managed(monkeypatch, app_metadata, fake_services):
     monkeypatch.setenv(fake_services.ProviderClass.managed_mode_env_var, "0")
+    # We want to use the real ProjectService here.
+    fake_services.register("project", services.ProjectService)
 
     app = application.Application(app_metadata, fake_services)
     assert app._work_dir == pathlib.Path.cwd()

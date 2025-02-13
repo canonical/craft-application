@@ -17,6 +17,7 @@
 
 from __future__ import annotations
 
+import functools
 import os
 import pathlib
 import shutil
@@ -225,6 +226,22 @@ def emitter_verbosity(request):
 
 
 @pytest.fixture
+def fake_project_service_class(fake_project) -> type[services.ProjectService]:
+    class FakeProjectService(services.ProjectService):
+        @override
+        def _load_raw_project(self):
+            return fake_project.marshal()
+
+        # Don't care if the project file exists during this testing.
+        @override
+        @functools.lru_cache
+        def resolve_project_file_path(self):
+            return (self._project_dir / f"{self._app.name}.yaml").resolve()
+
+    return FakeProjectService
+
+
+@pytest.fixture
 def fake_provider_service_class(fake_build_plan):
     class FakeProviderService(services.ProviderService):
         def __init__(
@@ -314,6 +331,7 @@ def fake_services(
     fake_project,
     fake_lifecycle_service_class,
     fake_package_service_class,
+    fake_project_service_class,
     fake_init_service_class,
     fake_remote_build_service_class,
 ):
@@ -321,9 +339,14 @@ def fake_services(
     services.ServiceFactory.register("lifecycle", fake_lifecycle_service_class)
     services.ServiceFactory.register("init", fake_init_service_class)
     services.ServiceFactory.register("remote_build", fake_remote_build_service_class)
-    factory = services.ServiceFactory(app_metadata, project=fake_project)
+    services.ServiceFactory.register("project", fake_project_service_class)
+    factory = services.ServiceFactory(app_metadata)
     factory.update_kwargs(
         "lifecycle", work_dir=tmp_path, cache_dir=tmp_path / "cache", build_plan=[]
+    )
+    factory.update_kwargs(
+        "project",
+        project_dir=tmp_path,
     )
     return factory
 
@@ -353,8 +376,10 @@ class FakeApplication(application.Application):
 
 
 @pytest.fixture
-def app(app_metadata, fake_services):
-    return FakeApplication(app_metadata, fake_services)
+def app(app_metadata, fake_services, tmp_path):
+    application = FakeApplication(app_metadata, fake_services)
+    application._work_dir = tmp_path
+    return application
 
 
 @pytest.fixture

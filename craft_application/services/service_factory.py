@@ -31,16 +31,18 @@ from typing import (
 
 import annotated_types
 
-from craft_application import models, services
+from craft_application import services
 
 if TYPE_CHECKING:
     from craft_application.application import AppMetadata
+    from craft_application.services.project import ProjectService
 
 _DEFAULT_SERVICES = {
     "config": "ConfigService",
     "fetch": "FetchService",
     "init": "InitService",
     "lifecycle": "LifecycleService",
+    "project": "ProjectService",
     "provider": "ProviderService",
     "remote_build": "RemoteBuildService",
     "request": "RequestService",
@@ -81,12 +83,9 @@ class ServiceFactory:
     def __init__(
         self,
         app: AppMetadata,
-        *,
-        project: models.Project | None = None,
         **kwargs: type[services.AppService] | None,
     ) -> None:
         self.app = app
-        self.project = project
         self._service_kwargs: dict[str, dict[str, Any]] = {}
         self._services: dict[str, services.AppService] = {}
 
@@ -157,11 +156,11 @@ class ServiceFactory:
     ) -> None:
         """Set up the keyword arguments to pass to a particular service class.
 
-        PENDING DEPRECATION: use update_kwargs instead
+        DEPRECATED: use update_kwargs instead
         """
         warnings.warn(
-            PendingDeprecationWarning(
-                "ServiceFactory.set_kwargs is pending deprecation. Use update_kwargs instead."
+            DeprecationWarning(
+                "ServiceFactory.set_kwargs is deprecated. Use update_kwargs instead."
             ),
             stacklevel=2,
         )
@@ -257,6 +256,8 @@ class ServiceFactory:
     @overload
     def get(self, service: Literal["lifecycle"]) -> services.LifecycleService: ...
     @overload
+    def get(self, service: Literal["project"]) -> ProjectService: ...
+    @overload
     def get(self, service: Literal["provider"]) -> services.ProviderService: ...
     @overload
     def get(self, service: Literal["remote_build"]) -> services.RemoteBuildService: ...
@@ -277,12 +278,12 @@ class ServiceFactory:
             return self._services[service]
         cls = self.get_class(service)
         kwargs = self._service_kwargs.get(service, {})
-        if issubclass(cls, services.ProjectService):
-            if not self.project:
-                raise ValueError(
-                    f"{cls.__name__} requires a project to be available before creation."
-                )
-            kwargs.setdefault("project", self.project)
+        # if issubclass(cls, services.ProjectService):
+        #     if not self.project:
+        #         raise ValueError(
+        #             f"{cls.__name__} requires a project to be available before creation."
+        #         )
+        #     kwargs.setdefault("project", self.project)
 
         instance = cls(app=self.app, services=self, **kwargs)
         instance.setup()
