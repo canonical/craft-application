@@ -42,7 +42,8 @@ classifiers = [
 ]
 requires-python = ">=3.10"
 
-[project.scripts]
+[project.entry-points.pytest11]
+craft_application = "craft_application.pytest_plugin"
 
 [project.optional-dependencies]
 remote = [
