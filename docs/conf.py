@@ -39,6 +39,7 @@ html_context = {
 
 extensions = [
     "canonical_sphinx",
+    "sphinx.ext.autodoc",
 ]
 # endregion
 

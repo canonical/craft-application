@@ -9,6 +9,7 @@ Reference
    changelog
    environment-variables
    platforms
+   pytest-plugin
 
 Indices and tables
 ==================

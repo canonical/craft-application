@@ -4,6 +4,23 @@
 Changelog
 *********
 
+5.0.0 (2025-Mon-DD)
+-------------------
+
+Testing
+=======
+
+- A new :doc:`pytest-plugin` with a fixture that enables production mode for the
+  application if a test requires it.
+
+Breaking changes
+================
+
+- The pytest plugin includes an auto-used fixture that puts the app into debug mode
+  by default for tests.
+
+For a complete list of commits, check out the `5.0.0`_ release on GitHub.
+
 4.9.1 (2025-Feb-12)
 -------------------
 
@@ -23,7 +40,7 @@ Application
 ===========
 
 - Add a feature to allow `Python plugins
-  https://packaging.python.org/en/latest/guides/creating-and-discovering-plugins/>`_
+  <https://packaging.python.org/en/latest/guides/creating-and-discovering-plugins/>`_
   to extend or modify the behaviour of applications that use craft-application as a
   framework. The plugin packages must be installed in the same virtual environment
   as the application.
@@ -588,3 +605,4 @@ For a complete list of commits, check out the `2.7.0`_ release on GitHub.
 .. _4.8.3: https://github.com/canonical/craft-application/releases/tag/4.8.3
 .. _4.9.0: https://github.com/canonical/craft-application/releases/tag/4.9.0
 .. _4.9.1: https://github.com/canonical/craft-application/releases/tag/4.9.1
+.. _5.0.0: https://github.com/canonical/craft-application/releases/tag/5.0.0
