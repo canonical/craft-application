@@ -43,6 +43,11 @@ if TYPE_CHECKING:  # pragma: no cover
     from collections.abc import Iterator
 
 
+@pytest.fixture(autouse=True)
+def debug_mode(monkeypatch):
+    monkeypatch.setenv("CRAFT_DEBUG", "1")
+
+
 def _create_fake_build_plan(num_infos: int = 1) -> list[models.BuildInfo]:
     """Create a build plan that is able to execute on the running system."""
     arch = util.get_host_architecture()

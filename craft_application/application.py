@@ -718,7 +718,7 @@ class Application:
                 craft_cli.CraftError(f"{self.app.name} internal error: {err!r}"),
                 cause=err,
             )
-            if self.services.config.get("debug"):
+            if self.services.get("config").get("debug"):
                 raise
             return_code = os.EX_SOFTWARE
         else:

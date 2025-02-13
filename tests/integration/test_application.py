@@ -254,7 +254,7 @@ def test_non_lifecycle_command_does_not_require_project(monkeypatch, app):
     """Run a command without having a project instance shall not fail."""
     monkeypatch.setattr("sys.argv", ["testcraft", "nothing"])
 
-    class NothingCommand(craft_cli.BaseCommand):
+    class NothingCommand(craft_application.commands.AppCommand):
         name = "nothing"
         help_msg = "none"
         overview = "nothing to see here"
@@ -503,6 +503,9 @@ def test_runtime_error_logging(monkeypatch, tmp_path, create_app, mocker):
         "craft_application.services.lifecycle._get_parts_action_message",
         side_effect=runtime_error,
     )
+    # Override the default of setting debug - here we're explicitly that we return
+    # properly in non-debug mode.
+    monkeypatch.setenv("CRAFT_DEBUG", "0")
 
     monkeypatch.setattr("sys.argv", ["testcraft", "pack", "--destructive-mode"])
     app = create_app()
