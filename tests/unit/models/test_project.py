@@ -573,8 +573,8 @@ def test_platform_invalid_arch(model, platform_label, basic_project_dict):
 
     assert error.value.args[0] == (
         "Bad myproject.yaml content:\n"
-        f"- 'unknown' is not a valid DebianArchitecture (in field 'platforms.{platform_label}.build-on')\n"
-        f"- 'unknown' is not a valid DebianArchitecture (in field 'platforms.{platform_label}.build-for')"
+        f"- 'unknown' is not a valid Debian architecture. (in field 'platforms.{platform_label}.build-on')\n"
+        f"- 'unknown' is not a valid Debian architecture. (in field 'platforms.{platform_label}.build-for')"
     )
 
 
@@ -591,7 +591,7 @@ def test_platform_invalid_build_arch(model, arch, field_name, basic_project_dict
     error_lines = [
         "Bad myproject.yaml content:",
         "- field 'build-on' required in 'platforms.amd64' configuration",
-        f"- 'unknown' is not a valid DebianArchitecture (in field 'platforms.amd64.{field_name}')",
+        f"- 'unknown' is not a valid Debian architecture. (in field 'platforms.amd64.{field_name}')",
     ]
     if field_name == "build-on":
         error_lines.pop(1)
