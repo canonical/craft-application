@@ -24,6 +24,7 @@ import pathlib
 import pkgutil
 import sys
 import urllib.request
+import warnings
 from collections.abc import Generator, Iterable
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -125,7 +126,7 @@ class ProviderService(base.ProjectService):
         self,
         build_info: models.BuildInfo,
         *,
-        work_dir: pathlib.Path,
+        work_dir: pathlib.Path | None = None,
         allow_unstable: bool = True,
         clean_existing: bool = False,
         **kwargs: bool | str | None,
@@ -133,12 +134,20 @@ class ProviderService(base.ProjectService):
         """Context manager for getting a provider instance.
 
         :param build_info: Build information for the instance.
-        :param work_dir: Local path to mount inside the provider instance.
+        :param work_dir: (DEPRECATED) Local path to mount inside the provider instance.
         :param allow_unstable: Whether to allow the use of unstable images.
         :param clean_existing: Whether pre-existing instances should be wiped
           and re-created.
         :returns: a context manager of the provider instance.
         """
+        if work_dir is not None:
+            warnings.warn(
+                "work_dir is deprecated. Use the service's work dir instead.",
+                DeprecationWarning,
+                stacklevel=3,
+            )
+        else:
+            work_dir = self._work_dir
         instance_name = self._get_instance_name(work_dir, build_info)
         emit.debug(f"Preparing managed instance {instance_name!r}")
         base_name = build_info.base

@@ -470,7 +470,6 @@ class Application:
 
             with self.services.provider.instance(
                 build_info,
-                work_dir=self._work_dir,
                 clean_existing=self._enable_fetch_service,
             ) as instance:
                 if self._enable_fetch_service:
