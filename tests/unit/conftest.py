@@ -104,11 +104,8 @@ def expected_git_command(
 
 
 @pytest.fixture
-def fake_project_file(monkeypatch, tmp_path):
-    project_dir = tmp_path / "project"
-    project_dir.mkdir()
-    project_path = project_dir / "testcraft.yaml"
-    project_path.write_text(BASIC_PROJECT_YAML)
-    monkeypatch.chdir(project_dir)
+def fake_project_file(in_project_path):
+    project_file = in_project_path / "testcraft.yaml"
+    project_file.write_text(BASIC_PROJECT_YAML)
 
-    return project_path
+    return project_file
