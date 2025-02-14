@@ -84,7 +84,7 @@ Commands can be classified as follows:
 
 For more information about a command, run 'testcraft help <command>'.
 For a summary of all commands, run 'testcraft help --all'.
-For more information about testcraft, check out: www.testcraft.example/docs/3.14159
+For more information about testcraft, check out: http://testcraft.example/docs/3.14159
 
 """
 INVALID_COMMAND = """\
@@ -254,7 +254,7 @@ def test_non_lifecycle_command_does_not_require_project(monkeypatch, app):
     """Run a command without having a project instance shall not fail."""
     monkeypatch.setattr("sys.argv", ["testcraft", "nothing"])
 
-    class NothingCommand(craft_cli.BaseCommand):
+    class NothingCommand(craft_application.commands.AppCommand):
         name = "nothing"
         help_msg = "none"
         overview = "nothing to see here"
@@ -299,7 +299,7 @@ def test_get_command_help(monkeypatch, emitter, capsys, app, cmd, help_param):
     assert f"testcraft {cmd} [options]" in stderr
     assert stderr.endswith(
         "For more information, check out: "
-        f"www.testcraft.example/docs/3.14159/reference/commands/{cmd}\n\n"
+        f"http://testcraft.example/docs/3.14159/reference/commands/{cmd}\n\n"
     )
 
 
@@ -507,7 +507,8 @@ def test_runtime_error_logging(monkeypatch, tmp_path, create_app, mocker):
     monkeypatch.setattr("sys.argv", ["testcraft", "pack", "--destructive-mode"])
     app = create_app()
 
-    app.run()
+    with pytest.raises(RuntimeError):
+        app.run()
 
     log_contents = craft_cli.emit._log_filepath.read_text()
 
