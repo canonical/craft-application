@@ -19,9 +19,11 @@ Fixtures
 
 .. autofunction:: destructive_mode
 
+.. autofunction:: fake_host_architecture
+
 .. autofunction:: project_path
 
-.. autofunction:: host_architecture
+.. autofunction:: in_project_path
 
 Auto-used fixtures
 ~~~~~~~~~~~~~~~~~~
