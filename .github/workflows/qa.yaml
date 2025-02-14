@@ -15,9 +15,10 @@ jobs:
   test:
     uses: canonical/starflow/.github/workflows/test-python.yaml@main
     with:
-      fast-test-platforms: '[["jammy", "amd64"], ["noble", "amd64"]]'
+      fast-test-platforms: '[["jammy", "amd64"], ["noble", "amd64"], "macos-14-large", "windows-2025"]'
       fast-test-python-versions: '["3.10", "3.12"]'
-      slow-test-platforms: '[["jammy", "amd64"], ["noble", "amd64"]]'
+      # In addition to Linux, run on x86 macos to test multipass.
+      slow-test-platforms: '[["jammy", "amd64"], ["noble", "amd64"], "macos-14-large"]'
       slow-test-python-versions: '["3.10", "3.12"]'
       lowest-python-platform: '["jammy", "amd64"]'
       lowest-python-version: "3.10"
