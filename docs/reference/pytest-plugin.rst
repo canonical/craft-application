@@ -3,7 +3,7 @@
 pytest plugin
 =============
 
-craft-application includes a pytest plugin to help ease the testing of apps that use
+craft-application includes a `pytest`_ plugin to help ease the testing of apps that use
 it as a framework.
 
 By default, this plugin sets the application into debug mode, meaning the
@@ -14,3 +14,23 @@ Fixtures
 --------
 
 .. autofunction:: production_mode
+
+.. autofunction:: managed_mode
+
+.. autofunction:: destructive_mode
+
+.. autofunction:: project_path
+
+.. autofunction:: host_architecture
+
+Auto-used fixtures
+~~~~~~~~~~~~~~~~~~
+
+Some fixtures are automatically enabled for tests, changing the default behaviour of
+applications during the testing process. This is kept to a minimum, but is done when
+the standard behaviour could cause subtle testing issues.
+
+.. autofunction:: debug_mode
+
+
+.. _pytest: https://docs.pytest.org
