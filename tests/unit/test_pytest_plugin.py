@@ -14,14 +14,76 @@
 """Simple tests for the pytest plugin."""
 
 import os
+import pathlib
+import platform
+from unittest import mock
 
+import craft_platforms
 import pytest
+import pytest_check
+from pyfakefs.fake_filesystem import FakeFilesystem
+
+from craft_application import services, util
 
 
-def test_sets_debug_mode():
+@pytest.mark.usefixtures("debug_mode")
+def test_sets_debug_mode(app_metadata):
     assert os.getenv("CRAFT_DEBUG") == "1"
+
+    config_service = services.ConfigService(app=app_metadata, services=mock.Mock())
+    config_service.setup()
+    assert config_service.get("debug") is True
 
 
 @pytest.mark.usefixtures("production_mode")
-def test_production_mode_sets_production_mode():
+def test_production_mode_sets_production_mode(app_metadata):
     assert os.getenv("CRAFT_DEBUG") == "0"
+
+    config_service = services.ConfigService(app=app_metadata, services=mock.Mock())
+    config_service.setup()
+    assert config_service.get("debug") is False
+
+
+@pytest.mark.usefixtures("managed_mode")
+def test_managed_mode():
+    assert services.ProviderService.is_managed() is True
+
+
+@pytest.mark.usefixtures("destructive_mode")
+def test_destructive_mode():
+    assert services.ProviderService.is_managed() is False
+    assert os.getenv("CRAFT_BUILD_ENVIRONMENT") == "host"
+
+
+@pytest.mark.xfail(
+    reason="Setup of this test should fail because the two fixtures cannot be used together.",
+    raises=LookupError,
+    strict=True,
+)
+@pytest.mark.usefixtures("managed_mode", "destructive_mode")
+def test_managed_and_destructive_mode_mutually_exclusive():
+    pass
+
+
+def test_host_architecture(host_architecture: craft_platforms.DebianArchitecture):
+    platform_arch = host_architecture.to_platform_arch()
+    pytest_check.equal(platform_arch, platform.uname().machine)
+    pytest_check.equal(platform_arch, platform.machine())
+    pytest_check.equal(host_architecture.value, util.get_host_architecture())
+    pytest_check.equal(
+        host_architecture, craft_platforms.DebianArchitecture.from_host()
+    )
+
+
+def test_project_path_created(project_path, tmp_path):
+    assert project_path.is_dir()
+    # Check that it's not the hardcoded fake path for pyfakefs.
+    assert project_path != pathlib.Path("/test/project")
+    assert project_path == tmp_path / "project"
+
+
+def test_project_path_created_with_pyfakefs(fs: FakeFilesystem, project_path):
+    assert fs.exists(project_path)
+    assert project_path.is_dir()
+    # Check that it's the hardcoded fake path for pyfakefs.
+    assert project_path == pathlib.Path("/test/project")
