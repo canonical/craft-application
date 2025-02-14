@@ -39,7 +39,15 @@ html_context = {
 
 extensions = [
     "canonical_sphinx",
+    "sphinx.ext.intersphinx",
 ]
+
+intersphinx_mapping = {
+    "craft-platforms": (
+        "https://canonical-craft-platforms.readthedocs-hosted.com/en/latest",
+        None,
+    )
+}
 # endregion
 
 # region Options for extensions
