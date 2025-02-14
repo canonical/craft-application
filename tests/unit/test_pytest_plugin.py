@@ -26,8 +26,7 @@ from pyfakefs.fake_filesystem import FakeFilesystem
 from craft_application import services, util
 
 
-@pytest.mark.usefixtures("debug_mode")
-def test_sets_debug_mode(app_metadata):
+def test_sets_debug_mode_auto_used(app_metadata):
     assert os.getenv("CRAFT_DEBUG") == "1"
 
     config_service = services.ConfigService(app=app_metadata, services=mock.Mock())
