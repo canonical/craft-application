@@ -57,10 +57,10 @@ def provider_service(app_metadata, fake_project, fake_build_plan, fake_services)
     )
 
 
-@pytest.fixture(scope="session")
-def anonymous_remote_build_service(default_app_metadata):
+@pytest.fixture
+def anonymous_remote_build_service(app_metadata):
     """Provider service with install snap disabled for integration tests"""
-    service = remotebuild.RemoteBuildService(default_app_metadata, services=mock.Mock())
+    service = remotebuild.RemoteBuildService(app_metadata, services=mock.Mock())
     service.lp = launchpad.Launchpad.anonymous("testcraft")
     return service
 

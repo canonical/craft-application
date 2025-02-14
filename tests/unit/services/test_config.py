@@ -27,7 +27,7 @@ import craft_cli
 import pytest
 import pytest_subprocess
 import snaphelpers
-from hypothesis import given, strategies
+from hypothesis import HealthCheck, given, settings, strategies
 
 import craft_application
 from craft_application import launchpad
@@ -64,18 +64,18 @@ APP_SPECIFIC_TEST_ENTRY_VALUES = [
 TEST_ENTRY_VALUES = CRAFT_APPLICATION_TEST_ENTRY_VALUES + APP_SPECIFIC_TEST_ENTRY_VALUES
 
 
-@pytest.fixture(scope="module")
-def app_environment_handler(default_app_metadata) -> config.AppEnvironmentHandler:
-    return config.AppEnvironmentHandler(default_app_metadata)
+@pytest.fixture
+def app_environment_handler(app_metadata) -> config.AppEnvironmentHandler:
+    return config.AppEnvironmentHandler(app_metadata)
 
 
-@pytest.fixture(scope="module")
-def craft_environment_handler(default_app_metadata) -> config.CraftEnvironmentHandler:
-    return config.CraftEnvironmentHandler(default_app_metadata)
+@pytest.fixture
+def craft_environment_handler(app_metadata) -> config.CraftEnvironmentHandler:
+    return config.CraftEnvironmentHandler(app_metadata)
 
 
-@pytest.fixture(scope="module")
-def snap_config_handler(default_app_metadata) -> Iterator[config.SnapConfigHandler]:
+@pytest.fixture
+def snap_config_handler(app_metadata) -> Iterator[config.SnapConfigHandler]:
     with pytest.MonkeyPatch.context() as monkeypatch:
         monkeypatch.setenv("SNAP", "/snap/testcraft/x1")
         monkeypatch.setenv("SNAP_COMMON", "/")
@@ -85,12 +85,12 @@ def snap_config_handler(default_app_metadata) -> Iterator[config.SnapConfigHandl
         monkeypatch.setenv("SNAP_USER_DATA", "/")
         monkeypatch.setenv("SNAP_INSTANCE_NAME", "testcraft")
         monkeypatch.setenv("SNAP_INSTANCE_KEY", "")
-        yield config.SnapConfigHandler(default_app_metadata)
+        yield config.SnapConfigHandler(app_metadata)
 
 
-@pytest.fixture(scope="module")
-def default_config_handler(default_app_metadata) -> config.DefaultConfigHandler:
-    return config.DefaultConfigHandler(default_app_metadata)
+@pytest.fixture
+def default_config_handler(app_metadata) -> config.DefaultConfigHandler:
+    return config.DefaultConfigHandler(app_metadata)
 
 
 @given(
@@ -99,6 +99,7 @@ def default_config_handler(default_app_metadata) -> config.DefaultConfigHandler:
         alphabet=strategies.characters(categories=["L", "M", "N", "P", "S", "Z"])
     ),
 )
+@settings(suppress_health_check=[HealthCheck.function_scoped_fixture])
 def test_app_environment_handler(app_environment_handler, item: str, content: str):
     with pytest.MonkeyPatch.context() as monkeypatch:
         monkeypatch.setenv(f"TESTCRAFT_{item.upper()}", content)
@@ -112,6 +113,7 @@ def test_app_environment_handler(app_environment_handler, item: str, content: st
         alphabet=strategies.characters(categories=["L", "M", "N", "P", "S", "Z"])
     ),
 )
+@settings(suppress_health_check=[HealthCheck.function_scoped_fixture])
 def test_craft_environment_handler(craft_environment_handler, item: str, content: str):
     with pytest.MonkeyPatch.context() as monkeypatch:
         monkeypatch.setenv(f"CRAFT_{item.upper()}", content)
@@ -149,23 +151,23 @@ def test_craft_environment_handler_error(
         ),
     ],
 )
-def test_snap_config_handler_create_error(mocker, default_app_metadata, error):
+def test_snap_config_handler_create_error(mocker, app_metadata, error):
     mocker.patch("snaphelpers.is_snap", return_value=True)
     mock_snap_config = mocker.patch(
         "snaphelpers.SnapConfig",
         side_effect=error,
     )
     with pytest.raises(OSError, match="Not running as a snap."):
-        config.SnapConfigHandler(default_app_metadata)
+        config.SnapConfigHandler(app_metadata)
 
     mock_snap_config.assert_called_once_with()
 
 
-def test_snap_config_handler_not_snap(mocker, default_app_metadata):
+def test_snap_config_handler_not_snap(mocker, app_metadata):
     mock_is_snap = mocker.patch("snaphelpers.is_snap", return_value=False)
 
     with pytest.raises(OSError, match="Not running as a snap."):
-        config.SnapConfigHandler(default_app_metadata)
+        config.SnapConfigHandler(app_metadata)
 
     mock_is_snap.asssert_called_once_with()
 
@@ -176,6 +178,7 @@ def test_snap_config_handler_not_snap(mocker, default_app_metadata):
         alphabet=strategies.characters(categories=["L", "M", "N", "P", "S", "Z"])
     ),
 )
+@settings(suppress_health_check=[HealthCheck.function_scoped_fixture])
 def test_snap_config_handler(snap_config_handler, item: str, content: str):
     snap_item = item.replace("_", "-")
     with (
