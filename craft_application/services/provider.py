@@ -27,6 +27,8 @@ import subprocess
 import sys
 import urllib.request
 from collections.abc import Generator, Iterable, Sequence
+import warnings
+from collections.abc import Generator, Iterable
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -136,7 +138,7 @@ class ProviderService(base.AppService):
         self,
         build_info: craft_platforms.BuildInfo,
         *,
-        work_dir: pathlib.Path,
+        work_dir: pathlib.Path | None = None,
         allow_unstable: bool = True,
         clean_existing: bool = False,
         project_name: str | None = None,
@@ -145,12 +147,20 @@ class ProviderService(base.AppService):
         """Context manager for getting a provider instance.
 
         :param build_info: Build information for the instance.
-        :param work_dir: Local path to mount inside the provider instance.
+        :param work_dir: (DEPRECATED) Local path to mount inside the provider instance.
         :param allow_unstable: Whether to allow the use of unstable images.
         :param clean_existing: Whether pre-existing instances should be wiped
           and re-created.
         :returns: a context manager of the provider instance.
         """
+        if work_dir is not None:
+            warnings.warn(
+                "work_dir is deprecated. Use the service's work dir instead.",
+                DeprecationWarning,
+                stacklevel=3,
+            )
+        else:
+            work_dir = self._work_dir
         if not project_name:
             project_name = self._services.get("project").get().name
         instance_name = self._get_instance_name(work_dir, build_info, project_name)

@@ -620,7 +620,7 @@ def test_instance(
     mock_capture_pack_state,
 ):
     with provider_service.instance(
-        fake_build_info, work_dir=tmp_path, allow_unstable=allow_unstable
+        fake_build_info, allow_unstable=allow_unstable
     ) as instance:
         pass
 
@@ -645,6 +645,22 @@ def test_instance(
         emitter.assert_progress("Launching managed .+ instance...", regex=True)
 
 
+def test_instance_work_dir_deprecated(provider_service, mock_provider):
+    arch = util.get_host_architecture()
+    build_info = models.BuildInfo("foo", arch, arch, bases.BaseName("ubuntu", "24.04"))
+    with pytest.warns(DeprecationWarning, match="work_dir is deprecated"):
+        with provider_service.instance(build_info, work_dir=pathlib.Path("/")):
+            pass
+
+    mock_provider.launched_environment.assert_called_once_with(
+        project_name=mock.ANY,
+        project_path=pathlib.Path("/"),
+        instance_name=mock.ANY,
+        base_configuration=mock.ANY,
+        allow_unstable=True,
+    )
+
+
 @pytest.mark.parametrize("clean_existing", [True, False])
 def test_instance_clean_existing(
     tmp_path,
@@ -658,7 +674,7 @@ def test_instance_clean_existing(
     build_info = craft_platforms.BuildInfo("foo", arch, arch, base_name)
 
     with provider_service.instance(
-        build_info, work_dir=tmp_path, clean_existing=clean_existing
+        build_info, clean_existing=clean_existing
     ) as _instance:
         pass
 
@@ -705,7 +721,7 @@ def test_load_bashrc_missing(
 
     mocker.patch.object(pkgutil, "get_data", return_value=None)
     with provider_service.instance(
-        fake_build_info, work_dir=tmp_path, allow_unstable=allow_unstable
+        fake_build_info, allow_unstable=allow_unstable
     ) as instance:
         instance._setup_instance_bashrc(instance)
     emitter.assert_debug(
@@ -771,7 +787,6 @@ def test_instance_fetch_logs(
     with (
         provider_service.instance(
             build_info=fake_build_info,
-            work_dir=pathlib.Path(),
         ) as mock_instance,
     ):
         pass
@@ -832,7 +847,6 @@ def test_instance_fetch_logs_missing_file(
     provider_service = setup_fetch_logs_provider(should_have_logfile=False)
     with provider_service.instance(
         build_info=fake_build_info,
-        work_dir=pathlib.Path(),
     ) as mock_instance:
         pass
 
