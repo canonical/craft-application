@@ -65,13 +65,13 @@ def test_managed_and_destructive_mode_mutually_exclusive():
     pass
 
 
-def test_host_architecture(host_architecture: craft_platforms.DebianArchitecture):
-    platform_arch = host_architecture.to_platform_arch()
+def test_host_architecture(fake_host_architecture: craft_platforms.DebianArchitecture):
+    platform_arch = fake_host_architecture.to_platform_arch()
     pytest_check.equal(platform_arch, platform.uname().machine)
     pytest_check.equal(platform_arch, platform.machine())
-    pytest_check.equal(host_architecture.value, util.get_host_architecture())
+    pytest_check.equal(fake_host_architecture.value, util.get_host_architecture())
     pytest_check.equal(
-        host_architecture, craft_platforms.DebianArchitecture.from_host()
+        fake_host_architecture, craft_platforms.DebianArchitecture.from_host()
     )
 
 
@@ -87,3 +87,7 @@ def test_project_path_created_with_pyfakefs(fs: FakeFilesystem, project_path):
     assert project_path.is_dir()
     # Check that it's the hardcoded fake path for pyfakefs.
     assert project_path == pathlib.Path("/test/project")
+
+
+def test_in_project_path(in_project_path):
+    assert pathlib.Path.cwd() == in_project_path

@@ -95,7 +95,7 @@ def _optional_pyfakefs(request: pytest.FixtureRequest) -> FakeFilesystem | None:
 def fake_host_architecture(
     request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch
 ) -> Iterator[craft_platforms.DebianArchitecture]:
-    """Run this test across all supported architectures.
+    """Run this test as though running on each supported architecture.
 
     This parametrized fixture provides architecture values for all supported
     architectures, simulating as though the application is running on that architecture.
@@ -130,3 +130,16 @@ def project_path(request: pytest.FixtureRequest) -> pathlib.Path:
     path = tmp_path / "project"
     path.mkdir()
     return path
+
+
+@pytest.fixture
+def in_project_path(
+    project_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
+) -> pathlib.Path:
+    """Run the test inside the project path.
+
+    Changes the working directory of the test to use the project path.
+    Best to use with ``pytest.mark.usefixtures``
+    """
+    monkeypatch.chdir(project_path)
+    return project_path
