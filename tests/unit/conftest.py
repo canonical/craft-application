@@ -22,7 +22,7 @@ from unittest import mock
 import pytest
 import pytest_mock
 
-from craft_application import git, services, util
+from craft_application import git, services
 from craft_application.services import service_factory
 
 BASIC_PROJECT_YAML = """
@@ -35,12 +35,6 @@ parts:
   mypart:
     plugin: nil
 """
-
-
-@pytest.fixture(params=["amd64", "arm64", "riscv64"])
-def fake_host_architecture(monkeypatch, request) -> str:
-    monkeypatch.setattr(util, "get_host_architecture", lambda: request.param)
-    return request.param
 
 
 @pytest.fixture
