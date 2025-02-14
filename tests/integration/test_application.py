@@ -38,7 +38,7 @@ class TestableApplication(craft_application.Application):
 
     def _pre_run(self, dispatcher: craft_cli.Dispatcher) -> None:
         super()._pre_run(dispatcher)
-        if self.is_managed():
+        if util.is_managed_mode():
             self.project_dir = pathlib.Path.cwd()
 
 

@@ -24,6 +24,7 @@ import pathlib
 import pkgutil
 import sys
 import urllib.request
+import warnings
 from collections.abc import Generator, Iterable
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -85,7 +86,13 @@ class ProviderService(base.ProjectService):
     @classmethod
     def is_managed(cls) -> bool:
         """Determine whether we're running in managed mode."""
-        return os.getenv(cls.managed_mode_env_var) == "1"
+        warnings.warn(
+            DeprecationWarning(
+                "ProviderService.is_managed() is deprecated. Use craft_application.is_managed_mode() instead."
+            ),
+            stacklevel=2,
+        )
+        return util.is_managed_mode()
 
     def setup(self) -> None:
         """Application-specific service setup."""
@@ -223,7 +230,7 @@ class ProviderService(base.ProjectService):
         if self._provider is not None:
             return self._provider
 
-        if self.is_managed():
+        if util.is_managed_mode():
             raise CraftError("Cannot nest managed environments.")
 
         # (1) use provider specified in the function argument,

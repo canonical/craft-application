@@ -31,7 +31,7 @@ def strtobool(value: str) -> bool:
     value = value.strip().lower()
     if value in {"true", "t", "yes", "y", "on", "1"}:
         return True
-    if value in {"false", "f", "no", "n", "off", "0"}:
+    if value in {"false", "f", "no", "n", "off", "0", "", "none"}:
         return False
     raise ValueError(f"Invalid boolean value: {value}")
 

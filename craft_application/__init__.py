@@ -30,6 +30,7 @@ from craft_application.services import (
     ServiceFactory,
 )
 from craft_application._config import ConfigModel
+from craft_application.util import is_managed_mode
 
 try:
     from ._version import __version__
@@ -54,4 +55,5 @@ __all__ = [
     "PackageService",
     "ProviderService",
     "ServiceFactory",
+    "is_managed_mode",
 ]

@@ -33,6 +33,7 @@ from unittest import mock
 
 import craft_cli
 import craft_parts
+import craft_platforms
 import craft_providers
 import pydantic
 import pytest
@@ -60,11 +61,10 @@ from craft_application.commands import (
     get_other_command_group,
 )
 from craft_application.models import BuildInfo
-from craft_application.util import (
-    get_host_architecture,  # pyright: ignore[reportGeneralTypeIssues]
-)
 from tests.conftest import FakeApplication
 from tests.unit.conftest import BASIC_PROJECT_YAML
+
+HOST_ARCH = craft_platforms.DebianArchitecture.from_host().value
 
 EMPTY_COMMAND_GROUP = craft_cli.CommandGroup("FakeCommands", [])
 
@@ -505,9 +505,7 @@ def test_merge_default_commands_only(app):
     [(True, pathlib.PurePosixPath("/tmp/testcraft.log")), (False, None)],
 )
 def test_log_path(monkeypatch, app, provider_managed, expected):
-    monkeypatch.setattr(
-        app.services.get_class("provider"), "is_managed", lambda: provider_managed
-    )
+    monkeypatch.setattr(util, "is_managed_mode", lambda: provider_managed)
 
     actual = app.log_path
 
@@ -520,9 +518,8 @@ def test_run_managed_success(mocker, app, fake_project, fake_build_plan):
     app.project = fake_project
     app._build_plan = fake_build_plan
     mock_pause = mocker.spy(craft_cli.emit, "pause")
-    arch = get_host_architecture()
 
-    app.run_managed(None, arch)
+    app.run_managed(None, HOST_ARCH)
 
     assert (
         mock.call(
@@ -544,7 +541,7 @@ def test_run_managed_failure(app, fake_project, fake_build_plan):
     app._build_plan = fake_build_plan
 
     with pytest.raises(craft_providers.ProviderError) as exc_info:
-        app.run_managed(None, get_host_architecture())
+        app.run_managed(None, HOST_ARCH)
 
     assert exc_info.value.brief == "Failed to execute testcraft in instance."
 
@@ -584,7 +581,7 @@ def test_run_managed_secrets(
         secret_strings=set(),
     )
 
-    app.run_managed(None, get_host_architecture())
+    app.run_managed(None, HOST_ARCH)
 
     # Check that the encoded secrets were propagated to the managed instance.
     assert len(mock_execute.mock_calls) == 1
@@ -604,7 +601,7 @@ def test_run_managed_multiple(app, fake_project):
     app.services.provider = mock_provider
     app.set_project(fake_project)
 
-    arch = get_host_architecture()
+    arch = HOST_ARCH
     info1 = BuildInfo("a1", arch, "arch1", bases.BaseName("base", "1"))
     info2 = BuildInfo("a2", arch, "arch2", bases.BaseName("base", "2"))
     app._build_plan = [info1, info2]
@@ -624,7 +621,7 @@ def test_run_managed_specified_arch(app, fake_project):
     app.services.provider = mock_provider
     app.set_project(fake_project)
 
-    arch = get_host_architecture()
+    arch = HOST_ARCH
     info1 = BuildInfo("a1", arch, "arch1", bases.BaseName("base", "1"))
     info2 = BuildInfo("a2", arch, "arch2", bases.BaseName("base", "2"))
     app._build_plan = [info1, info2]
@@ -644,7 +641,7 @@ def test_run_managed_specified_platform(app, fake_project):
     app.services.provider = mock_provider
     app.set_project(fake_project)
 
-    arch = get_host_architecture()
+    arch = HOST_ARCH
     info1 = BuildInfo("a1", arch, "arch1", bases.BaseName("base", "1"))
     info2 = BuildInfo("a2", arch, "arch2", bases.BaseName("base", "2"))
     app._build_plan = [info1, info2]
@@ -717,9 +714,7 @@ def test_get_arg_or_config(monkeypatch, app, parsed_args, environ, item, expecte
 def test_get_dispatcher_error(
     monkeypatch, check, capsys, app, mock_dispatcher, managed, error, exit_code, message
 ):
-    monkeypatch.setattr(
-        app.services.get_class("provider"), "is_managed", lambda: managed
-    )
+    monkeypatch.setattr(util, "is_managed_mode", lambda: managed)
     mock_dispatcher.pre_parse_args.side_effect = error
 
     with pytest.raises(SystemExit) as exc_info:
@@ -838,8 +833,8 @@ def test_set_verbosity_from_env_incorrect(monkeypatch, capsys, app):
     assert craft_cli.emit._mode == craft_cli.EmitterMode.BRIEF
 
 
-def test_pre_run_project_dir_managed(app):
-    app.is_managed = lambda: True
+def test_pre_run_project_dir_managed(monkeypatch, app):
+    monkeypatch.setattr(util, "is_managed_mode", lambda: True)
     dispatcher = mock.Mock(spec_set=craft_cli.Dispatcher)
 
     app._pre_run(dispatcher)
@@ -908,7 +903,7 @@ def test_run_success_managed(monkeypatch, app, fake_project, mocker):
 def test_run_success_managed_with_arch(monkeypatch, app, fake_project, mocker):
     mocker.patch.object(app, "get_project", return_value=fake_project)
     app.run_managed = mock.Mock()
-    arch = get_host_architecture()
+    arch = HOST_ARCH
     monkeypatch.setattr(sys, "argv", ["testcraft", "pull", f"--build-for={arch}"])
 
     pytest_check.equal(app.run(), 0)
@@ -932,12 +927,12 @@ def test_run_success_managed_with_platform(monkeypatch, app, fake_project, mocke
         ([], mock.call(None, None)),
         (["--platform=s390x"], mock.call("s390x", None)),
         (
-            ["--platform", get_host_architecture()],
-            mock.call(get_host_architecture(), None),
+            ["--platform", HOST_ARCH],
+            mock.call(HOST_ARCH, None),
         ),
         (
-            ["--build-for", get_host_architecture()],
-            mock.call(None, get_host_architecture()),
+            ["--build-for", HOST_ARCH],
+            mock.call(None, HOST_ARCH),
         ),
         (["--build-for", "s390x"], mock.call(None, "s390x")),
         (["--platform", "s390x,riscv64"], mock.call("s390x", None)),
@@ -1311,7 +1306,7 @@ def test_work_dir_project_non_managed(monkeypatch, app_metadata, fake_services):
     app = application.Application(app_metadata, fake_services)
     assert app._work_dir == pathlib.Path.cwd()
 
-    project = app.get_project(build_for=get_host_architecture())
+    project = app.get_project(build_for=HOST_ARCH)
 
     # Make sure the project is loaded correctly (from the cwd)
     assert project is not None
@@ -1326,7 +1321,7 @@ def test_work_dir_project_managed(monkeypatch, app_metadata, fake_services):
     app = application.Application(app_metadata, fake_services)
     assert app._work_dir == pathlib.PosixPath("/root")
 
-    project = app.get_project(build_for=get_host_architecture())
+    project = app.get_project(build_for=HOST_ARCH)
 
     # Make sure the project is loaded correctly (from the cwd)
     assert project is not None
@@ -1378,7 +1373,7 @@ def test_expand_environment_build_for_all(
             base: ubuntu@24.04
             platforms:
               platform1:
-                build-on: [{util.get_host_architecture()}]
+                build-on: [{HOST_ARCH}]
                 build-for: [all]
             parts:
               mypart:
@@ -1397,12 +1392,12 @@ def test_expand_environment_build_for_all(
     # Make sure the project is loaded correctly (from the cwd)
     assert project is not None
     assert project.parts["mypart"]["build-environment"] == [
-        {"BUILD_ON": util.get_host_architecture()},
-        {"BUILD_FOR": util.get_host_architecture()},
+        {"BUILD_ON": HOST_ARCH},
+        {"BUILD_FOR": HOST_ARCH},
     ]
     emitter.assert_debug(
         "Expanding environment variables with the host architecture "
-        f"{util.get_host_architecture()!r} as the build-for architecture "
+        f"{HOST_ARCH!r} as the build-for architecture "
         "because 'all' was specified."
     )
 
@@ -1410,14 +1405,14 @@ def test_expand_environment_build_for_all(
 @pytest.mark.usefixtures("environment_project")
 def test_application_expand_environment(app_metadata, fake_services):
     app = application.Application(app_metadata, fake_services)
-    project = app.get_project(build_for=get_host_architecture())
+    project = app.get_project(build_for=HOST_ARCH)
 
     # Make sure the project is loaded correctly (from the cwd)
     assert project is not None
     assert project.parts["mypart"]["source-tag"] == "v1.2.3"
     assert project.parts["mypart"]["build-environment"] == [
-        {"BUILD_ON": util.get_host_architecture()},
-        {"BUILD_FOR": util.get_host_architecture()},
+        {"BUILD_ON": HOST_ARCH},
+        {"BUILD_FOR": HOST_ARCH},
     ]
 
 
@@ -1456,7 +1451,7 @@ def test_application_build_secrets(app_metadata, fake_services, monkeypatch, moc
     spied_set_secrets = mocker.spy(craft_cli.emit, "set_secrets")
 
     app = application.Application(app_metadata, fake_services)
-    project = app.get_project(build_for=get_host_architecture())
+    project = app.get_project(build_for=HOST_ARCH)
 
     # Make sure the project is loaded correctly (from the cwd)
     assert project is not None
@@ -1571,7 +1566,7 @@ def test_extra_yaml_transform(tmp_path, app_metadata, fake_services):
     app.project_dir = tmp_path
     _ = app.get_project(build_for="s390x")
 
-    assert app.build_on == util.get_host_architecture()
+    assert app.build_on == HOST_ARCH
     assert app.build_for == "s390x"
 
 
@@ -1587,7 +1582,7 @@ def test_mandatory_adoptable_fields(tmp_path, app_metadata, fake_services):
     app.project_dir = tmp_path
 
     with pytest.raises(errors.CraftValidationError) as exc_info:
-        _ = app.get_project(build_for=get_host_architecture())
+        _ = app.get_project(build_for=HOST_ARCH)
 
     assert (
         str(exc_info.value)
@@ -1748,18 +1743,18 @@ def test_process_grammar_to_all(tmp_path, app_metadata, fake_services):
         base: ubuntu@24.04
         platforms:
           myplatform:
-            build-on: [{util.get_host_architecture()}]
+            build-on: [{HOST_ARCH}]
             build-for: [all]
         parts:
           mypart:
             plugin: nil
             build-packages:
             - test-package
-            - on {util.get_host_architecture()} to all:
+            - on {HOST_ARCH} to all:
               - on-host-to-all
             - to all:
               - to-all
-            - on {util.get_host_architecture()} to s390x:
+            - on {HOST_ARCH} to s390x:
               - on-host-to-s390x
             - to s390x:
               - on-amd64-to-s390x
@@ -1869,7 +1864,7 @@ def test_process_yaml_from_extra_transform(
     ]
     assert project.parts["mypart"]["build-environment"] == [
         # evaluate project variables
-        {"hello": get_host_architecture()},
+        {"hello": HOST_ARCH},
         # render secrets
         {"MY_VAR": "secret-value"},
     ]
@@ -1919,7 +1914,7 @@ def environment_partitions_project(monkeypatch, tmp_path):
 @pytest.mark.usefixtures("environment_partitions_project")
 def test_partition_application_expand_environment(app_metadata, fake_services):
     app = FakePartitionsApplication(app_metadata, fake_services)
-    project = app.get_project(build_for=get_host_architecture())
+    project = app.get_project(build_for=HOST_ARCH)
 
     assert craft_parts.Features().enable_partitions is True
     # Make sure the project is loaded correctly (from the cwd)
@@ -2168,7 +2163,7 @@ def test_clean_platform(monkeypatch, tmp_path, app_metadata, fake_services, mock
     """Test that calling "clean --platform=x" correctly filters the build plan."""
     data = util.safe_yaml_load(StringIO(BASIC_PROJECT_YAML))
     # Put a few different platforms on the project
-    arch = util.get_host_architecture()
+    arch = HOST_ARCH
     build_on_for = {
         "build-on": [arch],
         "build-for": [arch],

@@ -21,12 +21,14 @@ import os
 import pathlib
 import shutil
 import subprocess
+import warnings
 from dataclasses import dataclass
 from importlib import metadata
 from typing import TYPE_CHECKING, Any
 from unittest.mock import Mock
 
 import craft_parts
+import craft_platforms
 import jinja2
 import pydantic
 import pytest
@@ -45,8 +47,12 @@ if TYPE_CHECKING:  # pragma: no cover
 
 def _create_fake_build_plan(num_infos: int = 1) -> list[models.BuildInfo]:
     """Create a build plan that is able to execute on the running system."""
-    arch = util.get_host_architecture()
-    base = util.get_host_base()
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", DeprecationWarning)
+        arch = util.get_host_architecture()
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", PendingDeprecationWarning)
+        base = util.get_host_base()
     return [models.BuildInfo("foo", arch, arch, base)] * num_infos
 
 
@@ -133,7 +139,7 @@ def app_metadata_docs(features) -> craft_application.AppMetadata:
 
 @pytest.fixture
 def fake_project() -> models.Project:
-    arch = util.get_host_architecture()
+    arch = craft_platforms.DebianArchitecture.from_host().value
     return models.Project(
         name="full-project",  # pyright: ignore[reportArgumentType]
         title="A fully-defined project",  # pyright: ignore[reportArgumentType]
@@ -161,7 +167,7 @@ def fake_build_plan(request) -> list[models.BuildInfo]:
 @pytest.fixture
 def full_build_plan(mocker) -> list[models.BuildInfo]:
     """A big build plan with multiple bases and build-for targets."""
-    host_arch = util.get_host_architecture()
+    host_arch = craft_platforms.DebianArchitecture.from_host().value
     build_plan = []
     for release in ("20.04", "22.04", "24.04"):
         build_plan.extend(

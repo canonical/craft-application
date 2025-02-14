@@ -25,6 +25,7 @@ import signal
 import subprocess
 import sys
 import traceback
+import warnings
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
 from functools import cached_property
@@ -152,7 +153,7 @@ class Application:
         # This may be overridden by specific application implementations.
         self.project_dir = pathlib.Path.cwd()
 
-        if self.is_managed():
+        if util.is_managed_mode():
             self._work_dir = pathlib.Path("/root")
         else:
             self._work_dir = pathlib.Path.cwd()
@@ -280,7 +281,7 @@ class Application:
     @property
     def log_path(self) -> pathlib.Path | None:
         """Get the path to this process's log file, if any."""
-        if self.is_managed():
+        if util.is_managed_mode():
             return util.get_managed_logpath(self.app)
         return None
 
@@ -432,7 +433,13 @@ class Application:
 
     def is_managed(self) -> bool:
         """Shortcut to tell whether we're running in managed mode."""
-        return self.services.get_class("provider").is_managed()
+        warnings.warn(
+            DeprecationWarning(
+                "app.is_managed is deprecated. Use craft_application.is_managed_mode() instead."
+            ),
+            stacklevel=2,
+        )
+        return util.is_managed_mode()
 
     def run_managed(self, platform: str | None, build_for: str | None) -> None:
         """Run the application in a managed instance."""
@@ -604,7 +611,7 @@ class Application:
         # Some commands might have a project_dir parameter. Those commands and
         # only those commands should get a project directory, but only when
         # not managed.
-        if self.is_managed():
+        if util.is_managed_mode():
             self.project_dir = pathlib.Path("/root/project")
         elif project_dir := getattr(args, "project_dir", None):
             self.project_dir = pathlib.Path(project_dir).expanduser().resolve()
@@ -669,7 +676,7 @@ class Application:
             # command runs in the outer instance
             craft_cli.emit.debug(f"Running {self.app.name} {command.name} on host")
             return_code = dispatcher.run() or os.EX_OK
-        elif not self.is_managed():
+        elif not util.is_managed_mode():
             # command runs in inner instance, but this is the outer instance
             self.run_managed(platform, build_for)
             return_code = os.EX_OK
@@ -735,7 +742,7 @@ class Application:
             error.__cause__ = cause
 
         # Do not report the internal logpath if running inside an instance
-        if self.is_managed():
+        if util.is_managed_mode():
             error.logpath_report = False
 
         craft_cli.emit.error(error)
@@ -843,7 +850,7 @@ class Application:
     def _render_secrets(self, yaml_data: dict[str, Any]) -> None:
         """Render build-secrets, in-place."""
         secret_values = secrets.render_secrets(
-            yaml_data, managed_mode=self.is_managed()
+            yaml_data, managed_mode=util.is_managed_mode()
         )
 
         num_secrets = len(secret_values.secret_strings)
