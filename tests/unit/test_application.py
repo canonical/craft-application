@@ -713,13 +713,10 @@ def test_get_arg_or_config(monkeypatch, app, parsed_args, environ, item, expecte
         ),
     ],
 )
-@pytest.mark.usefixtures("emitter")
+@pytest.mark.usefixtures("emitter", "production_mode")
 def test_get_dispatcher_error(
     monkeypatch, check, capsys, app, mock_dispatcher, managed, error, exit_code, message
 ):
-    # Override the default of setting debug - here we're explicitly that we return
-    # properly in non-debug mode.
-    monkeypatch.setenv("CRAFT_DEBUG", "0")
     monkeypatch.setattr(
         app.services.get_class("provider"), "is_managed", lambda: managed
     )
@@ -1010,7 +1007,7 @@ def test_run_success_managed_inside_managed(
         ),
     ],
 )
-@pytest.mark.usefixtures("emitter")
+@pytest.mark.usefixtures("emitter", "production_mode")
 def test_run_error(
     monkeypatch,
     capsys,
@@ -1025,9 +1022,6 @@ def test_run_error(
     mock_dispatcher.load_command.side_effect = error
     mock_dispatcher.pre_parse_args.return_value = {}
     monkeypatch.setattr(sys, "argv", ["testcraft", "pull"])
-    # Override the default of setting debug - here we're explicitly that we return
-    # properly in non-debug mode.
-    monkeypatch.setenv("CRAFT_DEBUG", "0")
 
     pytest_check.equal(app.run(), return_code)
     _, err = capsys.readouterr()
@@ -1089,7 +1083,6 @@ def test_run_error_debug(monkeypatch, mock_dispatcher, app, fake_project, error)
     mock_dispatcher.load_command.side_effect = error
     mock_dispatcher.pre_parse_args.return_value = {}
     monkeypatch.setattr(sys, "argv", ["testcraft", "pull"])
-    monkeypatch.setenv("CRAFT_DEBUG", "1")
 
     with pytest.raises(error.__class__):
         app.run()

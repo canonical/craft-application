@@ -48,6 +48,12 @@ def debug_mode(monkeypatch):
     monkeypatch.setenv("CRAFT_DEBUG", "1")
 
 
+@pytest.fixture
+def production_mode(monkeypatch, debug_mode):
+    # This uses debug_mode to ensure that we run after it.
+    monkeypatch.delenv("CRAFT_DEBUG")
+
+
 def _create_fake_build_plan(num_infos: int = 1) -> list[models.BuildInfo]:
     """Create a build plan that is able to execute on the running system."""
     arch = util.get_host_architecture()

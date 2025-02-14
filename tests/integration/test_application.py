@@ -116,7 +116,6 @@ INVALID_PROJECTS_DIR = TEST_DATA_DIR / "invalid_projects"
     ],
 )
 def test_special_inputs(capsys, monkeypatch, app, argv, stdout, stderr, exit_code):
-    monkeypatch.setenv("CRAFT_DEBUG", "1")
     monkeypatch.setattr("sys.argv", ["testcraft", *argv])
 
     with pytest.raises(SystemExit) as exc_info:
@@ -177,7 +176,6 @@ def test_registering_new_commands(
 @pytest.mark.usefixtures("pretend_jammy")
 @pytest.mark.parametrize("project", (d.name for d in VALID_PROJECTS_DIR.iterdir()))
 def test_project_managed(capsys, monkeypatch, tmp_path, project, create_app):
-    monkeypatch.setenv("CRAFT_DEBUG", "1")
     monkeypatch.setenv("CRAFT_MANAGED_MODE", "1")
     monkeypatch.setattr("sys.argv", ["testcraft", "pack"])
     monkeypatch.chdir(tmp_path)
@@ -270,7 +268,6 @@ def test_non_lifecycle_command_does_not_require_project(monkeypatch, app):
 @pytest.mark.parametrize("cmd", ["clean", "pull", "build", "stage", "prime", "pack"])
 def test_run_always_load_project(capsys, monkeypatch, app, cmd):
     """Run a lifecycle command without having a project shall fail."""
-    monkeypatch.setenv("CRAFT_DEBUG", "1")
     monkeypatch.setattr("sys.argv", ["testcraft", cmd])
 
     assert app.run() == 66
@@ -394,7 +391,6 @@ def setup_secrets_project(create_app, monkeypatch, tmp_path):
     """Test the use of build secrets in destructive mode."""
 
     def _inner(*, destructive_mode: bool):
-        monkeypatch.setenv("CRAFT_DEBUG", "1")
         monkeypatch.chdir(tmp_path)
         shutil.copytree(TEST_DATA_DIR / "build-secrets", tmp_path, dirs_exist_ok=True)
 
@@ -492,7 +488,7 @@ def test_lifecycle_error_logging(monkeypatch, tmp_path, create_app):
     assert parts_message in log_contents
 
 
-@pytest.mark.usefixtures("pretend_jammy", "emitter")
+@pytest.mark.usefixtures("pretend_jammy", "emitter", "production_mode")
 def test_runtime_error_logging(monkeypatch, tmp_path, create_app, mocker):
     monkeypatch.chdir(tmp_path)
     shutil.copytree(INVALID_PROJECTS_DIR / "build-error", tmp_path, dirs_exist_ok=True)
@@ -503,9 +499,6 @@ def test_runtime_error_logging(monkeypatch, tmp_path, create_app, mocker):
         "craft_application.services.lifecycle._get_parts_action_message",
         side_effect=runtime_error,
     )
-    # Override the default of setting debug - here we're explicitly that we return
-    # properly in non-debug mode.
-    monkeypatch.setenv("CRAFT_DEBUG", "0")
 
     monkeypatch.setattr("sys.argv", ["testcraft", "pack", "--destructive-mode"])
     app = create_app()
