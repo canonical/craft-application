@@ -1048,7 +1048,7 @@ def test_run_error(
                 """\
                 Failed to run the build script for part 'foo'.
                 Recommended resolution: Check the build output and verify the project can work with the 'python' plugin.
-                For more information, check out: http://testcraft.example/reference/plugins.html
+                For more information, check out: http://testcraft.example/docs/3.14159/reference/plugins.html
                 Full execution log:"""
             ),
         ),
@@ -1058,14 +1058,14 @@ def test_run_error_with_docs_url(
     monkeypatch,
     capsys,
     mock_dispatcher,
-    app_metadata_docs,
+    app_metadata,
     fake_services,
     fake_project,
     error,
     return_code,
     error_msg,
 ):
-    app = FakeApplication(app_metadata_docs, fake_services)
+    app = FakeApplication(app_metadata, fake_services)
     app.set_project(fake_project)
     mock_dispatcher.load_command.side_effect = error
     mock_dispatcher.pre_parse_args.return_value = {}
@@ -2143,9 +2143,9 @@ def test_build_planner_errors(tmp_path, monkeypatch, fake_services):
 def test_emitter_docs_url(monkeypatch, mocker, app):
     """Test that the emitter is initialized with the correct url."""
 
-    assert app.app.docs_url == "www.testcraft.example/docs/{version}"
+    assert app.app.docs_url == "http://testcraft.example/docs/{version}"
     assert app.app.version == "3.14159"
-    expected_url = "www.testcraft.example/docs/3.14159"
+    expected_url = "http://testcraft.example/docs/3.14159"
 
     spied_init = mocker.spy(emit, "init")
 
@@ -2236,7 +2236,7 @@ def test_doc_url_in_general_help(help_args, monkeypatch, capsys, app):
     with pytest.raises(SystemExit):
         app.run()
 
-    expected = "For more information about testcraft, check out: www.testcraft.example/docs/3.14159\n\n"
+    expected = "For more information about testcraft, check out: http://testcraft.example/docs/3.14159\n\n"
     _, err = capsys.readouterr()
     assert err.endswith(expected)
 
@@ -2250,6 +2250,6 @@ def test_doc_url_in_command_help(monkeypatch, capsys, app):
     with pytest.raises(SystemExit):
         app.run()
 
-    expected = "For more information, check out: www.testcraft.example/docs/3.14159/reference/commands/app-config\n\n"
+    expected = "For more information, check out: http://testcraft.example/docs/3.14159/reference/commands/app-config\n\n"
     _, err = capsys.readouterr()
     assert err.endswith(expected)

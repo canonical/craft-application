@@ -113,21 +113,8 @@ def app_metadata(features, fake_config_model) -> craft_application.AppMetadata:
             "A fake app for testing craft-application",
             source_ignore_patterns=["*.snap", "*.charm", "*.starcraft"],
             features=craft_application.AppFeatures(**features),
-            docs_url="www.testcraft.example/docs/{version}",
+            docs_url="http://testcraft.example/docs/{version}",
             ConfigModel=fake_config_model,
-        )
-
-
-@pytest.fixture
-def app_metadata_docs(features) -> craft_application.AppMetadata:
-    with pytest.MonkeyPatch.context() as m:
-        m.setattr(metadata, "version", lambda _: "3.14159")
-        return craft_application.AppMetadata(
-            "testcraft",
-            "A fake app for testing craft-application",
-            docs_url="http://testcraft.example",
-            source_ignore_patterns=["*.snap", "*.charm", "*.starcraft"],
-            features=craft_application.AppFeatures(**features),
         )
 
 
