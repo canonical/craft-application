@@ -34,6 +34,7 @@ from typing import TYPE_CHECKING, Any, cast, final
 
 import craft_cli
 import craft_parts
+import craft_platforms
 import craft_providers
 from craft_parts.plugins.plugins import PluginType
 from platformdirs import user_cache_path
@@ -382,7 +383,7 @@ class Application:
         with project_path.open() as file:
             yaml_data = util.safe_yaml_load(file)
 
-        host_arch = util.get_host_architecture()
+        host_arch = craft_platforms.DebianArchitecture.from_host().value
         build_planner = self.app.BuildPlannerClass.from_yaml_data(
             yaml_data, project_path
         )

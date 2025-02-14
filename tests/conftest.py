@@ -286,6 +286,8 @@ def fake_package_service_class():
         def metadata(self) -> models.BaseMetadata:
             return models.BaseMetadata()
 
+    services.ServiceFactory.register("package", FakePackageService)
+
     return FakePackageService
 
 
@@ -311,6 +313,7 @@ def fake_lifecycle_service_class(tmp_path, fake_build_plan):
                 **kwargs,
             )
 
+    services.ServiceFactory.register("lifecycle", FakeLifecycleService)
     return FakeLifecycleService
 
 
@@ -320,6 +323,7 @@ def fake_init_service_class(tmp_path):
         def _get_loader(self, template_dir: pathlib.Path) -> jinja2.BaseLoader:
             return FileSystemLoader(tmp_path / "templates" / template_dir)
 
+    services.ServiceFactory.register("init", FakeInitService)
     return FakeInitService
 
 
@@ -330,6 +334,7 @@ def fake_remote_build_service_class():
         def _get_lp_client(self) -> launchpad.Launchpad:
             return Mock(spec=launchpad.Launchpad)
 
+    services.ServiceFactory.register("remote_build", FakeRemoteBuild)
     return FakeRemoteBuild
 
 
@@ -343,10 +348,6 @@ def fake_services(
     fake_init_service_class,
     fake_remote_build_service_class,
 ):
-    services.ServiceFactory.register("package", fake_package_service_class)
-    services.ServiceFactory.register("lifecycle", fake_lifecycle_service_class)
-    services.ServiceFactory.register("init", fake_init_service_class)
-    services.ServiceFactory.register("remote_build", fake_remote_build_service_class)
     factory = services.ServiceFactory(app_metadata, project=fake_project)
     factory.update_kwargs(
         "lifecycle", work_dir=tmp_path, cache_dir=tmp_path / "cache", build_plan=[]
