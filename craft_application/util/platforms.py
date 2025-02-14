@@ -20,9 +20,11 @@ from __future__ import annotations
 import functools
 import os
 import platform
+import warnings
 from typing import Final
 
-from craft_parts.utils import os_utils
+import craft_platforms
+import distro
 from craft_providers import bases
 
 from .string import strtobool
@@ -33,8 +35,13 @@ ENVIRONMENT_CRAFT_MANAGED_MODE: Final[str] = "CRAFT_MANAGED_MODE"
 @functools.lru_cache(maxsize=1)
 def get_host_architecture() -> str:
     """Get host architecture in deb format."""
-    machine = platform.machine()
-    return _ARCH_TRANSLATIONS_PLATFORM_TO_DEB.get(machine, machine)
+    warnings.warn(
+        DeprecationWarning(
+            "get_host_architecture() is deprecated. Use craft_platforms.DebianArchitecture.from_host()"
+        ),
+        stacklevel=2,
+    )
+    return craft_platforms.DebianArchitecture.from_host().value
 
 
 def convert_architecture_deb_to_platform(arch: str) -> str:
@@ -54,10 +61,16 @@ def is_valid_architecture(arch: str) -> bool:
 @functools.lru_cache(maxsize=1)
 def get_host_base() -> bases.BaseName:
     """Get the craft-providers base for the running host."""
-    release = os_utils.OsRelease()
-    os_id = release.id()
-    version_id = release.version_id()
-    return bases.BaseName(os_id, version_id)
+    warnings.warn(
+        PendingDeprecationWarning(
+            "get_host_base() is pending deprecation. Use craft_platforms.DistroBase.from_linux_distribution(distro.LinuxDistribution())"
+        ),
+        stacklevel=2,
+    )
+    distro_base = craft_platforms.DistroBase.from_linux_distribution(
+        distro.LinuxDistribution(include_lsb=False, include_uname=False)
+    )
+    return bases.BaseName(distro_base.distribution, distro_base.series)
 
 
 def get_hostname(hostname: str | None = None) -> str:

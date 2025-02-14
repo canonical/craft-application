@@ -84,7 +84,7 @@ class FetchService(services.ProjectService):
         """Start the fetch-service process with proper arguments."""
         super().setup()
 
-        if not self._services.get_class("provider").is_managed():
+        if not util.is_managed_mode():
             # Early fail if the fetch-service is not installed.
             fetch.verify_installed()
 
@@ -153,7 +153,7 @@ class FetchService(services.ProjectService):
 
         Only supports a single generated artifact, and only in managed runs.
         """
-        if not self._services.ProviderClass.is_managed():
+        if not util.is_managed_mode():
             emit.debug("Unable to generate the project manifest on the host.")
             return
 

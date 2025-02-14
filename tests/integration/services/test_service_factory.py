@@ -28,12 +28,11 @@ def test_gets_dataclass_services(
     fake_lifecycle_service_class,
     fake_provider_service_class,
 ):
+    services.ServiceFactory.register("lifecycle", fake_lifecycle_service_class)
+    services.ServiceFactory.register("provider", fake_provider_service_class)
     factory = services.ServiceFactory(
         app_metadata,
         project=fake_project,
-        PackageClass=fake_package_service_class,
-        LifecycleClass=fake_lifecycle_service_class,
-        ProviderClass=fake_provider_service_class,
     )
 
     check.is_instance(factory.package, services.PackageService)
@@ -49,7 +48,6 @@ def test_gets_registered_services(
     fake_lifecycle_service_class,
     fake_provider_service_class,
 ):
-    services.ServiceFactory.register("package", fake_package_service_class)
     services.ServiceFactory.register("lifecycle", fake_lifecycle_service_class)
     services.ServiceFactory.register("provider", fake_provider_service_class)
     factory = services.ServiceFactory(
@@ -63,10 +61,10 @@ def test_gets_registered_services(
 
 
 def test_real_service_error(app_metadata, fake_project):
+    services.ServiceFactory.register("package", services.PackageService)
     factory = services.ServiceFactory(
         app_metadata,
         project=fake_project,
-        PackageClass=services.PackageService,
     )
 
     with pytest.raises(

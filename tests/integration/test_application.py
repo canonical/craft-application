@@ -29,7 +29,7 @@ from craft_application import models, secrets, util
 from craft_application.util import yaml
 
 
-class TestableApplication(craft_application.Application):
+class FakeApplication(craft_application.Application):
     """An application modified for integration tests.
 
     Modifications are:
@@ -38,7 +38,7 @@ class TestableApplication(craft_application.Application):
 
     def _pre_run(self, dispatcher: craft_cli.Dispatcher) -> None:
         super()._pre_run(dispatcher)
-        if self.is_managed():
+        if util.is_managed_mode():
             self.project_dir = pathlib.Path.cwd()
 
 
@@ -47,10 +47,8 @@ def create_app(app_metadata, fake_package_service_class):
     def _inner():
         # Create a factory without a project, to simulate a real application use
         # and force loading from disk.
-        services = craft_application.ServiceFactory(
-            app_metadata, PackageClass=fake_package_service_class
-        )
-        return TestableApplication(app_metadata, services)
+        services = craft_application.ServiceFactory(app_metadata)
+        return FakeApplication(app_metadata, services)
 
     return _inner
 
@@ -143,7 +141,7 @@ def _create_command(command_name):
     ids=lambda ordered: f"keep_order={ordered}",
 )
 def test_registering_new_commands(
-    app: TestableApplication,
+    app: FakeApplication,
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
     *,
@@ -456,7 +454,7 @@ def test_build_secrets_managed(
     app = setup_secrets_project(destructive_mode=False)
 
     monkeypatch.setenv("CRAFT_MANAGED_MODE", "1")
-    assert app.is_managed()
+    assert util.is_managed_mode()
     app._work_dir = tmp_path
 
     # Before running the application, configure its environment "as if" the host app

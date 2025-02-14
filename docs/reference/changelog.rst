@@ -4,6 +4,27 @@
 Changelog
 *********
 
+4.10.0 (YYYY-Mon-DD)
+--------------------
+
+Application
+===========
+
+- Deprecate ``Application.is_managed()`` in favour of :func:`is_managed_mode()`
+
+Services
+========
+
+- Deprecate ``ProviderService.is_managed()`` in favour of :func:`is_managed_mode()`
+
+Utilities
+=========
+
+- Deprecate ``get_host_architecture()`` in favour of
+  :external+craft-platforms:meth:`craft_platforms.DebianArchitecture.from_host()`
+- Warn that ``get_host_base()`` is pending deprecation in favour of
+  :external+craft-platforms:meth:`craft_platforms.DistroBase.from_linux_distribution()`
+
 4.9.1 (2025-Feb-12)
 -------------------
 
@@ -23,7 +44,7 @@ Application
 ===========
 
 - Add a feature to allow `Python plugins
-  https://packaging.python.org/en/latest/guides/creating-and-discovering-plugins/>`_
+  <https://packaging.python.org/en/latest/guides/creating-and-discovering-plugins/>`_
   to extend or modify the behaviour of applications that use craft-application as a
   framework. The plugin packages must be installed in the same virtual environment
   as the application.

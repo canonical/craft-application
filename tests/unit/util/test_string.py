@@ -52,6 +52,8 @@ from craft_application.util import string
         ("Off", False),
         ("0", False),
         ("0  ", False),
+        ("", False),
+        (" ", False),
     ],
 )
 def test_strtobool(data, expected):
@@ -66,8 +68,6 @@ def test_strtobool(data, expected):
         (None),
         ({}),
         ([]),
-        (""),
-        (" "),
         ("invalid"),
         ("2"),
         ("-"),

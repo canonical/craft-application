@@ -207,7 +207,10 @@ def test_is_managed(managed_value, expected, monkeypatch):
         provider.ProviderService.managed_mode_env_var, str(managed_value)
     )
 
-    assert provider.ProviderService.is_managed() == expected
+    with pytest.warns(
+        DeprecationWarning, match=r"ProviderService.is_managed\(\) is deprecated."
+    ):
+        assert provider.ProviderService.is_managed() == expected
 
 
 def test_forward_environment_variables(monkeypatch, provider_service):
@@ -307,20 +310,20 @@ class TestGetProvider:
 
         assert provider_service.get_provider() == expected
 
-    def test_get_provider_managed_mode(self, provider_service):
+    def test_get_provider_managed_mode(self, provider_service, monkeypatch):
         """Raise an error when running in managed mode."""
         provider_service._provider = None
-        provider_service.is_managed = lambda: True
+        monkeypatch.setattr("craft_application.util.is_managed_mode", lambda: True)
 
         with pytest.raises(errors.CraftError) as raised:
             provider_service.get_provider()
 
         assert raised.value == errors.CraftError("Cannot nest managed environments.")
 
-    def test_get_provider_from_argument(self, provider_service, providers):
+    def test_get_provider_from_argument(self, provider_service, providers, monkeypatch):
         """(1) use provider specified in the function argument."""
         provider_service._provider = None
-        provider_service.is_managed = lambda: False
+        monkeypatch.setattr("craft_application.util.is_managed_mode", lambda: False)
 
         result = provider_service.get_provider(name=providers.name)
 
@@ -329,7 +332,7 @@ class TestGetProvider:
     def test_get_provider_from_env(self, monkeypatch, provider_service, providers):
         """(2) get the provider from the environment (CRAFT_BUILD_ENVIRONMENT)."""
         provider_service._provider = None
-        provider_service.is_managed = lambda: False
+        monkeypatch.setattr("craft_application.util.is_managed_mode", lambda: False)
         monkeypatch.setenv("CRAFT_BUILD_ENVIRONMENT", providers.name)
 
         result = provider_service.get_provider()
@@ -339,7 +342,7 @@ class TestGetProvider:
     def test_get_provider_from_snap(self, mocker, provider_service, providers):
         """(3) use provider specified with snap configuration."""
         provider_service._provider = None
-        provider_service.is_managed = lambda: False
+        mocker.patch("craft_application.util.is_managed_mode", return_value=False)
         mocker.patch(
             "craft_application.services.provider.snap_config.get_snap_config",
             return_value=snap_config.SnapConfig(provider=providers.name),
@@ -354,7 +357,7 @@ class TestGetProvider:
 
         Instead, proceed to the next step."""
         provider_service._provider = None
-        provider_service.is_managed = lambda: False
+        mocker.patch("craft_application.util.is_managed_mode", return_value=False)
         mocker.patch(
             "craft_application.services.provider.snap_config.get_snap_config",
             return_value=None,
