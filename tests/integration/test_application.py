@@ -29,7 +29,7 @@ from craft_application import models, secrets, util
 from craft_application.util import yaml
 
 
-class TestableApplication(craft_application.Application):
+class FakeApplication(craft_application.Application):
     """An application modified for integration tests.
 
     Modifications are:
@@ -50,7 +50,7 @@ def create_app(app_metadata, fake_package_service_class):
         services = craft_application.ServiceFactory(
             app_metadata, PackageClass=fake_package_service_class
         )
-        return TestableApplication(app_metadata, services)
+        return FakeApplication(app_metadata, services)
 
     return _inner
 
@@ -143,7 +143,7 @@ def _create_command(command_name):
     ids=lambda ordered: f"keep_order={ordered}",
 )
 def test_registering_new_commands(
-    app: TestableApplication,
+    app: FakeApplication,
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
     *,
