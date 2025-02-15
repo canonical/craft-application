@@ -1,4 +1,5 @@
 version = 1
+revision = 1
 requires-python = ">=3.10"
 resolution-markers = [
     "python_full_version >= '3.12'",
@@ -119,7 +120,7 @@ wheels = [
 
 [[package]]
 name = "canonical-sphinx"
-version = "0.2.0"
+version = "0.3.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "furo" },
@@ -127,9 +128,9 @@ dependencies = [
     { name = "myst-parser" },
     { name = "sphinx" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/fe/2a/a77c673d5950d1ae1e065fddd038e547610fc9e1de41ef56b20d85fa87c2/canonical_sphinx-0.2.0.tar.gz", hash = "sha256:74d8dce67845924220d67f78bf85df379d8121e9b8e684338986dcccf9fff439", size = 56858 }
+sdist = { url = "https://files.pythonhosted.org/packages/54/19/b2101265969ba6bfacbb9b3355a32a22abdcccceba61542813f07fe0e965/canonical_sphinx-0.3.0.tar.gz", hash = "sha256:7914a1281e7520a032058e7a511d019fee25a152c032499a7bf9e15852f9d9e7", size = 1051001 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/99/da/488d00806ddcc177c3e02049d8ab1d92aee0a334d6e2aed41a45a5c924f8/canonical_sphinx-0.2.0-py3-none-any.whl", hash = "sha256:c71ee6dbc15c084ad115f06b0f1c15f8269db3a896670e616b8945d6af089edd", size = 31067 },
+    { url = "https://files.pythonhosted.org/packages/30/ba/ab2e2113841f88a9725c6c55f4918a3031ef3efad6afd154d9444cd40c8e/canonical_sphinx-0.3.0-py3-none-any.whl", hash = "sha256:55dc07c54038ea7016a5a6a12fafa1bde8558a00009237f5224db1c65e919b0f", size = 1027670 },
 ]
 
 [[package]]
@@ -465,6 +466,7 @@ requires-dist = [
     { name = "snap-helpers", specifier = ">=0.4.2" },
     { name = "typing-extensions", specifier = ">=4.4.0" },
 ]
+provides-extras = ["remote", "apt"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -487,7 +489,7 @@ dev-noble = [{ name = "python-apt", marker = "sys_platform == 'linux'", specifie
 dev-oracular = [{ name = "python-apt", marker = "sys_platform == 'linux'", specifier = "~=2.9.0" }]
 dev-plucky = [{ name = "python-apt", marker = "sys_platform == 'linux'", specifier = ">=2.9.0" }]
 docs = [
-    { name = "canonical-sphinx", specifier = "~=0.2.0" },
+    { name = "canonical-sphinx", specifier = "~=0.3.0" },
     { name = "sphinx-autobuild", specifier = "==2024.10.3" },
     { name = "sphinx-lint", specifier = "==1.0.0" },
 ]
