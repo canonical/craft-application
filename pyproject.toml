@@ -23,7 +23,7 @@ dependencies = [
     # the minimum minor version here, that absolutely needs to go in the release
     # notes.
     # Pygit2 changelog: https://github.com/libgit2/pygit2/blob/master/CHANGELOG.md
-    "pygit2>=1.13.0,<1.15.0",
+    "pygit2>=1.17.0,<1.18.0",
     "PyYaml>=6.0",
     "requests",
     "typing_extensions>=4.4.0",
