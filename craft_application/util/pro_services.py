@@ -196,11 +196,12 @@ class ProServices(set[str]):
 
     def validate_project(self, project: models.Project) -> None:
         """Ensure no unsupported interim bases are used in Ubuntu Pro builds."""
-        if bool(self) and (
-            (project.base is not None and project.base == "devel")
-            or (project.build_base is not None and project.build_base == "devel")
-        ):
-            raise InvalidUbuntuProBaseError
+        invalid_bases = ["devel", "ubuntu@24.04"]
+        if bool(self):
+            if project.base is not None and project.base in invalid_bases:
+                raise InvalidUbuntuProBaseError("base", project.base)
+            if project.build_base is not None and project.build_base in invalid_bases:
+                raise InvalidUbuntuProBaseError("build-base", project.build_base)
 
     def validate_environment(
         self,

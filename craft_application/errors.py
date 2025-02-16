@@ -455,12 +455,9 @@ class InvalidUbuntuProServiceError(InvalidUbuntuProStateError):
 class InvalidUbuntuProBaseError(InvalidUbuntuProStateError):
     """Raised when the requested base, (or build_base) do not support Ubuntu Pro Builds."""
 
-    def __init__(self) -> None:
-        message = 'Ubuntu Pro builds are not supported on "devel" bases.'
-        resolution = (
-            'Remove --pro argument or set "base" and/or "build-base" to a LTS '
-            "release. Example: ubuntu@24.04"
-        )
+    def __init__(self, base_type: str, base_name: str) -> None:
+        message = f'Ubuntu Pro builds are not supported on "{base_name}" {base_type}.'
+        resolution = f"Remove --pro argument or set {base_type} to a supported base."
 
         super().__init__(message=message, resolution=resolution)
 
