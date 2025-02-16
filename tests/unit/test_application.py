@@ -1331,28 +1331,45 @@ def test_doc_url_in_command_help(monkeypatch, capsys, app):
 
 # fmt: off
 @pytest.mark.parametrize(
-    (   "run_managed",     "is_managed",   "val_env_calls",   "val_prj_calls",   "validator_options"),
+    (   "run_managed",     "is_managed",   "val_env_calls",   "validator_options"),
     [
-        (False,             False,         1,               1,               None),
-        (True,              True,          1,               0,               None),
-        (True,              False,         1,               1,               util.ValidatorOptions.AVAILABILITY),
-        (False,             True,          0,               0,               None),
+        (False,             False,         1,                 None),
+        (True,              True,          1,                 None),
+        (True,              False,         1,                 util.ValidatorOptions.AVAILABILITY),
+        (False,             True,          0,                 None),
     ],
 )
 # fmt: on
 def test_check_pro_requirement(
-    mocker, app, run_managed, is_managed, val_env_calls, val_prj_calls, validator_options
+    mocker, app, run_managed, is_managed, val_env_calls, validator_options
 ):
     """Test that _check_pro_requirement validates Pro Services in the correct situations"""
     pro_services = mocker.Mock()
-    project = mocker.Mock()
-    project.base = None
-    project.build_base = None
-    app._check_pro_requirement(pro_services, run_managed, is_managed, project)
+    app._check_pro_requirement(pro_services, run_managed, is_managed)
 
     assert pro_services.validate_environment.call_count == val_env_calls
-    assert pro_services.validate_project.call_count == val_prj_calls
 
     for call in pro_services.validate.call_args_list:
         if validator_options is not None:  # skip assert if default value is passed
             assert call.kwargs["options"] == validator_options
+
+
+# fmt: off
+@pytest.mark.parametrize(
+    (   "is_pro",   "val_prj_calls"),
+    [
+        (False,     0),
+        (True,     1),
+    ],
+)
+# fmt: on
+@pytest.mark.usefixtures("fake_project_file")
+def test_validate_project_pro_requirements(mocker, is_pro, val_prj_calls, app_metadata, fake_services):
+    """Test validate_project is called only when ProServices are available."""
+    app = application.Application(app_metadata, fake_services)
+
+    app._pro_services = mocker.MagicMock()
+
+    app._pro_services.__bool__.return_value = is_pro
+    app.get_project(build_for=get_host_architecture())
+    assert app._pro_services.validate_project.call_count == val_prj_calls
