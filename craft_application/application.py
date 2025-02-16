@@ -411,6 +411,9 @@ class Application:
                     f"Required field '{name}' is not set and 'adopt-info' not used."
                 )
 
+        if self._pro_services:
+            self._pro_services.validate_project(self.__project)
+
         return self.__project
 
     @cached_property
@@ -662,7 +665,6 @@ class Application:
         pro_services: ProServices | None,
         run_managed: bool,  # noqa: FBT001
         is_managed: bool,  # noqa: FBT001
-        project: models.Project,
     ) -> None:
         craft_cli.emit.debug(
             f"pro_services: {pro_services}, run_managed: {run_managed}, is_managed: {is_managed}"
@@ -673,7 +675,6 @@ class Application:
                 craft_cli.emit.debug(
                     f"Validating requested Ubuntu Pro status on host: {pro_services}"
                 )
-                pro_services.validate_project(project)
                 pro_services.validate_environment()
             # Validate requested pro services running in managed mode inside a managed instance.
             elif run_managed and is_managed:
@@ -686,7 +687,6 @@ class Application:
                 craft_cli.emit.debug(
                     f"Validating requested Ubuntu Pro attachment on host: {pro_services}"
                 )
-                pro_services.validate_project(project)
                 pro_services.validate_environment(
                     options=ValidatorOptions.AVAILABILITY,
                 )
@@ -718,9 +718,7 @@ class Application:
         # which may consume pro packages,
         self._pro_services = getattr(dispatcher.parsed_args(), "pro", None)
         # Check that pro services are correctly configured if available
-        self._check_pro_requirement(
-            self._pro_services, managed_mode, self.is_managed(), self.get_project()
-        )
+        self._check_pro_requirement(self._pro_services, managed_mode, self.is_managed())
 
         craft_cli.emit.debug(f"Build plan: platform={platform}, build_for={build_for}")
         self._pre_run(dispatcher)
