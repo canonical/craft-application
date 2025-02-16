@@ -1370,6 +1370,6 @@ def test_validate_project_pro_requirements(mocker, is_pro, val_prj_calls, app_me
 
     app._pro_services = mocker.MagicMock()
 
-    app._pro_services.__bool__.return_value = is_pro
+    app._pro_services.__bool__.return_value = is_pro # type: ignore # noqa: PGH003
     app.get_project(build_for=get_host_architecture())
-    assert app._pro_services.validate_project.call_count == val_prj_calls
+    assert app._pro_services.validate_project.call_count == val_prj_calls # type: ignore # noqa: PGH003
