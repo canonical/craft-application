@@ -22,8 +22,9 @@ from unittest import mock
 import pytest
 import pytest_mock
 
-from craft_application import git, services, util
+from craft_application import git, services
 from craft_application.services import service_factory
+from craft_application.services.project import ProjectService
 
 BASIC_PROJECT_YAML = """
 name: myproject
@@ -37,10 +38,13 @@ parts:
 """
 
 
-@pytest.fixture(params=["amd64", "arm64", "riscv64"])
-def fake_host_architecture(monkeypatch, request) -> str:
-    monkeypatch.setattr(util, "get_host_architecture", lambda: request.param)
-    return request.param
+@pytest.fixture
+def project_service(app_metadata, fake_services, tmp_path):
+    return ProjectService(
+        app_metadata,
+        fake_services,
+        project_dir=tmp_path,
+    )
 
 
 @pytest.fixture
@@ -110,11 +114,8 @@ def expected_git_command(
 
 
 @pytest.fixture
-def fake_project_file(monkeypatch, tmp_path):
-    project_dir = tmp_path / "project"
-    project_dir.mkdir()
-    project_path = project_dir / "testcraft.yaml"
-    project_path.write_text(BASIC_PROJECT_YAML)
-    monkeypatch.chdir(project_dir)
+def fake_project_file(in_project_path):
+    project_file = in_project_path / "testcraft.yaml"
+    project_file.write_text(BASIC_PROJECT_YAML)
 
-    return project_path
+    return project_file

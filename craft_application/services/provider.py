@@ -49,7 +49,8 @@ if TYPE_CHECKING:  # pragma: no cover
 DEFAULT_FORWARD_ENVIRONMENT_VARIABLES: Iterable[str] = ()
 
 
-class ProviderService(base.ProjectService):
+# TODO: This was a ProjectService
+class ProviderService(base.AppService):
     """Manager for craft_providers in an application.
 
     :param app: Metadata about this application.

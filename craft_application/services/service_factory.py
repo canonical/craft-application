@@ -32,16 +32,18 @@ from typing import (
 
 import annotated_types
 
-from craft_application import models, services
+from craft_application import services
 
 if TYPE_CHECKING:
     from craft_application.application import AppMetadata
+    from craft_application.services.project import ProjectService
 
 _DEFAULT_SERVICES = {
     "config": "ConfigService",
     "fetch": "FetchService",
     "init": "InitService",
     "lifecycle": "LifecycleService",
+    "project": "ProjectService",
     "provider": "ProviderService",
     "remote_build": "RemoteBuildService",
     "request": "RequestService",
@@ -69,26 +71,6 @@ class ServiceFactory:
 
     # These exist so that child ServiceFactory classes can use them.
     app: AppMetadata
-    PackageClass: type[services.PackageService] = None  # type: ignore[assignment]
-    LifecycleClass: type[services.LifecycleService] = None  # type: ignore[assignment]
-    ProviderClass: type[services.ProviderService] = None  # type: ignore[assignment]
-    RemoteBuildClass: type[services.RemoteBuildService] = None  # type: ignore[assignment]
-    RequestClass: type[services.RequestService] = None  # type: ignore[assignment]
-    ConfigClass: type[services.ConfigService] = None  # type: ignore[assignment]
-    FetchClass: type[services.FetchService] = None  # type: ignore[assignment]
-    InitClass: type[services.InitService] = None  # type: ignore[assignment]
-    project: models.Project | None = None
-
-    if TYPE_CHECKING:
-        # Cheeky hack that lets static type checkers report the correct types.
-        package: services.PackageService = None  # type: ignore[assignment]
-        lifecycle: services.LifecycleService = None  # type: ignore[assignment]
-        provider: services.ProviderService = None  # type: ignore[assignment]
-        remote_build: services.RemoteBuildService = None  # type: ignore[assignment]
-        request: services.RequestService = None  # type: ignore[assignment]
-        config: services.ConfigService = None  # type: ignore[assignment]
-        fetch: services.FetchService = None  # type: ignore[assignment]
-        init: services.InitService = None  # type: ignore[assignment]
 
     def __post_init__(self) -> None:
         self._service_kwargs: dict[str, dict[str, Any]] = {}
@@ -162,11 +144,11 @@ class ServiceFactory:
     ) -> None:
         """Set up the keyword arguments to pass to a particular service class.
 
-        PENDING DEPRECATION: use update_kwargs instead
+        DEPRECATED: use update_kwargs instead
         """
         warnings.warn(
-            PendingDeprecationWarning(
-                "ServiceFactory.set_kwargs is pending deprecation. Use update_kwargs instead."
+            DeprecationWarning(
+                "ServiceFactory.set_kwargs is deprecated. Use update_kwargs instead."
             ),
             stacklevel=2,
         )
@@ -262,6 +244,8 @@ class ServiceFactory:
     @overload
     def get(self, service: Literal["lifecycle"]) -> services.LifecycleService: ...
     @overload
+    def get(self, service: Literal["project"]) -> ProjectService: ...
+    @overload
     def get(self, service: Literal["provider"]) -> services.ProviderService: ...
     @overload
     def get(self, service: Literal["remote_build"]) -> services.RemoteBuildService: ...
@@ -282,12 +266,12 @@ class ServiceFactory:
             return self._services[service]
         cls = self.get_class(service)
         kwargs = self._service_kwargs.get(service, {})
-        if issubclass(cls, services.ProjectService):
-            if not self.project:
-                raise ValueError(
-                    f"{cls.__name__} requires a project to be available before creation."
-                )
-            kwargs.setdefault("project", self.project)
+        # if issubclass(cls, services.ProjectService):
+        #     if not self.project:
+        #         raise ValueError(
+        #             f"{cls.__name__} requires a project to be available before creation."
+        #         )
+        #     kwargs.setdefault("project", self.project)
 
         instance = cls(app=self.app, services=self, **kwargs)
         instance.setup()

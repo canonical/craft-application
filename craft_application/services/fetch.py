@@ -27,11 +27,13 @@ import craft_providers
 from craft_cli import emit
 from typing_extensions import override
 
-from craft_application import fetch, models, services, util
+from craft_application import fetch, models, util
 from craft_application.models.manifest import CraftManifest, ProjectManifest
+from craft_application.services import base
 
 if typing.TYPE_CHECKING:
     from craft_application.application import AppMetadata
+    from craft_application.services import service_factory
 
 
 _PROJECT_MANIFEST_MANAGED_PATH = pathlib.Path(
@@ -39,7 +41,8 @@ _PROJECT_MANIFEST_MANAGED_PATH = pathlib.Path(
 )
 
 
-class FetchService(services.ProjectService):
+# TODO: This was a ProjectService
+class FetchService(base.AppService):
     """Service class that handles communication with the fetch-service.
 
     This Service is able to spawn a fetch-service instance and create sessions
@@ -61,7 +64,7 @@ class FetchService(services.ProjectService):
     def __init__(
         self,
         app: AppMetadata,
-        services: services.ServiceFactory,
+        services: service_factory.ServiceFactory,
         *,
         project: models.Project,
         build_plan: list[models.BuildInfo],

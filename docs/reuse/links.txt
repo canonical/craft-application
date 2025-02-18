@@ -1,0 +1,1 @@
+.. _`YAML`: https://yaml.org/
