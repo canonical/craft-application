@@ -41,7 +41,6 @@ _PROJECT_MANIFEST_MANAGED_PATH = pathlib.Path(
 )
 
 
-# TODO: This was a ProjectService
 class FetchService(base.AppService):
     """Service class that handles communication with the fetch-service.
 
@@ -66,7 +65,6 @@ class FetchService(base.AppService):
         app: AppMetadata,
         services: service_factory.ServiceFactory,
         *,
-        project: models.Project,
         build_plan: list[models.BuildInfo],
         session_policy: str,
     ) -> None:
@@ -75,7 +73,7 @@ class FetchService(base.AppService):
         :param session_policy: Whether the created fetch-service sessions should
           be "strict" or "permissive".
         """
-        super().__init__(app, services, project=project)
+        super().__init__(app, services)
         self._fetch_process = None
         self._session_data = None
         self._build_plan = build_plan
@@ -162,16 +160,18 @@ class FetchService(base.AppService):
             return
 
         emit.debug(f"Generating project manifest at {_PROJECT_MANIFEST_MANAGED_PATH}")
+        project = self._services.get("project").get()
         project_manifest = ProjectManifest.from_packed_artifact(
-            self._project, self._build_plan[0], artifacts[0]
+            project, self._build_plan[0], artifacts[0]
         )
         project_manifest.to_yaml_file(_PROJECT_MANIFEST_MANAGED_PATH)
 
     def _create_craft_manifest(
         self, project_manifest: pathlib.Path, session_report: dict[str, typing.Any]
     ) -> None:
-        name = self._project.name
-        version = self._project.version
+        project = self._services.get("project").get()
+        name = project.name
+        version = project.version
         platform = self._build_plan[0].platform
 
         manifest_path = pathlib.Path(f"{name}_{version}_{platform}.json")

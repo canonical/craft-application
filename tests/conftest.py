@@ -282,8 +282,9 @@ def fake_project_service_class(fake_project) -> type[services.ProjectService]:
             return fake_project.marshal()
 
         # Don't care if the project file exists during this testing.
+        # Silencing B019 because we're replicating an inherited method.
         @override
-        @functools.lru_cache
+        @functools.lru_cache(maxsize=1)  # noqa: B019
         def resolve_project_file_path(self):
             return (self._project_dir / f"{self._app.name}.yaml").resolve()
 
@@ -383,6 +384,7 @@ def fake_services(
     fake_project_service_class,
     fake_init_service_class,
     fake_remote_build_service_class,
+    project_path,
 ):
     services.ServiceFactory.register("package", fake_package_service_class)
     services.ServiceFactory.register("lifecycle", fake_lifecycle_service_class)
@@ -395,8 +397,9 @@ def fake_services(
     )
     factory.update_kwargs(
         "project",
-        project_dir=tmp_path,
+        project_dir=project_path,
     )
+    factory.get("project").render_once()
     return factory
 
 
