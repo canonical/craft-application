@@ -99,10 +99,14 @@ def test_download_files_with_progress(tmp_path, emitter, request_service, downlo
 
     results = request_service.download_files_with_progress(files)
 
-    assert emitter.interactions[0] == call(
-        "progress_bar",
-        f"Downloading {len(downloads)} files",
-        sum(len(dl) for dl in downloads.values()),
+    emitter.assert_interactions(
+        [
+            call(
+                "progress_bar",
+                f"Downloading {len(downloads)} files",
+                sum(len(dl) for dl in downloads.values()),
+            )
+        ]
     )
     for file in downloads.values():
         if len(file) > 0:  # Advance doesn't get called on empty files
