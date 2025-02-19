@@ -63,7 +63,6 @@ from craft_application.util import (
     get_host_architecture,  # pyright: ignore[reportGeneralTypeIssues]
 )
 from tests.conftest import FakeApplication
-from tests.unit.conftest import BASIC_PROJECT_YAML
 
 EMPTY_COMMAND_GROUP = craft_cli.CommandGroup("FakeCommands", [])
 
@@ -703,13 +702,10 @@ def test_craft_lib_log_level(app_metadata, fake_services):
         assert logger.level == logging.DEBUG
 
 
-def test_gets_project(monkeypatch, tmp_path, app_metadata, fake_services):
-    project_file = tmp_path / "testcraft.yaml"
-    project_file.write_text(BASIC_PROJECT_YAML)
+def test_gets_project(monkeypatch, fake_project_file, app_metadata, fake_services):
     monkeypatch.setattr(sys, "argv", ["testcraft", "pull", "--destructive-mode"])
 
     app = FakeApplication(app_metadata, fake_services)
-    app.project_dir = tmp_path
 
     # fake_services.project = None
 
@@ -1462,10 +1458,7 @@ def test_register_plugins_default(mocker, app_metadata, fake_services):
     assert reg.call_count == 0
 
 
-def test_extra_yaml_transform(tmp_path, app_metadata, fake_services):
-    project_file = tmp_path / "testcraft.yaml"
-    project_file.write_text(BASIC_PROJECT_YAML)
-
+def test_extra_yaml_transform(tmp_path, app_metadata, fake_services, fake_project_file):
     app = FakeApplication(app_metadata, fake_services)
     app.project_dir = tmp_path
     _ = app.get_project(build_for="s390x")
@@ -1474,16 +1467,15 @@ def test_extra_yaml_transform(tmp_path, app_metadata, fake_services):
     assert app.build_for == "s390x"
 
 
-def test_mandatory_adoptable_fields(tmp_path, app_metadata, fake_services):
+def test_mandatory_adoptable_fields(
+    tmp_path, app_metadata, fake_services, fake_project_file
+):
     """Verify if mandatory adoptable fields are defined if not using adopt-info."""
-    project_file = tmp_path / "testcraft.yaml"
-    project_file.write_text(BASIC_PROJECT_YAML)
     app_metadata = dataclasses.replace(
         app_metadata, mandatory_adoptable_fields=["license"]
     )
 
     app = application.Application(app_metadata, fake_services)
-    app.project_dir = tmp_path
 
     with pytest.raises(errors.CraftValidationError) as exc_info:
         _ = app.get_project(build_for=get_host_architecture())
@@ -1747,15 +1739,12 @@ class FakeApplicationWithYamlTransform(FakeApplication):
 
 @pytest.mark.enable_features("build_secrets")
 def test_process_yaml_from_extra_transform(
-    app_metadata, fake_services, tmp_path, monkeypatch
+    app_metadata, fake_services, monkeypatch, fake_project_file
 ):
     """Test that grammar is applied on data from `_extra_yaml_transform`."""
     monkeypatch.setenv("SECRET_VAR", "secret-value")
-    project_file = tmp_path / "testcraft.yaml"
-    project_file.write_text(BASIC_PROJECT_YAML)
 
     app = FakeApplicationWithYamlTransform(app_metadata, fake_services)
-    app.project_dir = tmp_path
     project = app.get_project(build_for="riscv64")
 
     # process grammar
@@ -2058,9 +2047,11 @@ def test_emitter_docs_url(monkeypatch, mocker, app):
     assert spied_init.mock_calls[0].kwargs["docs_base_url"] == expected_url
 
 
-def test_clean_platform(monkeypatch, tmp_path, app_metadata, fake_services, mocker):
+def test_clean_platform(
+    monkeypatch, tmp_path, app_metadata, fake_services, mocker, fake_project_yaml
+):
     """Test that calling "clean --platform=x" correctly filters the build plan."""
-    data = util.safe_yaml_load(StringIO(BASIC_PROJECT_YAML))
+    data = util.safe_yaml_load(StringIO(fake_project_yaml))
     # Put a few different platforms on the project
     arch = util.get_host_architecture()
     build_on_for = {

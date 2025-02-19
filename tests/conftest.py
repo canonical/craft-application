@@ -18,6 +18,7 @@
 from __future__ import annotations
 
 import functools
+import io
 import os
 import pathlib
 import shutil
@@ -28,6 +29,8 @@ from typing import TYPE_CHECKING, Any
 from unittest.mock import Mock
 
 import craft_parts
+import craft_platforms
+import distro
 import jinja2
 import pydantic
 import pytest
@@ -39,9 +42,76 @@ from typing_extensions import override
 import craft_application
 from craft_application import application, git, launchpad, models, services, util
 from craft_application.services import service_factory
+from craft_application.util import yaml
 
 if TYPE_CHECKING:  # pragma: no cover
     from collections.abc import Iterator
+
+
+FAKE_PROJECT_YAML_TEMPLATE = """\
+name: full-project
+title: A fully-defined project
+summary: A fully-defined craft-application project.
+description: |
+  A fully-defined craft-application project.
+
+  This is a full description.
+version: 1.0.0.post64+git12345678
+license: LGPLv3
+
+base: {base}
+platforms:
+  64-bit-pc:
+    build-on: [amd64]
+    build-for: [amd64]
+  some-phone:
+    build-on: [amd64, arm64, s390x]
+    build-for: [arm64]
+  ppc64el:
+  risky:
+    build-on: [amd64, arm64, ppc64el, riscv64, s390x]
+    build-for: [riscv64]
+  s390x:
+    build-on: [amd64, arm64, ppc64el, riscv64, s390x]
+    build-for: [s390x]
+  platform-independent:
+    build-on: [amd64, arm64, ppc64el, riscv64, s390x]
+    build-for: [all]
+
+contact: author@project.org
+issues: https://github.com/canonical/craft-application/issues
+source-code: https://github.com/canonical/craft-application
+
+parts:
+  some-part:
+    plugin: nil
+"""
+
+
+@pytest.fixture
+def fake_project_yaml():
+    current_base = craft_platforms.DistroBase.from_linux_distribution(
+        distro.LinuxDistribution(
+            include_lsb=False, include_uname=False, include_oslevel=False
+        )
+    )
+    return FAKE_PROJECT_YAML_TEMPLATE.format(
+        base=f"{current_base.distribution}@{current_base.series}"
+    )
+
+
+@pytest.fixture
+def fake_project_file(in_project_path, fake_project_yaml):
+    project_file = in_project_path / "testcraft.yaml"
+    project_file.write_text(fake_project_yaml)
+
+    return project_file
+
+
+@pytest.fixture
+def fake_project(fake_project_yaml) -> models.Project:
+    with io.StringIO(fake_project_yaml) as project_io:
+        return models.Project.unmarshal(yaml.safe_yaml_load(project_io))
 
 
 def _create_fake_build_plan(num_infos: int = 1) -> list[models.BuildInfo]:
@@ -110,27 +180,6 @@ def app_metadata_docs() -> craft_application.AppMetadata:
             docs_url="http://testcraft.example",
             source_ignore_patterns=["*.snap", "*.charm", "*.starcraft"],
         )
-
-
-@pytest.fixture
-def fake_project() -> models.Project:
-    arch = util.get_host_architecture()
-    return models.Project(
-        name="full-project",  # pyright: ignore[reportArgumentType]
-        title="A fully-defined project",  # pyright: ignore[reportArgumentType]
-        base="ubuntu@24.04",
-        version="1.0.0.post64+git12345678",  # pyright: ignore[reportArgumentType]
-        contact="author@project.org",
-        issues="https://github.com/canonical/craft-application/issues",
-        source_code="https://github.com/canonical/craft-application",  # pyright: ignore[reportArgumentType]
-        summary="A fully-defined craft-application project.",  # pyright: ignore[reportArgumentType]
-        description="A fully-defined craft-application project. (description)",
-        license="LGPLv3",
-        parts={"my-part": {"plugin": "nil"}},
-        platforms={"foo": models.Platform(build_on=[arch], build_for=[arch])},
-        package_repositories=None,
-        adopt_info=None,
-    )
 
 
 @pytest.fixture

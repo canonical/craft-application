@@ -26,17 +26,6 @@ from craft_application import git, services
 from craft_application.services import service_factory
 from craft_application.services.project import ProjectService
 
-BASIC_PROJECT_YAML = """
-name: myproject
-version: 1.0
-base: ubuntu@24.04
-platforms:
-  arm64:
-parts:
-  mypart:
-    plugin: nil
-"""
-
 
 @pytest.fixture
 def project_service(app_metadata, fake_services, tmp_path):
@@ -111,11 +100,3 @@ def expected_git_command(
     which_res = f"/some/path/to/{git.CRAFTGIT_BINARY_NAME}" if craftgit_exists else None
     mocker.patch("shutil.which", return_value=which_res)
     return git.CRAFTGIT_BINARY_NAME if craftgit_exists else git.GIT_FALLBACK_BINARY_NAME
-
-
-@pytest.fixture
-def fake_project_file(in_project_path):
-    project_file = in_project_path / "testcraft.yaml"
-    project_file.write_text(BASIC_PROJECT_YAML)
-
-    return project_file
