@@ -82,8 +82,6 @@ contact: author@project.org
 issues: https://github.com/canonical/craft-application/issues
 source-code: https://github.com/canonical/craft-application
 
-
-
 parts:
   some-part:
     plugin: nil
