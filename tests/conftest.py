@@ -82,6 +82,8 @@ contact: author@project.org
 issues: https://github.com/canonical/craft-application/issues
 source-code: https://github.com/canonical/craft-application
 
+
+
 parts:
   some-part:
     plugin: nil
@@ -288,6 +290,10 @@ def fake_project_service_class(fake_project) -> type[services.ProjectService]:
         def resolve_project_file_path(self):
             return (self._project_dir / f"{self._app.name}.yaml").resolve()
 
+        def set(self, value: models.Project) -> None:
+            """Set the project model. Only for use during testing!"""
+            self._project_model = value
+
     return FakeProjectService
 
 
@@ -336,7 +342,6 @@ def fake_lifecycle_service_class(tmp_path, fake_build_plan):
         def __init__(
             self,
             app: application.AppMetadata,
-            project: models.Project,
             services: services.ServiceFactory,
             **kwargs: Any,
         ):
@@ -344,7 +349,6 @@ def fake_lifecycle_service_class(tmp_path, fake_build_plan):
             super().__init__(
                 app,
                 services,
-                project=project,
                 work_dir=kwargs.pop("work_dir", tmp_path / "work"),
                 cache_dir=kwargs.pop("cache_dir", tmp_path / "cache"),
                 platform=None,

@@ -44,7 +44,6 @@ if TYPE_CHECKING:  # pragma: no cover
     from pathlib import Path
 
     from craft_application.application import AppMetadata
-    from craft_application.models import Project
     from craft_application.services import ServiceFactory
 
 
@@ -112,7 +111,6 @@ def _get_step(step_name: str) -> Step:
         raise RuntimeError(f"Invalid target step {step_name!r}") from None
 
 
-# TODO: This was a ProjectService.
 class LifecycleService(base.AppService):
     """Create and manage the parts lifecycle.
 
@@ -126,19 +124,20 @@ class LifecycleService(base.AppService):
         LifecycleManager on initialisation.
     """
 
+    _project: models.Project
+
     def __init__(
         self,
         app: AppMetadata,
         services: ServiceFactory,
         *,
-        project: Project,
         work_dir: Path | str,
         cache_dir: Path | str,
         build_plan: list[models.BuildInfo],
         partitions: list[str] | None = None,
         **lifecycle_kwargs: Any,
     ) -> None:
-        super().__init__(app, services, project=project)
+        super().__init__(app, services)
         self._work_dir = work_dir
         self._cache_dir = cache_dir
         self._build_plan = build_plan
@@ -149,6 +148,7 @@ class LifecycleService(base.AppService):
     @override
     def setup(self) -> None:
         """Initialize the LifecycleManager with previously-set arguments."""
+        self._project = self._services.get("project").get()
         self._lcm = self._init_lifecycle_manager()
         callbacks.register_post_step(self.post_prime, step_list=[Step.PRIME])
 
@@ -321,7 +321,7 @@ class LifecycleService(base.AppService):
         cache_dir = self._cache_dir
         plan = self._build_plan
         return (
-            f"{self.__class__.__name__}({self._app!r}, {self._project!r}, "
+            f"{self.__class__.__name__}({self._app!r}, "
             f"{work_dir=}, {cache_dir=}, {plan=}, **{self._manager_kwargs!r})"
         )
 

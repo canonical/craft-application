@@ -74,12 +74,22 @@ def test_get_platforms(
     platforms: dict[str, dict[str, list[str] | None]],
     expected,
 ):
-    project_service._load_raw_project = lambda: {"platforms": platforms}  # type: ignore
+    project_service._load_raw_project = lambda: {"platforms": platforms}  # type: ignore  # noqa: PGH003
 
     assert project_service.get_platforms() == expected
 
 
 # TODO: test get_project_vars
+
+
+def test_partitions_with_partitions_disabled(project_service: ProjectService):
+    assert project_service.get_partitions() is None
+
+
+@pytest.mark.usefixtures("enable_partitions")
+def test_default_partitions_when_enabled(project_service: ProjectService):
+    assert project_service.get_partitions() == ["default"]
+
 
 # TODO: test expand_environment
 

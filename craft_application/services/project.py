@@ -129,10 +129,9 @@ class ProjectService(base.AppService):
             return self._app_render_legacy_platforms()
 
         platforms = raw_project["platforms"]
-        for name, platform in platforms.items():
-            if platform is None:
-                platform = {"build-on": [name], "build-for": [name]}
-                platforms[name] = platform
+        for name, data in platforms.items():
+            if data is None:
+                platforms[name] = {"build-on": [name], "build-for": [name]}
 
         return platforms
 
@@ -144,7 +143,13 @@ class ProjectService(base.AppService):
         return pvars
 
     def get_partitions(self) -> list[str] | None:
-        """Get the partitions this application needs for this project."""
+        """Get the partitions this application needs for this project.
+
+        Applications should override this method depending on how they determine
+        partitions.
+        """
+        if craft_parts.Features().enable_partitions:
+            return ["default"]
         return None
 
     @final
@@ -305,11 +310,12 @@ class ProjectService(base.AppService):
                 # If we don't have a platform, select the first platform that matches
                 # our build-on and build-for. If we don't have a build-for, select the
                 # first platform that matches our build-for.
-                for platform, data in platforms.items():
+                for name, data in platforms.items():
                     if build_on.value not in data["build-on"]:
                         continue
                     if build_for and build_for not in data["build-for"]:
                         continue
+                    platform = name
                     break
                 else:
                     if build_for:
