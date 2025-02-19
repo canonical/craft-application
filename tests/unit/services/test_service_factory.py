@@ -45,7 +45,6 @@ def factory(
 
     factory = services.ServiceFactory(
         app_metadata,
-        project=fake_project,
     )
     factory.update_kwargs(
         "lifecycle",
@@ -105,7 +104,6 @@ def test_register_services_in_init(
 ):
     factory = services.ServiceFactory(
         app_metadata,
-        project=fake_project,
         PackageClass=fake_package_service_class,
         LifecycleClass=fake_lifecycle_service_class,
         ProviderClass=fake_provider_service_class,
