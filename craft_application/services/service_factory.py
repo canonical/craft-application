@@ -31,7 +31,7 @@ from typing import (
 
 import annotated_types
 
-from craft_application import services
+from craft_application import models, services
 
 if TYPE_CHECKING:
     from craft_application.application import AppMetadata
