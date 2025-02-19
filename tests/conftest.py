@@ -298,20 +298,17 @@ def fake_project_service_class(fake_project) -> type[services.ProjectService]:
 
 
 @pytest.fixture
-def fake_provider_service_class(fake_build_plan):
+def fake_provider_service_class(fake_build_plan, project_path):
     class FakeProviderService(services.ProviderService):
         def __init__(
             self,
             app: application.AppMetadata,
             services: services.ServiceFactory,
-            *,
-            project: models.Project,
         ):
             super().__init__(
                 app,
                 services,
-                project=project,
-                work_dir=pathlib.Path(),
+                work_dir=project_path,
                 build_plan=fake_build_plan,
             )
 

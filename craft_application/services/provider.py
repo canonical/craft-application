@@ -49,7 +49,6 @@ if TYPE_CHECKING:  # pragma: no cover
 DEFAULT_FORWARD_ENVIRONMENT_VARIABLES: Iterable[str] = ()
 
 
-# TODO: This was a ProjectService
 class ProviderService(base.AppService):
     """Manager for craft_providers in an application.
 
@@ -65,13 +64,12 @@ class ProviderService(base.AppService):
         app: AppMetadata,
         services: ServiceFactory,
         *,
-        project: models.Project,
         work_dir: pathlib.Path,
         build_plan: list[models.BuildInfo],
         provider_name: str | None = None,
         install_snap: bool = True,
     ) -> None:
-        super().__init__(app, services, project=project)
+        super().__init__(app, services)
         self._provider: craft_providers.Provider | None = None
         self._work_dir = work_dir
         self._build_plan = build_plan
@@ -129,6 +127,7 @@ class ProviderService(base.AppService):
         work_dir: pathlib.Path,
         allow_unstable: bool = True,
         clean_existing: bool = False,
+        project_name: str | None = None,
         **kwargs: bool | str | None,
     ) -> Generator[craft_providers.Executor, None, None]:
         """Context manager for getting a provider instance.
@@ -140,7 +139,9 @@ class ProviderService(base.AppService):
           and re-created.
         :returns: a context manager of the provider instance.
         """
-        instance_name = self._get_instance_name(work_dir, build_info)
+        if not project_name:
+            project_name = self._services.get("project").get().name
+        instance_name = self._get_instance_name(work_dir, build_info, project_name)
         emit.debug(f"Preparing managed instance {instance_name!r}")
         base_name = build_info.base
         base = self.get_base(base_name, instance_name=instance_name, **kwargs)
@@ -149,11 +150,11 @@ class ProviderService(base.AppService):
         provider.ensure_provider_is_available()
 
         if clean_existing:
-            self._clean_instance(provider, work_dir, build_info)
+            self._clean_instance(provider, work_dir, build_info, project_name)
 
         emit.progress(f"Launching managed {base_name[0]} {base_name[1]} instance...")
         with provider.launched_environment(
-            project_name=self._project.name,
+            project_name=project_name,
             project_path=work_dir,
             instance_name=instance_name,
             base_configuration=base,
@@ -284,18 +285,21 @@ class ProviderService(base.AppService):
             target = "environments" if len(build_plan) > 1 else "environment"
             emit.progress(f"Cleaning build {target}")
 
+        project_name = self._services.get("project").get().name
+
         for info in build_plan:
-            self._clean_instance(provider, self._work_dir, info)
+            self._clean_instance(provider, self._work_dir, info, project_name)
 
     def _get_instance_name(
-        self, work_dir: pathlib.Path, build_info: models.BuildInfo
+        self, work_dir: pathlib.Path, build_info: models.BuildInfo, project_name: str
     ) -> str:
         work_dir_inode = work_dir.stat().st_ino
 
         # craft-providers will remove invalid characters from the name but replacing
         # characters improves readability for multi-base platforms like "ubuntu@24.04:amd64"
         platform = build_info.platform.replace(":", "-").replace("@", "-")
-        return f"{self._app.name}-{self._project.name}-{platform}-{work_dir_inode}"
+
+        return f"{self._app.name}-{project_name}-{platform}-{work_dir_inode}"
 
     def _get_provider_by_name(self, name: str) -> craft_providers.Provider:
         """Get a provider by its name."""
@@ -355,8 +359,9 @@ class ProviderService(base.AppService):
         provider: craft_providers.Provider,
         work_dir: pathlib.Path,
         info: models.BuildInfo,
+        project_name: str,
     ) -> None:
         """Clean an instance, if it exists."""
-        instance_name = self._get_instance_name(work_dir, info)
+        instance_name = self._get_instance_name(work_dir, info, project_name)
         emit.debug(f"Cleaning instance {instance_name}")
         provider.clean_project_environments(instance_name=instance_name)

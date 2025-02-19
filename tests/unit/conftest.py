@@ -43,7 +43,6 @@ def provider_service(
     return services.ProviderService(
         app_metadata,
         fake_services,
-        project=fake_project,
         work_dir=tmp_path,
         build_plan=fake_build_plan,
     )
