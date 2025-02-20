@@ -43,6 +43,11 @@ def mock_provider(monkeypatch, provider_service):
     return mocked_provider
 
 
+@pytest.fixture(autouse=True)
+def reset_provider_snaps() -> None:
+    provider._REQUESTED_SNAPS.clear()
+
+
 @pytest.mark.parametrize(
     ("given_environment", "expected_environment"),
     [
@@ -178,6 +183,43 @@ def test_install_snap(
     monkeypatch.delenv("CRAFT_SNAP_CHANNEL", raising=False)
     for name, value in environment.items():
         monkeypatch.setenv(name, value)
+    service = provider.ProviderService(
+        app_metadata,
+        fake_services,
+        project=fake_project,
+        work_dir=pathlib.Path(),
+        build_plan=fake_build_plan,
+        install_snap=install_snap,
+    )
+    service.setup()
+
+    if install_snap:
+        assert service.snaps == snaps
+    else:
+        assert service.snaps == []
+
+
+@pytest.mark.parametrize("install_snap", [True, False])
+def test_install_registered_snap_alongside_testcraft(
+    monkeypatch,
+    app_metadata,
+    fake_project,
+    fake_build_plan,
+    fake_services,
+    install_snap,
+):
+    registered_snap = Snap(name="another-craft", channel="latest/edge")
+    provider.ProviderService.register_snap("another-craft", registered_snap)
+    snaps = [
+        registered_snap,
+        Snap(name="testcraft", channel="latest/stable", classic=True),
+    ]
+
+    monkeypatch.delenv("SNAP", raising=False)
+    monkeypatch.delenv("CRAFT_SNAP_CHANNEL", raising=False)
+    monkeypatch.delenv("SNAP_INSTANCE_NAME", raising=False)
+    monkeypatch.delenv("SNAP_NAME", raising=False)
+    monkeypatch.delenv("CRAFT_SNAP_CHANNEL", raising=False)
     service = provider.ProviderService(
         app_metadata,
         fake_services,
