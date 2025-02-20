@@ -337,7 +337,9 @@ class Application:
         directory. Applications may wish to override this if the project file could be
          in multiple places within the project directory.
         """
-        warnings.warn(DeprecationWarning("NEEDS REMOVING BEFORE MERGE TO MAIN"))
+        warnings.warn(
+            DeprecationWarning("NEEDS REMOVING BEFORE MERGE TO MAIN"), stacklevel=1
+        )
         if project_dir is None:
             project_dir = self.project_dir
 
@@ -360,9 +362,10 @@ class Application:
         """
         warnings.warn(
             DeprecationWarning(
-                "Do not get the project directly from the Application. Get it from the "
-                "project service."
-            )
+                "Do not get the project directly from the Application. "
+                "Get it from the project service."
+            ),
+            stacklevel=2,
         )
         project_service = self.services.get("project")
         if project_service.is_rendered:
@@ -585,6 +588,11 @@ class Application:
             platform = platform.split(",", maxsplit=1)[0]
         if build_for and "," in build_for:
             build_for = build_for.split(",", maxsplit=1)[0]
+        if command.needs_project(dispatcher.parsed_args()):
+            project_service = self.services.get("project")
+            # This is only needed for testing.
+            if not project_service.is_rendered:
+                project_service.render_once()
 
         provider_name = command.provider_name(dispatcher.parsed_args())
 
@@ -592,11 +600,6 @@ class Application:
         self._pre_run(dispatcher)
 
         managed_mode = command.run_managed(dispatcher.parsed_args())
-        if managed_mode or command.needs_project(dispatcher.parsed_args()):
-            self.services.project = self.get_project(
-                platform=platform, build_for=build_for
-            )
-
         self._configure_services(provider_name)
 
         return_code = 1  # General error
