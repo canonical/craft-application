@@ -70,20 +70,52 @@ class AppFeatures:
 @final
 @dataclass(frozen=True)
 class AppMetadata:
-    """Metadata about a *craft application."""
+    """Metadata about an application that uses this framework."""
 
     name: str
+    """The name of the application.
+
+    This value is expected to be the executable name and its module name..
+    """
     summary: str | None = None
+    """A brief summary of the application.
+
+    Normally a multi-line string. This string is used in the ``help`` command.
+    """
     version: str = field(init=False)
+    """The version of the application.
+
+    Automatically determined from the ``__version__`` string of the app's module.
+    """
     docs_url: str | None = None
+    """A string template for the documentation URL.
+
+    Can include ``{version}`` to render to a specific version.
+    """
     source_ignore_patterns: list[str] = field(default_factory=list)
+    """A list of glob patterns to ignore in the source directory.
+
+    This usually includes the <app>.yaml file and any output artifacts.
+    """
     managed_instance_project_path = pathlib.PurePosixPath("/root/project")
+    """The project path when running inside a managed instance."""
     features: AppFeatures = AppFeatures()
     project_variables: list[str] = field(default_factory=lambda: ["version"])
-    mandatory_adoptable_fields: list[str] = field(default_factory=lambda: ["version"])
-    ConfigModel: type[_config.ConfigModel] = _config.ConfigModel
+    """A list of field names from the project model that can be added using adopt-info.
 
+    Each field here needs to be optional on the project class and have a default value.
+    """
+    mandatory_adoptable_fields: list[str] = field(default_factory=lambda: ["version"])
+    """A list of field names that, if adopted, are still mandatory.
+
+    These fields are expected to be filled using `craftctl set` in an override script
+    of the relevant adopting part. They will be checked for a value before packing the
+    final artifact.
+    """
+    ConfigModel: type[_config.ConfigModel] = _config.ConfigModel
+    """The model to use for configuring this application."""
     ProjectClass: type[models.Project] = models.Project
+    """The Project model class to use for this application."""
     BuildPlannerClass: type[models.BuildPlanner] = models.BuildPlanner
 
     def __post_init__(self) -> None:
@@ -116,7 +148,9 @@ class AppMetadata:
 
 
 class Application:
-    """Craft Application Builder.
+    """The Application itself.
+
+    This class orchestrates the running of the application.
 
     :ivar app: Metadata about this application
     :ivar services: A ServiceFactory for this application

@@ -7,6 +7,7 @@ Reference
    :maxdepth: 1
 
    changelog
+   application
    environment-variables
    platforms
 
