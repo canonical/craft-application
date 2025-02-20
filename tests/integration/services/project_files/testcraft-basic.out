@@ -1,0 +1,7 @@
+name: testy-mctestface
+version: "0.1"
+platforms:
+  all:
+    build-on: [amd64, arm64, armhf, i386, ppc64el, riscv64, s390x]
+    build-for: [all]
+parts: {}
