@@ -50,7 +50,6 @@ from craft_application import (
     commands,
     errors,
     models,
-    secrets,
     services,
     util,
 )
@@ -547,56 +546,6 @@ def test_run_managed_failure(app, fake_project, fake_build_plan):
         app.run_managed(None, get_host_architecture())
 
     assert exc_info.value.brief == "Failed to execute testcraft in instance."
-
-
-@pytest.mark.enable_features("build_secrets")
-@pytest.mark.parametrize(
-    "fake_encoded_environment",
-    [
-        pytest.param({}, id="empty"),
-        pytest.param(
-            {
-                "CRAFT_TEST": "banana",
-            },
-            id="fake-env",
-        ),
-        pytest.param(
-            {
-                "CRAFT_TEST_FRUIT": "banana",
-                "CRAFT_TEST_VEGETABLE": "cucumber",
-            },
-            id="multiple-entries-env",
-        ),
-    ],
-)
-def test_run_managed_secrets(
-    app, fake_project, fake_build_plan, fake_encoded_environment: dict[str, str], check
-):
-    mock_provider = mock.MagicMock(spec_set=services.ProviderService)
-    instance = mock_provider.instance.return_value.__enter__.return_value
-    mock_execute = instance.execute_run
-    app.services.provider = mock_provider
-    app.project = fake_project
-    app._build_plan = fake_build_plan
-
-    app._secrets = secrets.BuildSecrets(
-        environment=fake_encoded_environment,
-        secret_strings=set(),
-    )
-
-    app.run_managed(None, get_host_architecture())
-
-    # Check that the encoded secrets were propagated to the managed instance.
-    assert len(mock_execute.mock_calls) == 1
-    call = mock_execute.mock_calls[0]
-    execute_env = call.kwargs["env"]
-    for secret_key, secret_val in fake_encoded_environment.items():
-        with check:
-            # value is passed to the underlying provider
-            assert execute_env[secret_key] == secret_val
-            assert secret_key in craft_cli.emit._log_filepath.read_text()
-            # value is not leaking in logs
-            assert secret_val not in craft_cli.emit._log_filepath.read_text()
 
 
 def test_run_managed_multiple(app, fake_project):
@@ -1417,50 +1366,6 @@ def test_application_expand_environment(app_metadata, fake_services):
     ]
 
 
-@pytest.fixture
-def build_secrets_project(in_project_path):
-    project_file = in_project_path / "testcraft.yaml"
-    project_file.write_text(
-        dedent(
-            """
-            name: myproject
-            version: 1.2.3
-            base: ubuntu@24.04
-            platforms:
-              arm64:
-            parts:
-              mypart:
-                plugin: nil
-                source: $(HOST_SECRET:echo ${SECRET_VAR_1})/project
-                build-environment:
-                - MY_VAR: $(HOST_SECRET:echo ${SECRET_VAR_2})
-            """
-        )
-    )
-
-    return in_project_path
-
-
-@pytest.mark.usefixtures("build_secrets_project")
-@pytest.mark.enable_features("build_secrets")
-def test_application_build_secrets(app_metadata, fake_services, monkeypatch, mocker):
-    monkeypatch.setenv("SECRET_VAR_1", "source-folder")
-    monkeypatch.setenv("SECRET_VAR_2", "secret-value")
-    spied_set_secrets = mocker.spy(craft_cli.emit, "set_secrets")
-
-    app = application.Application(app_metadata, fake_services)
-    project = app.get_project(build_for=get_host_architecture())
-
-    # Make sure the project is loaded correctly (from the cwd)
-    assert project is not None
-
-    mypart = project.parts["mypart"]
-    assert mypart["source"] == "source-folder/project"
-    assert mypart["build-environment"][0]["MY_VAR"] == "secret-value"
-
-    spied_set_secrets.assert_called_once_with(list({"source-folder", "secret-value"}))
-
-
 @pytest.mark.usefixtures("fake_project_file")
 def test_get_project_current_dir(app):
     # Load a project file from the current directory
@@ -1832,8 +1737,6 @@ class FakeApplicationWithYamlTransform(FakeApplication):
                 "build-environment": [
                     # project variables
                     {"hello": "$CRAFT_ARCH_BUILD_ON"},
-                    # build secrets
-                    {"MY_VAR": "$(HOST_SECRET:echo ${SECRET_VAR})"},
                 ],
             }
         }
@@ -1862,8 +1765,6 @@ def test_process_yaml_from_extra_transform(
     assert project.parts["mypart"]["build-environment"] == [
         # evaluate project variables
         {"hello": get_host_architecture()},
-        # render secrets
-        {"MY_VAR": "secret-value"},
     ]
 
 
