@@ -85,7 +85,24 @@ source-code: https://github.com/canonical/craft-application
 parts:
   some-part:
     plugin: nil
+    build-environment:
+      - BUILD_ON: $CRAFT_ARCH_BUILD_ON
+      - BUILD_FOR: $CRAFT_ARCH_BUILD_FOR
 """
+
+
+@pytest.fixture(
+    params=[
+        "64-bit-pc",
+        "some-phone",
+        "ppc64el",
+        "risky",
+        "s390x",
+        "platform-independent",
+    ]
+)
+def fake_platform(request: pytest.FixtureRequest) -> str:
+    return request.param
 
 
 @pytest.fixture

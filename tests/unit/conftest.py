@@ -28,11 +28,11 @@ from craft_application.services.project import ProjectService
 
 
 @pytest.fixture
-def project_service(app_metadata, fake_services, tmp_path):
+def project_service(app_metadata, fake_services, project_path):
     return ProjectService(
         app_metadata,
         fake_services,
-        project_dir=tmp_path,
+        project_dir=project_path,
     )
 
 

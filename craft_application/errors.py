@@ -23,7 +23,7 @@ from __future__ import annotations
 import os
 import pathlib
 from collections.abc import Collection, Sequence
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Literal
 
 import yaml
 from craft_cli import CraftError
@@ -52,7 +52,7 @@ class ProjectFileMissingError(ProjectFileError, FileNotFoundError):
 
 
 class ProjectDirectoryMissingError(ProjectFileError, FileNotFoundError):
-    """The project directory doesn't exist"""
+    """The project directory doesn't exist."""
 
     def __init__(
         self,
@@ -76,7 +76,7 @@ class ProjectDirectoryMissingError(ProjectFileError, FileNotFoundError):
 
 
 class ProjectDirectoryTypeError(ProjectFileError, FileNotFoundError):
-    """The project directory doesn't exist"""
+    """The project directory is not a directory."""
 
     def __init__(
         self,
@@ -104,7 +104,7 @@ class ProjectFileInvalidError(ProjectFileError):
 
     def __init__(
         self,
-        project_data: Any,
+        project_data: object,
         *,
         resolution: str | None = None,
         docs_url: str | None = None,
@@ -112,7 +112,7 @@ class ProjectFileInvalidError(ProjectFileError):
     ) -> None:
         super().__init__(
             "Invalid project file.",
-            details=f"Project file should be a YAML mapping, not a {type(project_data)}",
+            details=f"Project file should be a YAML mapping, not {type(project_data).__name__!r}",
             resolution=resolution,
             docs_url=docs_url,
             logpath_report=False,
@@ -226,7 +226,8 @@ class InvalidPlatformError(PlatformDefinitionError):
 
     def __init__(self, platform: str, all_platforms: Sequence[str]) -> None:
         message = f"Platform {platform!r} not found in the project definition."
-        details = f"Valid platforms are: {', '.join(all_platforms)}."
+        platforms_str = ", ".join(repr(platform) for platform in all_platforms)
+        details = f"Valid platforms are: {platforms_str}."
 
         super().__init__(message=message, details=details)
 

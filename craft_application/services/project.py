@@ -16,7 +16,6 @@
 from __future__ import annotations
 
 import copy
-import functools
 import os
 import pathlib
 from typing import TYPE_CHECKING, Any, cast, final
@@ -40,17 +39,22 @@ if TYPE_CHECKING:
 class ProjectService(base.AppService):
     """A service for handling access to the project."""
 
+    __platforms: dict[str, craft_platforms.PlatformDict] | None
+    __project_file_path: pathlib.Path | None
+    __raw_project: dict[str, Any] | None
     _project_dir: pathlib.Path
-    __raw_project: dict[str, Any] | None = None
-    _project_model: models.Project | None = None
+    _project_model: models.Project | None
 
     def __init__(
         self, app: AppMetadata, services: ServiceFactory, *, project_dir: pathlib.Path
     ) -> None:
         super().__init__(app, services)
+        self.__platforms = None
+        self.__project_file_path = None
+        self.__raw_project: dict[str, Any] | None = None
         self._project_dir = project_dir
+        self._project_model = None
 
-    @functools.lru_cache(maxsize=1)
     def resolve_project_file_path(self) -> pathlib.Path:
         """Get the path to the project file from the root project directory.
 
@@ -63,6 +67,8 @@ class ProjectService(base.AppService):
         :returns: The path to the extant project file
         :raises: ProjectFileMissingError if the project file could not be found.
         """
+        if self.__project_file_path:
+            return self.__project_file_path
         try:
             path = (self._project_dir / f"{self._app.name}.yaml").resolve(strict=True)
         except FileNotFoundError as err:
@@ -121,9 +127,11 @@ class ProjectService(base.AppService):
             f"{self._app.name}.yaml must contain a 'platforms' key."
         )
 
-    @functools.lru_cache(maxsize=1)
+    @final
     def get_platforms(self) -> dict[str, craft_platforms.PlatformDict]:
         """Get the platforms definition for the project."""
+        if self.__platforms:
+            return self.__platforms.copy()
         raw_project = self._load_raw_project()
         if "platforms" not in raw_project:
             return self._app_render_legacy_platforms()
@@ -137,10 +145,7 @@ class ProjectService(base.AppService):
 
     def _get_project_vars(self, yaml_data: dict[str, Any]) -> dict[str, str]:
         """Return a dict with project variables to be expanded."""
-        pvars: dict[str, str] = {}
-        for var in self._app.project_variables:
-            pvars[var] = str(yaml_data.get(var, ""))
-        return pvars
+        return {var: str(yaml_data.get(var, "")) for var in self._app.project_variables}
 
     def get_partitions(self) -> list[str] | None:
         """Get the partitions this application needs for this project.
@@ -163,6 +168,8 @@ class ProjectService(base.AppService):
         :param project_data: The project's yaml data.
         :param build_for: The architecture to build for.
         """
+        # We can use "all" directly after resolving:
+        # https://github.com/canonical/craft-parts/issues/1019
         if build_for == "all":
             host_arch = craft_platforms.DebianArchitecture.from_host()
             for target in craft_platforms.DebianArchitecture:
@@ -221,7 +228,7 @@ class ProjectService(base.AppService):
         """
         platforms = self.get_platforms()
         if platform not in platforms:
-            raise errors.InvalidPlatformError(platform, list(platforms.keys()))
+            raise errors.InvalidPlatformError(platform, sorted(platforms.keys()))
 
         project = copy.deepcopy(self._load_raw_project())
 
