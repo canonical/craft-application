@@ -18,6 +18,7 @@ import pathlib
 import platform
 from unittest import mock
 
+import craft_parts
 import craft_platforms
 import pytest
 import pytest_check
@@ -71,6 +72,9 @@ def test_host_architecture(fake_host_architecture: craft_platforms.DebianArchite
     pytest_check.equal(fake_host_architecture.value, util.get_host_architecture())
     pytest_check.equal(
         fake_host_architecture, craft_platforms.DebianArchitecture.from_host()
+    )
+    pytest_check.equal(
+        fake_host_architecture.value, craft_parts.infos._get_host_architecture()
     )
 
 
