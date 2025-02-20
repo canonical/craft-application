@@ -107,6 +107,7 @@ def fake_host_architecture(
     monkeypatch.setattr(
         "platform.uname", lambda: real_uname._replace(machine=platform_arch)
     )
+    monkeypatch.setattr("craft_parts.infos._get_host_architecture", lambda: arch.value)
     util.get_host_architecture.cache_clear()
     yield arch
     util.get_host_architecture.cache_clear()
