@@ -1077,7 +1077,7 @@ def test_run_error_with_docs_url(
 
 
 @pytest.mark.parametrize("error", [KeyError(), ValueError(), Exception()])
-@pytest.mark.usefixtures("emitter")
+@pytest.mark.usefixtures("emitter", "debug_mode")
 def test_run_error_debug(monkeypatch, mock_dispatcher, app, fake_project, error):
     app.set_project(fake_project)
     mock_dispatcher.load_command.side_effect = error
@@ -1335,41 +1335,39 @@ def test_work_dir_project_managed(monkeypatch, app_metadata, fake_services):
 
 
 @pytest.fixture
-def environment_project(monkeypatch, tmp_path):
-    project_dir = tmp_path / "project"
-    project_dir.mkdir()
-    project_path = project_dir / "testcraft.yaml"
-    project_path.write_text(
+def environment_project(in_project_path):
+    project_file = in_project_path / "testcraft.yaml"
+    project_file.write_text(
         dedent(
+            """\
+            name: myproject
+            version: 1.2.3
+            base: ubuntu@24.04
+            platforms:
+              amd64:
+              arm64:
+              riscv64:
+            parts:
+              mypart:
+                plugin: nil
+                source-tag: v$CRAFT_PROJECT_VERSION
+                build-environment:
+                - BUILD_ON: $CRAFT_ARCH_BUILD_ON
+                - BUILD_FOR: $CRAFT_ARCH_BUILD_FOR
             """
-        name: myproject
-        version: 1.2.3
-        base: ubuntu@24.04
-        platforms:
-          arm64:
-        parts:
-          mypart:
-            plugin: nil
-            source-tag: v$CRAFT_PROJECT_VERSION
-            build-environment:
-              - BUILD_ON: $CRAFT_ARCH_BUILD_ON
-              - BUILD_FOR: $CRAFT_ARCH_BUILD_FOR
-        """
         )
     )
-    monkeypatch.chdir(project_dir)
 
-    return project_path
+    return in_project_path
 
 
+@pytest.mark.usefixtures("in_project_path", "fake_host_architecture")
 def test_expand_environment_build_for_all(
-    monkeypatch, app_metadata, tmp_path, fake_services, emitter
+    monkeypatch, app_metadata, project_path, fake_services, emitter
 ):
     """Expand build-for to the host arch when build-for is 'all'."""
-    project_dir = tmp_path / "project"
-    project_dir.mkdir()
-    project_path = project_dir / "testcraft.yaml"
-    project_path.write_text(
+    project_file = project_path / "testcraft.yaml"
+    project_file.write_text(
         dedent(
             f"""\
             name: myproject
@@ -1388,7 +1386,6 @@ def test_expand_environment_build_for_all(
         """
         )
     )
-    monkeypatch.chdir(project_dir)
 
     app = application.Application(app_metadata, fake_services)
     project = app.get_project()
@@ -1406,7 +1403,7 @@ def test_expand_environment_build_for_all(
     )
 
 
-@pytest.mark.usefixtures("environment_project")
+@pytest.mark.usefixtures("environment_project", "fake_host_architecture")
 def test_application_expand_environment(app_metadata, fake_services):
     app = application.Application(app_metadata, fake_services)
     project = app.get_project(build_for=get_host_architecture())
@@ -1421,30 +1418,27 @@ def test_application_expand_environment(app_metadata, fake_services):
 
 
 @pytest.fixture
-def build_secrets_project(monkeypatch, tmp_path):
-    project_dir = tmp_path / "project"
-    project_dir.mkdir()
-    project_path = project_dir / "testcraft.yaml"
-    project_path.write_text(
+def build_secrets_project(in_project_path):
+    project_file = in_project_path / "testcraft.yaml"
+    project_file.write_text(
         dedent(
             """
-        name: myproject
-        version: 1.2.3
-        base: ubuntu@24.04
-        platforms:
-          arm64:
-        parts:
-          mypart:
-            plugin: nil
-            source: $(HOST_SECRET:echo ${SECRET_VAR_1})/project
-            build-environment:
-              - MY_VAR: $(HOST_SECRET:echo ${SECRET_VAR_2})
-        """
+            name: myproject
+            version: 1.2.3
+            base: ubuntu@24.04
+            platforms:
+              arm64:
+            parts:
+              mypart:
+                plugin: nil
+                source: $(HOST_SECRET:echo ${SECRET_VAR_1})/project
+                build-environment:
+                - MY_VAR: $(HOST_SECRET:echo ${SECRET_VAR_2})
+            """
         )
     )
-    monkeypatch.chdir(project_dir)
 
-    return project_path
+    return in_project_path
 
 
 @pytest.mark.usefixtures("build_secrets_project")
@@ -1652,14 +1646,13 @@ def grammar_project_full(tmp_path):
 
 
 @pytest.fixture
-def non_grammar_build_plan(mocker):
+def non_grammar_build_plan(mocker, fake_host_architecture):
     """A build plan to build on amd64 to riscv64."""
-    host_arch = "amd64"
     base = util.get_host_base()
     build_plan = [
         models.BuildInfo(
             "platform-riscv64",
-            host_arch,
+            fake_host_architecture,
             "riscv64",
             base,
         )
