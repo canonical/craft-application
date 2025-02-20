@@ -56,24 +56,6 @@ def reset_services():
     service_factory.ServiceFactory.reset()
 
 
-@pytest.fixture
-def features(request) -> dict[str, bool]:
-    """Fixture that controls the enabled features.
-
-    To use it, mark the test with the features that should be enabled. For example:
-
-    @pytest.mark.enable_features("build_secrets")
-    def test_with_build_secrets(...)
-    """
-    features = {}
-
-    for feature_marker in request.node.iter_markers("enable_features"):
-        for feature_name in feature_marker.args:
-            features[feature_name] = True
-
-    return features
-
-
 class FakeConfigModel(craft_application.ConfigModel):
     my_str: str
     my_int: int
@@ -105,21 +87,20 @@ def default_app_metadata(fake_config_model) -> craft_application.AppMetadata:
 
 
 @pytest.fixture
-def app_metadata(features, fake_config_model) -> craft_application.AppMetadata:
+def app_metadata(fake_config_model) -> craft_application.AppMetadata:
     with pytest.MonkeyPatch.context() as m:
         m.setattr(metadata, "version", lambda _: "3.14159")
         return craft_application.AppMetadata(
             "testcraft",
             "A fake app for testing craft-application",
             source_ignore_patterns=["*.snap", "*.charm", "*.starcraft"],
-            features=craft_application.AppFeatures(**features),
             docs_url="www.testcraft.example/docs/{version}",
             ConfigModel=fake_config_model,
         )
 
 
 @pytest.fixture
-def app_metadata_docs(features) -> craft_application.AppMetadata:
+def app_metadata_docs() -> craft_application.AppMetadata:
     with pytest.MonkeyPatch.context() as m:
         m.setattr(metadata, "version", lambda _: "3.14159")
         return craft_application.AppMetadata(
@@ -127,7 +108,6 @@ def app_metadata_docs(features) -> craft_application.AppMetadata:
             "A fake app for testing craft-application",
             docs_url="http://testcraft.example",
             source_ignore_patterns=["*.snap", "*.charm", "*.starcraft"],
-            features=craft_application.AppFeatures(**features),
         )
 
 
