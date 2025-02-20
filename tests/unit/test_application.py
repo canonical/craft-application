@@ -16,7 +16,6 @@
 """Unit tests for craft-application app classes."""
 
 import argparse
-import copy
 import dataclasses
 import importlib
 import importlib.metadata
@@ -28,7 +27,6 @@ import sys
 import textwrap
 from io import StringIO
 from textwrap import dedent
-from typing import Any
 from unittest import mock
 
 import craft_cli
@@ -1307,62 +1305,6 @@ def environment_project(in_project_path):
     return in_project_path
 
 
-@pytest.mark.usefixtures("in_project_path", "fake_host_architecture")
-def test_expand_environment_build_for_all(
-    monkeypatch, app_metadata, project_path, fake_services, emitter
-):
-    """Expand build-for to the host arch when build-for is 'all'."""
-    project_file = project_path / "testcraft.yaml"
-    project_file.write_text(
-        dedent(
-            f"""\
-            name: myproject
-            version: 1.2.3
-            base: ubuntu@24.04
-            platforms:
-              platform1:
-                build-on: [{util.get_host_architecture()}]
-                build-for: [all]
-            parts:
-              mypart:
-                plugin: nil
-                build-environment:
-                  - BUILD_ON: $CRAFT_ARCH_BUILD_ON
-                  - BUILD_FOR: $CRAFT_ARCH_BUILD_FOR
-        """
-        )
-    )
-
-    app = application.Application(app_metadata, fake_services)
-    project = app.get_project()
-
-    # Make sure the project is loaded correctly (from the cwd)
-    assert project is not None
-    assert project.parts["mypart"]["build-environment"] == [
-        {"BUILD_ON": util.get_host_architecture()},
-        {"BUILD_FOR": util.get_host_architecture()},
-    ]
-    emitter.assert_debug(
-        "Expanding environment variables with the host architecture "
-        f"{util.get_host_architecture()!r} as the build-for architecture "
-        "because 'all' was specified."
-    )
-
-
-@pytest.mark.usefixtures("environment_project", "fake_host_architecture")
-def test_application_expand_environment(app_metadata, fake_services):
-    app = application.Application(app_metadata, fake_services)
-    project = app.get_project(build_for=get_host_architecture())
-
-    # Make sure the project is loaded correctly (from the cwd)
-    assert project is not None
-    assert project.parts["mypart"]["source-tag"] == "v1.2.3"
-    assert project.parts["mypart"]["build-environment"] == [
-        {"BUILD_ON": util.get_host_architecture()},
-        {"BUILD_FOR": util.get_host_architecture()},
-    ]
-
-
 @pytest.mark.usefixtures("fake_project_file")
 def test_get_project_current_dir(app):
     # Load a project file from the current directory
@@ -1456,15 +1398,6 @@ def test_register_plugins_default(mocker, app_metadata, fake_services):
         app.run()
 
     assert reg.call_count == 0
-
-
-def test_extra_yaml_transform(tmp_path, app_metadata, fake_services, fake_project_file):
-    app = FakeApplication(app_metadata, fake_services)
-    app.project_dir = tmp_path
-    _ = app.get_project(build_for="s390x")
-
-    assert app.build_on == util.get_host_architecture()
-    assert app.build_for == "s390x"
 
 
 def test_mandatory_adoptable_fields(
@@ -1705,59 +1638,6 @@ def test_process_grammar_no_match(grammar_app_mini, mocker):
     assert project.parts["mypart"]["build-packages"] == ["test-package"]
 
 
-class FakeApplicationWithYamlTransform(FakeApplication):
-    """Application class that adds data in `_extra_yaml_transform`."""
-
-    @override
-    def _extra_yaml_transform(
-        self,
-        yaml_data: dict[str, Any],
-        *,
-        build_on: str,
-        build_for: str | None,
-    ) -> dict[str, Any]:
-        # do not modify the dict passed in
-        new_yaml_data = copy.deepcopy(yaml_data)
-        new_yaml_data["parts"] = {
-            "mypart": {
-                "plugin": "nil",
-                # advanced grammar
-                "build-packages": [
-                    "test-package",
-                    {"to riscv64": "riscv64-package"},
-                    {"to s390x": "s390x-package"},
-                ],
-                "build-environment": [
-                    # project variables
-                    {"hello": "$CRAFT_ARCH_BUILD_ON"},
-                ],
-            }
-        }
-
-        return new_yaml_data
-
-
-@pytest.mark.enable_features("build_secrets")
-def test_process_yaml_from_extra_transform(
-    app_metadata, fake_services, monkeypatch, fake_project_file
-):
-    """Test that grammar is applied on data from `_extra_yaml_transform`."""
-    monkeypatch.setenv("SECRET_VAR", "secret-value")
-
-    app = FakeApplicationWithYamlTransform(app_metadata, fake_services)
-    project = app.get_project(build_for="riscv64")
-
-    # process grammar
-    assert project.parts["mypart"]["build-packages"] == [
-        "test-package",
-        "riscv64-package",
-    ]
-    assert project.parts["mypart"]["build-environment"] == [
-        # evaluate project variables
-        {"hello": get_host_architecture()},
-    ]
-
-
 class FakePartitionsApplication(FakeApplication):
     """A partition using FakeApplication."""
 
@@ -1796,30 +1676,6 @@ def environment_partitions_project(monkeypatch, tmp_path):
     monkeypatch.chdir(project_dir)
 
     return project_path
-
-
-@pytest.mark.usefixtures("enable_partitions")
-@pytest.mark.usefixtures("environment_partitions_project")
-def test_partition_application_expand_environment(app_metadata, fake_services):
-    app = FakePartitionsApplication(app_metadata, fake_services)
-    project = app.get_project(build_for=get_host_architecture())
-
-    assert craft_parts.Features().enable_partitions is True
-    # Make sure the project is loaded correctly (from the cwd)
-    assert project is not None
-    assert project.parts["mypart"]["source-tag"] == "v1.2.3"
-    assert project.parts["mypart"]["override-stage"] == dedent(
-        f"""\
-        touch {app.project_dir}/stage/default
-        touch {app.project_dir}/partitions/mypartition/stage/partition
-    """
-    )
-    assert project.parts["mypart"]["override-prime"] == dedent(
-        f"""\
-        touch {app.project_dir}/prime/default
-        touch {app.project_dir}/partitions/mypartition/prime/partition
-    """
-    )
 
 
 @pytest.mark.usefixtures("enable_overlay")

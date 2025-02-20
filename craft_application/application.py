@@ -38,7 +38,7 @@ import craft_providers
 from craft_parts.plugins.plugins import PluginType
 from platformdirs import user_cache_path
 
-from craft_application import _config, commands, errors, grammar, models, util
+from craft_application import _config, commands, errors, models, util
 from craft_application.errors import PathInvalidError
 from craft_application.models import BuildInfo
 
@@ -565,7 +565,7 @@ class Application:
         arg_value = getattr(parsed_args, item, None)
         if arg_value is not None:
             return arg_value
-        return self.services.config.get(item)
+        return self.services.get("config").get(item)
 
     def _run_inner(self) -> int:
         """Actual run implementation."""
@@ -675,78 +675,6 @@ class Application:
 
         craft_cli.emit.error(error)
 
-    def _transform_project_yaml(
-        self, yaml_data: dict[str, Any], build_on: str, build_for: str | None
-    ) -> dict[str, Any]:
-        """Update the project's yaml data with runtime properties.
-
-        Performs task such as environment expansion. Note that this transforms
-        ``yaml_data`` in-place.
-        """
-        # apply application-specific transformations first because an application may
-        # add advanced grammar, project variables, or secrets to the yaml
-        yaml_data = self._extra_yaml_transform(
-            yaml_data, build_on=build_on, build_for=build_for
-        )
-
-        # At the moment there is no perfect solution for what do to do
-        # expand project variables or to resolve the grammar if there's
-        # no explicitly-provided target arch. However, we must resolve
-        # it with *something* otherwise we might have an invalid parts
-        # definition full of grammar declarations and incorrect build_for
-        # architectures.
-        build_for = build_for or build_on
-
-        # Perform variable expansion.
-        self._expand_environment(yaml_data=yaml_data, build_for=build_for)
-
-        # Expand grammar.
-        if "parts" in yaml_data:
-            craft_cli.emit.debug(f"Processing grammar (on {build_on} for {build_for})")
-            yaml_data["parts"] = grammar.process_parts(
-                parts_yaml_data=yaml_data["parts"],
-                arch=build_on,
-                target_arch=build_for,
-            )
-
-        return yaml_data
-
-    def _expand_environment(self, yaml_data: dict[str, Any], build_for: str) -> None:
-        """Perform expansion of project environment variables.
-
-        :param yaml_data: The project's yaml data.
-        :param build_for: The architecture to build for.
-        """
-        if build_for == "all":
-            build_for_arch = util.get_host_architecture()
-            craft_cli.emit.debug(
-                "Expanding environment variables with the host architecture "
-                f"{build_for_arch!r} as the build-for architecture because 'all' was "
-                "specified."
-            )
-        else:
-            build_for_arch = build_for
-
-        environment_vars = self._get_project_vars(yaml_data)
-        project_dirs = craft_parts.ProjectDirs(
-            work_dir=self._work_dir, partitions=self._partitions
-        )
-
-        info = craft_parts.ProjectInfo(
-            application_name=self.app.name,  # not used in environment expansion
-            cache_dir=pathlib.Path(),  # not used in environment expansion
-            arch=build_for_arch,
-            parallel_build_count=util.get_parallel_build_count(self.app.name),
-            project_name=yaml_data.get("name", ""),
-            project_dirs=project_dirs,
-            project_vars=environment_vars,
-            partitions=self._partitions,
-        )
-
-        self._set_global_environment(info)
-
-        craft_parts.expand_environment(yaml_data, info=info)
-
     def _setup_partitions(self, yaml_data: dict[str, Any]) -> list[str] | None:
         """Return partitions to be used.
 
@@ -770,19 +698,6 @@ class Application:
                 "CRAFT_PROJECT_VERSION": info.get_project_var("version", raw_read=True),
             }
         )
-
-    def _extra_yaml_transform(
-        self,
-        yaml_data: dict[str, Any],
-        *,
-        build_on: str,  # noqa: ARG002 (Unused method argument)
-        build_for: str | None,  # noqa: ARG002 (Unused method argument)
-    ) -> dict[str, Any]:
-        """Perform additional transformations on a project's yaml data.
-
-        Note: subclasses should return a new dict and keep the parameter unmodified.
-        """
-        return yaml_data
 
     def _setup_logging(self) -> None:
         """Initialize the logging system."""
