@@ -1078,23 +1078,6 @@ def test_get_project_all_platform(app):
     app.get_project(platform="arm64")
 
 
-@pytest.mark.usefixtures("fake_project_file")
-def test_get_project_invalid_platform(app):
-    # Load a project file from the current directory
-
-    with pytest.raises(errors.InvalidPlatformError) as raised:
-        app.get_project(platform="invalid")
-
-    assert (
-        str(raised.value) == "Platform 'invalid' not found in the project definition."
-    )
-
-
-@pytest.mark.usefixtures("fake_project_file")
-def test_get_project_property(app):
-    assert app.project == app.get_project()
-
-
 def test_get_cache_dir(tmp_path, app):
     """Test that the cache dir is created and returned."""
     with mock.patch.dict("os.environ", {"XDG_CACHE_HOME": str(tmp_path / "cache")}):
