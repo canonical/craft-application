@@ -23,7 +23,7 @@ Application
 ===========
 
 - Add a feature to allow `Python plugins
-  https://packaging.python.org/en/latest/guides/creating-and-discovering-plugins/>`_
+  <https://packaging.python.org/en/latest/guides/creating-and-discovering-plugins/>`_
   to extend or modify the behaviour of applications that use craft-application as a
   framework. The plugin packages must be installed in the same virtual environment
   as the application.

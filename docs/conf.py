@@ -37,10 +37,17 @@ html_context = {
     "github_url": "https://github.com/canonical/craft-application",
 }
 
-extensions = [
-    "canonical_sphinx",
-]
+extensions = ["canonical_sphinx", "sphinx.ext.autodoc", "sphinx.ext.intersphinx"]
 # endregion
+
+autodoc_typehints_format = "short"
+intersphinx_mapping = {
+    "python": ("https://docs.python.org/3", None),
+    "craft-cli": (
+        "https://canonical-craft-cli.readthedocs-hosted.com/en/latest/",
+        None,
+    ),
+}
 
 # region Options for extensions
 # Github config
