@@ -199,19 +199,40 @@ def test_install_snap(
         assert service.snaps == []
 
 
+@pytest.mark.parametrize(
+    "additional_snaps",
+    [
+        pytest.param([], id="no_snaps"),
+        pytest.param(
+            [
+                Snap(name="another-craft", channel="latest/edge"),
+            ],
+            id="single_snap",
+        ),
+        pytest.param(
+            [
+                Snap(name="another-craft", channel="latest/edge"),
+                Snap(name="yet-another-craft", channel="latest/beta", classic=True),
+                Snap(name="stable-craft", channel="stable"),
+            ],
+            id="multiple_snaps",
+        ),
+    ],
+)
 @pytest.mark.parametrize("install_snap", [True, False])
-def test_install_registered_snap_alongside_testcraft(
+def test_install_registered_snaps_alongside_testcraft(
     monkeypatch,
     app_metadata,
     fake_project,
     fake_build_plan,
     fake_services,
     install_snap,
+    additional_snaps: list[Snap],
 ):
-    registered_snap = Snap(name="another-craft", channel="latest/edge")
-    provider.ProviderService.register_snap("another-craft", registered_snap)
+    for snap in additional_snaps:
+        provider.ProviderService.register_snap(snap.name, snap)
     snaps = [
-        registered_snap,
+        *additional_snaps,
         Snap(name="testcraft", channel="latest/stable", classic=True),
     ]
 
@@ -234,6 +255,34 @@ def test_install_registered_snap_alongside_testcraft(
         assert service.snaps == snaps
     else:
         assert service.snaps == []
+
+
+def test_snap_register(provider_service: provider.ProviderService) -> None:
+    provider_service.register_snap("test-snap", Snap(name="test-snap", channel="test"))
+    assert "test-snap" in provider._REQUESTED_SNAPS
+
+
+def test_snap_unregister(provider_service: provider.ProviderService) -> None:
+    provider_service.register_snap("test-snap", Snap(name="test-snap", channel="test"))
+
+    provider_service.unregister_snap("test-snap")
+
+
+def test_snap_unregister_twice(provider_service: provider.ProviderService) -> None:
+    snap_name = "test-snap"
+    provider_service.register_snap(snap_name, Snap(name="test-snap", channel="test"))
+
+    provider_service.unregister_snap(snap_name)
+    with pytest.raises(ValueError, match=f"Snap not registered: {snap_name!r}"):
+        provider_service.unregister_snap(snap_name)
+
+
+def test_snap_unregister_non_existent(
+    provider_service: provider.ProviderService,
+) -> None:
+    snap_name = "test-snap"
+    with pytest.raises(ValueError, match=f"Snap not registered: {snap_name!r}"):
+        provider_service.unregister_snap(snap_name)
 
 
 @pytest.mark.parametrize(
