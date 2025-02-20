@@ -37,7 +37,7 @@ import craft_providers
 from craft_parts.plugins.plugins import PluginType
 from platformdirs import user_cache_path
 
-from craft_application import _config, commands, errors, grammar, models, secrets, util
+from craft_application import _config, commands, errors, grammar, models, util
 from craft_application.errors import PathInvalidError
 from craft_application.models import BuildInfo, GrammarAwareProject
 
@@ -59,14 +59,6 @@ DEFAULT_CLI_LOGGERS = frozenset(
 )
 
 
-@dataclass(frozen=True)
-class AppFeatures:
-    """Specific features that can be enabled/disabled per-application."""
-
-    build_secrets: bool = False
-    """Support for build-time secrets."""
-
-
 @final
 @dataclass(frozen=True)
 class AppMetadata:
@@ -78,7 +70,6 @@ class AppMetadata:
     docs_url: str | None = None
     source_ignore_patterns: list[str] = field(default_factory=list)
     managed_instance_project_path = pathlib.PurePosixPath("/root/project")
-    features: AppFeatures = AppFeatures()
     project_variables: list[str] = field(default_factory=lambda: ["version"])
     mandatory_adoptable_fields: list[str] = field(default_factory=lambda: ["version"])
     ConfigModel: type[_config.ConfigModel] = _config.ConfigModel
@@ -138,9 +129,6 @@ class Application:
         self._cli_loggers = DEFAULT_CLI_LOGGERS | set(extra_loggers)
         self._full_build_plan: list[models.BuildInfo] = []
         self._build_plan: list[models.BuildInfo] = []
-        # When build_secrets are enabled, this contains the secret info to pass to
-        # managed instances.
-        self._secrets: secrets.BuildSecrets | None = None
         self._partitions: list[str] | None = None
         # Cached project object, allows only the first time we load the project
         # to specify things like the project directory.
@@ -452,15 +440,6 @@ class Application:
                 "CRAFT_VERBOSITY_LEVEL": craft_cli.emit.get_mode().name,
             }
 
-            if self.app.features.build_secrets:
-                # If using build secrets, put them in the environment of the managed
-                # instance.
-                secret_values = cast(secrets.BuildSecrets, self._secrets)
-                # disable logging CRAFT_SECRETS value passed to the managed instance
-                craft_cli.emit.set_secrets(list(secret_values.environment.values()))
-
-                env.update(secret_values.environment)
-
             extra_args["env"] = env
 
             craft_cli.emit.debug(
@@ -765,10 +744,6 @@ class Application:
         # Perform variable expansion.
         self._expand_environment(yaml_data=yaml_data, build_for=build_for)
 
-        # Handle build secrets.
-        if self.app.features.build_secrets:
-            self._render_secrets(yaml_data)
-
         # Expand grammar.
         if "parts" in yaml_data:
             craft_cli.emit.debug(f"Processing grammar (on {build_on} for {build_for})")
@@ -839,19 +814,6 @@ class Application:
                 "CRAFT_PROJECT_VERSION": info.get_project_var("version", raw_read=True),
             }
         )
-
-    def _render_secrets(self, yaml_data: dict[str, Any]) -> None:
-        """Render build-secrets, in-place."""
-        secret_values = secrets.render_secrets(
-            yaml_data, managed_mode=self.is_managed()
-        )
-
-        num_secrets = len(secret_values.secret_strings)
-        craft_cli.emit.debug(f"Project has {num_secrets} build-secret(s).")
-
-        craft_cli.emit.set_secrets(list(secret_values.secret_strings))
-
-        self._secrets = secret_values
 
     def _extra_yaml_transform(
         self,

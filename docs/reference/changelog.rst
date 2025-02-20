@@ -18,6 +18,7 @@ Breaking changes
 
 - The pytest plugin includes an auto-used fixture that puts the app into debug mode
   by default for tests.
+- Support for secrets has been removed.
 
 For a complete list of commits, check out the `5.0.0`_ release on GitHub.
 

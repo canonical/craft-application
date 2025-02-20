@@ -25,7 +25,7 @@ from typing_extensions import override
 
 import craft_application
 import craft_application.commands
-from craft_application import models, secrets, util
+from craft_application import models, util
 from craft_application.util import yaml
 
 
@@ -384,89 +384,6 @@ def test_global_environment(
         util.convert_architecture_deb_to_platform(util.get_host_architecture())
     )
     assert variables["parallel_build_count"] == build_count
-
-
-@pytest.fixture
-def setup_secrets_project(create_app, monkeypatch, tmp_path):
-    """Test the use of build secrets in destructive mode."""
-
-    def _inner(*, destructive_mode: bool):
-        monkeypatch.chdir(tmp_path)
-        shutil.copytree(TEST_DATA_DIR / "build-secrets", tmp_path, dirs_exist_ok=True)
-
-        argv = ["testcraft", "prime", "-v"]
-        if destructive_mode:
-            # Run in destructive mode
-            argv.append("--destructive-mode")
-
-        monkeypatch.setattr("sys.argv", argv)
-
-        return create_app()
-
-    return _inner
-
-
-@pytest.fixture
-def check_secrets_output(tmp_path, capsys):
-    def _inner():
-        prime_dir = tmp_path / "prime"
-        assert (prime_dir / "source-file.txt").read_text().strip() == "A source file"
-        assert (prime_dir / "build-file.txt").read_text().strip() == "my-secret"
-
-        # Check that the "secrets" were masked in console output and the logfile
-        _, stderr = capsys.readouterr()
-        log_contents = craft_cli.emit._log_filepath.read_text()
-
-        for target in (stderr, log_contents):
-            assert "Dumping SECRET_VAR: my-secret" not in target
-            assert "Dumping SECRET_VAR: *****" in target
-
-    return _inner
-
-
-@pytest.mark.slow
-@pytest.mark.usefixtures("pretend_jammy")
-@pytest.mark.enable_features("build_secrets")
-def test_build_secrets_destructive(
-    monkeypatch, setup_secrets_project, check_secrets_output
-):
-    """Test the use of build secrets in destructive mode."""
-    app = setup_secrets_project(destructive_mode=True)
-
-    # Set the environment variables that the project needs
-    monkeypatch.setenv("HOST_SOURCE_FOLDER", "secret-source")
-    monkeypatch.setenv("HOST_SECRET_VAR", "my-secret")
-
-    app.run()
-
-    check_secrets_output()
-
-
-@pytest.mark.slow
-@pytest.mark.usefixtures("pretend_jammy")
-@pytest.mark.enable_features("build_secrets")
-def test_build_secrets_managed(
-    monkeypatch, tmp_path, setup_secrets_project, check_secrets_output
-):
-    """Test the use of build secrets in managed mode."""
-    app = setup_secrets_project(destructive_mode=False)
-
-    monkeypatch.setenv("CRAFT_MANAGED_MODE", "1")
-    assert app.is_managed()
-    app._work_dir = tmp_path
-
-    # Before running the application, configure its environment "as if" the host app
-    # had placed the secrets there.
-    commands = {
-        "echo ${HOST_SOURCE_FOLDER}": "secret-source",
-        "echo ${HOST_SECRET_VAR}": "my-secret",
-    }
-    encoded = secrets._encode_commands(commands)
-    monkeypatch.setenv("CRAFT_SECRETS", encoded["CRAFT_SECRETS"])
-
-    app.run()
-
-    check_secrets_output()
 
 
 @pytest.mark.usefixtures("pretend_jammy")
