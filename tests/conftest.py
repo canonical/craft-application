@@ -144,6 +144,12 @@ def reset_services():
     service_factory.ServiceFactory.reset()
 
 
+@pytest.fixture
+def in_project_dir(project_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Put us in the project directory made by project_path."""
+    monkeypatch.chdir(project_path)
+
+
 class FakeConfigModel(craft_application.ConfigModel):
     my_str: str
     my_int: int
