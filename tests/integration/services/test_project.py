@@ -16,7 +16,6 @@
 import pathlib
 import shutil
 
-import craft_parts
 import craft_platforms
 import pytest
 
@@ -70,10 +69,8 @@ def overlay_project_file(
     return request.param
 
 
+@pytest.mark.usefixtures("enable_overlay")
 def test_load_overlay_project(service: ProjectService, overlay_project_file):
-    craft_parts.Features.reset()
-    craft_parts.Features(enable_overlay=True)
-
     project = service.render_once()
 
     with overlay_project_file.with_suffix(".out").open() as f:
