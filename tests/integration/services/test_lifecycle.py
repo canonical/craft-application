@@ -19,6 +19,7 @@ import os
 import textwrap
 
 import craft_cli
+import craft_parts
 import pytest
 import pytest_check
 
@@ -105,10 +106,18 @@ def test_lifecycle_messages_no_duplicates(parts_lifecycle, request, capsys):
     assert expected_output in stderr
 
 
+@pytest.mark.slow
 @pytest.mark.usefixtures("enable_overlay")
 def test_package_repositories_in_overlay(
-    app_metadata, fake_project, fake_services, tmp_path, mocker, fake_build_plan
+    app_metadata,
+    fake_project,
+    fake_services,
+    tmp_path,
+    mocker,
+    fake_build_plan,
+    enable_overlay,
 ):
+    fake_services.get("project").set(fake_project)
     # Mock overlay-related calls that need root; we won't be actually installing
     # any packages, just checking that the repositories are correctly installed
     # in the overlay.
@@ -116,6 +125,8 @@ def test_package_repositories_in_overlay(
     mocker.patch("craft_parts.overlays.OverlayManager.download_packages")
     mocker.patch("craft_parts.overlays.OverlayManager.install_packages")
     mocker.patch.object(os, "geteuid", return_value=0)
+
+    assert craft_parts.Features().enable_overlay
 
     parts = {
         "with-overlay": {
