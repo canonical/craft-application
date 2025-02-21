@@ -16,7 +16,6 @@
 """Unit tests for craft-application app classes."""
 
 import argparse
-import dataclasses
 import importlib
 import importlib.metadata
 import logging
@@ -1140,25 +1139,6 @@ def test_register_plugins_default(mocker, app_metadata, fake_services):
         app.run()
 
     assert reg.call_count == 0
-
-
-def test_mandatory_adoptable_fields(
-    tmp_path, app_metadata, fake_services, fake_project_file
-):
-    """Verify if mandatory adoptable fields are defined if not using adopt-info."""
-    app_metadata = dataclasses.replace(
-        app_metadata, mandatory_adoptable_fields=["license"]
-    )
-
-    app = application.Application(app_metadata, fake_services)
-
-    with pytest.raises(errors.CraftValidationError) as exc_info:
-        _ = app.get_project(build_for=get_host_architecture())
-
-    assert (
-        str(exc_info.value)
-        == "Required field 'license' is not set and 'adopt-info' not used."
-    )
 
 
 @pytest.fixture

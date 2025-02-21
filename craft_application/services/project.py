@@ -256,7 +256,7 @@ class ProjectService(base.AppService):
                 if not getattr(project_model, field, None):
                     missing_fields.add(field)
             if missing_fields:
-                missing = ", ".join(sorted(missing_fields))
+                missing = ", ".join(repr(field) for field in sorted(missing_fields))
                 raise errors.CraftValidationError(
                     f"'adopt-info' not set and required fields are missing: {missing}"
                 )

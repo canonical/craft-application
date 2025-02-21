@@ -13,6 +13,7 @@
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Unit tests for the ProjectService."""
 
+import dataclasses
 import pathlib
 import textwrap
 from typing import cast
@@ -390,3 +391,23 @@ def test_get_already_rendered(project_service: ProjectService):
     rendered = project_service.render_once()
 
     assert project_service.get() == rendered
+
+
+def test_mandatory_adoptable_fields(
+    app_metadata, project_service: ProjectService, fake_project_file: pathlib.Path
+):
+    """Verify if mandatory adoptable fields are defined if not using adopt-info."""
+    project_service._app = dataclasses.replace(
+        app_metadata, mandatory_adoptable_fields=["version", "license"]
+    )
+
+    project_yaml = fake_project_file.read_text()
+    fake_project_file.write_text(project_yaml.replace("license:", "# licence:"))
+
+    with pytest.raises(errors.CraftValidationError) as exc_info:
+        _ = project_service.render_once()
+
+    assert (
+        str(exc_info.value)
+        == "'adopt-info' not set and required fields are missing: 'license'"
+    )
