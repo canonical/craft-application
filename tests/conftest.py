@@ -299,8 +299,10 @@ def emitter_verbosity(request):
 @pytest.fixture
 def fake_project_service_class(fake_project) -> type[services.ProjectService]:
     class FakeProjectService(services.ProjectService):
+        # This is a final method, but we're overriding it here for convenience when
+        # doing internal testing.
         @override
-        def _load_raw_project(self):
+        def _load_raw_project(self):  # type: ignore[reportIncompatibleMethodOverride]
             return fake_project.marshal()
 
         # Don't care if the project file exists during this testing.
