@@ -136,7 +136,7 @@ class ProjectService(base.AppService):
         if "platforms" not in raw_project:
             return self._app_render_legacy_platforms()
 
-        platforms = raw_project["platforms"]
+        platforms: dict[str, craft_platforms.PlatformDict] = raw_project["platforms"]
         for name, data in platforms.items():
             if data is None:
                 platforms[name] = {"build-on": [name], "build-for": [name]}

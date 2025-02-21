@@ -433,19 +433,6 @@ class FakeApplication(application.Application):
     def set_project(self, project):
         self._Application__project = project
 
-    @override
-    def _extra_yaml_transform(
-        self,
-        yaml_data: dict[str, Any],
-        *,
-        build_on: str,
-        build_for: str | None,
-    ) -> dict[str, Any]:
-        self.build_on = build_on
-        self.build_for = build_for
-
-        return yaml_data
-
 
 @pytest.fixture
 def app(app_metadata, fake_services, tmp_path):
