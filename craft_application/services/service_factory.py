@@ -31,7 +31,7 @@ from typing import (
 
 import annotated_types
 
-from craft_application import models, services
+from craft_application import services
 
 if TYPE_CHECKING:
     from craft_application.application import AppMetadata
@@ -278,13 +278,6 @@ class ServiceFactory:
             return self._services[service]
         cls = self.get_class(service)
         kwargs = self._service_kwargs.get(service, {})
-        # if issubclass(cls, services.ProjectService):
-        #     if not self.project:
-        #         raise ValueError(
-        #             f"{cls.__name__} requires a project to be available before creation."
-        #         )
-        #     kwargs.setdefault("project", self.project)
-
         instance = cls(app=self.app, services=self, **kwargs)
         instance.setup()
         self._services[service] = instance
