@@ -590,7 +590,7 @@ class Application:
             build_for = build_for.split(",", maxsplit=1)[0]
         if command.needs_project(dispatcher.parsed_args()):
             project_service = self.services.get("project")
-            # This is only needed for testing.
+            # This branch always runs, except during testing.
             if not project_service.is_rendered:
                 project_service.render_once()
 

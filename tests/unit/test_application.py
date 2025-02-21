@@ -472,13 +472,13 @@ def test_gets_project(monkeypatch, fake_project_file, app_metadata, fake_service
 
 
 def test_fails_without_project(
-    monkeypatch, capsys, tmp_path, app_metadata, fake_services, app
+    monkeypatch, capsys, tmp_path, app_metadata, fake_services, app, debug_mode
 ):
+    # Set up a real project service - the fake one for testing gets a fake project!
+    del app.services._services["project"]
+    app.services.register("project", services.ProjectService)
+
     monkeypatch.setattr(sys, "argv", ["testcraft", "prime"])
-
-    app.project_dir = tmp_path
-
-    fake_services.project = None
 
     assert app.run() == 66
 
