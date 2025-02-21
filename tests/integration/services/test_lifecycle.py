@@ -37,6 +37,7 @@ from craft_application.services.lifecycle import LifecycleService
 def parts_lifecycle(
     app_metadata, fake_project, fake_services, tmp_path, request, fake_build_plan
 ):
+    fake_services.get("project").set(fake_project)
     fake_project.parts = request.param
 
     service = LifecycleService(
