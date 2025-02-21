@@ -17,7 +17,6 @@
 
 from __future__ import annotations
 
-import functools
 import io
 import os
 import pathlib
@@ -307,7 +306,6 @@ def fake_project_service_class(fake_project) -> type[services.ProjectService]:
         # Don't care if the project file exists during this testing.
         # Silencing B019 because we're replicating an inherited method.
         @override
-        @functools.lru_cache(maxsize=1)  # noqa: B019
         def resolve_project_file_path(self):
             return (self._project_dir / f"{self._app.name}.yaml").resolve()
 
@@ -343,7 +341,7 @@ def fake_package_service_class():
             self, prime_dir: pathlib.Path, dest: pathlib.Path
         ) -> list[pathlib.Path]:
             assert prime_dir.exists()
-            pkg = dest / f"package_{self._project.version}.tar.zst"
+            pkg = dest / "package_1.0.tar.zst"
             pkg.touch()
             return [pkg]
 
