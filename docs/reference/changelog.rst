@@ -7,6 +7,14 @@ Changelog
 5.0.0 (2025-Mon-DD)
 -------------------
 
+Services
+========
+
+- Setting the arguments for a service using the service factory's ``set_kwargs`` is
+  deprecated. Use ``update_kwargs`` instead or file `an issue
+  <https://github.com/canonical/craft-application/issues/new?template=bug.yaml>`_
+  if you still need this method.
+
 Testing
 =======
 

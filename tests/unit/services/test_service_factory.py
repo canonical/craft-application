@@ -136,7 +136,7 @@ def test_set_kwargs(
         app_metadata, project=fake_project, PackageClass=MockPackageService
     )
 
-    with pytest.warns(PendingDeprecationWarning):
+    with pytest.warns(DeprecationWarning):
         factory.set_kwargs("package", **kwargs)
 
     check.equal(factory.package, MockPackageService.mock_class.return_value)
