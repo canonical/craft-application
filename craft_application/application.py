@@ -301,6 +301,17 @@ class Application:
                 f"Unable to create/access cache directory: {err.strerror}"
             ) from err
 
+    def _bootstrap_services(self) -> None:
+        """Configure early-starting services.
+
+        This should only contain configuration for services that are needed during
+        application startup. All other configuration belongs in ``_configure_services``
+        """
+        self.services.update_kwargs(
+            "project",
+            project_dir=self.project_dir,
+        )
+
     def _configure_services(self, provider_name: str | None) -> None:
         """Configure additional keyword arguments for any service classes.
 
@@ -313,10 +324,6 @@ class Application:
             work_dir=self._work_dir,
             build_plan=self._build_plan,
             partitions=self._partitions,
-        )
-        self.services.update_kwargs(
-            "project",
-            project_dir=self.project_dir,
         )
         self.services.update_kwargs(
             "provider",
@@ -620,6 +627,7 @@ class Application:
     def run(self) -> int:
         """Bootstrap and run the application."""
         self._setup_logging()
+        self._bootstrap_services()
         self._load_plugins()
         self._initialize_craft_parts()
 
