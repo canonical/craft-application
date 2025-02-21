@@ -153,7 +153,8 @@ class FetchService(services.ProjectService):
 
         Only supports a single generated artifact, and only in managed runs.
         """
-        if not self._services.ProviderClass.is_managed():
+        # mypy doesn't accept accept ignore[union-attr] for unknown reasons.
+        if not self._services.ProviderClass.is_managed():  # type: ignore  # noqa: PGH003
             emit.debug("Unable to generate the project manifest on the host.")
             return
 
