@@ -1224,6 +1224,10 @@ class MyRaisingPlanner(models.BuildPlanner):
         return []
 
 
+@pytest.mark.skipif(
+    date.today() < date(2025, 2, 25),
+    reason="CRAFT-4159, This will no longer be the responsibility of the application.",
+)
 def test_build_planner_errors(tmp_path, monkeypatch, fake_services):
     monkeypatch.chdir(tmp_path)
     app_metadata = craft_application.AppMetadata(
