@@ -81,6 +81,7 @@ class ProjectService(base.AppService):
         emit.trace(f"Project file found at {path}")
         return path
 
+    @final
     def _load_raw_project(self) -> dict[str, Any]:
         """Get the raw project data structure.
 
@@ -272,10 +273,12 @@ class ProjectService(base.AppService):
         )
 
     @property
+    @final
     def is_rendered(self) -> bool:
         """Whether the project has already been rendered."""
         return self._project_model is not None
 
+    @final
     def get(self) -> models.Project:
         """Get the rendered project.
 
@@ -286,6 +289,7 @@ class ProjectService(base.AppService):
             raise RuntimeError("Project not rendered yet.")
         return self._project_model
 
+    @final
     def render_once(
         self,
         *,
