@@ -157,11 +157,11 @@ class ServiceFactory:
     ) -> None:
         """Set up the keyword arguments to pass to a particular service class.
 
-        PENDING DEPRECATION: use update_kwargs instead
+        DEPRECATED: use update_kwargs instead
         """
         warnings.warn(
-            PendingDeprecationWarning(
-                "ServiceFactory.set_kwargs is pending deprecation. Use update_kwargs instead."
+            DeprecationWarning(
+                "ServiceFactory.set_kwargs is deprecated. Use update_kwargs instead."
             ),
             stacklevel=2,
         )
