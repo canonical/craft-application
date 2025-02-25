@@ -69,6 +69,10 @@ class ProjectService(base.AppService):
         """
         if self.__project_file_path:
             return self.__project_file_path
+        if not self._project_dir.is_dir():
+            if not self._project_dir.exists():
+                raise errors.ProjectDirectoryMissingError(self._project_dir)
+            raise errors.ProjectDirectoryTypeError(self._project_dir)
         try:
             path = (self._project_dir / f"{self._app.name}.yaml").resolve(strict=True)
         except FileNotFoundError as err:
@@ -110,8 +114,13 @@ class ProjectService(base.AppService):
     ) -> None:
         """Run any application-specific pre-processing on the project, in-place.
 
-        The application must use the provided parameters rather than service state
-        when applying ``build_on``, ``build_for`` or ``platform`` information.
+        This includes any application-specific transformations on a project's raw data
+        structure before it gets rendered as a pydantic model. Some examples of
+        processing to do here include:
+
+        - Applying extensions
+        - Adding "hidden" app-specific parts
+        - Processing grammar for keys other than parts
         """
 
     def _app_render_legacy_platforms(self) -> dict[str, craft_platforms.PlatformDict]:
@@ -178,9 +187,10 @@ class ProjectService(base.AppService):
                     build_for = target.value
                     break
             else:
-                raise RuntimeError(
-                    "Somehow the host architecture is all Debian architectures. "
-                    "My universe is shattered; I give up."
+                raise ValueError(
+                    "Could not find an architecture other than the host architecture "
+                    "to set as the build-for architecture. This is a bug in "
+                    f"{self._app.name} or craft-application."
                 )
             emit.debug(
                 "Expanding environment variables with the architecture "
@@ -223,8 +233,7 @@ class ProjectService(base.AppService):
 
         :param build_for: The target architecture of the build.
         :param platform: The name of the target platform.
-        :param build_on: The host architecture the build happens on. Defaults to the
-            current architecture.
+        :param build_on: The host architecture the build happens on.
         :returns: A Project model containing the project rendered as above.
         """
         platforms = self.get_platforms()
@@ -245,7 +254,7 @@ class ProjectService(base.AppService):
             project["parts"] = grammar.process_parts(
                 parts_yaml_data=project["parts"],
                 arch=build_on,
-                target_arch=str(build_for),
+                target_arch=build_for,
             )
         project_model = self._app.ProjectClass.from_yaml_data(
             project, self.resolve_project_file_path()
@@ -299,7 +308,7 @@ class ProjectService(base.AppService):
         """Render the project model for this run.
 
         This should only be called by the Application for initial setup of the project.
-        Everything else should use :py:method:`get`.
+        Everything else should use :py:meth:`get`.
 
         If build_for or platform is not set, it tries to select the appropriate one.
         Which value is selected is not guaranteed unless both a build_for and platform

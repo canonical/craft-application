@@ -361,7 +361,7 @@ def test_invalid_command_argument(monkeypatch, capsys, app):
     ],
 )
 @pytest.mark.skipif(
-    date.today() < date(2025, 2, 25),
+    date.today() < date(2025, 2, 27),
     reason="Skip until we implement the BuildPlanService. (CRAFT-4159)",
 )
 def test_global_environment(

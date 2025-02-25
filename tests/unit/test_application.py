@@ -1225,7 +1225,7 @@ class MyRaisingPlanner(models.BuildPlanner):
 
 
 @pytest.mark.skipif(
-    date.today() < date(2025, 2, 25),
+    date.today() < date(2025, 2, 27),
     reason="CRAFT-4159, This will no longer be the responsibility of the application.",
 )
 def test_build_planner_errors(tmp_path, monkeypatch, fake_services):

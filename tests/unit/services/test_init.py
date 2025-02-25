@@ -152,6 +152,7 @@ def test_check_for_existing_files(
 ):
     """No-op if there are no overlapping files."""
     # Cleanup: we don't want the project directory to exist in this case.
+    assert project_path.is_relative_to(tmp_path)
     shutil.rmtree(project_path)
 
     # create template

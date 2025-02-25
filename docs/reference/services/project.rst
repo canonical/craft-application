@@ -9,10 +9,11 @@ Project loading
 ---------------
 
 The project service is responsible for loading, validating and rendering the project
-file to a ``Project`` model. While the service can render a project as though it is
-running on any architecture and building for any platform or architecture, the most
-common use case is to render the project as though running on the current architecture,
-for the targeted platform. Here, the steps taken are as follows:
+file to a :py:class:`~craft_application.models.Project` model. While the service can
+render a project as though it is running on any architecture and building for
+any platform or architecture, the most common use case is to render the project
+as though running on the current architecture, for the targeted platform.
+Here, the steps taken are as follows:
 
 .. How do I make this numbered?
 .. contents::
