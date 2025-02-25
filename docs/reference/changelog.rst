@@ -4,6 +4,14 @@
 Changelog
 *********
 
+4.x.x (YYYY-MMM-DD)
+-------------------
+
+Application
+===========
+
+- Increase timeout in fetch-service queries.
+
 4.9.1 (2025-Feb-12)
 -------------------
 
