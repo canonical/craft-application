@@ -4,6 +4,16 @@
 Changelog
 *********
 
+4.10.0 (YYYY-Mon-DD)
+--------------------
+
+Services
+========
+
+- Deprecate the ``work_dir`` parameter on :meth:`ProviderService.instance`. The
+  parameter is still used if provided, but is now optional. It will be removed in
+  a future release.
+
 4.9.1 (2025-Feb-12)
 -------------------
 
@@ -23,7 +33,7 @@ Application
 ===========
 
 - Add a feature to allow `Python plugins
-  https://packaging.python.org/en/latest/guides/creating-and-discovering-plugins/>`_
+  <https://packaging.python.org/en/latest/guides/creating-and-discovering-plugins/>`_
   to extend or modify the behaviour of applications that use craft-application as a
   framework. The plugin packages must be installed in the same virtual environment
   as the application.

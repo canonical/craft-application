@@ -117,7 +117,7 @@ def test_run_managed_fetch_service(
     instance_calls = [
         call
         for call in mock_provider.instance.mock_calls
-        if "work_dir" in call.kwargs and "clean_existing" in call.kwargs
+        if "clean_existing" in call.kwargs
     ]
 
     assert len(instance_calls) == len(fake_build_plan)
