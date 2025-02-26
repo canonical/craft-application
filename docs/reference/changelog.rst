@@ -7,6 +7,12 @@ Changelog
 5.0.0 (2025-Mon-DD)
 -------------------
 
+Services
+========
+
+- A new :doc:`services/project` now handles the creation and management of the project
+  for this run of the application.
+
 Testing
 =======
 
@@ -19,6 +25,10 @@ Breaking changes
 - The pytest plugin includes an auto-used fixture that puts the app into debug mode
   by default for tests.
 - Support for secrets has been removed.
+- The abstract class ``ProjectService`` has been removed. Services can no longer
+  designate that they require a project, but should instead use the
+  :py:meth:`~craft_application.services.project.ProjectService.get()` method of the
+  ``ProjectService`` to retrieve the project. It will error accordingly.
 
 For a complete list of commits, check out the `5.0.0`_ release on GitHub.
 
