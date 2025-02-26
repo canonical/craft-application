@@ -70,7 +70,6 @@ def fake_parts_lifecycle(
     fake_service = FakePartsLifecycle(
         app_metadata,
         fake_services,
-        project=fake_project,
         work_dir=work_dir,
         cache_dir=cache_dir,
         build_plan=fake_build_plan,
@@ -237,7 +236,6 @@ def test_init_success(
     service = lifecycle.LifecycleService(
         app_metadata,
         fake_services,
-        project=fake_project,
         work_dir=tmp_path,
         cache_dir=tmp_path,
         platform=None,
@@ -295,10 +293,11 @@ def test_init_with_feature_package_repositories(
 ):
     package_repositories = [{"type": "apt", "ppa": "ppa/ppa"}]
     fake_project.package_repositories = package_repositories.copy()
+    fake_services.get("project").set(fake_project)
+
     service = lifecycle.LifecycleService(
         app_metadata,
         fake_services,
-        project=fake_project,
         work_dir=tmp_path,
         cache_dir=tmp_path,
         platform=None,
@@ -488,7 +487,7 @@ def test_clean(part_names, message, emitter, fake_parts_lifecycle, check):
 
 
 def test_repr(fake_parts_lifecycle, app_metadata, fake_project):
-    start = f"FakePartsLifecycle({app_metadata!r}, {fake_project!r}, "
+    start = f"FakePartsLifecycle({app_metadata!r}, "
 
     actual = repr(fake_parts_lifecycle)
 
@@ -499,7 +498,8 @@ def test_repr(fake_parts_lifecycle, app_metadata, fake_project):
             r"cache_dir=(Posix|Windows)Path\('.+'\), "
             r"plan=\[BuildInfo\(.+\)], \*\*{}\)",
             actual,
-        )
+        ),
+        f"Does not match expected regex: {actual}",
     )
 
 
@@ -580,6 +580,7 @@ def test_lifecycle_package_repositories(
     """Test that package repositories installation is called in the lifecycle."""
     fake_repositories = [{"type": "apt", "ppa": "ppa/ppa"}]
     fake_project.package_repositories = fake_repositories.copy()
+    fake_services.get("project").set(fake_project)
     work_dir = tmp_path / "work"
 
     service = lifecycle.LifecycleService(
@@ -591,6 +592,7 @@ def test_lifecycle_package_repositories(
         platform=None,
         build_plan=fake_build_plan,
     )
+    service.setup()
     mocker.patch.object(service, "_get_local_keys_path", return_value=local_keys_path)
 
     service._lcm = mock.MagicMock(spec=LifecycleManager)
@@ -651,6 +653,7 @@ def test_lifecycle_project_variables(
         platform=None,
         build_plan=fake_build_plan,
     )
+    service._project = fake_project
     service._lcm = mock.MagicMock(spec=LifecycleManager)
     service._lcm.project_info = mock.MagicMock(spec=ProjectInfo)
     service._lcm.project_info.get_project_var = lambda _: "foo"

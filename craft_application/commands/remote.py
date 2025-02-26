@@ -23,7 +23,7 @@ from typing import Any, cast
 from craft_cli import emit
 from overrides import override  # pyright: ignore[reportUnknownVariableType]
 
-from craft_application import errors, models
+from craft_application import errors
 from craft_application.commands import ExtensibleCommand
 from craft_application.launchpad.models import Build, BuildState
 from craft_application.remote.utils import get_build_id
@@ -139,7 +139,7 @@ class RemoteBuild(ExtensibleCommand):
         build_args = self._get_build_args(parsed_args)
 
         builder = self._services.remote_build
-        project = cast(models.Project, self._services.project)
+        project = self._services.get("project").get()
         config = cast(dict[str, Any], self.config)
         project_dir = (
             pathlib.Path(config.get("global_args", {}).get("project_dir") or ".")

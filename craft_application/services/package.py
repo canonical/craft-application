@@ -31,7 +31,7 @@ if TYPE_CHECKING:  # pragma: no cover
     from craft_application import models
 
 
-class PackageService(base.ProjectService):
+class PackageService(base.AppService):
     """Business logic for creating packages."""
 
     @abc.abstractmethod
@@ -56,7 +56,8 @@ class PackageService(base.ProjectService):
             update_vars[var] = project_info.get_project_var(var)
 
         emit.debug(f"Update project variables: {update_vars}")
-        self._project.__dict__.update(update_vars)
+        project = self._services.get("project").get()
+        project.__dict__.update(update_vars)
 
         # Give subclasses a chance to update the project with their own logic
         self._extra_project_updates()
@@ -64,7 +65,7 @@ class PackageService(base.ProjectService):
         unset_fields = [
             field
             for field in self._app.mandatory_adoptable_fields
-            if not getattr(self._project, field)
+            if not getattr(project, field)
         ]
 
         if unset_fields:

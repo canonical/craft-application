@@ -32,7 +32,7 @@ import craft_cli
 import launchpadlib.errors  # type: ignore[import-untyped]
 import platformdirs
 
-from craft_application import errors, launchpad, models
+from craft_application import errors, launchpad
 from craft_application.git import GitError, GitRepo
 from craft_application.remote import (
     RemoteBuildGitError,
@@ -123,7 +123,7 @@ class RemoteBuildService(base.AppService):
         if self._builds:
             raise ValueError("Cannot start builds if already running builds")
 
-        project = cast(models.Project, self._services.project)
+        project = self._services.get("project").get()
 
         check_git_repo_for_remote_build(project_dir)
 

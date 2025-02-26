@@ -53,7 +53,6 @@ def fetch_service(app, fake_services, fake_project):
     return services.FetchService(
         app,
         fake_services,
-        project=fake_project,
         build_plan=[build_info],
         session_policy="strict",
     )

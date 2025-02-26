@@ -1,0 +1,71 @@
+name: myproject
+version: "1.0"
+base: ubuntu@24.04
+platforms:
+  arm64:
+    build-on: [arm64]
+    build-for: [arm64]
+parts:
+  mypart:
+    plugin: nil
+    source: non-grammar-source
+    source-checksum: on-amd64-to-riscv64-checksum
+    source-branch: riscv64-branch
+    source-commit: riscv64-commit
+    source-depth: 1
+    source-subdir: riscv64-subdir
+    source-submodules:
+      - riscv64-submodules-1
+      - riscv64-submodules-2
+    source-tag: riscv64-tag
+    source-type: riscv64-type
+    disable-parallel: true
+    after:
+      - riscv64-after
+    organize:
+      riscv64-organize-1: riscv64-organize-2
+      riscv64-organize-3: riscv64-organize-4
+    overlay:
+      - riscv64-overlay-1
+      - riscv64-overlay-2
+    overlay-packages:
+      - riscv64-overlay-1
+      - riscv64-overlay-2
+    overlay-script: riscv64-overlay-script
+    stage:
+      - riscv64-stage-1
+      - riscv64-stage-2
+    stage-snaps:
+      - riscv64-snap-1
+      - riscv64-snap-2
+    stage-packages:
+      - riscv64-package-1
+      - riscv64-package-2
+    prime:
+      - riscv64-prime-1
+      - riscv64-prime-2
+    build-snaps:
+      - riscv64-snap-1
+      - riscv64-snap-2
+    build-packages:
+      - riscv64-package-1
+      - riscv64-package-2
+    build-environment:
+      - MY_VAR: riscv64-value
+      - MY_VAR2: riscv64-value2
+    build-attributes:
+      - rifcv64-attr-1
+      - rifcv64-attr-2
+    override-pull: riscv64-override-pull
+    override-build: riscv64-override-build
+    override-stage: riscv64-override-stage
+    override-prime: riscv64-override-prime
+    permissions:
+      - path: riscv64-perm-1
+        owner: 123
+        group: 123
+        mode: "777"
+      - path: riscv64-perm-2
+        owner: 456
+        group: 456
+        mode: "666"

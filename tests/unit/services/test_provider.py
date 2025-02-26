@@ -87,7 +87,6 @@ def test_setup_proxy_environment(
     service = provider.ProviderService(
         app_metadata,
         fake_services,
-        project=fake_project,
         work_dir=pathlib.Path(),
         build_plan=fake_build_plan,
     )
@@ -181,7 +180,6 @@ def test_install_snap(
     service = provider.ProviderService(
         app_metadata,
         fake_services,
-        project=fake_project,
         work_dir=pathlib.Path(),
         build_plan=fake_build_plan,
         install_snap=install_snap,
@@ -259,7 +257,9 @@ def test_get_instance_name(platform, platform_str, new_dir, provider_service):
     expected_name = f"testcraft-full-project-{platform_str}-{inode_number}"
 
     assert (
-        provider_service._get_instance_name(work_dir=new_dir, build_info=build_info)
+        provider_service._get_instance_name(
+            work_dir=new_dir, build_info=build_info, project_name="full-project"
+        )
         == expected_name
     )
 

@@ -27,11 +27,13 @@ import craft_providers
 from craft_cli import emit
 from typing_extensions import override
 
-from craft_application import fetch, models, services, util
+from craft_application import fetch, models, util
 from craft_application.models.manifest import CraftManifest, ProjectManifest
+from craft_application.services import base
 
 if typing.TYPE_CHECKING:
     from craft_application.application import AppMetadata
+    from craft_application.services import service_factory
 
 
 _PROJECT_MANIFEST_MANAGED_PATH = pathlib.Path(
@@ -39,7 +41,7 @@ _PROJECT_MANIFEST_MANAGED_PATH = pathlib.Path(
 )
 
 
-class FetchService(services.ProjectService):
+class FetchService(base.AppService):
     """Service class that handles communication with the fetch-service.
 
     This Service is able to spawn a fetch-service instance and create sessions
@@ -61,9 +63,8 @@ class FetchService(services.ProjectService):
     def __init__(
         self,
         app: AppMetadata,
-        services: services.ServiceFactory,
+        services: service_factory.ServiceFactory,
         *,
-        project: models.Project,
         build_plan: list[models.BuildInfo],
         session_policy: str,
     ) -> None:
@@ -72,7 +73,7 @@ class FetchService(services.ProjectService):
         :param session_policy: Whether the created fetch-service sessions should
           be "strict" or "permissive".
         """
-        super().__init__(app, services, project=project)
+        super().__init__(app, services)
         self._fetch_process = None
         self._session_data = None
         self._build_plan = build_plan
@@ -159,16 +160,18 @@ class FetchService(services.ProjectService):
             return
 
         emit.debug(f"Generating project manifest at {_PROJECT_MANIFEST_MANAGED_PATH}")
+        project = self._services.get("project").get()
         project_manifest = ProjectManifest.from_packed_artifact(
-            self._project, self._build_plan[0], artifacts[0]
+            project, self._build_plan[0], artifacts[0]
         )
         project_manifest.to_yaml_file(_PROJECT_MANIFEST_MANAGED_PATH)
 
     def _create_craft_manifest(
         self, project_manifest: pathlib.Path, session_report: dict[str, typing.Any]
     ) -> None:
-        name = self._project.name
-        version = self._project.version
+        project = self._services.get("project").get()
+        name = project.name
+        version = project.version
         platform = self._build_plan[0].platform
 
         manifest_path = pathlib.Path(f"{name}_{version}_{platform}.json")

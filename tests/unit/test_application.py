@@ -16,8 +16,6 @@
 """Unit tests for craft-application app classes."""
 
 import argparse
-import copy
-import dataclasses
 import importlib
 import importlib.metadata
 import logging
@@ -26,9 +24,9 @@ import re
 import subprocess
 import sys
 import textwrap
+from datetime import date
 from io import StringIO
 from textwrap import dedent
-from typing import Any
 from unittest import mock
 
 import craft_cli
@@ -63,249 +61,8 @@ from craft_application.util import (
     get_host_architecture,  # pyright: ignore[reportGeneralTypeIssues]
 )
 from tests.conftest import FakeApplication
-from tests.unit.conftest import BASIC_PROJECT_YAML
 
 EMPTY_COMMAND_GROUP = craft_cli.CommandGroup("FakeCommands", [])
-
-FULL_PROJECT_YAML = """
-name: myproject
-version: 1.0
-base: ubuntu@24.04
-platforms:
-  arm64:
-parts:
-  mypart:
-    plugin: nil
-    source: non-grammar-source
-    source-checksum: on-amd64-to-riscv64-checksum
-    source-branch: riscv64-branch
-    source-commit: riscv64-commit
-    source-depth: 1
-    source-subdir: riscv64-subdir
-    source-submodules:
-      - riscv64-submodules-1
-      - riscv64-submodules-2
-    source-tag: riscv64-tag
-    source-type: riscv64-type
-    disable-parallel: true
-    after:
-      - riscv64-after
-    organize:
-      riscv64-organize-1: riscv64-organize-2
-      riscv64-organize-3: riscv64-organize-4
-    overlay:
-      - riscv64-overlay-1
-      - riscv64-overlay-2
-    overlay-packages:
-      - riscv64-overlay-1
-      - riscv64-overlay-2
-    overlay-script: riscv64-overlay-script
-    stage:
-      - riscv64-stage-1
-      - riscv64-stage-2
-    stage-snaps:
-      - riscv64-snap-1
-      - riscv64-snap-2
-    stage-packages:
-      - riscv64-package-1
-      - riscv64-package-2
-    prime:
-      - riscv64-prime-1
-      - riscv64-prime-2
-    build-snaps:
-      - riscv64-snap-1
-      - riscv64-snap-2
-    build-packages:
-      - riscv64-package-1
-      - riscv64-package-2
-    build-environment:
-      - MY_VAR: riscv64-value
-      - MY_VAR2: riscv64-value2
-    build-attributes:
-      - rifcv64-attr-1
-      - rifcv64-attr-2
-    override-pull: riscv64-override-pull
-    override-build: riscv64-override-build
-    override-stage: riscv64-override-stage
-    override-prime: riscv64-override-prime
-    permissions:
-      - path: riscv64-perm-1
-        owner: 123
-        group: 123
-        mode: "777"
-      - path: riscv64-perm-2
-        owner: 456
-        group: 456
-        mode: "666"
-"""
-
-FULL_GRAMMAR_PROJECT_YAML = """
-name: myproject
-version: 1.0
-base: ubuntu@24.04
-platforms:
-  riscv64:
-    build-on: [amd64]
-    build-for: [riscv64]
-  s390x:
-    build-on: [amd64]
-    build-for: [s390x]
-parts:
-  mypart:
-    plugin:
-      - on amd64 to riscv64: nil
-      - on amd64 to s390x: dump
-    source:
-      - on amd64 to s390x: on-amd64-to-s390x
-      - on amd64 to riscv64: on-amd64-to-riscv64
-    source-checksum:
-      - on amd64 to riscv64: on-amd64-to-riscv64-checksum
-      - on amd64 to s390x: on-amd64-to-s390x-checksum
-    source-branch:
-      - on amd64 to s390x: s390x-branch
-      - on amd64 to riscv64: riscv64-branch
-    source-commit:
-      - on amd64 to riscv64: riscv64-commit
-      - on amd64 to s390x: s390x-commit
-    source-depth:
-      - on amd64 to s390x: 2
-      - on amd64 to riscv64: 1
-    source-subdir:
-      - on amd64 to riscv64: riscv64-subdir
-      - on amd64 to s390x: s390x-subdir
-    source-submodules:
-      - on amd64 to s390x:
-          - s390x-submodules-1
-          - s390x-submodules-2
-      - on amd64 to riscv64:
-          - riscv64-submodules-1
-          - riscv64-submodules-2
-    source-tag:
-      - on amd64 to riscv64: riscv64-tag
-      - on amd64 to s390x: s390x-tag
-    source-type:
-      - on amd64 to s390x: s390x-type
-      - on amd64 to riscv64: riscv64-type
-    disable-parallel:
-      - on amd64 to riscv64: true
-      - on amd64 to s390x: false
-    after:
-      - on amd64 to s390x:
-        - s390x-after
-      - on amd64 to riscv64:
-        - riscv64-after
-    organize:
-        - on amd64 to riscv64:
-            riscv64-organize-1: riscv64-organize-2
-            riscv64-organize-3: riscv64-organize-4
-        - on amd64 to s390x:
-            s390x-organize-1: s390x-organize-2
-            s390x-organize-3: s390x-organize-4
-    overlay:
-      - on amd64 to s390x:
-        - s390x-overlay-1
-        - s390x-overlay-2
-      - on amd64 to riscv64:
-        - riscv64-overlay-1
-        - riscv64-overlay-2
-    overlay-packages:
-      - on amd64 to riscv64:
-        - riscv64-overlay-1
-        - riscv64-overlay-2
-      - on amd64 to s390x:
-        - s390x-overlay-1
-        - s390x-overlay-2
-    overlay-script:
-        - on amd64 to s390x: s390x-overlay-script
-        - on amd64 to riscv64: riscv64-overlay-script
-    stage:
-      - on amd64 to riscv64:
-        - riscv64-stage-1
-        - riscv64-stage-2
-      - on amd64 to s390x:
-        - s390x-stage-1
-        - s390x-stage-2
-    stage-snaps:
-      - on amd64 to s390x:
-        - s390x-snap-1
-        - s390x-snap-2
-      - on amd64 to riscv64:
-        - riscv64-snap-1
-        - riscv64-snap-2
-    stage-packages:
-      - on amd64 to riscv64:
-        - riscv64-package-1
-        - riscv64-package-2
-      - on amd64 to s390x:
-        - s390x-package-1
-        - s390x-package-2
-    prime:
-      - on amd64 to s390x:
-        - s390x-prime-1
-        - s390x-prime-2
-      - on amd64 to riscv64:
-        - riscv64-prime-1
-        - riscv64-prime-2
-    build-snaps:
-      - on amd64 to riscv64:
-        - riscv64-snap-1
-        - riscv64-snap-2
-      - on amd64 to s390x:
-        - s390x-snap-1
-        - s390x-snap-2
-    build-packages:
-      - on amd64 to s390x:
-        - s390x-package-1
-        - s390x-package-2
-      - on amd64 to riscv64:
-        - riscv64-package-1
-        - riscv64-package-2
-    build-environment:
-      - on amd64 to riscv64:
-          - MY_VAR: riscv64-value
-          - MY_VAR2: riscv64-value2
-      - on amd64 to s390x:
-          - MY_VAR: s390x-value
-          - MY_VAR2: s390x-value2
-    build-attributes:
-      - on amd64 to s390x:
-        - s390x-attr-1
-        - s390x-attr-2
-      - on amd64 to riscv64:
-        - rifcv64-attr-1
-        - rifcv64-attr-2
-    override-pull:
-      - on amd64 to riscv64: riscv64-override-pull
-      - on amd64 to s390x: s390x-override-pull
-    override-build:
-      - on amd64 to s390x: s390x-override-build
-      - on amd64 to riscv64: riscv64-override-build
-    override-stage:
-      - on amd64 to riscv64: riscv64-override-stage
-      - on amd64 to s390x: s390x-override-stage
-    override-prime:
-      - on amd64 to s390x: s390x-override-prime
-      - on amd64 to riscv64: riscv64-override-prime
-    permissions:
-      - on amd64 to riscv64:
-        - path: riscv64-perm-1
-          owner: 123
-          group: 123
-          mode: "777"
-        - path: riscv64-perm-2
-          owner: 456
-          group: 456
-          mode: "666"
-      - on amd64 to s390x:
-        - path: s390x-perm-1
-          owner: 123
-          group: 123
-          mode: "666"
-        - path: s390x-perm-2
-          owner: 456
-          group: 456
-          mode: "777"
-"""
 
 
 @pytest.mark.parametrize("summary", ["A summary", None])
@@ -703,15 +460,10 @@ def test_craft_lib_log_level(app_metadata, fake_services):
         assert logger.level == logging.DEBUG
 
 
-def test_gets_project(monkeypatch, tmp_path, app_metadata, fake_services):
-    project_file = tmp_path / "testcraft.yaml"
-    project_file.write_text(BASIC_PROJECT_YAML)
+def test_gets_project(monkeypatch, fake_project_file, app_metadata, fake_services):
     monkeypatch.setattr(sys, "argv", ["testcraft", "pull", "--destructive-mode"])
 
     app = FakeApplication(app_metadata, fake_services)
-    app.project_dir = tmp_path
-
-    fake_services.project = None
 
     app.run()
 
@@ -720,14 +472,13 @@ def test_gets_project(monkeypatch, tmp_path, app_metadata, fake_services):
 
 
 def test_fails_without_project(
-    monkeypatch, capsys, tmp_path, app_metadata, fake_services
+    monkeypatch, capsys, tmp_path, app_metadata, fake_services, app, debug_mode
 ):
+    # Set up a real project service - the fake one for testing gets a fake project!
+    del app.services._services["project"]
+    app.services.register("project", services.ProjectService)
+
     monkeypatch.setattr(sys, "argv", ["testcraft", "prime"])
-
-    app = FakeApplication(app_metadata, fake_services)
-    app.project_dir = tmp_path
-
-    fake_services.project = None
 
     assert app.run() == 66
 
@@ -1252,9 +1003,11 @@ def test_filter_plan(mocker, plan, platform, build_for, host_arch, result):
     assert application.filter_plan(plan, platform, build_for, host_arch) == result
 
 
-@pytest.mark.usefixtures("fake_project_file")
+@pytest.mark.usefixtures("fake_project_file", "in_project_dir")
 def test_work_dir_project_non_managed(monkeypatch, app_metadata, fake_services):
     monkeypatch.setenv(fake_services.ProviderClass.managed_mode_env_var, "0")
+    # We want to use the real ProjectService here.
+    fake_services.register("project", services.ProjectService)
 
     app = application.Application(app_metadata, fake_services)
     assert app._work_dir == pathlib.Path.cwd()
@@ -1263,8 +1016,8 @@ def test_work_dir_project_non_managed(monkeypatch, app_metadata, fake_services):
 
     # Make sure the project is loaded correctly (from the cwd)
     assert project is not None
-    assert project.name == "myproject"
-    assert project.version == "1.0"
+    assert project.name == "full-project"
+    assert project.version == "1.0.0.post64+git12345678"
 
 
 @pytest.mark.usefixtures("fake_project_file")
@@ -1279,8 +1032,8 @@ def test_work_dir_project_managed(monkeypatch, app_metadata, fake_services):
     # Make sure the project is loaded correctly (from the cwd)
     assert project is not None
 
-    assert project.name == "myproject"
-    assert project.version == "1.0"
+    assert project.name == "full-project"
+    assert project.version == "1.0.0.post64+git12345678"
 
 
 @pytest.fixture
@@ -1310,62 +1063,6 @@ def environment_project(in_project_path):
     return in_project_path
 
 
-@pytest.mark.usefixtures("in_project_path", "fake_host_architecture")
-def test_expand_environment_build_for_all(
-    monkeypatch, app_metadata, project_path, fake_services, emitter
-):
-    """Expand build-for to the host arch when build-for is 'all'."""
-    project_file = project_path / "testcraft.yaml"
-    project_file.write_text(
-        dedent(
-            f"""\
-            name: myproject
-            version: 1.2.3
-            base: ubuntu@24.04
-            platforms:
-              platform1:
-                build-on: [{util.get_host_architecture()}]
-                build-for: [all]
-            parts:
-              mypart:
-                plugin: nil
-                build-environment:
-                  - BUILD_ON: $CRAFT_ARCH_BUILD_ON
-                  - BUILD_FOR: $CRAFT_ARCH_BUILD_FOR
-        """
-        )
-    )
-
-    app = application.Application(app_metadata, fake_services)
-    project = app.get_project()
-
-    # Make sure the project is loaded correctly (from the cwd)
-    assert project is not None
-    assert project.parts["mypart"]["build-environment"] == [
-        {"BUILD_ON": util.get_host_architecture()},
-        {"BUILD_FOR": util.get_host_architecture()},
-    ]
-    emitter.assert_debug(
-        "Expanding environment variables with the host architecture "
-        f"{util.get_host_architecture()!r} as the build-for architecture "
-        "because 'all' was specified."
-    )
-
-
-@pytest.mark.usefixtures("environment_project", "fake_host_architecture")
-def test_application_expand_environment(app_metadata, fake_services):
-    app = application.Application(app_metadata, fake_services)
-    project = app.get_project(build_for=get_host_architecture())
-
-    # Make sure the project is loaded correctly (from the cwd)
-    assert project is not None
-    assert project.parts["mypart"]["source-tag"] == "v1.2.3"
-    assert project.parts["mypart"]["build-environment"] == [
-        {"BUILD_ON": util.get_host_architecture()},
-        {"BUILD_FOR": util.get_host_architecture()},
-    ]
-
-
 @pytest.mark.usefixtures("fake_project_file")
 def test_get_project_current_dir(app):
     # Load a project file from the current directory
@@ -1378,23 +1075,6 @@ def test_get_project_current_dir(app):
 @pytest.mark.usefixtures("fake_project_file")
 def test_get_project_all_platform(app):
     app.get_project(platform="arm64")
-
-
-@pytest.mark.usefixtures("fake_project_file")
-def test_get_project_invalid_platform(app):
-    # Load a project file from the current directory
-
-    with pytest.raises(errors.InvalidPlatformError) as raised:
-        app.get_project(platform="invalid")
-
-    assert (
-        str(raised.value) == "Platform 'invalid' not found in the project definition."
-    )
-
-
-@pytest.mark.usefixtures("fake_project_file")
-def test_get_project_property(app):
-    assert app.project == app.get_project()
 
 
 def test_get_cache_dir(tmp_path, app):
@@ -1461,38 +1141,6 @@ def test_register_plugins_default(mocker, app_metadata, fake_services):
     assert reg.call_count == 0
 
 
-def test_extra_yaml_transform(tmp_path, app_metadata, fake_services):
-    project_file = tmp_path / "testcraft.yaml"
-    project_file.write_text(BASIC_PROJECT_YAML)
-
-    app = FakeApplication(app_metadata, fake_services)
-    app.project_dir = tmp_path
-    _ = app.get_project(build_for="s390x")
-
-    assert app.build_on == util.get_host_architecture()
-    assert app.build_for == "s390x"
-
-
-def test_mandatory_adoptable_fields(tmp_path, app_metadata, fake_services):
-    """Verify if mandatory adoptable fields are defined if not using adopt-info."""
-    project_file = tmp_path / "testcraft.yaml"
-    project_file.write_text(BASIC_PROJECT_YAML)
-    app_metadata = dataclasses.replace(
-        app_metadata, mandatory_adoptable_fields=["license"]
-    )
-
-    app = application.Application(app_metadata, fake_services)
-    app.project_dir = tmp_path
-
-    with pytest.raises(errors.CraftValidationError) as exc_info:
-        _ = app.get_project(build_for=get_host_architecture())
-
-    assert (
-        str(exc_info.value)
-        == "Required field 'license' is not set and 'adopt-info' not used."
-    )
-
-
 @pytest.fixture
 def grammar_project_mini(tmp_path):
     """A project that builds on amd64 to riscv64 and s390x."""
@@ -1536,438 +1184,6 @@ def grammar_project_mini(tmp_path):
     project_file.write_text(contents)
 
 
-@pytest.fixture
-def non_grammar_project_full(tmp_path):
-    """A project that builds on amd64 to riscv64."""
-    project_file = tmp_path / "testcraft.yaml"
-    project_file.write_text(FULL_PROJECT_YAML)
-
-
-@pytest.fixture
-def grammar_project_full(tmp_path):
-    """A project that builds on amd64 to riscv64 and s390x."""
-    project_file = tmp_path / "testcraft.yaml"
-    project_file.write_text(FULL_GRAMMAR_PROJECT_YAML)
-
-
-@pytest.fixture
-def non_grammar_build_plan(mocker, fake_host_architecture):
-    """A build plan to build on amd64 to riscv64."""
-    base = util.get_host_base()
-    build_plan = [
-        models.BuildInfo(
-            "platform-riscv64",
-            fake_host_architecture,
-            "riscv64",
-            base,
-        )
-    ]
-
-    mocker.patch.object(models.BuildPlanner, "get_build_plan", return_value=build_plan)
-
-
-@pytest.fixture
-def grammar_build_plan(mocker):
-    """A build plan to build on amd64 to riscv64 and s390x."""
-    host_arch = "amd64"
-    base = util.get_host_base()
-    build_plan = [
-        models.BuildInfo(
-            f"platform-{build_for}",
-            host_arch,
-            build_for,
-            base,
-        )
-        for build_for in ("riscv64", "s390x")
-    ]
-
-    mocker.patch.object(models.BuildPlanner, "get_build_plan", return_value=build_plan)
-
-
-@pytest.fixture
-def grammar_app_mini(
-    tmp_path,
-    grammar_project_mini,
-    grammar_build_plan,
-    app_metadata,
-    fake_services,
-):
-    app = application.Application(app_metadata, fake_services)
-    app.project_dir = tmp_path
-
-    return app
-
-
-@pytest.fixture
-def non_grammar_app_full(
-    tmp_path,
-    non_grammar_project_full,
-    non_grammar_build_plan,
-    app_metadata,
-    fake_services,
-):
-    app = application.Application(app_metadata, fake_services)
-    app.project_dir = tmp_path
-
-    return app
-
-
-@pytest.fixture
-def grammar_app_full(
-    tmp_path,
-    grammar_project_full,
-    grammar_build_plan,
-    app_metadata,
-    fake_services,
-):
-    app = application.Application(app_metadata, fake_services)
-    app.project_dir = tmp_path
-
-    return app
-
-
-def test_process_grammar_build_for(grammar_app_mini):
-    """Test that a provided build-for is used to process the grammar."""
-    project = grammar_app_mini.get_project(build_for="s390x")
-    assert project.parts["mypart"]["source"] == "on-amd64-to-s390x"
-    assert project.parts["mypart"]["build-packages"] == [
-        "test-package",
-        "on-amd64-to-s390x",
-    ]
-
-
-def test_process_grammar_to_all(tmp_path, app_metadata, fake_services):
-    """Test that 'to all' is a valid grammar statement."""
-    contents = dedent(
-        f"""\
-        name: myproject
-        version: 1.0
-        base: ubuntu@24.04
-        platforms:
-          myplatform:
-            build-on: [{util.get_host_architecture()}]
-            build-for: [all]
-        parts:
-          mypart:
-            plugin: nil
-            build-packages:
-            - test-package
-            - on {util.get_host_architecture()} to all:
-              - on-host-to-all
-            - to all:
-              - to-all
-            - on {util.get_host_architecture()} to s390x:
-              - on-host-to-s390x
-            - to s390x:
-              - on-amd64-to-s390x
-        """
-    )
-    project_file = tmp_path / "testcraft.yaml"
-    project_file.write_text(contents)
-    app = application.Application(app_metadata, fake_services)
-    app.project_dir = tmp_path
-
-    project = app.get_project()
-
-    assert project.parts["mypart"]["build-packages"] == [
-        "test-package",
-        "on-host-to-all",
-        "to-all",
-    ]
-
-
-def test_process_grammar_platform(grammar_app_mini):
-    """Test that a provided platform is used to process the grammar."""
-    project = grammar_app_mini.get_project(platform="platform-riscv64")
-    assert project.parts["mypart"]["source"] == "on-amd64-to-riscv64"
-    assert project.parts["mypart"]["build-packages"] == [
-        "test-package",
-        "on-amd64-to-riscv64",
-    ]
-
-
-def test_process_grammar_non_grammar(grammar_app_mini):
-    """Non-grammar keywords should not be modified."""
-    project = grammar_app_mini.get_project(platform="platform-riscv64")
-
-    assert project.parts["mypart"]["meson-parameters"] == ["foo", "bar"]
-
-
-def test_process_grammar_default(grammar_app_mini):
-    """Test that if nothing is provided the first BuildInfo is used by the grammar."""
-    project = grammar_app_mini.get_project()
-    assert project.parts["mypart"]["source"] == "on-amd64-to-riscv64"
-    assert project.parts["mypart"]["build-packages"] == [
-        "test-package",
-        "on-amd64-to-riscv64",
-    ]
-
-
-def test_process_grammar_no_match(grammar_app_mini, mocker):
-    """Test that if the build plan is empty, the grammar uses the host as target arch."""
-    mocker.patch("craft_application.util.get_host_architecture", return_value="i386")
-    project = grammar_app_mini.get_project()
-
-    assert project.parts["mypart"]["source"] == "other"
-    assert project.parts["mypart"]["build-packages"] == ["test-package"]
-
-
-class FakeApplicationWithYamlTransform(FakeApplication):
-    """Application class that adds data in `_extra_yaml_transform`."""
-
-    @override
-    def _extra_yaml_transform(
-        self,
-        yaml_data: dict[str, Any],
-        *,
-        build_on: str,
-        build_for: str | None,
-    ) -> dict[str, Any]:
-        # do not modify the dict passed in
-        new_yaml_data = copy.deepcopy(yaml_data)
-        new_yaml_data["parts"] = {
-            "mypart": {
-                "plugin": "nil",
-                # advanced grammar
-                "build-packages": [
-                    "test-package",
-                    {"to riscv64": "riscv64-package"},
-                    {"to s390x": "s390x-package"},
-                ],
-                "build-environment": [
-                    # project variables
-                    {"hello": "$CRAFT_ARCH_BUILD_ON"},
-                ],
-            }
-        }
-
-        return new_yaml_data
-
-
-@pytest.mark.enable_features("build_secrets")
-def test_process_yaml_from_extra_transform(
-    app_metadata, fake_services, tmp_path, monkeypatch
-):
-    """Test that grammar is applied on data from `_extra_yaml_transform`."""
-    monkeypatch.setenv("SECRET_VAR", "secret-value")
-    project_file = tmp_path / "testcraft.yaml"
-    project_file.write_text(BASIC_PROJECT_YAML)
-
-    app = FakeApplicationWithYamlTransform(app_metadata, fake_services)
-    app.project_dir = tmp_path
-    project = app.get_project(build_for="riscv64")
-
-    # process grammar
-    assert project.parts["mypart"]["build-packages"] == [
-        "test-package",
-        "riscv64-package",
-    ]
-    assert project.parts["mypart"]["build-environment"] == [
-        # evaluate project variables
-        {"hello": get_host_architecture()},
-    ]
-
-
-class FakePartitionsApplication(FakeApplication):
-    """A partition using FakeApplication."""
-
-    @override
-    def _setup_partitions(self, yaml_data) -> list[str]:
-        _ = yaml_data
-        return ["default", "mypartition"]
-
-
-@pytest.fixture
-def environment_partitions_project(monkeypatch, tmp_path):
-    project_dir = tmp_path / "project"
-    project_dir.mkdir()
-    project_path = project_dir / "testcraft.yaml"
-    project_path.write_text(
-        dedent(
-            """
-        name: myproject
-        version: 1.2.3
-        base: ubuntu@24.04
-        platforms:
-          arm64:
-        parts:
-          mypart:
-            plugin: nil
-            source-tag: v$CRAFT_PROJECT_VERSION
-            override-stage: |
-              touch $CRAFT_STAGE/default
-              touch $CRAFT_MYPARTITION_STAGE/partition
-            override-prime: |
-              touch $CRAFT_PRIME/default
-              touch $CRAFT_MYPARTITION_PRIME/partition
-        """
-        )
-    )
-    monkeypatch.chdir(project_dir)
-
-    return project_path
-
-
-@pytest.mark.usefixtures("enable_partitions")
-@pytest.mark.usefixtures("environment_partitions_project")
-def test_partition_application_expand_environment(app_metadata, fake_services):
-    app = FakePartitionsApplication(app_metadata, fake_services)
-    project = app.get_project(build_for=get_host_architecture())
-
-    assert craft_parts.Features().enable_partitions is True
-    # Make sure the project is loaded correctly (from the cwd)
-    assert project is not None
-    assert project.parts["mypart"]["source-tag"] == "v1.2.3"
-    assert project.parts["mypart"]["override-stage"] == dedent(
-        f"""\
-        touch {app.project_dir}/stage/default
-        touch {app.project_dir}/partitions/mypartition/stage/partition
-    """
-    )
-    assert project.parts["mypart"]["override-prime"] == dedent(
-        f"""\
-        touch {app.project_dir}/prime/default
-        touch {app.project_dir}/partitions/mypartition/prime/partition
-    """
-    )
-
-
-@pytest.mark.usefixtures("enable_overlay")
-def test_process_non_grammar_full(non_grammar_app_full):
-    """Test that the non-grammar project is processed correctly.
-
-    The following fields are not included due to not able to be tested in this context:
-    - parse-info
-    """
-    project = non_grammar_app_full.get_project()
-    assert project.parts["mypart"]["plugin"] == "nil"
-    assert project.parts["mypart"]["source"] == "non-grammar-source"
-    assert project.parts["mypart"]["source-checksum"] == "on-amd64-to-riscv64-checksum"
-    assert project.parts["mypart"]["source-branch"] == "riscv64-branch"
-    assert project.parts["mypart"]["source-commit"] == "riscv64-commit"
-    assert project.parts["mypart"]["source-depth"] == 1
-    assert project.parts["mypart"]["source-subdir"] == "riscv64-subdir"
-    assert project.parts["mypart"]["source-submodules"] == [
-        "riscv64-submodules-1",
-        "riscv64-submodules-2",
-    ]
-    assert project.parts["mypart"]["source-tag"] == "riscv64-tag"
-    assert project.parts["mypart"]["source-type"] == "riscv64-type"
-    assert project.parts["mypart"]["disable-parallel"] is True
-    assert project.parts["mypart"]["after"] == ["riscv64-after"]
-    assert project.parts["mypart"]["organize"] == {
-        "riscv64-organize-1": "riscv64-organize-2",
-        "riscv64-organize-3": "riscv64-organize-4",
-    }
-    assert project.parts["mypart"]["overlay"] == [
-        "riscv64-overlay-1",
-        "riscv64-overlay-2",
-    ]
-    assert project.parts["mypart"]["overlay-script"] == "riscv64-overlay-script"
-    assert project.parts["mypart"]["stage"] == ["riscv64-stage-1", "riscv64-stage-2"]
-    assert project.parts["mypart"]["stage-snaps"] == [
-        "riscv64-snap-1",
-        "riscv64-snap-2",
-    ]
-    assert project.parts["mypart"]["stage-packages"] == [
-        "riscv64-package-1",
-        "riscv64-package-2",
-    ]
-    assert project.parts["mypart"]["prime"] == ["riscv64-prime-1", "riscv64-prime-2"]
-    assert project.parts["mypart"]["build-snaps"] == [
-        "riscv64-snap-1",
-        "riscv64-snap-2",
-    ]
-    assert project.parts["mypart"]["build-packages"] == [
-        "riscv64-package-1",
-        "riscv64-package-2",
-    ]
-    assert project.parts["mypart"]["build-environment"] == [
-        {"MY_VAR": "riscv64-value"},
-        {"MY_VAR2": "riscv64-value2"},
-    ]
-    assert project.parts["mypart"]["build-attributes"] == [
-        "rifcv64-attr-1",
-        "rifcv64-attr-2",
-    ]
-    assert project.parts["mypart"]["override-pull"] == "riscv64-override-pull"
-    assert project.parts["mypart"]["override-build"] == "riscv64-override-build"
-    assert project.parts["mypart"]["override-stage"] == "riscv64-override-stage"
-    assert project.parts["mypart"]["override-prime"] == "riscv64-override-prime"
-    assert project.parts["mypart"]["permissions"] == [
-        {"path": "riscv64-perm-1", "owner": 123, "group": 123, "mode": "777"},
-        {"path": "riscv64-perm-2", "owner": 456, "group": 456, "mode": "666"},
-    ]
-
-
-@pytest.mark.usefixtures("enable_overlay")
-def test_process_grammar_full(grammar_app_full):
-    """Test that the nearly all grammar is processed correctly.
-
-    The following fields are not included due to not able to be tested in this context:
-    - parse-info
-    """
-    project = grammar_app_full.get_project()
-    assert project.parts["mypart"]["plugin"] == "nil"
-    assert project.parts["mypart"]["source"] == "on-amd64-to-riscv64"
-    assert project.parts["mypart"]["source-checksum"] == "on-amd64-to-riscv64-checksum"
-    assert project.parts["mypart"]["source-branch"] == "riscv64-branch"
-    assert project.parts["mypart"]["source-commit"] == "riscv64-commit"
-    assert project.parts["mypart"]["source-depth"] == 1
-    assert project.parts["mypart"]["source-subdir"] == "riscv64-subdir"
-    assert project.parts["mypart"]["source-submodules"] == [
-        "riscv64-submodules-1",
-        "riscv64-submodules-2",
-    ]
-    assert project.parts["mypart"]["source-tag"] == "riscv64-tag"
-    assert project.parts["mypart"]["source-type"] == "riscv64-type"
-    assert project.parts["mypart"]["disable-parallel"] is True
-    assert project.parts["mypart"]["after"] == ["riscv64-after"]
-    assert project.parts["mypart"]["organize"] == {
-        "riscv64-organize-1": "riscv64-organize-2",
-        "riscv64-organize-3": "riscv64-organize-4",
-    }
-    assert project.parts["mypart"]["overlay"] == [
-        "riscv64-overlay-1",
-        "riscv64-overlay-2",
-    ]
-    assert project.parts["mypart"]["overlay-script"] == "riscv64-overlay-script"
-    assert project.parts["mypart"]["stage"] == ["riscv64-stage-1", "riscv64-stage-2"]
-    assert project.parts["mypart"]["stage-snaps"] == [
-        "riscv64-snap-1",
-        "riscv64-snap-2",
-    ]
-    assert project.parts["mypart"]["stage-packages"] == [
-        "riscv64-package-1",
-        "riscv64-package-2",
-    ]
-    assert project.parts["mypart"]["prime"] == ["riscv64-prime-1", "riscv64-prime-2"]
-    assert project.parts["mypart"]["build-snaps"] == [
-        "riscv64-snap-1",
-        "riscv64-snap-2",
-    ]
-    assert project.parts["mypart"]["build-packages"] == [
-        "riscv64-package-1",
-        "riscv64-package-2",
-    ]
-    assert project.parts["mypart"]["build-environment"] == [
-        {"MY_VAR": "riscv64-value"},
-        {"MY_VAR2": "riscv64-value2"},
-    ]
-    assert project.parts["mypart"]["build-attributes"] == [
-        "rifcv64-attr-1",
-        "rifcv64-attr-2",
-    ]
-    assert project.parts["mypart"]["override-pull"] == "riscv64-override-pull"
-    assert project.parts["mypart"]["override-build"] == "riscv64-override-build"
-    assert project.parts["mypart"]["override-stage"] == "riscv64-override-stage"
-    assert project.parts["mypart"]["override-prime"] == "riscv64-override-prime"
-    assert project.parts["mypart"]["permissions"] == [
-        {"path": "riscv64-perm-1", "owner": 123, "group": 123, "mode": "777"},
-        {"path": "riscv64-perm-2", "owner": 456, "group": 456, "mode": "666"},
-    ]
-
-
 def test_enable_features(app, mocker):
     calls = []
 
@@ -2008,6 +1224,10 @@ class MyRaisingPlanner(models.BuildPlanner):
         return []
 
 
+@pytest.mark.skipif(
+    date.today() < date(2025, 2, 27),
+    reason="CRAFT-4159, This will no longer be the responsibility of the application.",
+)
 def test_build_planner_errors(tmp_path, monkeypatch, fake_services):
     monkeypatch.chdir(tmp_path)
     app_metadata = craft_application.AppMetadata(
@@ -2057,9 +1277,21 @@ def test_emitter_docs_url(monkeypatch, mocker, app):
     assert spied_init.mock_calls[0].kwargs["docs_base_url"] == expected_url
 
 
-def test_clean_platform(monkeypatch, tmp_path, app_metadata, fake_services, mocker):
+@pytest.mark.skipif(
+    date.today() < date(2025, 3, 1),
+    reason="CRAFT-4163, This will no longer be the responsibility of the application.",
+)
+def test_clean_platform(
+    monkeypatch,
+    tmp_path,
+    app_metadata,
+    fake_services,
+    mocker,
+    fake_project_yaml,
+    fake_provider_service_class,
+):
     """Test that calling "clean --platform=x" correctly filters the build plan."""
-    data = util.safe_yaml_load(StringIO(BASIC_PROJECT_YAML))
+    data = util.safe_yaml_load(StringIO(fake_project_yaml))
     # Put a few different platforms on the project
     arch = util.get_host_architecture()
     build_on_for = {
