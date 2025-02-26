@@ -29,6 +29,7 @@ from dataclasses import dataclass, field
 from functools import cached_property
 from importlib import metadata
 from typing import TYPE_CHECKING, Any, cast, final
+from pydantic.v1.utils import deep_update
 
 import craft_cli
 import craft_parts
@@ -380,7 +381,8 @@ class Application:
         craft_cli.emit.debug(f"Loading project file '{project_path!s}'")
 
         with project_path.open() as file:
-            yaml_data = util.safe_yaml_load(file)
+            yaml_data = util.safe_yaml_load(file, include_line_nums=True)
+        flattened_yaml_data = util.flatten_yaml_data(yaml_data)
 
         host_arch = util.get_host_architecture()
         build_planner = self.app.BuildPlannerClass.from_yaml_data(
@@ -390,7 +392,7 @@ class Application:
         self._build_plan = filter_plan(
             self._full_build_plan, platform, build_for, host_arch
         )
-
+        
         if not build_for:
             # get the build-for arch from the platform
             if platform:
@@ -405,13 +407,13 @@ class Application:
                 build_for = self._build_plan[0].build_for
 
         # validate project grammar
-        GrammarAwareProject.validate_grammar(yaml_data)
+        GrammarAwareProject.validate_grammar(flattened_yaml_data)
 
         build_on = host_arch
 
         # Setup partitions, some projects require the yaml data, most will not
-        self._partitions = self._setup_partitions(yaml_data)
-        yaml_data = self._transform_project_yaml(yaml_data, build_on, build_for)
+        self._partitions = self._setup_partitions(flattened_yaml_data)
+        yaml_data = deep_update(yaml_data, self._transform_project_yaml(flattened_yaml_data, build_on, build_for))
         self.__project = self.app.ProjectClass.from_yaml_data(yaml_data, project_path)
 
         # check if mandatory adoptable fields exist if adopt-info not used

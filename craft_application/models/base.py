@@ -75,7 +75,7 @@ class CraftBaseModel(pydantic.BaseModel):
         :param filepath: The filepath corresponding to ``data``, for error reporting.
         """
         try:
-            return cls.unmarshal(data)
+            return cls.unmarshal(util.flatten_yaml_data(data))
         except pydantic.ValidationError as err:
             cls.transform_pydantic_error(err)
             raise errors.CraftValidationError.from_pydantic(
@@ -83,6 +83,7 @@ class CraftBaseModel(pydantic.BaseModel):
                 file_name=filepath.name,
                 doc_slug=cls.model_reference_slug(),
                 logpath_report=False,
+                validated_object=data
             ) from None
 
     def to_yaml_file(self, path: pathlib.Path) -> None:

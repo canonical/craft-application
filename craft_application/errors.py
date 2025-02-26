@@ -21,7 +21,7 @@ from __future__ import annotations
 
 import os
 from collections.abc import Sequence
-from typing import TYPE_CHECKING
+from typing import Any, TYPE_CHECKING
 
 import yaml
 from craft_cli import CraftError
@@ -71,6 +71,7 @@ class CraftValidationError(CraftError):
         error: pydantic.ValidationError,
         *,
         file_name: str = "yaml file",
+        validated_object: dict[str, Any] | None = None,
         **kwargs: str | bool | int | None,
     ) -> Self:
         """Convert this error from a pydantic ValidationError.
@@ -80,7 +81,7 @@ class CraftValidationError(CraftError):
         :param doc_slug: The optional slug to this error's docs.
         :param kwargs: additional keyword arguments get passed to CraftError
         """
-        message = format_pydantic_errors(error.errors(), file_name=file_name)
+        message = format_pydantic_errors(error.errors(), file_name=file_name, validated_object=validated_object)
         return cls(message, **kwargs)  # type: ignore[arg-type]
 
 

@@ -17,7 +17,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
-from typing import NamedTuple
+from typing import Any, NamedTuple
 
 from pydantic import error_wrappers
 
@@ -44,7 +44,7 @@ class FieldLocationTuple(NamedTuple):
         return cls(field, location)
 
 
-def format_pydantic_error(loc: Iterable[str | int], message: str) -> str:
+def format_pydantic_error(loc: Iterable[str | int], message: str, validated_object : dict[str, Any] | None = None) -> str:
     """Format a single pydantic ErrorDict as a string.
 
     :param loc: An iterable of strings and integers determining the error location.
@@ -53,11 +53,23 @@ def format_pydantic_error(loc: Iterable[str | int], message: str) -> str:
         Can be pulled from the "msg" field of a pydantic ErrorDict.
     :returns: A formatted error.
     """
+    line_num = None
+    if validated_object is not None:
+        for i,l in enumerate(loc):
+            if i == len(loc) - 1 and f"__line__{l}" in validated_object:
+                line_num = validated_object[f"__line__{l}"]
+            elif type(validated_object) == dict and l in validated_object:
+                validated_object = validated_object.get(l)
+            elif type(validated_object) == list and type(l) == int:
+                validated_object = validated_object[l]
+
     field_path = _format_pydantic_error_location(loc)
     message = _format_pydantic_error_message(message)
     field_name, location = FieldLocationTuple.from_str(field_path)
     if location != "top-level":
         location = repr(location)
+    if line_num is not None:
+        location += f" - line {line_num}"
 
     if message == "field required":
         return f"- field {field_name!r} required in {location} configuration"
@@ -67,11 +79,11 @@ def format_pydantic_error(loc: Iterable[str | int], message: str) -> str:
         return f"- duplicate {field_name!r} entry not permitted in {location} configuration"
     if field_path in ("__root__", ""):
         return f"- {message}"
-    return f"- {message} (in field {field_path!r})"
+    return f"- {message} (in field {field_path!r}" + (f" - line {line_num})" if line_num else ")")
 
 
 def format_pydantic_errors(
-    errors: Iterable[error_wrappers.ErrorDict], *, file_name: str = "yaml file"
+    errors: Iterable[error_wrappers.ErrorDict], *, file_name: str = "yaml file", validated_object: dict[str, Any] | None
 ) -> str:
     """Format errors.
 
@@ -86,7 +98,7 @@ def format_pydantic_errors(
     - field: <some field 2>
       reason: <some reason 2>.
     """
-    messages = (format_pydantic_error(error["loc"], error["msg"]) for error in errors)
+    messages = (format_pydantic_error(error["loc"], error["msg"], validated_object) for error in errors)
     return "\n".join((f"Bad {file_name} content:", *messages))
 
 
