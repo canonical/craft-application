@@ -18,7 +18,7 @@
 from __future__ import annotations
 
 import pathlib
-from typing import Any, Dict
+from typing import Any
 
 import pydantic
 from pydantic import model_validator
@@ -42,9 +42,10 @@ class CraftBaseModel(pydantic.BaseModel):
         alias_generator=alias_generator,
         coerce_numbers_to_str=True,
     )
-
+    
     @model_validator(mode="before")
-    def flatten(cls, values: Dict[str, Any]) -> Dict[str, Any]:
+    @classmethod
+    def _flatten(cls, values: dict[str, Any]) -> dict[str, Any]:
         return util.flatten_yaml_data(values)
 
     def marshal(self) -> dict[str, str | list[str] | dict[str, Any]]:

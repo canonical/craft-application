@@ -35,7 +35,12 @@ from craft_application.util.snap_config import (
 )
 from craft_application.util.string import humanize_list, strtobool
 from craft_application.util.system import get_parallel_build_count
-from craft_application.util.yaml import dump_yaml, safe_yaml_load, flatten_yaml_data
+from craft_application.util.yaml import (
+    dump_yaml,
+    safe_yaml_load,
+    safe_yaml_load_with_lines,
+    flatten_yaml_data,
+)
 from craft_application.util.cli import format_timestamp
 
 __all__ = [
@@ -55,6 +60,7 @@ __all__ = [
     "get_host_base",
     "dump_yaml",
     "safe_yaml_load",
+    "safe_yaml_load_with_lines",
     "flatten_yaml_data",
     "retry",
     "get_parallel_build_count",

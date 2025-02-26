@@ -22,7 +22,7 @@ from __future__ import annotations
 
 import os
 from collections.abc import Sequence
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import yaml
 from craft_cli import CraftError

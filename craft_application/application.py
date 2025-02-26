@@ -21,7 +21,6 @@ import argparse
 import importlib
 import os
 import pathlib
-import pydantic
 import signal
 import subprocess
 import sys
@@ -31,11 +30,11 @@ from dataclasses import dataclass, field
 from functools import cached_property
 from importlib import metadata
 from typing import TYPE_CHECKING, Any, cast, final
-from pydantic.v1.utils import deep_update
 
 import craft_cli
 import craft_parts
 import craft_providers
+import pydantic
 from craft_parts.plugins.plugins import PluginType
 from platformdirs import user_cache_path
 
@@ -381,7 +380,7 @@ class Application:
         craft_cli.emit.debug(f"Loading project file '{project_path!s}'")
 
         with project_path.open() as file:
-            yaml_data = util.safe_yaml_load(file, include_line_nums=True)
+            yaml_data = util.safe_yaml_load_with_lines(file)
 
         host_arch = util.get_host_architecture()
         build_planner = self.app.BuildPlannerClass.from_yaml_data(
@@ -421,9 +420,7 @@ class Application:
 
         # Setup partitions, some projects require the yaml data, most will not
         self._partitions = self._setup_partitions(yaml_data)
-        yaml_data = deep_update(
-            yaml_data, self._transform_project_yaml(yaml_data, build_on, build_for)
-        )
+        yaml_data = self._transform_project_yaml(yaml_data, build_on, build_for)
         self.__project = self.app.ProjectClass.from_yaml_data(yaml_data, project_path)
 
         # check if mandatory adoptable fields exist if adopt-info not used

@@ -60,13 +60,13 @@ def format_pydantic_error(
     """
     line_num = None
     if validated_object is not None:
-        for i, l in enumerate(loc):
-            if i == len(loc) - 1 and f"__line__{l}" in validated_object:
-                line_num = validated_object[f"__line__{l}"]
-            elif type(validated_object) == dict and l in validated_object:
-                validated_object = validated_object.get(l)
-            elif type(validated_object) == list and type(l) == int:
-                validated_object = validated_object[l]
+        for i, location in enumerate(loc):
+            if i == len(loc) - 1 and f"__line__{location}" in validated_object:
+                line_num = validated_object[f"__line__{location}"]
+            elif type(validated_object) is dict and location in validated_object:
+                validated_object = validated_object.get(location)
+            elif type(validated_object) is list and type(location) is int:
+                validated_object = validated_object[location]
 
     field_path = _format_pydantic_error_location(loc)
     message = _format_pydantic_error_message(message)

@@ -24,7 +24,7 @@ from typing import TYPE_CHECKING, Any, TextIO, cast, overload
 import yaml
 from yaml.composer import Composer
 from yaml.constructor import Constructor
-from yaml.nodes import ScalarNode
+from yaml.nodes import MappingNode, Node, ScalarNode
 from yaml.resolver import BaseResolver
 
 from craft_application import errors
@@ -100,14 +100,27 @@ class _SafeYamlLoader(yaml.SafeLoader):
             yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, _dict_constructor
         )
 
-    def compose_node(self, parent, index):
+
+class _SafeLineNoLoader(_SafeYamlLoader):
+    def __init__(self, stream: TextIO) -> None:
+        super().__init__(stream)
+
+        self.add_constructor(
+            yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, _dict_constructor
+        )
+
+    def compose_node(self, parent: Node | None, index: int) -> Node:
         # the line number where the previous token has ended (plus empty lines)
         line = self.line
         node = Composer.compose_node(self, parent, index)
         node.__line__ = line + 1
         return node
 
-    def construct_mapping(self, node, deep=False):
+    def construct_mapping(
+        self,
+        node: MappingNode,
+        deep: bool = False,  # noqa: FBT001, FBT002 - used internally by yaml.SafeLoader
+    ) -> dict[Hashable, Any]:
         node_pair_lst = node.value
         node_pair_lst_for_appending = []
 
@@ -121,13 +134,10 @@ class _SafeYamlLoader(yaml.SafeLoader):
             node_pair_lst_for_appending.append((shadow_key_node, shadow_value_node))
 
         node.value = node_pair_lst + node_pair_lst_for_appending
-        mapping = Constructor.construct_mapping(self, node, deep=deep)
-        return mapping
+        return Constructor.construct_mapping(self, node, deep=deep)
 
 
-def safe_yaml_load(
-    stream: TextIO, include_line_nums=False
-) -> Any:  # noqa: ANN401 - The YAML could be anything
+def safe_yaml_load(stream: TextIO) -> Any:  # noqa: ANN401 - The YAML could be anything
     """Equivalent to pyyaml's safe_load function, but constraining duplicate keys.
 
     :param stream: Any text-like IO object.
@@ -136,8 +146,22 @@ def safe_yaml_load(
     try:
         # Silencing S506 ("probable use of unsafe loader") because we override it by
         # using our own safe loader.
-        result = yaml.load(stream, Loader=_SafeYamlLoader)  # noqa: S506
-        return result if include_line_nums else flatten_yaml_data(result)
+        return yaml.load(stream, Loader=_SafeYamlLoader)  # noqa: S506
+    except yaml.YAMLError as error:
+        filename = pathlib.Path(stream.name).name
+        raise errors.YamlError.from_yaml_error(filename, error) from error
+
+
+def safe_yaml_load_with_lines(stream: TextIO) -> Any:  # noqa: ANN401 - The YAML could be anything
+    """Equivalent to pyyaml's safe_load function, but constraining duplicate keys and including line numbers.
+
+    :param stream: Any text-like IO object.
+    :returns: A dict object mapping the yaml.
+    """
+    try:
+        # Silencing S506 ("probable use of unsafe loader") because we override it by
+        # using our own safe loader.
+        return yaml.load(stream, Loader=_SafeLineNoLoader)  # noqa: S506
     except yaml.YAMLError as error:
         filename = pathlib.Path(stream.name).name
         raise errors.YamlError.from_yaml_error(filename, error) from error
@@ -180,9 +204,7 @@ def dump_yaml(data: Any, stream: TextIO | None = None, **kwargs: Any) -> str | N
 
 
 def flatten_yaml_data(data: dict[str, Any]) -> dict[str, Any]:
-    """
-    Recursively flattens a nested dictionary by removing the '__line__' fields.
-    """
+    """Recursively flattens a nested dictionary by removing the '__line__' fields."""
     if type(data) is not dict:
         return data
     return {k: flatten_yaml_data(v) for k, v in data.items() if "__line__" not in k}
