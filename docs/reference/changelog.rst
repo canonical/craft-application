@@ -12,6 +12,10 @@ Services
 
 - A new :doc:`services/project` now handles the creation and management of the project
   for this run of the application.
+- Setting the arguments for a service using the service factory's ``set_kwargs`` is
+  deprecated. Use ``update_kwargs`` instead or file `an issue
+  <https://github.com/canonical/craft-application/issues/new?template=bug.yaml>`_
+  if you still need this method.
 
 Testing
 =======
