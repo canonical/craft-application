@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU Lesser General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Integration tests for ServiceFactory."""
+
 import pytest
 
 from craft_application import services
@@ -27,13 +28,14 @@ def test_gets_dataclass_services(
     fake_lifecycle_service_class,
     fake_provider_service_class,
 ):
-    factory = services.ServiceFactory(
-        app_metadata,
-        project=fake_project,
-        PackageClass=fake_package_service_class,
-        LifecycleClass=fake_lifecycle_service_class,
-        ProviderClass=fake_provider_service_class,
-    )
+    with pytest.warns(DeprecationWarning, match="Use ServiceFactory.register"):
+        factory = services.ServiceFactory(
+            app_metadata,
+            project=fake_project,
+            PackageClass=fake_package_service_class,
+            LifecycleClass=fake_lifecycle_service_class,
+            ProviderClass=fake_provider_service_class,
+        )
 
     check.is_instance(factory.package, services.PackageService)
     check.is_instance(factory.lifecycle, services.LifecycleService)
@@ -62,11 +64,8 @@ def test_gets_registered_services(
 
 
 def test_real_service_error(app_metadata, fake_project):
-    factory = services.ServiceFactory(
-        app_metadata,
-        project=fake_project,
-        PackageClass=services.PackageService,
-    )
+    services.ServiceFactory.register("package", services.PackageService)
+    factory = services.ServiceFactory(app_metadata, project=fake_project)
 
     with pytest.raises(
         TypeError,

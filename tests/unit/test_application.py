@@ -713,7 +713,7 @@ def test_get_arg_or_config(monkeypatch, app, parsed_args, environ, item, expecte
         ),
     ],
 )
-@pytest.mark.usefixtures("emitter")
+@pytest.mark.usefixtures("emitter", "production_mode")
 def test_get_dispatcher_error(
     monkeypatch, check, capsys, app, mock_dispatcher, managed, error, exit_code, message
 ):
@@ -1007,7 +1007,7 @@ def test_run_success_managed_inside_managed(
         ),
     ],
 )
-@pytest.mark.usefixtures("emitter")
+@pytest.mark.usefixtures("emitter", "production_mode")
 def test_run_error(
     monkeypatch,
     capsys,
@@ -1083,7 +1083,6 @@ def test_run_error_debug(monkeypatch, mock_dispatcher, app, fake_project, error)
     mock_dispatcher.load_command.side_effect = error
     mock_dispatcher.pre_parse_args.return_value = {}
     monkeypatch.setattr(sys, "argv", ["testcraft", "pull"])
-    monkeypatch.setenv("CRAFT_DEBUG", "1")
 
     with pytest.raises(error.__class__):
         app.run()
@@ -2200,13 +2199,11 @@ def test_clean_platform(monkeypatch, tmp_path, app_metadata, fake_services, mock
 
 
 class AppConfigCommand(AppCommand):
-
     name: str = "app-config"
     help_msg: str = "Help text"
     overview: str = "Overview"
 
     def fill_parser(self, parser: argparse.ArgumentParser) -> None:
-
         name = self._app.name
         parser.add_argument(
             "app-name",

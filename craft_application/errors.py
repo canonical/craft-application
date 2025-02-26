@@ -17,6 +17,7 @@
 
 All errors inherit from craft_cli.CraftError.
 """
+
 from __future__ import annotations
 
 import os
@@ -103,7 +104,9 @@ class PartsLifecycleError(CraftError):
     @classmethod
     def from_os_error(cls, err: OSError) -> Self:
         """Create a PartsLifecycleError from an OSError."""
-        message = f"{err.filename}: {err.strerror}" if err.filename else err.strerror
+        message = (
+            f"{err.filename}: {err.strerror}" if err.filename else str(err.strerror)
+        )
         details = err.__class__.__name__
         if err.filename:
             details += f": filename: {err.filename!r}"

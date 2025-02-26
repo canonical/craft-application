@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU Lesser General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Shared data for all craft-application tests."""
+
 from __future__ import annotations
 
 import os
@@ -40,6 +41,17 @@ from craft_application.services import service_factory
 
 if TYPE_CHECKING:  # pragma: no cover
     from collections.abc import Iterator
+
+
+@pytest.fixture(autouse=True)
+def debug_mode(monkeypatch):
+    monkeypatch.setenv("CRAFT_DEBUG", "1")
+
+
+@pytest.fixture
+def production_mode(monkeypatch, debug_mode):
+    # This uses debug_mode to ensure that we run after it.
+    monkeypatch.delenv("CRAFT_DEBUG")
 
 
 def _create_fake_build_plan(num_infos: int = 1) -> list[models.BuildInfo]:
@@ -74,7 +86,6 @@ def features(request) -> dict[str, bool]:
 
 
 class FakeConfigModel(craft_application.ConfigModel):
-
     my_str: str
     my_int: int
     my_bool: bool

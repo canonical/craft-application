@@ -658,10 +658,13 @@ def test_instance_fetch_logs_error(
 
     # Setup the build instance and pretend the command inside it finished with error.
     provider_service = setup_fetch_logs_provider(should_have_logfile=True)
-    with pytest.raises(RuntimeError), provider_service.instance(
-        build_info=_get_build_info(),
-        work_dir=pathlib.Path(),
-    ) as mock_instance:
+    with (
+        pytest.raises(RuntimeError),
+        provider_service.instance(
+            build_info=_get_build_info(),
+            work_dir=pathlib.Path(),
+        ) as mock_instance,
+    ):
         raise RuntimeError("Faking an error in the build instance!")
 
     # Now check that the logs from the build instance were collected.

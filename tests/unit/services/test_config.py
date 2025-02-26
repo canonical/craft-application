@@ -178,7 +178,10 @@ def test_snap_config_handler_not_snap(mocker, default_app_metadata):
 )
 def test_snap_config_handler(snap_config_handler, item: str, content: str):
     snap_item = item.replace("_", "-")
-    with pytest_subprocess.FakeProcess.context() as fp, pytest.MonkeyPatch.context() as mp:
+    with (
+        pytest_subprocess.FakeProcess.context() as fp,
+        pytest.MonkeyPatch.context() as mp,
+    ):
         mp.setattr("snaphelpers._ctl.Popen", subprocess.Popen)
         fp.register(
             ["/usr/bin/snapctl", "get", "-d", snap_item],
@@ -246,6 +249,7 @@ def test_default_config_handler_success(default_config_handler, item, expected):
         ),
     ],
 )
+@pytest.mark.usefixtures("production_mode")
 def test_config_service_converts_type(
     monkeypatch: pytest.MonkeyPatch,
     fake_process: pytest_subprocess.FakeProcess,
