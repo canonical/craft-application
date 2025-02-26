@@ -301,7 +301,7 @@ class Application:
                 f"Unable to create/access cache directory: {err.strerror}"
             ) from err
 
-    def _bootstrap_services(self) -> None:
+    def _configure_early_services(self) -> None:
         """Configure early-starting services.
 
         This should only contain configuration for services that are needed during
@@ -336,21 +336,6 @@ class Application:
             build_plan=self._build_plan,
             session_policy=self._fetch_service_policy,
         )
-
-    def _resolve_project_path(self, project_dir: pathlib.Path | None) -> pathlib.Path:
-        """Find the project file for the current project.
-
-        The default implementation simply looks for the project file in the project
-        directory. Applications may wish to override this if the project file could be
-         in multiple places within the project directory.
-        """
-        warnings.warn(
-            DeprecationWarning("NEEDS REMOVING BEFORE MERGE TO MAIN"), stacklevel=1
-        )
-        if project_dir is None:
-            project_dir = self.project_dir
-
-        return (project_dir / f"{self.app.name}.yaml").resolve(strict=True)
 
     def get_project(
         self,
@@ -627,7 +612,7 @@ class Application:
     def run(self) -> int:
         """Bootstrap and run the application."""
         self._setup_logging()
-        self._bootstrap_services()
+        self._configure_early_services()
         self._load_plugins()
         self._initialize_craft_parts()
 

@@ -329,7 +329,7 @@ class ProjectService(base.AppService):
             if not platform:
                 # If we don't have a platform, select the first platform that matches
                 # our build-on and build-for. If we don't have a build-for, select the
-                # first platform that matches our build-for.
+                # first platform that matches our build-on.
                 for name, data in platforms.items():
                     if build_on.value not in data["build-on"]:
                         continue

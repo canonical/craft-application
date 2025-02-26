@@ -429,7 +429,7 @@ def test_lifecycle_error_logging(monkeypatch, tmp_path, create_app):
     app = create_app()
 
     # Workaround until we implement CRAFT-4159
-    app._bootstrap_services()  # We need to access the project service.
+    app._configure_early_services()  # We need to access the project service.
     app.services.get("project").render_once()
     if date.today() < date(2025, 3, 1):
         app._build_plan = [
@@ -469,7 +469,7 @@ def test_runtime_error_logging(monkeypatch, tmp_path, create_app, mocker):
     app = create_app()
 
     # Workaround until we implement CRAFT-4159
-    app._bootstrap_services()  # We need to access the project service.
+    app._configure_early_services()  # We need to access the project service.
     app.services.get("project").render_once()
     if date.today() < date(2025, 3, 1):
         app._build_plan = [
