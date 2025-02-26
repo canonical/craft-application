@@ -45,7 +45,7 @@ class CraftBaseModel(pydantic.BaseModel):
     @model_validator(mode="before")
     def flatten(cls, values: Dict[str, Any]) -> Dict[str, Any]:
         return util.flatten_yaml_data(values)
-    
+
     def marshal(self) -> dict[str, str | list[str] | dict[str, Any]]:
         """Convert to a dictionary."""
         return self.model_dump(mode="json", by_alias=True, exclude_unset=True)
@@ -88,7 +88,7 @@ class CraftBaseModel(pydantic.BaseModel):
                 file_name=filepath.name,
                 doc_slug=cls.model_reference_slug(),
                 logpath_report=False,
-                validated_object=data
+                validated_object=data,
             ) from None
 
     def to_yaml_file(self, path: pathlib.Path) -> None:

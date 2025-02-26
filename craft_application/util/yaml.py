@@ -111,8 +111,12 @@ class _SafeYamlLoader(yaml.SafeLoader):
         node_pair_lst_for_appending = []
 
         for key_node, _ in node_pair_lst:
-            shadow_key_node = ScalarNode(tag=BaseResolver.DEFAULT_SCALAR_TAG, value='__line__' + key_node.value)
-            shadow_value_node = ScalarNode(tag=BaseResolver.DEFAULT_SCALAR_TAG, value=key_node.__line__)
+            shadow_key_node = ScalarNode(
+                tag=BaseResolver.DEFAULT_SCALAR_TAG, value="__line__" + key_node.value
+            )
+            shadow_value_node = ScalarNode(
+                tag=BaseResolver.DEFAULT_SCALAR_TAG, value=key_node.__line__
+            )
             node_pair_lst_for_appending.append((shadow_key_node, shadow_value_node))
 
         node.value = node_pair_lst + node_pair_lst_for_appending
@@ -120,7 +124,9 @@ class _SafeYamlLoader(yaml.SafeLoader):
         return mapping
 
 
-def safe_yaml_load(stream: TextIO, include_line_nums = False) -> Any:  # noqa: ANN401 - The YAML could be anything
+def safe_yaml_load(
+    stream: TextIO, include_line_nums=False
+) -> Any:  # noqa: ANN401 - The YAML could be anything
     """Equivalent to pyyaml's safe_load function, but constraining duplicate keys.
 
     :param stream: Any text-like IO object.
@@ -170,10 +176,10 @@ def dump_yaml(data: Any, stream: TextIO | None = None, **kwargs: Any) -> str | N
     )
 
 
-def flatten_yaml_data(data : dict[str, Any]) -> dict[str, Any]:
+def flatten_yaml_data(data: dict[str, Any]) -> dict[str, Any]:
     """
     Recursively flattens a nested dictionary by removing the '__line__' fields.
     """
     if type(data) is not dict:
         return data
-    return { k:flatten_yaml_data(v) for k,v in data.items() if "__line__" not in k}
+    return {k: flatten_yaml_data(v) for k, v in data.items() if "__line__" not in k}

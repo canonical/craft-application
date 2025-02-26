@@ -44,7 +44,11 @@ class FieldLocationTuple(NamedTuple):
         return cls(field, location)
 
 
-def format_pydantic_error(loc: Iterable[str | int], message: str, validated_object : dict[str, Any] | None = None) -> str:
+def format_pydantic_error(
+    loc: Iterable[str | int],
+    message: str,
+    validated_object: dict[str, Any] | None = None,
+) -> str:
     """Format a single pydantic ErrorDict as a string.
 
     :param loc: An iterable of strings and integers determining the error location.
@@ -55,7 +59,7 @@ def format_pydantic_error(loc: Iterable[str | int], message: str, validated_obje
     """
     line_num = None
     if validated_object is not None:
-        for i,l in enumerate(loc):
+        for i, l in enumerate(loc):
             if i == len(loc) - 1 and f"__line__{l}" in validated_object:
                 line_num = validated_object[f"__line__{l}"]
             elif type(validated_object) == dict and l in validated_object:
@@ -79,11 +83,16 @@ def format_pydantic_error(loc: Iterable[str | int], message: str, validated_obje
         return f"- duplicate {field_name!r} entry not permitted in {location} configuration"
     if field_path in ("__root__", ""):
         return f"- {message}"
-    return f"- {message} (in field {field_path!r}" + (f" - line {line_num})" if line_num else ")")
+    return f"- {message} (in field {field_path!r}" + (
+        f" - line {line_num})" if line_num else ")"
+    )
 
 
 def format_pydantic_errors(
-    errors: Iterable[error_wrappers.ErrorDict], *, file_name: str = "yaml file", validated_object: dict[str, Any] | None = None
+    errors: Iterable[error_wrappers.ErrorDict],
+    *,
+    file_name: str = "yaml file",
+    validated_object: dict[str, Any] | None = None,
 ) -> str:
     """Format errors.
 
@@ -98,7 +107,10 @@ def format_pydantic_errors(
     - field: <some field 2>
       reason: <some reason 2>.
     """
-    messages = (format_pydantic_error(error["loc"], error["msg"], validated_object) for error in errors)
+    messages = (
+        format_pydantic_error(error["loc"], error["msg"], validated_object)
+        for error in errors
+    )
     return "\n".join((f"Bad {file_name} content:", *messages))
 
 

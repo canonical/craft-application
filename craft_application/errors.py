@@ -81,7 +81,9 @@ class CraftValidationError(CraftError):
         :param doc_slug: The optional slug to this error's docs.
         :param kwargs: additional keyword arguments get passed to CraftError
         """
-        message = format_pydantic_errors(error.errors(), file_name=file_name, validated_object=validated_object)
+        message = format_pydantic_errors(
+            error.errors(), file_name=file_name, validated_object=validated_object
+        )
         return cls(message, **kwargs)  # type: ignore[arg-type]
 
 

@@ -392,7 +392,7 @@ class Application:
         self._build_plan = filter_plan(
             self._full_build_plan, platform, build_for, host_arch
         )
-        
+
         if not build_for:
             # get the build-for arch from the platform
             if platform:
@@ -415,15 +415,16 @@ class Application:
                 file_name=project_path.name,
                 doc_slug="common/craft-parts/reference/part_properties",
                 logpath_report=False,
-                validated_object=yaml_data
+                validated_object=yaml_data,
             ) from None
-
 
         build_on = host_arch
 
         # Setup partitions, some projects require the yaml data, most will not
         self._partitions = self._setup_partitions(yaml_data)
-        yaml_data = deep_update(yaml_data, self._transform_project_yaml(yaml_data, build_on, build_for))
+        yaml_data = deep_update(
+            yaml_data, self._transform_project_yaml(yaml_data, build_on, build_for)
+        )
         self.__project = self.app.ProjectClass.from_yaml_data(yaml_data, project_path)
 
         # check if mandatory adoptable fields exist if adopt-info not used
