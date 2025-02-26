@@ -48,6 +48,9 @@ if TYPE_CHECKING:  # pragma: no cover
 
 DEFAULT_FORWARD_ENVIRONMENT_VARIABLES: Iterable[str] = ()
 
+_REQUESTED_SNAPS: dict[str, Snap] = {}
+"""Additional snaps to be installed using provider."""
+
 
 class ProviderService(base.ProjectService):
     """Manager for craft_providers in an application.
@@ -99,6 +102,8 @@ class ProviderService(base.ProjectService):
             self.environment[f"{scheme.upper()}_PROXY"] = value
 
         if self._install_snap:
+            self.snaps.extend(_REQUESTED_SNAPS.values())
+
             if util.is_running_from_snap(self._app.name):
                 # use the aliased name of the snap when injecting
                 name = os.getenv("SNAP_INSTANCE_NAME", self._app.name)
@@ -359,3 +364,16 @@ class ProviderService(base.ProjectService):
         instance_name = self._get_instance_name(work_dir, info)
         emit.debug(f"Cleaning instance {instance_name}")
         provider.clean_project_environments(instance_name=instance_name)
+
+    @classmethod
+    def register_snap(cls, name: str, snap: Snap) -> None:
+        """Register new snap for installation in provider instance."""
+        _REQUESTED_SNAPS[name] = snap
+
+    @classmethod
+    def unregister_snap(cls, name: str) -> None:
+        """Unregister snap from installation."""
+        try:
+            del _REQUESTED_SNAPS[name]
+        except KeyError:
+            raise ValueError(f"Snap not registered: {name!r}")
