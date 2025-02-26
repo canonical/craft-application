@@ -93,7 +93,7 @@ class GrammarAwareProject(_GrammarAwareModel):
         item defined, set it to an empty dictionary. This is distinct from having
         `parts` be invalid, which is not coerced here.
         """
-        data = util.flatten_yaml_data(data)
+        data = util.remove_yaml_lines(data)
         data.setdefault("parts", {})
         return data
 

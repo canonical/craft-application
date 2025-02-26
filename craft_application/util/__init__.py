@@ -39,7 +39,7 @@ from craft_application.util.yaml import (
     dump_yaml,
     safe_yaml_load,
     safe_yaml_load_with_lines,
-    flatten_yaml_data,
+    remove_yaml_lines,
 )
 from craft_application.util.cli import format_timestamp
 
@@ -61,7 +61,7 @@ __all__ = [
     "dump_yaml",
     "safe_yaml_load",
     "safe_yaml_load_with_lines",
-    "flatten_yaml_data",
+    "remove_yaml_lines",
     "retry",
     "get_parallel_build_count",
     "get_hostname",

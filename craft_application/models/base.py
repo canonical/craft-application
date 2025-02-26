@@ -42,11 +42,11 @@ class CraftBaseModel(pydantic.BaseModel):
         alias_generator=alias_generator,
         coerce_numbers_to_str=True,
     )
-    
+
     @model_validator(mode="before")
     @classmethod
     def _flatten(cls, values: dict[str, Any]) -> dict[str, Any]:
-        return util.flatten_yaml_data(values)
+        return util.remove_yaml_lines(values)
 
     def marshal(self) -> dict[str, str | list[str] | dict[str, Any]]:
         """Convert to a dictionary."""
