@@ -188,7 +188,7 @@ def test_project_managed(capsys, monkeypatch, tmp_path, project, create_app):
     app._work_dir = tmp_path
 
     # Workaround until we implement CRAFT-4159
-    app._bootstrap_services()  # We need to access the project service.
+    app._configure_early_services()  # We need to access the project service.
     app.services.get("project").render_once()
     if date.today() < date(2025, 3, 1):
         app._build_plan = [
@@ -235,7 +235,7 @@ def test_project_destructive(
     app = create_app()
 
     # Workaround until we implement CRAFT-4159
-    app._bootstrap_services()  # We need to access the project service.
+    app._configure_early_services()  # We need to access the project service.
     app.services.get("project").render_once()
     if date.today() < date(2025, 3, 1):
         app._build_plan = [
