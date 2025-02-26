@@ -34,6 +34,7 @@ from typing import TYPE_CHECKING, Any, cast, final
 import craft_cli
 import craft_parts
 import craft_providers
+import pydantic
 from craft_parts.plugins.plugins import PluginType
 from platformdirs import user_cache_path
 
@@ -379,7 +380,7 @@ class Application:
         craft_cli.emit.debug(f"Loading project file '{project_path!s}'")
 
         with project_path.open() as file:
-            yaml_data = util.safe_yaml_load(file)
+            yaml_data = util.safe_yaml_load_with_lines(file)
 
         host_arch = util.get_host_architecture()
         build_planner = self.app.BuildPlannerClass.from_yaml_data(
@@ -404,7 +405,16 @@ class Application:
                 build_for = self._build_plan[0].build_for
 
         # validate project grammar
-        GrammarAwareProject.validate_grammar(yaml_data)
+        try:
+            GrammarAwareProject.validate_grammar(yaml_data)
+        except pydantic.ValidationError as err:
+            raise errors.CraftValidationError.from_pydantic(
+                err,
+                file_name=project_path.name,
+                doc_slug="common/craft-parts/reference/part_properties",
+                logpath_report=False,
+                validated_object=yaml_data,
+            ) from None
 
         build_on = host_arch
 
