@@ -83,7 +83,7 @@ def format_pydantic_error(loc: Iterable[str | int], message: str, validated_obje
 
 
 def format_pydantic_errors(
-    errors: Iterable[error_wrappers.ErrorDict], *, file_name: str = "yaml file", validated_object: dict[str, Any] | None
+    errors: Iterable[error_wrappers.ErrorDict], *, file_name: str = "yaml file", validated_object: dict[str, Any] | None = None
 ) -> str:
     """Format errors.
 

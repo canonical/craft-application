@@ -17,9 +17,10 @@
 from __future__ import annotations
 
 import pathlib
-from typing import Any
+from typing import Any, Dict
 
 import pydantic
+from pydantic import model_validator
 from typing_extensions import Self
 
 from craft_application import errors, util
@@ -41,6 +42,10 @@ class CraftBaseModel(pydantic.BaseModel):
         coerce_numbers_to_str=True,
     )
 
+    @model_validator(mode="before")
+    def flatten(cls, values: Dict[str, Any]) -> Dict[str, Any]:
+        return util.flatten_yaml_data(values)
+    
     def marshal(self) -> dict[str, str | list[str] | dict[str, Any]]:
         """Convert to a dictionary."""
         return self.model_dump(mode="json", by_alias=True, exclude_unset=True)
@@ -75,7 +80,7 @@ class CraftBaseModel(pydantic.BaseModel):
         :param filepath: The filepath corresponding to ``data``, for error reporting.
         """
         try:
-            return cls.unmarshal(util.flatten_yaml_data(data))
+            return cls.unmarshal(data)
         except pydantic.ValidationError as err:
             cls.transform_pydantic_error(err)
             raise errors.CraftValidationError.from_pydantic(

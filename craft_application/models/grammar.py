@@ -18,6 +18,7 @@
 from typing import Any
 
 import pydantic
+from craft_application import util
 from craft_grammar.models import Grammar  # type: ignore[import-untyped]
 from pydantic import ConfigDict
 
@@ -91,6 +92,7 @@ class GrammarAwareProject(_GrammarAwareModel):
         item defined, set it to an empty dictionary. This is distinct from having
         `parts` be invalid, which is not coerced here.
         """
+        data = util.flatten_yaml_data(data)
         data.setdefault("parts", {})
         return data
 
