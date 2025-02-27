@@ -109,11 +109,11 @@ class _SafeLineNoLoader(_SafeYamlLoader):
             yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, _dict_constructor
         )
 
-    def compose_node(self, parent: Node | None, index: int) -> Node:
+    def compose_node(self, parent: Node | None, index: int) -> Node | None:
         # the line number where the previous token has ended (plus empty lines)
         line = self.line
         node = Composer.compose_node(self, parent, index)
-        node.__line__ = line + 1
+        setattr(node, "__line__", line + 1)  # noqa: B010 - used internally, prevent mypy error
         return node
 
     def construct_mapping(
@@ -134,7 +134,7 @@ class _SafeLineNoLoader(_SafeYamlLoader):
             node_pair_lst_for_appending.append((shadow_key_node, shadow_value_node))
 
         node.value = node_pair_lst + node_pair_lst_for_appending
-        return Constructor.construct_mapping(self, node, deep=deep)
+        return Constructor.construct_mapping(self, node, deep=deep)  # type: ignore[arg-type]
 
 
 def safe_yaml_load(stream: TextIO) -> Any:  # noqa: ANN401 - The YAML could be anything

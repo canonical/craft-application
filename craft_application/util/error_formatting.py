@@ -17,7 +17,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from typing import Any, NamedTuple
 
 from pydantic import error_wrappers
@@ -46,7 +46,7 @@ class FieldLocationTuple(NamedTuple):
 
 
 def format_pydantic_error(
-    loc: Iterable[str | int],
+    loc: Sequence[str | int],
     message: str,
     validated_object: dict[str, Any] | None = None,
 ) -> str:
@@ -58,18 +58,9 @@ def format_pydantic_error(
         Can be pulled from the "msg" field of a pydantic ErrorDict.
     :returns: A formatted error.
     """
-    line_num = None
-    if validated_object is not None:
-        for i, location in enumerate(loc):
-            if i == len(loc) - 1 and f"__line__{location}" in validated_object:
-                line_num = validated_object[f"__line__{location}"]
-            elif type(validated_object) is dict and location in validated_object:
-                validated_object = validated_object.get(location)
-            elif type(validated_object) is list and type(location) is int:
-                validated_object = validated_object[location]
-
     field_path = _format_pydantic_error_location(loc)
     message = _format_pydantic_error_message(message)
+    line_num = _get_line_number(loc, validated_object)
     field_name, location = FieldLocationTuple.from_str(field_path)
     if location != "top-level":
         location = repr(location)
@@ -139,3 +130,24 @@ def _format_pydantic_error_message(msg: str) -> str:
     if msg:
         msg = msg[0].lower() + msg[1:]
     return msg
+
+
+def _get_line_number(
+    loc: Sequence[str | int], validated_object: dict[str, Any] | None
+) -> int | None:
+    """Return the line number of a key based on its location."""
+    if validated_object is None:
+        return None
+
+    object_value: dict[str, Any] | Sequence[Any] = validated_object
+    line_number: int | None = None
+
+    for i, location in enumerate(loc):
+        if isinstance(location, int) and isinstance(object_value, Sequence):
+            object_value = object_value[location]  # type: ignore[arg-type]
+        elif isinstance(location, str) and isinstance(object_value, dict):
+            if i == len(loc) - 1 and f"__line__{location}" in object_value:
+                line_number = object_value[f"__line__{location}"]
+            elif location in object_value:
+                object_value = object_value[location]
+    return line_number
