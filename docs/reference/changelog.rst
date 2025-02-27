@@ -4,13 +4,17 @@
 Changelog
 *********
 
-4.x.x (YYYY-MMM-DD)
--------------------
+4.10.0 (2025-Feb-27)
+--------------------
 
 Application
 ===========
 
+- Add an API for additional snaps to be installed in the managed instance by the
+  provider service.
 - Increase timeout in fetch-service queries.
+
+For a complete list of commits, check out the `4.10.0`_ release on GitHub.
 
 4.9.1 (2025-Feb-12)
 -------------------
@@ -596,3 +600,4 @@ For a complete list of commits, check out the `2.7.0`_ release on GitHub.
 .. _4.8.3: https://github.com/canonical/craft-application/releases/tag/4.8.3
 .. _4.9.0: https://github.com/canonical/craft-application/releases/tag/4.9.0
 .. _4.9.1: https://github.com/canonical/craft-application/releases/tag/4.9.1
+.. _4.10.0: https://github.com/canonical/craft-application/releases/tag/4.10.0
