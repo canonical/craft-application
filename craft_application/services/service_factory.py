@@ -32,10 +32,10 @@ from typing import (
 import annotated_types
 
 from craft_application import services
-from craft_application.services.buildplan import BuildPlanService
 
 if TYPE_CHECKING:
     from craft_application.application import AppMetadata
+    from craft_application.services.buildplan import BuildPlanService
     from craft_application.services.project import ProjectService
 
 _DEFAULT_SERVICES = {
