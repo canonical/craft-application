@@ -203,8 +203,15 @@ def dump_yaml(data: Any, stream: TextIO | None = None, **kwargs: Any) -> str | N
     )
 
 
-def remove_yaml_lines(data: dict[str, Any]) -> dict[str, Any]:
+def remove_yaml_lines(data: dict[str, Any] | list[Any]) -> dict[str, Any]:
     """Recursively flattens a nested dictionary by removing the '__line__' fields."""
+    if type(data) is list:
+        return [remove_yaml_lines(v) for v in data]  # type: ignore[return-value]
     if type(data) is not dict:
-        return data
-    return {k: remove_yaml_lines(v) for k, v in data.items() if "__line__" not in k}
+        return data  # type: ignore[return-value]
+    # k is only None in one test case
+    return {
+        k: remove_yaml_lines(v)
+        for k, v in data.items()
+        if k is None or "__line__" not in k  # type: ignore[reportUnnecessaryComparison]
+    }
