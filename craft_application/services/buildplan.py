@@ -40,13 +40,13 @@ class BuildPlanService(base.AppService):
 
     def set_platforms(self, *platform: str) -> None:
         """Set the platforms for the build plan."""
-        self._platforms = list(platform)
+        self.__platforms = list(platform)
 
     def set_build_fors(
-        self, *build_for: craft_platforms.DebianArchitecture | Literal["all"]
+        self, *build_for: craft_platforms.DebianArchitecture | str
     ) -> None:
         """Set the build-for (target) platforms for the build plan."""
-        self._build_for = [
+        self.__build_for = [
             target if target == "all" else craft_platforms.DebianArchitecture(target)
             for target in build_for
         ]
@@ -56,8 +56,8 @@ class BuildPlanService(base.AppService):
         """Plan the current build."""
         if not self.__plan:
             self.__plan = self.create_build_plan(
-                platforms=self._platforms or None,
-                build_for=self._build_for or None,
+                platforms=self.__platforms or None,
+                build_for=self.__build_for or None,
                 build_on=[craft_platforms.DebianArchitecture.from_host()],
             )
         return self.__plan

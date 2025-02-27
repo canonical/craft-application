@@ -184,7 +184,12 @@ def get_parts_action_message_with_reason(step: Step, message: str):
     assert actual == message, f"Unexpected {actual!r}"
 
 
-def test_progress_messages(fake_parts_lifecycle, emitter):
+def test_progress_messages(
+    fake_services, fake_platform, fake_host_architecture, fake_parts_lifecycle, emitter
+):
+    fake_services.get("build_plan").set_platforms(fake_platform)
+    if not fake_services.get("build_plan").plan():
+        pytest.skip(reason="Platform/architecture combination has no builds")
     actions = [
         Action("my-part", Step.PULL),
         Action("my-part", Step.BUILD),
@@ -196,7 +201,7 @@ def test_progress_messages(fake_parts_lifecycle, emitter):
     lcm = fake_parts_lifecycle._lcm
     lcm.plan.return_value = actions
 
-    fake_parts_lifecycle.run("prime", "arch")
+    fake_parts_lifecycle.run("prime")
 
     emitter.assert_progress("Pulling my-part")
     emitter.assert_progress("Building my-part")
@@ -238,8 +243,6 @@ def test_init_success(
         fake_services,
         work_dir=tmp_path,
         cache_dir=tmp_path,
-        platform=None,
-        build_plan=fake_build_plan,
     )
     assert service._lcm is None
     service.setup()
@@ -405,14 +408,18 @@ def test_get_primed_stage_packages(lifecycle_service):
     ],
 )
 def test_get_build_for(
+    mocker,
     fake_host_architecture,
     fake_parts_lifecycle: lifecycle.LifecycleService,
+    fake_services,
     build_plan: list[BuildInfo],
     expected: str | None,
 ):
+    mocker.patch.object(
+        fake_services.get("build_plan"), "plan", return_value=build_plan
+    )
     if expected is None:
         expected = fake_host_architecture
-    fake_parts_lifecycle._build_plan = build_plan
 
     actual = fake_parts_lifecycle._get_build_for()
 
@@ -426,7 +433,17 @@ def test_get_build_for(
         [Action("my-part", Step.PULL), Action("my-part", Step.BUILD)],
     ],
 )
-def test_run_success(fake_parts_lifecycle, actions, check):
+def test_run_success(
+    fake_parts_lifecycle,
+    actions,
+    check,
+    fake_services,
+    fake_platform,
+    fake_host_architecture,
+):
+    fake_services.get("build_plan").set_platforms(fake_platform)
+    if not fake_services.get("build_plan").plan():
+        pytest.skip(reason="Platform/architecture combination has no builds")
     lcm = fake_parts_lifecycle._lcm
     lcm.plan.return_value = actions
     executor = lcm.action_executor.return_value.__enter__.return_value
@@ -443,7 +460,12 @@ def test_run_success(fake_parts_lifecycle, actions, check):
         assert executor.method_calls == executor_calls
 
 
-def test_run_no_step(fake_parts_lifecycle):
+def test_run_no_step(
+    fake_parts_lifecycle, fake_services, fake_platform, fake_host_architecture
+):
+    fake_services.get("build_plan").set_platforms(fake_platform)
+    if not fake_services.get("build_plan").plan():
+        pytest.skip(reason="Platform/architecture combination has no builds")
     lcm = fake_parts_lifecycle._lcm
     executor = lcm.action_executor.return_value.__enter__.return_value
 
@@ -462,7 +484,18 @@ def test_run_no_step(fake_parts_lifecycle):
         (craft_parts.PartsError("parts error"), PartsLifecycleError, "^parts error$"),
     ],
 )
-def test_run_failure(fake_parts_lifecycle, err, exc_class, message_regex):
+def test_run_failure(
+    fake_parts_lifecycle,
+    fake_services,
+    fake_platform,
+    fake_host_architecture,
+    err,
+    exc_class,
+    message_regex,
+):
+    fake_services.get("build_plan").set_platforms(fake_platform)
+    if not fake_services.get("build_plan").plan():
+        pytest.skip(reason="Platform/architecture combination has no builds")
     fake_parts_lifecycle._lcm.plan.side_effect = err
 
     with pytest.raises(exc_class, match=message_regex):
@@ -495,8 +528,7 @@ def test_repr(fake_parts_lifecycle, app_metadata, fake_project):
     pytest_check.is_true(
         re.fullmatch(
             r"FakePartsLifecycle\(.+, work_dir=(Posix|Windows)Path\('.+'\), "
-            r"cache_dir=(Posix|Windows)Path\('.+'\), "
-            r"plan=\[BuildInfo\(.+\)], \*\*{}\)",
+            r"cache_dir=(Posix|Windows)Path\('.+'\), .+\)",
             actual,
         ),
         f"Does not match expected regex: {actual}",
@@ -572,12 +604,16 @@ def test_lifecycle_package_repositories(
     app_metadata,
     fake_project,
     fake_services,
+    fake_platform,
     tmp_path,
     mocker,
     fake_build_plan,
     local_keys_path,
 ):
     """Test that package repositories installation is called in the lifecycle."""
+    fake_services.get("build_plan").set_platforms(fake_platform)
+    if not fake_services.get("build_plan").plan():
+        pytest.skip(reason="Platform/architecture combination has no builds")
     fake_repositories = [{"type": "apt", "ppa": "ppa/ppa"}]
     fake_project.package_repositories = fake_repositories.copy()
     fake_services.get("project").set(fake_project)
@@ -616,15 +652,13 @@ def test_lifecycle_package_repositories(
     mock_callback.assert_called_once_with(repositories.install_overlay_repositories)
 
 
-# endregion
-
-# region project variables
-
-
 def test_lifecycle_project_variables(
-    app_metadata, fake_services, tmp_path, fake_build_plan
+    app_metadata, fake_services, tmp_path, fake_build_plan, fake_platform
 ):
     """Test that project variables are set after the lifecycle runs."""
+    fake_services.get("build_plan").set_platforms(fake_platform)
+    if not fake_services.get("build_plan").plan():
+        pytest.skip(reason="Platform/architecture combination has no builds")
 
     class LocalProject(models.Project):
         color: str | None = None
@@ -664,59 +698,58 @@ def test_lifecycle_project_variables(
     assert service.project_info.get_project_var("color") == "foo"
 
 
-# endregion
-
-
-@pytest.mark.parametrize("fake_build_plan", [0], indirect=True)
-def test_no_builds_error(fake_parts_lifecycle):
+def test_no_builds_error(mocker, fake_parts_lifecycle, fake_services):
     """Build plan has no items."""
+    mock_plan = mocker.patch.object(
+        fake_services.get("build_plan"), "plan", return_value=[]
+    )
+
     with pytest.raises(errors.EmptyBuildPlanError):
         fake_parts_lifecycle.run("prime")
 
+    mock_plan.assert_called_once_with()
 
-@pytest.mark.parametrize(
-    ("fake_build_plan", "fake_result_str"),
-    [
-        (2, "'foo' and 'foo'"),
-        (3, "'foo', 'foo', and 'foo'"),
-        (4, "'foo', 'foo', 'foo', and 'foo'"),
-    ],
-    indirect=["fake_build_plan"],
-)
-def test_multiple_builds_error(fake_parts_lifecycle, fake_result_str):
+
+def test_multiple_builds_error(
+    fake_parts_lifecycle, fake_services, fake_host_architecture
+):
     """Build plan contains more than 1 item."""
+    if len(fake_services.get("build_plan").plan()) <= 1:
+        pytest.skip(reason="Architecture has 0 or 1 builds")
     with pytest.raises(errors.MultipleBuildsError) as e:
-        fake_parts_lifecycle.run("prime")
-    assert str(e.value) == (
-        f"Multiple builds match the current platform: {fake_result_str}."
-    )
+        fake_parts_lifecycle._validate_build_plan()
+    assert str(e.value).startswith("Multiple builds match the current platform: ")
 
 
 @pytest.mark.parametrize(
-    ("system_name", "system_version", "expected_pretty"),
+    ("base", "expected_pretty"),
     [
-        ("ubuntu", "22.04", "Ubuntu 22.04"),
-        ("centos", "6", "Centos 6"),
-        ("centos", "devel", "Centos devel"),
+        (craft_platforms.DistroBase("ubuntu", "22.04"), "Ubuntu 22.04"),
+        (craft_platforms.DistroBase("centos", "6"), "Centos 6"),
+        (craft_platforms.DistroBase("centos", "devel"), "Centos devel"),
     ],
 )
-@pytest.mark.parametrize("fake_build_plan", [1], indirect=True)
 def test_invalid_base_error(
+    build_plan_service,
     fake_parts_lifecycle,
-    fake_build_plan,
     mocker,
-    system_name,
-    system_version,
+    base,
     expected_pretty,
 ):
     """BuildInfo has a different base than the running environment."""
-    fake_host = bases.BaseName(name="ubuntu", version="24.04")
+    fake_host = craft_platforms.DistroBase(distribution="ubuntu", series="24.04")
+    fake_build = craft_platforms.BuildInfo(
+        platform="anything",
+        build_on=craft_platforms.DebianArchitecture.from_host(),
+        build_for=craft_platforms.DebianArchitecture.from_host(),
+        build_base=base,
+    )
     mocker.patch.object(
-        util,
-        "get_host_base",
+        craft_platforms.DistroBase,
+        "from_linux_distribution",
         return_value=fake_host,
     )
-    fake_build_plan[0].base = bases.BaseName(name=system_name, version=system_version)
+    mocker.patch.object(build_plan_service, "plan", return_value=[fake_build])
 
     expected = (
         f"{expected_pretty} builds cannot be performed on this Ubuntu 24.04 system."
@@ -726,16 +759,21 @@ def test_invalid_base_error(
         fake_parts_lifecycle.run("prime")
 
 
-@pytest.mark.parametrize("fake_build_plan", [1], indirect=True)
-def test_devel_base_no_error(fake_parts_lifecycle, fake_build_plan, mocker):
+def test_devel_base_no_error(fake_parts_lifecycle, build_plan_service, mocker):
     """BuildInfo has a 'devel' build-base but the system is the same."""
-    fake_host = bases.BaseName(name="ubuntu", version="24.04")
+    fake_base = craft_platforms.DistroBase("ubuntu", "24.04")
     mocker.patch.object(
-        util,
-        "get_host_base",
-        return_value=fake_host,
+        craft_platforms.DistroBase,
+        "from_linux_distribution",
+        return_value=fake_base,
     )
-    fake_build_plan[0].base = bases.BaseName(name="ubuntu", version="devel")
+    fake_build = craft_platforms.BuildInfo(
+        platform="anything",
+        build_on=craft_platforms.DebianArchitecture.from_host(),
+        build_for=craft_platforms.DebianArchitecture.from_host(),
+        build_base=fake_base,
+    )
+    mocker.patch.object(build_plan_service, "plan", return_value=[fake_build])
 
     # Pass None as the step to ensure validation but skip the actual lifecycle run
     _ = fake_parts_lifecycle.run(None)

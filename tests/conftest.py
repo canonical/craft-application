@@ -71,11 +71,8 @@ platforms:
     build-on: [amd64, arm64, ppc64el, riscv64, s390x]
     build-for: [riscv64]
   s390x:
-    build-on: [amd64, arm64, ppc64el, riscv64, s390x]
+    build-on: [amd64, arm64, armhf, i386, ppc64el, riscv64, s390x]
     build-for: [s390x]
-  platform-independent:
-    build-on: [amd64, arm64, ppc64el, riscv64, s390x]
-    build-for: [all]
 
 contact: author@project.org
 issues: https://github.com/canonical/craft-application/issues
@@ -97,11 +94,25 @@ parts:
         "ppc64el",
         "risky",
         "s390x",
-        "platform-independent",
     ]
 )
 def fake_platform(request: pytest.FixtureRequest) -> str:
     return request.param
+
+
+@pytest.fixture
+def platform_independent_project(fake_project_file, fake_project):
+    """Turn the fake project into a platform-independent project.
+
+    This is needed because `build-for: [all]` implies a single platform. So
+    """
+    fake_project.platforms = {
+        "platform-independent": {
+            "build-on": [str(arch) for arch in craft_platforms.DebianArchitecture],
+            "build-for": ["all"],
+        }
+    }
+    fake_project_file.write_text(fake_project.to_yaml_string())
 
 
 @pytest.fixture
@@ -250,6 +261,11 @@ def enable_overlay() -> Iterator[craft_parts.Features]:
     craft_parts.Features.reset()
     yield craft_parts.Features(enable_overlay=True, enable_partitions=enable_partitions)
     craft_parts.Features.reset()
+
+
+@pytest.fixture
+def build_plan_service(fake_services):
+    return fake_services.get("build_plan")
 
 
 @pytest.fixture
