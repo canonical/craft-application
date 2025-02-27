@@ -292,6 +292,32 @@ def test_render_for(
     assert actual_build_on in expected_build_ons
 
 
+@pytest.mark.usefixtures("platform_independent_project", "fake_project_file")
+def test_render_for_platform_independent(
+    project_service: ProjectService,
+    fake_host_architecture,
+):
+    result = project_service.render_for(
+        build_for="all",
+        build_on=fake_host_architecture,
+        platform="platform-independent",
+    )
+
+    assert (
+        result.parts["some-part"]["build-environment"][1]["BUILD_FOR"]
+        != fake_host_architecture
+    )
+
+    # The actual host value can be removed when here when we fix
+    # https://github.com/canonical/craft-parts/issues/1018
+    expected_build_ons = (
+        fake_host_architecture,
+        craft_platforms.DebianArchitecture.from_host().value,
+    )
+    actual_build_on = result.parts["some-part"]["build-environment"][0]["BUILD_ON"]
+    assert actual_build_on in expected_build_ons
+
+
 @pytest.mark.parametrize(
     "build_for", [arch.value for arch in craft_platforms.DebianArchitecture]
 )
@@ -347,11 +373,7 @@ def test_render_once_by_platform(project_service: ProjectService, fake_platform:
         == craft_platforms.DebianArchitecture.from_host().value
     )
     build_for = cast(dict, result.platforms)[fake_platform].build_for[0]
-    # Workaround for https://github.com/canonical/craft-parts/issues/1019
-    if build_for != "all":
-        assert (
-            result.parts["some-part"]["build-environment"][1]["BUILD_FOR"] == build_for
-        )
+    assert result.parts["some-part"]["build-environment"][1]["BUILD_FOR"] == build_for
 
 
 @pytest.mark.usefixtures("fake_project_file")
@@ -379,6 +401,30 @@ def test_render_once_by_build_for(
         assert (
             result.parts["some-part"]["build-environment"][1]["BUILD_FOR"] == build_for
         )
+
+
+@pytest.mark.parametrize(
+    "kwargs",
+    [
+        {"build_for": "all"},
+        {"platform": "platform-independent"},
+        {},
+    ],
+)
+@pytest.mark.usefixtures("platform_independent_project", "fake_project_file")
+def test_render_once_platform_independent(
+    project_service: ProjectService, fake_host_architecture, kwargs
+):
+    result = project_service.render_once(**kwargs)
+
+    assert (
+        result.parts["some-part"]["build-environment"][0]["BUILD_ON"]
+        == fake_host_architecture
+    )
+    assert result.parts["some-part"]["build-environment"][1]["BUILD_FOR"] not in (
+        fake_host_architecture,
+        "all",
+    )
 
 
 def test_get_not_rendered(project_service: ProjectService):
