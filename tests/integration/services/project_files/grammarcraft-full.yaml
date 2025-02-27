@@ -1,0 +1,151 @@
+name: myproject
+version: 1.0
+base: ubuntu@24.04
+platforms:
+  dev-board:
+    build-on: [amd64, riscv64]
+    build-for: [riscv64]
+  mainframe:
+    build-on: [amd64, riscv64]
+    build-for: [s390x]
+parts:
+  mypart:
+    plugin:
+      - on amd64: nil
+      - on s390x: dump
+      - on riscv64: rust
+    source:
+      - on amd64 to s390x: on-amd64-to-s390x
+      - on riscv64 to s390x: on-riscv64-to-s390x
+      - on amd64 to riscv64: on-amd64-to-riscv64
+      - on riscv64 to riscv64: on-riscv64-to-riscv64
+    source-checksum:
+      - to riscv64: to-riscv64-checksum
+      - to s390x: to-s390x-checksum
+    source-branch:
+      - to s390x: s390x-branch
+      - to riscv64: riscv64-branch
+    source-commit:
+      - to riscv64: riscv64-commit
+      - to s390x: s390x-commit
+    source-depth:
+      - to s390x: 2
+      - to riscv64: 1
+    source-subdir:
+      - to riscv64: riscv64-subdir
+      - to s390x: s390x-subdir
+    source-submodules:
+      - to s390x:
+          - s390x-submodules-1
+          - s390x-submodules-2
+      - to riscv64:
+          - riscv64-submodules-1
+          - riscv64-submodules-2
+    source-tag:
+      - to riscv64: riscv64-tag
+      - to s390x: s390x-tag
+    source-type:
+      - to s390x: s390x-type
+      - to riscv64: riscv64-type
+    disable-parallel:
+      - to riscv64: true
+      - else: false
+    after:
+      - to s390x:
+        - s390x-after
+      - to riscv64:
+        - riscv64-after
+    organize:
+      - to riscv64:
+          riscv64-organize-1: riscv64-organize-2
+          riscv64-organize-3: riscv64-organize-4
+      - to s390x:
+          s390x-organize-1: s390x-organize-2
+          s390x-organize-3: s390x-organize-4
+    stage:
+      - to riscv64:
+        - riscv64-stage-1
+        - riscv64-stage-2
+      - to s390x:
+        - s390x-stage-1
+        - s390x-stage-2
+    stage-snaps:
+      - to s390x:
+        - s390x-snap-1
+        - s390x-snap-2
+      - to riscv64:
+        - riscv64-snap-1
+        - riscv64-snap-2
+    stage-packages:
+      - to riscv64:
+        - riscv64-package-1
+        - riscv64-package-2
+      - to s390x:
+        - s390x-package-1
+        - s390x-package-2
+    prime:
+      - to s390x:
+        - s390x-prime-1
+        - s390x-prime-2
+      - to riscv64:
+        - riscv64-prime-1
+        - riscv64-prime-2
+    build-snaps:
+      - to riscv64:
+        - riscv64-snap-1
+        - riscv64-snap-2
+      - to s390x:
+        - s390x-snap-1
+        - s390x-snap-2
+    build-packages:
+      - to s390x:
+        - s390x-package-1
+        - s390x-package-2
+      - to riscv64:
+        - riscv64-package-1
+        - riscv64-package-2
+    build-environment:
+      - to riscv64:
+          - MY_VAR: riscv64-value
+          - MY_VAR2: riscv64-value2
+      - to s390x:
+          - MY_VAR: s390x-value
+          - MY_VAR2: s390x-value2
+    build-attributes:
+      - to s390x:
+        - s390x-attr-1
+        - s390x-attr-2
+      - to riscv64:
+        - rifcv64-attr-1
+        - rifcv64-attr-2
+    override-pull:
+      - to riscv64: riscv64-override-pull
+      - to s390x: s390x-override-pull
+    override-build:
+      - to s390x: s390x-override-build
+      - to riscv64: riscv64-override-build
+    override-stage:
+      - to riscv64: riscv64-override-stage
+      - to s390x: s390x-override-stage
+    override-prime:
+      - to s390x: s390x-override-prime
+      - to riscv64: riscv64-override-prime
+    permissions:
+      - to riscv64:
+        - path: riscv64-perm-1
+          owner: 123
+          group: 123
+          mode: "777"
+        - path: riscv64-perm-2
+          owner: 456
+          group: 456
+          mode: "666"
+      - to s390x:
+        - path: s390x-perm-1
+          owner: 123
+          group: 123
+          mode: "666"
+        - path: s390x-perm-2
+          owner: 456
+          group: 456
+          mode: "777"
