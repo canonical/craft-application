@@ -23,7 +23,6 @@ import pathlib
 import re
 import subprocess
 import sys
-import textwrap
 from datetime import date
 from io import StringIO
 from textwrap import dedent
@@ -31,6 +30,7 @@ from unittest import mock
 
 import craft_cli
 import craft_parts
+import craft_platforms
 import craft_providers
 import pydantic
 import pytest
@@ -270,32 +270,32 @@ def test_log_path(monkeypatch, app, provider_managed, expected):
     assert actual == expected
 
 
-def test_run_managed_success(mocker, app, fake_project, fake_build_plan):
+@pytest.mark.usefixtures("platform_independent_project")
+def test_run_managed_success(mocker, app, fake_host_architecture):
     mock_provider = mock.MagicMock(spec_set=services.ProviderService)
-    app.services.provider = mock_provider
-    app.project = fake_project
-    app._build_plan = fake_build_plan
+    app.services._services["provider"] = mock_provider
     mock_pause = mocker.spy(craft_cli.emit, "pause")
-    arch = get_host_architecture()
 
-    app.run_managed(None, arch)
+    app.run_managed("platform-independent", None)
 
-    assert (
-        mock.call(
-            fake_build_plan[0],
-            work_dir=mock.ANY,
-            clean_existing=False,
-        )
-        in mock_provider.instance.mock_calls
+    mock_provider.instance.assert_called_once_with(
+        craft_platforms.BuildInfo(
+            platform="platform-independent",
+            build_on=fake_host_architecture,
+            build_for="all",
+            build_base=mock.ANY,
+        ),
+        work_dir=mock.ANY,
+        clean_existing=False,
     )
-    mock_pause.assert_called_once()
+    mock_pause.assert_called_once_with()
 
 
 def test_run_managed_failure(app, fake_project, fake_build_plan):
     mock_provider = mock.MagicMock(spec_set=services.ProviderService)
     instance = mock_provider.instance.return_value.__enter__.return_value
     instance.execute_run.side_effect = subprocess.CalledProcessError(1, [])
-    app.services.provider = mock_provider
+    app.services._services["provider"] = mock_provider
     app.project = fake_project
     app._build_plan = fake_build_plan
 
@@ -305,70 +305,77 @@ def test_run_managed_failure(app, fake_project, fake_build_plan):
     assert exc_info.value.brief == "Failed to execute testcraft in instance."
 
 
-def test_run_managed_multiple(app, fake_project):
+def test_run_managed_multiple(app, fake_host_architecture):
     mock_provider = mock.MagicMock(spec_set=services.ProviderService)
-    app.services.provider = mock_provider
-    app.set_project(fake_project)
-
-    arch = get_host_architecture()
-    info1 = BuildInfo("a1", arch, "arch1", bases.BaseName("base", "1"))
-    info2 = BuildInfo("a2", arch, "arch2", bases.BaseName("base", "2"))
-    app._build_plan = [info1, info2]
+    app.services._services["provider"] = mock_provider
 
     app.run_managed(None, None)
 
-    extra_args = {
-        "work_dir": mock.ANY,
-        "clean_existing": False,
-    }
-    assert mock.call(info2, **extra_args) in mock_provider.instance.mock_calls
-    assert mock.call(info1, **extra_args) in mock_provider.instance.mock_calls
+    mock_provider.instance.assert_called_with(
+        craft_platforms.BuildInfo(
+            platform=mock.ANY,
+            build_on=fake_host_architecture,
+            build_for=mock.ANY,
+            build_base=mock.ANY,
+        ),
+        work_dir=mock.ANY,
+        clean_existing=False,
+    )
+
+    assert len(mock_provider.instance.mock_calls) > 1
 
 
-def test_run_managed_specified_arch(app, fake_project):
+@pytest.mark.parametrize("build_for", craft_platforms.DebianArchitecture)
+def test_run_managed_specified_arch(app, fake_host_architecture, build_for):
     mock_provider = mock.MagicMock(spec_set=services.ProviderService)
-    app.services.provider = mock_provider
-    app.set_project(fake_project)
+    app.services._services["provider"] = mock_provider
 
-    arch = get_host_architecture()
-    info1 = BuildInfo("a1", arch, "arch1", bases.BaseName("base", "1"))
-    info2 = BuildInfo("a2", arch, "arch2", bases.BaseName("base", "2"))
-    app._build_plan = [info1, info2]
+    try:
+        app.run_managed(None, build_for)
+    except errors.EmptyBuildPlanError:
+        pytest.skip(
+            reason=f"build-for {build_for} has no build-on {fake_host_architecture}"
+        )
 
-    app.run_managed(None, "arch2")
+    mock_provider.instance.assert_called_with(
+        craft_platforms.BuildInfo(
+            platform=mock.ANY,
+            build_on=fake_host_architecture,
+            build_for=build_for,
+            build_base=mock.ANY,
+        ),
+        work_dir=mock.ANY,
+        clean_existing=False,
+    )
 
-    extra_args = {
-        "work_dir": mock.ANY,
-        "clean_existing": False,
-    }
-    assert mock.call(info2, **extra_args) in mock_provider.instance.mock_calls
-    assert mock.call(info1, **extra_args) not in mock_provider.instance.mock_calls
 
-
-def test_run_managed_specified_platform(app, fake_project):
+def test_run_managed_specified_platform(app, fake_platform, fake_host_architecture):
     mock_provider = mock.MagicMock(spec_set=services.ProviderService)
-    app.services.provider = mock_provider
-    app.set_project(fake_project)
+    app.services._services["provider"] = mock_provider
 
-    arch = get_host_architecture()
-    info1 = BuildInfo("a1", arch, "arch1", bases.BaseName("base", "1"))
-    info2 = BuildInfo("a2", arch, "arch2", bases.BaseName("base", "2"))
-    app._build_plan = [info1, info2]
+    try:
+        app.run_managed(fake_platform, None)
+    except errors.EmptyBuildPlanError:
+        pytest.skip(
+            reason=f"Platform {fake_platform} has no builds on {fake_host_architecture}"
+        )
 
-    app.run_managed("a2", None)
+    mock_provider.instance.assert_called_once_with(
+        craft_platforms.BuildInfo(
+            platform=fake_platform,
+            build_on=fake_host_architecture,
+            build_for=mock.ANY,
+            build_base=mock.ANY,
+        ),
+        work_dir=mock.ANY,
+        clean_existing=False,
+    )
 
-    extra_args = {
-        "work_dir": mock.ANY,
-        "clean_existing": False,
-    }
-    assert mock.call(info2, **extra_args) in mock_provider.instance.mock_calls
-    assert mock.call(info1, **extra_args) not in mock_provider.instance.mock_calls
 
+def test_run_managed_empty_plan(mocker, app):
+    build_plan_service = app.services.get("build_plan")
+    mocker.patch.object(build_plan_service, "plan", return_value=[])
 
-def test_run_managed_empty_plan(app, fake_project):
-    app.set_project(fake_project)
-
-    app._build_plan = []
     with pytest.raises(errors.EmptyBuildPlanError):
         app.run_managed(None, None)
 
@@ -788,221 +795,6 @@ def test_run_error_debug(monkeypatch, mock_dispatcher, app, fake_project, error)
         app.run()
 
 
-_base = bases.BaseName("", "")
-_pc_on_amd64_for_amd64 = BuildInfo(
-    platform="pc", build_on="amd64", build_for="amd64", base=_base
-)
-_pc_on_amd64_for_i386 = BuildInfo(
-    platform="legacy-pc", build_on="amd64", build_for="i386", base=_base
-)
-_amd64_on_amd64_for_amd64 = BuildInfo(
-    platform="amd64", build_on="amd64", build_for="amd64", base=_base
-)
-_i386_on_amd64_for_i386 = BuildInfo(
-    platform="i386", build_on="amd64", build_for="i386", base=_base
-)
-_i386_on_i386_for_i386 = BuildInfo(
-    platform="i386", build_on="i386", build_for="i386", base=_base
-)
-
-
-@pytest.mark.parametrize(
-    ("_id", "plan", "platform", "build_for", "host_arch", "result"),
-    [
-        (0, [_pc_on_amd64_for_amd64], None, None, "amd64", [_pc_on_amd64_for_amd64]),
-        (1, [_pc_on_amd64_for_amd64], "pc", None, "amd64", [_pc_on_amd64_for_amd64]),
-        (2, [_pc_on_amd64_for_amd64], "legacy-pc", None, "amd64", []),
-        (3, [_pc_on_amd64_for_amd64], None, "amd64", "amd64", [_pc_on_amd64_for_amd64]),
-        (4, [_pc_on_amd64_for_amd64], "pc", "amd64", "amd64", [_pc_on_amd64_for_amd64]),
-        (5, [_pc_on_amd64_for_amd64], "legacy-pc", "amd64", "amd64", []),
-        (6, [_pc_on_amd64_for_amd64], None, "i386", "amd64", []),
-        (7, [_pc_on_amd64_for_amd64], None, "amd64", "i386", []),
-        (
-            8,
-            [_pc_on_amd64_for_amd64, _pc_on_amd64_for_i386],
-            None,
-            "i386",
-            "amd64",
-            [_pc_on_amd64_for_i386],
-        ),
-        (
-            9,
-            [_pc_on_amd64_for_amd64, _pc_on_amd64_for_i386],
-            "pc",
-            "amd64",
-            "i386",
-            [],
-        ),
-        (
-            10,
-            [_pc_on_amd64_for_amd64, _pc_on_amd64_for_i386],
-            "legacy-pc",
-            "i386",
-            "amd64",
-            [_pc_on_amd64_for_i386],
-        ),
-        (11, [_pc_on_amd64_for_amd64, _pc_on_amd64_for_i386], None, "i386", "i386", []),
-        (12, [_pc_on_amd64_for_amd64, _pc_on_amd64_for_i386], None, None, "i386", []),
-        (
-            13,
-            [_pc_on_amd64_for_amd64, _pc_on_amd64_for_i386],
-            "legacy-pc",
-            None,
-            "i386",
-            [],
-        ),
-        (
-            14,
-            [_pc_on_amd64_for_amd64, _pc_on_amd64_for_i386],
-            None,
-            None,
-            "amd64",
-            [_pc_on_amd64_for_amd64, _pc_on_amd64_for_i386],
-        ),
-        (
-            15,
-            [_pc_on_amd64_for_amd64, _pc_on_amd64_for_i386],
-            "legacy-pc",
-            None,
-            "amd64",
-            [_pc_on_amd64_for_i386],
-        ),
-        (
-            16,
-            [_pc_on_amd64_for_amd64, _amd64_on_amd64_for_amd64],
-            None,
-            "amd64",
-            "amd64",
-            [_amd64_on_amd64_for_amd64],
-        ),
-        (
-            17,
-            [_pc_on_amd64_for_amd64, _amd64_on_amd64_for_amd64],
-            "amd64",
-            None,
-            "amd64",
-            [_amd64_on_amd64_for_amd64],
-        ),
-        (
-            18,
-            [_pc_on_amd64_for_amd64, _amd64_on_amd64_for_amd64],
-            "amd64",
-            "amd64",
-            "amd64",
-            [_amd64_on_amd64_for_amd64],
-        ),
-        (
-            19,
-            [_pc_on_amd64_for_amd64, _i386_on_amd64_for_i386],
-            None,
-            "i386",
-            "amd64",
-            [_i386_on_amd64_for_i386],
-        ),
-        (
-            20,
-            [_pc_on_amd64_for_amd64, _i386_on_amd64_for_i386],
-            "amd64",
-            None,
-            "amd64",
-            [],
-        ),
-        (
-            21,
-            [
-                _pc_on_amd64_for_amd64,
-                _amd64_on_amd64_for_amd64,
-                _i386_on_amd64_for_i386,
-            ],
-            None,
-            "amd64",
-            "amd64",
-            [_amd64_on_amd64_for_amd64],
-        ),
-        (
-            22,
-            [_pc_on_amd64_for_amd64, _i386_on_amd64_for_i386],
-            "i386",
-            "i386",
-            "amd64",
-            [_i386_on_amd64_for_i386],
-        ),
-        (
-            23,
-            [
-                _pc_on_amd64_for_amd64,
-                _amd64_on_amd64_for_amd64,
-                _i386_on_amd64_for_i386,
-            ],
-            None,
-            "i386",
-            "amd64",
-            [_i386_on_amd64_for_i386],
-        ),
-        (
-            24,
-            [_pc_on_amd64_for_amd64, _amd64_on_amd64_for_amd64],
-            None,
-            "i386",
-            "amd64",
-            [],
-        ),
-        (
-            25,
-            [_pc_on_amd64_for_amd64, _i386_on_amd64_for_i386, _i386_on_i386_for_i386],
-            "amd64",
-            None,
-            "amd64",
-            [],
-        ),
-        (
-            26,
-            [_pc_on_amd64_for_amd64, _i386_on_amd64_for_i386, _i386_on_i386_for_i386],
-            "amd64",
-            None,
-            "i386",
-            [],
-        ),
-        (
-            27,
-            [_pc_on_amd64_for_amd64, _i386_on_amd64_for_i386, _i386_on_i386_for_i386],
-            "i386",
-            None,
-            "amd64",
-            [_i386_on_amd64_for_i386],
-        ),
-        (
-            28,
-            [_pc_on_amd64_for_amd64, _i386_on_amd64_for_i386, _i386_on_i386_for_i386],
-            "i386",
-            None,
-            "i386",
-            [_i386_on_i386_for_i386],
-        ),
-        (
-            29,
-            [_pc_on_amd64_for_amd64, _i386_on_amd64_for_i386, _i386_on_i386_for_i386],
-            None,
-            "i386",
-            "i386",
-            [_i386_on_i386_for_i386],
-        ),
-        (
-            30,
-            [_pc_on_amd64_for_amd64, _i386_on_amd64_for_i386, _i386_on_i386_for_i386],
-            "i386",
-            None,
-            None,
-            [_i386_on_amd64_for_i386, _i386_on_i386_for_i386],
-        ),
-    ],
-)
-@pytest.mark.usefixtures("_id")
-def test_filter_plan(mocker, plan, platform, build_for, host_arch, result):
-    mocker.patch("craft_application.util.get_host_architecture", return_value=host_arch)
-    assert application.filter_plan(plan, platform, build_for, host_arch) == result
-
-
 @pytest.mark.usefixtures("fake_project_file", "in_project_dir")
 def test_work_dir_project_non_managed(monkeypatch, app_metadata, fake_services):
     monkeypatch.setenv(fake_services.ProviderClass.managed_mode_env_var, "0")
@@ -1222,43 +1014,6 @@ class MyRaisingPlanner(models.BuildPlanner):
     @override
     def get_build_plan(self) -> list[BuildInfo]:
         return []
-
-
-@pytest.mark.skipif(
-    date.today() < date(2025, 2, 27),
-    reason="CRAFT-4159, This will no longer be the responsibility of the application.",
-)
-def test_build_planner_errors(tmp_path, monkeypatch, fake_services):
-    monkeypatch.chdir(tmp_path)
-    app_metadata = craft_application.AppMetadata(
-        "testcraft",
-        "A fake app for testing craft-application",
-        BuildPlannerClass=MyRaisingPlanner,
-        source_ignore_patterns=["*.snap", "*.charm", "*.starcraft"],
-    )
-    app = FakeApplication(app_metadata, fake_services)
-    project_contents = textwrap.dedent(
-        """\
-        name: my-project
-        base: ubuntu@24.04
-        value1: 10
-        value2: "banana"
-        platforms:
-          amd64:
-        """
-    ).strip()
-    project_path = tmp_path / "testcraft.yaml"
-    project_path.write_text(project_contents)
-
-    with pytest.raises(errors.CraftValidationError) as err:
-        app.get_project()
-
-    expected = (
-        "Bad testcraft.yaml content:\n"
-        "- bad value1: 10 (in field 'value1')\n"
-        "- bad value2: banana (in field 'value2')"
-    )
-    assert str(err.value) == expected
 
 
 def test_emitter_docs_url(monkeypatch, mocker, app):

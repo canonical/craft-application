@@ -129,7 +129,6 @@ class Application:
         self._global_arguments: list[craft_cli.GlobalArgument] = [GLOBAL_VERSION]
         self._cli_loggers = DEFAULT_CLI_LOGGERS | set(extra_loggers)
         self._full_build_plan: list[models.BuildInfo] = []
-        self._build_plan: list[models.BuildInfo] = []
         self._partitions: list[str] | None = None
         # Cached project object, allows only the first time we load the project
         # to specify things like the project directory.
@@ -322,18 +321,15 @@ class Application:
             "lifecycle",
             cache_dir=self.cache_dir,
             work_dir=self._work_dir,
-            build_plan=self._build_plan,
             partitions=self._partitions,
         )
         self.services.update_kwargs(
             "provider",
             work_dir=self._work_dir,
-            build_plan=self._build_plan,
             provider_name=provider_name,
         )
         self.services.update_kwargs(
             "fetch",
-            build_plan=self._build_plan,
             session_policy=self._fetch_service_policy,
         )
 
@@ -375,17 +371,18 @@ class Application:
 
     def run_managed(self, platform: str | None, build_for: str | None) -> None:
         """Run the application in a managed instance."""
-        if not self._build_plan:
+        build_planner = self.services.get("build_plan")
+        if platform:
+            build_planner.set_platforms(platform)
+        if build_for:
+            build_planner.set_build_fors(build_for)
+        plan = build_planner.plan()
+
+        if not plan:
             raise errors.EmptyBuildPlanError
 
         extra_args: dict[str, Any] = {}
-        for build_info in self._build_plan:
-            if platform and platform != build_info.platform:
-                continue
-
-            if build_for and build_for != build_info.build_for:
-                continue
-
+        for build_info in plan:
             env = {
                 "CRAFT_PLATFORM": build_info.platform,
                 "CRAFT_VERBOSITY_LEVEL": craft_cli.emit.get_mode().name,
