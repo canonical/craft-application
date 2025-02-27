@@ -37,6 +37,7 @@ import craft_providers
 import pydantic
 from craft_parts.plugins.plugins import PluginType
 from platformdirs import user_cache_path
+from pydantic.v1.utils import deep_update
 
 from craft_application import _config, commands, errors, grammar, models, secrets, util
 from craft_application.errors import PathInvalidError
@@ -420,7 +421,12 @@ class Application:
 
         # Setup partitions, some projects require the yaml data, most will not
         self._partitions = self._setup_partitions(yaml_data)
-        yaml_data = self._transform_project_yaml(yaml_data, build_on, build_for)
+
+        # Apply transformations to base yaml, then update to preserve line numbers
+        yaml_base = util.remove_yaml_lines(yaml_data)
+        yaml_update = self._transform_project_yaml(yaml_base, build_on, build_for)
+        yaml_data = deep_update(yaml_data, yaml_update)
+
         self.__project = self.app.ProjectClass.from_yaml_data(yaml_data, project_path)
 
         # check if mandatory adoptable fields exist if adopt-info not used
