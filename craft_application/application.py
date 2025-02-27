@@ -34,8 +34,10 @@ from typing import TYPE_CHECKING, Any, cast, final
 import craft_cli
 import craft_parts
 import craft_providers
+import pydantic
 from craft_parts.plugins.plugins import PluginType
 from platformdirs import user_cache_path
+from pydantic.v1.utils import deep_update
 
 from craft_application import _config, commands, errors, grammar, models, secrets, util
 from craft_application.errors import PathInvalidError
@@ -379,7 +381,7 @@ class Application:
         craft_cli.emit.debug(f"Loading project file '{project_path!s}'")
 
         with project_path.open() as file:
-            yaml_data = util.safe_yaml_load(file)
+            yaml_data = util.safe_yaml_load_with_lines(file)
 
         host_arch = util.get_host_architecture()
         build_planner = self.app.BuildPlannerClass.from_yaml_data(
@@ -404,13 +406,27 @@ class Application:
                 build_for = self._build_plan[0].build_for
 
         # validate project grammar
-        GrammarAwareProject.validate_grammar(yaml_data)
+        try:
+            GrammarAwareProject.validate_grammar(yaml_data)
+        except pydantic.ValidationError as err:
+            raise errors.CraftValidationError.from_pydantic(
+                err,
+                file_name=project_path.name,
+                doc_slug="common/craft-parts/reference/part_properties",
+                logpath_report=False,
+                validated_object=yaml_data,
+            ) from None
 
         build_on = host_arch
 
         # Setup partitions, some projects require the yaml data, most will not
         self._partitions = self._setup_partitions(yaml_data)
-        yaml_data = self._transform_project_yaml(yaml_data, build_on, build_for)
+
+        # Apply transformations to base yaml, then update to preserve line numbers
+        yaml_base = util.remove_yaml_lines(yaml_data)
+        yaml_update = self._transform_project_yaml(yaml_base, build_on, build_for)
+        yaml_data = deep_update(yaml_data, yaml_update)
+
         self.__project = self.app.ProjectClass.from_yaml_data(yaml_data, project_path)
 
         # check if mandatory adoptable fields exist if adopt-info not used

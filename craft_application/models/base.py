@@ -21,6 +21,7 @@ import pathlib
 from typing import Any
 
 import pydantic
+from pydantic import model_validator
 from typing_extensions import Self
 
 from craft_application import errors, util
@@ -41,6 +42,11 @@ class CraftBaseModel(pydantic.BaseModel):
         alias_generator=alias_generator,
         coerce_numbers_to_str=True,
     )
+
+    @model_validator(mode="before")
+    @classmethod
+    def _flatten(cls, values: dict[str, Any]) -> dict[str, Any]:
+        return util.remove_yaml_lines(values)
 
     def marshal(self) -> dict[str, str | list[str] | dict[str, Any]]:
         """Convert to a dictionary."""
@@ -84,6 +90,7 @@ class CraftBaseModel(pydantic.BaseModel):
                 file_name=filepath.name,
                 doc_slug=cls.model_reference_slug(),
                 logpath_report=False,
+                validated_object=data,
             ) from None
 
     def to_yaml_file(self, path: pathlib.Path) -> None:
