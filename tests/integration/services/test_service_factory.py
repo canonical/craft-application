@@ -24,8 +24,10 @@ def test_gets_dataclass_services(
     check,
     app_metadata,
     fake_project,
+    project_path,
     fake_package_service_class,
     fake_lifecycle_service_class,
+    fake_project_service_class,
     fake_provider_service_class,
 ):
     with pytest.warns(DeprecationWarning, match="Use ServiceFactory.register"):
@@ -34,8 +36,11 @@ def test_gets_dataclass_services(
             project=fake_project,
             PackageClass=fake_package_service_class,
             LifecycleClass=fake_lifecycle_service_class,
+            ProjectClass=fake_project_service_class,
             ProviderClass=fake_provider_service_class,
         )
+    factory.update_kwargs("project", project_dir=project_path)
+    factory.get("project").set(fake_project)  # type: ignore[reportAttributeAccessIssue]
 
     check.is_instance(factory.package, services.PackageService)
     check.is_instance(factory.lifecycle, services.LifecycleService)
@@ -45,22 +50,27 @@ def test_gets_dataclass_services(
 def test_gets_registered_services(
     check,
     app_metadata,
+    project_path,
     fake_project,
     fake_package_service_class,
     fake_lifecycle_service_class,
     fake_provider_service_class,
+    fake_project_service_class,
 ):
     services.ServiceFactory.register("package", fake_package_service_class)
+    services.ServiceFactory.register("project", fake_project_service_class)
     services.ServiceFactory.register("lifecycle", fake_lifecycle_service_class)
     services.ServiceFactory.register("provider", fake_provider_service_class)
     factory = services.ServiceFactory(
         app_metadata,
-        project=fake_project,
     )
+    factory.update_kwargs("project", project_dir=project_path)
+    factory.get("project").set(fake_project)  # type: ignore[reportAttributeAccessIssue]
 
-    check.is_instance(factory.package, services.PackageService)
-    check.is_instance(factory.lifecycle, services.LifecycleService)
-    check.is_instance(factory.provider, services.ProviderService)
+    check.is_instance(factory.get("package"), services.PackageService)
+    check.is_instance(factory.get("project"), services.ProjectService)
+    check.is_instance(factory.get("lifecycle"), services.LifecycleService)
+    check.is_instance(factory.get("provider"), services.ProviderService)
 
 
 def test_real_service_error(app_metadata, fake_project):
