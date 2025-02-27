@@ -47,9 +47,17 @@ parts:
       - python3-apt
     organize:
       usr/lib/python3/dist-packages/*: lib/python3.12/site-packages
+    build-attributes:
+      - enable-patchelf
+  libs:
+    plugin: nil
+    stage-packages:
+      - libgit2-1.7
+    build-attributes:
+      - enable-patchelf
   testcraft:
     source: .
-    after: [python-apt]
+    after: [python-apt, libs]
     plugin: nil # Real crafts should just use the uv plugin.
     build-snaps:
       - astral-uv
@@ -65,6 +73,8 @@ parts:
       - UV_PYTHON: /usr/bin/python3.12
       - UV_PROJECT_ENVIRONMENT: "${CRAFT_PART_INSTALL}"
       - MAKEOPTS: -j$(nproc --all)
+    build-attributes:
+      - enable-patchelf
     override-build: |
       uv venv --relocatable --allow-existing "${CRAFT_PART_INSTALL}"
       uv sync --no-dev --no-group dev-plucky --no-editable --reinstall
