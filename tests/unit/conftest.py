@@ -37,14 +37,11 @@ def project_service(app_metadata, fake_services, project_path):
 
 
 @pytest.fixture
-def provider_service(
-    app_metadata, fake_project, fake_build_plan, fake_services, tmp_path
-):
+def provider_service(app_metadata, fake_project, fake_services, tmp_path):
     return services.ProviderService(
         app_metadata,
         fake_services,
         work_dir=tmp_path,
-        build_plan=fake_build_plan,
     )
 
 

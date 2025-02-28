@@ -141,6 +141,22 @@ def fake_project(fake_project_yaml) -> models.Project:
         return models.Project.unmarshal(yaml.safe_yaml_load(project_io))
 
 
+@pytest.fixture(
+    params=[
+        craft_platforms.DistroBase("ubuntu", "18.04"),
+        craft_platforms.DistroBase("ubuntu", "20.04"),
+        craft_platforms.DistroBase("ubuntu", "22.04"),
+        craft_platforms.DistroBase("ubuntu", "24.04"),
+        craft_platforms.DistroBase("ubuntu", "24.10"),
+        craft_platforms.DistroBase("ubuntu", "devel"),
+        craft_platforms.DistroBase("almalinux", "9"),
+    ],
+    scope="session",
+)
+def fake_base(request: pytest.FixtureRequest):
+    return request.param
+
+
 def _create_fake_build_plan(num_infos: int = 1) -> list[models.BuildInfo]:
     """Create a build plan that is able to execute on the running system."""
     arch = util.get_host_architecture()
@@ -335,7 +351,7 @@ def fake_project_service_class(fake_project) -> type[services.ProjectService]:
 
 
 @pytest.fixture
-def fake_provider_service_class(fake_build_plan, project_path):
+def fake_provider_service_class(project_path):
     class FakeProviderService(services.ProviderService):
         def __init__(
             self,
@@ -346,7 +362,6 @@ def fake_provider_service_class(fake_build_plan, project_path):
                 app,
                 services,
                 work_dir=project_path,
-                build_plan=fake_build_plan,
             )
 
     return FakeProviderService
