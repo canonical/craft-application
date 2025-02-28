@@ -30,7 +30,6 @@ import yaml
 from craft_cli import CraftError
 from craft_providers import bases
 
-from craft_application import models
 from craft_application.util.error_formatting import format_pydantic_errors
 from craft_application.util.string import humanize_list
 
@@ -273,8 +272,7 @@ class MultipleBuildsError(CraftError):
 
     def __init__(
         self,
-        matching_builds: Sequence[craft_platforms.BuildInfo | models.BuildInfo]
-        | None = None,
+        matching_builds: Sequence[craft_platforms.BuildInfo] | None = None,
     ) -> None:
         message = "Multiple builds match the current platform"
         if matching_builds:

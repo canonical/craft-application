@@ -23,12 +23,11 @@ import craft_cli
 import craft_platforms
 import pytest
 import pytest_check
-from craft_providers.bases import BaseName
 from typing_extensions import override
 
 import craft_application
 import craft_application.commands
-from craft_application import models, util
+from craft_application import util
 from craft_application.util import yaml
 
 
@@ -226,11 +225,11 @@ def test_project_destructive(
     app.services.get("project").render_once()
     if date.today() < date(2025, 3, 1):
         app._build_plan = [
-            models.BuildInfo(
+            craft_platforms.BuildInfo(
                 platform=next(iter(app.services.get("project").get().platforms)),
                 build_on=craft_platforms.DebianArchitecture.from_host(),
                 build_for=craft_platforms.DebianArchitecture.from_host(),
-                base=BaseName("ubuntu", "22.04"),
+                build_base=craft_platforms.DistroBase("ubuntu", "22.04"),
             )
         ]
 
@@ -402,11 +401,11 @@ def test_lifecycle_error_logging(monkeypatch, tmp_path, create_app):
     app.services.get("project").render_once()
     if date.today() < date(2025, 3, 1):
         app._build_plan = [
-            models.BuildInfo(
+            craft_platforms.BuildInfo(
                 platform=next(iter(app.services.get("project").get().platforms)),
                 build_on=craft_platforms.DebianArchitecture.from_host(),
                 build_for=craft_platforms.DebianArchitecture.from_host(),
-                base=BaseName("ubuntu", "22.04"),
+                build_base=craft_platforms.DistroBase("ubuntu", "22.04"),
             )
         ]
 
@@ -442,11 +441,11 @@ def test_runtime_error_logging(monkeypatch, tmp_path, create_app, mocker):
     app.services.get("project").render_once()
     if date.today() < date(2025, 3, 1):
         app._build_plan = [
-            models.BuildInfo(
+            craft_platforms.BuildInfo(
                 platform=next(iter(app.services.get("project").get().platforms)),
                 build_on=craft_platforms.DebianArchitecture.from_host(),
                 build_for=craft_platforms.DebianArchitecture.from_host(),
-                base=BaseName("ubuntu", "22.04"),
+                build_base=craft_platforms.DistroBase("ubuntu", "22.04"),
             )
         ]
 
