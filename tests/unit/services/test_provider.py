@@ -258,7 +258,10 @@ def test_get_lxd_provider(monkeypatch, provider_service, lxd_remote, check):
 )
 def test_get_instance_name(platform, platform_str, new_dir, provider_service):
     build_info = craft_platforms.BuildInfo(
-        platform, "riscv64", "riscv64", bases.BaseName("ubuntu", "24.04")
+        platform,
+        craft_platforms.DebianArchitecture.RISCV64,
+        craft_platforms.DebianArchitecture.RISCV64,
+        craft_platforms.DistroBase("ubuntu", "24.04"),
     )
     inode_number = str(new_dir.stat().st_ino)
     provider_service._build_plan = [build_info]

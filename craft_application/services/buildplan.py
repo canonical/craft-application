@@ -47,7 +47,7 @@ class BuildPlanService(base.AppService):
     ) -> None:
         """Set the build-for (target) platforms for the build plan."""
         self.__build_for = [
-            target if target == "all" else craft_platforms.DebianArchitecture(target)
+            "all" if target == "all" else craft_platforms.DebianArchitecture(target)
             for target in build_for
         ]
 
