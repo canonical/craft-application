@@ -62,9 +62,7 @@ class FakePartsLifecycle(lifecycle.LifecycleService):
 
 
 @pytest.fixture
-def fake_parts_lifecycle(
-    app_metadata, fake_project, fake_services, tmp_path, fake_build_plan
-):
+def fake_parts_lifecycle(app_metadata, fake_project, fake_services, tmp_path):
     work_dir = tmp_path / "work"
     cache_dir = tmp_path / "cache"
     fake_service = FakePartsLifecycle(
@@ -72,7 +70,6 @@ def fake_parts_lifecycle(
         fake_services,
         work_dir=work_dir,
         cache_dir=cache_dir,
-        build_plan=fake_build_plan,
     )
     fake_service.setup()
     return fake_service
@@ -235,9 +232,7 @@ def test_get_step_failure(step_name):
 
 # endregion
 # region PartsLifecycle tests
-def test_init_success(
-    app_metadata, fake_project, fake_services, tmp_path, fake_build_plan
-):
+def test_init_success(app_metadata, fake_project, fake_services, tmp_path):
     service = lifecycle.LifecycleService(
         app_metadata,
         fake_services,
@@ -270,7 +265,6 @@ def test_init_parts_error(
     tmp_path,
     error,
     expected,
-    fake_build_plan,
 ):
     mock_lifecycle = mock.Mock(side_effect=error)
     monkeypatch.setattr(lifecycle, "LifecycleManager", mock_lifecycle)
@@ -282,7 +276,6 @@ def test_init_parts_error(
         work_dir=tmp_path,
         cache_dir=tmp_path,
         platform=None,
-        build_plan=fake_build_plan,
     )
 
     with pytest.raises(type(expected)) as exc_info:
@@ -292,7 +285,7 @@ def test_init_parts_error(
 
 
 def test_init_with_feature_package_repositories(
-    app_metadata, fake_project, fake_services, tmp_path, fake_build_plan
+    app_metadata, fake_project, fake_services, tmp_path
 ):
     package_repositories = [{"type": "apt", "ppa": "ppa/ppa"}]
     fake_project.package_repositories = package_repositories.copy()
@@ -304,7 +297,6 @@ def test_init_with_feature_package_repositories(
         work_dir=tmp_path,
         cache_dir=tmp_path,
         platform=None,
-        build_plan=fake_build_plan,
     )
     assert service._lcm is None
     service.setup()
@@ -313,9 +305,7 @@ def test_init_with_feature_package_repositories(
 
 
 @pytest.mark.usefixtures("enable_partitions")
-def test_init_with_partitions(
-    app_metadata, fake_project, fake_services, tmp_path, fake_build_plan
-):
+def test_init_with_partitions(app_metadata, fake_project, fake_services, tmp_path):
     service = lifecycle.LifecycleService(
         app_metadata,
         fake_services,
@@ -323,7 +313,6 @@ def test_init_with_partitions(
         work_dir=tmp_path,
         cache_dir=tmp_path,
         platform=None,
-        build_plan=fake_build_plan,
         partitions=["default", "mypartition"],
     )
     assert service._lcm is None
@@ -607,7 +596,6 @@ def test_lifecycle_package_repositories(
     fake_platform,
     tmp_path,
     mocker,
-    fake_build_plan,
     local_keys_path,
 ):
     """Test that package repositories installation is called in the lifecycle."""
@@ -626,7 +614,6 @@ def test_lifecycle_package_repositories(
         work_dir=work_dir,
         cache_dir=tmp_path / "cache",
         platform=None,
-        build_plan=fake_build_plan,
     )
     service.setup()
     mocker.patch.object(service, "_get_local_keys_path", return_value=local_keys_path)
@@ -653,7 +640,7 @@ def test_lifecycle_package_repositories(
 
 
 def test_lifecycle_project_variables(
-    app_metadata, fake_services, tmp_path, fake_build_plan, fake_platform
+    app_metadata, fake_services, tmp_path, fake_platform
 ):
     """Test that project variables are set after the lifecycle runs."""
     fake_services.get("build_plan").set_platforms(fake_platform)
@@ -685,7 +672,6 @@ def test_lifecycle_project_variables(
         work_dir=work_dir,
         cache_dir=tmp_path / "cache",
         platform=None,
-        build_plan=fake_build_plan,
     )
     service._project = fake_project
     service._lcm = mock.MagicMock(spec=LifecycleManager)

@@ -291,13 +291,12 @@ def test_run_managed_success(mocker, app, fake_host_architecture):
     mock_pause.assert_called_once_with()
 
 
-def test_run_managed_failure(app, fake_project, fake_build_plan):
+def test_run_managed_failure(app, fake_project):
     mock_provider = mock.MagicMock(spec_set=services.ProviderService)
     instance = mock_provider.instance.return_value.__enter__.return_value
     instance.execute_run.side_effect = subprocess.CalledProcessError(1, [])
     app.services._services["provider"] = mock_provider
     app.project = fake_project
-    app._build_plan = fake_build_plan
 
     with pytest.raises(craft_providers.ProviderError) as exc_info:
         app.run_managed(None, get_host_architecture())

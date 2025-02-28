@@ -54,7 +54,6 @@ class FakeFetchService(services.FetchService):
         self.calls.append(f"shutdown({force})")
 
 
-@pytest.mark.parametrize("fake_build_plan", [2], indirect=True)
 @pytest.mark.parametrize(
     ("pack_args", "expected_calls", "expected_clean_existing"),
     [

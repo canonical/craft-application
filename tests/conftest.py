@@ -157,13 +157,6 @@ def fake_base(request: pytest.FixtureRequest):
     return request.param
 
 
-def _create_fake_build_plan(num_infos: int = 1) -> list[models.BuildInfo]:
-    """Create a build plan that is able to execute on the running system."""
-    arch = util.get_host_architecture()
-    base = util.get_host_base()
-    return [models.BuildInfo("foo", arch, arch, base)] * num_infos
-
-
 @pytest.fixture(autouse=True)
 def reset_services():
     yield
@@ -232,12 +225,6 @@ def app_metadata_docs() -> craft_application.AppMetadata:
 
 
 @pytest.fixture
-def fake_build_plan(request) -> list[models.BuildInfo]:
-    num_infos = getattr(request, "param", 1)
-    return _create_fake_build_plan(num_infos)
-
-
-@pytest.fixture
 def full_build_plan(mocker) -> list[models.BuildInfo]:
     """A big build plan with multiple bases and build-for targets."""
     host_arch = util.get_host_architecture()
@@ -286,7 +273,7 @@ def build_plan_service(fake_services):
 
 @pytest.fixture
 def lifecycle_service(
-    app_metadata, fake_project, fake_services, fake_build_plan, mocker, tmp_path
+    app_metadata, fake_project, fake_services, mocker, tmp_path
 ) -> services.LifecycleService:
     work_dir = tmp_path / "work"
     cache_dir = tmp_path / "cache"
@@ -298,7 +285,6 @@ def lifecycle_service(
         work_dir=work_dir,
         cache_dir=cache_dir,
         platform=None,
-        build_plan=fake_build_plan,
     )
     service.setup()
     mocker.patch.object(
@@ -386,7 +372,7 @@ def fake_package_service_class():
 
 
 @pytest.fixture
-def fake_lifecycle_service_class(tmp_path, fake_build_plan):
+def fake_lifecycle_service_class(tmp_path):
     class FakeLifecycleService(services.LifecycleService):
         def __init__(
             self,
@@ -401,7 +387,6 @@ def fake_lifecycle_service_class(tmp_path, fake_build_plan):
                 work_dir=kwargs.pop("work_dir", tmp_path / "work"),
                 cache_dir=kwargs.pop("cache_dir", tmp_path / "cache"),
                 platform=None,
-                build_plan=fake_build_plan,
                 **kwargs,
             )
 

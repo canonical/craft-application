@@ -121,7 +121,6 @@ def test_package_repositories_in_overlay(
     build_plan_service,
     tmp_path,
     mocker,
-    fake_build_plan,
 ):
     build_plan_service.setup()  # Reset the build plan
     build_plan_service.set_platforms("s390x")
@@ -171,7 +170,6 @@ def test_package_repositories_in_overlay(
         work_dir=work_dir,
         cache_dir=tmp_path / "cache",
         platform=None,
-        build_plan=fake_build_plan,
         base_layer_dir=base_layer_dir,
         base_layer_hash=b"deadbeef",
     )
