@@ -10,6 +10,7 @@ execute: |
 
   testcraft init
   testcraft pack
+  testcraft clean
 
 restore: |
   rm -rf init-test
