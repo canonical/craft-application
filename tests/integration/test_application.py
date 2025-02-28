@@ -23,12 +23,11 @@ import craft_cli
 import craft_platforms
 import pytest
 import pytest_check
-from craft_providers.bases import BaseName
 from typing_extensions import override
 
 import craft_application
 import craft_application.commands
-from craft_application import models, util
+from craft_application import util
 from craft_application.util import yaml
 
 
@@ -187,19 +186,6 @@ def test_project_managed(capsys, monkeypatch, tmp_path, project, create_app):
     app = create_app()
     app._work_dir = tmp_path
 
-    # Workaround until we implement CRAFT-4159
-    app._configure_early_services()  # We need to access the project service.
-    app.services.get("project").render_once()
-    if date.today() < date(2025, 3, 1):
-        app._build_plan = [
-            models.BuildInfo(
-                platform=next(iter(app.services.get("project").get().platforms)),
-                build_on=craft_platforms.DebianArchitecture.from_host(),
-                build_for=craft_platforms.DebianArchitecture.from_host(),
-                base=BaseName("ubuntu", "22.04"),
-            )
-        ]
-
     assert app.run() == 0
 
     assert (tmp_path / "package_1.0.tar.zst").exists()
@@ -211,7 +197,7 @@ def test_project_managed(capsys, monkeypatch, tmp_path, project, create_app):
 
 
 @pytest.mark.slow
-@pytest.mark.usefixtures("full_build_plan", "pretend_jammy")
+@pytest.mark.usefixtures("pretend_jammy")
 @pytest.mark.parametrize("project", (d.name for d in VALID_PROJECTS_DIR.iterdir()))
 def test_project_destructive(
     capsys,
@@ -239,11 +225,11 @@ def test_project_destructive(
     app.services.get("project").render_once()
     if date.today() < date(2025, 3, 1):
         app._build_plan = [
-            models.BuildInfo(
+            craft_platforms.BuildInfo(
                 platform=next(iter(app.services.get("project").get().platforms)),
                 build_on=craft_platforms.DebianArchitecture.from_host(),
                 build_for=craft_platforms.DebianArchitecture.from_host(),
-                base=BaseName("ubuntu", "22.04"),
+                build_base=craft_platforms.DistroBase("ubuntu", "22.04"),
             )
         ]
 
@@ -355,15 +341,11 @@ def test_invalid_command_argument(monkeypatch, capsys, app):
 @pytest.mark.parametrize(
     "arguments",
     [
-        [],
         ["--build-for", "s390x"],
         ["--platform", "my-platform"],
     ],
 )
-@pytest.mark.skipif(
-    date.today() < date(2025, 2, 27),
-    reason="Skip until we implement the BuildPlanService. (CRAFT-4159)",
-)
+@pytest.mark.usefixtures("pretend_jammy")
 def test_global_environment(
     arguments,
     create_app,
@@ -374,20 +356,6 @@ def test_global_environment(
     """Test that the global environment is correctly populated during the build process."""
     monkeypatch.chdir(tmp_path)
     shutil.copytree(VALID_PROJECTS_DIR / "environment", tmp_path, dirs_exist_ok=True)
-
-    # a build plan that builds for s390x (a cross-compiling scenario unless on s390x)
-    mocker.patch.object(
-        models.BuildPlanner,
-        "get_build_plan",
-        return_value=[
-            models.BuildInfo(
-                platform="my-platform",
-                build_on=util.get_host_architecture(),
-                build_for="s390x",
-                base=util.get_host_base(),
-            ),
-        ],
-    )
 
     # Check that this odd value makes its way through to the yaml build script
     build_count = "5"
@@ -433,11 +401,11 @@ def test_lifecycle_error_logging(monkeypatch, tmp_path, create_app):
     app.services.get("project").render_once()
     if date.today() < date(2025, 3, 1):
         app._build_plan = [
-            models.BuildInfo(
+            craft_platforms.BuildInfo(
                 platform=next(iter(app.services.get("project").get().platforms)),
                 build_on=craft_platforms.DebianArchitecture.from_host(),
                 build_for=craft_platforms.DebianArchitecture.from_host(),
-                base=BaseName("ubuntu", "22.04"),
+                build_base=craft_platforms.DistroBase("ubuntu", "22.04"),
             )
         ]
 
@@ -473,11 +441,11 @@ def test_runtime_error_logging(monkeypatch, tmp_path, create_app, mocker):
     app.services.get("project").render_once()
     if date.today() < date(2025, 3, 1):
         app._build_plan = [
-            models.BuildInfo(
+            craft_platforms.BuildInfo(
                 platform=next(iter(app.services.get("project").get().platforms)),
                 build_on=craft_platforms.DebianArchitecture.from_host(),
                 build_for=craft_platforms.DebianArchitecture.from_host(),
-                base=BaseName("ubuntu", "22.04"),
+                build_base=craft_platforms.DistroBase("ubuntu", "22.04"),
             )
         ]
 

@@ -21,14 +21,15 @@ import uuid
 from typing import NamedTuple
 from unittest import mock
 
+import craft_platforms
 import craft_providers
 import pytest
 from craft_providers import bases, lxd, multipass
 from craft_providers.actions.snap_installer import Snap
 
-from craft_application import errors, models, util
+from craft_application import errors
 from craft_application.services import provider
-from craft_application.util import platforms, snap_config
+from craft_application.util import snap_config
 
 
 @pytest.fixture
@@ -41,6 +42,17 @@ def mock_provider(monkeypatch, provider_service):
     )
 
     return mocked_provider
+
+
+@pytest.fixture(scope="module")
+def fake_build_info(fake_base):
+    arch = craft_platforms.DebianArchitecture.from_host()
+    return craft_platforms.BuildInfo(
+        platform=str(arch),
+        build_on=arch,
+        build_for=arch,
+        build_base=fake_base,
+    )
 
 
 @pytest.mark.parametrize(
@@ -75,7 +87,6 @@ def test_setup_proxy_environment(
     app_metadata,
     fake_services,
     fake_project,
-    fake_build_plan,
     given_environment: dict[str, str],
     expected_environment: dict[str, str],
 ):
@@ -88,7 +99,6 @@ def test_setup_proxy_environment(
         app_metadata,
         fake_services,
         work_dir=pathlib.Path(),
-        build_plan=fake_build_plan,
     )
     service.setup()
 
@@ -164,7 +174,6 @@ def test_install_snap(
     monkeypatch,
     app_metadata,
     fake_project,
-    fake_build_plan,
     fake_services,
     install_snap,
     environment,
@@ -181,7 +190,6 @@ def test_install_snap(
         app_metadata,
         fake_services,
         work_dir=pathlib.Path(),
-        build_plan=fake_build_plan,
         install_snap=install_snap,
     )
     service.setup()
@@ -249,8 +257,11 @@ def test_get_lxd_provider(monkeypatch, provider_service, lxd_remote, check):
     ],
 )
 def test_get_instance_name(platform, platform_str, new_dir, provider_service):
-    build_info = models.BuildInfo(
-        platform, "riscv64", "riscv64", bases.BaseName("ubuntu", "24.04")
+    build_info = craft_platforms.BuildInfo(
+        platform,
+        craft_platforms.DebianArchitecture.RISCV64,
+        craft_platforms.DebianArchitecture.RISCV64,
+        craft_platforms.DistroBase("ubuntu", "24.04"),
     )
     inode_number = str(new_dir.stat().st_ino)
     provider_service._build_plan = [build_info]
@@ -443,17 +454,6 @@ def test_get_base_packages(provider_service):
 
 
 @pytest.mark.parametrize("allow_unstable", [True, False])
-@pytest.mark.parametrize(
-    "base_name",
-    [
-        ("ubuntu", "devel"),
-        ("ubuntu", "24.10"),
-        ("ubuntu", "24.04"),
-        ("ubuntu", "22.04"),
-        ("ubuntu", "20.04"),
-        ("almalinux", "9"),
-    ],
-)
 def test_instance(
     check,
     emitter,
@@ -461,15 +461,12 @@ def test_instance(
     app_metadata,
     fake_project,
     provider_service,
-    base_name,
+    fake_build_info,
     allow_unstable,
     mock_provider,
 ):
-    arch = util.get_host_architecture()
-    build_info = models.BuildInfo("foo", arch, arch, base_name)
-
     with provider_service.instance(
-        build_info, work_dir=tmp_path, allow_unstable=allow_unstable
+        fake_build_info, work_dir=tmp_path, allow_unstable=allow_unstable
     ) as instance:
         pass
 
@@ -501,9 +498,9 @@ def test_instance_clean_existing(
     mock_provider,
     clean_existing,
 ):
-    arch = util.get_host_architecture()
-    base_name = bases.BaseName("ubuntu", "24.04")
-    build_info = models.BuildInfo("foo", arch, arch, base_name)
+    arch = craft_platforms.DebianArchitecture.from_host()
+    base_name = craft_platforms.DistroBase("ubuntu", "24.04")
+    build_info = craft_platforms.BuildInfo("foo", arch, arch, base_name)
 
     with provider_service.instance(
         build_info, work_dir=tmp_path, clean_existing=clean_existing
@@ -533,21 +530,12 @@ def test_load_bashrc(emitter):
 
 
 @pytest.mark.parametrize("allow_unstable", [True, False])
-@pytest.mark.parametrize(
-    "base_name",
-    [
-        ("ubuntu", "devel"),
-        ("ubuntu", "22.04"),
-        ("centos", "7"),
-        ("almalinux", "9"),
-    ],
-)
 def test_load_bashrc_missing(
     monkeypatch,
     emitter,
     tmp_path,
     provider_service,
-    base_name,
+    fake_build_info,
     allow_unstable,
     mocker,
 ):
@@ -558,12 +546,10 @@ def test_load_bashrc_missing(
         "get_provider",
         lambda name: mock_provider,
     )
-    arch = util.get_host_architecture()
-    build_info = models.BuildInfo("foo", arch, arch, base_name)
 
     mocker.patch.object(pkgutil, "get_data", return_value=None)
     with provider_service.instance(
-        build_info, work_dir=tmp_path, allow_unstable=allow_unstable
+        fake_build_info, work_dir=tmp_path, allow_unstable=allow_unstable
     ) as instance:
         instance._setup_instance_bashrc(instance)
     emitter.assert_debug(
@@ -611,25 +597,19 @@ def setup_fetch_logs_provider(monkeypatch, provider_service, tmp_path):
     return _setup
 
 
-def _get_build_info() -> models.BuildInfo:
-    arch = util.get_host_architecture()
-    return models.BuildInfo(
-        platform=arch,
-        build_on=arch,
-        build_for=arch,
-        base=bases.BaseName("ubuntu", "22.04"),
-    )
-
-
 def test_instance_fetch_logs(
-    provider_service, setup_fetch_logs_provider, check, emitter
+    provider_service,
+    setup_fetch_logs_provider,
+    check,
+    emitter,
+    fake_build_info,
 ):
     """Test that logs from the build instance are fetched in case of success."""
 
     # Setup the build instance and pretend the command inside it finished successfully.
     provider_service = setup_fetch_logs_provider(should_have_logfile=True)
     with provider_service.instance(
-        build_info=_get_build_info(),
+        build_info=fake_build_info,
         work_dir=pathlib.Path(),
     ) as mock_instance:
         pass
@@ -652,7 +632,11 @@ def test_instance_fetch_logs(
 
 
 def test_instance_fetch_logs_error(
-    provider_service, setup_fetch_logs_provider, check, emitter
+    provider_service,
+    setup_fetch_logs_provider,
+    check,
+    emitter,
+    fake_build_info,
 ):
     """Test that logs from the build instance are fetched in case of errors."""
 
@@ -661,7 +645,7 @@ def test_instance_fetch_logs_error(
     with (
         pytest.raises(RuntimeError),
         provider_service.instance(
-            build_info=_get_build_info(),
+            build_info=fake_build_info,
             work_dir=pathlib.Path(),
         ) as mock_instance,
     ):
@@ -685,14 +669,14 @@ def test_instance_fetch_logs_error(
 
 
 def test_instance_fetch_logs_missing_file(
-    provider_service, setup_fetch_logs_provider, check, emitter
+    provider_service, setup_fetch_logs_provider, check, emitter, fake_build_info
 ):
     """Test that we handle the case where the logfile is missing."""
 
     # Setup the build instance and pretend the command inside it finished successfully.
     provider_service = setup_fetch_logs_provider(should_have_logfile=False)
     with provider_service.instance(
-        build_info=_get_build_info(),
+        build_info=fake_build_info,
         work_dir=pathlib.Path(),
     ) as mock_instance:
         pass
@@ -710,59 +694,34 @@ def test_instance_fetch_logs_missing_file(
         emitter.assert_interactions(expected)
 
 
-_test_base = bases.BaseName("ubuntu", "22.04")
-
-
 @pytest.mark.parametrize(
-    ("build_infos", "expected_on_fors"),
-    [
-        # A single build info, matching the current architecture
+    ("arch", "expected_platforms"),
+    [  # Based on the fake project yaml in tests/conftest.py
         (
-            [models.BuildInfo("foo", "current", "current", _test_base)],
-            ["foo"],
+            craft_platforms.DebianArchitecture.AMD64,
+            ["64-bit-pc", "some-phone", "risky", "s390x"],
         ),
-        # Two build infos, both matching the current architecture
-        (
-            [
-                models.BuildInfo("foo", "current", "current", _test_base),
-                models.BuildInfo("foo2", "current", "other", _test_base),
-            ],
-            ["foo", "foo2"],
-        ),
-        # Three build infos, only one matches current architecture
-        (
-            [
-                models.BuildInfo("foo", "current", "current", _test_base),
-                models.BuildInfo("foo2", "other", "other", _test_base),
-                models.BuildInfo("foo3", "other", "other2", _test_base),
-            ],
-            ["foo"],
-        ),
-        # Two build infos, none matches current architecture
-        (
-            [
-                models.BuildInfo("foo2", "other", "other", _test_base),
-                models.BuildInfo("foo3", "other", "other2", _test_base),
-            ],
-            [],
-        ),
+        (craft_platforms.DebianArchitecture.ARM64, ["some-phone", "risky", "s390x"]),
+        (craft_platforms.DebianArchitecture.ARMHF, ["s390x"]),
+        (craft_platforms.DebianArchitecture.RISCV64, ["risky", "s390x"]),
+        (craft_platforms.DebianArchitecture.PPC64EL, ["ppc64el", "risky", "s390x"]),
     ],
 )
-def test_clean_instances(
-    provider_service, tmp_path, mocker, build_infos, expected_on_fors
-):
-    mocker.patch.object(platforms, "get_host_architecture", return_value="current")
-
+def test_clean_instances(provider_service, tmp_path, mocker, arch, expected_platforms):
+    mocker.patch.object(
+        craft_platforms.DebianArchitecture,
+        "from_host",
+        return_value=arch,
+    )
     current_provider = provider_service.get_provider()
     mock_clean = mocker.patch.object(current_provider, "clean_project_environments")
 
-    provider_service._build_plan = build_infos
     provider_service.clean_instances()
 
     work_dir_inode = tmp_path.stat().st_ino
 
     expected_mock_calls = [
-        mock.call(instance_name=f"testcraft-full-project-{on_for}-{work_dir_inode}")
-        for on_for in expected_on_fors
+        mock.call(instance_name=f"testcraft-full-project-{platform}-{work_dir_inode}")
+        for platform in expected_platforms
     ]
     assert mock_clean.mock_calls == expected_mock_calls

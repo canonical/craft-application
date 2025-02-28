@@ -34,12 +34,11 @@ import jinja2
 import pydantic
 import pytest
 from craft_cli import EmitterMode, emit
-from craft_providers import bases
 from jinja2 import FileSystemLoader
 from typing_extensions import override
 
 import craft_application
-from craft_application import application, git, launchpad, models, services, util
+from craft_application import application, git, launchpad, models, services
 from craft_application.services import service_factory
 from craft_application.util import yaml
 
@@ -71,11 +70,8 @@ platforms:
     build-on: [amd64, arm64, ppc64el, riscv64, s390x]
     build-for: [riscv64]
   s390x:
-    build-on: [amd64, arm64, ppc64el, riscv64, s390x]
+    build-on: [amd64, arm64, armhf, i386, ppc64el, riscv64, s390x]
     build-for: [s390x]
-  platform-independent:
-    build-on: [amd64, arm64, ppc64el, riscv64, s390x]
-    build-for: [all]
 
 contact: author@project.org
 issues: https://github.com/canonical/craft-application/issues
@@ -97,11 +93,25 @@ parts:
         "ppc64el",
         "risky",
         "s390x",
-        "platform-independent",
     ]
 )
 def fake_platform(request: pytest.FixtureRequest) -> str:
     return request.param
+
+
+@pytest.fixture
+def platform_independent_project(fake_project_file, fake_project):
+    """Turn the fake project into a platform-independent project.
+
+    This is needed because `build-for: [all]` implies a single platform. So
+    """
+    fake_project.platforms = {
+        "platform-independent": {
+            "build-on": [str(arch) for arch in craft_platforms.DebianArchitecture],
+            "build-for": ["all"],
+        }
+    }
+    fake_project_file.write_text(fake_project.to_yaml_string())
 
 
 @pytest.fixture
@@ -130,11 +140,20 @@ def fake_project(fake_project_yaml) -> models.Project:
         return models.Project.unmarshal(yaml.safe_yaml_load(project_io))
 
 
-def _create_fake_build_plan(num_infos: int = 1) -> list[models.BuildInfo]:
-    """Create a build plan that is able to execute on the running system."""
-    arch = util.get_host_architecture()
-    base = util.get_host_base()
-    return [models.BuildInfo("foo", arch, arch, base)] * num_infos
+@pytest.fixture(
+    params=[
+        craft_platforms.DistroBase("ubuntu", "18.04"),
+        craft_platforms.DistroBase("ubuntu", "20.04"),
+        craft_platforms.DistroBase("ubuntu", "22.04"),
+        craft_platforms.DistroBase("ubuntu", "24.04"),
+        craft_platforms.DistroBase("ubuntu", "24.10"),
+        craft_platforms.DistroBase("ubuntu", "devel"),
+        craft_platforms.DistroBase("almalinux", "9"),
+    ],
+    scope="session",
+)
+def fake_base(request: pytest.FixtureRequest):
+    return request.param
 
 
 @pytest.fixture(autouse=True)
@@ -205,32 +224,6 @@ def app_metadata_docs() -> craft_application.AppMetadata:
 
 
 @pytest.fixture
-def fake_build_plan(request) -> list[models.BuildInfo]:
-    num_infos = getattr(request, "param", 1)
-    return _create_fake_build_plan(num_infos)
-
-
-@pytest.fixture
-def full_build_plan(mocker) -> list[models.BuildInfo]:
-    """A big build plan with multiple bases and build-for targets."""
-    host_arch = util.get_host_architecture()
-    build_plan = []
-    for release in ("20.04", "22.04", "24.04"):
-        build_plan.extend(
-            models.BuildInfo(
-                f"ubuntu-{release}-{build_for}",
-                host_arch,
-                build_for,
-                bases.BaseName("ubuntu", release),
-            )
-            for build_for in (host_arch, "s390x", "riscv64")
-        )
-
-    mocker.patch.object(models.BuildPlanner, "get_build_plan", return_value=build_plan)
-    return build_plan
-
-
-@pytest.fixture
 def enable_partitions() -> Iterator[craft_parts.Features]:
     """Enable the partitions feature in craft_parts for the relevant test."""
     enable_overlay = craft_parts.Features().enable_overlay
@@ -253,8 +246,13 @@ def enable_overlay() -> Iterator[craft_parts.Features]:
 
 
 @pytest.fixture
+def build_plan_service(fake_services):
+    return fake_services.get("build_plan")
+
+
+@pytest.fixture
 def lifecycle_service(
-    app_metadata, fake_project, fake_services, fake_build_plan, mocker, tmp_path
+    app_metadata, fake_project, fake_services, mocker, tmp_path
 ) -> services.LifecycleService:
     work_dir = tmp_path / "work"
     cache_dir = tmp_path / "cache"
@@ -266,7 +264,6 @@ def lifecycle_service(
         work_dir=work_dir,
         cache_dir=cache_dir,
         platform=None,
-        build_plan=fake_build_plan,
     )
     service.setup()
     mocker.patch.object(
@@ -319,7 +316,7 @@ def fake_project_service_class(fake_project) -> type[services.ProjectService]:
 
 
 @pytest.fixture
-def fake_provider_service_class(fake_build_plan, project_path):
+def fake_provider_service_class(project_path):
     class FakeProviderService(services.ProviderService):
         def __init__(
             self,
@@ -330,7 +327,6 @@ def fake_provider_service_class(fake_build_plan, project_path):
                 app,
                 services,
                 work_dir=project_path,
-                build_plan=fake_build_plan,
             )
 
     return FakeProviderService
@@ -355,7 +351,7 @@ def fake_package_service_class():
 
 
 @pytest.fixture
-def fake_lifecycle_service_class(tmp_path, fake_build_plan):
+def fake_lifecycle_service_class(tmp_path):
     class FakeLifecycleService(services.LifecycleService):
         def __init__(
             self,
@@ -370,7 +366,6 @@ def fake_lifecycle_service_class(tmp_path, fake_build_plan):
                 work_dir=kwargs.pop("work_dir", tmp_path / "work"),
                 cache_dir=kwargs.pop("cache_dir", tmp_path / "cache"),
                 platform=None,
-                build_plan=fake_build_plan,
                 **kwargs,
             )
 

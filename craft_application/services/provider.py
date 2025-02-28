@@ -28,6 +28,7 @@ from collections.abc import Generator, Iterable
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+import craft_platforms
 from craft_cli import CraftError, emit
 from craft_providers import bases
 from craft_providers.actions.snap_installer import Snap
@@ -41,7 +42,6 @@ from craft_application.util import platforms, snap_config
 if TYPE_CHECKING:  # pragma: no cover
     import craft_providers
 
-    from craft_application import models
     from craft_application.application import AppMetadata
     from craft_application.services import ServiceFactory
 
@@ -65,14 +65,12 @@ class ProviderService(base.AppService):
         services: ServiceFactory,
         *,
         work_dir: pathlib.Path,
-        build_plan: list[models.BuildInfo],
         provider_name: str | None = None,
         install_snap: bool = True,
     ) -> None:
         super().__init__(app, services)
         self._provider: craft_providers.Provider | None = None
         self._work_dir = work_dir
-        self._build_plan = build_plan
         self.snaps: list[Snap] = []
         self._install_snap = install_snap
         self.environment: dict[str, str | None] = {self.managed_mode_env_var: "1"}
@@ -122,7 +120,7 @@ class ProviderService(base.AppService):
     @contextlib.contextmanager
     def instance(
         self,
-        build_info: models.BuildInfo,
+        build_info: craft_platforms.BuildInfo,
         *,
         work_dir: pathlib.Path,
         allow_unstable: bool = True,
@@ -143,7 +141,10 @@ class ProviderService(base.AppService):
             project_name = self._services.get("project").get().name
         instance_name = self._get_instance_name(work_dir, build_info, project_name)
         emit.debug(f"Preparing managed instance {instance_name!r}")
-        base_name = build_info.base
+        base_name = bases.BaseName(
+            name=build_info.build_base.distribution,
+            version=build_info.build_base.series,
+        )
         base = self.get_base(base_name, instance_name=instance_name, **kwargs)
         provider = self.get_provider(name=self.__provider_name)
 
@@ -275,11 +276,13 @@ class ProviderService(base.AppService):
     def clean_instances(self) -> None:
         """Clean all existing managed instances related to the project."""
         provider = self.get_provider(name=self.__provider_name)
+        build_planner = self._services.get("build_plan")
 
-        current_arch = platforms.get_host_architecture()
-        build_plan = [
-            info for info in self._build_plan if info.build_on == current_arch
-        ]
+        build_plan = build_planner.create_build_plan(
+            platforms=None,
+            build_for=None,
+            build_on=[craft_platforms.DebianArchitecture.from_host()],
+        )
 
         if build_plan:
             target = "environments" if len(build_plan) > 1 else "environment"
@@ -291,7 +294,10 @@ class ProviderService(base.AppService):
             self._clean_instance(provider, self._work_dir, info, project_name)
 
     def _get_instance_name(
-        self, work_dir: pathlib.Path, build_info: models.BuildInfo, project_name: str
+        self,
+        work_dir: pathlib.Path,
+        build_info: craft_platforms.BuildInfo,
+        project_name: str,
     ) -> str:
         work_dir_inode = work_dir.stat().st_ino
 
@@ -358,7 +364,7 @@ class ProviderService(base.AppService):
         self,
         provider: craft_providers.Provider,
         work_dir: pathlib.Path,
-        info: models.BuildInfo,
+        info: craft_platforms.BuildInfo,
         project_name: str,
     ) -> None:
         """Clean an instance, if it exists."""

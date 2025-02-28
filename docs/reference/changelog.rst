@@ -33,6 +33,10 @@ Breaking changes
   designate that they require a project, but should instead use the
   :py:meth:`~craft_application.services.project.ProjectService.get()` method of the
   ``ProjectService`` to retrieve the project. It will error accordingly.
+- The ``BuildPlanner`` class has been replaced with the
+  :py:class:`~craft_application.services.services.buildplan.BuildPlanService`
+- ``BuildInfo`` is replaced with
+  :external+craft-platforms:class:`craft_platforms.BuildInfo`
 
 For a complete list of commits, check out the `5.0.0`_ release on GitHub.
 

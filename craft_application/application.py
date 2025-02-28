@@ -40,7 +40,6 @@ from platformdirs import user_cache_path
 
 from craft_application import _config, commands, errors, models, util
 from craft_application.errors import PathInvalidError
-from craft_application.models import BuildInfo
 
 if TYPE_CHECKING:
     from craft_application.services import service_factory
@@ -76,7 +75,6 @@ class AppMetadata:
     ConfigModel: type[_config.ConfigModel] = _config.ConfigModel
 
     ProjectClass: type[models.Project] = models.Project
-    BuildPlannerClass: type[models.BuildPlanner] = models.BuildPlanner
 
     def __post_init__(self) -> None:
         setter = super().__setattr__
@@ -128,8 +126,6 @@ class Application:
         self._command_groups: list[craft_cli.CommandGroup] = []
         self._global_arguments: list[craft_cli.GlobalArgument] = [GLOBAL_VERSION]
         self._cli_loggers = DEFAULT_CLI_LOGGERS | set(extra_loggers)
-        self._full_build_plan: list[models.BuildInfo] = []
-        self._build_plan: list[models.BuildInfo] = []
         self._partitions: list[str] | None = None
         # Cached project object, allows only the first time we load the project
         # to specify things like the project directory.
@@ -322,18 +318,15 @@ class Application:
             "lifecycle",
             cache_dir=self.cache_dir,
             work_dir=self._work_dir,
-            build_plan=self._build_plan,
             partitions=self._partitions,
         )
         self.services.update_kwargs(
             "provider",
             work_dir=self._work_dir,
-            build_plan=self._build_plan,
             provider_name=provider_name,
         )
         self.services.update_kwargs(
             "fetch",
-            build_plan=self._build_plan,
             session_policy=self._fetch_service_policy,
         )
 
@@ -375,17 +368,18 @@ class Application:
 
     def run_managed(self, platform: str | None, build_for: str | None) -> None:
         """Run the application in a managed instance."""
-        if not self._build_plan:
+        build_planner = self.services.get("build_plan")
+        if platform:
+            build_planner.set_platforms(platform)
+        if build_for:
+            build_planner.set_build_fors(build_for)
+        plan = build_planner.plan()
+
+        if not plan:
             raise errors.EmptyBuildPlanError
 
         extra_args: dict[str, Any] = {}
-        for build_info in self._build_plan:
-            if platform and platform != build_info.platform:
-                continue
-
-            if build_for and build_for != build_info.build_for:
-                continue
-
+        for build_info in plan:
             env = {
                 "CRAFT_PLATFORM": build_info.platform,
                 "CRAFT_VERBOSITY_LEVEL": craft_cli.emit.get_mode().name,
@@ -584,14 +578,13 @@ class Application:
             project_service = self.services.get("project")
             # This branch always runs, except during testing.
             if not project_service.is_rendered:
-                project_service.render_once()
-
-        provider_name = command.provider_name(dispatcher.parsed_args())
+                project_service.render_once(platform=platform, build_for=build_for)
 
         craft_cli.emit.debug(f"Build plan: platform={platform}, build_for={build_for}")
         self._pre_run(dispatcher)
 
         managed_mode = command.run_managed(dispatcher.parsed_args())
+        provider_name = command.provider_name(dispatcher.parsed_args())
         self._configure_services(provider_name)
 
         return_code = 1  # General error
@@ -740,38 +733,3 @@ class Application:
         """Perform craft-parts-specific initialization, like features and plugins."""
         self._enable_craft_parts_features()
         self._register_default_plugins()
-
-
-def filter_plan(
-    build_plan: list[BuildInfo],
-    platform: str | None,
-    build_for: str | None,
-    host_arch: str | None,
-) -> list[BuildInfo]:
-    """Filter out build plans that are not matching build-on, build-for, and platform.
-
-    If the host_arch is None, ignore the build-on check for remote builds.
-    """
-    new_plan_matched_build_for: list[BuildInfo] = []
-    new_plan_matched_platform_name: list[BuildInfo] = []
-
-    for build_info in build_plan:
-        if platform and build_info.platform != platform:
-            continue
-
-        if host_arch and build_info.build_on != host_arch:
-            continue
-
-        if build_for and build_info.build_for != build_for:
-            continue
-
-        if build_for and build_info.platform == build_for:
-            # prioritize platform name if matched build_for
-            new_plan_matched_platform_name.append(build_info)
-            continue
-
-        new_plan_matched_build_for.append(build_info)
-
-    if new_plan_matched_platform_name:
-        return new_plan_matched_platform_name
-    return new_plan_matched_build_for
