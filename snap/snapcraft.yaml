@@ -46,7 +46,7 @@ parts:
     stage-packages:
       - python3-apt
     organize:
-      usr/lib/python3/dist-packages/*: lib/python3.12/site-packages
+      usr/lib/python3/dist-packages/*: lib/python3.12/site-packages/
     build-attributes:
       - enable-patchelf
   libs:
