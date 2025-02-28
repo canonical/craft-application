@@ -25,6 +25,7 @@ import pathlib
 from collections.abc import Collection, Sequence
 from typing import TYPE_CHECKING, Literal
 
+import craft_platforms
 import yaml
 from craft_cli import CraftError
 from craft_providers import bases
@@ -270,7 +271,11 @@ class EmptyBuildPlanError(CraftError):
 class MultipleBuildsError(CraftError):
     """The build plan contains multiple possible builds."""
 
-    def __init__(self, matching_builds: list[models.BuildInfo] | None = None) -> None:
+    def __init__(
+        self,
+        matching_builds: Sequence[craft_platforms.BuildInfo | models.BuildInfo]
+        | None = None,
+    ) -> None:
         message = "Multiple builds match the current platform"
         if matching_builds:
             message += ": " + humanize_list(
@@ -286,16 +291,28 @@ class MultipleBuildsError(CraftError):
 class IncompatibleBaseError(CraftError):
     """The build plan's base is incompatible with the host environment."""
 
-    def __init__(self, host_base: bases.BaseName, build_base: bases.BaseName) -> None:
-        host_pretty = f"{host_base.name.title()} {host_base.version}"
-        build_pretty = f"{build_base.name.title()} {build_base.version}"
+    def __init__(
+        self,
+        host_base: craft_platforms.DistroBase | bases.BaseName,
+        build_base: craft_platforms.DistroBase | bases.BaseName,
+    ) -> None:
+        if isinstance(host_base, bases.BaseName):
+            host_base = craft_platforms.DistroBase(
+                distribution=host_base.name, series=host_base.version
+            )
+        if isinstance(build_base, bases.BaseName):
+            build_base = craft_platforms.DistroBase(
+                distribution=build_base.name, series=build_base.version
+            )
+        host_pretty = f"{host_base.distribution.title()} {host_base.series}"
+        build_pretty = f"{build_base.distribution.title()} {build_base.series}"
 
         message = (
             f"{build_pretty} builds cannot be performed on this {host_pretty} system."
         )
         details = (
             "Builds must be performed on a specific system to ensure that the "
-            "final artefact's binaries are compatible with the intended execution "
+            "final artifact's binaries are compatible with the intended execution "
             "environment."
         )
         resolution = "Run a managed build, or run on a compatible host."
