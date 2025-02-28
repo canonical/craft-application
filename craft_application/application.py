@@ -581,14 +581,13 @@ class Application:
             project_service = self.services.get("project")
             # This branch always runs, except during testing.
             if not project_service.is_rendered:
-                project_service.render_once()
-
-        provider_name = command.provider_name(dispatcher.parsed_args())
+                project_service.render_once(platform=platform, build_for=build_for)
 
         craft_cli.emit.debug(f"Build plan: platform={platform}, build_for={build_for}")
         self._pre_run(dispatcher)
 
         managed_mode = command.run_managed(dispatcher.parsed_args())
+        provider_name = command.provider_name(dispatcher.parsed_args())
         self._configure_services(provider_name)
 
         return_code = 1  # General error

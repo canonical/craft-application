@@ -21,8 +21,9 @@ import sys
 import tempfile
 from unittest import mock
 
+import craft_platforms
 import pytest
-from craft_providers import bases, lxd, multipass
+from craft_providers import lxd, multipass
 
 from craft_application import launchpad
 from craft_application.services import provider, remotebuild
@@ -90,8 +91,10 @@ def snap_safe_tmp_path():
 @pytest.fixture
 def pretend_jammy(mocker) -> None:
     """Pretend we're running on jammy. Used for tests that use destructive mode."""
-    fake_host = bases.BaseName(name="ubuntu", version="22.04")
-    mocker.patch("craft_application.util.get_host_base", return_value=fake_host)
+    fake_host = craft_platforms.DistroBase("ubuntu", "22.04")
+    mocker.patch(
+        "craft_platforms.DistroBase.from_linux_distribution", return_value=fake_host
+    )
 
 
 @pytest.fixture
