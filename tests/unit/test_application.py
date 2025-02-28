@@ -32,13 +32,10 @@ import craft_cli
 import craft_parts
 import craft_platforms
 import craft_providers
-import pydantic
 import pytest
 import pytest_check
 from craft_cli import emit
 from craft_parts.plugins.plugins import PluginType
-from craft_providers import bases
-from overrides import override
 
 import craft_application
 import craft_application.errors
@@ -47,7 +44,6 @@ from craft_application import (
     application,
     commands,
     errors,
-    models,
     services,
     util,
 )
@@ -56,7 +52,6 @@ from craft_application.commands import (
     get_lifecycle_command_group,
     get_other_command_group,
 )
-from craft_application.models import BuildInfo
 from craft_application.util import (
     get_host_architecture,  # pyright: ignore[reportGeneralTypeIssues]
 )
@@ -996,25 +991,6 @@ def test_enable_features(app, mocker):
     assert calls == ["enable-features", "register-plugins"]
 
 
-class MyRaisingPlanner(models.BuildPlanner):
-    value1: int
-    value2: str
-
-    @pydantic.field_validator("value1", mode="after")
-    @classmethod
-    def _validate_value1(cls, v):
-        raise ValueError(f"Bad value1: {v}")
-
-    @pydantic.field_validator("value2", mode="after")
-    @classmethod
-    def _validate_value(cls, v):
-        raise ValueError(f"Bad value2: {v}")
-
-    @override
-    def get_build_plan(self) -> list[BuildInfo]:
-        return []
-
-
 def test_emitter_docs_url(monkeypatch, mocker, app):
     """Test that the emitter is initialized with the correct url."""
 
@@ -1047,7 +1023,7 @@ def test_clean_platform(
     """Test that calling "clean --platform=x" correctly filters the build plan."""
     data = util.safe_yaml_load(StringIO(fake_project_yaml))
     # Put a few different platforms on the project
-    arch = util.get_host_architecture()
+    arch = craft_platforms.DebianArchitecture.from_host()
     build_on_for = {
         "build-on": [arch],
         "build-for": [arch],
@@ -1069,11 +1045,11 @@ def test_clean_platform(
 
     app.run()
 
-    expected_info = models.BuildInfo(
+    expected_info = craft_platforms.BuildInfo(
         platform="plat2",
         build_on=arch,
         build_for=arch,
-        base=bases.BaseName("ubuntu", "24.04"),
+        build_base=craft_platforms.DistroBase("ubuntu", "24.04"),
     )
     mocked_clean.assert_called_once_with(mocker.ANY, mocker.ANY, expected_info)
 
