@@ -46,7 +46,13 @@ from craft_application import errors, models, util
 from craft_application.errors import PartsLifecycleError
 from craft_application.models.project import BuildInfo
 from craft_application.services import lifecycle
+from craft_application.services.buildplan import BuildPlanService
 from craft_application.util import repositories
+
+
+def skip_if_build_plan_empty(build_planner: BuildPlanService):
+    if not build_planner.plan():
+        pytest.skip(reason="Empty build plan")
 
 
 # region Local fixtures
@@ -185,8 +191,7 @@ def test_progress_messages(
     fake_services, fake_platform, fake_host_architecture, fake_parts_lifecycle, emitter
 ):
     fake_services.get("build_plan").set_platforms(fake_platform)
-    if not fake_services.get("build_plan").plan():
-        pytest.skip(reason="Platform/architecture combination has no builds")
+    skip_if_build_plan_empty(fake_services.get("build_plan"))
     actions = [
         Action("my-part", Step.PULL),
         Action("my-part", Step.BUILD),
@@ -431,8 +436,7 @@ def test_run_success(
     fake_host_architecture,
 ):
     fake_services.get("build_plan").set_platforms(fake_platform)
-    if not fake_services.get("build_plan").plan():
-        pytest.skip(reason="Platform/architecture combination has no builds")
+    skip_if_build_plan_empty(fake_services.get("build_plan"))
     lcm = fake_parts_lifecycle._lcm
     lcm.plan.return_value = actions
     executor = lcm.action_executor.return_value.__enter__.return_value
@@ -453,8 +457,7 @@ def test_run_no_step(
     fake_parts_lifecycle, fake_services, fake_platform, fake_host_architecture
 ):
     fake_services.get("build_plan").set_platforms(fake_platform)
-    if not fake_services.get("build_plan").plan():
-        pytest.skip(reason="Platform/architecture combination has no builds")
+    skip_if_build_plan_empty(fake_services.get("build_plan"))
     lcm = fake_parts_lifecycle._lcm
     executor = lcm.action_executor.return_value.__enter__.return_value
 
@@ -483,8 +486,7 @@ def test_run_failure(
     message_regex,
 ):
     fake_services.get("build_plan").set_platforms(fake_platform)
-    if not fake_services.get("build_plan").plan():
-        pytest.skip(reason="Platform/architecture combination has no builds")
+    skip_if_build_plan_empty(fake_services.get("build_plan"))
     fake_parts_lifecycle._lcm.plan.side_effect = err
 
     with pytest.raises(exc_class, match=message_regex):
@@ -600,8 +602,7 @@ def test_lifecycle_package_repositories(
 ):
     """Test that package repositories installation is called in the lifecycle."""
     fake_services.get("build_plan").set_platforms(fake_platform)
-    if not fake_services.get("build_plan").plan():
-        pytest.skip(reason="Platform/architecture combination has no builds")
+    skip_if_build_plan_empty(fake_services.get("build_plan"))
     fake_repositories = [{"type": "apt", "ppa": "ppa/ppa"}]
     fake_project.package_repositories = fake_repositories.copy()
     fake_services.get("project").set(fake_project)
@@ -644,8 +645,7 @@ def test_lifecycle_project_variables(
 ):
     """Test that project variables are set after the lifecycle runs."""
     fake_services.get("build_plan").set_platforms(fake_platform)
-    if not fake_services.get("build_plan").plan():
-        pytest.skip(reason="Platform/architecture combination has no builds")
+    skip_if_build_plan_empty(fake_services.get("build_plan"))
 
     class LocalProject(models.Project):
         color: str | None = None

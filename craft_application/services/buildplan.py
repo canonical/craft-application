@@ -34,7 +34,7 @@ class BuildPlanService(base.AppService):
     def setup(self) -> None:
         """Set up the build plan service."""
         super().setup()
-        self.__platforms: list[str] | None = None
+        self.__platforms: list[str] = []
         self.__build_for: list[craft_platforms.DebianArchitecture | Literal["all"]] = []
         self.__plan: Sequence[craft_platforms.BuildInfo] | None = None
 
@@ -62,7 +62,7 @@ class BuildPlanService(base.AppService):
             )
         return self.__plan
 
-    def gen_exhaustive_build_plan(
+    def _gen_exhaustive_build_plan(
         self, project_data: dict[str, Any]
     ) -> Iterable[craft_platforms.BuildInfo]:
         """Generate the exhaustive build plan with craft-platforms.
@@ -157,7 +157,7 @@ class BuildPlanService(base.AppService):
 
         plan = list(
             self._filter_plan(
-                self.gen_exhaustive_build_plan(project_data=raw_project),
+                self._gen_exhaustive_build_plan(project_data=raw_project),
                 platforms=platforms,
                 build_for=build_for,
                 build_on=build_on,

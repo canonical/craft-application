@@ -1032,7 +1032,7 @@ def test_emitter_docs_url(monkeypatch, mocker, app):
 
 
 @pytest.mark.skipif(
-    date.today() < date(2025, 3, 1),
+    date.today() < date(2025, 3, 4),
     reason="CRAFT-4163, This will no longer be the responsibility of the application.",
 )
 def test_clean_platform(

@@ -406,9 +406,9 @@ def test_render_once_by_build_for(
 @pytest.mark.parametrize(
     "kwargs",
     [
-        {"build_for": "all"},
-        {"platform": "platform-independent"},
-        {},
+        pytest.param({"build_for": "all"}, id="build-for-all"),
+        pytest.param({"platform": "platform-independent"}, id="select-platform"),
+        pytest.param({}, id="empty"),
     ],
 )
 @pytest.mark.usefixtures("platform_independent_project", "fake_project_file")

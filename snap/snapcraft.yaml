@@ -67,7 +67,7 @@ parts:
       - libffi-dev # for building cffi
       - libgit2-dev # for pygit2
     build-environment:
-      - UV_NO_BINARY: "1"
+      # - UV_NO_BINARY: "1"  # Uncomment this for any real, released craft.
       - UV_FROZEN: "true"
       - UV_COMPILE_BYTECODE: "1"
       - UV_PYTHON: /usr/bin/python3.12
@@ -77,6 +77,6 @@ parts:
       - enable-patchelf
     override-build: |
       uv venv --relocatable --allow-existing "${CRAFT_PART_INSTALL}"
-      uv sync --no-dev --no-group dev-plucky --no-editable --reinstall
+      uv sync --no-dev --no-editable --reinstall
 
       cp -r testcraft/ "${CRAFT_PART_INSTALL}/lib/site-packages/"

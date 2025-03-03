@@ -32,13 +32,13 @@ from craft_application.services.buildplan import BuildPlanService
 from craft_application.services.service_factory import ServiceFactory
 
 
-def test_gen_exhaustive_build_plan(
+def test__gen_exhaustive_build_plan(
     mocker: pytest_mock.MockFixture, build_plan_service: BuildPlanService, app_metadata
 ):
     stub_project = {}
     mock_create_build_plan = mocker.patch("craft_platforms.get_build_plan")
 
-    build_plan_service.gen_exhaustive_build_plan(stub_project)
+    build_plan_service._gen_exhaustive_build_plan(stub_project)
 
     mock_create_build_plan.assert_called_once_with(
         app=app_metadata.name, project_data=stub_project
