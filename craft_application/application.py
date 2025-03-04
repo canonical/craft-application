@@ -682,8 +682,8 @@ class Application:
     def run(self) -> int:
         """Bootstrap and run the application."""
         self._setup_logging()
-        self._load_plugins()
         self._initialize_craft_parts()
+        self._load_plugins()
 
         craft_cli.emit.debug("Preparing application...")
 
