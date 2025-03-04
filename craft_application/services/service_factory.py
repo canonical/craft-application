@@ -35,9 +35,11 @@ from craft_application import services
 
 if TYPE_CHECKING:
     from craft_application.application import AppMetadata
+    from craft_application.services.buildplan import BuildPlanService
     from craft_application.services.project import ProjectService
 
 _DEFAULT_SERVICES = {
+    "build_plan": "BuildPlanService",
     "config": "ConfigService",
     "fetch": "FetchService",
     "init": "InitService",
@@ -183,6 +185,11 @@ class ServiceFactory:
     @overload
     @classmethod
     def get_class(
+        cls, name: Literal["build_plan", "BuildPlanService", "BuildPlanClass"]
+    ) -> type[BuildPlanService]: ...
+    @overload
+    @classmethod
+    def get_class(
         cls, name: Literal["config", "ConfigService", "ConfigClass"]
     ) -> type[services.ConfigService]: ...
     @overload
@@ -245,6 +252,8 @@ class ServiceFactory:
             return cast(type[services.AppService], getattr(module, class_name))
         return service_info
 
+    @overload
+    def get(self, service: Literal["build_plan"]) -> BuildPlanService: ...
     @overload
     def get(self, service: Literal["config"]) -> services.ConfigService: ...
     @overload

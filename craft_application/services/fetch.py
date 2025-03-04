@@ -27,7 +27,7 @@ import craft_providers
 from craft_cli import emit
 from typing_extensions import override
 
-from craft_application import fetch, models, util
+from craft_application import fetch, util
 from craft_application.models.manifest import CraftManifest, ProjectManifest
 from craft_application.services import base
 
@@ -65,7 +65,6 @@ class FetchService(base.AppService):
         app: AppMetadata,
         services: service_factory.ServiceFactory,
         *,
-        build_plan: list[models.BuildInfo],
         session_policy: str,
     ) -> None:
         """Create a new FetchService.
@@ -76,7 +75,6 @@ class FetchService(base.AppService):
         super().__init__(app, services)
         self._fetch_process = None
         self._session_data = None
-        self._build_plan = build_plan
         self._session_policy = session_policy
         self._instance = None
 
@@ -154,6 +152,7 @@ class FetchService(base.AppService):
 
         Only supports a single generated artifact, and only in managed runs.
         """
+        build = self._services.get("build_plan").plan()[0]
         # mypy doesn't accept accept ignore[union-attr] for unknown reasons.
         if not self._services.ProviderClass.is_managed():  # type: ignore  # noqa: PGH003
             emit.debug("Unable to generate the project manifest on the host.")
@@ -162,7 +161,7 @@ class FetchService(base.AppService):
         emit.debug(f"Generating project manifest at {_PROJECT_MANIFEST_MANAGED_PATH}")
         project = self._services.get("project").get()
         project_manifest = ProjectManifest.from_packed_artifact(
-            project, self._build_plan[0], artifacts[0]
+            project, build, artifacts[0]
         )
         project_manifest.to_yaml_file(_PROJECT_MANIFEST_MANAGED_PATH)
 
@@ -172,7 +171,7 @@ class FetchService(base.AppService):
         project = self._services.get("project").get()
         name = project.name
         version = project.version
-        platform = self._build_plan[0].platform
+        platform = self._services.get("build_plan").plan()[0].platform
 
         manifest_path = pathlib.Path(f"{name}_{version}_{platform}.json")
         emit.debug(f"Generating craft manifest at {manifest_path}")
