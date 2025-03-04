@@ -23,8 +23,6 @@ from typing import Any, Literal, final
 import craft_platforms
 from craft_cli import emit
 
-from craft_application import errors
-
 from . import base
 
 
@@ -80,8 +78,9 @@ class BuildPlanService(base.AppService):
         exhaustive_build_plan: Iterable[craft_platforms.BuildInfo],
         *,
         platforms: Collection[str] | None,
-        build_for: Collection[str | craft_platforms.DebianArchitecture] | None,
-        build_on: Collection[str | craft_platforms.DebianArchitecture] | None,
+        build_for: Collection[craft_platforms.DebianArchitecture | Literal["all"]]
+        | None,
+        build_on: Collection[craft_platforms.DebianArchitecture] | None,
     ) -> Iterable[craft_platforms.BuildInfo]:
         """Filter the build plan.
 
@@ -99,26 +98,13 @@ class BuildPlanService(base.AppService):
         :yields: Build info objects based on the given filter.
         """
         platforms_built: set[str] = set()
-        if build_for is not None:
-            build_for_archs = {
-                craft_platforms.DebianArchitecture(arch) for arch in build_for
-            }
-        else:
-            build_for_archs = None
-
-        if build_on is not None:
-            build_on_archs = {
-                craft_platforms.DebianArchitecture(arch) for arch in build_on
-            }
-        else:
-            build_on_archs = None
 
         for item in exhaustive_build_plan:
             if platforms is not None and item.platform not in platforms:
                 continue
-            if build_for_archs is not None and item.build_for not in build_for_archs:
+            if build_for is not None and item.build_for not in build_for:
                 continue
-            if build_on_archs is not None and item.build_on not in build_on_archs:
+            if build_on is not None and item.build_on not in build_on:
                 continue
             if item.platform in platforms_built:  # Don't render duplicate build items.
                 continue
@@ -143,24 +129,30 @@ class BuildPlanService(base.AppService):
             Defaults to the current architecture.
         :returns: A build plan for the given
         """
-        if build_for and "all" in build_for:
-            raise errors.CraftError(
-                "Cannot filter build-for for architecture 'all'.",
-                resolution="Filter by platform name instead.",
-                retcode=64,  # os.EX_USAGE
-            )
-
         project_service = self._services.get("project")
         raw_project = project_service.get_raw()
         if "platforms" not in raw_project:
             raw_project["platforms"] = project_service.get_platforms()
 
+        if build_on:
+            build_on_archs = [craft_platforms.DebianArchitecture(on) for on in build_on]
+        else:
+            build_on_archs = None
+
+        if build_for:
+            build_for_archs = [
+                "all" if fr == "all" else craft_platforms.DebianArchitecture(fr)
+                for fr in build_for
+            ]
+        else:
+            build_for_archs = None
+
         plan = list(
             self._filter_plan(
                 self._gen_exhaustive_build_plan(project_data=raw_project),
                 platforms=platforms,
-                build_for=build_for,
-                build_on=build_on,
+                build_for=build_for_archs,  # type: ignore[arg-type]  # Literal "all"
+                build_on=build_on_archs,
             )
         )
 

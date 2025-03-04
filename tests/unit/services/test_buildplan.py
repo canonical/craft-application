@@ -16,11 +16,9 @@
 """Unit tests for the build plan service."""
 
 import collections
-import os
 from collections.abc import Collection
 from unittest import mock
 
-import craft_cli
 import craft_platforms
 import pytest
 import pytest_check
@@ -515,16 +513,18 @@ def test_create_build_plan_build_for_filter_platform_independent(
     emitter: RecordingEmitter,
     fake_host_architecture,
 ):
-    with pytest.raises(craft_cli.CraftError) as exc_info:
-        build_plan_service.create_build_plan(
-            platforms=None,
-            build_for=["all"],
-            build_on=None,
-        )
+    plan = build_plan_service.create_build_plan(
+        platforms=None,
+        build_for=["all"],
+        build_on=None,
+    )
 
-    assert exc_info.value.args[0] == "Cannot filter build-for for architecture 'all'."
-    assert exc_info.value.resolution == "Filter by platform name instead."
-    assert exc_info.value.retcode == os.EX_USAGE
+    check_plan(
+        plan,
+        min_length=1,
+        max_length=1,
+        build_for="all",
+    )
 
 
 @pytest.mark.parametrize("build_on", craft_platforms.DebianArchitecture)
