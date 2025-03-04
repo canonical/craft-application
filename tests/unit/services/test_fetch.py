@@ -34,26 +34,17 @@ from unittest.mock import MagicMock, call
 
 import craft_providers
 import pytest
-from craft_providers import bases
 from freezegun import freeze_time
 
 from craft_application import ProviderService, fetch, services
-from craft_application.models import BuildInfo
 from craft_application.services import fetch as service_module
 
 
 @pytest.fixture
 def fetch_service(app, fake_services, fake_project):
-    build_info = BuildInfo(
-        platform="amd64",
-        build_on="amd64",
-        build_for="amd64",
-        base=bases.BaseName("ubuntu", "24.04"),
-    )
     return services.FetchService(
         app,
         fake_services,
-        build_plan=[build_info],
         session_policy="strict",
     )
 
@@ -147,7 +138,9 @@ def test_teardown_session_create_manifest(
     fetch_service.teardown_session()
 
     expected_file = manifest_data_dir / "craft-manifest-expected.json"
-    obtained_file = tmp_path / f"{fake_project.name}_{fake_project.version}_amd64.json"
+    obtained_file = (
+        tmp_path / f"{fake_project.name}_{fake_project.version}_64-bit-pc.json"
+    )
 
     assert obtained_file.read_text() + "\n" == expected_file.read_text()
 

@@ -104,6 +104,10 @@ class ProjectService(base.AppService):
         self.__raw_project = cast(dict[str, Any], raw_yaml)
         return self.__raw_project
 
+    def get_raw(self) -> dict[str, Any]:
+        """Get the raw project data structure."""
+        return copy.deepcopy(self._load_raw_project())
+
     def _app_preprocess_project(
         self,
         project: dict[str, Any],

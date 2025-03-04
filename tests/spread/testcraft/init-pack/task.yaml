@@ -1,0 +1,16 @@
+summary: test testcraft init and testcraft pack
+
+environment:
+  CRAFT_BUILD_ENVIRONMENT/managed: ""
+  CRAFT_BUILD_ENVIRONMENT/destructive: host
+
+execute: |
+  mkdir init-test
+  cd init-test
+
+  testcraft init
+  testcraft pack
+  testcraft clean
+
+restore: |
+  rm -rf init-test
