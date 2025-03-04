@@ -103,7 +103,11 @@ prepare: |
   snap wait system seed.loaded
 
   snap install --dangerous --classic tests/spread/*.snap
+  snap alias testcraft.partitioncraft partitioncraft
 
 suites:
   tests/spread/testcraft/:
     summary: Tests for testcraft core functionality
+
+  tests/spread/partitioncraft/:
+    summary: Tests for partitioncraft (app with partitions enabled)

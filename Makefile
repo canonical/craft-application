@@ -1,4 +1,4 @@
-PROJECT=craft_application
+PROJECT=craft_application testcraft partitioncraft
 UV_TEST_GROUPS := "--group=dev"
 UV_DOCS_GROUPS := "--group=docs"
 UV_LINT_GROUPS := "--group=lint" "--group=types"

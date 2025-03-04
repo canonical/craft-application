@@ -20,6 +20,8 @@ platforms:
 apps:
   testcraft:
     command: bin/python -m testcraft
+  partitioncraft:
+    command: bin/python -m partitioncraft
 
 parts:
   python:
@@ -79,4 +81,6 @@ parts:
       uv venv --relocatable --allow-existing "${CRAFT_PART_INSTALL}"
       uv sync --no-dev --no-editable --reinstall
 
-      cp -r testcraft/ "${CRAFT_PART_INSTALL}/lib/site-packages/"
+      # blah
+      cp -r testcraft "${CRAFT_PART_INSTALL}/lib/python3.12/site-packages/"
+      cp -r partitioncraft "${CRAFT_PART_INSTALL}/lib/python3.12/site-packages/"
