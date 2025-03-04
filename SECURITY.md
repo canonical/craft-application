@@ -2,18 +2,17 @@
 
 ## Release cycle
 
-<!---
-The information under this header may not be strictly accurate for all applications.
+<!--
+The information under this header may not be strictly accurate for all apps and libraries.
 Review the wording carefully and only copy it if the support offered makes sense. If it
 seems wrong, speak with Canonical Security Engineering about refining a version for
 your application.
 -->
 
-Each minor release of Craft Application used in a currently-supported version of a
-Canonical product (e.g. Snapcraft, Charmcraft, Rockcraft) is supported.
-
-Except for the above, only the most recent patch release of Craft Application is
-supported.
+Canonical tracks and responds to vulnerabilities in:
+- The most recent patch version of Craft Application.
+- Any version of Craft Application that's included in a current release of a Canonical
+  product.
 
 ## Reporting a vulnerability
 
