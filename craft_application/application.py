@@ -666,15 +666,6 @@ class Application:
 
         craft_cli.emit.error(error)
 
-    def _setup_partitions(self, yaml_data: dict[str, Any]) -> list[str] | None:
-        """Return partitions to be used.
-
-        When returning you will also need to ensure that the feature is enabled
-        on Application instantiation craft_parts.Features(partitions_enabled=True)
-        """
-        _ = yaml_data
-        return None
-
     def _get_project_vars(self, yaml_data: dict[str, Any]) -> dict[str, str]:
         """Return a dict with project variables to be expanded."""
         pvars: dict[str, str] = {}
