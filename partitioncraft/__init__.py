@@ -13,10 +13,9 @@
 #
 # You should have received a copy of the GNU Lesser General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
-"""The main entrypoint to testcraft."""
+"""Partitioncraft.
 
-import sys
+Partitioncraft is a fake craft-application app that enables partitions.
 
-from testcraft import cli
-
-sys.exit(cli.create_app().run())
+This package contains things that differ between testcraft and partitioncraft.
+"""

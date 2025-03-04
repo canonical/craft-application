@@ -17,6 +17,6 @@
 
 import sys
 
-from testcraft import cli
+from partitioncraft import cli
 
 sys.exit(cli.create_app().run())

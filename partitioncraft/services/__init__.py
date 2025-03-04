@@ -13,10 +13,4 @@
 #
 # You should have received a copy of the GNU Lesser General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
-"""The main entrypoint to testcraft."""
-
-import sys
-
-from testcraft import cli
-
-sys.exit(cli.create_app().run())
+"""Services for partitioncraft."""

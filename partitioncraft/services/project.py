@@ -13,10 +13,17 @@
 #
 # You should have received a copy of the GNU Lesser General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
-"""The main entrypoint to testcraft."""
+"""Partitioncraft project service.
 
-import sys
+Needed so we can set partitions.
+"""
 
-from testcraft import cli
+from craft_application.services import project
 
-sys.exit(cli.create_app().run())
+
+class PartitioncraftProjectService(project.ProjectService):
+    """Package service for testcraft."""
+
+    def get_partitions(self) -> list[str] | None:
+        """Get the partitions needed for any partitioncraft project."""
+        return ["default", "mushroom"]
