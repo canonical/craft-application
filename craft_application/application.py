@@ -40,7 +40,6 @@ from platformdirs import user_cache_path
 
 from craft_application import _config, commands, errors, models, util
 from craft_application.errors import PathInvalidError
-from craft_application.models import BuildInfo
 
 if TYPE_CHECKING:
     from craft_application.services import service_factory
@@ -76,7 +75,6 @@ class AppMetadata:
     ConfigModel: type[_config.ConfigModel] = _config.ConfigModel
 
     ProjectClass: type[models.Project] = models.Project
-    BuildPlannerClass: type[models.BuildPlanner] = models.BuildPlanner
 
     def __post_init__(self) -> None:
         setter = super().__setattr__
@@ -726,38 +724,3 @@ class Application:
         """Perform craft-parts-specific initialization, like features and plugins."""
         self._enable_craft_parts_features()
         self._register_default_plugins()
-
-
-def filter_plan(
-    build_plan: list[BuildInfo],
-    platform: str | None,
-    build_for: str | None,
-    host_arch: str | None,
-) -> list[BuildInfo]:
-    """Filter out build plans that are not matching build-on, build-for, and platform.
-
-    If the host_arch is None, ignore the build-on check for remote builds.
-    """
-    new_plan_matched_build_for: list[BuildInfo] = []
-    new_plan_matched_platform_name: list[BuildInfo] = []
-
-    for build_info in build_plan:
-        if platform and build_info.platform != platform:
-            continue
-
-        if host_arch and build_info.build_on != host_arch:
-            continue
-
-        if build_for and build_info.build_for != build_for:
-            continue
-
-        if build_for and build_info.platform == build_for:
-            # prioritize platform name if matched build_for
-            new_plan_matched_platform_name.append(build_info)
-            continue
-
-        new_plan_matched_build_for.append(build_info)
-
-    if new_plan_matched_platform_name:
-        return new_plan_matched_platform_name
-    return new_plan_matched_build_for
