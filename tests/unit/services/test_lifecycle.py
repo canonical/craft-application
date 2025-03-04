@@ -25,6 +25,7 @@ from unittest import mock
 import craft_parts
 import craft_parts.callbacks
 import craft_platforms
+import distro
 import pytest
 import pytest_check
 from craft_parts import (
@@ -40,11 +41,9 @@ from craft_parts import (
 from craft_parts.executor import (
     ExecutionContext,  # pyright: ignore[reportPrivateImportUsage]
 )
-from craft_providers import bases
 
 from craft_application import errors, models, util
 from craft_application.errors import PartsLifecycleError
-from craft_application.models.project import BuildInfo
 from craft_application.services import lifecycle
 from craft_application.services.buildplan import BuildPlanService
 from craft_application.util import repositories
@@ -368,44 +367,44 @@ def test_get_primed_stage_packages(lifecycle_service):
         ([], None),
         (
             [
-                BuildInfo(
+                craft_platforms.BuildInfo(
                     "my-platform",
-                    build_on="any",
+                    build_on=craft_platforms.DebianArchitecture.from_host(),
                     build_for="all",
-                    base=bases.BaseName("ubuntu", "24.04"),
+                    build_base=craft_platforms.DistroBase("ubuntu", "24.04"),
                 )
             ],
             None,
         ),
         (
             [
-                BuildInfo(
+                craft_platforms.BuildInfo(
                     "my-platform",
-                    build_on="any",
+                    build_on=craft_platforms.DebianArchitecture.from_host(),
                     build_for=craft_platforms.DebianArchitecture.AMD64,
-                    base=bases.BaseName("ubuntu", "24.04"),
+                    build_base=craft_platforms.DistroBase("ubuntu", "24.04"),
                 )
             ],
             "amd64",
         ),
         (
             [
-                BuildInfo(
+                craft_platforms.BuildInfo(
                     "my-platform",
-                    build_on="any",
-                    build_for="arm64",
-                    base=bases.BaseName("ubuntu", "24.04"),
+                    build_on=craft_platforms.DebianArchitecture.from_host(),
+                    build_for=craft_platforms.DebianArchitecture.ARM64,
+                    build_base=craft_platforms.DistroBase("ubuntu", "24.04"),
                 )
             ],
             "arm64",
         ),
         (
             [
-                BuildInfo(
+                craft_platforms.BuildInfo(
                     "my-platform",
-                    build_on="any",
-                    build_for="riscv64",
-                    base=bases.BaseName("ubuntu", "24.04"),
+                    build_on=craft_platforms.DebianArchitecture.from_host(),
+                    build_for=craft_platforms.DebianArchitecture.RISCV64,
+                    build_base=craft_platforms.DistroBase("ubuntu", "24.04"),
                 )
             ],
             "riscv64",
@@ -417,7 +416,7 @@ def test_get_build_for(
     fake_host_architecture,
     fake_parts_lifecycle: lifecycle.LifecycleService,
     fake_services,
-    build_plan: list[BuildInfo],
+    build_plan: list[craft_platforms.BuildInfo],
     expected: str | None,
 ):
     mocker.patch.object(
@@ -570,11 +569,13 @@ def test_run_lifecycle_build_for_all(
 ):
     """'build-for: [all]' should be converted to the host arch."""
     build_plan = [
-        models.BuildInfo(
+        craft_platforms.BuildInfo(
             platform="platform1",
-            build_on=util.get_host_architecture(),
+            build_on=craft_platforms.DebianArchitecture.from_host(),
             build_for="all",
-            base=util.get_host_base(),
+            build_base=craft_platforms.DistroBase.from_linux_distribution(
+                distro.LinuxDistribution()
+            ),
         )
     ]
     work_dir = tmp_path / "work"
@@ -590,7 +591,10 @@ def test_run_lifecycle_build_for_all(
     )
     service.setup()
 
-    assert service.project_info.target_arch == util.get_host_architecture()
+    assert (
+        service.project_info.target_arch
+        == craft_platforms.DebianArchitecture.from_host()
+    )
     assert service.project_info.arch_build_for == util.get_host_architecture()
 
 

@@ -167,8 +167,6 @@ markers = [
     "slow: Tests that take a long time",
 ]
 filterwarnings = [
-    "ignore:The craft-application BuildPlanner:PendingDeprecationWarning",
-    "ignore:BuildInfo:PendingDeprecationWarning",
 ]
 
 [tool.coverage.run]
