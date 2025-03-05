@@ -50,11 +50,12 @@ class ProjectService(base.AppService):
     ) -> None:
         super().__init__(app, services)
         self.__platforms = None
+        self.__partitions: list[str] | None = None
         self.__project_file_path = None
         self.__raw_project: dict[str, Any] | None = None
         self._project_dir = project_dir
         self._project_model = None
-        self._build_on = craft_platforms.DebianArchitecture.from_host()
+        self._build_on: craft_platforms.DebianArchitecture | None = None
         self._build_for: str | None = None
         self._platform: str | None = None
 
@@ -65,6 +66,7 @@ class ProjectService(base.AppService):
         This method configures the settings of our prime project rendering -
         that is, the one that will be used for the project that is cached.
         """
+        self._build_on = craft_platforms.DebianArchitecture.from_host()
         if self.is_configured:
             raise RuntimeError("Project is already configured.")
 
@@ -243,10 +245,13 @@ class ProjectService(base.AppService):
         """The partitions for the prime project."""
         if not self.is_configured:
             raise RuntimeError("Project not configured yet.")
-        return self.get_partitions_for(
-            platform=cast(str, self._platform),
-            build_for=cast(str, self._build_for),
-        )
+
+        if not self.__partitions:
+            self.__partitions = self.get_partitions_for(
+                platform=cast(str, self._platform),
+                build_for=cast(str, self._build_for),
+            )
+        return self.__partitions
 
     @staticmethod
     def _app_preprocess_project(
@@ -320,6 +325,34 @@ class ProjectService(base.AppService):
         craft_parts.expand_environment(project_data, info=info)
 
     @final
+    def _preprocess(
+        self,
+        *,
+        build_for: str,
+        build_on: str,
+        platform: str,
+    ) -> dict[str, Any]:
+        """Preprocess the project for the given build-on, build-for and platform.
+
+        This method provides a project dict that has gone through any app-specific
+        pre-processing and has had its grammar validated, has not had environment
+        expansion or parts grammar applied.
+
+        This method is for internal use only, such as for getting partitions.
+
+        :param build_for: The target architecture of the build.
+        :param platform: The name of the target platform.
+        :param build_on: The host architecture the build happens on.
+        :returns: A dict containing a the pre-processed project.
+        """
+        project = self.get_raw()
+        GrammarAwareProject.validate_grammar(project)
+        self._app_preprocess_project(
+            project, build_on=build_on, build_for=build_for, platform=platform
+        )
+        return project
+
+    @final
     def render_for(
         self,
         *,
@@ -342,11 +375,8 @@ class ProjectService(base.AppService):
         if platform not in platforms:
             raise errors.InvalidPlatformError(platform, sorted(platforms.keys()))
 
-        project = copy.deepcopy(self._load_raw_project())
-
-        GrammarAwareProject.validate_grammar(project)
-        self._app_preprocess_project(
-            project, build_on=build_on, build_for=build_for, platform=platform
+        project = self._preprocess(
+            build_for=build_for, build_on=build_on, platform=platform
         )
         self._expand_environment(project, build_for=build_for, platform=platform)
 

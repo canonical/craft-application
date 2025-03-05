@@ -21,6 +21,7 @@ from unittest import mock
 
 import craft_platforms
 import pytest
+import pytest_mock
 from hypothesis import given, strategies
 
 from craft_application import errors
@@ -315,6 +316,38 @@ def test_expand_environment_stage_dirs(
         echo {platform_prime_dir}
         echo {build_for_prime_dir}"""
     )
+
+
+@pytest.mark.parametrize(
+    "build_for", [arch.value for arch in craft_platforms.DebianArchitecture]
+)
+@pytest.mark.parametrize(
+    "build_on", [arch.value for arch in craft_platforms.DebianArchitecture]
+)
+@pytest.mark.usefixtures("fake_project_file")
+def test_preprocess(
+    mocker: pytest_mock.MockFixture,
+    real_project_service: ProjectService,
+    build_for,
+    build_on,
+    fake_platform,
+):
+    mock_app_preprocess = mocker.patch.object(
+        real_project_service, "_app_preprocess_project"
+    )
+
+    project = real_project_service._preprocess(
+        build_for=build_for, build_on=build_on, platform=fake_platform
+    )
+
+    mock_app_preprocess.assert_called_once_with(
+        real_project_service.get_raw(),
+        build_on=build_on,
+        build_for=build_for,
+        platform=fake_platform,
+    )
+
+    assert project == real_project_service.get_raw()
 
 
 @pytest.mark.parametrize(
