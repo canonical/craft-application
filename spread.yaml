@@ -18,10 +18,6 @@ backends:
     location: snapd-spread/us-east1-b
     halt-timeout: 3h
     systems:
-      - ubuntu-22.04-64:
-          workers: 2
-          memory: 2G
-          storage: 10G
       - ubuntu-24.04-64:
           workers: 2
           memory: 2G
