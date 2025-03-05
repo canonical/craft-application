@@ -1,4 +1,5 @@
 version = 1
+revision = 1
 requires-python = ">=3.10"
 resolution-markers = [
     "python_full_version >= '3.12'",
@@ -451,7 +452,7 @@ requires-dist = [
     { name = "craft-cli", specifier = ">=2.12.0" },
     { name = "craft-grammar", specifier = ">=2.0.0" },
     { name = "craft-parts", specifier = ">=2.1.1" },
-    { name = "craft-platforms", specifier = ">=0.5.0" },
+    { name = "craft-platforms", specifier = ">=0.6.0" },
     { name = "craft-providers", specifier = ">=2.1.0" },
     { name = "jinja2", specifier = "~=3.1" },
     { name = "launchpadlib", marker = "extra == 'remote'", specifier = ">=1.10.16" },
@@ -459,12 +460,13 @@ requires-dist = [
     { name = "platformdirs", specifier = ">=3.10" },
     { name = "pydantic", specifier = "~=2.0" },
     { name = "pygit2", specifier = ">=1.13.0,<1.15.0" },
-    { name = "python-apt", marker = "sys_platform == 'linux' and extra == 'apt'", specifier = ">=2.4.0" },
+    { name = "python-apt", marker = "sys_platform == 'linux' and extra == 'apt'", specifier = ">=2.4.0", index = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels/" },
     { name = "pyyaml", specifier = ">=6.0" },
     { name = "requests" },
     { name = "snap-helpers", specifier = ">=0.4.2" },
     { name = "typing-extensions", specifier = ">=4.4.0" },
 ]
+provides-extras = ["remote", "apt"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -482,10 +484,10 @@ dev = [
     { name = "pytest-time", specifier = ">=0.3.1" },
     { name = "responses", specifier = "~=0.25.0" },
 ]
-dev-jammy = [{ name = "python-apt", marker = "sys_platform == 'linux'", specifier = "~=2.4.0" }]
-dev-noble = [{ name = "python-apt", marker = "sys_platform == 'linux'", specifier = "~=2.7.0" }]
-dev-oracular = [{ name = "python-apt", marker = "sys_platform == 'linux'", specifier = "~=2.9.0" }]
-dev-plucky = [{ name = "python-apt", marker = "sys_platform == 'linux'", specifier = ">=2.9.0" }]
+dev-jammy = [{ name = "python-apt", marker = "sys_platform == 'linux'", specifier = "~=2.4.0", index = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels/" }]
+dev-noble = [{ name = "python-apt", marker = "sys_platform == 'linux'", specifier = "~=2.7.0", index = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels/" }]
+dev-oracular = [{ name = "python-apt", marker = "sys_platform == 'linux'", specifier = "~=2.9.0", index = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels/" }]
+dev-plucky = [{ name = "python-apt", marker = "sys_platform == 'linux'", specifier = ">=2.9.0", index = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels/" }]
 docs = [
     { name = "canonical-sphinx", specifier = "~=0.2.0" },
     { name = "sphinx-autobuild", specifier = "==2024.10.3" },

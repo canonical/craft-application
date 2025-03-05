@@ -12,13 +12,8 @@ execute: |
   testcraft pack
   testcraft clean
 
-  if [[ $(find . -maxdepth 1 -name '*-default.partitioncraft') == "" ]]; then
-    echo "No default partition output" >> /dev/stderr
-    exit 1
-  fi
-
-  if ! [[ $(find . -maxdepth 1 -name '*-mushroom.partitioncraft') == "" ]]; then
-    echo "No mushroom partition output" >> /dev/stderr
+  if [[ $(find . -maxdepth 1 -name '*.testcraft') == "" ]]; then
+    echo "No testcraft file created" >> /dev/stderr
     exit 1
   fi
 

@@ -21,6 +21,7 @@ import craft_cli
 
 import craft_application
 from partitioncraft.application import PARTITIONCRAFT, Partitioncraft
+from partitioncraft.services import register_services
 
 
 def create_app() -> craft_application.Application:
@@ -29,19 +30,7 @@ def create_app() -> craft_application.Application:
     This is used both for running the app and for generating shell completion.
     This function is where the app should be configured before running it.
     """
-    craft_application.ServiceFactory.register(
-        "package", "PackageService", module="testcraft.services.package"
-    )
-    craft_application.ServiceFactory.register(
-        "project",
-        "PartitioncraftProjectService",
-        module="partitioncraft.services.project",
-    )
-    craft_application.ServiceFactory.register(
-        "provider",
-        "PartitioncraftProviderService",
-        module="partitioncraft.services.provider",
-    )
+    register_services()
     services = craft_application.ServiceFactory(app=PARTITIONCRAFT)
 
     return Partitioncraft(PARTITIONCRAFT, services=services)

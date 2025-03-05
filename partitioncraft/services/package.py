@@ -13,7 +13,7 @@
 #
 # You should have received a copy of the GNU Lesser General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
-"""Testcraft package service."""
+"""Partitioncraft package service."""
 
 import pathlib
 import tarfile
@@ -39,7 +39,7 @@ class PackageService(package.PackageService):
         )
 
     def pack(self, prime_dir: pathlib.Path, dest: pathlib.Path) -> list[pathlib.Path]:
-        """Pack a testcraft artifact."""
+        """Pack a partitioncraft artifact set."""
         project = self._services.get("project").get()
         lifecycle = self._services.get("lifecycle")
         tarball_name = f"{project.name}-{project.version}-default.partitioncraft"

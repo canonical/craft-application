@@ -24,6 +24,6 @@ from craft_application.services import project
 class PartitioncraftProjectService(project.ProjectService):
     """Package service for testcraft."""
 
-    def get_partitions(self) -> list[str] | None:
+    def get_partitions(self) -> list[str]:
         """Get the partitions needed for any partitioncraft project."""
         return ["default", "mushroom"]

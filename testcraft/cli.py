@@ -21,6 +21,7 @@ import craft_cli
 
 import craft_application
 from testcraft.application import TESTCRAFT
+from testcraft.services import register_services
 
 
 def create_app() -> craft_application.Application:
@@ -29,9 +30,7 @@ def create_app() -> craft_application.Application:
     This is used both for running the app and for generating shell completion.
     This function is where the app should be configured before running it.
     """
-    craft_application.ServiceFactory.register(
-        "package", "PackageService", module="testcraft.services.package"
-    )
+    register_services()
     services = craft_application.ServiceFactory(app=TESTCRAFT)
 
     return craft_application.Application(TESTCRAFT, services=services)
