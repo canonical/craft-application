@@ -4,6 +4,14 @@
 Changelog
 *********
 
+5.4.0 (2025-MM-DD)
+------------------
+
+Models
+======
+
+- Expose ``Part`` type
+
 5.3.0 (2025-05-28)
 ------------------
 
@@ -47,10 +55,15 @@ Commands
 
 - The ``test`` command now accepts paths to specific tests as well as the
   ``--debug``, ``--shell`` and ``--shell-after`` parameters.
+=======
+4.x.x (YYYY-MMM-DD)
+-------------------
+>>>>>>> 7e225ac (feat(models): expose Part type)
 
 Models
 ======
 
+<<<<<<< HEAD
 - A new :doc:`how-to guide </howto/platforms>` describes how to implement
   application-specific ``platforms`` keys.
 

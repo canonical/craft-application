@@ -108,6 +108,9 @@ def _validate_part(part: dict[str, Any]) -> dict[str, Any]:
     return part
 
 
+Part = Annotated[dict[str, Any], pydantic.BeforeValidator(_validate_part)]
+
+
 class Project(base.CraftBaseModel):
     """Craft Application project definition."""
 
@@ -128,10 +131,8 @@ class Project(base.CraftBaseModel):
 
     adopt_info: str | None = None
 
-    parts: dict[  # parts are handled by craft-parts
-        str,
-        Annotated[dict[str, Any], pydantic.BeforeValidator(_validate_part)],
-    ]
+    # parts are handled by craft-parts
+    parts: dict[str, Part]
 
     package_repositories: (
         list[
