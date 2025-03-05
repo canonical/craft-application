@@ -84,3 +84,6 @@ parts:
       # Include the actual fake apps
       cp -r testcraft "${CRAFT_PART_INSTALL}/lib/python3.12/site-packages/"
       cp -r partitioncraft "${CRAFT_PART_INSTALL}/lib/python3.12/site-packages/"
+
+      rm "${CRAFT_PART_INSTALL}/bin/python"
+      ln -s ../usr/bin/python3 "${CRAFT_PART_INSTALL}/bin/python"

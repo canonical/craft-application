@@ -426,7 +426,7 @@ class ProjectService(base.AppService):
         if not self._project_model:
             self._project_model = self.render_for(
                 build_for=cast(str, self._build_for),
-                build_on=self._build_on,
+                build_on=str(self._build_on),
                 platform=cast(str, self._platform),
             )
         return self._project_model
