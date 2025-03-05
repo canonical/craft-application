@@ -331,6 +331,12 @@ def fake_project_service_class(fake_project) -> type[services.ProjectService]:
                 return ["default", *{platform, build_for}]
             return None
 
+        def get_partitions(self) -> list[str] | None:
+            """Make this flexible for whether we have partitions or not."""
+            if craft_parts.Features().enable_partitions:
+                return ["default", "a"]
+            return None
+
     return FakeProjectService
 
 

@@ -19,7 +19,13 @@ backends:
     halt-timeout: 3h
     systems:
       - ubuntu-24.04-64:
+<<<<<<< HEAD
           workers: 2
+=======
+          workers: 4
+          memory: 2G
+          storage: 10G
+>>>>>>> a390947 (fix: oops)
   # lxd:  # Disabled due to https://github.com/canonical/spread/issues/215
   #   systems:
   #     - ubuntu-24.04
