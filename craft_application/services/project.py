@@ -167,8 +167,6 @@ class ProjectService(base.AppService):
         Applications should override this method depending on how they determine
         partitions.
         """
-        if craft_parts.Features().enable_partitions:
-            return ["default"]
         return None
 
     @final
