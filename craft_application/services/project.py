@@ -54,6 +54,85 @@ class ProjectService(base.AppService):
         self.__raw_project: dict[str, Any] | None = None
         self._project_dir = project_dir
         self._project_model = None
+        self._build_on = craft_platforms.DebianArchitecture.from_host()
+        self._build_for: str | None = None
+        self._platform: str | None = None
+
+    @final
+    def configure(self, *, platform: str | None, build_for: str | None) -> None:
+        """Configure the prime project to render.
+
+        This method configures the settings of our prime project rendering -
+        that is, the one that will be used for the project that is cached.
+        """
+        if self.is_configured:
+            raise RuntimeError("Project is already configured.")
+
+        platforms = self.get_platforms()
+        if platform and platform not in platforms:
+            raise errors.InvalidPlatformError(platform, list(platforms.keys()))
+
+        if platform and build_for:
+            self._platform = platform
+            self._build_for = (
+                build_for
+                if build_for == "all"
+                else craft_platforms.DebianArchitecture(build_for)
+            )
+            self.__is_configured = True
+            return
+
+        if not platform:
+            # If we don't have a platform, select the first platform that matches
+            # our build-on and build-for. If we don't have a build-for, select the
+            # first platform that matches our build-on.
+            for name, data in platforms.items():
+                if self._build_on.value not in data["build-on"]:
+                    continue
+                if build_for and build_for not in data["build-for"]:
+                    continue
+                platform = name
+                break
+            else:
+                if build_for:
+                    raise RuntimeError(
+                        f"Cannot generate a project that builds on "
+                        f"{self._build_on} and builds for {build_for}"
+                    )
+                # We won't be able to build in this case, but the project is
+                # still valid for non-lifecycle commands. Our prime project will
+                # just be the first item available.
+                platform = next(iter(platforms))
+                self._platform = platform
+                build_for = platforms[platform]["build-for"][0]
+                self._build_for = (
+                    build_for
+                    if build_for == "all"
+                    else craft_platforms.DebianArchitecture(build_for)
+                )
+                self._build_on = craft_platforms.DebianArchitecture(
+                    platforms[platform]["build-on"][0]
+                )
+                self.__is_configured = True
+                return
+        self._platform = platform
+
+        if not build_for:
+            # Any build-for in the platform is fine. For most crafts this is the
+            # only build-for in the platform.
+            build_for = platforms[platform]["build-for"][0]
+        self._build_for = (
+            build_for
+            if build_for == "all"
+            else craft_platforms.DebianArchitecture(build_for)
+        )
+        self.__is_configured = True
+
+    @property
+    @final
+    def is_configured(self) -> bool:
+        """Whether the project has already been rendered."""
+        return self._platform is not None and self._build_for is not None
 
     def resolve_project_file_path(self) -> pathlib.Path:
         """Get the path to the project file from the root project directory.
@@ -104,28 +183,10 @@ class ProjectService(base.AppService):
         self.__raw_project = cast(dict[str, Any], raw_yaml)
         return self.__raw_project
 
+    @final
     def get_raw(self) -> dict[str, Any]:
         """Get the raw project data structure."""
         return copy.deepcopy(self._load_raw_project())
-
-    def _app_preprocess_project(
-        self,
-        project: dict[str, Any],
-        *,
-        build_on: str,
-        build_for: str,
-        platform: str,
-    ) -> None:
-        """Run any application-specific pre-processing on the project, in-place.
-
-        This includes any application-specific transformations on a project's raw data
-        structure before it gets rendered as a pydantic model. Some examples of
-        processing to do here include:
-
-        - Applying extensions
-        - Adding "hidden" app-specific parts
-        - Processing grammar for keys other than parts
-        """
 
     def _app_render_legacy_platforms(self) -> dict[str, craft_platforms.PlatformDict]:
         """Application-specific rendering function if no platforms are declared.
@@ -143,7 +204,12 @@ class ProjectService(base.AppService):
 
     @final
     def get_platforms(self) -> dict[str, craft_platforms.PlatformDict]:
-        """Get the platforms definition for the project."""
+        """Get the platforms definition for the project.
+
+        The platforms definition must always be immediately able to be rendered from
+        the raw YAML. This means that platforms cannot contain grammar, they cannot
+        be defined by extensions, etc.
+        """
         if self.__platforms:
             return self.__platforms.copy()
         raw_project = self._load_raw_project()
@@ -157,22 +223,56 @@ class ProjectService(base.AppService):
 
         return platforms
 
+    @final
     def _get_project_vars(self, yaml_data: dict[str, Any]) -> dict[str, str]:
         """Return a dict with project variables to be expanded."""
         return {var: str(yaml_data.get(var, "")) for var in self._app.project_variables}
 
-    def get_partitions(self) -> list[str] | None:
-        """Get the partitions this application needs for this project.
+    def get_partitions_for(self, *, platform: str, build_for: str) -> list[str] | None:  # noqa: ARG002  # Intentionally unused for overrides.
+        """Get the partitions for a destination of this project.
 
-        Applications should override this method depending on how they determine
-        partitions.
+        The default implementation gets partitions for an application that does not
+        have partitions. Applications that will enable partitions must override this
+        method.
         """
         return None
+
+    @property
+    @final
+    def partitions(self) -> list[str] | None:
+        """The partitions for the prime project."""
+        if not self.is_configured:
+            raise RuntimeError("Project not configured yet.")
+        return self.get_partitions_for(
+            platform=cast(str, self._platform),
+            build_for=cast(str, self._build_for),
+        )
+
+    @staticmethod
+    def _app_preprocess_project(
+        project: dict[str, Any],
+        *,
+        build_on: str,
+        build_for: str,
+        platform: str,
+    ) -> None:
+        """Run any application-specific pre-processing on the project, in-place.
+
+        This includes any application-specific transformations on a project's raw data
+        structure before it gets rendered as a pydantic model. Some examples of
+        processing to do here include:
+
+        - Applying extensions
+        - Adding "hidden" app-specific parts
+        - Processing grammar for keys other than parts
+        """
 
     @final
     def _expand_environment(
         self,
         project_data: dict[str, Any],
+        *,
+        platform: str,
         build_for: str,
     ) -> None:
         """Perform expansion of project environment variables.
@@ -201,7 +301,7 @@ class ProjectService(base.AppService):
             )
 
         environment_vars = self._get_project_vars(project_data)
-        partitions = self.get_partitions()
+        partitions = self.get_partitions_for(platform=platform, build_for=build_for)
         project_dirs = craft_parts.ProjectDirs(
             work_dir=self._project_dir, partitions=partitions
         )
@@ -248,7 +348,7 @@ class ProjectService(base.AppService):
         self._app_preprocess_project(
             project, build_on=build_on, build_for=build_for, platform=platform
         )
-        self._expand_environment(project, build_for=build_for)
+        self._expand_environment(project, build_for=build_for, platform=platform)
 
         # Process grammar.
         if "parts" in project:
@@ -283,12 +383,6 @@ class ProjectService(base.AppService):
             }
         )
 
-    @property
-    @final
-    def is_rendered(self) -> bool:
-        """Whether the project has already been rendered."""
-        return self._project_model is not None
-
     @final
     def get(self) -> models.Project:
         """Get the rendered project.
@@ -296,69 +390,13 @@ class ProjectService(base.AppService):
         :returns: The project model.
         :raises: RuntimeError if the project has not been rendered.
         """
+        if not self.is_configured:
+            raise RuntimeError("Project not configured yet.")
+
         if not self._project_model:
-            raise RuntimeError("Project not rendered yet.")
-        return self._project_model
-
-    @final
-    def render_once(
-        self,
-        *,
-        platform: str | None = None,
-        build_for: str | None = None,
-    ) -> models.Project:
-        """Render the project model for this run.
-
-        This should only be called by the Application for initial setup of the project.
-        Everything else should use :py:meth:`get`.
-
-        If build_for or platform is not set, it tries to select the appropriate one.
-        Which value is selected is not guaranteed unless both a build_for and platform
-        are passed. If an application requires that each platform only build for
-        exactly one target, passing only platform will guarantee a repeatable output.
-
-        :param platform: The platform build name.
-        :param build_for: The destination architecture (or base:arch)
-        :returns: The rendered project
-        :raises: RuntimeError if the project has already been rendered.
-        """
-        if self._project_model:
-            raise RuntimeError("Project should only be rendered once.")
-
-        build_on = craft_platforms.DebianArchitecture.from_host()
-        if not platform or not build_for:
-            platforms = self.get_platforms()
-            if not platform:
-                # If we don't have a platform, select the first platform that matches
-                # our build-on and build-for. If we don't have a build-for, select the
-                # first platform that matches our build-on.
-                for name, data in platforms.items():
-                    if build_on.value not in data["build-on"]:
-                        continue
-                    if build_for and build_for not in data["build-for"]:
-                        continue
-                    platform = name
-                    break
-                else:
-                    if build_for:
-                        raise RuntimeError(
-                            f"Cannot generate a project that builds on {build_on} and "
-                            f"builds for {build_for}"
-                        )
-                    # We won't be able to build in this case, but the project is
-                    # still valid for non-lifecycle commands. Render for anything.
-                    platform = next(iter(platforms))
-                    self._project_model = self.render_for(
-                        platform=platform,
-                        build_for=platforms[platform]["build-for"][0],
-                        build_on=platforms[platform]["build-on"][0],
-                    )
-                    return self._project_model
-            # Any build-for in the platform is fine. For most crafts this is the
-            # only build-for in the platform.
-            build_for = platforms[platform]["build-for"][0]
-
-        self._project_model = self.render_for(
-            build_for=build_for, build_on=build_on, platform=platform
-        )
+            self._project_model = self.render_for(
+                build_for=cast(str, self._build_for),
+                build_on=self._build_on,
+                platform=cast(str, self._platform),
+            )
         return self._project_model

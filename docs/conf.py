@@ -54,4 +54,8 @@ intersphinx_mapping = {
         "https://canonical-craft-parts.readthedocs-hosted.com/en/latest",
         None,
     ),
+    "craft-platforms": (
+        "https://canonical-craft-platforms.readthedocs-hosted.com/en/latest",
+        None,
+    ),
 }

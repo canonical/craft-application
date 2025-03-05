@@ -3,7 +3,7 @@
 ``ProjectService``
 ==================
 
-The ``ProjectService`` is a service for handling access to this run's project.
+The ``ProjectService`` is a service for handling access to the project.
 
 Project loading
 ---------------

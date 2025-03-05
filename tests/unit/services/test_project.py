@@ -21,6 +21,7 @@ from unittest import mock
 
 import craft_platforms
 import pytest
+from hypothesis import given, strategies
 
 from craft_application import errors
 from craft_application.application import AppMetadata
@@ -140,8 +141,31 @@ def test_get_project_vars(real_project_service: ProjectService, data, expected):
     assert real_project_service._get_project_vars(data) == expected
 
 
-def test_partitions_with_partitions_disabled(real_project_service: ProjectService):
-    assert real_project_service.get_partitions() is None
+@given(
+    build_for=strategies.text(),
+    platform=strategies.text(),
+)
+def test_get_partitions_for(build_for, platform):
+    svc = ProjectService(None, None, project_dir=None)  # type: ignore[arg-type]
+    assert (
+        svc.get_partitions_for(
+            platform=platform,
+            build_for=build_for,
+        )
+        is None
+    )
+
+
+@pytest.mark.parametrize("build_for", [*craft_platforms.DebianArchitecture, "all"])
+@pytest.mark.usefixtures("fake_host_architecture")
+def test_partitions(
+    fake_project_file,
+    real_project_service: ProjectService,
+    fake_platform: str,
+    build_for: str,
+):
+    real_project_service.configure(build_for=build_for, platform=fake_platform)
+    assert real_project_service.partitions is None
 
 
 @pytest.mark.parametrize(
@@ -187,9 +211,15 @@ def test_partitions_with_partitions_disabled(real_project_service: ProjectServic
     "build_for", [arch.value for arch in craft_platforms.DebianArchitecture] + ["all"]
 )
 def test_expand_environment_no_partitions_any_platform(
-    real_project_service: ProjectService, project_data, build_for, expected
+    real_project_service: ProjectService,
+    project_data,
+    build_for,
+    fake_platform,
+    expected,
 ):
-    real_project_service._expand_environment(project_data, build_for)
+    real_project_service._expand_environment(
+        project_data, platform=fake_platform, build_for=build_for
+    )
     assert project_data == expected
 
 
@@ -232,42 +262,58 @@ def test_expand_environment_no_partitions_any_platform(
     ],
 )
 def test_expand_environment_for_riscv64(
-    real_project_service: ProjectService, project_data, expected, fake_host_architecture
+    real_project_service: ProjectService,
+    project_data,
+    expected,
+    fake_host_architecture,
+    fake_platform,
 ):
-    real_project_service._expand_environment(project_data, "riscv64")
+    real_project_service._expand_environment(
+        project_data, platform=fake_platform, build_for="riscv64"
+    )
     assert project_data == expected
 
 
 @pytest.mark.parametrize(
-    "build_for", [arch.value for arch in craft_platforms.DebianArchitecture] + ["all"]
+    "build_for", [arch.value for arch in craft_platforms.DebianArchitecture]
 )
 @pytest.mark.usefixtures("enable_partitions")
 def test_expand_environment_stage_dirs(
-    project_service: ProjectService, build_for: str, project_path: pathlib.Path
+    project_service: ProjectService,
+    build_for: str,
+    project_path: pathlib.Path,
+    fake_platform: str,
 ):
     default_stage_dir = project_path / "stage"
-    a_stage_dir = project_path / "partitions/a/stage"
+    platform_stage_dir = project_path / f"partitions/{fake_platform}/stage"
+    build_for_stage_dir = project_path / f"partitions/{build_for}/stage"
     default_prime_dir = project_path / "prime"
-    a_prime_dir = project_path / "partitions/a/prime"
-    project_service.get_partitions = lambda: ["default", "a"]
+    platform_prime_dir = project_path / f"partitions/{fake_platform}/prime"
+    build_for_prime_dir = project_path / f"partitions/{build_for}/prime"
+    platform_env = fake_platform.upper().replace("-", "_")
+    build_for_env = build_for.upper().replace("-", "_")
     my_part = {
         "plugin": "nil",
-        "override-stage": "echo $CRAFT_STAGE\necho $CRAFT_DEFAULT_STAGE\necho $CRAFT_A_STAGE",
-        "override-prime": "echo $CRAFT_PRIME\necho $CRAFT_DEFAULT_PRIME\necho $CRAFT_A_PRIME",
+        "override-stage": f"echo $CRAFT_STAGE\necho $CRAFT_DEFAULT_STAGE\necho $CRAFT_{platform_env}_STAGE\necho $CRAFT_{build_for_env}_STAGE",
+        "override-prime": f"echo $CRAFT_PRIME\necho $CRAFT_DEFAULT_PRIME\necho $CRAFT_{platform_env}_PRIME\necho $CRAFT_{build_for_env}_PRIME",
     }
     data = {"parts": {"my-part": my_part}}
-    project_service._expand_environment(data, build_for)
+    project_service._expand_environment(
+        data, platform=fake_platform, build_for=build_for
+    )
     assert data["parts"]["my-part"]["override-stage"] == textwrap.dedent(
         f"""\
         echo {default_stage_dir}
         echo {default_stage_dir}
-        echo {a_stage_dir}"""
+        echo {platform_stage_dir}
+        echo {build_for_stage_dir}"""
     )
     assert data["parts"]["my-part"]["override-prime"] == textwrap.dedent(
         f"""\
         echo {default_prime_dir}
         echo {default_prime_dir}
-        echo {a_prime_dir}"""
+        echo {platform_prime_dir}
+        echo {build_for_prime_dir}"""
     )
 
 
@@ -343,40 +389,48 @@ def test_render_for_invalid_platform(
 
 
 @pytest.mark.parametrize(
+    "build_for", [*(arch.value for arch in craft_platforms.DebianArchitecture), "all"]
+)
+@pytest.mark.usefixtures("fake_project_file")
+def test_cannot_reconfigure(
+    real_project_service: ProjectService, build_for, fake_platform
+):
+    real_project_service.configure(platform=fake_platform, build_for=build_for)
+
+    # Test that we can't re-render no matter the arguments.
+    with pytest.raises(RuntimeError, match="Project is already configured."):
+        real_project_service.configure(platform=fake_platform, build_for=build_for)
+
+    with pytest.raises(RuntimeError, match="Project is already configured."):
+        real_project_service.configure(platform=fake_platform, build_for=None)
+
+    with pytest.raises(RuntimeError, match="Project is already configured."):
+        real_project_service.configure(build_for=build_for, platform=None)
+
+    with pytest.raises(RuntimeError, match="Project is already configured."):
+        real_project_service.configure(platform=None, build_for=None)
+
+
+@pytest.mark.parametrize(
     "build_for", [arch.value for arch in craft_platforms.DebianArchitecture]
 )
 @pytest.mark.usefixtures("fake_project_file")
-def test_render_once_by_build_for_and_platform(
+def test_get_by_build_for_and_platform(
     real_project_service: ProjectService, build_for, fake_platform
 ):
-    result = real_project_service.render_once(
-        platform=fake_platform, build_for=build_for
-    )
+    real_project_service.configure(platform=fake_platform, build_for=build_for)
+    result = real_project_service.get()
     assert (
         result.parts["some-part"]["build-environment"][0]["BUILD_ON"]
         == craft_platforms.DebianArchitecture.from_host().value
     )
     assert result.parts["some-part"]["build-environment"][1]["BUILD_FOR"] == build_for
 
-    # Test that we can't re-render no matter the arguments.
-    with pytest.raises(RuntimeError, match="Project should only be rendered once."):
-        real_project_service.render_once(platform=fake_platform, build_for=build_for)
-
-    with pytest.raises(RuntimeError, match="Project should only be rendered once."):
-        real_project_service.render_once(platform=fake_platform)
-
-    with pytest.raises(RuntimeError, match="Project should only be rendered once."):
-        real_project_service.render_once(build_for=build_for)
-
-    with pytest.raises(RuntimeError, match="Project should only be rendered once."):
-        real_project_service.render_once()
-
 
 @pytest.mark.usefixtures("fake_project_file")
-def test_render_once_by_platform(
-    real_project_service: ProjectService, fake_platform: str
-):
-    result = real_project_service.render_once(platform=fake_platform)
+def test_get_by_platform(real_project_service: ProjectService, fake_platform: str):
+    real_project_service.configure(platform=fake_platform, build_for=None)
+    result = real_project_service.get()
     assert (
         result.parts["some-part"]["build-environment"][0]["BUILD_ON"]
         == craft_platforms.DebianArchitecture.from_host().value
@@ -389,14 +443,15 @@ def test_render_once_by_platform(
 @pytest.mark.parametrize(
     "build_for", [arch.value for arch in craft_platforms.DebianArchitecture]
 )
-def test_render_once_by_build_for(
+def test_get_by_build_for(
     real_project_service: ProjectService, build_for: str, fake_host_architecture
 ):
+    real_project_service.configure(build_for=build_for, platform=None)
     # This test takes two paths because not all build-on/build-for combinations are
     # valid. If the combination is valid, we check that we got the expected output.
     # If the combination is invalid, we check that the error was correct.
     try:
-        result = real_project_service.render_once(build_for=build_for)
+        result = real_project_service.get()
     except RuntimeError as exc:
         assert (  # noqa: PT017
             exc.args[0]
@@ -421,10 +476,13 @@ def test_render_once_by_build_for(
     ],
 )
 @pytest.mark.usefixtures("platform_independent_project", "fake_project_file")
-def test_render_once_platform_independent(
+def test_get_platform_independent(
     real_project_service: ProjectService, fake_host_architecture, kwargs
 ):
-    result = real_project_service.render_once(**kwargs)
+    configure_args = {"build_for": None, "platform": None}
+    configure_args.update(kwargs)
+    real_project_service.configure(**configure_args)
+    result = real_project_service.get()
 
     assert (
         result.parts["some-part"]["build-environment"][0]["BUILD_ON"]
@@ -436,16 +494,17 @@ def test_render_once_platform_independent(
     )
 
 
-def test_get_not_rendered(real_project_service: ProjectService):
-    with pytest.raises(RuntimeError, match="Project not rendered yet."):
+def test_get_not_configured(real_project_service: ProjectService):
+    with pytest.raises(RuntimeError, match="Project not configured yet."):
         real_project_service.get()
 
 
 @pytest.mark.usefixtures("fake_project_file")
 def test_get_already_rendered(real_project_service: ProjectService):
-    rendered = real_project_service.render_once()
+    real_project_service.configure(platform=None, build_for=None)
+    rendered = real_project_service.get()
 
-    assert real_project_service.get() == rendered
+    assert real_project_service.get() is rendered
 
 
 def test_mandatory_adoptable_fields(
@@ -459,8 +518,9 @@ def test_mandatory_adoptable_fields(
     project_yaml = fake_project_file.read_text()
     fake_project_file.write_text(project_yaml.replace("license:", "# licence:"))
 
+    real_project_service.configure(platform=None, build_for=None)
     with pytest.raises(errors.CraftValidationError) as exc_info:
-        _ = real_project_service.render_once()
+        _ = real_project_service.get()
 
     assert (
         str(exc_info.value)

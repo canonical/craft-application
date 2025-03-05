@@ -239,7 +239,7 @@ class LifecycleService(base.AppService):
                 project_vars_part_name=self._project.adopt_info,
                 project_vars=self._project_vars,
                 track_stage_packages=True,
-                partitions=self._services.get("project").get_partitions(),
+                partitions=self._services.get("project").partitions,
                 **self._manager_kwargs,
             )
         except PartsError as err:
