@@ -26,8 +26,10 @@ Configure the ProjectService
 The first step is for the ``Application`` to configure the project service. This means
 several things:
 
-1. Set the project directory location. This is done by passing a directory on instantiation.
-2. Set any ``platform`` and ``build_for`` hints. This is done using the ``configure`` method.
+1. Set the project directory location. This is done by passing a directory on
+   instantiation.
+2. Set any ``platform`` and ``build_for`` hints. This is done using the ``configure``
+   method.
 
 Find the project file
 ~~~~~~~~~~~~~~~~~~~~~
@@ -61,7 +63,7 @@ using the :py:meth:`ProjectService._app_preprocess_project` method. By default,
 nothing happens here.
 
 The project dict at this state is available using the
-`:py:meth:`ProjectService._preprocess` protected method.
+:py:meth:`ProjectService._preprocess` protected method.
 
 Expand environment
 ~~~~~~~~~~~~~~~~~~
