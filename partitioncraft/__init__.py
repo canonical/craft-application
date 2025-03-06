@@ -13,17 +13,9 @@
 #
 # You should have received a copy of the GNU Lesser General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
-"""Services for testcraft."""
+"""Partitioncraft.
 
-import craft_application
+Partitioncraft is a fake craft-application app that enables partitions.
 
-
-def register_services() -> None:
-    """Register Testcraft's services.
-
-    This registers with the ServiceFactory all the services that testcraft
-    adds or overrides.
-    """
-    craft_application.ServiceFactory.register(
-        "package", "PackageService", module="testcraft.services.package"
-    )
+This package contains things that differ between testcraft and partitioncraft.
+"""

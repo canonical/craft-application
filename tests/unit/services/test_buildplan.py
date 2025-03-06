@@ -17,6 +17,7 @@
 
 import collections
 from collections.abc import Collection
+from typing import Literal
 from unittest import mock
 
 import craft_platforms
@@ -370,8 +371,8 @@ def test_filter_plan(
     build_plan_service: BuildPlanService,
     plan: list[BuildInfo],
     platform: str | None,
-    build_for: str | None,
-    build_on: str | None,
+    build_for: craft_platforms.DebianArchitecture | Literal["all"] | None,
+    build_on: craft_platforms.DebianArchitecture | None,
     result,
 ):
     assert (

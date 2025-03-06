@@ -2,7 +2,7 @@ name: testcraft
 summary: A craft for testing craft-application
 description: |
   This is a snap for testing craft-application.
-# adopt-info: testcraft
+# adopt-info: testcraft  # Real apps should include adopt-info rather than version.
 version: dev
 
 grade: devel
@@ -20,6 +20,8 @@ platforms:
 apps:
   testcraft:
     command: bin/python -m testcraft
+  partitioncraft:
+    command: bin/python -m partitioncraft
 
 parts:
   python:
@@ -79,4 +81,6 @@ parts:
       uv venv --relocatable --allow-existing "${CRAFT_PART_INSTALL}"
       uv sync --no-dev --no-editable --reinstall
 
-      cp -r testcraft/ "${CRAFT_PART_INSTALL}/lib/site-packages/"
+      # Include the actual fake apps
+      cp -r testcraft "${CRAFT_PART_INSTALL}/lib/python3.12/site-packages/"
+      cp -r partitioncraft "${CRAFT_PART_INSTALL}/lib/python3.12/site-packages/"
