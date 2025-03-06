@@ -13,17 +13,27 @@
 #
 # You should have received a copy of the GNU Lesser General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
-"""Services for testcraft."""
+"""Services for partitioncraft."""
 
 import craft_application
 
 
 def register_services() -> None:
-    """Register Testcraft's services.
+    """Register Partitioncraft's services.
 
-    This registers with the ServiceFactory all the services that testcraft
+    This registers with the ServiceFactory all the services that partitioncraft
     adds or overrides.
     """
     craft_application.ServiceFactory.register(
-        "package", "PackageService", module="testcraft.services.package"
+        "package", "PackageService", module="partitioncraft.services.package"
+    )
+    craft_application.ServiceFactory.register(
+        "project",
+        "PartitioncraftProjectService",
+        module="partitioncraft.services.project",
+    )
+    craft_application.ServiceFactory.register(
+        "provider",
+        "PartitioncraftProviderService",
+        module="partitioncraft.services.provider",
     )

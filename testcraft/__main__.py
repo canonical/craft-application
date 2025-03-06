@@ -17,6 +17,6 @@
 
 import sys
 
-from . import cli
+from testcraft import cli
 
 sys.exit(cli.create_app().run())

@@ -9,7 +9,19 @@ environment:
 include:
   - tests/spread
 
+exclude:
+  - .venv
+
 backends:
+  google:
+    key: '$(HOST: echo "$SPREAD_GOOGLE_KEY")'
+    location: snapd-spread/us-east1-b
+    halt-timeout: 3h
+    systems:
+      - ubuntu-24.04-64:
+          workers: 2
+          memory: 2G
+          storage: 10G
   # lxd:  # Disabled due to https://github.com/canonical/spread/issues/215
   #   systems:
   #     - ubuntu-24.04
@@ -96,6 +108,7 @@ backends:
       multipass delete --purge "${instance_name}"
     systems:
       - ubuntu-24.04-64:
+          workers: 3
 
 prepare: |
   snap wait system seed.loaded
@@ -103,7 +116,11 @@ prepare: |
   snap wait system seed.loaded
 
   snap install --dangerous --classic tests/spread/*.snap
+  snap alias testcraft.partitioncraft partitioncraft
 
 suites:
   tests/spread/testcraft/:
     summary: Tests for testcraft core functionality
+
+  tests/spread/partitioncraft/:
+    summary: Tests for partitioncraft (app with partitions enabled)
