@@ -143,15 +143,17 @@ def test_get_project_vars(real_project_service: ProjectService, data, expected):
 
 
 @given(
+    build_on=strategies.sampled_from(craft_platforms.DebianArchitecture),
     build_for=strategies.text(),
     platform=strategies.text(),
 )
-def test_get_partitions_for(build_for, platform):
+def test_get_partitions_for(build_on, build_for, platform):
     svc = ProjectService(None, None, project_dir=None)  # type: ignore[arg-type]
     assert (
         svc.get_partitions_for(
             platform=platform,
             build_for=build_for,
+            build_on=build_on,
         )
         is None
     )
@@ -215,11 +217,15 @@ def test_expand_environment_no_partitions_any_platform(
     real_project_service: ProjectService,
     project_data,
     build_for,
+    fake_host_architecture,
     fake_platform,
     expected,
 ):
     real_project_service._expand_environment(
-        project_data, platform=fake_platform, build_for=build_for
+        project_data,
+        platform=fake_platform,
+        build_for=build_for,
+        build_on=fake_host_architecture,
     )
     assert project_data == expected
 
@@ -270,7 +276,10 @@ def test_expand_environment_for_riscv64(
     fake_platform,
 ):
     real_project_service._expand_environment(
-        project_data, platform=fake_platform, build_for="riscv64"
+        project_data,
+        platform=fake_platform,
+        build_for="riscv64",
+        build_on=fake_host_architecture,
     )
     assert project_data == expected
 
@@ -283,6 +292,7 @@ def test_expand_environment_stage_dirs(
     project_service: ProjectService,
     build_for: str,
     project_path: pathlib.Path,
+    fake_host_architecture,
     fake_platform: str,
 ):
     default_stage_dir = project_path / "stage"
@@ -300,7 +310,10 @@ def test_expand_environment_stage_dirs(
     }
     data = {"parts": {"my-part": my_part}}
     project_service._expand_environment(
-        data, platform=fake_platform, build_for=build_for
+        data,
+        platform=fake_platform,
+        build_for=build_for,
+        build_on=fake_host_architecture,
     )
     assert data["parts"]["my-part"]["override-stage"] == textwrap.dedent(
         f"""\

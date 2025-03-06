@@ -316,7 +316,11 @@ def fake_project_service_class(fake_project) -> type[services.ProjectService]:
 
         @override
         def get_partitions_for(
-            self, *, platform: str, build_for: str
+            self,
+            *,
+            platform: str,
+            build_for: str,
+            build_on: craft_platforms.DebianArchitecture,
         ) -> list[str] | None:
             """Make this flexible for whether we have partitions or not.
 

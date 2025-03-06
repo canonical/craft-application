@@ -134,7 +134,7 @@ class ProjectService(base.AppService):
     @final
     def is_configured(self) -> bool:
         """Whether the project has already been rendered."""
-        return self._platform is not None and self._build_for is not None
+        return None not in (self._build_on, self._build_for, self._platform)
 
     def resolve_project_file_path(self) -> pathlib.Path:
         """Get the path to the project file from the root project directory.
@@ -230,7 +230,13 @@ class ProjectService(base.AppService):
         """Return a dict with project variables to be expanded."""
         return {var: str(yaml_data.get(var, "")) for var in self._app.project_variables}
 
-    def get_partitions_for(self, *, platform: str, build_for: str) -> list[str] | None:  # noqa: ARG002  # Intentionally unused for overrides.
+    def get_partitions_for(
+        self,
+        *,  # The keyword args here may be used by child class overrides.
+        platform: str,  # noqa: ARG002
+        build_for: str,  # noqa: ARG002
+        build_on: craft_platforms.DebianArchitecture,  # noqa: ARG002
+    ) -> list[str] | None:
         """Get the partitions for a destination of this project.
 
         The default implementation gets partitions for an application that does not
@@ -250,6 +256,7 @@ class ProjectService(base.AppService):
             self.__partitions = self.get_partitions_for(
                 platform=cast(str, self._platform),
                 build_for=cast(str, self._build_for),
+                build_on=cast(craft_platforms.DebianArchitecture, self._build_on),
             )
         return self.__partitions
 
@@ -279,6 +286,7 @@ class ProjectService(base.AppService):
         *,
         platform: str,
         build_for: str,
+        build_on: craft_platforms.DebianArchitecture,
     ) -> None:
         """Perform expansion of project environment variables.
 
@@ -306,7 +314,9 @@ class ProjectService(base.AppService):
             )
 
         environment_vars = self._get_project_vars(project_data)
-        partitions = self.get_partitions_for(platform=platform, build_for=build_for)
+        partitions = self.get_partitions_for(
+            platform=platform, build_for=build_for, build_on=build_on
+        )
         project_dirs = craft_parts.ProjectDirs(
             work_dir=self._project_dir, partitions=partitions
         )
@@ -378,7 +388,12 @@ class ProjectService(base.AppService):
         project = self._preprocess(
             build_for=build_for, build_on=build_on, platform=platform
         )
-        self._expand_environment(project, build_for=build_for, platform=platform)
+        self._expand_environment(
+            project,
+            build_on=craft_platforms.DebianArchitecture(build_on),
+            build_for=build_for,
+            platform=platform,
+        )
 
         # Process grammar.
         if "parts" in project:
