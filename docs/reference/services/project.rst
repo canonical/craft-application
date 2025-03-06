@@ -63,7 +63,9 @@ using the :py:meth:`ProjectService._app_preprocess_project` method. By default,
 nothing happens here.
 
 The project dict at this state is available using the
-:py:meth:`ProjectService._preprocess` protected method.
+:py:meth:`ProjectService._preprocess` protected method. ``_preprocess`` calls
+``_app_preprocess_project`` as the last step of processing before returning the
+pre-processed project dict.
 
 Expand environment
 ~~~~~~~~~~~~~~~~~~
