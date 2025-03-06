@@ -320,6 +320,7 @@ def test_mandatory_adoptable_field(
         LifecycleClass=fake_lifecycle_service_class,
     )
     factory.update_kwargs("project", project_dir=fake_project_file.parent)
+    factory.get("project").configure(platform=None, build_for=None)
     factory.get("project").set(fake_project)  # type: ignore[reportAttributeAccessIssue]
 
     factory.get("lifecycle")
