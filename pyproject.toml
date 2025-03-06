@@ -9,7 +9,8 @@ dependencies = [
     "craft-grammar>=2.0.0",
     "craft-parts>=2.1.1",
     "craft-platforms>=0.5.0",
-    "craft-providers>=2.1.0",
+    "craft-providers @ git+https://github.com/canonical/craft-providers.git@main",
+    #"craft-providers>=2.1.0",
     "Jinja2~=3.1",
     "snap-helpers>=0.4.2",
     "platformdirs>=3.10",
@@ -96,6 +97,10 @@ dev-oracular = [
 ]
 dev-plucky = [
     "python-apt>=2.9.0;sys_platform=='linux'",
+]
+apt-manual = [
+    # Install this with "pip install .[apt-manual]" to get a functioning test environment
+    "python-apt @ https://launchpad.net/ubuntu/+archive/primary/+sourcefiles/python-apt/2.4.0ubuntu2/python-apt_2.4.0ubuntu2.tar.xz ; sys_platform == 'linux'"
 ]
 
 [build-system]
