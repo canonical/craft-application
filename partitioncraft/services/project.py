@@ -13,17 +13,17 @@
 #
 # You should have received a copy of the GNU Lesser General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
-"""Services for testcraft."""
+"""Partitioncraft project service.
 
-import craft_application
+Needed so we can set partitions.
+"""
+
+from craft_application.services import project
 
 
-def register_services() -> None:
-    """Register Testcraft's services.
+class PartitioncraftProjectService(project.ProjectService):
+    """Package service for testcraft."""
 
-    This registers with the ServiceFactory all the services that testcraft
-    adds or overrides.
-    """
-    craft_application.ServiceFactory.register(
-        "package", "PackageService", module="testcraft.services.package"
-    )
+    def get_partitions(self) -> list[str]:
+        """Get the partitions needed for any partitioncraft project."""
+        return ["default", "mushroom"]

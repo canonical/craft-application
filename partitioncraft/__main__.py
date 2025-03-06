@@ -13,17 +13,10 @@
 #
 # You should have received a copy of the GNU Lesser General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
-"""Services for testcraft."""
+"""The main entrypoint to testcraft."""
 
-import craft_application
+import sys
 
+from partitioncraft import cli
 
-def register_services() -> None:
-    """Register Testcraft's services.
-
-    This registers with the ServiceFactory all the services that testcraft
-    adds or overrides.
-    """
-    craft_application.ServiceFactory.register(
-        "package", "PackageService", module="testcraft.services.package"
-    )
+sys.exit(cli.create_app().run())

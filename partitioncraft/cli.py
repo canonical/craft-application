@@ -13,15 +13,15 @@
 #
 # You should have received a copy of the GNU Lesser General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
-"""Command-line application entry point."""
+"""Main CLI for partitioncraft."""
 
 from typing import Any
 
 import craft_cli
 
 import craft_application
-from testcraft.application import TESTCRAFT
-from testcraft.services import register_services
+from partitioncraft.application import PARTITIONCRAFT, Partitioncraft
+from partitioncraft.services import register_services
 
 
 def create_app() -> craft_application.Application:
@@ -31,9 +31,9 @@ def create_app() -> craft_application.Application:
     This function is where the app should be configured before running it.
     """
     register_services()
-    services = craft_application.ServiceFactory(app=TESTCRAFT)
+    services = craft_application.ServiceFactory(app=PARTITIONCRAFT)
 
-    return craft_application.Application(TESTCRAFT, services=services)
+    return Partitioncraft(PARTITIONCRAFT, services=services)
 
 
 def get_completion_data() -> tuple[craft_cli.Dispatcher, dict[str, Any]]:

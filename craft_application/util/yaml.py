@@ -21,6 +21,7 @@ import contextlib
 import pathlib
 from typing import TYPE_CHECKING, Any, TextIO, cast, overload
 
+import craft_platforms
 import yaml
 
 from craft_application import errors
@@ -140,6 +141,11 @@ def dump_yaml(data: Any, stream: TextIO | None = None, **kwargs: Any) -> str | N
     """
     yaml.add_representer(
         str, _repr_str, Dumper=cast(type[yaml.Dumper], yaml.SafeDumper)
+    )
+    yaml.add_representer(
+        craft_platforms.DebianArchitecture,
+        _repr_str,
+        Dumper=cast(type[yaml.Dumper], yaml.SafeDumper),
     )
     kwargs.setdefault("sort_keys", False)
     kwargs.setdefault("allow_unicode", True)
