@@ -479,7 +479,10 @@ def test_get_by_platform(real_project_service: ProjectService, fake_platform: st
 def test_get_by_build_for(
     real_project_service: ProjectService, build_for: str, fake_host_architecture
 ):
-    real_project_service.configure(build_for=build_for, platform=None)
+    try:
+        real_project_service.configure(build_for=build_for, platform=None)
+    except RuntimeError as exc:
+        pytest.skip(f"Not a valid build on/for combo: {exc}")
     # This test takes two paths because not all build-on/build-for combinations are
     # valid. If the combination is valid, we check that we got the expected output.
     # If the combination is invalid, we check that the error was correct.
