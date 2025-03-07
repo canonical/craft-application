@@ -60,12 +60,12 @@ license: LGPLv3
 base: {base}
 platforms:
   64-bit-pc:
-    build-on: [amd64]
+    build-on: amd64  # Testing vectorisation of build-on
     build-for: [amd64]
   some-phone:
     build-on: [amd64, arm64, s390x]
-    build-for: [arm64]
-  ppc64el:
+    build-for: arm64  # Testing vectorisation of build-for
+  ppc64el:  # Testing expansion of architecture name.
   risky:
     build-on: [amd64, arm64, ppc64el, riscv64, s390x]
     build-for: [riscv64]
@@ -311,6 +311,25 @@ def fake_project_service_class(fake_project) -> type[services.ProjectService]:
         def set(self, value: models.Project) -> None:
             """Set the project model. Only for use during testing!"""
             self._project_model = value
+            self._platform = next(iter(value.platforms))
+            self._build_for = value.platforms[self._platform].build_for[0]  # type: ignore[reportOptionalSubscript]
+
+        @override
+        def get_partitions_for(
+            self,
+            *,
+            platform: str,
+            build_for: str,
+            build_on: craft_platforms.DebianArchitecture,
+        ) -> list[str] | None:
+            """Make this flexible for whether we have partitions or not.
+
+            If we have partitions, we get the default, one for the platform and
+            one for build_for.
+            """
+            if craft_parts.Features().enable_partitions:
+                return ["default", *{platform, build_for}]
+            return None
 
     return FakeProjectService
 
@@ -393,6 +412,7 @@ def fake_remote_build_service_class():
 
 @pytest.fixture
 def fake_services(
+    request: pytest.FixtureRequest,
     tmp_path,
     app_metadata,
     fake_project,
@@ -416,7 +436,21 @@ def fake_services(
         "project",
         project_dir=project_path,
     )
-    factory.get("project").render_once()
+    platform = (
+        request.getfixturevalue("fake_platform")
+        if "fake_platform" in request.fixturenames
+        else None
+    )
+    build_for = (
+        str(request.getfixturevalue("build_for"))
+        if "build_for" in request.fixturenames
+        else None
+    )
+
+    try:
+        factory.get("project").configure(platform=platform, build_for=build_for)
+    except RuntimeError as exc:
+        pytest.skip(str(exc))
     return factory
 
 

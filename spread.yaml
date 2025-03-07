@@ -20,8 +20,6 @@ backends:
     systems:
       - ubuntu-24.04-64:
           workers: 2
-          memory: 2G
-          storage: 10G
   # lxd:  # Disabled due to https://github.com/canonical/spread/issues/215
   #   systems:
   #     - ubuntu-24.04
@@ -108,7 +106,7 @@ backends:
       multipass delete --purge "${instance_name}"
     systems:
       - ubuntu-24.04-64:
-          workers: 3
+          workers: 4
 
 prepare: |
   snap wait system seed.loaded

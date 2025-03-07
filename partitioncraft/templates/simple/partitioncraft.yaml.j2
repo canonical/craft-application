@@ -8,5 +8,11 @@ platforms:
     build-for: [all]
 
 parts:
-  my-test:
+  to-default:
     plugin: nil
+  to-mushroom:
+    plugin: nil
+    override-build: |
+      date > "${CRAFT_PART_INSTALL}/date.txt"
+    organize:
+      "*": (mushroom)/

@@ -309,19 +309,9 @@ def test_init_with_feature_package_repositories(
 
 
 @pytest.mark.usefixtures("enable_partitions")
-@pytest.mark.parametrize(
-    "partitions",
-    [
-        ["default"],
-        ["default", "mypartition"],
-        ["default", "my-app-partition", "another", "blargh"],
-    ],
-)
 def test_init_with_partitions(
-    app_metadata, fake_project, fake_services, tmp_path, partitions
+    app_metadata, fake_project, fake_services, tmp_path, fake_platform
 ):
-    fake_services.get("project").get_partitions = lambda: partitions
-
     service = lifecycle.LifecycleService(
         app_metadata,
         fake_services,
@@ -333,7 +323,8 @@ def test_init_with_partitions(
     assert service._lcm is None
     service.setup()
     assert service._lcm is not None
-    assert service._lcm._project_info.partitions == partitions
+    assert service._lcm._project_info.partitions[0] == "default"
+    assert fake_platform in service._lcm._project_info.partitions
 
 
 def test_prime_dir(lifecycle_service, tmp_path):

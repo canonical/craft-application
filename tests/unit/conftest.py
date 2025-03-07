@@ -24,12 +24,14 @@ import pytest_mock
 
 from craft_application import git, services
 from craft_application.services import service_factory
-from craft_application.services.project import ProjectService
 
 
 @pytest.fixture
-def project_service(app_metadata, fake_services, project_path):
-    return ProjectService(
+def project_service(
+    app_metadata, fake_services, project_path, fake_project_service_class
+):
+    fake_services.register("project", fake_project_service_class)
+    return fake_project_service_class(
         app_metadata,
         fake_services,
         project_dir=project_path,

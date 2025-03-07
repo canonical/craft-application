@@ -40,6 +40,7 @@ def test_gets_dataclass_services(
             ProviderClass=fake_provider_service_class,
         )
     factory.update_kwargs("project", project_dir=project_path)
+    factory.get("project").configure(platform=None, build_for=None)
     factory.get("project").set(fake_project)  # type: ignore[reportAttributeAccessIssue]
 
     check.is_instance(factory.package, services.PackageService)
@@ -65,6 +66,7 @@ def test_gets_registered_services(
         app_metadata,
     )
     factory.update_kwargs("project", project_dir=project_path)
+    factory.get("project").configure(platform=None, build_for=None)
     factory.get("project").set(fake_project)  # type: ignore[reportAttributeAccessIssue]
 
     check.is_instance(factory.get("package"), services.PackageService)

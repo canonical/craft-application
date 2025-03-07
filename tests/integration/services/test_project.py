@@ -47,7 +47,8 @@ def project_file(
 
 
 def test_load_project(service: ProjectService, project_file: pathlib.Path):
-    project = service.render_once()
+    service.configure(platform=None, build_for=None)
+    project = service.get()
 
     with project_file.with_suffix(".out").open() as f:
         expected = yaml.safe_yaml_load(f)
@@ -71,7 +72,8 @@ def overlay_project_file(
 
 @pytest.mark.usefixtures("enable_overlay")
 def test_load_overlay_project(service: ProjectService, overlay_project_file):
-    project = service.render_once()
+    service.configure(platform=None, build_for=None)
+    project = service.get()
 
     with overlay_project_file.with_suffix(".out").open() as f:
         expected = yaml.safe_yaml_load(f)
@@ -103,7 +105,8 @@ def test_load_grammar_project(
         return_value=craft_platforms.DebianArchitecture(build_on),
     )
 
-    project = service.render_once(build_for=build_for)
+    service.configure(build_for=build_for, platform=None)
+    project = service.get()
 
     with grammar_project_file.with_suffix(
         f".on-{build_on}.for-{build_for}"

@@ -318,7 +318,6 @@ class Application:
             "lifecycle",
             cache_dir=self.cache_dir,
             work_dir=self._work_dir,
-            partitions=self._partitions,
         )
         self.services.update_kwargs(
             "provider",
@@ -353,9 +352,9 @@ class Application:
             stacklevel=2,
         )
         project_service = self.services.get("project")
-        if project_service.is_rendered:
-            return project_service.get()
-        return project_service.render_once(platform=platform, build_for=build_for)
+        if not project_service.is_configured:
+            project_service.configure(platform=platform, build_for=build_for)
+        return project_service.get()
 
     @cached_property
     def project(self) -> models.Project:
@@ -577,8 +576,8 @@ class Application:
         if command.needs_project(dispatcher.parsed_args()):
             project_service = self.services.get("project")
             # This branch always runs, except during testing.
-            if not project_service.is_rendered:
-                project_service.render_once(platform=platform, build_for=build_for)
+            if not project_service.is_configured:
+                project_service.configure(platform=platform, build_for=build_for)
 
         craft_cli.emit.debug(f"Build plan: platform={platform}, build_for={build_for}")
         self._pre_run(dispatcher)

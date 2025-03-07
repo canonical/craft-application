@@ -3,7 +3,7 @@
 ``ProjectService``
 ==================
 
-The ``ProjectService`` is a service for handling access to this run's project.
+The ``ProjectService`` is a service for handling access to the project.
 
 Project loading
 ---------------
@@ -26,8 +26,10 @@ Configure the ProjectService
 The first step is for the ``Application`` to configure the project service. This means
 several things:
 
-1. Set the project directory location.
-2. Set any ``platform`` and ``build_for`` hints.
+1. Set the project directory location. This is done by passing a directory on
+   instantiation.
+2. Set any ``platform`` and ``build_for`` hints. This is done using the ``configure``
+   method.
 
 Find the project file
 ~~~~~~~~~~~~~~~~~~~~~
@@ -59,6 +61,11 @@ Perform application-specific transforms
 At this step, any application-specific transformations of the document are applied
 using the :py:meth:`ProjectService._app_preprocess_project` method. By default,
 nothing happens here.
+
+The project dict at this state is available using the
+:py:meth:`ProjectService._preprocess` protected method. ``_preprocess`` calls
+``_app_preprocess_project`` as the last step of processing before returning the
+pre-processed project dict.
 
 Expand environment
 ~~~~~~~~~~~~~~~~~~
@@ -93,5 +100,5 @@ API documentation
 
 .. autoclass:: ProjectService
     :members:
-    :private-members: _app_preprocess_project,_app_legacy_platforms_render
+    :private-members: _app_preprocess_project,_app_render_legacy_platforms,_preprocess
     :undoc-members:
