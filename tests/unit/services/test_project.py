@@ -303,6 +303,9 @@ def test_expand_environment_stage_dirs(
     fake_host_architecture,
     fake_platform: str,
 ):
+    # The fake project service generates platforms based on its build-for and platform.
+    # This is to ensure that we have dynamic partition sets that can vary based on
+    # the platform.
     default_stage_dir = project_path / "stage"
     platform_stage_dir = project_path / f"partitions/{fake_platform}/stage"
     build_for_stage_dir = project_path / f"partitions/{build_for}/stage"
