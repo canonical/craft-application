@@ -125,3 +125,17 @@ def test_proxy_variables_forwarded(
 
     for var, content in proxy_vars.items():
         assert instance_env.get(var) == content
+
+
+@pytest.mark.slow
+@pytest.mark.parametrize("fetch", [False, True])
+def test_run_managed(provider_service, fetch, snap_safe_tmp_path):
+    base = craft_platforms.DistroBase("ubuntu", "24.04")
+    arch = craft_platforms.DebianArchitecture.from_host()
+    build_info = craft_platforms.BuildInfo("foo", arch, arch, base)
+
+    provider_service._work_dir = snap_safe_tmp_path
+
+    provider_service.run_managed(
+        build_info, enable_fetch_service=fetch, command=["echo", "hi"]
+    )

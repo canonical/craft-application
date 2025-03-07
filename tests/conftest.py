@@ -331,6 +331,12 @@ def fake_project_service_class(fake_project) -> type[services.ProjectService]:
                 return ["default", *{platform, build_for}]
             return None
 
+        def get_partitions(self) -> list[str] | None:
+            """Make this flexible for whether we have partitions or not."""
+            if craft_parts.Features().enable_partitions:
+                return ["default", "a"]
+            return None
+
     return FakeProjectService
 
 
@@ -432,10 +438,8 @@ def fake_services(
     factory.update_kwargs(
         "lifecycle", work_dir=tmp_path, cache_dir=tmp_path / "cache", build_plan=[]
     )
-    factory.update_kwargs(
-        "project",
-        project_dir=project_path,
-    )
+    factory.update_kwargs("project", project_dir=project_path)
+    factory.update_kwargs("provider", work_dir=project_path)
     platform = (
         request.getfixturevalue("fake_platform")
         if "fake_platform" in request.fixturenames

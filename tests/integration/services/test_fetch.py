@@ -83,8 +83,8 @@ def app_service(app_metadata, fake_services, fake_project):
     fetch_service = services.FetchService(
         app_metadata,
         fake_services,
-        session_policy="permissive",
     )
+    fetch_service.set_policy("permissive")
     yield fetch_service
     fetch_service.shutdown(force=True)
 

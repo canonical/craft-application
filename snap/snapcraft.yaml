@@ -86,4 +86,4 @@ parts:
       cp -r partitioncraft "${CRAFT_PART_INSTALL}/lib/python3.12/site-packages/"
 
       rm "${CRAFT_PART_INSTALL}/bin/python"
-      ln -s ../usr/bin/python3 "${CRAFT_PART_INSTALL}/bin/python"
+      ln -s ../usr/bin/python3.12 "${CRAFT_PART_INSTALL}/bin/python"

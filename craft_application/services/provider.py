@@ -22,13 +22,15 @@ import io
 import os
 import pathlib
 import pkgutil
+import subprocess
 import sys
 import urllib.request
-from collections.abc import Generator, Iterable
+from collections.abc import Generator, Iterable, Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 import craft_platforms
+import craft_providers
 from craft_cli import CraftError, emit
 from craft_providers import bases
 from craft_providers.actions.snap_installer import Snap
@@ -40,8 +42,6 @@ from craft_application.services import base
 from craft_application.util import platforms, snap_config
 
 if TYPE_CHECKING:  # pragma: no cover
-    import craft_providers
-
     from craft_application.application import AppMetadata
     from craft_application.services import ServiceFactory
 
@@ -371,3 +371,52 @@ class ProviderService(base.AppService):
         instance_name = self._get_instance_name(work_dir, info, project_name)
         emit.debug(f"Cleaning instance {instance_name}")
         provider.clean_project_environments(instance_name=instance_name)
+
+    def run_managed(
+        self,
+        build_info: craft_platforms.BuildInfo,
+        enable_fetch_service: bool,  # noqa: FBT001
+        command: Sequence[str] = (),
+    ) -> None:
+        """Create a managed instance and run a command in it.
+
+        :param build_info: The BuildInfo that defines what instance to use.
+        :enable_fetch_service: Whether to enable the fetch service.
+        :command: The command to run. Defaults to the current command.
+        """
+        if not command:
+            command = [self._app.name, *sys.argv[1:]]
+        env = {
+            "CRAFT_PLATFORM": build_info.platform,
+            "CRAFT_VERBOSITY_LEVEL": emit.get_mode().name,
+        }
+        emit.debug(
+            f"Running managed {self._app.name} in managed {build_info.build_base} instance for platform {build_info.platform!r}"
+        )
+
+        with self.instance(
+            build_info=build_info,
+            work_dir=self._work_dir,
+            clean_existing=enable_fetch_service,
+        ) as instance:
+            if enable_fetch_service:
+                session_env = self._services.get("fetch").create_session(instance)
+                env.update(session_env)
+
+            emit.debug(f"Running in instance: {command}")
+            try:
+                with emit.pause():
+                    # Pyright doesn't fully understand craft_providers's CompletedProcess.
+                    instance.execute_run(  # pyright: ignore[reportUnknownMemberType,reportUnknownVariableType]
+                        list(command),
+                        cwd=self._app.managed_instance_project_path,
+                        check=True,
+                        env=env,
+                    )
+            except subprocess.CalledProcessError as exc:
+                raise craft_providers.ProviderError(
+                    f"Failed to run {self._app.name} in instance"
+                ) from exc
+            finally:
+                if enable_fetch_service:
+                    self._services.get("fetch").teardown_session()
