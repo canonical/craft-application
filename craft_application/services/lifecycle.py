@@ -135,13 +135,11 @@ class LifecycleService(base.AppService):
         *,
         work_dir: Path | str,
         cache_dir: Path | str,
-        partitions: list[str] | None = None,
         **lifecycle_kwargs: Any,
     ) -> None:
         super().__init__(app, services)
         self._work_dir = work_dir
         self._cache_dir = cache_dir
-        self._partitions = partitions
         self._manager_kwargs = lifecycle_kwargs
         self._lcm: LifecycleManager = None  # type: ignore[assignment]
 
@@ -239,7 +237,7 @@ class LifecycleService(base.AppService):
                 project_vars_part_name=self._project.adopt_info,
                 project_vars=self._project_vars,
                 track_stage_packages=True,
-                partitions=self._services.get("project").get_partitions(),
+                partitions=self._services.get("project").partitions,
                 **self._manager_kwargs,
             )
         except PartsError as err:
