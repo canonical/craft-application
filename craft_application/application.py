@@ -318,7 +318,6 @@ class Application:
             "lifecycle",
             cache_dir=self.cache_dir,
             work_dir=self._work_dir,
-            partitions=self._partitions,
         )
         self.services.update_kwargs(
             "provider",
