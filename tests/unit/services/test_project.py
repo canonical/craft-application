@@ -115,6 +115,14 @@ def test_load_raw_project_invalid(
             )
             for arch in craft_platforms.DebianArchitecture
         ),
+        *(
+            pytest.param(
+                {"unvectored": {"build-on": str(arch), "build-for": "all"}},
+                {"unvectored": {"build-on": [str(arch)], "build-for": ["all"]}},
+                id=f"vectorise-{arch}",
+            )
+            for arch in craft_platforms.DebianArchitecture
+        ),
     ],
 )
 def test_get_platforms(

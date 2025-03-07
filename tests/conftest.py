@@ -60,12 +60,12 @@ license: LGPLv3
 base: {base}
 platforms:
   64-bit-pc:
-    build-on: [amd64]
+    build-on: amd64  # Testing vectorisation of build-on
     build-for: [amd64]
   some-phone:
     build-on: [amd64, arm64, s390x]
-    build-for: [arm64]
-  ppc64el:
+    build-for: arm64  # Testing vectorisation of build-for
+  ppc64el:  # Testing expansion of architecture name.
   risky:
     build-on: [amd64, arm64, ppc64el, riscv64, s390x]
     build-for: [riscv64]

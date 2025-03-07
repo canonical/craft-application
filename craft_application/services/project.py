@@ -222,6 +222,12 @@ class ProjectService(base.AppService):
         for name, data in platforms.items():
             if data is None:
                 platforms[name] = {"build-on": [name], "build-for": [name]}
+            else:
+                # Vectorise build-on and build-for
+                if isinstance(data["build-on"], str):
+                    data["build-on"] = [data["build-on"]]
+                if isinstance(data["build-for"], str):
+                    data["build-for"] = [data["build-for"]]
 
         return platforms
 
