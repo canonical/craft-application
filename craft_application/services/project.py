@@ -439,7 +439,7 @@ class ProjectService(base.AppService):
         """Get the rendered project.
 
         :returns: The project model.
-        :raises: RuntimeError if the project has not been rendered.
+        :raises: RuntimeError if the project has not been configured.
         """
         if not self.is_configured:
             raise RuntimeError("Project not configured yet.")
