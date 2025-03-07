@@ -540,7 +540,7 @@ class Application:
         fetch_service_policy: str | None = getattr(args, "fetch_service_policy", None)
         if fetch_service_policy:
             self._enable_fetch_service = True
-            self._fetch_service_policy = fetch_service_policy  # type: ignore[reportAttributeAccessIssue]
+            self._fetch_service_policy = fetch_service_policy  # type: ignore[assignment]
 
     def get_arg_or_config(self, parsed_args: argparse.Namespace, item: str) -> Any:  # noqa: ANN401
         """Get a configuration option that could be overridden by a command argument.
