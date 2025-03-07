@@ -219,7 +219,7 @@ def test_get_default_services(
 ):
     project_service = factory.get("project")
     pytest_check.is_instance(project_service, services.ProjectService)
-    project_service.render_once()
+    project_service.configure(platform=None, build_for=None)
 
     pytest_check.is_instance(factory.get("package"), fake_package_service_class)
     pytest_check.is_instance(factory.get("lifecycle"), fake_lifecycle_service_class)
@@ -251,7 +251,7 @@ def test_get_unregistered_service(factory):
 
 
 def test_get_project_service_error(factory):
-    with pytest.raises(RuntimeError, match="Project not rendered yet."):
+    with pytest.raises(RuntimeError, match="Project not configured yet."):
         factory.get("lifecycle")
 
 
@@ -320,6 +320,7 @@ def test_mandatory_adoptable_field(
         LifecycleClass=fake_lifecycle_service_class,
     )
     factory.update_kwargs("project", project_dir=fake_project_file.parent)
+    factory.get("project").configure(platform=None, build_for=None)
     factory.get("project").set(fake_project)  # type: ignore[reportAttributeAccessIssue]
 
     factory.get("lifecycle")

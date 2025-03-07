@@ -18,12 +18,22 @@
 Needed so we can set partitions.
 """
 
+import craft_platforms
+from typing_extensions import override
+
 from craft_application.services import project
 
 
 class PartitioncraftProjectService(project.ProjectService):
     """Package service for testcraft."""
 
-    def get_partitions(self) -> list[str]:
+    @override
+    def get_partitions_for(
+        self,
+        *,
+        platform: str,
+        build_for: str,
+        build_on: craft_platforms.DebianArchitecture,
+    ) -> list[str] | None:
         """Get the partitions needed for any partitioncraft project."""
         return ["default", "mushroom"]
