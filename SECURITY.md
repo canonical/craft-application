@@ -10,6 +10,7 @@ your application.
 -->
 
 Canonical tracks and responds to vulnerabilities in:
+
 - The most recent patch version of Craft Application.
 - Any version of Craft Application that's included in a current release of a Canonical
   product.
