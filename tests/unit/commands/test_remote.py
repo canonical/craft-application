@@ -35,6 +35,7 @@ def remote_build(
     return RemoteBuild(config)
 
 
+@pytest.mark.slow
 def test_remote_build_run(remote_build, mocker, fake_services, tmp_path, emitter):
     builder = fake_services.remote_build
 
@@ -124,6 +125,7 @@ def test_remote_build_run(remote_build, mocker, fake_services, tmp_path, emitter
         pytest.param(False, True, "my-project", False, id="named-priv-proj"),
     ],
 )
+@pytest.mark.slow
 def test_set_project_succeeds(
     mocker,
     remote_build: RemoteBuild,
