@@ -24,7 +24,6 @@ import re
 import subprocess
 import sys
 from datetime import date
-from io import StringIO
 from textwrap import dedent
 from unittest import mock
 
@@ -40,12 +39,10 @@ from craft_parts.plugins.plugins import PluginType
 import craft_application
 import craft_application.errors
 from craft_application import (
-    ProviderService,
     application,
     commands,
     errors,
     services,
-    util,
 )
 from craft_application.commands import (
     AppCommand,
@@ -596,6 +593,9 @@ def test_run_success_unmanaged(
         emitter.assert_debug("Running testcraft pass on host")
 
 
+@pytest.mark.skipif(
+    date.today() <= date(2025, 3, 31), reason="run_managed is going away."
+)
 def test_run_success_managed(monkeypatch, app, fake_project, mocker):
     mocker.patch.object(app, "get_project", return_value=fake_project)
     app.run_managed = mock.Mock()
@@ -606,6 +606,9 @@ def test_run_success_managed(monkeypatch, app, fake_project, mocker):
     app.run_managed.assert_called_once_with(None, None)  # --build-for not used
 
 
+@pytest.mark.skipif(
+    date.today() <= date(2025, 3, 31), reason="run_managed is going away."
+)
 def test_run_success_managed_with_arch(monkeypatch, app, fake_project, mocker):
     mocker.patch.object(app, "get_project", return_value=fake_project)
     app.run_managed = mock.Mock()
@@ -617,6 +620,9 @@ def test_run_success_managed_with_arch(monkeypatch, app, fake_project, mocker):
     app.run_managed.assert_called_once()
 
 
+@pytest.mark.skipif(
+    date.today() <= date(2025, 3, 31), reason="run_managed is going away."
+)
 def test_run_success_managed_with_platform(monkeypatch, app, fake_project, mocker):
     mocker.patch.object(app, "get_project", return_value=fake_project)
     app.run_managed = mock.Mock()
@@ -627,6 +633,9 @@ def test_run_success_managed_with_platform(monkeypatch, app, fake_project, mocke
     app.run_managed.assert_called_once_with("foo", None)
 
 
+@pytest.mark.skipif(
+    date.today() <= date(2025, 3, 31), reason="run_managed is going away."
+)
 @pytest.mark.parametrize(
     ("params", "expected_call"),
     [
@@ -1005,53 +1014,6 @@ def test_emitter_docs_url(monkeypatch, mocker, app):
         app.run()
 
     assert spied_init.mock_calls[0].kwargs["docs_base_url"] == expected_url
-
-
-@pytest.mark.skipif(
-    date.today() < date(2025, 3, 4),
-    reason="CRAFT-4163, This will no longer be the responsibility of the application.",
-)
-def test_clean_platform(
-    monkeypatch,
-    tmp_path,
-    app_metadata,
-    fake_services,
-    mocker,
-    fake_project_yaml,
-    fake_provider_service_class,
-):
-    """Test that calling "clean --platform=x" correctly filters the build plan."""
-    data = util.safe_yaml_load(StringIO(fake_project_yaml))
-    # Put a few different platforms on the project
-    arch = craft_platforms.DebianArchitecture.from_host()
-    build_on_for = {
-        "build-on": [arch],
-        "build-for": [arch],
-    }
-    data["platforms"] = {
-        "plat1": build_on_for,
-        "plat2": build_on_for,
-        "plat3": build_on_for,
-    }
-    project_file = tmp_path / "testcraft.yaml"
-    project_file.write_text(util.dump_yaml(data))
-    monkeypatch.setattr(sys, "argv", ["testcraft", "clean", "--platform=plat2"])
-
-    mocked_clean = mocker.patch.object(ProviderService, "_clean_instance")
-    app = FakeApplication(app_metadata, fake_services)
-    app.project_dir = tmp_path
-
-    fake_services.project = None
-
-    app.run()
-
-    expected_info = craft_platforms.BuildInfo(
-        platform="plat2",
-        build_on=arch,
-        build_for=arch,
-        build_base=craft_platforms.DistroBase("ubuntu", "24.04"),
-    )
-    mocked_clean.assert_called_once_with(mocker.ANY, mocker.ANY, expected_info)
 
 
 class AppConfigCommand(AppCommand):

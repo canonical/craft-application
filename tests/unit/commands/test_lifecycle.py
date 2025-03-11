@@ -311,7 +311,7 @@ def test_clean_run_with_parts_unmanaged(app_metadata, parts, tmp_path, mock_serv
 
     assert not mock_services.get("provider").clean_instances.called
     command._run_manager_for_build_plan.assert_called_once_with(
-        enable_fetch_service=False
+        fetch_service_policy=None
     )
 
 
@@ -466,6 +466,7 @@ def test_pack_fetch_manifest(
     assert mock_services.fetch.create_project_manifest.called == expect_create_called
 
 
+@pytest.mark.usefixtures("destructive_mode")
 def test_pack_run_wrong_step(app_metadata, fake_services):
     parsed_args = argparse.Namespace(
         destructive_mode=False, parts=None, output=pathlib.Path()
