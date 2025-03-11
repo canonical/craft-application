@@ -455,7 +455,7 @@ requires-dist = [
     { name = "craft-parts", specifier = ">=2.1.1" },
     { name = "craft-platforms", specifier = ">=0.5.0" },
     { name = "craft-providers", specifier = ">=2.1.0" },
-    { name = "jinja2", specifier = "~=3.1" },
+    { name = "jinja2", specifier = ">=3.1.6,<4.0.0" },
     { name = "launchpadlib", marker = "extra == 'remote'", specifier = ">=1.10.16" },
     { name = "license-expression", specifier = ">=30.0.0" },
     { name = "platformdirs", specifier = ">=3.10" },
