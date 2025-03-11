@@ -24,7 +24,7 @@ import shutil
 import subprocess
 from dataclasses import dataclass
 from importlib import metadata
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 from unittest.mock import Mock
 
 import craft_parts
@@ -40,6 +40,7 @@ from typing_extensions import override
 import craft_application
 from craft_application import application, git, launchpad, models, services
 from craft_application.services import service_factory
+from craft_application.services.fetch import FetchService
 from craft_application.util import yaml
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -455,7 +456,10 @@ def fake_services(
         factory.get("project").configure(platform=platform, build_for=build_for)
     except RuntimeError as exc:
         pytest.skip(str(exc))
-    return factory
+    yield factory
+
+    if fetch := cast(FetchService | None, factory._services.get("fetch")):
+        fetch.shutdown(force=True)
 
 
 class FakeApplication(application.Application):
