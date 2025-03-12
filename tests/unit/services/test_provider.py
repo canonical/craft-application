@@ -27,8 +27,10 @@ import pytest
 from craft_providers import bases, lxd, multipass
 from craft_providers.actions.snap_installer import Snap
 
+import craft_application
 from craft_application import errors
 from craft_application.services import provider
+from craft_application.services.service_factory import ServiceFactory
 from craft_application.util import snap_config
 
 
@@ -816,3 +818,37 @@ def test_clean_instances(provider_service, tmp_path, mocker, arch, expected_plat
         for platform in expected_platforms
     ]
     assert mock_clean.mock_calls == expected_mock_calls
+
+
+@pytest.mark.parametrize("fetch", [False, True])
+def test_run_managed(
+    monkeypatch: pytest.MonkeyPatch,
+    provider_service: provider.ProviderService,
+    default_app_metadata: craft_application.AppMetadata,
+    fake_services: ServiceFactory,
+    fake_build_info: craft_platforms.BuildInfo,
+    fetch: bool,
+    mock_provider,
+):
+    mock_fetch = mock.MagicMock()
+    fake_services.register("fetch", mock.Mock(return_value=mock_fetch))
+    monkeypatch.setattr("sys.argv", ["[unused]", "pack", "--verbose"])
+    instance_context = (
+        mock_provider.launched_environment.return_value.__enter__.return_value
+    )
+
+    provider_service.run_managed(fake_build_info, enable_fetch_service=fetch)
+
+    instance_context.execute_run.assert_called_once_with(
+        ["testcraft", "pack", "--verbose"],
+        cwd=default_app_metadata.managed_instance_project_path,
+        check=True,
+        env={
+            "CRAFT_VERBOSITY_LEVEL": mock.ANY,
+            "CRAFT_PLATFORM": fake_build_info.platform,
+        },
+    )
+
+    if fetch:
+        mock_fetch.create_session.assert_called_once_with(instance_context)
+        mock_fetch.teardown_session.assert_called_once_with()

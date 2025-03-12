@@ -24,7 +24,7 @@ import shutil
 import subprocess
 from dataclasses import dataclass
 from importlib import metadata
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 from unittest.mock import Mock
 
 import craft_parts
@@ -40,6 +40,7 @@ from typing_extensions import override
 import craft_application
 from craft_application import application, git, launchpad, models, services
 from craft_application.services import service_factory
+from craft_application.services.fetch import FetchService
 from craft_application.util import yaml
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -331,6 +332,12 @@ def fake_project_service_class(fake_project) -> type[services.ProjectService]:
                 return ["default", *{platform, build_for}]
             return None
 
+        def get_partitions(self) -> list[str] | None:
+            """Make this flexible for whether we have partitions or not."""
+            if craft_parts.Features().enable_partitions:
+                return ["default", "a"]
+            return None
+
     return FakeProjectService
 
 
@@ -432,10 +439,8 @@ def fake_services(
     factory.update_kwargs(
         "lifecycle", work_dir=tmp_path, cache_dir=tmp_path / "cache", build_plan=[]
     )
-    factory.update_kwargs(
-        "project",
-        project_dir=project_path,
-    )
+    factory.update_kwargs("project", project_dir=project_path)
+    factory.update_kwargs("provider", work_dir=project_path)
     platform = (
         request.getfixturevalue("fake_platform")
         if "fake_platform" in request.fixturenames
@@ -451,7 +456,10 @@ def fake_services(
         factory.get("project").configure(platform=platform, build_for=build_for)
     except RuntimeError as exc:
         pytest.skip(str(exc))
-    return factory
+    yield factory
+
+    if fetch := cast(FetchService | None, factory._services.get("fetch")):
+        fetch.shutdown(force=True)
 
 
 class FakeApplication(application.Application):

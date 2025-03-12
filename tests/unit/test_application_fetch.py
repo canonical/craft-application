@@ -15,6 +15,7 @@
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Unit tests for the interaction between the Application and the FetchService."""
 
+from datetime import date
 from typing import Any
 from unittest import mock
 
@@ -54,6 +55,9 @@ class FakeFetchService(services.FetchService):
         self.calls.append(f"shutdown({force})")
 
 
+@pytest.mark.skipif(
+    date.today() <= date(2025, 3, 31), reason="run_managed is going away."
+)
 @pytest.mark.parametrize(
     ("pack_args", "expected_calls", "expected_clean_existing"),
     [

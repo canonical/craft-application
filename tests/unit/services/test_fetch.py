@@ -45,8 +45,23 @@ def fetch_service(app, fake_services, fake_project):
     return services.FetchService(
         app,
         fake_services,
-        session_policy="strict",
     )
+
+
+@pytest.mark.parametrize("policy", ["strict", "permissive"])
+def test_set_policy(fetch_service, policy):
+    assert fetch_service._session_policy == "strict"
+
+    fetch_service.set_policy(policy)
+
+    assert fetch_service._session_policy == policy
+
+
+def test_set_policy_error(fetch_service):
+    fetch_service._fetch_process = "I'm fetching here!"
+
+    with pytest.raises(RuntimeError, match="set fetch service policy after starting"):
+        fetch_service.set_policy("strict")
 
 
 def test_create_session_already_exists(fetch_service):

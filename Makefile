@@ -63,6 +63,8 @@ else ifeq ($(shell which apt-get),)
 else
 	sudo $(APT) install $(APT_PACKAGES)
 endif
+	curl http://archive.ubuntu.com/ubuntu/dists/noble/main/binary-amd64/Packages.xz
+	curl http://archive.ubuntu.com/ubuntu/dists/noble/main/binary-amd64/Packages.gz
 
 # If additional build dependencies need installing in order to build the linting env.
 .PHONY: install-lint-build-deps
