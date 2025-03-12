@@ -17,6 +17,7 @@
 
 from __future__ import annotations
 
+import atexit
 import json
 import pathlib
 import subprocess
@@ -64,8 +65,6 @@ class FetchService(base.AppService):
         self,
         app: AppMetadata,
         services: service_factory.ServiceFactory,
-        *,
-        session_policy: str,
     ) -> None:
         """Create a new FetchService.
 
@@ -75,7 +74,7 @@ class FetchService(base.AppService):
         super().__init__(app, services)
         self._fetch_process = None
         self._session_data = None
-        self._session_policy = session_policy
+        self._session_policy: str = "strict"  # Default to strict policy.
         self._instance = None
 
     @override
@@ -95,6 +94,17 @@ class FetchService(base.AppService):
             )
 
             self._fetch_process = fetch.start_service()
+
+            # When we exit the application, we'll shut down the fetch service.
+            atexit.register(self.shutdown, force=True)
+
+    def set_policy(self, policy: typing.Literal["strict", "permissive"]) -> None:
+        """Set the policy for the fetch service."""
+        if self._fetch_process is not None:
+            raise RuntimeError(
+                "Attempted to set fetch service policy after starting the process."
+            )
+        self._session_policy = policy
 
     def create_session(self, instance: craft_providers.Executor) -> dict[str, str]:
         """Create a new session.
