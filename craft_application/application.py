@@ -30,7 +30,7 @@ from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
 from functools import cached_property
 from importlib import metadata
-from typing import TYPE_CHECKING, Any, cast, final
+from typing import TYPE_CHECKING, Any, Literal, cast, final
 
 import craft_cli
 import craft_parts
@@ -145,7 +145,7 @@ class Application:
         # Whether the command execution should use the fetch-service
         self._enable_fetch_service = False
         # The kind of sessions that the fetch-service service should create
-        self._fetch_service_policy = "strict"
+        self._fetch_service_policy: Literal["strict", "permissive"] = "strict"
 
     @final
     def _load_plugins(self) -> None:
@@ -324,10 +324,6 @@ class Application:
             work_dir=self._work_dir,
             provider_name=provider_name,
         )
-        self.services.update_kwargs(
-            "fetch",
-            session_policy=self._fetch_service_policy,
-        )
 
     def get_project(
         self,
@@ -376,6 +372,9 @@ class Application:
 
         if not plan:
             raise errors.EmptyBuildPlanError
+
+        if self._enable_fetch_service:
+            self.services.get("fetch").set_policy(self._fetch_service_policy)
 
         extra_args: dict[str, Any] = {}
         for build_info in plan:
@@ -541,7 +540,7 @@ class Application:
         fetch_service_policy: str | None = getattr(args, "fetch_service_policy", None)
         if fetch_service_policy:
             self._enable_fetch_service = True
-            self._fetch_service_policy = fetch_service_policy
+            self._fetch_service_policy = fetch_service_policy  # type: ignore[assignment]
 
     def get_arg_or_config(self, parsed_args: argparse.Namespace, item: str) -> Any:  # noqa: ANN401
         """Get a configuration option that could be overridden by a command argument.
