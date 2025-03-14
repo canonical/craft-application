@@ -79,7 +79,8 @@ def test_is_service_online(status, json, expected):
     assert fetch.is_service_online() == expected
 
 
-def test_start_service(mocker, tmp_path):
+@pytest.mark.parametrize("has_config", [True, False])
+def test_start_service(mocker, tmp_path, has_config):
     mock_is_online = mocker.patch.object(fetch, "is_service_online", return_value=False)
     mocker.patch.object(fetch, "_check_installed", return_value=True)
     mock_base_dir = mocker.patch.object(
@@ -98,6 +99,11 @@ def test_start_service(mocker, tmp_path):
     mock_process = mock_popen.return_value
     mock_process.poll.return_value = None
 
+    config_dir = tmp_path / "config"
+    if has_config:
+        config_dir.mkdir()
+        (config_dir / "inspectors.yaml").touch()
+
     process = fetch.start_service()
     assert process is mock_process
 
@@ -106,13 +112,16 @@ def test_start_service(mocker, tmp_path):
     assert mock_get_status.called
     assert mock_obtain_certificate.called
 
-    popen_call = mock_popen.mock_calls[0]
-    assert popen_call == call(
-        [
+    config_args = [f"--config={config_dir}"] if has_config else []
+
+    expected_cmd = [
+        *[
             fetch._FETCH_BINARY,
             f"--control-port={CONTROL}",
             f"--proxy-port={PROXY}",
-            f"--config={tmp_path / 'config'}",
+        ],
+        *config_args,
+        *[
             f"--spool={tmp_path / 'spool'}",
             f"--cert={fake_cert}",
             f"--key={fake_key}",
@@ -120,6 +129,11 @@ def test_start_service(mocker, tmp_path):
             "--idle-shutdown=300",
             f"--log-file={tmp_path / 'craft-logs/fetch-service.log'}",
         ],
+    ]
+
+    popen_call = mock_popen.mock_calls[0]
+    assert popen_call == call(
+        expected_cmd,
         env={
             "FETCH_SERVICE_AUTH": AUTH,
         },

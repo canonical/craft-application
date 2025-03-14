@@ -18,6 +18,7 @@
 import contextlib
 import io
 import logging
+import os
 import pathlib
 import shlex
 import subprocess
@@ -149,10 +150,16 @@ def start_service() -> subprocess.Popen[str] | None:
     # Set config and spool directories
     base_dir = _get_service_base_dir()
 
-    for dir_name in ("config", "spool"):
-        dir_path = base_dir / dir_name
-        dir_path.mkdir(exist_ok=True)
-        cmd.append(f"--{dir_name}={dir_path}")
+    config_dir = base_dir / "config"
+    config_dir.mkdir(exist_ok=True)
+    if len(os.listdir(config_dir)) > 0:
+        cmd.append(f"--config={config_dir}")
+    else:
+        emit.debug(f"Local config dir {config_dir} is empty; skipping it.")
+
+    spool_path = base_dir / "spool"
+    spool_path.mkdir(exist_ok=True)
+    cmd.append(f"--spool={spool_path}")
 
     cert, cert_key = _obtain_certificate()
 
