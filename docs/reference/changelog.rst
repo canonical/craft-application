@@ -4,6 +4,15 @@
 Changelog
 *********
 
+4.X.Y (2025-MMM-DD)
+-------------------
+
+Application
+===========
+
+- The integration with the fetch-service will no longer pass the custom configuration
+  directory option when starting the service if said directory is empty.
+
 4.10.0 (2025-Feb-27)
 --------------------
 
