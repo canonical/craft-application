@@ -121,6 +121,9 @@ def process_parts(
     processor = GrammarProcessor(arch=arch, target_arch=target_arch, checker=self_check)
 
     for part_name, part_data in parts_yaml_data.items():
+        # Ignore line numbers coming from yaml reader
+        if part_name.startswith("__line__"):
+            continue
         parts_yaml_data[part_name] = process_part(
             part_yaml_data=part_data, processor=processor
         )
