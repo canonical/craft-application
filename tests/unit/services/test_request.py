@@ -91,7 +91,7 @@ def test_download_with_progress(
     ],
 )
 def test_download_files_with_progress(tmp_path, emitter, request_service, downloads):
-    files = {url: tmp_path for url in downloads}
+    files = dict.fromkeys(downloads, tmp_path)
     for url, data in downloads.items():
         responses.add(
             responses.GET, url, body=data, headers={"Content-Length": str(len(data))}
