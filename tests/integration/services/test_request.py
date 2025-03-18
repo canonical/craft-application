@@ -65,7 +65,9 @@ def test_get_real_file(tmp_path, emitter, request_service, url, checksum, size):
 )
 @pytest.mark.slow
 def test_get_real_files(tmp_path, request_service, files):
-    result = request_service.download_files_with_progress({f: tmp_path for f in files})
+    result = request_service.download_files_with_progress(
+        dict.fromkeys(files, tmp_path)
+    )
 
     for url, path in result.items():
         expected_hash = files[url]
