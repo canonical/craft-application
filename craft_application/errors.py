@@ -233,7 +233,7 @@ class InvalidPlatformError(PlatformDefinitionError):
 
 
 class ArchitectureNotInPlatformError(PlatformDefinitionError):
-    """The selected build-for is not in the selected platform."""
+    """The selected architecture is not available in the selected platform."""
 
     def __init__(
         self,

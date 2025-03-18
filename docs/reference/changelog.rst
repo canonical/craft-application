@@ -636,8 +636,5 @@ For a complete list of commits, check out the `2.7.0`_ release on GitHub.
 .. _4.8.3: https://github.com/canonical/craft-application/releases/tag/4.8.3
 .. _4.9.0: https://github.com/canonical/craft-application/releases/tag/4.9.0
 .. _4.9.1: https://github.com/canonical/craft-application/releases/tag/4.9.1
-<<<<<<< HEAD
 .. _4.10.0: https://github.com/canonical/craft-application/releases/tag/4.10.0
-=======
 .. _5.0.0: https://github.com/canonical/craft-application/releases/tag/5.0.0
->>>>>>> 20ca815 (feat!(test): add a pytest plugin (#653))

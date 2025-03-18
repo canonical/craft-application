@@ -232,7 +232,6 @@ def test_install_registered_snaps_alongside_testcraft(
     monkeypatch,
     app_metadata,
     fake_project,
-    fake_build_plan,
     fake_services,
     install_snap,
     additional_snaps: list[Snap],
@@ -252,9 +251,7 @@ def test_install_registered_snaps_alongside_testcraft(
     service = provider.ProviderService(
         app_metadata,
         fake_services,
-        project=fake_project,
         work_dir=pathlib.Path(),
-        build_plan=fake_build_plan,
         install_snap=install_snap,
     )
     service.setup()
