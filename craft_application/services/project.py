@@ -323,9 +323,8 @@ class ProjectService(base.AppService):
         partitions = self.get_partitions_for(
             platform=platform, build_for=build_for, build_on=build_on
         )
-        project_dirs = craft_parts.ProjectDirs(
-            work_dir=self._project_dir, partitions=partitions
-        )
+        work_dir = util.get_work_dir(self._project_dir)
+        project_dirs = craft_parts.ProjectDirs(work_dir=work_dir, partitions=partitions)
         info = craft_parts.ProjectInfo(
             application_name=self._app.name,  # not used in environment expansion
             cache_dir=pathlib.Path(),  # not used in environment expansion

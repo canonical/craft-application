@@ -46,3 +46,19 @@ def test_get_filename_from_url_path(url):
 )
 def test_get_filename_from_url_path_correct(url, filename):
     assert get_filename_from_url_path(url) == filename
+
+
+def test_get_work_dir_on_host(tmp_path):
+    assert util.get_work_dir(tmp_path) == tmp_path
+
+
+@pytest.mark.usefixtures("destructive_mode")
+def test_get_work_dir_destructive(tmp_path):
+    assert util.get_work_dir(tmp_path) == tmp_path
+
+
+@pytest.mark.usefixtures("managed_mode")
+def test_get_work_dir_managed(tmp_path):
+    expected = pathlib.Path("/root")
+    assert util.get_work_dir(tmp_path) == expected
+    assert tmp_path != expected

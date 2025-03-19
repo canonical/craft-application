@@ -18,7 +18,11 @@
 from craft_application.util.callbacks import get_unique_callbacks
 from craft_application.util.docs import render_doc_url
 from craft_application.util.logging import setup_loggers
-from craft_application.util.paths import get_filename_from_url_path, get_managed_logpath
+from craft_application.util.paths import (
+    get_filename_from_url_path,
+    get_managed_logpath,
+    get_work_dir,
+)
 from craft_application.util.platforms import (
     get_host_architecture,
     convert_architecture_deb_to_platform,
@@ -44,6 +48,7 @@ __all__ = [
     "setup_loggers",
     "get_filename_from_url_path",
     "get_managed_logpath",
+    "get_work_dir",
     "get_host_architecture",
     "convert_architecture_deb_to_platform",
     "get_snap_config",
