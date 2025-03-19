@@ -293,6 +293,39 @@ def test_expand_environment_for_riscv64(
 
 
 @pytest.mark.parametrize(
+    "project_data",
+    [
+        pytest.param(
+            {
+                "name": "my-name",
+                "version": "1.2.3",
+                "parts": {
+                    "my-part": {
+                        "plugin": "nil",
+                        "override-build": "echo $CRAFT_STAGE",
+                    }
+                },
+            },
+        ),
+    ],
+)
+@pytest.mark.usefixtures("managed_mode")
+def test_expand_environment_managed_mode(
+    real_project_service: ProjectService,
+    project_data,
+    fake_host_architecture,
+    fake_platform,
+):
+    real_project_service._expand_environment(
+        project_data,
+        platform=fake_platform,
+        build_for="riscv64",
+        build_on=fake_host_architecture,
+    )
+    assert project_data["parts"]["my-part"]["override-build"] == "echo /root/stage"
+
+
+@pytest.mark.parametrize(
     "build_for", [arch.value for arch in craft_platforms.DebianArchitecture]
 )
 @pytest.mark.usefixtures("enable_partitions")
