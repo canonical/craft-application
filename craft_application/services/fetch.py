@@ -82,7 +82,7 @@ class FetchService(base.AppService):
         """Start the fetch-service process with proper arguments."""
         super().setup()
 
-        if not self._services.get_class("provider").is_managed():
+        if not util.is_managed_mode():
             # Early fail if the fetch-service is not installed.
             fetch.verify_installed()
 
@@ -100,10 +100,6 @@ class FetchService(base.AppService):
 
     def set_policy(self, policy: typing.Literal["strict", "permissive"]) -> None:
         """Set the policy for the fetch service."""
-        if self._fetch_process is not None:
-            raise RuntimeError(
-                "Attempted to set fetch service policy after starting the process."
-            )
         self._session_policy = policy
 
     def create_session(self, instance: craft_providers.Executor) -> dict[str, str]:
@@ -116,7 +112,6 @@ class FetchService(base.AppService):
             raise ValueError(
                 "create_session() called but there's already a live fetch-service session."
             )
-
         strict_session = self._session_policy == "strict"
         self._session_data = fetch.create_session(strict=strict_session)
         self._instance = instance
