@@ -36,7 +36,7 @@ import craft_providers
 import pytest
 from freezegun import freeze_time
 
-from craft_application import ProviderService, fetch, services
+from craft_application import fetch, services
 from craft_application.services import fetch as service_module
 
 
@@ -55,13 +55,6 @@ def test_set_policy(fetch_service, policy):
     fetch_service.set_policy(policy)
 
     assert fetch_service._session_policy == policy
-
-
-def test_set_policy_error(fetch_service):
-    fetch_service._fetch_process = "I'm fetching here!"
-
-    with pytest.raises(RuntimeError, match="set fetch service policy after starting"):
-        fetch_service.set_policy("strict")
 
 
 def test_create_session_already_exists(fetch_service):
@@ -187,7 +180,7 @@ def test_warning_experimental(mocker, fetch_service, run_on_host, emitter):
     mocker.patch.object(fetch, "start_service")
     mocker.patch.object(fetch, "verify_installed")
     mocker.patch.object(fetch, "_get_service_base_dir", return_value=pathlib.Path())
-    mocker.patch.object(ProviderService, "is_managed", return_value=not run_on_host)
+    mocker.patch("craft_application.util.is_managed_mode", return_value=not run_on_host)
 
     fetch_service.setup()
 
@@ -204,7 +197,7 @@ def test_warning_experimental(mocker, fetch_service, run_on_host, emitter):
 def test_setup_managed(mocker, fetch_service):
     """The fetch-service process should only be checked/started when running on the host."""
     mock_start = mocker.patch.object(fetch, "start_service")
-    mocker.patch.object(ProviderService, "is_managed", return_value=True)
+    mocker.patch("craft_application.util.is_managed_mode", return_value=True)
 
     fetch_service.setup()
 

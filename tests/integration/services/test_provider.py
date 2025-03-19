@@ -129,10 +129,13 @@ def test_proxy_variables_forwarded(
 
 @pytest.mark.slow
 @pytest.mark.parametrize("fetch", [False, True])
-def test_run_managed(provider_service, fetch, snap_safe_tmp_path):
+def test_run_managed(provider_service, fake_services, fetch, snap_safe_tmp_path):
     base = craft_platforms.DistroBase("ubuntu", "24.04")
     arch = craft_platforms.DebianArchitecture.from_host()
     build_info = craft_platforms.BuildInfo("foo", arch, arch, base)
+
+    fetch_service = fake_services.get("fetch")
+    fetch_service.set_policy("permissive")
 
     provider_service._work_dir = snap_safe_tmp_path
 
