@@ -20,6 +20,7 @@ from typing import cast
 from unittest import mock
 
 import craft_platforms
+import pydantic
 import pytest
 import pytest_mock
 from hypothesis import given, strategies
@@ -133,6 +134,26 @@ def test_get_platforms(
     real_project_service._load_raw_project = lambda: {"platforms": platforms}  # type: ignore  # noqa: PGH003
 
     assert real_project_service.get_platforms() == expected
+
+
+@pytest.mark.parametrize(
+    ("platforms", "match"),
+    [
+        (None, "should be a valid dictionary"),
+        ({"invalid": None}, r"platforms\.invalid\n.+should be a valid dictionary"),
+        (
+            {"my-pf": {"build-on": ["amd66"]}},
+            "'amd66' is not a valid Debian architecture",
+        ),
+    ],
+)
+def test_get_platforms_bad_platforms_value(
+    real_project_service: ProjectService, platforms, match
+):
+    real_project_service._load_raw_project = lambda: {"platforms": platforms}  # type: ignore  # noqa: PGH003
+
+    with pytest.raises(pydantic.ValidationError, match=match):
+        real_project_service.get_platforms()
 
 
 @pytest.mark.parametrize(

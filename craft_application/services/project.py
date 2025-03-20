@@ -22,9 +22,11 @@ from typing import TYPE_CHECKING, Any, Literal, cast, final
 
 import craft_parts
 import craft_platforms
+import pydantic
 from craft_cli import emit
 
 from craft_application import errors, grammar, util
+from craft_application.models import Platform
 from craft_application.models.grammar import GrammarAwareProject
 
 from . import base
@@ -198,6 +200,36 @@ class ProjectService(base.AppService):
             f"{self._app.name}.yaml must contain a 'platforms' key."
         )
 
+    @staticmethod
+    def _vectorise_platforms(platforms: dict[str, Any]) -> None:
+        """Vectorise the platforms dictionary in place."""
+        for name, data in platforms.items():
+            try:
+                craft_platforms.DebianArchitecture(name)
+            except ValueError:
+                continue  # Don't vectorise platforms with invalid names.
+            if data is None:
+                platforms[name] = {
+                    "build-on": [name],
+                    "build-for": [name],
+                }
+
+    @classmethod
+    def _preprocess_platforms(
+        cls, platforms: dict[str, craft_platforms.PlatformDict]
+    ) -> dict[str, craft_platforms.PlatformDict]:
+        """Validate that the given platforms value is valid."""
+        platforms_project_adapter = pydantic.TypeAdapter(
+            dict[Literal["platforms"], dict[str, Platform]],
+        )
+        if platforms:
+            cls._vectorise_platforms(platforms)
+        return platforms_project_adapter.dump_python(  # type: ignore[no-any-return]
+            platforms_project_adapter.validate_python({"platforms": platforms}),
+            mode="json",
+            by_alias=True,
+        )["platforms"]
+
     @final
     def get_platforms(self) -> dict[str, craft_platforms.PlatformDict]:
         """Get the platforms definition for the project.
@@ -212,18 +244,8 @@ class ProjectService(base.AppService):
         if "platforms" not in raw_project:
             return self._app_render_legacy_platforms()
 
-        platforms: dict[str, craft_platforms.PlatformDict] = raw_project["platforms"]
-        for name, data in platforms.items():
-            if data is None:
-                platforms[name] = {"build-on": [name], "build-for": [name]}
-            else:
-                # Vectorise build-on and build-for
-                if isinstance(data["build-on"], str):
-                    data["build-on"] = [data["build-on"]]
-                if isinstance(data["build-for"], str):
-                    data["build-for"] = [data["build-for"]]
-
-        return platforms
+        self.__platforms = self._preprocess_platforms(raw_project["platforms"])
+        return self.__platforms
 
     @final
     def _get_project_vars(self, yaml_data: dict[str, Any]) -> dict[str, str]:
@@ -352,7 +374,7 @@ class ProjectService(base.AppService):
         :param build_for: The target architecture of the build.
         :param platform: The name of the target platform.
         :param build_on: The host architecture the build happens on.
-        :returns: A dict containing a the pre-processed project.
+        :returns: A dict containing a pre-processed project.
         """
         project = self.get_raw()
         GrammarAwareProject.validate_grammar(project)
@@ -457,7 +479,7 @@ def _convert_build_for(
     """
     try:
         return (
-            architecture
+            "all"
             if architecture == "all"
             else craft_platforms.DebianArchitecture(architecture)
         )
