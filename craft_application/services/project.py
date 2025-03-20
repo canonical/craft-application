@@ -213,6 +213,11 @@ class ProjectService(base.AppService):
                     "build-on": [name],
                     "build-for": [name],
                 }
+            else:
+                if "build-on" in data and isinstance(data["build-on"], str):
+                    data["build-on"] = [data["build-on"]]
+                if "build-for" in data and isinstance(data["build-for"], str):
+                    data["build-for"] = [data["build-for"]]
 
     @classmethod
     def _preprocess_platforms(
@@ -485,7 +490,7 @@ def _convert_build_for(
         )
     except ValueError:
         raise errors.CraftValidationError(
-            "{architecture!r} is not a valid Debian architecture",
+            f"{architecture!r} is not a valid Debian architecture",
             resolution="Use a supported Debian architecture name.",
             reportable=False,
             logpath_report=False,

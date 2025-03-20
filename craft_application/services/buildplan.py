@@ -131,8 +131,7 @@ class BuildPlanService(base.AppService):
         """
         project_service = self._services.get("project")
         raw_project = project_service.get_raw()
-        if "platforms" not in raw_project:
-            raw_project["platforms"] = project_service.get_platforms()
+        raw_project["platforms"] = project_service.get_platforms()
 
         if build_on:
             build_on_archs = [craft_platforms.DebianArchitecture(on) for on in build_on]

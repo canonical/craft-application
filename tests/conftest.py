@@ -447,7 +447,7 @@ def fake_services(
         else None
     )
     build_for = (
-        str(request.getfixturevalue("build_for"))
+        request.getfixturevalue("build_for")
         if "build_for" in request.fixturenames
         else None
     )
