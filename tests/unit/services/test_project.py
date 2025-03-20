@@ -501,6 +501,18 @@ def test_cannot_reconfigure(
         real_project_service.configure(platform=None, build_for=None)
 
 
+@pytest.mark.usefixtures("fake_project_file")
+def test_configure_bad_build_for(
+    real_project_service: ProjectService,
+    fake_project_file: pathlib.Path,
+):
+    """Test that we get a good error message given a bad build-for platform."""
+    with pytest.raises(
+        errors.CraftValidationError, match="not a valid Debian architecture"
+    ):
+        real_project_service.configure(platform=None, build_for="invalid")
+
+
 @pytest.mark.parametrize(
     "build_for", [arch.value for arch in craft_platforms.DebianArchitecture]
 )
