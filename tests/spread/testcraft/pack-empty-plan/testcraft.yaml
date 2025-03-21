@@ -1,0 +1,13 @@
+name: empty-build
+description: This shouldn't build in any our spread environments.
+version: "0.1"
+
+base: ubuntu@24.04
+platforms:
+  all:
+    build-on: [s390x]
+    build-for: [all]
+
+parts:
+  my-test:
+    plugin: nil

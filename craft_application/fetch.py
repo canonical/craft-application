@@ -182,7 +182,7 @@ def start_service() -> subprocess.Popen[str] | None:
 
     # Wait a bit for the service to come online
     with contextlib.suppress(subprocess.TimeoutExpired):
-        fetch_process.wait(0.1)
+        fetch_process.wait(0.5)
 
     if fetch_process.poll() is not None:
         # fetch-service already exited, something is wrong

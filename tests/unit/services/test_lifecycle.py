@@ -43,14 +43,16 @@ from craft_parts.executor import (
 )
 
 from craft_application import errors, models, util
-from craft_application.errors import PartsLifecycleError
+from craft_application.errors import EmptyBuildPlanError, PartsLifecycleError
 from craft_application.services import lifecycle
 from craft_application.services.buildplan import BuildPlanService
 from craft_application.util import repositories
 
 
 def skip_if_build_plan_empty(build_planner: BuildPlanService):
-    if not build_planner.plan():
+    try:
+        build_planner.plan()
+    except EmptyBuildPlanError:
         pytest.skip(reason="Empty build plan")
 
 

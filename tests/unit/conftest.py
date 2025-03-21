@@ -49,7 +49,9 @@ def provider_service(app_metadata, fake_project, fake_services, tmp_path):
 
 @pytest.fixture
 def mock_services(monkeypatch, app_metadata, fake_project):
-    services.ServiceFactory.register("config", mock.Mock(spec=services.ConfigService))
+    mock_config = mock.Mock(spec=services.ConfigService)
+    mock_config.return_value.get.return_value = None
+    services.ServiceFactory.register("config", mock_config)
     services.ServiceFactory.register("fetch", mock.Mock(spec=services.FetchService))
     services.ServiceFactory.register("init", mock.MagicMock(spec=services.InitService))
     services.ServiceFactory.register(

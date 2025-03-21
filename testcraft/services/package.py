@@ -41,7 +41,8 @@ class PackageService(package.PackageService):
     def pack(self, prime_dir: pathlib.Path, dest: pathlib.Path) -> list[pathlib.Path]:
         """Pack a testcraft artifact."""
         project = self._services.get("project").get()
-        tarball_name = f"{project.name}-{project.version}.testcraft"
+        platform = self._services.get("build_plan").plan()[0].platform
+        tarball_name = f"{project.name}-{project.version}-{platform}.testcraft"
         with tarfile.open(dest / tarball_name, mode="w:xz") as tar:
             tar.add(prime_dir, arcname=".")
         return [dest / tarball_name]

@@ -161,6 +161,15 @@ class LifecycleCommand(_BaseLifecycleCommand):
         """Run a lifecycle step command."""
         super()._run(parsed_args)
 
+        build_planner = self.services.get("build_plan")
+        config = self.services.get("config")
+        platform = getattr(parsed_args, "platform", None) or config.get("platform")
+        if platform:
+            build_planner.set_platforms(platform)
+        build_for = getattr(parsed_args, "build_for", None) or config.get("build_for")
+        if build_for:
+            build_planner.set_build_fors(build_for)
+
         if self._use_provider(parsed_args):
             fetch_service_policy = getattr(parsed_args, "fetch_service_policy", None)
             if fetch_service_policy:
