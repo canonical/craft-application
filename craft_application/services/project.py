@@ -160,6 +160,7 @@ class ProjectService(base.AppService):
                 retcode=os.EX_NOINPUT,
             ) from err
         emit.trace(f"Project file found at {path}")
+        self.__project_file_path = path
         return path
 
     @final
