@@ -297,8 +297,8 @@ class ProjectService(base.AppService):
             )
         return self.__partitions
 
-    @staticmethod
     def _app_preprocess_project(
+        self,
         project: dict[str, Any],
         *,
         build_on: str,
