@@ -204,31 +204,41 @@ class ProjectService(base.AppService):
     def _vectorise_platforms(platforms: dict[str, Any]) -> None:
         """Vectorise the platforms dictionary in place."""
         for name, data in platforms.items():
-            try:
-                craft_platforms.DebianArchitecture(name)
-            except ValueError:
-                continue  # Don't vectorise platforms with invalid names.
             if data is None:
+                try:  # Only copy platform name if it's actually valid.
+                    craft_platforms.DebianArchitecture(name)
+                except ValueError:
+                    continue
                 platforms[name] = {
                     "build-on": [name],
                     "build-for": [name],
                 }
-            else:
-                if "build-on" in data and isinstance(data["build-on"], str):
+                continue
+            # Non-vector versions of architectures. These are accepted,
+            # but are not included in the schema.
+            if "build-on" in data:
+                if isinstance(data["build-on"], str):
                     data["build-on"] = [data["build-on"]]
-                if "build-for" in data and isinstance(data["build-for"], str):
-                    data["build-for"] = [data["build-for"]]
+                # Semi-shorthand where only build-on is provided. This
+                # is also not validated by the schema, but is accepted.
+                # The value could already be None so we need to handle both
+                # the case where build-for is None and where it's not actually
+                # in the platform.
+                if data.get("build-for") is None:
+                    data["build-for"] = data["build-on"]
+            if "build-for" in data and isinstance(data["build-for"], str):
+                data["build-for"] = [data["build-for"]]
 
     @classmethod
     def _preprocess_platforms(
         cls, platforms: dict[str, craft_platforms.PlatformDict]
     ) -> dict[str, craft_platforms.PlatformDict]:
         """Validate that the given platforms value is valid."""
+        if platforms:
+            cls._vectorise_platforms(platforms)
         platforms_project_adapter = pydantic.TypeAdapter(
             dict[Literal["platforms"], dict[str, Platform]],
         )
-        if platforms:
-            cls._vectorise_platforms(platforms)
         return platforms_project_adapter.dump_python(  # type: ignore[no-any-return]
             platforms_project_adapter.validate_python({"platforms": platforms}),
             mode="json",

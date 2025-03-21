@@ -124,6 +124,11 @@ def test_load_raw_project_invalid(
             )
             for arch in craft_platforms.DebianArchitecture
         ),
+        pytest.param(
+            {"my-platform": {"build-on": ["ppc64el"]}},
+            {"my-platform": {"build-on": ["ppc64el"], "build-for": ["ppc64el"]}},
+            id="only-build-on",
+        ),
     ],
 )
 def test_get_platforms(
