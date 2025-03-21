@@ -18,13 +18,15 @@ from __future__ import annotations
 import copy
 import os
 import pathlib
-from typing import TYPE_CHECKING, Any, cast, final
+from typing import TYPE_CHECKING, Any, Literal, cast, final
 
 import craft_parts
 import craft_platforms
+import pydantic
 from craft_cli import emit
 
 from craft_application import errors, grammar, util
+from craft_application.models import Platform
 from craft_application.models.grammar import GrammarAwareProject
 
 from . import base
@@ -76,11 +78,7 @@ class ProjectService(base.AppService):
 
         if platform and build_for:
             self._platform = platform
-            self._build_for = (
-                build_for
-                if build_for == "all"
-                else craft_platforms.DebianArchitecture(build_for)
-            )
+            self._build_for = _convert_build_for(build_for)
             self.__is_configured = True
             return
 
@@ -97,6 +95,8 @@ class ProjectService(base.AppService):
                 break
             else:
                 if build_for:
+                    # Gives a clean error if the value of build_for is invalid.
+                    _convert_build_for(build_for)
                     raise RuntimeError(
                         f"Cannot generate a project that builds on "
                         f"{self._build_on} and builds for {build_for}"
@@ -107,11 +107,7 @@ class ProjectService(base.AppService):
                 platform = next(iter(platforms))
                 self._platform = platform
                 build_for = platforms[platform]["build-for"][0]
-                self._build_for = (
-                    build_for
-                    if build_for == "all"
-                    else craft_platforms.DebianArchitecture(build_for)
-                )
+                self._build_for = _convert_build_for(build_for)
                 self._build_on = craft_platforms.DebianArchitecture(
                     platforms[platform]["build-on"][0]
                 )
@@ -205,6 +201,50 @@ class ProjectService(base.AppService):
             f"{self._app.name}.yaml must contain a 'platforms' key."
         )
 
+    @staticmethod
+    def _vectorise_platforms(platforms: dict[str, Any]) -> None:
+        """Vectorise the platforms dictionary in place."""
+        for name, data in platforms.items():
+            if data is None:
+                # list call is needed until we have python 3.12 as minimum
+                if name not in list(craft_platforms.DebianArchitecture):
+                    continue
+                platforms[name] = {
+                    "build-on": [name],
+                    "build-for": [name],
+                }
+                continue
+            # Non-vector versions of architectures. These are accepted,
+            # but are not included in the schema.
+            if "build-on" in data and isinstance(data["build-on"], str):
+                data["build-on"] = [data["build-on"]]
+            # Semi-shorthand where only build-on is provided. This
+            # is also not validated by the schema, but is accepted.
+            if data.get("build-for") is None and name in (
+                *craft_platforms.DebianArchitecture,
+                "all",
+            ):
+                data["build-for"] = [name]
+            if "build-for" in data and isinstance(data["build-for"], str):
+                data["build-for"] = [data["build-for"]]
+
+    @classmethod
+    def _preprocess_platforms(
+        cls, platforms: dict[str, craft_platforms.PlatformDict]
+    ) -> dict[str, craft_platforms.PlatformDict]:
+        """Validate that the given platforms value is valid."""
+        if platforms:
+            cls._vectorise_platforms(platforms)
+        platforms_project_adapter = pydantic.TypeAdapter(
+            dict[Literal["platforms"], dict[str, Platform]],
+        )
+        return platforms_project_adapter.dump_python(  # type: ignore[no-any-return]
+            platforms_project_adapter.validate_python({"platforms": platforms}),
+            mode="json",
+            by_alias=True,
+            exclude_defaults=True,
+        )["platforms"]
+
     @final
     def get_platforms(self) -> dict[str, craft_platforms.PlatformDict]:
         """Get the platforms definition for the project.
@@ -219,18 +259,8 @@ class ProjectService(base.AppService):
         if "platforms" not in raw_project:
             return self._app_render_legacy_platforms()
 
-        platforms: dict[str, craft_platforms.PlatformDict] = raw_project["platforms"]
-        for name, data in platforms.items():
-            if data is None:
-                platforms[name] = {"build-on": [name], "build-for": [name]}
-            else:
-                # Vectorise build-on and build-for
-                if isinstance(data["build-on"], str):
-                    data["build-on"] = [data["build-on"]]
-                if isinstance(data["build-for"], str):
-                    data["build-for"] = [data["build-for"]]
-
-        return platforms
+        self.__platforms = self._preprocess_platforms(raw_project["platforms"])
+        return self.__platforms
 
     @final
     def _get_project_vars(self, yaml_data: dict[str, Any]) -> dict[str, str]:
@@ -359,7 +389,7 @@ class ProjectService(base.AppService):
         :param build_for: The target architecture of the build.
         :param platform: The name of the target platform.
         :param build_on: The host architecture the build happens on.
-        :returns: A dict containing a the pre-processed project.
+        :returns: A dict containing a pre-processed project.
         """
         project = self.get_raw()
         GrammarAwareProject.validate_grammar(project)
@@ -451,3 +481,27 @@ class ProjectService(base.AppService):
                 platform=cast(str, self._platform),
             )
         return self._project_model
+
+
+def _convert_build_for(
+    architecture: str,
+) -> craft_platforms.DebianArchitecture | Literal["all"]:
+    """Convert a build-for value to a valid internal value.
+
+    :param architecture: A valid build-for architecture as a string
+    :returns: The architecture as a DebianArchitecture or the special case string "all"
+    :raises: CraftValidationError if the given value is not valid for build-for.
+    """
+    try:
+        return (
+            "all"
+            if architecture == "all"
+            else craft_platforms.DebianArchitecture(architecture)
+        )
+    except ValueError:
+        raise errors.CraftValidationError(
+            f"{architecture!r} is not a valid Debian architecture",
+            resolution="Use a supported Debian architecture name.",
+            reportable=False,
+            logpath_report=False,
+        ) from None

@@ -20,6 +20,7 @@ from typing import cast
 from unittest import mock
 
 import craft_platforms
+import pydantic
 import pytest
 import pytest_mock
 from hypothesis import given, strategies
@@ -123,6 +124,26 @@ def test_load_raw_project_invalid(
             )
             for arch in craft_platforms.DebianArchitecture
         ),
+        pytest.param(
+            {"my-platform": {"build-on": ["ppc64el"]}},
+            {"my-platform": {"build-on": ["ppc64el"]}},
+            id="only-build-on-bad-name",
+        ),
+        pytest.param(
+            {"ppc64el": {"build-on": ["amd64", "riscv64"]}},
+            {"ppc64el": {"build-on": ["amd64", "riscv64"], "build-for": ["ppc64el"]}},
+            id="only-build-on-valid-name",
+        ),
+        pytest.param(
+            {"all": {"build-on": "riscv64"}},
+            {"all": {"build-on": ["riscv64"], "build-for": ["all"]}},
+            id="lazy-all",
+        ),
+        pytest.param(
+            {"s390x": {"build-on": "ppc64el", "build-for": None}},
+            {"s390x": {"build-on": ["ppc64el"], "build-for": ["s390x"]}},
+            id="null-build-for-valid-name",
+        ),
     ],
 )
 def test_get_platforms(
@@ -133,6 +154,26 @@ def test_get_platforms(
     real_project_service._load_raw_project = lambda: {"platforms": platforms}  # type: ignore  # noqa: PGH003
 
     assert real_project_service.get_platforms() == expected
+
+
+@pytest.mark.parametrize(
+    ("platforms", "match"),
+    [
+        (None, "should be a valid dictionary"),
+        ({"invalid": None}, r"platforms\.invalid\n.+should be a valid dictionary"),
+        (
+            {"my-pf": {"build-on": ["amd66"]}},
+            "'amd66' is not a valid Debian architecture",
+        ),
+    ],
+)
+def test_get_platforms_bad_value(
+    real_project_service: ProjectService, platforms, match
+):
+    real_project_service._load_raw_project = lambda: {"platforms": platforms}  # type: ignore  # noqa: PGH003
+
+    with pytest.raises(pydantic.ValidationError, match=match):
+        real_project_service.get_platforms()
 
 
 @pytest.mark.parametrize(
@@ -499,6 +540,18 @@ def test_cannot_reconfigure(
 
     with pytest.raises(RuntimeError, match="Project is already configured."):
         real_project_service.configure(platform=None, build_for=None)
+
+
+@pytest.mark.usefixtures("fake_project_file")
+def test_configure_bad_build_for(
+    real_project_service: ProjectService,
+    fake_project_file: pathlib.Path,
+):
+    """Test that we get a good error message given a bad build-for platform."""
+    with pytest.raises(
+        errors.CraftValidationError, match="not a valid Debian architecture"
+    ):
+        real_project_service.configure(platform=None, build_for="invalid")
 
 
 @pytest.mark.parametrize(

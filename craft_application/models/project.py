@@ -104,7 +104,8 @@ class Platform(base.CraftBaseModel):
         cls, values: Mapping[str, list[str]]
     ) -> Mapping[str, Any]:
         """If build_for is provided, then build_on must also be."""
-        if values.get("build_for") and not values.get("build_on"):
+        # "if values" here ensures that a None value errors properly.
+        if values and values.get("build_for") and not values.get("build_on"):
             raise errors.CraftValidationError(
                 "'build-for' expects 'build-on' to also be provided."
             )
@@ -113,7 +114,7 @@ class Platform(base.CraftBaseModel):
 
     @classmethod
     def from_platforms(cls, platforms: craft_platforms.Platforms) -> dict[str, Self]:
-        """Create a dictionary ofthese objects from craft_platforms PlatformDicts."""
+        """Create a dictionary of these objects from craft_platforms PlatformDicts."""
         result: dict[str, Self] = {}
         for key, value in platforms.items():
             name = str(key)
