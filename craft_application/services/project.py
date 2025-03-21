@@ -205,9 +205,7 @@ class ProjectService(base.AppService):
         """Vectorise the platforms dictionary in place."""
         for name, data in platforms.items():
             if data is None:
-                try:  # Only copy platform name if it's actually valid.
-                    craft_platforms.DebianArchitecture(name)
-                except ValueError:
+                if name not in craft_platforms.DebianArchitecture:
                     continue
                 platforms[name] = {
                     "build-on": [name],
@@ -216,16 +214,15 @@ class ProjectService(base.AppService):
                 continue
             # Non-vector versions of architectures. These are accepted,
             # but are not included in the schema.
-            if "build-on" in data:
-                if isinstance(data["build-on"], str):
-                    data["build-on"] = [data["build-on"]]
-                # Semi-shorthand where only build-on is provided. This
-                # is also not validated by the schema, but is accepted.
-                # The value could already be None so we need to handle both
-                # the case where build-for is None and where it's not actually
-                # in the platform.
-                if data.get("build-for") is None:
-                    data["build-for"] = data["build-on"]
+            if "build-on" in data and isinstance(data["build-on"], str):
+                data["build-on"] = [data["build-on"]]
+            # Semi-shorthand where only build-on is provided. This
+            # is also not validated by the schema, but is accepted.
+            if data.get("build-for") is None and name in (
+                *craft_platforms.DebianArchitecture,
+                "all",
+            ):
+                data["build-for"] = [name]
             if "build-for" in data and isinstance(data["build-for"], str):
                 data["build-for"] = [data["build-for"]]
 
@@ -243,6 +240,7 @@ class ProjectService(base.AppService):
             platforms_project_adapter.validate_python({"platforms": platforms}),
             mode="json",
             by_alias=True,
+            exclude_defaults=True,
         )["platforms"]
 
     @final

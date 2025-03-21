@@ -126,8 +126,23 @@ def test_load_raw_project_invalid(
         ),
         pytest.param(
             {"my-platform": {"build-on": ["ppc64el"]}},
-            {"my-platform": {"build-on": ["ppc64el"], "build-for": ["ppc64el"]}},
-            id="only-build-on",
+            {"my-platform": {"build-on": ["ppc64el"]}},
+            id="only-build-on-bad-name",
+        ),
+        pytest.param(
+            {"ppc64el": {"build-on": ["amd64", "riscv64"]}},
+            {"ppc64el": {"build-on": ["amd64", "riscv64"], "build-for": ["ppc64el"]}},
+            id="only-build-on-valid-name",
+        ),
+        pytest.param(
+            {"all": {"build-on": "riscv64"}},
+            {"all": {"build-on": ["riscv64"], "build-for": ["all"]}},
+            id="lazy-all",
+        ),
+        pytest.param(
+            {"s390x": {"build-on": "ppc64el", "build-for": None}},
+            {"s390x": {"build-on": ["ppc64el"], "build-for": ["s390x"]}},
+            id="null-build-for-valid-name",
         ),
     ],
 )
@@ -152,7 +167,7 @@ def test_get_platforms(
         ),
     ],
 )
-def test_get_platforms_bad_platforms_value(
+def test_get_platforms_bad_value(
     real_project_service: ProjectService, platforms, match
 ):
     real_project_service._load_raw_project = lambda: {"platforms": platforms}  # type: ignore  # noqa: PGH003
