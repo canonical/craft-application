@@ -205,7 +205,8 @@ class ProjectService(base.AppService):
         """Vectorise the platforms dictionary in place."""
         for name, data in platforms.items():
             if data is None:
-                if name not in craft_platforms.DebianArchitecture:
+                # list call is needed until we have python 3.12 as minimum
+                if name not in list(craft_platforms.DebianArchitecture):
                     continue
                 platforms[name] = {
                     "build-on": [name],
