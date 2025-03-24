@@ -24,6 +24,7 @@ from unittest import mock
 import craft_platforms
 import craft_providers
 import pytest
+from craft_cli import emit
 from craft_providers import bases, lxd, multipass
 from craft_providers.actions.snap_installer import Snap
 
@@ -693,15 +694,20 @@ def test_instance_fetch_logs(
     check,
     emitter,
     fake_build_info,
+    mocker,
+    tmp_path,
 ):
     """Test that logs from the build instance are fetched in case of success."""
 
     # Setup the build instance and pretend the command inside it finished successfully.
     provider_service = setup_fetch_logs_provider(should_have_logfile=True)
-    with provider_service.instance(
-        build_info=fake_build_info,
-        work_dir=pathlib.Path(),
-    ) as mock_instance:
+    mock_dump = mocker.patch.object(emit, "dump_log_contents")
+    with (
+        provider_service.instance(
+            build_info=fake_build_info,
+            work_dir=pathlib.Path(),
+        ) as mock_instance,
+    ):
         pass
 
     # Now check that the logs from the build instance were collected.
@@ -710,15 +716,10 @@ def test_instance_fetch_logs(
             source=pathlib.PosixPath("/tmp/testcraft.log"), missing_ok=True
         )
 
-    expected = [
-        mock.call("debug", "Logs retrieved from managed instance:"),
-        mock.call("debug", ":: some"),
-        mock.call("debug", ":: log data"),
-        mock.call("debug", ":: here"),
-    ]
-
     with check:
-        emitter.assert_interactions(expected)
+        emitter.assert_debug("Logs retrieved from managed instance:")
+
+    mock_dump.assert_called_once_with(tmp_path / "fake.file")
 
 
 def test_instance_fetch_logs_error(
@@ -727,11 +728,14 @@ def test_instance_fetch_logs_error(
     check,
     emitter,
     fake_build_info,
+    mocker,
+    tmp_path,
 ):
     """Test that logs from the build instance are fetched in case of errors."""
 
     # Setup the build instance and pretend the command inside it finished with error.
     provider_service = setup_fetch_logs_provider(should_have_logfile=True)
+    mock_dump = mocker.patch.object(emit, "dump_log_contents")
     with (
         pytest.raises(RuntimeError),
         provider_service.instance(
@@ -747,15 +751,10 @@ def test_instance_fetch_logs_error(
             source=pathlib.PosixPath("/tmp/testcraft.log"), missing_ok=True
         )
 
-    expected = [
-        mock.call("debug", "Logs retrieved from managed instance:"),
-        mock.call("debug", ":: some"),
-        mock.call("debug", ":: log data"),
-        mock.call("debug", ":: here"),
-    ]
-
     with check:
-        emitter.assert_interactions(expected)
+        emitter.assert_debug("Logs retrieved from managed instance:")
+
+    mock_dump.assert_called_once_with(tmp_path / "fake.file")
 
 
 def test_instance_fetch_logs_missing_file(
