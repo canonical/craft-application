@@ -35,8 +35,7 @@ class TestingService(base.AppService):
     def process_spread_yaml(self, dest: pathlib.Path) -> None:
         """Process the spread configuration file.
 
-        :param project_dir: The directory to initialise the project in.
-        :param project_name: The name of the project.
+        :param dest: the output path for spread.yaml.
         """
         emit.debug("Processing spread.yaml.")
         # For now we need to modify the spread.yaml file in-place.
@@ -50,9 +49,10 @@ class TestingService(base.AppService):
         with spread_path.open() as file:
             data = util.safe_yaml_load(file)
 
-        shutil.move(spread_path, spread_backup)
-
-        atexit.register(shutil.move, spread_backup, spread_path)
+        shutil.move(spread_path, dest)
+        spread_backup.hardlink_to(dest)
+        atexit.register(shutil.move, dest, spread_path)
+        atexit.register(spread_backup.unlink)
 
         simple = models.CraftSpreadYaml.unmarshal(data)
 
