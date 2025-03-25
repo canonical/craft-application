@@ -1,4 +1,4 @@
-# Copyright 2023-2024 Canonical Ltd.
+# Copyright 2023-2025 Canonical Ltd.
 #
 # This program is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Lesser General Public License version 3, as
@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import argparse
 import pathlib
+import shutil
 import subprocess
 import textwrap
 from typing import Any
@@ -27,6 +28,8 @@ from typing_extensions import override
 
 from craft_application import util
 from craft_application.commands import base
+
+TEMP_SPREAD_FILE_NAME = ".craft-spread.yaml"
 
 
 def get_lifecycle_command_group() -> CommandGroup:
@@ -418,6 +421,77 @@ class PackCommand(LifecycleCommand):
         if self._use_provider(parsed_args=parsed_args):
             return super()._run(parsed_args=parsed_args, step_name=step_name)
         return self._run_real(parsed_args=parsed_args, step_name=step_name)
+
+
+class TestCommand(PackCommand):
+    """Command to run project tests.
+
+    The test command invokes the spread command with a processed spread.yaml
+    configuration file.
+
+    This command is opt-in for applications in craft-application 5 and will become
+    a standard lifecycle command in a future major release.
+    """
+
+    name = "test"
+    help_msg = "Run project tests"
+    overview = textwrap.dedent(
+        """
+        Run spread tests for the project.
+        """
+    )
+    common = True
+
+    @override
+    def _fill_parser(self, parser: argparse.ArgumentParser) -> None:
+        # Skip the parser additions that `pack` adds.
+        super(LifecycleCommand, self)._fill_parser(parser)
+
+    @override
+    def _run(
+        self,
+        parsed_args: argparse.Namespace,
+        step_name: str | None = None,
+        **kwargs: Any,
+    ) -> None:
+        emit.progress(
+            "The test command is experimental and subject to change without warning.",
+            permanent=True,
+        )
+        # Output into the spread directory.
+        parsed_args.output = pathlib.Path.cwd() / "spread"
+        parsed_args.output.mkdir(exist_ok=True)
+        parsed_args.fetch_service_policy = None
+
+        # Pack the packages.
+        super()._run(parsed_args, step_name, **kwargs)
+
+        if util.is_managed_mode():
+            # Run the rest of this outside the managed instance.
+            return
+
+        emit.progress("Testing project.")
+
+        dest = pathlib.Path.cwd() / TEMP_SPREAD_FILE_NAME
+
+        spread_path = pathlib.Path.cwd() / "spread.yaml"
+        spread_backup = spread_path.with_suffix(".yaml~")
+        try:
+            self._services.testing.process_spread_yaml(dest)
+
+            # For now we need to modify the spread.yaml file in-place.
+            # See: https://github.com/canonical/spread/issues/225
+            spread_backup.unlink(missing_ok=True)
+            spread_backup.hardlink_to(spread_path)
+            shutil.move(dest, spread_path)
+
+            self._services.testing.run_spread(dest)
+        finally:
+            if not self._services.config.get("debug"):
+                dest.unlink(missing_ok=True)
+            # See: https://github.com/canonical/spread/issues/225
+            spread_path.unlink(missing_ok=True)
+            spread_path.hardlink_to(spread_backup)
 
 
 class CleanCommand(_BaseLifecycleCommand):
