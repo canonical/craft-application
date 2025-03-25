@@ -16,11 +16,13 @@
 
 """Service for testing a project."""
 
+import atexit
 import os
 import pathlib
+import shutil
 import subprocess
 
-from craft_cli import emit
+from craft_cli import CraftError, emit
 
 from craft_application import models, util
 
@@ -37,11 +39,20 @@ class TestingService(base.AppService):
         :param project_name: The name of the project.
         """
         emit.debug("Processing spread.yaml.")
+        # For now we need to modify the spread.yaml file in-place.
+        # See: https://github.com/canonical/spread/issues/225
+        _ = dest
+        spread_path = pathlib.Path("spread.yaml")
+        spread_backup = spread_path.with_suffix(".yaml~")
 
         craft_backend = self._get_backend()
 
-        with pathlib.Path("spread.yaml").open() as file:
+        with spread_path.open() as file:
             data = util.safe_yaml_load(file)
+
+        shutil.move(spread_path, spread_backup)
+
+        atexit.register(shutil.move, spread_backup, spread_path)
 
         simple = models.CraftSpreadYaml.unmarshal(data)
 
@@ -50,16 +61,26 @@ class TestingService(base.AppService):
             craft_backend=craft_backend,
         )
 
-        spread_yaml.to_yaml_file(dest)
+        spread_yaml.to_yaml_file(spread_path)
 
     def run_spread(self, project_path: pathlib.Path) -> None:
         """Run spread on the processed project file.
 
         :param project_path: The processed project file.
         """
-        with emit.pause():
-            os.environ["SPREAD_PROJECT_FILE"] = str(project_path)
-            subprocess.run(["spread", "-v", "craft:"], check=True)
+        try:
+            with emit.pause():
+                subprocess.run(
+                    ["spread", "-v", "craft:"],
+                    check=True,
+                    env=os.environ | {"SPREAD_PROJECT_FILE": project_path.as_posix()},
+                )
+        except subprocess.CalledProcessError as exc:
+            raise CraftError(
+                "spread run failed",
+                reportable=False,
+                retcode=exc.returncode,
+            )
 
     def _get_backend(self) -> models.SpreadBackend:
         name = "ci" if os.environ.get("CI") else "lxd-vm"

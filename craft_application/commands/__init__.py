@@ -18,8 +18,7 @@
 from .base import AppCommand, ExtensibleCommand
 from . import lifecycle
 from .init import InitCommand
-from .lifecycle import get_lifecycle_command_group, LifecycleCommand
-from .test import TestCommand
+from .lifecycle import get_lifecycle_command_group, LifecycleCommand, TestCommand
 from .other import get_other_command_group
 from .remote import RemoteBuild  # Not part of the default commands.
 
@@ -28,9 +27,9 @@ __all__ = [
     "ExtensibleCommand",
     "InitCommand",
     "RemoteBuild",
-    "TestCommand",
     "lifecycle",
     "LifecycleCommand",
+    "TestCommand",
     "get_lifecycle_command_group",
     "get_other_command_group",
 ]

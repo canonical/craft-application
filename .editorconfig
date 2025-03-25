@@ -20,7 +20,7 @@ indent_style = tab
 [{*.py,*.pyi}]
 max_line_length = 88
 
-[{*.bash,*.sh,*.zsh}]
+[{*.bash,*.sh,*.zsh,.extension}]
 indent_size = 2
 tab_width = 2
 

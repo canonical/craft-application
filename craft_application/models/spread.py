@@ -15,7 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Models representing spread projects."""
 
-
+import pydantic
 from typing_extensions import Any, Self
 
 from craft_application.models import CraftBaseModel
@@ -23,16 +23,25 @@ from craft_application.models import CraftBaseModel
 # Simplified spread configuration
 
 
-class CraftSpreadSystem(CraftBaseModel):
+class SpreadBase(CraftBaseModel):
+    """Base model for spread.yaml, which can always take and ignore extra items."""
+
+    model_config = pydantic.ConfigDict(
+        CraftBaseModel.model_config,  # type: ignore[misc]
+        extra="ignore",
+    )
+
+
+class CraftSpreadSystem(SpreadBase):
     """Simplified spread system configuration."""
 
     workers: int | None = None
 
 
-class CraftSpreadBackend(CraftBaseModel):
+class CraftSpreadBackend(SpreadBase):
     """Simplified spread backend configuration."""
 
-    type: str
+    type: str | None = None
     allocate: str | None = None
     discard: str | None = None
     systems: list[dict[str, CraftSpreadSystem | None]]
@@ -42,11 +51,11 @@ class CraftSpreadBackend(CraftBaseModel):
     restore_each: str | None = None
 
 
-class CraftSpreadSuite(CraftBaseModel):
+class CraftSpreadSuite(SpreadBase):
     """Simplified spread suite configuration."""
 
     summary: str
-    systems: list[str]
+    systems: list[str] | None = None
     environment: dict[str, str] | None = None
     prepare: str | None = None
     restore: str | None = None
@@ -55,7 +64,7 @@ class CraftSpreadSuite(CraftBaseModel):
     kill_timeout: str | None = None
 
 
-class CraftSpreadYaml(CraftBaseModel):
+class CraftSpreadYaml(SpreadBase):
     """Simplified spread project configuration."""
 
     backends: dict[str, CraftSpreadBackend]
@@ -71,7 +80,7 @@ class CraftSpreadYaml(CraftBaseModel):
 # Processed full-form spread configuration
 
 
-class SpreadBaseModel(CraftBaseModel):
+class SpreadBaseModel(SpreadBase):
     """Base for spread models."""
 
     def model_post_init(self, /, __context: Any) -> None:  # noqa: ANN401
@@ -107,7 +116,7 @@ class SpreadSystem(SpreadBaseModel):
 class SpreadBackend(SpreadBaseModel):
     """Processed spread backend configuration."""
 
-    type: str
+    type: str | None = None
     allocate: str | None = None
     discard: str | None = None
     systems: list[dict[str, SpreadSystem]] = []
@@ -162,13 +171,13 @@ class SpreadSuite(SpreadBaseModel):
         """Create a spread suite configuration from the simplified version."""
         return cls(
             summary=simple.summary,
-            systems=simple.systems,
+            systems=simple.systems or [],
             environment=simple.environment,
             prepare=simple.prepare,
             restore=simple.restore,
             prepare_each=simple.prepare_each,
             restore_each=simple.restore_each,
-            kill_timeout=simple.kill_timeout,  # TODO: add time limit
+            kill_timeout=simple.kill_timeout,
         )
 
 
@@ -185,7 +194,7 @@ class SpreadYaml(SpreadBaseModel):
     restore: str | None
     prepare_each: str | None
     restore_each: str | None
-    kill_timeout: str
+    kill_timeout: str | None = None
 
     @classmethod
     def from_craft(
@@ -212,7 +221,7 @@ class SpreadYaml(SpreadBaseModel):
             restore=simple.restore,
             prepare_each=simple.prepare_each,
             restore_each=simple.restore_each,
-            kill_timeout=simple.kill_timeout or "1h",  # TODO: add time limit
+            kill_timeout=simple.kill_timeout or None,
         )
 
     @staticmethod
@@ -233,6 +242,6 @@ class SpreadYaml(SpreadBaseModel):
 
     @staticmethod
     def _suites_from_craft(
-        simple: dict[str, CraftSpreadSuite]
+        simple: dict[str, CraftSpreadSuite],
     ) -> dict[str, SpreadSuite]:
         return {name: SpreadSuite.from_craft(suite) for name, suite in simple.items()}

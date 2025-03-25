@@ -28,6 +28,8 @@ from typing_extensions import override
 from craft_application import util
 from craft_application.commands import base
 
+TEMP_SPREAD_FILE_NAME = ".craft-spread.yaml"
+
 
 def get_lifecycle_command_group() -> CommandGroup:
     """Return the lifecycle related command group."""
@@ -418,6 +420,55 @@ class PackCommand(LifecycleCommand):
         if self._use_provider(parsed_args=parsed_args):
             return super()._run(parsed_args=parsed_args, step_name=step_name)
         return self._run_real(parsed_args=parsed_args, step_name=step_name)
+
+
+class TestCommand(PackCommand):
+    """Command to run project tests.
+
+    The test command invokes the spread command with a processed spread.yaml
+    configuration file.
+
+    This command is opt-in for applications in craft-application 5 and will become
+    a standard lifecycle command in a future major release.
+    """
+
+    name = "test"
+    help_msg = "Run project tests"
+    overview = textwrap.dedent(
+        """
+        Run spread tests for the project.
+        """
+    )
+    common = True
+
+    @override
+    def _fill_parser(self, parser: argparse.ArgumentParser) -> None:
+        # Skip the parser additions that `pack` adds.
+        super(LifecycleCommand, self)._fill_parser(parser)
+
+    @override
+    def _run(
+        self,
+        parsed_args: argparse.Namespace,
+        step_name: str | None = None,
+        **kwargs: Any,
+    ) -> None:
+        # Output into the spread directory.
+        parsed_args.output = pathlib.Path.cwd() / "spread"
+        parsed_args.output.mkdir(exist_ok=True)
+        parsed_args.fetch_service_policy = None
+
+        # Pack the packages.
+        super()._run(parsed_args, step_name, **kwargs)
+        emit.progress("Testing project.")
+
+        dest = pathlib.Path.cwd() / TEMP_SPREAD_FILE_NAME
+        try:
+            self._services.testing.process_spread_yaml(dest)
+            self._services.testing.run_spread(dest)
+        finally:
+            if not self._services.config.get("debug"):
+                dest.unlink()
 
 
 class CleanCommand(_BaseLifecycleCommand):
