@@ -460,6 +460,11 @@ class TestCommand(PackCommand):
 
         # Pack the packages.
         super()._run(parsed_args, step_name, **kwargs)
+
+        if util.is_managed_mode():
+            # Run the rest of this outside the managed instance.
+            return
+
         emit.progress("Testing project.")
 
         dest = pathlib.Path.cwd() / TEMP_SPREAD_FILE_NAME
