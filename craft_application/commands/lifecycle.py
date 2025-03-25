@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import argparse
 import pathlib
+import shutil
 import subprocess
 import textwrap
 from typing import Any
@@ -468,12 +469,25 @@ class TestCommand(PackCommand):
         emit.progress("Testing project.")
 
         dest = pathlib.Path.cwd() / TEMP_SPREAD_FILE_NAME
+
+        spread_path = pathlib.Path.cwd() / "spread.yaml"
+        spread_backup = spread_path.with_suffix(".yaml~")
         try:
             self._services.testing.process_spread_yaml(dest)
+
+            # For now we need to modify the spread.yaml file in-place.
+            # See: https://github.com/canonical/spread/issues/225
+            spread_backup.unlink(missing_ok=True)
+            spread_backup.hardlink_to(spread_path)
+            shutil.move(dest, spread_path)
+
             self._services.testing.run_spread(dest)
         finally:
             if not self._services.config.get("debug"):
-                dest.unlink()
+                dest.unlink(missing_ok=True)
+            # See: https://github.com/canonical/spread/issues/225
+            spread_path.unlink(missing_ok=True)
+            spread_path.hardlink_to(spread_backup)
 
 
 class CleanCommand(_BaseLifecycleCommand):

@@ -16,10 +16,8 @@
 
 """Service for testing a project."""
 
-import atexit
 import os
 import pathlib
-import shutil
 import subprocess
 
 from craft_cli import CraftError, emit
@@ -38,21 +36,12 @@ class TestingService(base.AppService):
         :param dest: the output path for spread.yaml.
         """
         emit.debug("Processing spread.yaml.")
-        # For now we need to modify the spread.yaml file in-place.
-        # See: https://github.com/canonical/spread/issues/225
-        _ = dest
         spread_path = pathlib.Path("spread.yaml")
-        spread_backup = spread_path.with_suffix(".yaml~")
 
         craft_backend = self._get_backend()
 
         with spread_path.open() as file:
             data = util.safe_yaml_load(file)
-
-        shutil.move(spread_path, dest)
-        spread_backup.hardlink_to(dest)
-        atexit.register(shutil.move, dest, spread_path)
-        atexit.register(spread_backup.unlink)
 
         simple = models.CraftSpreadYaml.unmarshal(data)
 
@@ -61,7 +50,7 @@ class TestingService(base.AppService):
             craft_backend=craft_backend,
         )
 
-        spread_yaml.to_yaml_file(spread_path)
+        spread_yaml.to_yaml_file(dest)
 
     def run_spread(self, project_path: pathlib.Path) -> None:
         """Run spread on the processed project file.
@@ -88,7 +77,7 @@ class TestingService(base.AppService):
         return models.SpreadBackend(
             type="adhoc",
             allocate=f"ADDRESS $(./spread/.extension allocate {name})",
-            discard=f"./spread/.extension discard {name}",
+            discard=f'"$PROJECT_PATH"/spread/.extension discard {name}',
             prepare=f'"$PROJECT_PATH"/spread/.extension backend-prepare {name}',
             restore=f'"$PROJECT_PATH"/spread/.extension backend-restore {name}',
             prepare_each=f'"$PROJECT_PATH"/spread/.extension backend-prepare-each {name}',

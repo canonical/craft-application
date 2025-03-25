@@ -28,6 +28,8 @@ allocate-lxd-vm(){
 
   # Wait for cloud-init to complete
   lxc exec "${VM_NAME}" -- cloud-init status --wait &>/dev/null
+  # Wait for snap to complete seeding
+  lxc exec "${VM_NAME}" -- snap wait system seed.loaded &> /dev/null
 
   rm "$cloud_config"
 
