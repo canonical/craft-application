@@ -29,7 +29,7 @@ Auto-used fixtures
 
 Some fixtures are automatically enabled for tests, changing the default behaviour of
 applications during the testing process. Each auto-use fixture changes the default
-behaviour of craft-application during testing.
+behaviour of Craft Application during testing.
 
 .. autofunction:: debug_mode
 
