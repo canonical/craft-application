@@ -4,18 +4,17 @@
 Changelog
 *********
 
-5.0.0 (2025-Mon-DD)
--------------------
+5.0.0 (2025-03-26)
+------------------
 
 Services
 ========
 
-- A new :doc:`services/project` now handles the creation and management of the project
-  for this run of the application.
+- A new :doc:`services/project` now handles project loading and rendering. Services
+  and commands can use this to get a project. The abstract ``ProjectService`` is no
+  longer available for inheritance.
 - Setting the arguments for a service using the service factory's ``set_kwargs`` is
-  deprecated. Use ``update_kwargs`` instead or file `an issue
-  <https://github.com/canonical/craft-application/issues/new?template=bug.yaml>`_
-  if you still need this method.
+  deprecated. Use ``update_kwargs`` instead.
 
 Testing
 =======
@@ -33,9 +32,9 @@ Breaking changes
   designate that they require a project, but should instead use the
   :py:meth:`~craft_application.services.project.ProjectService.get()` method of the
   ``ProjectService`` to retrieve the project. It will error accordingly.
-- The ``BuildPlanner`` class has been replaced with the
+- The ``BuildPlanner`` pydantic model has been replaced with the
   :py:class:`~craft_application.services.services.buildplan.BuildPlanService`
-- ``BuildInfo`` is replaced with
+- The internal ``BuildInfo`` model is replaced with
   :external+craft-platforms:class:`craft_platforms.BuildInfo`
 
 For a complete list of commits, check out the `5.0.0`_ release on GitHub.

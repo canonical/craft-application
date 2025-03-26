@@ -3,8 +3,7 @@
 pytest plugin
 =============
 
-craft-application includes a `pytest`_ plugin to help ease the testing of apps that use
-it as a framework.
+The `pytest`_ plugin helps ease the testing of apps that use craft-application.
 
 By default, this plugin sets the application into debug mode, meaning the
 :py:meth:`~craft_application.Application.run()` method will re-raise generic exceptions.
@@ -26,11 +25,11 @@ Fixtures
 .. autofunction:: in_project_path
 
 Auto-used fixtures
-~~~~~~~~~~~~~~~~~~
+------------------
 
 Some fixtures are automatically enabled for tests, changing the default behaviour of
-applications during the testing process. This is kept to a minimum, but is done when
-the standard behaviour could cause subtle testing issues.
+applications during the testing process. Each auto-use fixture changes the default
+behaviour of craft-application during testing.
 
 .. autofunction:: debug_mode
 
