@@ -1,4 +1,4 @@
-summary: test testcraft init and testcraft pack
+summary: test testcraft init/pack/clean cycle
 
 environment:
   CRAFT_BUILD_ENVIRONMENT/managed: ""

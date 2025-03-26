@@ -174,6 +174,96 @@ def test_use_provider(
     assert command._use_provider(parsed_args) == expected
 
 
+def test_run_sets_platform_arg(
+    mocker: pytest_mock.MockerFixture,
+    app_metadata: AppMetadata,
+    fake_services: ServiceFactory,
+    fake_platform: str,
+):
+    build_planner = fake_services.get("build_plan")
+    cls = get_fake_command_class(LifecycleCommand, managed=False)
+    command = cls({"app": app_metadata, "services": fake_services})
+
+    mocker.patch.object(command, "_use_provider", return_value=False)
+    mocker.patch.object(command, "_run_lifecycle")
+
+    parsed_args = argparse.Namespace(platform=fake_platform)
+
+    command.run(parsed_args)
+
+    assert build_planner._BuildPlanService__platforms == [fake_platform]  # type: ignore[reportAttributeAccessIssue]
+
+
+def test_run_sets_platform_from_env(
+    mocker: pytest_mock.MockerFixture,
+    monkeypatch: pytest.MonkeyPatch,
+    app_metadata: AppMetadata,
+    fake_services: ServiceFactory,
+    fake_platform: str,
+):
+    build_planner = fake_services.get("build_plan")
+    cls = get_fake_command_class(LifecycleCommand, managed=False)
+    command = cls({"app": app_metadata, "services": fake_services})
+
+    mocker.patch.object(command, "_use_provider", return_value=False)
+    mocker.patch.object(command, "_run_lifecycle")
+    monkeypatch.setenv("CRAFT_PLATFORM", fake_platform)
+
+    parsed_args = argparse.Namespace(platform=None)
+
+    command.run(parsed_args)
+
+    assert build_planner._BuildPlanService__platforms == [fake_platform]  # type: ignore[reportAttributeAccessIssue]
+
+
+@pytest.mark.parametrize(
+    "arch", [*(arch.value for arch in craft_platforms.DebianArchitecture), "all"]
+)
+def test_run_sets_build_for_arg(
+    mocker: pytest_mock.MockerFixture,
+    app_metadata: AppMetadata,
+    fake_services: ServiceFactory,
+    arch: str,
+):
+    build_planner = fake_services.get("build_plan")
+    cls = get_fake_command_class(LifecycleCommand, managed=False)
+    command = cls({"app": app_metadata, "services": fake_services})
+
+    mocker.patch.object(command, "_use_provider", return_value=False)
+    mocker.patch.object(command, "_run_lifecycle")
+
+    parsed_args = argparse.Namespace(build_for=arch)
+
+    command.run(parsed_args)
+
+    assert build_planner._BuildPlanService__build_for == [arch]  # type: ignore[reportAttributeAccessIssue]
+
+
+@pytest.mark.parametrize(
+    "arch", [*(arch.value for arch in craft_platforms.DebianArchitecture), "all"]
+)
+def test_run_sets_build_for_from_env(
+    mocker: pytest_mock.MockerFixture,
+    monkeypatch: pytest.MonkeyPatch,
+    app_metadata: AppMetadata,
+    fake_services: ServiceFactory,
+    arch: str,
+):
+    build_planner = fake_services.get("build_plan")
+    cls = get_fake_command_class(LifecycleCommand, managed=False)
+    command = cls({"app": app_metadata, "services": fake_services})
+
+    mocker.patch.object(command, "_use_provider", return_value=False)
+    mocker.patch.object(command, "_run_lifecycle")
+    monkeypatch.setenv("CRAFT_BUILD_FOR", arch)
+
+    parsed_args = argparse.Namespace()
+
+    command.run(parsed_args)
+
+    assert build_planner._BuildPlanService__build_for == [arch]  # type: ignore[reportAttributeAccessIssue]
+
+
 @pytest.mark.parametrize("fetch", [False, True])
 def test_run_manager_for_build_plan(
     mocker: pytest_mock.MockerFixture,

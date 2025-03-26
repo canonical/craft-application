@@ -20,8 +20,16 @@ from typing import Any
 import craft_cli
 
 import craft_application
+from craft_application.commands.lifecycle import (
+    TestCommand,
+)
 from testcraft.application import TESTCRAFT
 from testcraft.services import register_services
+
+
+def register_commands(app: craft_application.Application) -> None:
+    """Register extra commands for testcraft."""
+    app.add_command_group("Lifecycle", [TestCommand], ordered=True)
 
 
 def create_app() -> craft_application.Application:
@@ -33,7 +41,9 @@ def create_app() -> craft_application.Application:
     register_services()
     services = craft_application.ServiceFactory(app=TESTCRAFT)
 
-    return craft_application.Application(TESTCRAFT, services=services)
+    app = craft_application.Application(TESTCRAFT, services=services)
+    register_commands(app)
+    return app
 
 
 def get_completion_data() -> tuple[craft_cli.Dispatcher, dict[str, Any]]:

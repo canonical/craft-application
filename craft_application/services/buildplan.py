@@ -23,6 +23,8 @@ from typing import Any, Literal, final
 import craft_platforms
 from craft_cli import emit
 
+from craft_application.errors import EmptyBuildPlanError
+
 from . import base
 
 
@@ -58,6 +60,8 @@ class BuildPlanService(base.AppService):
                 build_for=self.__build_for or None,
                 build_on=[craft_platforms.DebianArchitecture.from_host()],
             )
+        if not self.__plan:
+            raise EmptyBuildPlanError
         return self.__plan
 
     def _gen_exhaustive_build_plan(

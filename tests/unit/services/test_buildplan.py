@@ -27,6 +27,7 @@ import pytest_mock
 from craft_cli.pytest_plugin import RecordingEmitter
 from craft_platforms import BuildInfo, DebianArchitecture, DistroBase
 
+from craft_application.errors import EmptyBuildPlanError
 from craft_application.services.buildplan import BuildPlanService
 from craft_application.services.service_factory import ServiceFactory
 
@@ -42,6 +43,15 @@ def test__gen_exhaustive_build_plan(
     mock_create_build_plan.assert_called_once_with(
         app=app_metadata.name, project_data=stub_project
     )
+
+
+def test_plan_empty(
+    mocker: pytest_mock.MockFixture,
+    build_plan_service: BuildPlanService,
+):
+    mocker.patch.object(build_plan_service, "create_build_plan", return_value=[])
+    with pytest.raises(EmptyBuildPlanError):
+        build_plan_service.plan()
 
 
 _base = DistroBase("", "")
