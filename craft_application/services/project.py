@@ -132,6 +132,11 @@ class ProjectService(base.AppService):
         """Whether the project has already been rendered."""
         return None not in (self._build_on, self._build_for, self._platform)
 
+    @property
+    def project_file_name(self) -> str:
+        """Get filename of the project file."""
+        return f"{self._app.name}.yaml"
+
     def resolve_project_file_path(self) -> pathlib.Path:
         """Get the path to the project file from the root project directory.
 
@@ -151,10 +156,10 @@ class ProjectService(base.AppService):
                 raise errors.ProjectDirectoryMissingError(self._project_dir)
             raise errors.ProjectDirectoryTypeError(self._project_dir)
         try:
-            path = (self._project_dir / f"{self._app.name}.yaml").resolve(strict=True)
+            path = (self._project_dir / self.project_file_name).resolve(strict=True)
         except FileNotFoundError as err:
             raise errors.ProjectFileMissingError(
-                f"Project file '{self._app.name}.yaml' not found in '{self._project_dir}'.",
+                f"Project file {self.project_file_name!r} not found in '{self._project_dir}'.",
                 details="The project file could not be found.",
                 resolution="Ensure the project file exists.",
                 retcode=os.EX_NOINPUT,
@@ -259,7 +264,13 @@ class ProjectService(base.AppService):
         if "platforms" not in raw_project:
             return self._app_render_legacy_platforms()
 
-        self.__platforms = self._preprocess_platforms(raw_project["platforms"])
+        try:
+            self.__platforms = self._preprocess_platforms(raw_project["platforms"])
+        except pydantic.ValidationError as exc:
+            raise errors.CraftValidationError.from_pydantic(
+                exc,
+                file_name=self.project_file_name,
+            ) from None
         return self.__platforms
 
     @final
