@@ -93,7 +93,7 @@ dev-noble = [
     "python-apt~=2.7.0;sys_platform=='linux'",
 ]
 dev-oracular = [
-    "python-apt~=2.9.0;sys_platform=='linux'",
+    "python-apt~=2.9.0,<2.9.9;sys_platform=='linux'",
 ]
 dev-plucky = [
     "python-apt>=2.9.9;sys_platform=='linux'",

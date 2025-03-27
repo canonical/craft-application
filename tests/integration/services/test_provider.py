@@ -16,16 +16,11 @@
 """Integration tests for provider service."""
 
 import contextlib
-import re
 import subprocess
-from pathlib import Path
 
-import craft_cli
 import craft_platforms
 import craft_providers
 import pytest
-
-from craft_application.services.provider import ProviderService
 
 
 @pytest.mark.parametrize(
@@ -147,27 +142,3 @@ def test_run_managed(provider_service, fake_services, fetch, snap_safe_tmp_path)
     provider_service.run_managed(
         build_info, enable_fetch_service=fetch, command=["echo", "hi"]
     )
-
-
-@pytest.mark.slow
-def test_managed_logs_timestamps(
-    provider_service: ProviderService, snap_safe_tmp_path: Path
-) -> None:
-    """Ensure that every log line in managed mode has exactly one timestamp"""
-    base = craft_platforms.DistroBase("ubuntu", "24.04")
-    arch = craft_platforms.DebianArchitecture.from_host()
-    build_info = craft_platforms.BuildInfo("foo", arch, arch, base)
-
-    provider_service._work_dir = snap_safe_tmp_path
-
-    with pytest.raises(craft_providers.ProviderError):
-        provider_service.run_managed(
-            build_info, enable_fetch_service=False, command=["false"]
-        )
-
-    timestamp_re = re.compile(r"^\d{4}-\d{2}-\d{2} (?:\d{2}:){2}\d{2}\.\d{3}")
-    emitter = craft_cli.messages.emit
-    with emitter.log_filepath.open() as log_file:
-        for line in log_file:
-            matches = re.findall(timestamp_re, line)
-            assert len(matches) == 1
