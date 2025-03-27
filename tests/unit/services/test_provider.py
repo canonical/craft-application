@@ -701,7 +701,7 @@ def test_instance_fetch_logs(
 
     # Setup the build instance and pretend the command inside it finished successfully.
     provider_service = setup_fetch_logs_provider(should_have_logfile=True)
-    mock_dump = mocker.patch.object(emit, "dump_log_contents")
+    mock_append = mocker.patch.object(emit, "append_to_log")
     with (
         provider_service.instance(
             build_info=fake_build_info,
@@ -719,7 +719,7 @@ def test_instance_fetch_logs(
     with check:
         emitter.assert_debug("Logs retrieved from managed instance:")
 
-    mock_dump.assert_called_once_with(tmp_path / "fake.file")
+    mock_append.assert_called_once()
 
 
 def test_instance_fetch_logs_error(
@@ -735,7 +735,7 @@ def test_instance_fetch_logs_error(
 
     # Setup the build instance and pretend the command inside it finished with error.
     provider_service = setup_fetch_logs_provider(should_have_logfile=True)
-    mock_dump = mocker.patch.object(emit, "dump_log_contents")
+    mock_append = mocker.patch.object(emit, "append_to_log")
     with (
         pytest.raises(RuntimeError),
         provider_service.instance(
@@ -754,7 +754,7 @@ def test_instance_fetch_logs_error(
     with check:
         emitter.assert_debug("Logs retrieved from managed instance:")
 
-    mock_dump.assert_called_once_with(tmp_path / "fake.file")
+    mock_append.assert_called_once()
 
 
 def test_instance_fetch_logs_missing_file(
