@@ -1,4 +1,4 @@
-# Copyright 2023-2024 Canonical Ltd.
+# Copyright 2023-2025 Canonical Ltd.
 #
 # This program is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Lesser General Public License version 3, as
@@ -48,6 +48,7 @@ _DEFAULT_SERVICES = {
     "provider": "ProviderService",
     "remote_build": "RemoteBuildService",
     "request": "RequestService",
+    "testing": "TestingService",
 }
 _CAMEL_TO_PYTHON_CASE_REGEX = re.compile(r"(?<!^)(?=[A-Z])")
 
@@ -81,6 +82,7 @@ class ServiceFactory:
         config: services.ConfigService
         fetch: services.FetchService
         init: services.InitService
+        testing: services.TestingService
 
     def __init__(
         self,
@@ -229,6 +231,11 @@ class ServiceFactory:
     ) -> type[services.RequestService]: ...
     @overload
     @classmethod
+    def get_class(
+        cls, name: Literal["testing", "TestingService", "TestingClass"]
+    ) -> type[services.TestingService]: ...
+    @overload
+    @classmethod
     def get_class(cls, name: str) -> type[services.AppService]: ...
     @classmethod
     def get_class(cls, name: str) -> type[services.AppService]:
@@ -272,6 +279,8 @@ class ServiceFactory:
     def get(self, service: Literal["remote_build"]) -> services.RemoteBuildService: ...
     @overload
     def get(self, service: Literal["request"]) -> services.RequestService: ...
+    @overload
+    def get(self, service: Literal["testing"]) -> services.TestingService: ...
     @overload
     def get(self, service: str) -> services.AppService: ...
     def get(self, service: str) -> services.AppService:

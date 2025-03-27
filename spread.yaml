@@ -4,7 +4,7 @@ path: /testcraft
 environment:
   PROJECT_PATH: /testcraft
   PATH: /snap/bin:$PATH
-  CRAFT_DEBUG: 1
+  CRAFT_DEBUG: "1"
 
 include:
   - tests/spread
@@ -109,14 +109,22 @@ backends:
     systems:
       - ubuntu-24.04-64:
           workers: 4
+  craft:
+    type: adhoc
+    allocate: "false"
+    systems:
+      - ubuntu-24.04-64:
 
 prepare: |
-  snap wait system seed.loaded
-  snap install snapd || snap refresh snapd
-  snap wait system seed.loaded
+  sudo snap wait system seed.loaded
+  # IDK why but if we don't sleep after this we get:
+  # error: cannot install "snapd": Post "https://api.snapcraft.io/v2/snaps/refresh": context canceled
+  sleep 2
+  sudo snap install snapd || sudo snap refresh snapd
+  sudo snap wait system seed.loaded
 
-  snap install --dangerous --classic tests/spread/*.snap
-  snap alias testcraft.partitioncraft partitioncraft
+  sudo snap install --dangerous --classic tests/spread/*.snap
+  sudo snap alias testcraft.partitioncraft partitioncraft
 
 suites:
   tests/spread/testcraft/:

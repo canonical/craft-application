@@ -35,8 +35,8 @@ if TYPE_CHECKING:
 def debug_mode() -> None:
     """Ensure that the application is in debug mode, raising exceptions from run().
 
-    This fixture is automatically used. To disable debug mode for specific tests that
-    require it, use the :py:func:`production_mode` fixture.
+    This fixture is automatically used. To disable debug mode for specific tests,
+    use the :py:func:`production_mode` fixture.
     """
     os.environ["CRAFT_DEBUG"] = "1"
 
@@ -98,7 +98,7 @@ def fake_host_architecture(
     """Run this test as though running on each supported architecture.
 
     This parametrized fixture provides architecture values for all supported
-    architectures, simulating as though the application is running on that architecture.
+    architectures, simulating running on that architecture.
     This fixture is limited to setting the architecture within this python process.
     """
     arch: craft_platforms.DebianArchitecture = request.param
@@ -139,7 +139,7 @@ def in_project_path(
 ) -> pathlib.Path:
     """Run the test inside the project path.
 
-    Changes the working directory of the test to use the project path.
+    This fixture changes the working directory of the test to use the project path.
     Best to use with ``pytest.mark.usefixtures``
     """
     monkeypatch.chdir(project_path)

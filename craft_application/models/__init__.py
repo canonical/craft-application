@@ -1,6 +1,6 @@
 # This file is part of craft_application.
 #
-# Copyright 2023-2024 Canonical Ltd.
+# Copyright 2023-2025 Canonical Ltd.
 #
 # This program is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Lesser General Public License version 3, as
@@ -35,6 +35,11 @@ from craft_application.models.project import (
     Platform,
     Project,
 )
+from craft_application.models.spread import (
+    CraftSpreadYaml,
+    SpreadBackend,
+    SpreadYaml,
+)
 
 
 __all__ = [
@@ -48,6 +53,9 @@ __all__ = [
     "Project",
     "ProjectName",
     "ProjectTitle",
+    "CraftSpreadYaml",
+    "SpreadBackend",
+    "SpreadYaml",
     "SummaryStr",
     "UniqueStrList",
     "VersionStr",
