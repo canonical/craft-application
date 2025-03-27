@@ -5,7 +5,7 @@ dynamic = ["version", "readme"]
 dependencies = [
     "annotated-types>=0.6.0",
     "craft-archives>=2.0.0",
-    "craft-cli @ git+https://github.com/canonical/craft-cli@work/timestamp-dedup/CRAFT-4331",
+    "craft-cli~=3.0",
     "craft-grammar>=2.0.0",
     "craft-parts>=2.1.1",
     "craft-platforms>=0.6.0",
