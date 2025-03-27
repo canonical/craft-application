@@ -22,5 +22,5 @@ execute: |
   # Check that every line in the log conforms to LINE_RE or NO_TIMESTAMP_RE
   while read line; do
     echo "$line" | grep -Pqe "$LINE_RE" || \
-    echo "$line" | grep -Pqe "$NO_TIMESTAMP"
+    echo "$line" | grep -Pqe "$NO_TIMESTAMP_RE"
   done < $LOG_FILE
