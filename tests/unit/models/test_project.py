@@ -135,8 +135,8 @@ def full_project_dict():
         ),
         *(
             pytest.param(
-                {"build-on": arch},
-                Platform(build_on=[arch]),
+                {"build-on": arch, "build-for": "all"},
+                Platform(build_on=[arch], build_for=["all"]),
                 id=f"build-on-only-{arch}",
             )
             for arch in craft_platforms.DebianArchitecture
@@ -192,6 +192,35 @@ def test_platform_from_platform_dict(incoming, expected):
 )
 def test_platform_from_platforms(incoming, expected):
     assert Platform.from_platforms(incoming) == expected
+
+
+@pytest.mark.parametrize(
+    ("value", "match"),
+    [
+        pytest.param({}, "build-on\n  Field required", id="empty"),
+        pytest.param(
+            {"build-on": [], "build-for": ["all"]},
+            "build-on\n  List should have at least 1 item",
+            id="empty-build-on",
+        ),
+        pytest.param(
+            {"build-on": ["all"], "build-for": ["all"]},
+            "'all' cannot be used for 'build-on'",
+            id="build-on-all",
+        ),
+        pytest.param(
+            {"build-on": ["s390x"]}, r"build-for\n\s+Field required", id="no-build-for"
+        ),
+        pytest.param(
+            {"build-on": ["s390x"], "build-for": ["amd64", "riscv64"]},
+            r"List should have at most 1 item",
+            id="build-for-many",
+        ),
+    ],
+)
+def test_platform_validation_errors(value, match):
+    with pytest.raises(ValueError, match=match):
+        Platform.model_validate(value)
 
 
 @pytest.mark.parametrize(
@@ -542,7 +571,10 @@ def test_platform_invalid_arch(model, platform_label, basic_project_dict):
 @pytest.mark.parametrize("arch", ["unknown", "ubuntu@24.04:unknown"])
 @pytest.mark.parametrize("field_name", ["build-on", "build-for"])
 def test_platform_invalid_build_arch(model, arch, field_name, basic_project_dict):
-    basic_project_dict["platforms"] = {"amd64": {field_name: [arch]}}
+    other_field = next(iter({"build-on", "build-for"} - {field_name}))
+    basic_project_dict["platforms"] = {
+        "mine": {field_name: [arch], other_field: ["amd64"]}
+    }
     project_path = pathlib.Path("myproject.yaml")
 
     with pytest.raises(CraftValidationError) as error:
@@ -550,11 +582,8 @@ def test_platform_invalid_build_arch(model, arch, field_name, basic_project_dict
 
     error_lines = [
         "Bad myproject.yaml content:",
-        "- field 'build-on' required in 'platforms.amd64' configuration",
-        f"- 'unknown' is not a valid Debian architecture. (in field 'platforms.amd64.{field_name}')",
+        f"- 'unknown' is not a valid Debian architecture. (in field 'platforms.mine.{field_name}')",
     ]
-    if field_name == "build-on":
-        error_lines.pop(1)
     assert error.value.args[0] == "\n".join(error_lines)
 
 
