@@ -4,6 +4,19 @@
 Changelog
 *********
 
+5.0.1 (2025-MM-DD)
+------------------
+
+Commands
+========
+
+- The warning that the test command is experimental is only displayed once.
+
+Services
+========
+
+- The ``TestingService`` now outputs a correct discard script for spread.
+
 5.0.0 (2025-03-26)
 ------------------
 
