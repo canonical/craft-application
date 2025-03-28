@@ -4,6 +4,14 @@
 Changelog
 *********
 
+5.0.1 (2025-MM-DD)
+------------------
+
+Commands
+========
+
+- The warning that the test command is experimental is only displayed once.
+
 5.0.0 (2025-03-26)
 ------------------
 
