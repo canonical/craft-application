@@ -76,7 +76,7 @@ class TestingService(base.AppService):
 
         return models.SpreadBackend(
             type="adhoc",
-            # Allocate and discord occur on the host.
+            # Allocate and discard occur on the host.
             allocate=f"ADDRESS $(./spread/.extension allocate {name})",
             discard=f"./spread/.extension discard {name}",
             # Each of these occur within the spread runner.
