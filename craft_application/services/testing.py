@@ -88,8 +88,10 @@ class TestingService(base.AppService):
 
         return models.SpreadBackend(
             type="adhoc",
+            # Allocate and discard occur on the host.
             allocate=f"ADDRESS $(./spread/.extension allocate {name})",
-            discard=f'"$PROJECT_PATH"/spread/.extension discard {name}',
+            discard=f"./spread/.extension discard {name}",
+            # Each of these occur within the spread runner.
             prepare=f'"$PROJECT_PATH"/spread/.extension backend-prepare {name}',
             restore=f'"$PROJECT_PATH"/spread/.extension backend-restore {name}',
             prepare_each=f'"$PROJECT_PATH"/spread/.extension backend-prepare-each {name}',
