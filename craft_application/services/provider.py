@@ -341,8 +341,7 @@ class ProviderService(base.AppService):
             if log_path:
                 emit.debug("Logs retrieved from managed instance:")
                 with log_path.open() as log_file:
-                    for line in log_file:
-                        emit.debug(":: " + line.rstrip())
+                    emit.append_to_log(file=log_file)
             else:
                 emit.debug(
                     f"Could not find log file {source_log_path.as_posix()} in instance."
