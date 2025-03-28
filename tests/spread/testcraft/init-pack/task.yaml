@@ -1,0 +1,21 @@
+summary: test testcraft init/pack/clean cycle
+
+environment:
+  CRAFT_BUILD_ENVIRONMENT/managed: ""
+  CRAFT_BUILD_ENVIRONMENT/destructive: host
+
+execute: |
+  mkdir init-test
+  cd init-test
+
+  testcraft init
+  testcraft pack
+  testcraft clean
+
+  if [[ $(find . -maxdepth 1 -name '*.testcraft') == "" ]]; then
+    echo "No testcraft file created" >> /dev/stderr
+    exit 1
+  fi
+
+restore: |
+  rm -rf init-test

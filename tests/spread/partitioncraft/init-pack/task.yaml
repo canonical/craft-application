@@ -1,0 +1,27 @@
+summary: test partitoncraft init and pack
+
+environment:
+  CRAFT_BUILD_ENVIRONMENT/managed: ""
+  CRAFT_BUILD_ENVIRONMENT/destructive: host
+
+execute: |
+  mkdir init-test
+  cd init-test
+
+  partitioncraft init
+  partitioncraft pack
+  partitioncraft clean
+
+  if [[ $(find . -maxdepth 1 -name '*-default.partitioncraft') == "" ]]; then
+    echo "No default partition output" >> /dev/stderr
+    exit 1
+  fi
+
+  if [[ $(find . -maxdepth 1 -name '*-mushroom.partitioncraft') == "" ]]; then
+    echo "No mushroom partition output" >> /dev/stderr
+    exit 1
+  fi
+
+
+restore: |
+  rm -rf init-test

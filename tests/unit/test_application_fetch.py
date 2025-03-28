@@ -15,6 +15,7 @@
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Unit tests for the interaction between the Application and the FetchService."""
 
+from datetime import date
 from typing import Any
 from unittest import mock
 
@@ -54,7 +55,9 @@ class FakeFetchService(services.FetchService):
         self.calls.append(f"shutdown({force})")
 
 
-@pytest.mark.parametrize("fake_build_plan", [2], indirect=True)
+@pytest.mark.skipif(
+    date.today() <= date(2025, 3, 31), reason="run_managed is going away."
+)
 @pytest.mark.parametrize(
     ("pack_args", "expected_calls", "expected_clean_existing"),
     [
@@ -70,9 +73,7 @@ class FakeFetchService(services.FetchService):
             [
                 # One call to setup
                 "setup",
-                # Two pairs of create/teardown sessions, for two builds
-                "create_session",
-                "teardown_session",
+                # One platform, so one create/teardown
                 "create_session",
                 "teardown_session",
                 # One call to shut down (with `force`)
@@ -85,29 +86,37 @@ class FakeFetchService(services.FetchService):
 def test_run_managed_fetch_service(
     app,
     fake_project,
-    fake_build_plan,
     monkeypatch,
     pack_args,
     expected_calls,
     expected_clean_existing,
+    fake_platform,
+    capsys,
 ):
     """Test that the application calls the correct FetchService methods."""
     mock_provider = mock.MagicMock(spec_set=services.ProviderService)
     app.services.provider = mock_provider
-    app.set_project(fake_project)
-
-    expected_build_infos = 2
-    assert len(fake_build_plan) == expected_build_infos
-    app._build_plan = fake_build_plan
+    app.services.get("project").set(fake_project)
 
     fetch_calls: list[str] = []
     app.services.register("fetch", FakeFetchService)
     app.services.update_kwargs("fetch", fetch_calls=fetch_calls)
 
-    monkeypatch.setattr("sys.argv", ["testcraft", "pack", *pack_args])
-    app.run()
+    monkeypatch.setattr(
+        "sys.argv", ["testcraft", "pack", "--platform", fake_platform, *pack_args]
+    )
+    build_plan_service = app.services.get("build_plan")
+    build_plan_service.set_platforms(fake_platform)
+    build_plan = app.services.get("build_plan").plan()
 
-    assert fetch_calls == expected_calls
+    result = app.run()
+
+    if result != 0:  # We'll fail if the platform doesn't build on this arch.
+        assert fetch_calls == []
+        stdout, stderr = capsys.readouterr()
+        assert "No build matches the current execution environment" in stderr
+    else:
+        assert fetch_calls == expected_calls
 
     # Check that the provider service was correctly instructed to clean, or not
     # clean, the existing instance.
@@ -120,6 +129,6 @@ def test_run_managed_fetch_service(
         if "work_dir" in call.kwargs and "clean_existing" in call.kwargs
     ]
 
-    assert len(instance_calls) == len(fake_build_plan)
+    assert len(instance_calls) == len(build_plan)
     for call in instance_calls:
         assert call.kwargs["clean_existing"] == expected_clean_existing

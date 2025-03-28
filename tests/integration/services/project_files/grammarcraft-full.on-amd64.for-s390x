@@ -1,0 +1,71 @@
+name: myproject
+version: "1.0"
+base: ubuntu@24.04
+platforms:
+  dev-board:
+    build-on: [amd64, riscv64]
+    build-for: [riscv64]
+  mainframe:
+    build-on: [amd64, riscv64]
+    build-for: [s390x]
+parts:
+  mypart:
+    plugin: nil
+    source: on-amd64-to-s390x
+    source-checksum: to-s390x-checksum
+    source-branch: s390x-branch
+    source-commit: s390x-commit
+    source-depth: 2
+    source-subdir: s390x-subdir
+    source-submodules:
+      - s390x-submodules-1
+      - s390x-submodules-2
+    source-tag: s390x-tag
+    source-type: s390x-type
+    disable-parallel: false
+    after:
+      - s390x-after
+    organize:
+      s390x-organize-1: s390x-organize-2
+      s390x-organize-3: s390x-organize-4
+    stage:
+      - s390x-stage-1
+      - s390x-stage-2
+    stage-snaps:
+      - s390x-snap-1
+      - s390x-snap-2
+    stage-packages:
+      - s390x-package-1
+      - s390x-package-2
+    prime:
+      - s390x-prime-1
+      - s390x-prime-2
+    build-snaps:
+      - s390x-snap-1
+      - s390x-snap-2
+    build-packages:
+      - s390x-package-1
+      - s390x-package-2
+    build-environment:
+      - MY_VAR: s390x-value
+      - MY_VAR2: s390x-value2
+    build-attributes:
+      - s390x-attr-1
+      - s390x-attr-2
+    override-pull: |-
+      s390x-override-pull
+    override-build: |-
+      s390x-override-build
+    override-stage: |-
+      s390x-override-stage
+    override-prime: |-
+      s390x-override-prime
+    permissions:
+      - path: s390x-perm-1
+        owner: 123
+        group: 123
+        mode: "666"
+      - path: s390x-perm-2
+        owner: 456
+        group: 456
+        mode: "777"

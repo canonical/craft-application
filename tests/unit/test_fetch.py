@@ -154,12 +154,16 @@ def test_start_service_not_installed(mocker):
     ("strict", "expected_policy"), [(True, "strict"), (False, "permissive")]
 )
 def test_create_session(strict, expected_policy):
+    create_session_timeout = 5.0
     responses.add(
         responses.POST,
         f"http://localhost:{CONTROL}/session",
         json={"id": "my-session-id", "token": "my-session-token"},
         status=200,
-        match=[matchers.json_params_matcher({"policy": expected_policy})],
+        match=[
+            matchers.json_params_matcher({"policy": expected_policy}),
+            matchers.request_kwargs_matcher({"timeout": create_session_timeout}),
+        ],
     )
 
     session_data = fetch.create_session(strict=strict)
@@ -171,11 +175,15 @@ def test_create_session(strict, expected_policy):
 @assert_requests
 def test_teardown_session():
     session_data = fetch.SessionData(id="my-session-id", token="my-session-token")
+    default_timeout = 10.0
 
     # Call to delete token
     responses.delete(
         f"http://localhost:{CONTROL}/session/{session_data.session_id}/token",
-        match=[matchers.json_params_matcher({"token": session_data.token})],
+        match=[
+            matchers.json_params_matcher({"token": session_data.token}),
+            matchers.request_kwargs_matcher({"timeout": default_timeout}),
+        ],
         json={},
         status=200,
     )
@@ -183,18 +191,21 @@ def test_teardown_session():
     responses.get(
         f"http://localhost:{CONTROL}/session/{session_data.session_id}",
         json={},
+        match=[matchers.request_kwargs_matcher({"timeout": default_timeout})],
         status=200,
     )
     # Call to delete session
     responses.delete(
         f"http://localhost:{CONTROL}/session/{session_data.session_id}",
         json={},
+        match=[matchers.request_kwargs_matcher({"timeout": default_timeout})],
         status=200,
     )
     # Call to delete session resources
     responses.delete(
         f"http://localhost:{CONTROL}/resources/{session_data.session_id}",
         json={},
+        match=[matchers.request_kwargs_matcher({"timeout": default_timeout})],
         status=200,
     )
 

@@ -18,27 +18,24 @@
 import contextlib
 import subprocess
 
+import craft_platforms
 import craft_providers
 import pytest
-from craft_providers import bases
-
-from craft_application.models import BuildInfo
-from craft_application.util import get_host_architecture
 
 
 @pytest.mark.parametrize(
     "base_name",
     [
         pytest.param(
-            ("ubuntu", "24.10"),
+            craft_platforms.DistroBase("ubuntu", "24.10"),
             id="ubuntu_latest",
             marks=pytest.mark.skip(
-                reason="Skipping Oracular test for now; see https://github.com/canonical/craft-providers/issues/593"
+                reason="Skipping Oracular test for now; see https://github.com/canonical/craft-providers/issues/598"
             ),
         ),
-        pytest.param(("ubuntu", "24.04"), id="ubuntu_lts"),
-        pytest.param(("ubuntu", "22.04"), id="ubuntu_old_lts"),
-        pytest.param(("almalinux", "9"), id="almalinux_9"),
+        pytest.param(craft_platforms.DistroBase("ubuntu", "24.04"), id="ubuntu@24.04"),
+        pytest.param(craft_platforms.DistroBase("ubuntu", "22.04"), id="ubuntu@22.04"),
+        pytest.param(craft_platforms.DistroBase("almalinux", "9"), id="almalinux@9"),
     ],
 )
 @pytest.mark.parametrize(
@@ -51,18 +48,18 @@ from craft_application.util import get_host_architecture
 # The LXD tests can be flaky, erroring out with a BaseCompatibilityError:
 # "Clean incompatible instance and retry the requested operation."
 # This is due to an upstream LXD bug that appears to still be present in LXD 5.14:
-# https://github.com/lxc/lxd/issues/11422
+# https://github.com/canonical/lxd/issues/11422
 @pytest.mark.flaky(reruns=3, reruns_delay=2)
 @pytest.mark.slow
 def test_provider_lifecycle(
     snap_safe_tmp_path, app_metadata, provider_service, name, base_name
 ):
-    if name == "multipass" and base_name[0] != "ubuntu":
+    if name == "multipass" and base_name.distribution != "ubuntu":
         pytest.skip("multipass only provides ubuntu images")
     provider_service.get_provider(name)
 
-    arch = get_host_architecture()
-    build_info = BuildInfo("foo", arch, arch, bases.BaseName(*base_name))
+    arch = craft_platforms.DebianArchitecture.from_host()
+    build_info = craft_platforms.BuildInfo("foo", arch, arch, base_name)
     instance = provider_service.instance(build_info, work_dir=snap_safe_tmp_path)
     executor = None
     try:
@@ -85,7 +82,7 @@ def test_provider_lifecycle(
     assert proc_result.stdout.startswith("#!/bin/bash")
 
 
-@pytest.mark.parametrize("base", [bases.BaseName("ubuntu", "22.04")])
+@pytest.mark.parametrize("base", [craft_platforms.DistroBase("ubuntu", "22.04")])
 @pytest.mark.parametrize(
     "proxy_vars",
     [
@@ -103,8 +100,8 @@ def test_proxy_variables_forwarded(
 ):
     for var, content in proxy_vars.items():
         monkeypatch.setenv(var, content)
-    arch = get_host_architecture()
-    build_info = BuildInfo("foo", arch, arch, base)
+    arch = craft_platforms.DebianArchitecture.from_host()
+    build_info = craft_platforms.BuildInfo("foo", arch, arch, base)
     provider_service.get_provider(provider_name)
     executor = None
 
@@ -128,3 +125,20 @@ def test_proxy_variables_forwarded(
 
     for var, content in proxy_vars.items():
         assert instance_env.get(var) == content
+
+
+@pytest.mark.slow
+@pytest.mark.parametrize("fetch", [False, True])
+def test_run_managed(provider_service, fake_services, fetch, snap_safe_tmp_path):
+    base = craft_platforms.DistroBase("ubuntu", "24.04")
+    arch = craft_platforms.DebianArchitecture.from_host()
+    build_info = craft_platforms.BuildInfo("foo", arch, arch, base)
+
+    fetch_service = fake_services.get("fetch")
+    fetch_service.set_policy("permissive")
+
+    provider_service._work_dir = snap_safe_tmp_path
+
+    provider_service.run_managed(
+        build_info, enable_fetch_service=fetch, command=["echo", "hi"]
+    )

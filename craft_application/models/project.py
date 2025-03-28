@@ -18,18 +18,15 @@
 This defines the structure of the input file (e.g. snapcraft.yaml)
 """
 
-import abc
 import dataclasses
-import warnings
 from collections.abc import Mapping
-from typing import Annotated, Any, cast
+from typing import Annotated, Any
 
 import craft_parts
 import craft_platforms
 import craft_providers.bases
 import pydantic
 from craft_cli import emit
-from craft_providers import bases
 from craft_providers.errors import BaseConfigurationError
 from typing_extensions import Self
 
@@ -73,47 +70,6 @@ DEVEL_BASE_WARNING = (
 )
 
 
-@dataclasses.dataclass
-class BuildInfo:
-    """Platform build information."""
-
-    platform: str
-    """The platform name."""
-
-    build_on: str
-    """The architecture to build on."""
-
-    build_for: str
-    """The architecture to build for."""
-
-    base: craft_providers.bases.BaseName
-    """The base to build on."""
-
-    def __post_init__(self) -> None:
-        warnings.warn(
-            "BuildInfo is pending deprecation and will be replaced with craft_platforms.BuildInfo.",
-            PendingDeprecationWarning,
-            stacklevel=2,
-        )
-
-    @classmethod
-    def from_platforms(cls, info: craft_platforms.BuildInfo) -> Self:
-        """Convert a craft-platforms BuildInfo to a craft-application BuildInfo."""
-        build_for = (
-            "all"
-            if info.build_for == "all"
-            else craft_platforms.DebianArchitecture(info.build_for)
-        )
-        return cls(
-            platform=info.platform,
-            build_on=craft_platforms.DebianArchitecture(info.build_on),
-            build_for=build_for,
-            base=craft_providers.bases.BaseName(
-                name=info.build_base.distribution, version=info.build_base.series
-            ),
-        )
-
-
 class Platform(base.CraftBaseModel):
     """Project platform definition."""
 
@@ -148,7 +104,8 @@ class Platform(base.CraftBaseModel):
         cls, values: Mapping[str, list[str]]
     ) -> Mapping[str, Any]:
         """If build_for is provided, then build_on must also be."""
-        if values.get("build_for") and not values.get("build_on"):
+        # "if values" here ensures that a None value errors properly.
+        if values and values.get("build_for") and not values.get("build_on"):
             raise errors.CraftValidationError(
                 "'build-for' expects 'build-on' to also be provided."
             )
@@ -157,7 +114,7 @@ class Platform(base.CraftBaseModel):
 
     @classmethod
     def from_platforms(cls, platforms: craft_platforms.Platforms) -> dict[str, Self]:
-        """Create a dictionary ofthese objects from craft_platforms PlatformDicts."""
+        """Create a dictionary of these objects from craft_platforms PlatformDicts."""
         result: dict[str, Self] = {}
         for key, value in platforms.items():
             name = str(key)
@@ -186,101 +143,6 @@ def _expand_shorthand_platforms(platforms: dict[str, Any]) -> dict[str, Any]:
             }
 
     return platforms
-
-
-class BuildPlanner(base.CraftBaseModel, metaclass=abc.ABCMeta):
-    """The BuildPlanner obtains a build plan for the project."""
-
-    model_config = pydantic.ConfigDict(
-        validate_assignment=True,
-        extra="ignore",
-        populate_by_name=True,
-        alias_generator=base.alias_generator,
-    )
-
-    platforms: dict[str, Platform]
-    base: str | None = None
-    build_base: str | None = None
-
-    @pydantic.model_validator(mode="after")
-    def _warn_deprecation(self) -> Self:
-        warnings.warn(
-            "The craft-application BuildPlanner is pending deprecation in favour of functions that create build plans in craft-platforms.",
-            PendingDeprecationWarning,
-            stacklevel=2,
-        )
-        return self
-
-    @pydantic.field_validator("platforms", mode="before")
-    @classmethod
-    def _populate_platforms(cls, platforms: dict[str, Any]) -> dict[str, Any]:
-        """Expand shorthand platform entries into standard form."""
-        return _expand_shorthand_platforms(platforms)
-
-    @pydantic.field_validator("platforms", mode="after")
-    @classmethod
-    def _validate_platforms_all_keyword(
-        cls, platforms: dict[str, Any]
-    ) -> dict[str, Any]:
-        """Validate `all` keyword is properly used.
-
-        Validation rules:
-        - `all` cannot be used to `build-on`
-        - If `all` is used for `build-for`, no other architectures can be defined
-          for `build-for`.
-
-        :raises ValueError: if `all` keyword isn't properly used.
-        """
-        # track if 'all' is used in any platform
-        is_all_used = False
-
-        # validate `all` inside each platform:
-        for platform in platforms.values():
-            if platform and platform.build_on and "all" in platform.build_on:
-                raise ValueError("'all' cannot be used for 'build-on'")
-            if platform and platform.build_for and "all" in platform.build_for:
-                is_all_used = True
-
-        # validate `all` across all platforms:
-        if len(platforms) > 1 and is_all_used:
-            raise ValueError(
-                "one of the platforms has 'all' in 'build-for', but there are"
-                f" {len(platforms)} platforms: upon release they will conflict."
-                "'all' should only be used if there is a single item"
-            )
-
-        return platforms
-
-    @property
-    def effective_base(self) -> bases.BaseName:
-        """Get the Base name for craft-providers."""
-        base = self.build_base if self.build_base else self.base
-
-        if not base:
-            raise errors.CraftValidationError("Could not determine effective base")
-
-        name, _, channel = base.partition("@")
-
-        return bases.BaseName(name, channel)
-
-    def get_build_plan(self) -> list[BuildInfo]:
-        """Obtain the list of architectures and bases from the Project."""
-        effective_base = self.effective_base
-        base = craft_platforms.DistroBase(
-            distribution=effective_base.name, series=effective_base.version
-        )
-        platforms = cast(
-            craft_platforms.Platforms,
-            {key: value.marshal() for key, value in self.platforms.items()},
-        )
-
-        return [
-            BuildInfo.from_platforms(info)
-            for info in craft_platforms.get_platforms_build_plan(
-                base=base,
-                platforms=platforms,
-            )
-        ]
 
 
 def _validate_package_repository(repository: dict[str, Any]) -> dict[str, Any]:

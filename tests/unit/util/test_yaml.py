@@ -18,6 +18,7 @@
 import io
 import pathlib
 
+import craft_platforms
 import pytest
 import pytest_check
 
@@ -90,6 +91,7 @@ def test_safe_yaml_loader_specific_error(yaml_text: str, error_msg: str):
             {"sort_keys": True},
             "comes_first: true\nordered: 'yes'\n",
         ),
+        ({"arch": craft_platforms.DebianArchitecture.RISCV64}, {}, "arch: riscv64\n"),
     ],
 )
 def test_dump_yaml_to_string(data, kwargs, expected):

@@ -21,14 +21,15 @@ All errors inherit from craft_cli.CraftError.
 from __future__ import annotations
 
 import os
-from collections.abc import Sequence
-from typing import TYPE_CHECKING
+import pathlib
+from collections.abc import Collection, Sequence
+from typing import TYPE_CHECKING, Literal
 
+import craft_platforms
 import yaml
 from craft_cli import CraftError
 from craft_providers import bases
 
-from craft_application import models
 from craft_application.util.error_formatting import format_pydantic_errors
 from craft_application.util.string import humanize_list
 
@@ -38,12 +39,87 @@ if TYPE_CHECKING:  # pragma: no cover
     from typing_extensions import Self
 
 
-class ProjectFileMissingError(CraftError, FileNotFoundError):
+class PathInvalidError(CraftError, OSError):
+    """Error that the given path is not usable."""
+
+
+class ProjectFileError(CraftError):
+    """Errors to do with the project file or directory."""
+
+
+class ProjectFileMissingError(ProjectFileError, FileNotFoundError):
     """Error finding project file."""
 
 
-class PathInvalidError(CraftError, OSError):
-    """Error that the given path is not usable."""
+class ProjectDirectoryMissingError(ProjectFileError, FileNotFoundError):
+    """The project directory doesn't exist."""
+
+    def __init__(
+        self,
+        directory: pathlib.Path,
+        *,
+        details: str | None = None,
+        resolution: str | None = None,
+        docs_url: str | None = None,
+        doc_slug: str | None = None,
+    ) -> None:
+        super().__init__(
+            f"Project directory missing: {directory}",
+            details=details,
+            resolution=resolution,
+            docs_url=docs_url,
+            logpath_report=False,
+            reportable=False,
+            retcode=os.EX_NOINPUT,
+            doc_slug=doc_slug,
+        )
+
+
+class ProjectDirectoryTypeError(ProjectFileError, FileNotFoundError):
+    """The project directory is not a directory."""
+
+    def __init__(
+        self,
+        directory: pathlib.Path,
+        *,
+        details: str | None = None,
+        resolution: str | None = None,
+        docs_url: str | None = None,
+        doc_slug: str | None = None,
+    ) -> None:
+        super().__init__(
+            f"Given project directory path is not a directory: {directory}",
+            details=details,
+            resolution=resolution,
+            docs_url=docs_url,
+            logpath_report=False,
+            reportable=False,
+            retcode=os.EX_NOINPUT,
+            doc_slug=doc_slug,
+        )
+
+
+class ProjectFileInvalidError(ProjectFileError):
+    """Error that the project file is valid YAML, but not a valid project file."""
+
+    def __init__(
+        self,
+        project_data: object,
+        *,
+        resolution: str | None = None,
+        docs_url: str | None = None,
+        doc_slug: str | None = None,
+    ) -> None:
+        super().__init__(
+            "Invalid project file.",
+            details=f"Project file should be a YAML mapping, not {type(project_data).__name__!r}",
+            resolution=resolution,
+            docs_url=docs_url,
+            logpath_report=False,
+            reportable=False,
+            retcode=os.EX_NOINPUT,
+            doc_slug=doc_slug,
+        )
 
 
 class YamlError(CraftError, yaml.YAMLError):
@@ -141,14 +217,41 @@ class SecretsManagedError(CraftError):
         super().__init__(message=message)
 
 
-class InvalidPlatformError(CraftError):
+class PlatformDefinitionError(CraftError):
+    """Errors with the platform definitions."""
+
+
+class InvalidPlatformError(PlatformDefinitionError):
     """The selected build plan platform is invalid."""
 
     def __init__(self, platform: str, all_platforms: Sequence[str]) -> None:
         message = f"Platform {platform!r} not found in the project definition."
-        details = f"Valid platforms are: {', '.join(all_platforms)}."
+        platforms_str = ", ".join(repr(platform) for platform in all_platforms)
+        details = f"Valid platforms are: {platforms_str}."
 
         super().__init__(message=message, details=details)
+
+
+class ArchitectureNotInPlatformError(PlatformDefinitionError):
+    """The selected architecture is not available in the selected platform."""
+
+    def __init__(
+        self,
+        build_key: Literal["build-on", "build-for"],
+        build_for: str,
+        platform: str,
+        build_fors: Collection[str],
+        *,
+        docs_url: str | None = None,
+        doc_slug: str | None = None,
+    ) -> None:
+        super().__init__(
+            f"Platform {platform!r} does not contain {build_key!r} {build_for}.",
+            details=f"Valid {build_key!r} values: {humanize_list(build_fors, 'and')}",
+            reportable=False,
+            docs_url=docs_url,
+            doc_slug=doc_slug,
+        )
 
 
 class EmptyBuildPlanError(CraftError):
@@ -167,7 +270,10 @@ class EmptyBuildPlanError(CraftError):
 class MultipleBuildsError(CraftError):
     """The build plan contains multiple possible builds."""
 
-    def __init__(self, matching_builds: list[models.BuildInfo] | None = None) -> None:
+    def __init__(
+        self,
+        matching_builds: Sequence[craft_platforms.BuildInfo] | None = None,
+    ) -> None:
         message = "Multiple builds match the current platform"
         if matching_builds:
             message += ": " + humanize_list(
@@ -183,16 +289,28 @@ class MultipleBuildsError(CraftError):
 class IncompatibleBaseError(CraftError):
     """The build plan's base is incompatible with the host environment."""
 
-    def __init__(self, host_base: bases.BaseName, build_base: bases.BaseName) -> None:
-        host_pretty = f"{host_base.name.title()} {host_base.version}"
-        build_pretty = f"{build_base.name.title()} {build_base.version}"
+    def __init__(
+        self,
+        host_base: craft_platforms.DistroBase | bases.BaseName,
+        build_base: craft_platforms.DistroBase | bases.BaseName,
+    ) -> None:
+        if isinstance(host_base, bases.BaseName):
+            host_base = craft_platforms.DistroBase(
+                distribution=host_base.name, series=host_base.version
+            )
+        if isinstance(build_base, bases.BaseName):
+            build_base = craft_platforms.DistroBase(
+                distribution=build_base.name, series=build_base.version
+            )
+        host_pretty = f"{host_base.distribution.title()} {host_base.series}"
+        build_pretty = f"{build_base.distribution.title()} {build_base.series}"
 
         message = (
             f"{build_pretty} builds cannot be performed on this {host_pretty} system."
         )
         details = (
             "Builds must be performed on a specific system to ensure that the "
-            "final artefact's binaries are compatible with the intended execution "
+            "final artifact's binaries are compatible with the intended execution "
             "environment."
         )
         resolution = "Run a managed build, or run on a compatible host."

@@ -25,11 +25,11 @@ from typing_extensions import override
 
 import craft_application
 import craft_application.commands
-from craft_application import models, secrets, util
+from craft_application import util
 from craft_application.util import yaml
 
 
-class TestableApplication(craft_application.Application):
+class FakeApplication(craft_application.Application):
     """An application modified for integration tests.
 
     Modifications are:
@@ -44,13 +44,13 @@ class TestableApplication(craft_application.Application):
 
 @pytest.fixture
 def create_app(app_metadata, fake_package_service_class):
+    craft_application.ServiceFactory.register("package", fake_package_service_class)
+
     def _inner():
         # Create a factory without a project, to simulate a real application use
         # and force loading from disk.
-        services = craft_application.ServiceFactory(
-            app_metadata, PackageClass=fake_package_service_class
-        )
-        return TestableApplication(app_metadata, services)
+        services = craft_application.ServiceFactory(app_metadata)
+        return FakeApplication(app_metadata, services)
 
     return _inner
 
@@ -116,7 +116,6 @@ INVALID_PROJECTS_DIR = TEST_DATA_DIR / "invalid_projects"
     ],
 )
 def test_special_inputs(capsys, monkeypatch, app, argv, stdout, stderr, exit_code):
-    monkeypatch.setenv("CRAFT_DEBUG", "1")
     monkeypatch.setattr("sys.argv", ["testcraft", *argv])
 
     with pytest.raises(SystemExit) as exc_info:
@@ -143,7 +142,7 @@ def _create_command(command_name):
     ids=lambda ordered: f"keep_order={ordered}",
 )
 def test_registering_new_commands(
-    app: TestableApplication,
+    app: FakeApplication,
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
     *,
@@ -177,7 +176,6 @@ def test_registering_new_commands(
 @pytest.mark.usefixtures("pretend_jammy")
 @pytest.mark.parametrize("project", (d.name for d in VALID_PROJECTS_DIR.iterdir()))
 def test_project_managed(capsys, monkeypatch, tmp_path, project, create_app):
-    monkeypatch.setenv("CRAFT_DEBUG", "1")
     monkeypatch.setenv("CRAFT_MANAGED_MODE", "1")
     monkeypatch.setattr("sys.argv", ["testcraft", "pack"])
     monkeypatch.chdir(tmp_path)
@@ -197,7 +195,7 @@ def test_project_managed(capsys, monkeypatch, tmp_path, project, create_app):
 
 
 @pytest.mark.slow
-@pytest.mark.usefixtures("full_build_plan", "pretend_jammy")
+@pytest.mark.usefixtures("pretend_jammy")
 @pytest.mark.parametrize("project", (d.name for d in VALID_PROJECTS_DIR.iterdir()))
 def test_project_destructive(
     capsys,
@@ -209,16 +207,12 @@ def test_project_destructive(
     monkeypatch.chdir(tmp_path)
     shutil.copytree(VALID_PROJECTS_DIR / project, tmp_path, dirs_exist_ok=True)
 
-    build_for = util.get_host_architecture()
-    release = util.get_host_base().version
-    platform = f"ubuntu-{release}-{build_for}"
-
-    # Run pack in destructive mode
     monkeypatch.setattr(
         "sys.argv",
-        ["testcraft", "pack", "--destructive-mode", "--platform", platform],
+        ["testcraft", "pack", "--destructive-mode"],
     )
     app = create_app()
+
     app.run()
 
     assert (tmp_path / "package_1.0.tar.zst").exists()
@@ -254,7 +248,7 @@ def test_non_lifecycle_command_does_not_require_project(monkeypatch, app):
     """Run a command without having a project instance shall not fail."""
     monkeypatch.setattr("sys.argv", ["testcraft", "nothing"])
 
-    class NothingCommand(craft_cli.BaseCommand):
+    class NothingCommand(craft_application.commands.AppCommand):
         name = "nothing"
         help_msg = "none"
         overview = "nothing to see here"
@@ -270,7 +264,6 @@ def test_non_lifecycle_command_does_not_require_project(monkeypatch, app):
 @pytest.mark.parametrize("cmd", ["clean", "pull", "build", "stage", "prime", "pack"])
 def test_run_always_load_project(capsys, monkeypatch, app, cmd):
     """Run a lifecycle command without having a project shall fail."""
-    monkeypatch.setenv("CRAFT_DEBUG", "1")
     monkeypatch.setattr("sys.argv", ["testcraft", cmd])
 
     assert app.run() == 66
@@ -328,11 +321,11 @@ def test_invalid_command_argument(monkeypatch, capsys, app):
 @pytest.mark.parametrize(
     "arguments",
     [
-        [],
         ["--build-for", "s390x"],
         ["--platform", "my-platform"],
     ],
 )
+@pytest.mark.usefixtures("pretend_jammy")
 def test_global_environment(
     arguments,
     create_app,
@@ -343,20 +336,6 @@ def test_global_environment(
     """Test that the global environment is correctly populated during the build process."""
     monkeypatch.chdir(tmp_path)
     shutil.copytree(VALID_PROJECTS_DIR / "environment", tmp_path, dirs_exist_ok=True)
-
-    # a build plan that builds for s390x (a cross-compiling scenario unless on s390x)
-    mocker.patch.object(
-        models.BuildPlanner,
-        "get_build_plan",
-        return_value=[
-            models.BuildInfo(
-                platform="my-platform",
-                build_on=util.get_host_architecture(),
-                build_for="s390x",
-                base=util.get_host_base(),
-            ),
-        ],
-    )
 
     # Check that this odd value makes its way through to the yaml build script
     build_count = "5"
@@ -389,90 +368,6 @@ def test_global_environment(
     assert variables["parallel_build_count"] == build_count
 
 
-@pytest.fixture
-def setup_secrets_project(create_app, monkeypatch, tmp_path):
-    """Test the use of build secrets in destructive mode."""
-
-    def _inner(*, destructive_mode: bool):
-        monkeypatch.setenv("CRAFT_DEBUG", "1")
-        monkeypatch.chdir(tmp_path)
-        shutil.copytree(TEST_DATA_DIR / "build-secrets", tmp_path, dirs_exist_ok=True)
-
-        argv = ["testcraft", "prime", "-v"]
-        if destructive_mode:
-            # Run in destructive mode
-            argv.append("--destructive-mode")
-
-        monkeypatch.setattr("sys.argv", argv)
-
-        return create_app()
-
-    return _inner
-
-
-@pytest.fixture
-def check_secrets_output(tmp_path, capsys):
-    def _inner():
-        prime_dir = tmp_path / "prime"
-        assert (prime_dir / "source-file.txt").read_text().strip() == "A source file"
-        assert (prime_dir / "build-file.txt").read_text().strip() == "my-secret"
-
-        # Check that the "secrets" were masked in console output and the logfile
-        _, stderr = capsys.readouterr()
-        log_contents = craft_cli.emit._log_filepath.read_text()
-
-        for target in (stderr, log_contents):
-            assert "Dumping SECRET_VAR: my-secret" not in target
-            assert "Dumping SECRET_VAR: *****" in target
-
-    return _inner
-
-
-@pytest.mark.slow
-@pytest.mark.usefixtures("pretend_jammy")
-@pytest.mark.enable_features("build_secrets")
-def test_build_secrets_destructive(
-    monkeypatch, setup_secrets_project, check_secrets_output
-):
-    """Test the use of build secrets in destructive mode."""
-    app = setup_secrets_project(destructive_mode=True)
-
-    # Set the environment variables that the project needs
-    monkeypatch.setenv("HOST_SOURCE_FOLDER", "secret-source")
-    monkeypatch.setenv("HOST_SECRET_VAR", "my-secret")
-
-    app.run()
-
-    check_secrets_output()
-
-
-@pytest.mark.slow
-@pytest.mark.usefixtures("pretend_jammy")
-@pytest.mark.enable_features("build_secrets")
-def test_build_secrets_managed(
-    monkeypatch, tmp_path, setup_secrets_project, check_secrets_output
-):
-    """Test the use of build secrets in managed mode."""
-    app = setup_secrets_project(destructive_mode=False)
-
-    monkeypatch.setenv("CRAFT_MANAGED_MODE", "1")
-    assert app.is_managed()
-    app._work_dir = tmp_path
-
-    # Before running the application, configure its environment "as if" the host app
-    # had placed the secrets there.
-    commands = {
-        "echo ${HOST_SOURCE_FOLDER}": "secret-source",
-        "echo ${HOST_SECRET_VAR}": "my-secret",
-    }
-    encoded = secrets._encode_commands(commands)
-    monkeypatch.setenv("CRAFT_SECRETS", encoded["CRAFT_SECRETS"])
-
-    app.run()
-
-    check_secrets_output()
-
-
 @pytest.mark.usefixtures("pretend_jammy")
 def test_lifecycle_error_logging(monkeypatch, tmp_path, create_app):
     monkeypatch.chdir(tmp_path)
@@ -480,6 +375,7 @@ def test_lifecycle_error_logging(monkeypatch, tmp_path, create_app):
 
     monkeypatch.setattr("sys.argv", ["testcraft", "pack", "--destructive-mode"])
     app = create_app()
+
     app.run()
 
     log_contents = craft_cli.emit._log_filepath.read_text()
@@ -507,7 +403,8 @@ def test_runtime_error_logging(monkeypatch, tmp_path, create_app, mocker):
     monkeypatch.setattr("sys.argv", ["testcraft", "pack", "--destructive-mode"])
     app = create_app()
 
-    app.run()
+    with pytest.raises(RuntimeError):
+        app.run()
 
     log_contents = craft_cli.emit._log_filepath.read_text()
 

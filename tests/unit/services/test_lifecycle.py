@@ -25,6 +25,7 @@ from unittest import mock
 import craft_parts
 import craft_parts.callbacks
 import craft_platforms
+import distro
 import pytest
 import pytest_check
 from craft_parts import (
@@ -40,13 +41,19 @@ from craft_parts import (
 from craft_parts.executor import (
     ExecutionContext,  # pyright: ignore[reportPrivateImportUsage]
 )
-from craft_providers import bases
 
 from craft_application import errors, models, util
-from craft_application.errors import PartsLifecycleError
-from craft_application.models.project import BuildInfo
+from craft_application.errors import EmptyBuildPlanError, PartsLifecycleError
 from craft_application.services import lifecycle
+from craft_application.services.buildplan import BuildPlanService
 from craft_application.util import repositories
+
+
+def skip_if_build_plan_empty(build_planner: BuildPlanService):
+    try:
+        build_planner.plan()
+    except EmptyBuildPlanError:
+        pytest.skip(reason="Empty build plan")
 
 
 # region Local fixtures
@@ -62,18 +69,14 @@ class FakePartsLifecycle(lifecycle.LifecycleService):
 
 
 @pytest.fixture
-def fake_parts_lifecycle(
-    app_metadata, fake_project, fake_services, tmp_path, fake_build_plan
-):
+def fake_parts_lifecycle(app_metadata, fake_project, fake_services, tmp_path):
     work_dir = tmp_path / "work"
     cache_dir = tmp_path / "cache"
     fake_service = FakePartsLifecycle(
         app_metadata,
         fake_services,
-        project=fake_project,
         work_dir=work_dir,
         cache_dir=cache_dir,
-        build_plan=fake_build_plan,
     )
     fake_service.setup()
     return fake_service
@@ -185,7 +188,11 @@ def get_parts_action_message_with_reason(step: Step, message: str):
     assert actual == message, f"Unexpected {actual!r}"
 
 
-def test_progress_messages(fake_parts_lifecycle, emitter):
+def test_progress_messages(
+    fake_services, fake_platform, fake_host_architecture, fake_parts_lifecycle, emitter
+):
+    fake_services.get("build_plan").set_platforms(fake_platform)
+    skip_if_build_plan_empty(fake_services.get("build_plan"))
     actions = [
         Action("my-part", Step.PULL),
         Action("my-part", Step.BUILD),
@@ -197,7 +204,7 @@ def test_progress_messages(fake_parts_lifecycle, emitter):
     lcm = fake_parts_lifecycle._lcm
     lcm.plan.return_value = actions
 
-    fake_parts_lifecycle.run("prime", "arch")
+    fake_parts_lifecycle.run("prime")
 
     emitter.assert_progress("Pulling my-part")
     emitter.assert_progress("Building my-part")
@@ -231,17 +238,12 @@ def test_get_step_failure(step_name):
 
 # endregion
 # region PartsLifecycle tests
-def test_init_success(
-    app_metadata, fake_project, fake_services, tmp_path, fake_build_plan
-):
+def test_init_success(app_metadata, fake_project, fake_services, tmp_path):
     service = lifecycle.LifecycleService(
         app_metadata,
         fake_services,
-        project=fake_project,
         work_dir=tmp_path,
         cache_dir=tmp_path,
-        platform=None,
-        build_plan=fake_build_plan,
     )
     assert service._lcm is None
     service.setup()
@@ -269,7 +271,6 @@ def test_init_parts_error(
     tmp_path,
     error,
     expected,
-    fake_build_plan,
 ):
     mock_lifecycle = mock.Mock(side_effect=error)
     monkeypatch.setattr(lifecycle, "LifecycleManager", mock_lifecycle)
@@ -281,7 +282,6 @@ def test_init_parts_error(
         work_dir=tmp_path,
         cache_dir=tmp_path,
         platform=None,
-        build_plan=fake_build_plan,
     )
 
     with pytest.raises(type(expected)) as exc_info:
@@ -291,18 +291,18 @@ def test_init_parts_error(
 
 
 def test_init_with_feature_package_repositories(
-    app_metadata, fake_project, fake_services, tmp_path, fake_build_plan
+    app_metadata, fake_project, fake_services, tmp_path
 ):
     package_repositories = [{"type": "apt", "ppa": "ppa/ppa"}]
     fake_project.package_repositories = package_repositories.copy()
+    fake_services.get("project").set(fake_project)
+
     service = lifecycle.LifecycleService(
         app_metadata,
         fake_services,
-        project=fake_project,
         work_dir=tmp_path,
         cache_dir=tmp_path,
         platform=None,
-        build_plan=fake_build_plan,
     )
     assert service._lcm is None
     service.setup()
@@ -312,7 +312,7 @@ def test_init_with_feature_package_repositories(
 
 @pytest.mark.usefixtures("enable_partitions")
 def test_init_with_partitions(
-    app_metadata, fake_project, fake_services, tmp_path, fake_build_plan
+    app_metadata, fake_project, fake_services, tmp_path, fake_platform
 ):
     service = lifecycle.LifecycleService(
         app_metadata,
@@ -321,13 +321,12 @@ def test_init_with_partitions(
         work_dir=tmp_path,
         cache_dir=tmp_path,
         platform=None,
-        build_plan=fake_build_plan,
-        partitions=["default", "mypartition"],
     )
     assert service._lcm is None
     service.setup()
     assert service._lcm is not None
-    assert service._lcm._project_info.partitions == ["default", "mypartition"]
+    assert service._lcm._project_info.partitions[0] == "default"
+    assert fake_platform in service._lcm._project_info.partitions
 
 
 def test_prime_dir(lifecycle_service, tmp_path):
@@ -361,44 +360,44 @@ def test_get_primed_stage_packages(lifecycle_service):
         ([], None),
         (
             [
-                BuildInfo(
+                craft_platforms.BuildInfo(
                     "my-platform",
-                    build_on="any",
+                    build_on=craft_platforms.DebianArchitecture.from_host(),
                     build_for="all",
-                    base=bases.BaseName("ubuntu", "24.04"),
+                    build_base=craft_platforms.DistroBase("ubuntu", "24.04"),
                 )
             ],
             None,
         ),
         (
             [
-                BuildInfo(
+                craft_platforms.BuildInfo(
                     "my-platform",
-                    build_on="any",
+                    build_on=craft_platforms.DebianArchitecture.from_host(),
                     build_for=craft_platforms.DebianArchitecture.AMD64,
-                    base=bases.BaseName("ubuntu", "24.04"),
+                    build_base=craft_platforms.DistroBase("ubuntu", "24.04"),
                 )
             ],
             "amd64",
         ),
         (
             [
-                BuildInfo(
+                craft_platforms.BuildInfo(
                     "my-platform",
-                    build_on="any",
-                    build_for="arm64",
-                    base=bases.BaseName("ubuntu", "24.04"),
+                    build_on=craft_platforms.DebianArchitecture.from_host(),
+                    build_for=craft_platforms.DebianArchitecture.ARM64,
+                    build_base=craft_platforms.DistroBase("ubuntu", "24.04"),
                 )
             ],
             "arm64",
         ),
         (
             [
-                BuildInfo(
+                craft_platforms.BuildInfo(
                     "my-platform",
-                    build_on="any",
-                    build_for="riscv64",
-                    base=bases.BaseName("ubuntu", "24.04"),
+                    build_on=craft_platforms.DebianArchitecture.from_host(),
+                    build_for=craft_platforms.DebianArchitecture.RISCV64,
+                    build_base=craft_platforms.DistroBase("ubuntu", "24.04"),
                 )
             ],
             "riscv64",
@@ -406,14 +405,18 @@ def test_get_primed_stage_packages(lifecycle_service):
     ],
 )
 def test_get_build_for(
+    mocker,
     fake_host_architecture,
     fake_parts_lifecycle: lifecycle.LifecycleService,
-    build_plan: list[BuildInfo],
+    fake_services,
+    build_plan: list[craft_platforms.BuildInfo],
     expected: str | None,
 ):
+    mocker.patch.object(
+        fake_services.get("build_plan"), "plan", return_value=build_plan
+    )
     if expected is None:
         expected = fake_host_architecture
-    fake_parts_lifecycle._build_plan = build_plan
 
     actual = fake_parts_lifecycle._get_build_for()
 
@@ -427,7 +430,16 @@ def test_get_build_for(
         [Action("my-part", Step.PULL), Action("my-part", Step.BUILD)],
     ],
 )
-def test_run_success(fake_parts_lifecycle, actions, check):
+def test_run_success(
+    fake_parts_lifecycle,
+    actions,
+    check,
+    fake_services,
+    fake_platform,
+    fake_host_architecture,
+):
+    fake_services.get("build_plan").set_platforms(fake_platform)
+    skip_if_build_plan_empty(fake_services.get("build_plan"))
     lcm = fake_parts_lifecycle._lcm
     lcm.plan.return_value = actions
     executor = lcm.action_executor.return_value.__enter__.return_value
@@ -444,7 +456,11 @@ def test_run_success(fake_parts_lifecycle, actions, check):
         assert executor.method_calls == executor_calls
 
 
-def test_run_no_step(fake_parts_lifecycle):
+def test_run_no_step(
+    fake_parts_lifecycle, fake_services, fake_platform, fake_host_architecture
+):
+    fake_services.get("build_plan").set_platforms(fake_platform)
+    skip_if_build_plan_empty(fake_services.get("build_plan"))
     lcm = fake_parts_lifecycle._lcm
     executor = lcm.action_executor.return_value.__enter__.return_value
 
@@ -463,7 +479,17 @@ def test_run_no_step(fake_parts_lifecycle):
         (craft_parts.PartsError("parts error"), PartsLifecycleError, "^parts error$"),
     ],
 )
-def test_run_failure(fake_parts_lifecycle, err, exc_class, message_regex):
+def test_run_failure(
+    fake_parts_lifecycle,
+    fake_services,
+    fake_platform,
+    fake_host_architecture,
+    err,
+    exc_class,
+    message_regex,
+):
+    fake_services.get("build_plan").set_platforms(fake_platform)
+    skip_if_build_plan_empty(fake_services.get("build_plan"))
     fake_parts_lifecycle._lcm.plan.side_effect = err
 
     with pytest.raises(exc_class, match=message_regex):
@@ -488,7 +514,7 @@ def test_clean(part_names, message, emitter, fake_parts_lifecycle, check):
 
 
 def test_repr(fake_parts_lifecycle, app_metadata, fake_project):
-    start = f"FakePartsLifecycle({app_metadata!r}, {fake_project!r}, "
+    start = f"FakePartsLifecycle({app_metadata!r}, "
 
     actual = repr(fake_parts_lifecycle)
 
@@ -496,10 +522,10 @@ def test_repr(fake_parts_lifecycle, app_metadata, fake_project):
     pytest_check.is_true(
         re.fullmatch(
             r"FakePartsLifecycle\(.+, work_dir=(Posix|Windows)Path\('.+'\), "
-            r"cache_dir=(Posix|Windows)Path\('.+'\), "
-            r"plan=\[BuildInfo\(.+\)], \*\*{}\)",
+            r"cache_dir=(Posix|Windows)Path\('.+'\), .+\)",
             actual,
-        )
+        ),
+        f"Does not match expected regex: {actual}",
     )
 
 
@@ -536,11 +562,13 @@ def test_run_lifecycle_build_for_all(
 ):
     """'build-for: [all]' should be converted to the host arch."""
     build_plan = [
-        models.BuildInfo(
+        craft_platforms.BuildInfo(
             platform="platform1",
-            build_on=util.get_host_architecture(),
+            build_on=craft_platforms.DebianArchitecture.from_host(),
             build_for="all",
-            base=util.get_host_base(),
+            build_base=craft_platforms.DistroBase.from_linux_distribution(
+                distro.LinuxDistribution()
+            ),
         )
     ]
     work_dir = tmp_path / "work"
@@ -556,7 +584,10 @@ def test_run_lifecycle_build_for_all(
     )
     service.setup()
 
-    assert service.project_info.target_arch == util.get_host_architecture()
+    assert (
+        service.project_info.target_arch
+        == craft_platforms.DebianArchitecture.from_host()
+    )
     assert service.project_info.arch_build_for == util.get_host_architecture()
 
 
@@ -572,14 +603,17 @@ def test_lifecycle_package_repositories(
     app_metadata,
     fake_project,
     fake_services,
+    fake_platform,
     tmp_path,
     mocker,
-    fake_build_plan,
     local_keys_path,
 ):
     """Test that package repositories installation is called in the lifecycle."""
+    fake_services.get("build_plan").set_platforms(fake_platform)
+    skip_if_build_plan_empty(fake_services.get("build_plan"))
     fake_repositories = [{"type": "apt", "ppa": "ppa/ppa"}]
     fake_project.package_repositories = fake_repositories.copy()
+    fake_services.get("project").set(fake_project)
     work_dir = tmp_path / "work"
 
     service = lifecycle.LifecycleService(
@@ -589,8 +623,8 @@ def test_lifecycle_package_repositories(
         work_dir=work_dir,
         cache_dir=tmp_path / "cache",
         platform=None,
-        build_plan=fake_build_plan,
     )
+    service.setup()
     mocker.patch.object(service, "_get_local_keys_path", return_value=local_keys_path)
 
     service._lcm = mock.MagicMock(spec=LifecycleManager)
@@ -614,15 +648,12 @@ def test_lifecycle_package_repositories(
     mock_callback.assert_called_once_with(repositories.install_overlay_repositories)
 
 
-# endregion
-
-# region project variables
-
-
 def test_lifecycle_project_variables(
-    app_metadata, fake_services, tmp_path, fake_build_plan
+    app_metadata, fake_services, tmp_path, fake_platform
 ):
     """Test that project variables are set after the lifecycle runs."""
+    fake_services.get("build_plan").set_platforms(fake_platform)
+    skip_if_build_plan_empty(fake_services.get("build_plan"))
 
     class LocalProject(models.Project):
         color: str | None = None
@@ -649,8 +680,8 @@ def test_lifecycle_project_variables(
         work_dir=work_dir,
         cache_dir=tmp_path / "cache",
         platform=None,
-        build_plan=fake_build_plan,
     )
+    service._project = fake_project
     service._lcm = mock.MagicMock(spec=LifecycleManager)
     service._lcm.project_info = mock.MagicMock(spec=ProjectInfo)
     service._lcm.project_info.get_project_var = lambda _: "foo"
@@ -661,59 +692,58 @@ def test_lifecycle_project_variables(
     assert service.project_info.get_project_var("color") == "foo"
 
 
-# endregion
-
-
-@pytest.mark.parametrize("fake_build_plan", [0], indirect=True)
-def test_no_builds_error(fake_parts_lifecycle):
+def test_no_builds_error(mocker, fake_parts_lifecycle, fake_services):
     """Build plan has no items."""
+    mock_plan = mocker.patch.object(
+        fake_services.get("build_plan"), "plan", return_value=[]
+    )
+
     with pytest.raises(errors.EmptyBuildPlanError):
         fake_parts_lifecycle.run("prime")
 
+    mock_plan.assert_called_once_with()
 
-@pytest.mark.parametrize(
-    ("fake_build_plan", "fake_result_str"),
-    [
-        (2, "'foo' and 'foo'"),
-        (3, "'foo', 'foo', and 'foo'"),
-        (4, "'foo', 'foo', 'foo', and 'foo'"),
-    ],
-    indirect=["fake_build_plan"],
-)
-def test_multiple_builds_error(fake_parts_lifecycle, fake_result_str):
+
+def test_multiple_builds_error(
+    fake_parts_lifecycle, fake_services, fake_host_architecture
+):
     """Build plan contains more than 1 item."""
+    if len(fake_services.get("build_plan").plan()) <= 1:
+        pytest.skip(reason="Architecture has 0 or 1 builds")
     with pytest.raises(errors.MultipleBuildsError) as e:
-        fake_parts_lifecycle.run("prime")
-    assert str(e.value) == (
-        f"Multiple builds match the current platform: {fake_result_str}."
-    )
+        fake_parts_lifecycle._validate_build_plan()
+    assert str(e.value).startswith("Multiple builds match the current platform: ")
 
 
 @pytest.mark.parametrize(
-    ("system_name", "system_version", "expected_pretty"),
+    ("base", "expected_pretty"),
     [
-        ("ubuntu", "22.04", "Ubuntu 22.04"),
-        ("centos", "6", "Centos 6"),
-        ("centos", "devel", "Centos devel"),
+        (craft_platforms.DistroBase("ubuntu", "22.04"), "Ubuntu 22.04"),
+        (craft_platforms.DistroBase("centos", "6"), "Centos 6"),
+        (craft_platforms.DistroBase("centos", "devel"), "Centos devel"),
     ],
 )
-@pytest.mark.parametrize("fake_build_plan", [1], indirect=True)
 def test_invalid_base_error(
+    build_plan_service,
     fake_parts_lifecycle,
-    fake_build_plan,
     mocker,
-    system_name,
-    system_version,
+    base,
     expected_pretty,
 ):
     """BuildInfo has a different base than the running environment."""
-    fake_host = bases.BaseName(name="ubuntu", version="24.04")
+    fake_host = craft_platforms.DistroBase(distribution="ubuntu", series="24.04")
+    fake_build = craft_platforms.BuildInfo(
+        platform="anything",
+        build_on=craft_platforms.DebianArchitecture.from_host(),
+        build_for=craft_platforms.DebianArchitecture.from_host(),
+        build_base=base,
+    )
     mocker.patch.object(
-        util,
-        "get_host_base",
+        craft_platforms.DistroBase,
+        "from_linux_distribution",
         return_value=fake_host,
     )
-    fake_build_plan[0].base = bases.BaseName(name=system_name, version=system_version)
+    mocker.patch.object(build_plan_service, "plan", return_value=[fake_build])
 
     expected = (
         f"{expected_pretty} builds cannot be performed on this Ubuntu 24.04 system."
@@ -723,16 +753,21 @@ def test_invalid_base_error(
         fake_parts_lifecycle.run("prime")
 
 
-@pytest.mark.parametrize("fake_build_plan", [1], indirect=True)
-def test_devel_base_no_error(fake_parts_lifecycle, fake_build_plan, mocker):
+def test_devel_base_no_error(fake_parts_lifecycle, build_plan_service, mocker):
     """BuildInfo has a 'devel' build-base but the system is the same."""
-    fake_host = bases.BaseName(name="ubuntu", version="24.04")
+    fake_base = craft_platforms.DistroBase("ubuntu", "24.04")
     mocker.patch.object(
-        util,
-        "get_host_base",
-        return_value=fake_host,
+        craft_platforms.DistroBase,
+        "from_linux_distribution",
+        return_value=fake_base,
     )
-    fake_build_plan[0].base = bases.BaseName(name="ubuntu", version="devel")
+    fake_build = craft_platforms.BuildInfo(
+        platform="anything",
+        build_on=craft_platforms.DebianArchitecture.from_host(),
+        build_for=craft_platforms.DebianArchitecture.from_host(),
+        build_base=fake_base,
+    )
+    mocker.patch.object(build_plan_service, "plan", return_value=[fake_build])
 
     # Pass None as the step to ensure validation but skip the actual lifecycle run
     _ = fake_parts_lifecycle.run(None)

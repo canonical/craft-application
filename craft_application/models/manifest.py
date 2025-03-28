@@ -20,6 +20,7 @@ import pathlib
 from datetime import datetime, timezone
 from typing import Any, Literal
 
+import craft_platforms
 from pydantic import Field
 from typing_extensions import Self, override
 
@@ -84,7 +85,7 @@ class ProjectManifest(BaseManifestModel):
     def from_packed_artifact(
         cls,
         project: models.Project,
-        build_info: models.BuildInfo,
+        build_info: craft_platforms.BuildInfo,
         artifact: pathlib.Path,
     ) -> Self:
         """Create the project manifest for a packed artifact."""

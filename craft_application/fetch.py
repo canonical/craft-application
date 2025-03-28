@@ -182,7 +182,7 @@ def start_service() -> subprocess.Popen[str] | None:
 
     # Wait a bit for the service to come online
     with contextlib.suppress(subprocess.TimeoutExpired):
-        fetch_process.wait(0.1)
+        fetch_process.wait(0.5)
 
     if fetch_process.poll() is not None:
         # fetch-service already exited, something is wrong
@@ -226,22 +226,26 @@ def stop_service(fetch_process: subprocess.Popen[str]) -> None:
         fetch_process.kill()
 
 
-def create_session(*, strict: bool) -> SessionData:
+def create_session(*, strict: bool, timeout: float = 5.0) -> SessionData:
     """Create a new fetch-service session.
 
     :param strict: Whether the created session should be strict.
+    :param timeout: Maximum time to wait for the response from the fetch-service
     :return: a SessionData object containing the session's id and token.
     """
     json = {"policy": "strict" if strict else "permissive"}
-    data = _service_request("post", "session", json=json).json()
+    data = _service_request("post", "session", json=json, timeout=timeout).json()
 
     return SessionData.unmarshal(data=data)
 
 
-def teardown_session(session_data: SessionData) -> dict[str, Any]:
+def teardown_session(
+    session_data: SessionData, timeout: float = 10.0
+) -> dict[str, Any]:
     """Stop and cleanup a running fetch-service session.
 
     :param session_data: the data of a previously-created session.
+    :param timeout: Maximum time to wait for the response from the fetch-service
     :return: A dict containing the session's report (the contents and format
       of this dict are still subject to change).
     """
@@ -250,17 +254,25 @@ def teardown_session(session_data: SessionData) -> dict[str, Any]:
 
     # Revoke token
     _revoke_data = _service_request(
-        "delete", f"session/{session_id}/token", json={"token": session_token}
+        "delete",
+        f"session/{session_id}/token",
+        json={"token": session_token},
+        timeout=timeout,
     ).json()
 
     # Get session report
-    session_report = _service_request("get", f"session/{session_id}", json={}).json()
+    session_report = _service_request(
+        "get",
+        f"session/{session_id}",
+        json={},
+        timeout=timeout,
+    ).json()
 
     # Delete session
-    _service_request("delete", f"session/{session_id}")
+    _service_request("delete", f"session/{session_id}", timeout=timeout)
 
     # Delete session resources
-    _service_request("delete", f"resources/{session_id}")
+    _service_request("delete", f"resources/{session_id}", timeout=timeout)
 
     return cast(dict[str, Any], session_report)
 
@@ -302,7 +314,10 @@ def verify_installed() -> None:
 
 
 def _service_request(
-    verb: str, endpoint: str, json: dict[str, Any] | None = None
+    verb: str,
+    endpoint: str,
+    json: dict[str, Any] | None = None,
+    timeout: float = 10.0,
 ) -> requests.Response:
     headers = {
         "Content-type": "application/json",
@@ -315,7 +330,7 @@ def _service_request(
             auth=auth,
             headers=headers,
             json=json,  # Use defaults
-            timeout=0.1,
+            timeout=timeout,
         )
         response.raise_for_status()
     except requests.RequestException as err:

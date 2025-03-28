@@ -1,0 +1,12 @@
+name: {{name}}
+version: "0.1"
+
+base: ubuntu@24.04
+platforms:
+  platform-independent:
+    build-on: [amd64, arm64, ppc64el, s390x, riscv64]
+    build-for: [all]
+
+parts:
+  my-test:
+    plugin: nil

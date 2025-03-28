@@ -1,0 +1,64 @@
+name: myproject
+version: 1.0
+base: ubuntu@24.04
+platforms:
+  unlikely:  # A platform we probably won't run tests on.
+    build-on: [i386]
+    build-for: [all]
+parts:
+  mypart:
+    plugin: nil
+    source: non-grammar-source
+    source-checksum: on-amd64-to-i386-checksum
+    source-branch: i386-branch
+    source-commit: i386-commit
+    source-depth: 1
+    source-subdir: i386-subdir
+    source-submodules:
+      - i386-submodules-1
+      - i386-submodules-2
+    source-tag: i386-tag
+    source-type: i386-type
+    disable-parallel: true
+    after:
+      - i386-after
+    organize:
+      i386-organize-1: i386-organize-2
+      i386-organize-3: i386-organize-4
+    stage:
+      - i386-stage-1
+      - i386-stage-2
+    stage-snaps:
+      - i386-snap-1
+      - i386-snap-2
+    stage-packages:
+      - i386-package-1
+      - i386-package-2
+    prime:
+      - i386-prime-1
+      - i386-prime-2
+    build-snaps:
+      - i386-snap-1
+      - i386-snap-2
+    build-packages:
+      - i386-package-1
+      - i386-package-2
+    build-environment:
+      - MY_VAR: i386-value
+      - MY_VAR2: i386-value2
+    build-attributes:
+      - rifcv64-attr-1
+      - rifcv64-attr-2
+    override-pull: i386-override-pull
+    override-build: i386-override-build
+    override-stage: i386-override-stage
+    override-prime: i386-override-prime
+    permissions:
+      - path: i386-perm-1
+        owner: 123
+        group: 123
+        mode: "777"
+      - path: i386-perm-2
+        owner: 456
+        group: 456
+        mode: "666"

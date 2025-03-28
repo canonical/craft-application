@@ -18,12 +18,15 @@
 import argparse
 import pathlib
 import subprocess
+from unittest import mock
 
 import craft_parts
+import craft_platforms
 import pytest
-from craft_cli import emit
+import pytest_mock
 from craft_parts import Features
 
+from craft_application.application import AppMetadata
 from craft_application.commands.lifecycle import (
     BuildCommand,
     CleanCommand,
@@ -36,6 +39,7 @@ from craft_application.commands.lifecycle import (
     StageCommand,
     get_lifecycle_command_group,
 )
+from craft_application.services.service_factory import ServiceFactory
 
 PARTS_LISTS = [[], ["my-part"], ["my-part", "your-part"]]
 SHELL_PARAMS = [
@@ -139,56 +143,148 @@ def test_lifecycle_command_fill_parser(
     assert args_dict == expected
 
 
-@pytest.mark.parametrize("parts", PARTS_LISTS)
-def test_parts_command_get_managed_cmd(
-    app_metadata, fake_services, parts, emitter_verbosity
+@pytest.mark.parametrize(
+    ("destructive", "managed", "build_env", "expected"),
+    [
+        pytest.param(False, False, "", True, id="managed-outer"),
+        pytest.param(False, True, "", False, id="managed-inner"),
+        pytest.param(True, False, "", False, id="destructive"),
+        pytest.param(False, False, "host", False, id="build-on-host"),
+        pytest.param(False, False, "something else", True, id="bad-build-env"),
+        pytest.param(True, True, "host", False, id="xmas"),
+    ],
+)
+def test_use_provider(
+    mocker: pytest_mock.MockerFixture,
+    monkeypatch: pytest.MonkeyPatch,
+    app_metadata: AppMetadata,
+    fake_services: ServiceFactory,
+    destructive: bool,
+    managed: bool,
+    build_env: str,
+    expected: bool,
 ):
-    cls = get_fake_command_class(LifecyclePartsCommand, managed=True)
-
-    expected = [
-        app_metadata.name,
-        f"--verbosity={emitter_verbosity.name.lower()}",
-        "fake",
-        *parts,
-    ]
-
-    parsed_args = argparse.Namespace(parts=parts)
+    cls = get_fake_command_class(LifecycleCommand, managed=False)
     command = cls({"app": app_metadata, "services": fake_services})
 
-    actual = command.get_managed_cmd(parsed_args)
+    parsed_args = argparse.Namespace(destructive_mode=destructive)
+    mocker.patch("craft_application.util.is_managed_mode", return_value=managed)
+    monkeypatch.setenv("CRAFT_BUILD_ENVIRONMENT", build_env)
 
-    assert actual == expected
+    assert command._use_provider(parsed_args) == expected
+
+
+def test_run_sets_platform_arg(
+    mocker: pytest_mock.MockerFixture,
+    app_metadata: AppMetadata,
+    fake_services: ServiceFactory,
+    fake_platform: str,
+):
+    build_planner = fake_services.get("build_plan")
+    cls = get_fake_command_class(LifecycleCommand, managed=False)
+    command = cls({"app": app_metadata, "services": fake_services})
+
+    mocker.patch.object(command, "_use_provider", return_value=False)
+    mocker.patch.object(command, "_run_lifecycle")
+
+    parsed_args = argparse.Namespace(platform=fake_platform)
+
+    command.run(parsed_args)
+
+    assert build_planner._BuildPlanService__platforms == [fake_platform]  # type: ignore[reportAttributeAccessIssue]
+
+
+def test_run_sets_platform_from_env(
+    mocker: pytest_mock.MockerFixture,
+    monkeypatch: pytest.MonkeyPatch,
+    app_metadata: AppMetadata,
+    fake_services: ServiceFactory,
+    fake_platform: str,
+):
+    build_planner = fake_services.get("build_plan")
+    cls = get_fake_command_class(LifecycleCommand, managed=False)
+    command = cls({"app": app_metadata, "services": fake_services})
+
+    mocker.patch.object(command, "_use_provider", return_value=False)
+    mocker.patch.object(command, "_run_lifecycle")
+    monkeypatch.setenv("CRAFT_PLATFORM", fake_platform)
+
+    parsed_args = argparse.Namespace(platform=None)
+
+    command.run(parsed_args)
+
+    assert build_planner._BuildPlanService__platforms == [fake_platform]  # type: ignore[reportAttributeAccessIssue]
 
 
 @pytest.mark.parametrize(
-    ("destructive", "build_env", "expected_run_managed"),
-    [
-        # Destructive mode or CRAFT_BUILD_ENV=host should not run managed
-        (False, "host", False),
-        (True, "host", False),
-        (True, "lxd", False),
-        # Non-destructive mode and CRAFT_BUILD_ENV!=host should run managed
-        (False, "lxd", True),
-    ],
+    "arch", [*(arch.value for arch in craft_platforms.DebianArchitecture), "all"]
 )
-@pytest.mark.parametrize("parts", PARTS_LISTS)
-# clean command has different logic for `run_managed()`
-@pytest.mark.parametrize("command_cls", NON_CLEAN_COMMANDS)
-def test_parts_command_run_managed(
-    app_metadata,
-    mock_services,
-    destructive,
-    build_env,
-    expected_run_managed,
-    parts,
-    command_cls,
-    monkeypatch,
+def test_run_sets_build_for_arg(
+    mocker: pytest_mock.MockerFixture,
+    app_metadata: AppMetadata,
+    fake_services: ServiceFactory,
+    arch: str,
 ):
-    monkeypatch.setenv("CRAFT_BUILD_ENVIRONMENT", build_env)
-    parsed_args = argparse.Namespace(parts=parts, destructive_mode=destructive)
-    command = command_cls({"app": app_metadata, "services": mock_services})
+    build_planner = fake_services.get("build_plan")
+    cls = get_fake_command_class(LifecycleCommand, managed=False)
+    command = cls({"app": app_metadata, "services": fake_services})
 
-    assert command.run_managed(parsed_args) == expected_run_managed
+    mocker.patch.object(command, "_use_provider", return_value=False)
+    mocker.patch.object(command, "_run_lifecycle")
+
+    parsed_args = argparse.Namespace(build_for=arch)
+
+    command.run(parsed_args)
+
+    assert build_planner._BuildPlanService__build_for == [arch]  # type: ignore[reportAttributeAccessIssue]
+
+
+@pytest.mark.parametrize(
+    "arch", [*(arch.value for arch in craft_platforms.DebianArchitecture), "all"]
+)
+def test_run_sets_build_for_from_env(
+    mocker: pytest_mock.MockerFixture,
+    monkeypatch: pytest.MonkeyPatch,
+    app_metadata: AppMetadata,
+    fake_services: ServiceFactory,
+    arch: str,
+):
+    build_planner = fake_services.get("build_plan")
+    cls = get_fake_command_class(LifecycleCommand, managed=False)
+    command = cls({"app": app_metadata, "services": fake_services})
+
+    mocker.patch.object(command, "_use_provider", return_value=False)
+    mocker.patch.object(command, "_run_lifecycle")
+    monkeypatch.setenv("CRAFT_BUILD_FOR", arch)
+
+    parsed_args = argparse.Namespace()
+
+    command.run(parsed_args)
+
+    assert build_planner._BuildPlanService__build_for == [arch]  # type: ignore[reportAttributeAccessIssue]
+
+
+@pytest.mark.parametrize("fetch", [False, True])
+def test_run_manager_for_build_plan(
+    mocker: pytest_mock.MockerFixture,
+    app_metadata: AppMetadata,
+    fake_services: ServiceFactory,
+    fetch: bool,
+):
+    build = craft_platforms.BuildInfo(
+        platform="Tall",
+        build_on=craft_platforms.DebianArchitecture.PPC64EL,
+        build_for=craft_platforms.DebianArchitecture.RISCV64,
+        build_base=craft_platforms.DistroBase("distro", "series"),
+    )
+    mock_run_managed = mocker.patch.object(fake_services.get("provider"), "run_managed")
+    mocker.patch.object(fake_services.get("build_plan"), "plan", return_value=[build])
+    cls = get_fake_command_class(LifecycleCommand, managed=False)
+
+    command = cls({"app": app_metadata, "services": fake_services})
+    command._run_manager_for_build_plan(fetch)
+
+    mock_run_managed.assert_called_once_with(build, fetch)
 
 
 @pytest.mark.parametrize(("build_env_dict", "build_env_args"), BUILD_ENV_COMMANDS)
@@ -226,36 +322,13 @@ def test_step_command_fill_parser(
     assert args_dict == expected
 
 
-@pytest.mark.parametrize(("shell_params", "shell_opts"), SHELL_PARAMS)
-@pytest.mark.parametrize("parts", PARTS_LISTS)
-def test_step_command_get_managed_cmd(
-    app_metadata, fake_services, parts, emitter_verbosity, shell_params, shell_opts
-):
-    cls = get_fake_command_class(LifecyclePartsCommand, managed=True)
-
-    expected = [
-        app_metadata.name,
-        f"--verbosity={emitter_verbosity.name.lower()}",
-        "fake",
-        *parts,
-        *shell_opts,
-    ]
-
-    emit.set_mode(emitter_verbosity)
-    parsed_args = argparse.Namespace(parts=parts, **shell_params)
-    command = cls({"app": app_metadata, "services": fake_services})
-
-    actual = command.get_managed_cmd(parsed_args)
-
-    assert actual == expected
-
-
 @pytest.mark.parametrize("step_name", STEP_NAMES)
 @pytest.mark.parametrize("parts", PARTS_LISTS)
+@pytest.mark.usefixtures("managed_mode")
 def test_step_command_run_explicit_step(app_metadata, mock_services, parts, step_name):
     cls = get_fake_command_class(LifecyclePartsCommand, managed=True)
 
-    parsed_args = argparse.Namespace(parts=parts)
+    parsed_args = argparse.Namespace(destructive_mode=False, parts=parts)
     command = cls({"app": app_metadata, "services": mock_services})
 
     command.run(parsed_args=parsed_args, step_name=step_name)
@@ -267,7 +340,7 @@ def test_step_command_run_explicit_step(app_metadata, mock_services, parts, step
 
 @pytest.mark.parametrize("command_cls", MANAGED_LIFECYCLE_COMMANDS)
 def test_step_command_failure(app_metadata, mock_services, command_cls):
-    parsed_args = argparse.Namespace(parts=None)
+    parsed_args = argparse.Namespace(destructive_mode=True, parts=None)
     error_message = "Lifecycle run failed!"
 
     # Make lifecycle.run() raise an error.
@@ -289,39 +362,10 @@ def test_step_command_failure(app_metadata, mock_services, command_cls):
 
 
 @pytest.mark.parametrize("command_cls", MANAGED_LIFECYCLE_COMMANDS)
-@pytest.mark.parametrize(("shell_params", "shell_opts"), SHELL_PARAMS)
 @pytest.mark.parametrize("parts", PARTS_LISTS)
-def test_concrete_commands_get_managed_cmd(
-    app_metadata,
-    fake_services,
-    command_cls,
-    shell_params,
-    shell_opts,
-    parts,
-    emitter_verbosity,
-):
-    expected = [
-        app_metadata.name,
-        f"--verbosity={emitter_verbosity.name.lower()}",
-        command_cls.name,
-        *parts,
-        *shell_opts,
-    ]
-
-    parsed_args = argparse.Namespace(
-        destructive_mode=False, parts=parts, **shell_params
-    )
-    command = command_cls({"app": app_metadata, "services": fake_services})
-
-    actual = command.get_managed_cmd(parsed_args)
-
-    assert actual == expected
-
-
-@pytest.mark.parametrize("command_cls", MANAGED_LIFECYCLE_COMMANDS)
-@pytest.mark.parametrize("parts", PARTS_LISTS)
+@pytest.mark.usefixtures("managed_mode")
 def test_managed_concrete_commands_run(app_metadata, mock_services, command_cls, parts):
-    parsed_args = argparse.Namespace(parts=parts)
+    parsed_args = argparse.Namespace(destructive_mode=False, parts=parts)
     command = command_cls({"app": app_metadata, "services": mock_services})
 
     command.run(parsed_args)
@@ -332,11 +376,42 @@ def test_managed_concrete_commands_run(app_metadata, mock_services, command_cls,
 
 
 @pytest.mark.parametrize("parts", [("my-part",), ("my-part", "your-part")])
-def test_clean_run_with_parts(app_metadata, parts, tmp_path, mock_services):
+@pytest.mark.usefixtures("managed_mode")
+def test_clean_run_with_parts_managed(app_metadata, parts, tmp_path, mock_services):
     parsed_args = argparse.Namespace(
         parts=parts, output=tmp_path, destructive_mode=False
     )
     command = CleanCommand({"app": app_metadata, "services": mock_services})
+
+    command.run(parsed_args)
+
+    mock_services.lifecycle.clean.assert_called_once_with(parts)
+    assert not mock_services.provider.clean_instances.called
+
+
+@pytest.mark.parametrize("parts", [("my-part",), ("my-part", "your-part")])
+def test_clean_run_with_parts_unmanaged(app_metadata, parts, tmp_path, mock_services):
+    parsed_args = argparse.Namespace(
+        parts=parts, output=tmp_path, destructive_mode=False
+    )
+    command = CleanCommand({"app": app_metadata, "services": mock_services})
+    command._run_manager_for_build_plan = mock.Mock()
+
+    command.run(parsed_args)
+
+    assert not mock_services.get("provider").clean_instances.called
+    command._run_manager_for_build_plan.assert_called_once_with(
+        fetch_service_policy=None
+    )
+
+
+@pytest.mark.parametrize("parts", [("my-part",), ("my-part", "your-part")])
+def test_clean_run_with_parts_destructive(app_metadata, parts, tmp_path, mock_services):
+    parsed_args = argparse.Namespace(
+        parts=parts, output=tmp_path, destructive_mode=True
+    )
+    command = CleanCommand({"app": app_metadata, "services": mock_services})
+    command._run_manager_for_build_plan = mock.Mock()
 
     command.run(parsed_args)
 
@@ -365,7 +440,7 @@ def test_clean_run_without_parts(
     expected_provider,
     monkeypatch,
 ):
-    monkeypatch.setenv("CRAFT_BUILD_ENVIRONMENT", build_env)
+    mock_services.get("config").get.return_value = build_env
     parts = []
     parsed_args = argparse.Namespace(
         parts=parts, output=tmp_path, destructive_mode=destructive_mode
@@ -374,45 +449,8 @@ def test_clean_run_without_parts(
 
     command.run(parsed_args)
 
-    assert mock_services.lifecycle.clean.called == expected_lifecycle
+    assert mock_services.get("lifecycle").clean.called == expected_lifecycle
     assert mock_services.provider.clean_instances.called == expected_provider
-
-
-@pytest.mark.parametrize(
-    ("destructive", "build_env", "parts", "expected_run_managed"),
-    [
-        # destructive mode or CRAFT_BUILD_ENV==host should not run managed
-        (True, "lxd", [], False),
-        (True, "host", [], False),
-        (False, "host", [], False),
-        (True, "lxd", ["part1"], False),
-        (True, "host", ["part1"], False),
-        (False, "host", ["part1"], False),
-        (True, "lxd", ["part1", "part2"], False),
-        (True, "host", ["part1", "part2"], False),
-        (False, "host", ["part1", "part2"], False),
-        # destructive mode==False and CRAFT_BUILD_ENV!=host: depends on "parts"
-        # clean specific parts: should run managed
-        (False, "lxd", ["part1"], True),
-        (False, "lxd", ["part1", "part2"], True),
-        # "part-less" clean: shouldn't run managed
-        (False, "lxd", [], False),
-    ],
-)
-def test_clean_run_managed(
-    app_metadata,
-    mock_services,
-    destructive,
-    build_env,
-    parts,
-    expected_run_managed,
-    monkeypatch,
-):
-    monkeypatch.setenv("CRAFT_BUILD_ENVIRONMENT", build_env)
-    parsed_args = argparse.Namespace(parts=parts, destructive_mode=destructive)
-    command = CleanCommand({"app": app_metadata, "services": mock_services})
-
-    assert command.run_managed(parsed_args) == expected_run_managed
 
 
 @pytest.mark.parametrize(("build_env_dict", "build_env_args"), BUILD_ENV_COMMANDS)
@@ -469,7 +507,7 @@ def test_pack_run(
 ):
     mock_services.package.pack.return_value = packages
     parsed_args = argparse.Namespace(
-        parts=parts, output=tmp_path, fetch_service_policy=None
+        destructive_mode=True, parts=parts, output=tmp_path, fetch_service_policy=None
     )
     command = PackCommand(
         {
@@ -498,7 +536,9 @@ def test_pack_fetch_manifest(
     packages = [pathlib.Path("package.zip")]
     mock_services.package.pack.return_value = packages
     parsed_args = argparse.Namespace(
-        output=tmp_path, fetch_service_policy=fetch_service_policy
+        destructive_mode=True,
+        output=tmp_path,
+        fetch_service_policy=fetch_service_policy,
     )
     command = PackCommand(
         {
@@ -516,8 +556,11 @@ def test_pack_fetch_manifest(
     assert mock_services.fetch.create_project_manifest.called == expect_create_called
 
 
+@pytest.mark.usefixtures("destructive_mode")
 def test_pack_run_wrong_step(app_metadata, fake_services):
-    parsed_args = argparse.Namespace(parts=None, output=pathlib.Path())
+    parsed_args = argparse.Namespace(
+        destructive_mode=False, parts=None, output=pathlib.Path()
+    )
     command = PackCommand(
         {
             "app": app_metadata,
@@ -553,7 +596,7 @@ def test_shell(
     command_cls,
     expected_step,
 ):
-    parsed_args = argparse.Namespace(parts=None, shell=True)
+    parsed_args = argparse.Namespace(destructive_mode=True, parts=None, shell=True)
     mock_lifecycle_run = mocker.patch.object(fake_services.lifecycle, "run")
     mocker.patch.object(
         fake_services.lifecycle.project_info, "execution_finished", return_value=True
@@ -576,7 +619,7 @@ def test_shell_pack(
     mocker,
     mock_subprocess_run,
 ):
-    parsed_args = argparse.Namespace(shell=True)
+    parsed_args = argparse.Namespace(destructive_mode=True, shell=True)
     mock_lifecycle_run = mocker.patch.object(fake_services.lifecycle, "run")
     mock_pack = mocker.patch.object(fake_services.package, "pack")
     mocker.patch.object(
@@ -602,7 +645,9 @@ def test_shell_pack(
 def test_shell_after(
     app_metadata, fake_services, mocker, mock_subprocess_run, command_cls
 ):
-    parsed_args = argparse.Namespace(parts=None, shell_after=True)
+    parsed_args = argparse.Namespace(
+        destructive_mode=True, parts=None, shell_after=True
+    )
     mock_lifecycle_run = mocker.patch.object(fake_services.lifecycle, "run")
     mocker.patch.object(
         fake_services.lifecycle.project_info, "execution_finished", return_value=True
@@ -628,7 +673,10 @@ def test_shell_after_pack(
     mock_subprocess_run,
 ):
     parsed_args = argparse.Namespace(
-        shell_after=True, output=pathlib.Path(), fetch_service_policy=None
+        destructive_mode=True,
+        shell_after=True,
+        output=pathlib.Path(),
+        fetch_service_policy=None,
     )
     mock_lifecycle_run = mocker.patch.object(fake_services.lifecycle, "run")
     mock_pack = mocker.patch.object(fake_services.package, "pack")
@@ -652,7 +700,7 @@ def test_shell_after_pack(
 
 @pytest.mark.parametrize("command_cls", [*MANAGED_LIFECYCLE_COMMANDS, PackCommand])
 def test_debug(app_metadata, fake_services, mocker, mock_subprocess_run, command_cls):
-    parsed_args = argparse.Namespace(parts=None, debug=True)
+    parsed_args = argparse.Namespace(destructive_mode=True, parts=None, debug=True)
     error_message = "Lifecycle run failed!"
 
     # Make lifecycle.run() raise an error.
@@ -679,7 +727,9 @@ def test_debug_pack(
     mock_subprocess_run,
 ):
     """Same as test_debug(), but checking when the error happens when packing."""
-    parsed_args = argparse.Namespace(debug=True, output=pathlib.Path())
+    parsed_args = argparse.Namespace(
+        destructive_mode=True, debug=True, output=pathlib.Path()
+    )
     error_message = "Packing failed!"
 
     # Lifecycle.run() should work
