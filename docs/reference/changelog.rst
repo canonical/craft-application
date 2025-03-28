@@ -4,6 +4,14 @@
 Changelog
 *********
 
+5.0.1 (2025-MM-DD)
+------------------
+
+Services
+========
+
+- The ``TestingService`` now outputs a correct discard script for spread.
+
 5.0.0 (2025-03-26)
 ------------------
 
