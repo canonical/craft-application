@@ -3,8 +3,21 @@
 import datetime
 
 import pytest
+import requests
 
 from craft_application import launchpad
+
+
+def _ignore_staging() -> bool:
+    """Check if we should ignore staging."""
+    # Extend acceptance of staging being down to the end of May
+    if datetime.date.today() >= datetime.date(2025, 6, 1):
+        return False
+    # If the main web page is up, run the tests as normal.
+    return requests.get("https://staging.launchpad.net").status_code >= 500
+
+
+_IGNORE_STAGING = _ignore_staging()
 
 
 @pytest.mark.parametrize(
@@ -12,10 +25,8 @@ from craft_application import launchpad
     [
         pytest.param(
             "staging",
-            marks=pytest.mark.xfail(
-                # Only xfail until the end of January.
-                datetime.date.today() < datetime.date(2025, 2, 1),
-                strict=False,
+            marks=pytest.mark.skipif(
+                _IGNORE_STAGING,
                 reason="staging endpoint is offline",
             ),
         ),
