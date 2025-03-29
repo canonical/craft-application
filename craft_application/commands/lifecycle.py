@@ -454,10 +454,11 @@ class TestCommand(PackCommand):
         step_name: str | None = None,
         **kwargs: Any,
     ) -> None:
-        emit.progress(
-            "The test command is experimental and subject to change without warning.",
-            permanent=True,
-        )
+        if not util.is_managed_mode():
+            emit.progress(
+                "The test command is experimental and subject to change without warning.",
+                permanent=True,
+            )
         # Output into the spread directory.
         parsed_args.output = pathlib.Path.cwd() / "spread"
         parsed_args.output.mkdir(exist_ok=True)
