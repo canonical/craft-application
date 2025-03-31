@@ -13,10 +13,11 @@
 #
 #  You should have received a copy of the GNU Lesser General Public License
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
-"""Unit tests for the testing service."""
+"""Unit tests for the TestingService."""
 
 import pathlib
 import stat
+from unittest import mock
 
 import pytest
 from craft_cli import CraftError
@@ -24,11 +25,14 @@ from craft_cli import CraftError
 from craft_application.services.testing import TestingService
 
 
-@pytest.fixture
-def testing_service(fake_services) -> TestingService:
-    return fake_services.get("testing")
+@pytest.fixture(scope="module")
+def testing_service(default_app_metadata) -> TestingService:
+    return TestingService(
+        app=default_app_metadata,
+        services=mock.Mock(),  # TestingService doesn't rely on other services.
+    )
 
-
+  
 @pytest.mark.parametrize("spread_name", ["craft.spread"])
 def test_get_app_spread_executable_success(
     monkeypatch: pytest.MonkeyPatch,
@@ -55,3 +59,8 @@ def test_get_app_spread_executable_error(
         CraftError, match="Internal error: cannot find a 'craft.spread' executable."
     ):
         testing_service._get_spread_executable()
+
+
+def test_process_without_spread_file(new_dir, testing_service):
+    with pytest.raises(CraftError, match="Could not find 'spread.yaml'"):
+        testing_service.process_spread_yaml(new_dir / "wherever")

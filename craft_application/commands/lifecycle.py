@@ -486,13 +486,17 @@ class TestCommand(PackCommand):
             spread_backup.hardlink_to(spread_path)
             shutil.move(dest, spread_path)
 
-            self._services.testing.run_spread(dest)
+            try:
+                self._services.testing.run_spread(dest)
+            finally:
+                # See: https://github.com/canonical/spread/issues/225
+                if spread_backup.is_file():
+                    spread_path.unlink(missing_ok=True)
+                    spread_path.hardlink_to(spread_backup)
+                    spread_backup.unlink()
         finally:
             if not self._services.config.get("debug"):
                 dest.unlink(missing_ok=True)
-            # See: https://github.com/canonical/spread/issues/225
-            spread_path.unlink(missing_ok=True)
-            spread_path.hardlink_to(spread_backup)
 
 
 class CleanCommand(_BaseLifecycleCommand):
