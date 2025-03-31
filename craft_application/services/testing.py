@@ -18,6 +18,7 @@
 
 import os
 import pathlib
+import shutil
 import subprocess
 
 from craft_cli import CraftError, emit
@@ -72,7 +73,7 @@ class TestingService(base.AppService):
         try:
             with emit.pause():
                 subprocess.run(
-                    ["spread", "-v", "craft:"],
+                    [self._get_spread_executable(), "-v", "craft:"],
                     check=True,
                     env=os.environ | {"SPREAD_PROJECT_FILE": project_path.as_posix()},
                 )
@@ -96,4 +97,20 @@ class TestingService(base.AppService):
             restore=f'"$PROJECT_PATH"/spread/.extension backend-restore {name}',
             prepare_each=f'"$PROJECT_PATH"/spread/.extension backend-prepare-each {name}',
             restore_each=f'"$PROJECT_PATH"/spread/.extension backend-restore-each {name}',
+        )
+
+    def _get_spread_executable(self) -> str:
+        """Get the executable to run for spread.
+
+        :returns: The spread command to use
+        :raises: CraftError if spread cannot be found.
+        """
+        # Spread included in the application.
+        if path := shutil.which("craft.spread"):
+            return path
+        raise CraftError(
+            "Internal error: cannot find a 'craft.spread' executable.",
+            details=f"'{self._app.name} test' needs 'craft.spread' to run.",
+            resolution="This is likely a packaging bug that needs reporting.",
+            retcode=os.EX_SOFTWARE,
         )
