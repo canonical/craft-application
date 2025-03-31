@@ -454,10 +454,11 @@ class TestCommand(PackCommand):
         step_name: str | None = None,
         **kwargs: Any,
     ) -> None:
-        emit.progress(
-            "The test command is experimental and subject to change without warning.",
-            permanent=True,
-        )
+        if not util.is_managed_mode():
+            emit.progress(
+                "The test command is experimental and subject to change without warning.",
+                permanent=True,
+            )
         # Output into the spread directory.
         parsed_args.output = pathlib.Path.cwd() / "spread"
         parsed_args.output.mkdir(exist_ok=True)
@@ -485,13 +486,17 @@ class TestCommand(PackCommand):
             spread_backup.hardlink_to(spread_path)
             shutil.move(dest, spread_path)
 
-            self._services.testing.run_spread(dest)
+            try:
+                self._services.testing.run_spread(dest)
+            finally:
+                # See: https://github.com/canonical/spread/issues/225
+                if spread_backup.is_file():
+                    spread_path.unlink(missing_ok=True)
+                    spread_path.hardlink_to(spread_backup)
+                    spread_backup.unlink()
         finally:
             if not self._services.config.get("debug"):
                 dest.unlink(missing_ok=True)
-            # See: https://github.com/canonical/spread/issues/225
-            spread_path.unlink(missing_ok=True)
-            spread_path.hardlink_to(spread_backup)
 
 
 class CleanCommand(_BaseLifecycleCommand):

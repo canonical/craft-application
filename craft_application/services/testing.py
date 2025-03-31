@@ -30,6 +30,8 @@ from . import base
 class TestingService(base.AppService):
     """Service class for testing a project."""
 
+    __test__ = False  # Tell pytest this service is not a test class.
+
     def process_spread_yaml(self, dest: pathlib.Path) -> None:
         """Process the spread configuration file.
 
@@ -37,6 +39,14 @@ class TestingService(base.AppService):
         """
         emit.debug("Processing spread.yaml.")
         spread_path = pathlib.Path("spread.yaml")
+        if not spread_path.is_file():
+            raise CraftError(
+                "Could not find 'spread.yaml' in the current directory.",
+                resolution="Ensure you are in the correct directory or create a spread.yaml file.",
+                reportable=False,
+                logpath_report=False,
+                retcode=os.EX_CONFIG,
+            )
 
         craft_backend = self._get_backend()
 
@@ -50,6 +60,7 @@ class TestingService(base.AppService):
             craft_backend=craft_backend,
         )
 
+        emit.trace(f"Writing processed spread file to {dest}")
         spread_yaml.to_yaml_file(dest)
 
     def run_spread(self, project_path: pathlib.Path) -> None:
@@ -57,6 +68,7 @@ class TestingService(base.AppService):
 
         :param project_path: The processed project file.
         """
+        emit.debug("Running spread tests.")
         try:
             with emit.pause():
                 subprocess.run(
@@ -76,8 +88,10 @@ class TestingService(base.AppService):
 
         return models.SpreadBackend(
             type="adhoc",
+            # Allocate and discard occur on the host.
             allocate=f"ADDRESS $(./spread/.extension allocate {name})",
-            discard=f'"$PROJECT_PATH"/spread/.extension discard {name}',
+            discard=f"./spread/.extension discard {name}",
+            # Each of these occur within the spread runner.
             prepare=f'"$PROJECT_PATH"/spread/.extension backend-prepare {name}',
             restore=f'"$PROJECT_PATH"/spread/.extension backend-restore {name}',
             prepare_each=f'"$PROJECT_PATH"/spread/.extension backend-prepare-each {name}',
