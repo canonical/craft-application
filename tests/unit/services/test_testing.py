@@ -32,7 +32,7 @@ def testing_service(default_app_metadata) -> TestingService:
         services=mock.Mock(),  # TestingService doesn't rely on other services.
     )
 
-  
+
 @pytest.mark.parametrize("spread_name", ["craft.spread"])
 def test_get_app_spread_executable_success(
     monkeypatch: pytest.MonkeyPatch,
