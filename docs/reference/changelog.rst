@@ -10,7 +10,8 @@ Changelog
 Commands
 ========
 
-- The warning that the test command is experimental is only displayed once.
+- ``test`` raises a clear error message if ``spread.yaml`` is missing.
+- The warning that the ``test`` command is experimental is only displayed once.
 
 Services
 ========
