@@ -153,16 +153,26 @@ def test_get_platforms(
 @pytest.mark.parametrize(
     ("platforms", "match"),
     [
-        (None, "should be a valid dictionary"),
-        ({"invalid": None}, r"should be a valid dictionary.+'platforms.invalid'"),
-        (
+        pytest.param(None, "should be a valid dictionary", id="platforms-null"),
+        pytest.param(
+            {"invalid": None},
+            r"should be a valid dictionary.+'platforms.invalid'",
+            id="invalid-shorthand",
+        ),
+        pytest.param(
             {"my-pf": {"build-on": ["amd66"], "build-for": ["all"]}},
             "'amd66' is not a valid Debian architecture",
+            id="invalid-build-on",
         ),
         pytest.param(
             {"mine": {"build-on": ["all"], "build-for": ["all"]}},
             r"'all' cannot be used for 'build-on' \(in field 'platforms.mine.build-on'\)",
-            id="invalid-build-on",
+            id="build-on-all",
+        ),
+        pytest.param(
+            {"mine": {"build-on": ["amd64"], "build-for": ["any"]}},
+            r"'any' is not a valid Debian architecture\.",
+            id="build-on-all",
         ),
         pytest.param(
             {"my-platform": {"build-on": ["ppc64el"]}},
