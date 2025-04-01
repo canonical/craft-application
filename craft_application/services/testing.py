@@ -64,18 +64,20 @@ class TestingService(base.AppService):
         emit.trace(f"Writing processed spread file to {dest}")
         spread_yaml.to_yaml_file(dest)
 
-    def run_spread(self, project_path: pathlib.Path) -> None:
+    def run_spread(self, spread_yaml: pathlib.Path) -> None:
         """Run spread on the processed project file.
 
-        :param project_path: The processed project file.
+        :param spread_yaml: The path of the processed spread.yaml
         """
         emit.debug("Running spread tests.")
         try:
-            with emit.pause():
+            with emit.open_stream("Running spread tests") as stream:
                 subprocess.run(
                     [self._get_spread_executable(), "-v", "craft:"],
                     check=True,
-                    env=os.environ | {"SPREAD_PROJECT_FILE": project_path.as_posix()},
+                    stdout=stream,
+                    stderr=stream,
+                    cwd=spread_yaml.parent,
                 )
         except subprocess.CalledProcessError as exc:
             raise CraftError(

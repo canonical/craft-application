@@ -12,6 +12,7 @@ Commands
 
 - ``test`` raises a clear error message if ``spread.yaml`` is missing.
 - The warning that the ``test`` command is experimental is only displayed once.
+- ``test`` no longer overwrites ``spread.yaml``
 
 Services
 ========
