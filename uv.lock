@@ -120,7 +120,7 @@ wheels = [
 
 [[package]]
 name = "canonical-sphinx"
-version = "0.2.0"
+version = "0.4.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "furo" },
@@ -128,9 +128,9 @@ dependencies = [
     { name = "myst-parser" },
     { name = "sphinx" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/fe/2a/a77c673d5950d1ae1e065fddd038e547610fc9e1de41ef56b20d85fa87c2/canonical_sphinx-0.2.0.tar.gz", hash = "sha256:74d8dce67845924220d67f78bf85df379d8121e9b8e684338986dcccf9fff439", size = 56858 }
+sdist = { url = "https://files.pythonhosted.org/packages/7a/17/b5db416b095aeb34a706630564020a19f62ea043d594a067c40c6a20991f/canonical_sphinx-0.4.0.tar.gz", hash = "sha256:00101e7f172ad9d481e4474e0e88ae09b94bcfcfbe353473f1f7e5f37d0001eb", size = 1051897 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/99/da/488d00806ddcc177c3e02049d8ab1d92aee0a334d6e2aed41a45a5c924f8/canonical_sphinx-0.2.0-py3-none-any.whl", hash = "sha256:c71ee6dbc15c084ad115f06b0f1c15f8269db3a896670e616b8945d6af089edd", size = 31067 },
+    { url = "https://files.pythonhosted.org/packages/c9/20/264fea36a671347136d3e1b70f52723acb9d6fac116ea863ccf965ce6f6e/canonical_sphinx-0.4.0-py3-none-any.whl", hash = "sha256:97bc68e2be0bcb794d3d8d7048175564f4ce819c26372079d2790c38d48189c9", size = 1028858 },
 ]
 
 [[package]]
@@ -490,7 +490,7 @@ dev-noble = [{ name = "python-apt", marker = "sys_platform == 'linux'", specifie
 dev-oracular = [{ name = "python-apt", marker = "sys_platform == 'linux'", specifier = "~=2.9.0", index = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels/" }]
 dev-plucky = [{ name = "python-apt", marker = "sys_platform == 'linux'", specifier = ">=2.9.9", index = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels/" }]
 docs = [
-    { name = "canonical-sphinx", specifier = "~=0.2.0" },
+    { name = "canonical-sphinx", specifier = "~=0.4.0" },
     { name = "sphinx-autobuild", specifier = "==2024.10.3" },
     { name = "sphinx-lint", specifier = "==1.0.0" },
 ]
