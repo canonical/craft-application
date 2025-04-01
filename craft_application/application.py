@@ -22,7 +22,6 @@ import importlib
 import os
 import pathlib
 import signal
-import subprocess
 import sys
 import traceback
 import warnings
@@ -361,68 +360,6 @@ class Application:
     def is_managed(self) -> bool:
         """Shortcut to tell whether we're running in managed mode."""
         return self.services.get_class("provider").is_managed()
-
-    def run_managed(self, platform: str | None, build_for: str | None) -> None:
-        """Run the application in a managed instance."""
-        build_planner = self.services.get("build_plan")
-        if platform:
-            build_planner.set_platforms(platform)
-        if build_for:
-            build_planner.set_build_fors(build_for)
-        plan = build_planner.plan()
-
-        if not plan:
-            raise errors.EmptyBuildPlanError
-
-        if self._enable_fetch_service:
-            self.services.get("fetch").set_policy(self._fetch_service_policy)
-
-        extra_args: dict[str, Any] = {}
-        for build_info in plan:
-            env = {
-                "CRAFT_PLATFORM": build_info.platform,
-                "CRAFT_VERBOSITY_LEVEL": craft_cli.emit.get_mode().name,
-            }
-
-            extra_args["env"] = env
-
-            craft_cli.emit.debug(
-                f"Running {self.app.name}:{build_info.platform} in {build_info.build_for} instance..."
-            )
-            instance_path = pathlib.PosixPath("/root/project")
-
-            with self.services.provider.instance(
-                build_info,
-                work_dir=self._work_dir,
-                clean_existing=self._enable_fetch_service,
-            ) as instance:
-                if self._enable_fetch_service:
-                    session_env = self.services.fetch.create_session(instance)
-                    env.update(session_env)
-
-                cmd = [self.app.name, *sys.argv[1:]]
-                craft_cli.emit.debug(
-                    f"Executing {cmd} in instance location {instance_path} with {extra_args}."
-                )
-                try:
-                    with craft_cli.emit.pause():
-                        # Pyright doesn't fully understand craft_providers's CompletedProcess.
-                        instance.execute_run(  # pyright: ignore[reportUnknownMemberType,reportUnknownVariableType]
-                            cmd,
-                            cwd=instance_path,
-                            check=True,
-                            **extra_args,
-                        )
-                except subprocess.CalledProcessError as exc:
-                    raise craft_providers.ProviderError(
-                        f"Failed to execute {self.app.name} in instance."
-                    ) from exc
-                finally:
-                    if self._enable_fetch_service:
-                        self.services.fetch.teardown_session()
-
-        if self._enable_fetch_service:
-            self.services.fetch.shutdown(force=True)
 
     def configure(self, global_args: dict[str, Any]) -> None:
         """Configure the application using any global arguments."""
