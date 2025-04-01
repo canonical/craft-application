@@ -17,8 +17,8 @@ from __future__ import annotations
 
 import argparse
 import pathlib
-import shutil
 import subprocess
+import tempfile
 import textwrap
 from typing import Any
 
@@ -471,32 +471,23 @@ class TestCommand(PackCommand):
             # Run the rest of this outside the managed instance.
             return
 
-        emit.progress("Testing project.")
+        emit.progress("Testing project")
 
         dest = pathlib.Path.cwd() / TEMP_SPREAD_FILE_NAME
 
-        spread_path = pathlib.Path.cwd() / "spread.yaml"
-        spread_backup = spread_path.with_suffix(".yaml~")
-        try:
-            self._services.testing.process_spread_yaml(dest)
-
-            # For now we need to modify the spread.yaml file in-place.
-            # See: https://github.com/canonical/spread/issues/225
-            spread_backup.unlink(missing_ok=True)
-            spread_backup.hardlink_to(spread_path)
-            shutil.move(dest, spread_path)
+        with tempfile.TemporaryDirectory(
+            prefix=".craft-spread-",
+            dir=pathlib.Path.cwd(),
+        ) as temp_dir:
+            temp_spread = pathlib.Path(temp_dir) / "spread.yaml"
 
             try:
-                self._services.testing.run_spread(dest)
+                self._services.testing.process_spread_yaml(temp_spread)
+                self._services.testing.run_spread(temp_spread)
             finally:
-                # See: https://github.com/canonical/spread/issues/225
-                if spread_backup.is_file():
-                    spread_path.unlink(missing_ok=True)
-                    spread_path.hardlink_to(spread_backup)
-                    spread_backup.unlink()
-        finally:
-            if not self._services.config.get("debug"):
-                dest.unlink(missing_ok=True)
+                if not self._services.config.get("debug"):
+                    dest.unlink(missing_ok=True)
+            emit.progress("Tests succeeded")
 
 
 class CleanCommand(_BaseLifecycleCommand):

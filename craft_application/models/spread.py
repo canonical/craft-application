@@ -28,7 +28,7 @@ class SpreadBase(CraftBaseModel):
 
     model_config = pydantic.ConfigDict(
         CraftBaseModel.model_config,  # type: ignore[misc]
-        extra="ignore",
+        extra="allow",
     )
 
 
@@ -195,6 +195,7 @@ class SpreadYaml(SpreadBaseModel):
     prepare_each: str | None
     restore_each: str | None
     kill_timeout: str | None = None
+    reroot: str | None = None
 
     @classmethod
     def from_craft(
@@ -222,6 +223,7 @@ class SpreadYaml(SpreadBaseModel):
             prepare_each=simple.prepare_each,
             restore_each=simple.restore_each,
             kill_timeout=simple.kill_timeout or None,
+            reroot="..",
         )
 
     @staticmethod
