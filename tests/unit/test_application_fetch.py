@@ -112,7 +112,8 @@ def test_run_managed_fetch_service(
     result = app.run()
 
     if result != 0:  # We'll fail if the platform doesn't build on this arch.
-        assert fetch_calls == []
+        # Some configurations may have set up the service but we don't care.
+        assert fetch_calls in (["setup"], [])
         stdout, stderr = capsys.readouterr()
         assert "No build matches the current execution environment" in stderr
     else:

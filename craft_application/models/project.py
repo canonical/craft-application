@@ -71,10 +71,13 @@ DEVEL_BASE_WARNING = (
 
 
 class Platform(base.CraftBaseModel):
-    """Project platform definition."""
+    """Project platform definition.
 
-    build_on: UniqueList[str] | None = pydantic.Field(min_length=1)
-    build_for: SingleEntryList[str] | None = None
+    This model defines how the ``platforms`` key works for a project.
+    """
+
+    build_on: UniqueList[str] = pydantic.Field(min_length=1)
+    build_for: SingleEntryList[str]
 
     @pydantic.field_validator("build_on", "build_for", mode="before")
     @classmethod
@@ -96,6 +99,16 @@ class Platform(base.CraftBaseModel):
         """
         [craft_platforms.parse_base_and_architecture(arch) for arch in values]
 
+        return values
+
+    @pydantic.field_validator("build_on", mode="after")
+    @classmethod
+    def _validate_build_on_real_arch(cls, values: list[str]) -> list[str]:
+        """Validate that we must build on a real architecture."""
+        for value in values:
+            _, arch = craft_platforms.parse_base_and_architecture(value)
+            if arch == "all":
+                raise ValueError("'all' cannot be used for 'build-on'")
         return values
 
     @pydantic.model_validator(mode="before")
