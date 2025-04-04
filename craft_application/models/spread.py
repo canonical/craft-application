@@ -46,7 +46,7 @@ class CraftSpreadSuite(CraftBaseModel):
     """Simplified spread suite configuration."""
 
     summary: str
-    systems: list[str]
+    systems: list[str] | None = None
     environment: dict[str, str] | None = None
     prepare: str | None = None
     restore: str | None = None
@@ -111,7 +111,7 @@ class SpreadBackend(SpreadBaseModel):
     type: str
     allocate: str | None = None
     discard: str | None = None
-    systems: list[dict[str, SpreadSystem]] = []
+    systems: list[dict[str, SpreadSystem]]
     prepare: str | None = None
     restore: str | None = None
     prepare_each: str | None = None
@@ -150,7 +150,7 @@ class SpreadSuite(SpreadBaseModel):
     """Processed spread suite configuration."""
 
     summary: str
-    systems: list[str]
+    systems: list[str] | None
     environment: dict[str, str] | None
     prepare: str | None
     restore: str | None

@@ -45,7 +45,9 @@ class TestingService(base.AppService):
         with pathlib.Path("spread.yaml").open() as file:
             data = util.safe_yaml_load(file)
 
+        print("=== unmarshal spread.yaml")
         craft_spread_yaml = models.CraftSpreadYaml.unmarshal(data)
+        print("=== unmarshal spread.yaml complete")
 
         spread_yaml = models.SpreadYaml.from_craft(
             craft_spread_yaml,
@@ -61,7 +63,6 @@ class TestingService(base.AppService):
         :param project_path: The processed project file.
         """
         with emit.open_stream() as stream:
-            os.environ["SPREAD_PROJECT_FILE"] = str(project_path)
             subprocess.run(
                 ["spread", "craft:"],
                 cwd=project_path,
