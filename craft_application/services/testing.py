@@ -54,6 +54,7 @@ class TestingService(base.AppService):
         )
 
         spread_yaml.to_yaml_file(destdir / "spread.yaml")
+        spread_yaml.to_yaml_file(pathlib.Path("spread-debug.yaml"))
 
     def run_spread(self, project_path: pathlib.Path) -> None:
         """Run spread on the processed project file.
@@ -61,7 +62,6 @@ class TestingService(base.AppService):
         :param project_path: The processed project file.
         """
         with emit.open_stream() as stream:
-            os.environ["SPREAD_PROJECT_FILE"] = str(project_path)
             subprocess.run(
                 ["spread", "craft:"],
                 cwd=project_path,

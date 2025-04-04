@@ -46,7 +46,7 @@ class CraftSpreadSuite(CraftBaseModel):
     """Simplified spread suite configuration."""
 
     summary: str
-    systems: list[str]
+    systems: list[str] | None = None
     environment: dict[str, str] | None = None
     prepare: str | None = None
     restore: str | None = None
@@ -90,8 +90,8 @@ class SpreadBaseModel(CraftBaseModel):
 class SpreadSystem(SpreadBaseModel):
     """Processed spread system configuration."""
 
-    username: str
-    password: str
+    username: str | None = None
+    password: str | None = None
     workers: int | None = None
 
     @classmethod
@@ -100,8 +100,6 @@ class SpreadSystem(SpreadBaseModel):
         workers = craft_spread_system.workers if craft_spread_system else 1
         return cls(
             workers=workers,
-            username="spread",
-            password="spread",  # noqa: S106 (possible hardcoded password)
         )
 
 
@@ -111,7 +109,7 @@ class SpreadBackend(SpreadBaseModel):
     type: str
     allocate: str | None = None
     discard: str | None = None
-    systems: list[dict[str, SpreadSystem]] = []
+    systems: list[dict[str, SpreadSystem]] | None = None
     prepare: str | None = None
     restore: str | None = None
     prepare_each: str | None = None
@@ -150,7 +148,7 @@ class SpreadSuite(SpreadBaseModel):
     """Processed spread suite configuration."""
 
     summary: str
-    systems: list[str]
+    systems: list[str] | None
     environment: dict[str, str] | None
     prepare: str | None
     restore: str | None
