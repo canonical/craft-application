@@ -28,7 +28,7 @@ class SpreadBase(CraftBaseModel):
 
     model_config = pydantic.ConfigDict(
         CraftBaseModel.model_config,  # type: ignore[misc]
-        extra="allow",
+        extra="ignore",
     )
 
 

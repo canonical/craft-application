@@ -18,7 +18,6 @@ from __future__ import annotations
 import argparse
 import pathlib
 import subprocess
-import tempfile
 import textwrap
 from typing import Any
 
@@ -472,22 +471,8 @@ class TestCommand(PackCommand):
             return
 
         emit.progress("Testing project")
-
-        dest = pathlib.Path.cwd() / TEMP_SPREAD_FILE_NAME
-
-        with tempfile.TemporaryDirectory(
-            prefix=".craft-spread-",
-            dir=pathlib.Path.cwd(),
-        ) as temp_dir:
-            temp_spread = pathlib.Path(temp_dir) / "spread.yaml"
-
-            try:
-                self._services.testing.process_spread_yaml(temp_spread)
-                self._services.testing.run_spread(temp_spread)
-            finally:
-                if not self._services.config.get("debug"):
-                    dest.unlink(missing_ok=True)
-            emit.progress("Tests succeeded")
+        self._services.get("testing").test(pathlib.Path.cwd())
+        emit.progress("Tests succeeded")
 
 
 class CleanCommand(_BaseLifecycleCommand):

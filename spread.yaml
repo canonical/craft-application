@@ -12,6 +12,8 @@ include:
 exclude:
   - .venv
 
+"bork bork bork": true
+
 backends:
   google:
     key: '$(HOST: echo "$SPREAD_GOOGLE_KEY")'
