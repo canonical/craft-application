@@ -18,6 +18,7 @@ Services
 ========
 
 - The ``TestingService`` now outputs a correct discard script for spread.
+- ``Platforms`` models are more strictly validated.
 
 5.0.0 (2025-03-26)
 ------------------
