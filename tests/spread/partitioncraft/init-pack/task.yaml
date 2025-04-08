@@ -9,7 +9,7 @@ execute: |
   cd init-test
 
   partitioncraft init
-  partitioncraft pack --verbosity=debug
+  partitioncraft pack
   partitioncraft clean
 
   if [[ $(find . -maxdepth 1 -name '*-default.partitioncraft') == "" ]]; then
