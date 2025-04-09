@@ -24,7 +24,7 @@ import tempfile
 
 from craft_cli import CraftError, emit
 
-from craft_application import models, util
+from craft_application import models, os_release, util
 
 from . import base
 
@@ -89,10 +89,13 @@ class TestingService(base.AppService):
         :param spread_yaml: The path of the processed spread.yaml
         """
         emit.debug("Running spread tests.")
+
+        system = self._get_system()
+
         try:
             with emit.open_stream("Running spread tests") as stream:
                 subprocess.run(
-                    [self._get_spread_executable(), "-v", "craft:"],
+                    [self._get_spread_executable(), "-v", "craft:" + system],
                     check=True,
                     stdout=stream,
                     stderr=stream,
@@ -105,19 +108,38 @@ class TestingService(base.AppService):
                 retcode=exc.returncode,
             )
 
+    def _get_backend_type(self) -> str:
+        return "ci" if os.environ.get("CI") else "lxd-vm"
+
+    def _get_system(self) -> str:
+        btype = self._get_backend_type()
+
+        if btype == "ci":
+            try:
+                osrel = os_release.OsRelease()
+                id = osrel.id()
+                system_id = osrel.system_id()
+                system = f"{id}-{system_id}"
+            except (CraftError, FileNotFoundError):
+                system = ""
+        else:
+            system = ""
+
+        return system
+
     def _get_backend(self) -> models.SpreadBackend:
-        name = "ci" if os.environ.get("CI") else "lxd-vm"
+        btype = self._get_backend_type()
 
         return models.SpreadBackend(
             type="adhoc",
             # Allocate and discard occur on the host.
-            allocate=f"ADDRESS $(./spread/.extension allocate {name})",
-            discard=f"./spread/.extension discard {name}",
+            allocate=f"ADDRESS $(./spread/.extension allocate {btype})",
+            discard=f"./spread/.extension discard {btype}",
             # Each of these occur within the spread runner.
-            prepare=f'"$PROJECT_PATH"/spread/.extension backend-prepare {name}',
-            restore=f'"$PROJECT_PATH"/spread/.extension backend-restore {name}',
-            prepare_each=f'"$PROJECT_PATH"/spread/.extension backend-prepare-each {name}',
-            restore_each=f'"$PROJECT_PATH"/spread/.extension backend-restore-each {name}',
+            prepare=f'"$PROJECT_PATH"/spread/.extension backend-prepare {btype}',
+            restore=f'"$PROJECT_PATH"/spread/.extension backend-restore {btype}',
+            prepare_each=f'"$PROJECT_PATH"/spread/.extension backend-prepare-each {btype}',
+            restore_each=f'"$PROJECT_PATH"/spread/.extension backend-restore-each {btype}',
         )
 
     def _get_spread_executable(self) -> str:
