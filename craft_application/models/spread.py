@@ -28,7 +28,7 @@ class SpreadBase(CraftBaseModel):
 
     model_config = pydantic.ConfigDict(
         CraftBaseModel.model_config,  # type: ignore[misc]
-        extra="ignore",
+        extra="allow",
     )
 
 
@@ -67,6 +67,11 @@ class CraftSpreadSuite(SpreadBase):
 class CraftSpreadYaml(SpreadBase):
     """Simplified spread project configuration."""
 
+    model_config = pydantic.ConfigDict(
+        SpreadBase.model_config,  # type: ignore[misc]
+        extra="forbid",
+    )
+
     backends: dict[str, CraftSpreadBackend]
     suites: dict[str, CraftSpreadSuite]
     exclude: list[str] | None = None
@@ -98,19 +103,15 @@ class SpreadBaseModel(SpreadBase):
 class SpreadSystem(SpreadBaseModel):
     """Processed spread system configuration."""
 
-    username: str
-    password: str
+    username: str | None = None
+    password: str | None = None
     workers: int | None = None
 
     @classmethod
     def from_craft(cls, simple: CraftSpreadSystem | None) -> Self:
         """Create a spread system configuration from the simplified version."""
         workers = simple.workers if simple else 1
-        return cls(
-            workers=workers,
-            username="spread",
-            password="spread",  # noqa: S106 (possible hardcoded password)
-        )
+        return cls(workers=workers)
 
 
 class SpreadBackend(SpreadBaseModel):
