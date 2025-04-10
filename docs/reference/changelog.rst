@@ -19,7 +19,7 @@ Services
 
 - The ``TestingService`` now outputs a correct discard script for spread.
 - ``Platforms`` models are more strictly validated.
-- ``spread.yaml`` files are parsed strictly for  top level keys, but pass through
+- ``spread.yaml`` files are parsed strictly for top level keys, but pass through
   second level keys to the spread process.
 - Spread tests run on their runners as root.
 
