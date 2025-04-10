@@ -4,7 +4,7 @@
 Changelog
 *********
 
-5.0.1 (2025-MM-DD)
+5.0.1 (2025-04-10)
 ------------------
 
 Commands
@@ -19,6 +19,8 @@ Services
 
 - The ``TestingService`` now outputs a correct discard script for spread.
 - ``Platforms`` models are more strictly validated.
+- Raise ``ProjectGenerationError`` instead of ``RuntimeError`` in ``ProjectService``
+  when a project fails to generate.
 
 5.0.0 (2025-03-26)
 ------------------
