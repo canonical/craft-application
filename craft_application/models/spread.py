@@ -67,6 +67,11 @@ class CraftSpreadSuite(SpreadBase):
 class CraftSpreadYaml(SpreadBase):
     """Simplified spread project configuration."""
 
+    model_config = pydantic.ConfigDict(
+        SpreadBase.model_config,  # type: ignore[misc]
+        extra="forbid",
+    )
+
     backends: dict[str, CraftSpreadBackend]
     suites: dict[str, CraftSpreadSuite]
     exclude: list[str] | None = None
@@ -179,11 +184,6 @@ class SpreadSuite(SpreadBaseModel):
 
 class SpreadYaml(SpreadBaseModel):
     """Processed spread project configuration."""
-
-    model_config = pydantic.ConfigDict(
-        SpreadBaseModel.model_config,  # type: ignore[misc]
-        extra="forbid",
-    )
 
     project: str
     environment: dict[str, str]
