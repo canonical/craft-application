@@ -70,7 +70,7 @@ class ProjectService(base.AppService):
         """
         self._build_on = craft_platforms.DebianArchitecture.from_host()
         if self.is_configured:
-            raise RuntimeError("Project is already configured.")
+            raise errors.ProjectGenerationError("Project is already configured.")
 
         platforms = self.get_platforms()
         if platform and platform not in platforms:
@@ -97,7 +97,7 @@ class ProjectService(base.AppService):
                 if build_for:
                     # Gives a clean error if the value of build_for is invalid.
                     _convert_build_for(build_for)
-                    raise RuntimeError(
+                    raise errors.ProjectGenerationError(
                         f"Cannot generate a project that builds on "
                         f"{self._build_on} and builds for {build_for}"
                     )

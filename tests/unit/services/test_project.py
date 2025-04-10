@@ -548,16 +548,16 @@ def test_cannot_reconfigure(
     real_project_service.configure(platform=fake_platform, build_for=build_for)
 
     # Test that we can't re-render no matter the arguments.
-    with pytest.raises(RuntimeError, match="Project is already configured."):
+    with pytest.raises(errors.ProjectGenerationError, match="Project is already configured."):
         real_project_service.configure(platform=fake_platform, build_for=build_for)
 
-    with pytest.raises(RuntimeError, match="Project is already configured."):
+    with pytest.raises(errors.ProjectGenerationError, match="Project is already configured."):
         real_project_service.configure(platform=fake_platform, build_for=None)
 
-    with pytest.raises(RuntimeError, match="Project is already configured."):
+    with pytest.raises(errors.ProjectGenerationError, match="Project is already configured."):
         real_project_service.configure(build_for=build_for, platform=None)
 
-    with pytest.raises(RuntimeError, match="Project is already configured."):
+    with pytest.raises(errors.ProjectGenerationError, match="Project is already configured."):
         real_project_service.configure(platform=None, build_for=None)
 
 
@@ -610,14 +610,14 @@ def test_get_by_build_for(
 ):
     try:
         real_project_service.configure(build_for=build_for, platform=None)
-    except RuntimeError as exc:
+    except errors.ProjectGenerationError as exc:
         pytest.skip(f"Not a valid build on/for combo: {exc}")
     # This test takes two paths because not all build-on/build-for combinations are
     # valid. If the combination is valid, we check that we got the expected output.
     # If the combination is invalid, we check that the error was correct.
     try:
         result = real_project_service.get()
-    except RuntimeError as exc:
+    except errors.ProjectGenerationError as exc:
         assert (  # noqa: PT017
             exc.args[0]
             == f"Cannot generate a project that builds on {fake_host_architecture} and builds for {build_for}"

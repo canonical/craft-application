@@ -38,7 +38,7 @@ from jinja2 import FileSystemLoader
 from typing_extensions import override
 
 import craft_application
-from craft_application import application, git, launchpad, models, services
+from craft_application import application, errors, git, launchpad, models, services
 from craft_application.services import service_factory
 from craft_application.services.fetch import FetchService
 from craft_application.util import yaml
@@ -454,7 +454,7 @@ def fake_services(
 
     try:
         factory.get("project").configure(platform=platform, build_for=build_for)
-    except RuntimeError as exc:
+    except errors.ProjectGenerationError as exc:
         pytest.skip(str(exc))
     yield factory
 

@@ -47,6 +47,10 @@ class ProjectFileError(CraftError):
     """Errors to do with the project file or directory."""
 
 
+class ProjectGenerationError(CraftError):
+    """Errors to do with prime project generation."""
+
+
 class ProjectFileMissingError(ProjectFileError, FileNotFoundError):
     """Error finding project file."""
 
