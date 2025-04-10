@@ -97,7 +97,7 @@ class ProjectService(base.AppService):
                 if build_for:
                     # Gives a clean error if the value of build_for is invalid.
                     _convert_build_for(build_for)
-                    raise RuntimeError(
+                    raise errors.ProjectGenerationError(
                         f"Cannot generate a project that builds on "
                         f"{self._build_on} and builds for {build_for}"
                     )

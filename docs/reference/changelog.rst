@@ -19,6 +19,8 @@ Services
 
 - The ``TestingService`` now outputs a correct discard script for spread.
 - ``Platforms`` models are more strictly validated.
+- Raise ``ProjectGenerationError`` instead of ``RuntimeError`` in ``ProjectService``
+  when a project fails to generate.
 - ``spread.yaml`` files are parsed strictly for top level keys, but pass through
   second level keys to the spread process.
 - Spread tests run on their runners as root.
