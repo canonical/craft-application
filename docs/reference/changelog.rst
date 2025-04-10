@@ -4,7 +4,7 @@
 Changelog
 *********
 
-5.0.1 (2025-MM-DD)
+5.0.1 (2025-04-10)
 ------------------
 
 Commands
@@ -19,6 +19,9 @@ Services
 
 - The ``TestingService`` now outputs a correct discard script for spread.
 - ``Platforms`` models are more strictly validated.
+- ``spread.yaml`` files are parsed strictly for  top level keys, but pass through
+  second level keys to the spread process.
+- Spread tests run on their runners as root.
 
 5.0.0 (2025-03-26)
 ------------------
