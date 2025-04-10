@@ -548,16 +548,24 @@ def test_cannot_reconfigure(
     real_project_service.configure(platform=fake_platform, build_for=build_for)
 
     # Test that we can't re-render no matter the arguments.
-    with pytest.raises(errors.ProjectGenerationError, match="Project is already configured."):
+    with pytest.raises(
+        errors.ProjectGenerationError, match="Project is already configured."
+    ):
         real_project_service.configure(platform=fake_platform, build_for=build_for)
 
-    with pytest.raises(errors.ProjectGenerationError, match="Project is already configured."):
+    with pytest.raises(
+        errors.ProjectGenerationError, match="Project is already configured."
+    ):
         real_project_service.configure(platform=fake_platform, build_for=None)
 
-    with pytest.raises(errors.ProjectGenerationError, match="Project is already configured."):
+    with pytest.raises(
+        errors.ProjectGenerationError, match="Project is already configured."
+    ):
         real_project_service.configure(build_for=build_for, platform=None)
 
-    with pytest.raises(errors.ProjectGenerationError, match="Project is already configured."):
+    with pytest.raises(
+        errors.ProjectGenerationError, match="Project is already configured."
+    ):
         real_project_service.configure(platform=None, build_for=None)
 
 
