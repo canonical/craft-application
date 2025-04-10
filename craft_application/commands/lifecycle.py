@@ -17,7 +17,6 @@ from __future__ import annotations
 
 import argparse
 import pathlib
-import shutil
 import subprocess
 import textwrap
 from typing import Any
@@ -454,10 +453,11 @@ class TestCommand(PackCommand):
         step_name: str | None = None,
         **kwargs: Any,
     ) -> None:
-        emit.progress(
-            "The test command is experimental and subject to change without warning.",
-            permanent=True,
-        )
+        if not util.is_managed_mode():
+            emit.progress(
+                "The test command is experimental and subject to change without warning.",
+                permanent=True,
+            )
         # Output into the spread directory.
         parsed_args.output = pathlib.Path.cwd() / "spread"
         parsed_args.output.mkdir(exist_ok=True)
@@ -470,28 +470,9 @@ class TestCommand(PackCommand):
             # Run the rest of this outside the managed instance.
             return
 
-        emit.progress("Testing project.")
-
-        dest = pathlib.Path.cwd() / TEMP_SPREAD_FILE_NAME
-
-        spread_path = pathlib.Path.cwd() / "spread.yaml"
-        spread_backup = spread_path.with_suffix(".yaml~")
-        try:
-            self._services.testing.process_spread_yaml(dest)
-
-            # For now we need to modify the spread.yaml file in-place.
-            # See: https://github.com/canonical/spread/issues/225
-            spread_backup.unlink(missing_ok=True)
-            spread_backup.hardlink_to(spread_path)
-            shutil.move(dest, spread_path)
-
-            self._services.testing.run_spread(dest)
-        finally:
-            if not self._services.config.get("debug"):
-                dest.unlink(missing_ok=True)
-            # See: https://github.com/canonical/spread/issues/225
-            spread_path.unlink(missing_ok=True)
-            spread_path.hardlink_to(spread_backup)
+        emit.progress("Testing project")
+        self._services.get("testing").test(pathlib.Path.cwd())
+        emit.progress("Tests succeeded")
 
 
 class CleanCommand(_BaseLifecycleCommand):

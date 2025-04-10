@@ -112,13 +112,7 @@ def test_start_service_already_up(app_service, request):
 @pytest.mark.parametrize(
     "port",
     [
-        pytest.param(
-            fetch._DEFAULT_CONFIG.control,
-            marks=pytest.mark.xfail(
-                reason="Needs https://github.com/canonical/fetch-service/issues/208 fixed",
-                strict=True,
-            ),
-        ),
+        pytest.param(fetch._DEFAULT_CONFIG.control),
         fetch._DEFAULT_CONFIG.proxy,
     ],
 )

@@ -4,6 +4,22 @@
 Changelog
 *********
 
+5.0.1 (2025-MM-DD)
+------------------
+
+Commands
+========
+
+- ``test`` raises a clear error message if ``spread.yaml`` is missing.
+- The warning that the ``test`` command is experimental is only displayed once.
+- ``test`` no longer overwrites ``spread.yaml``
+
+Services
+========
+
+- The ``TestingService`` now outputs a correct discard script for spread.
+- ``Platforms`` models are more strictly validated.
+
 5.0.0 (2025-03-26)
 ------------------
 

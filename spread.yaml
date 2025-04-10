@@ -12,6 +12,8 @@ include:
 exclude:
   - .venv
 
+"bork bork bork": true
+
 backends:
   google:
     key: '$(HOST: echo "$SPREAD_GOOGLE_KEY")'
@@ -119,7 +121,7 @@ prepare: |
   sudo snap wait system seed.loaded
   # IDK why but if we don't sleep after this we get:
   # error: cannot install "snapd": Post "https://api.snapcraft.io/v2/snaps/refresh": context canceled
-  sleep 2
+  sleep 4
   sudo snap install snapd || sudo snap refresh snapd
   sudo snap wait system seed.loaded
 

@@ -23,11 +23,11 @@ import pathlib
 import re
 import subprocess
 import sys
-from datetime import date
 from textwrap import dedent
 from unittest import mock
 
 import craft_cli
+import craft_cli.pytest_plugin
 import craft_parts
 import craft_platforms
 import craft_providers
@@ -593,79 +593,6 @@ def test_run_success_unmanaged(
         emitter.assert_debug("Running testcraft pass on host")
 
 
-@pytest.mark.skipif(
-    date.today() <= date(2025, 3, 31), reason="run_managed is going away."
-)
-def test_run_success_managed(monkeypatch, app, fake_project, mocker):
-    mocker.patch.object(app, "get_project", return_value=fake_project)
-    app.run_managed = mock.Mock()
-    monkeypatch.setattr(sys, "argv", ["testcraft", "pull"])
-
-    pytest_check.equal(app.run(), 0)
-
-    app.run_managed.assert_called_once_with(None, None)  # --build-for not used
-
-
-@pytest.mark.skipif(
-    date.today() <= date(2025, 3, 31), reason="run_managed is going away."
-)
-def test_run_success_managed_with_arch(monkeypatch, app, fake_project, mocker):
-    mocker.patch.object(app, "get_project", return_value=fake_project)
-    app.run_managed = mock.Mock()
-    arch = get_host_architecture()
-    monkeypatch.setattr(sys, "argv", ["testcraft", "pull", f"--build-for={arch}"])
-
-    pytest_check.equal(app.run(), 0)
-
-    app.run_managed.assert_called_once()
-
-
-@pytest.mark.skipif(
-    date.today() <= date(2025, 3, 31), reason="run_managed is going away."
-)
-def test_run_success_managed_with_platform(monkeypatch, app, fake_project, mocker):
-    mocker.patch.object(app, "get_project", return_value=fake_project)
-    app.run_managed = mock.Mock()
-    monkeypatch.setattr(sys, "argv", ["testcraft", "pull", "--platform=foo"])
-
-    pytest_check.equal(app.run(), 0)
-
-    app.run_managed.assert_called_once_with("foo", None)
-
-
-@pytest.mark.skipif(
-    date.today() <= date(2025, 3, 31), reason="run_managed is going away."
-)
-@pytest.mark.parametrize(
-    ("params", "expected_call"),
-    [
-        ([], mock.call(None, None)),
-        (["--platform=s390x"], mock.call("s390x", None)),
-        (
-            ["--platform", get_host_architecture()],
-            mock.call(get_host_architecture(), None),
-        ),
-        (
-            ["--build-for", get_host_architecture()],
-            mock.call(None, get_host_architecture()),
-        ),
-        (["--build-for", "s390x"], mock.call(None, "s390x")),
-        (["--platform", "s390x,riscv64"], mock.call("s390x", None)),
-        (["--build-for", "s390x,riscv64"], mock.call(None, "s390x")),
-    ],
-)
-def test_run_passes_platforms(
-    monkeypatch, app, fake_project, mocker, params, expected_call
-):
-    mocker.patch.object(app, "get_project", return_value=fake_project)
-    app.run_managed = mock.Mock(return_value=False)
-    monkeypatch.setattr(sys, "argv", ["testcraft", "pull", *params])
-
-    pytest_check.equal(app.run(), 0)
-
-    assert app.run_managed.mock_calls == [expected_call]
-
-
 @pytest.mark.parametrize("return_code", [None, 0, 1])
 def test_run_success_managed_inside_managed(
     monkeypatch, check, app, fake_project, mock_dispatcher, return_code, mocker
@@ -685,6 +612,124 @@ def test_run_success_managed_inside_managed(
         app.run_managed.assert_not_called()
     with check:
         mock_dispatcher.run.assert_called_once_with()
+
+
+class FakeCraftError(Exception):
+    def __init__(self, *args: object) -> None:
+        super().__init__(*args)
+        self.details = "details"
+        self.resolution = "resolution"
+        self.reportable = True
+        self.docs_url = "docs-url"
+        self.doc_slug = "doc-slug"
+        self.logpath_report = True
+        self.retcode = 123
+
+
+@pytest.mark.parametrize(
+    ("exception", "transformed"),
+    [
+        pytest.param(
+            KeyboardInterrupt(),
+            craft_cli.CraftError("Interrupted.", retcode=130),
+        ),
+        pytest.param(
+            craft_cli.CraftError("default"),
+            craft_cli.CraftError("default"),
+        ),
+        pytest.param(
+            craft_cli.CraftError(
+                "message",
+                details="details",
+                resolution="resolution",
+                docs_url="docs_url",
+                reportable=False,
+                logpath_report=False,
+                retcode=-3,
+                doc_slug="sluggy",
+            ),
+            craft_cli.CraftError(
+                "message",
+                details="details",
+                resolution="resolution",
+                docs_url="docs_url",
+                reportable=False,
+                logpath_report=False,
+                retcode=-3,
+                doc_slug="sluggy",
+            ),
+        ),
+        pytest.param(
+            craft_parts.PartsError("message", "details", "resolution", "doc-slug"),
+            craft_cli.CraftError(
+                "message",
+                details="details",
+                resolution="resolution",
+                doc_slug="doc-slug",
+            ),
+        ),
+        pytest.param(
+            craft_providers.ProviderError("brief!", "details", "resolution"),
+            craft_cli.CraftError(
+                "brief!",
+                details="details",
+                resolution="resolution",
+            ),
+        ),
+        pytest.param(
+            craft_platforms.CraftPlatformsError(
+                "brief!",
+                "details",
+                "resolution",
+                docs_url="docs-url",
+                doc_slug="doc_slug",
+                logpath_report=False,
+                reportable=False,
+                retcode=-3,
+            ),
+            craft_cli.CraftError(
+                "brief!",
+                details="details",
+                resolution="resolution",
+                docs_url="docs-url",
+                doc_slug="doc_slug",
+                logpath_report=False,
+                reportable=False,
+                retcode=-3,
+            ),
+        ),
+        pytest.param(
+            FakeCraftError("message"),
+            craft_cli.CraftError(
+                "message",
+                details="details",
+                resolution="resolution",
+                docs_url="docs-url",
+                doc_slug="doc-slug",
+                retcode=123,
+            ),
+        ),
+    ],
+)
+@pytest.mark.usefixtures("production_mode")
+def test_run_exception_transforms(
+    emitter: craft_cli.pytest_plugin.RecordingEmitter,
+    mocker,
+    app: application.Application,
+    exception,
+    transformed: craft_cli.CraftError,
+):
+    mocker.patch.object(app, "_setup_logging")
+    mocker.patch.object(app, "_configure_early_services")
+    mocker.patch.object(app, "_initialize_craft_parts")
+    mocker.patch.object(app, "_load_plugins")
+    mocker.patch.object(app, "_run_inner", side_effect=exception)
+    # Workaround for https://github.com/canonical/craft-cli/issues/162
+    mock_error = mocker.patch.object(craft_cli.messages.Emitter, "error")
+
+    assert app.run() == transformed.retcode
+
+    mock_error.assert_called_once_with(transformed)
 
 
 @pytest.mark.parametrize(

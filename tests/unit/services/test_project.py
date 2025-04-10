@@ -20,7 +20,6 @@ from typing import cast
 from unittest import mock
 
 import craft_platforms
-import pydantic
 import pytest
 import pytest_mock
 from hypothesis import given, strategies
@@ -125,11 +124,6 @@ def test_load_raw_project_invalid(
             for arch in craft_platforms.DebianArchitecture
         ),
         pytest.param(
-            {"my-platform": {"build-on": ["ppc64el"]}},
-            {"my-platform": {"build-on": ["ppc64el"]}},
-            id="only-build-on-bad-name",
-        ),
-        pytest.param(
             {"ppc64el": {"build-on": ["amd64", "riscv64"]}},
             {"ppc64el": {"build-on": ["amd64", "riscv64"], "build-for": ["ppc64el"]}},
             id="only-build-on-valid-name",
@@ -159,11 +153,36 @@ def test_get_platforms(
 @pytest.mark.parametrize(
     ("platforms", "match"),
     [
-        (None, "should be a valid dictionary"),
-        ({"invalid": None}, r"platforms\.invalid\n.+should be a valid dictionary"),
-        (
-            {"my-pf": {"build-on": ["amd66"]}},
+        pytest.param(None, "should be a valid dictionary", id="platforms-null"),
+        pytest.param(
+            {"invalid": None},
+            r"should be a valid dictionary.+'platforms.invalid'",
+            id="invalid-shorthand",
+        ),
+        pytest.param(
+            {"my-pf": {"build-on": ["amd66"], "build-for": ["all"]}},
             "'amd66' is not a valid Debian architecture",
+            id="invalid-build-on",
+        ),
+        pytest.param(
+            {"mine": {"build-on": ["all"], "build-for": ["all"]}},
+            r"'all' cannot be used for 'build-on' \(in field 'platforms.mine.build-on'\)",
+            id="build-on-all",
+        ),
+        pytest.param(
+            {"mine": {"build-on": ["amd64"], "build-for": ["any"]}},
+            r"'any' is not a valid Debian architecture\.",
+            id="build-on-all",
+        ),
+        pytest.param(
+            {"my-platform": {"build-on": ["ppc64el"]}},
+            r"'build-for' required in 'platforms.my-platform'",
+            id="only-build-on-bad-name",
+        ),
+        pytest.param(
+            {"all": None},
+            r"input should be a valid dictionary.+'platforms.all'",
+            id="invalid-short-name",
         ),
     ],
 )
@@ -172,7 +191,7 @@ def test_get_platforms_bad_value(
 ):
     real_project_service._load_raw_project = lambda: {"platforms": platforms}  # type: ignore  # noqa: PGH003
 
-    with pytest.raises(pydantic.ValidationError, match=match):
+    with pytest.raises(errors.CraftValidationError, match=match):
         real_project_service.get_platforms()
 
 

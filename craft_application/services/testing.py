@@ -18,7 +18,9 @@
 
 import os
 import pathlib
+import shutil
 import subprocess
+import tempfile
 
 from craft_cli import CraftError, emit
 
@@ -30,6 +32,26 @@ from . import base
 class TestingService(base.AppService):
     """Service class for testing a project."""
 
+    __test__ = False  # Tell pytest this service is not a test class.
+
+    def test(self, project_path: pathlib.Path) -> None:
+        """Run the full set of spread tests.
+
+        This method is likely the all you need to call.
+
+        :param project_path: the path to the project directory containing spread.yaml.
+        """
+        with tempfile.TemporaryDirectory(
+            prefix=".craft-spread-",
+            dir=project_path,
+        ) as temp_dir:
+            temp_dir_path = pathlib.Path(temp_dir)
+            emit.trace(f"Temporary spread directory: {temp_dir_path}")
+            temp_spread_file = temp_dir_path / "spread.yaml"
+            self.process_spread_yaml(temp_spread_file)
+            emit.trace(f"Temporary spread file:\n{temp_spread_file.read_text()}")
+            self.run_spread(temp_dir_path)
+
     def process_spread_yaml(self, dest: pathlib.Path) -> None:
         """Process the spread configuration file.
 
@@ -37,6 +59,14 @@ class TestingService(base.AppService):
         """
         emit.debug("Processing spread.yaml.")
         spread_path = pathlib.Path("spread.yaml")
+        if not spread_path.is_file():
+            raise CraftError(
+                "Could not find 'spread.yaml' in the current directory.",
+                resolution="Ensure you are in the correct directory or create a spread.yaml file.",
+                reportable=False,
+                logpath_report=False,
+                retcode=os.EX_CONFIG,
+            )
 
         craft_backend = self._get_backend()
 
@@ -50,19 +80,23 @@ class TestingService(base.AppService):
             craft_backend=craft_backend,
         )
 
+        emit.trace(f"Writing processed spread file to {dest}")
         spread_yaml.to_yaml_file(dest)
 
-    def run_spread(self, project_path: pathlib.Path) -> None:
+    def run_spread(self, spread_dir: pathlib.Path) -> None:
         """Run spread on the processed project file.
 
-        :param project_path: The processed project file.
+        :param spread_yaml: The path of the processed spread.yaml
         """
+        emit.debug("Running spread tests.")
         try:
-            with emit.pause():
+            with emit.open_stream("Running spread tests") as stream:
                 subprocess.run(
-                    ["spread", "-v", "craft:"],
+                    [self._get_spread_executable(), "-v", "craft:"],
                     check=True,
-                    env=os.environ | {"SPREAD_PROJECT_FILE": project_path.as_posix()},
+                    stdout=stream,
+                    stderr=stream,
+                    cwd=spread_dir,
                 )
         except subprocess.CalledProcessError as exc:
             raise CraftError(
@@ -76,10 +110,28 @@ class TestingService(base.AppService):
 
         return models.SpreadBackend(
             type="adhoc",
+            # Allocate and discard occur on the host.
             allocate=f"ADDRESS $(./spread/.extension allocate {name})",
-            discard=f'"$PROJECT_PATH"/spread/.extension discard {name}',
+            discard=f"./spread/.extension discard {name}",
+            # Each of these occur within the spread runner.
             prepare=f'"$PROJECT_PATH"/spread/.extension backend-prepare {name}',
             restore=f'"$PROJECT_PATH"/spread/.extension backend-restore {name}',
             prepare_each=f'"$PROJECT_PATH"/spread/.extension backend-prepare-each {name}',
             restore_each=f'"$PROJECT_PATH"/spread/.extension backend-restore-each {name}',
+        )
+
+    def _get_spread_executable(self) -> str:
+        """Get the executable to run for spread.
+
+        :returns: The spread command to use
+        :raises: CraftError if spread cannot be found.
+        """
+        # Spread included in the application.
+        if path := shutil.which("craft.spread"):
+            return path
+        raise CraftError(
+            "Internal error: cannot find a 'craft.spread' executable.",
+            details=f"'{self._app.name} test' needs 'craft.spread' to run.",
+            resolution="This is likely a packaging bug that needs reporting.",
+            retcode=os.EX_SOFTWARE,
         )
