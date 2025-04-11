@@ -48,7 +48,7 @@ def provider_service(app_metadata, fake_project, fake_services, tmp_path):
 
 
 @pytest.fixture
-def mock_services(monkeypatch, app_metadata, fake_project):
+def mock_services(monkeypatch, app_metadata, fake_project, project_path):
     mock_config = mock.Mock(spec=services.ConfigService)
     mock_config.return_value.get.return_value = None
     services.ServiceFactory.register("config", mock_config)
@@ -75,7 +75,9 @@ def mock_services(monkeypatch, app_metadata, fake_project):
     monkeypatch.setattr(
         service_factory, "issubclass", forgiving_is_subclass, raising=False
     )
-    return services.ServiceFactory(app_metadata, project=fake_project)
+    factory = services.ServiceFactory(app_metadata, project=fake_project)
+    factory.update_kwargs("project", project_dir=project_path)
+    return factory
 
 
 @pytest.fixture
