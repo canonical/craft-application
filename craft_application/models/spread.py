@@ -72,6 +72,7 @@ class CraftSpreadYaml(SpreadBase):
         extra="forbid",
     )
 
+    project: str | None = None
     backends: dict[str, CraftSpreadBackend]
     suites: dict[str, CraftSpreadSuite]
     exclude: list[str] | None = None
@@ -213,12 +214,12 @@ class SpreadYaml(SpreadBaseModel):
                 "SUDO_UID": "",
                 "LANG": "C.UTF-8",
                 "LANGUAGE": "en",
-                "PROJECT_PATH": "/home/spread/proj",
+                "PROJECT_PATH": "/root/proj",
             },
             backends=cls._backends_from_craft(simple.backends, craft_backend),
             suites=cls._suites_from_craft(simple.suites),
             exclude=simple.exclude or [".git", ".tox"],
-            path="/home/spread/proj",
+            path="/root/proj",
             prepare=simple.prepare,
             restore=simple.restore,
             prepare_each=simple.prepare_each,

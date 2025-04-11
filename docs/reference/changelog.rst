@@ -4,6 +4,15 @@
 Changelog
 *********
 
+5.0.2 (2025-04-11)
+------------------
+
+Fixes
+=====
+
+- The craft-spread base model now contains an optional ``project`` key. It is currently
+  overwritten by the ``test`` command.
+
 5.0.1 (2025-04-10)
 ------------------
 
