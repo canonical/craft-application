@@ -12,6 +12,7 @@ Fixes
 
 - `#716 <https://github.com/canonical/craft-application/issues/716>`_ - ``prime``
   command fails in managed mode
+- Correctly set SSL_CERT_DIR during pygit2 import on non-Ubuntu systems.
 
 For a complete list of commits, check out the `5.0.3`_ release on GitHub.
 

@@ -36,10 +36,12 @@ from typing_extensions import Self
 try:
     import pygit2  # type: ignore[import-untyped]
 except Exception:  # noqa: BLE001 (narrower types are provided by the import)
+    from ._utils import find_ssl_cert_dir
+
     # This environment comes from ssl.get_default_verify_paths
     _old_env = os.getenv("SSL_CERT_DIR")
-    # Needs updating when the base changes for applications' snap
-    os.environ["SSL_CERT_DIR"] = "/snap/core22/current/etc/ssl/certs"
+
+    os.environ["SSL_CERT_DIR"] = find_ssl_cert_dir()
     import pygit2  # type: ignore[import-untyped]
 
     # Restore the environment in case the application shells out and the
