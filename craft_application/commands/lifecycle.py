@@ -325,6 +325,10 @@ class PrimeCommand(LifecyclePartsCommand):
     ) -> None:
         """Run the prime command."""
         super()._run(parsed_args, step_name=step_name)
+        if self._use_provider(parsed_args=parsed_args):
+            return
+        # Only run the post prime steps in the process that
+        # ran the lifecycle
         self._run_post_prime_steps()
 
 
