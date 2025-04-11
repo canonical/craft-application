@@ -72,6 +72,8 @@ class CraftSpreadYaml(SpreadBase):
         extra="forbid",
     )
 
+    project: str | None = None
+    path: str | None = None
     backends: dict[str, CraftSpreadBackend]
     suites: dict[str, CraftSpreadSuite]
     exclude: list[str] | None = None

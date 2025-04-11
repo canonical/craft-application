@@ -4,6 +4,15 @@
 Changelog
 *********
 
+5.0.2 (2025-04-11)
+------------------
+
+Fixes
+=====
+
+- The craft-spread base model now contains optional ``path`` and ``project`` keys.
+  These keys are overwritten, but are valid to include in the input.
+
 5.0.1 (2025-04-10)
 ------------------
 
