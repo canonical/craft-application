@@ -750,3 +750,65 @@ def test_debug_pack(
         command.run(parsed_args)
 
     mock_subprocess_run.assert_called_once_with(["bash"], check=False)
+
+
+def test_run_post_prime(app_metadata, mock_services, mocker, fake_project_file):
+    command = PrimeCommand(
+        {
+            "app": app_metadata,
+            "services": mock_services,
+        }
+    )
+    mocked_run_post_prime_steps = mocker.patch.object(command, "_run_post_prime_steps")
+
+    parsed_args = argparse.Namespace(
+        destructive_mode=False,
+        parts=[],
+    )
+
+    command.run(parsed_args)
+
+    mocked_run_post_prime_steps.assert_not_called()
+
+
+def test_run_post_prime_destructive_mode(
+    app_metadata, mock_services, mocker, fake_project_file
+):
+    command = PrimeCommand(
+        {
+            "app": app_metadata,
+            "services": mock_services,
+        }
+    )
+    mocked_run_post_prime_steps = mocker.patch.object(command, "_run_post_prime_steps")
+
+    parsed_args = argparse.Namespace(
+        destructive_mode=True,
+        parts=[],
+    )
+
+    command.run(parsed_args)
+
+    mocked_run_post_prime_steps.assert_called_once()
+
+
+@pytest.mark.usefixtures("managed_mode")
+def test_run_post_prime_managed_mode(
+    app_metadata, mock_services, mocker, fake_project_file
+):
+    command = PrimeCommand(
+        {
+            "app": app_metadata,
+            "services": mock_services,
+        }
+    )
+    mocked_run_post_prime_steps = mocker.patch.object(command, "_run_post_prime_steps")
+
+    parsed_args = argparse.Namespace(
+        destructive_mode=False,
+        parts=[],
+    )
+
+    command.run(parsed_args)
+
+    mocked_run_post_prime_steps.assert_called_once()
