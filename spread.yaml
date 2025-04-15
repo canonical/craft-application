@@ -21,6 +21,7 @@ backends:
     halt-timeout: 3h
     systems:
       - ubuntu-24.04-64:
+          image: ubuntu-2404-64
           workers: 4
           memory: 2G
           storage: 10G
