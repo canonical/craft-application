@@ -1,0 +1,8 @@
+name: bad-platforms
+parts: {}
+version: "0.0"
+summary: A platform missing a build-for
+
+platforms:
+  my-laptop:
+    build-on: [amd64, riscv64]
