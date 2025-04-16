@@ -24,7 +24,7 @@ import tempfile
 
 from craft_cli import CraftError, emit
 
-from craft_application import models, util
+from craft_application import models, os_release, util
 
 from . import base
 
@@ -89,10 +89,13 @@ class TestingService(base.AppService):
         :param spread_yaml: The path of the processed spread.yaml
         """
         emit.debug("Running spread tests.")
+
+        system = self._get_system()
+
         try:
             with emit.open_stream("Running spread tests") as stream:
                 subprocess.run(
-                    [self._get_spread_executable(), "-v", "craft:"],
+                    [self._get_spread_executable(), "-v", "craft:" + system],
                     check=True,
                     stdout=stream,
                     stderr=stream,
@@ -105,8 +108,27 @@ class TestingService(base.AppService):
                 retcode=exc.returncode,
             )
 
+    def _get_backend_type(self) -> str:
+        return "ci" if os.environ.get("CI") else "lxd-vm"
+
+    def _get_system(self) -> str:
+        name = self._get_backend_type()
+
+        if name == "ci":
+            try:
+                osrel = os_release.OsRelease()
+                os_id = osrel.id()
+                version_id = osrel.version_id()
+                system = f"{os_id}-{version_id}"
+            except (CraftError, FileNotFoundError):
+                system = ""
+        else:
+            system = ""
+
+        return system
+
     def _get_backend(self) -> models.SpreadBackend:
-        name = "ci" if os.environ.get("CI") else "lxd-vm"
+        name = self._get_backend_type()
 
         return models.SpreadBackend(
             type="adhoc",
