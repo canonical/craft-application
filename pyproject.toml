@@ -68,7 +68,8 @@ dev = [
     "pytest-subprocess~=1.5.2",
     "pytest-time>=0.3.1",
     "responses~=0.25.0",
-    "craft-application[remote]"
+    "craft-application[remote]",
+    "jsonschema>=4.23.0",
 ]
 lint = [
     "black~=24.0",

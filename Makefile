@@ -31,6 +31,11 @@ publish: publish-pypi  ## Publish packages
 publish-pypi: clean pack-pip lint-twine  ##- Publish Python packages to pypi
 	uv tool run twine upload dist/*
 
+.PHONY: schema
+schema: install-uv  ## Make a schema file for testcraft.
+	mkdir -p schema
+	uv run python -c 'from craft_application.models import Project;import json; print(json.dumps(Project.model_json_schema(), indent=2))' > schema/testcraft.json
+
 # Find dependencies that need installing
 APT_PACKAGES :=
 ifeq ($(wildcard /usr/include/libxml2/libxml/xpath.h),)

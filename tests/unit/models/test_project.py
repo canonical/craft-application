@@ -200,7 +200,7 @@ def test_platform_from_platforms(incoming, expected):
         pytest.param({}, "build-on\n  Field required", id="empty"),
         pytest.param(
             {"build-on": [], "build-for": ["all"]},
-            "build-on\n  List should have at least 1 item",
+            "build-on\n  Value should have at least 1 item",
             id="empty-build-on",
         ),
         pytest.param(
