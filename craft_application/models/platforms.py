@@ -106,7 +106,8 @@ class GenericPlatformsDict(dict[str, PT]):
     This class exists to generate Pydantic and JSON schemas for the platforms key on
     a project. By making it a generic, an application can override the Platform
     definition and provide its own PlatformsDict. A side effect of this, however, is
-    that an application cannot simply.
+    that an application cannot simply use the generic directly. Instead, it must create
+    a non-generic child class and use that.
     """
 
     _shorthand_keys: ClassVar[type[enum.Enum] | Iterable[enum.Enum]] = (
