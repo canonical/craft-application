@@ -37,7 +37,7 @@ from craft_providers.actions.snap_installer import Snap
 from craft_providers.lxd import LXDProvider
 from craft_providers.multipass import MultipassProvider
 
-from craft_application import util
+from craft_application import models, util
 from craft_application.services import base
 from craft_application.util import platforms, snap_config
 
@@ -81,6 +81,7 @@ class ProviderService(base.AppService):
         # this is a private attribute because it may not reflect the actual
         # provider name. Instead, self._provider.name should be used.
         self.__provider_name: str | None = provider_name
+        self._pack_state: models.PackState = models.PackState(artifact=None, resources=None)
 
     @classmethod
     def is_managed(cls) -> bool:
@@ -178,6 +179,7 @@ class ProviderService(base.AppService):
                 yield instance
             finally:
                 self._capture_logs_from_instance(instance)
+                self._capture_pack_state_from_instance(instance)
 
     def get_base(
         self,
@@ -212,6 +214,10 @@ class ProviderService(base.AppService):
             packages=self.packages,
             **kwargs,  # type: ignore[arg-type]
         )
+
+    def get_pack_state(self) -> models.PackState:
+        """Get packaging state information."""
+        return self._pack_state
 
     def get_provider(self, name: str | None = None) -> craft_providers.Provider:
         """Get the provider to use.
@@ -345,6 +351,17 @@ class ProviderService(base.AppService):
             else:
                 emit.debug(
                     f"Could not find log file {source_log_path.as_posix()} in instance."
+                )
+
+    def _capture_pack_state_from_instance(self, instance: craft_providers.Executor) -> None:
+        """Fetch the pack state from inside `instance`."""
+        state_path = util.get_managed_pack_state_path(self._app)
+        with instance.temporarily_pull_file(source=state_path, missing_ok=True) as temp:
+            if temp:
+                self._pack_state = models.PackState.from_yaml_file(temp)
+            else:
+                emit.debug(
+                    f"Could not find state file {state_path.as_posix()} in instance."
                 )
 
     def _setup_instance_bashrc(self, instance: craft_providers.Executor) -> None:

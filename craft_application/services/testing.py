@@ -36,7 +36,7 @@ class TestingService(base.AppService):
 
     __test__ = False  # Tell pytest this service is not a test class.
 
-    def test(self, project_path: pathlib.Path) -> None:
+    def test(self, project_path: pathlib.Path, pack_state: models.PackState) -> None:
         """Run the full set of spread tests.
 
         This method is likely the all you need to call.
@@ -50,11 +50,11 @@ class TestingService(base.AppService):
             temp_dir_path = pathlib.Path(temp_dir)
             emit.trace(f"Temporary spread directory: {temp_dir_path}")
             temp_spread_file = temp_dir_path / "spread.yaml"
-            self.process_spread_yaml(temp_spread_file)
+            self.process_spread_yaml(temp_spread_file, pack_state)
             emit.trace(f"Temporary spread file:\n{temp_spread_file.read_text()}")
             self.run_spread(temp_dir_path)
 
-    def process_spread_yaml(self, dest: pathlib.Path) -> None:
+    def process_spread_yaml(self, dest: pathlib.Path, pack_state: models.PackState) -> None:
         """Process the spread configuration file.
 
         :param dest: the output path for spread.yaml.
@@ -72,6 +72,9 @@ class TestingService(base.AppService):
 
         craft_backend = self._get_backend()
 
+        if not pack_state.artifact:
+            raise RuntimeError("No artifact files to test.")
+
         with spread_path.open() as file:
             data = util.safe_yaml_load(file)
 
@@ -80,6 +83,8 @@ class TestingService(base.AppService):
         spread_yaml = models.SpreadYaml.from_craft(
             simple,
             craft_backend=craft_backend,
+            artifact=pack_state.artifact,
+            resources=pack_state.resources or {},
         )
 
         emit.trace(f"Writing processed spread file to {dest}")

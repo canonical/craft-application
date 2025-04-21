@@ -22,17 +22,23 @@ from typing import TYPE_CHECKING
 
 from craft_cli import emit
 
-from craft_application import errors, util
+from craft_application import errors, models, util
 from craft_application.services import base
 
 if TYPE_CHECKING:  # pragma: no cover
     import pathlib
 
-    from craft_application import models
+    from craft_application.application import AppMetadata
+    from craft_application.services import ServiceFactory
 
 
 class PackageService(base.AppService):
     """Business logic for creating packages."""
+
+    def __init__(self, app: AppMetadata, services: ServiceFactory) -> None:
+        super().__init__(app, services)
+        self._resource_map: dict[str, pathlib.Path] | None = None
+
 
     @abc.abstractmethod
     def pack(self, prime_dir: pathlib.Path, dest: pathlib.Path) -> list[pathlib.Path]:
@@ -42,6 +48,28 @@ class PackageService(base.AppService):
         :param dest: Directory into which to write the package(s).
         :returns: A list of paths to created packages.
         """
+
+    # This was implemented as a separate property to allow applications to
+    # retrieve this information without changing the pack method to also
+    # return the resource mapping. The two calls can be consolidated in the
+    # next API change.
+    @property
+    def resource_map(self) -> dict[str, pathlib.Path] | None:
+        """Map resource name to artifact file name."""
+        return self._resource_map
+
+    def write_state(self, artifact: pathlib.Path | None, resources: dict[str, pathlib.Path] | None) -> None:
+        """Write the packaging state."""
+        path = util.get_managed_pack_state_path(self._app)
+        pack_state = models.PackState(artifact=artifact, resources=resources)
+        pack_state.to_yaml_file(path)
+
+    def read_state(self) -> models.PackState:
+        """Read the packaging state."""
+        path = util.get_managed_pack_state_path(self._app)
+        with path.open() as f:
+            data = util.safe_yaml_load(f)
+        return models.PackState.unmarshal(data)
 
     @property
     @abc.abstractmethod
