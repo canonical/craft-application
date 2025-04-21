@@ -84,8 +84,10 @@ types = [
 ]
 docs = [
     "canonical-sphinx~=0.4.0",
+    "pydantic-kitbash==0.0.2",
     "sphinx-autobuild==2024.10.3",
     "sphinx-lint==1.0.0",
+    "sphinxext-rediraffe>=0.2.7",
 ]
 dev-jammy = [
     "python-apt~=2.4.0;sys_platform=='linux'",

@@ -1,3 +1,5 @@
+.. _ProjectService:
+
 .. py:currentmodule:: craft_application.services.project
 
 ``ProjectService``

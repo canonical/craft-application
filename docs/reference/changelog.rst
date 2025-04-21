@@ -13,6 +13,14 @@ Application
 - The application now has craft-cli capture logs from HTTPX by default,
   logging store requests for craft-store's Publisher Gateway.
 
+Models
+======
+
+- A new :class:`~craft_application.models.PlatformsDict` model describes how the
+  ``platforms`` key on a project model is interpreted. Along with this comes a new
+  :doc:`how-to guide </howto/platforms>` that describes how to implement an
+  application-specific ``platforms`` model.
+
 5.0.3 (2025-04-14)
 ------------------
 
@@ -608,7 +616,7 @@ Application
 Models
 ======
 
-* Adds a default ``Platform`` model. See :doc:`platforms</reference/platforms>`
+* Adds a default ``Platform`` model. See :doc:`platforms</reference/models/platforms>`
   for a reference of the model.
 * Adds a default ``get_build_plan()`` function to the ``BuildPlanner`` class.
   See :doc:`Build plans</explanation/build-plans>` for an explanation of how

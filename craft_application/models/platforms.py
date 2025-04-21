@@ -31,13 +31,37 @@ from craft_application.models.constraints import SingleEntryList, UniqueList
 
 
 class Platform(base.CraftBaseModel):
-    """Project platform definition.
+    """A single platform entry in the platforms dictionary.
 
     This model defines how a single value under the ``platforms`` key works for a project.
     """
 
-    build_on: UniqueList[str] | str = pydantic.Field(min_length=1)
-    build_for: SingleEntryList[str] | str
+    build_on: UniqueList[str] | str = pydantic.Field(
+        min_length=1,
+        examples=[
+            "amd64",
+            '["arm64", "riscv64"]',
+        ],
+    )
+    """Architectures to build on.
+
+    If this field is a string containing the build-on architecture, it will be parsed
+    at runtime into a list of strings containing these architectures. This list must
+    contain unique values.
+    """
+    build_for: SingleEntryList[str] | str = pydantic.Field(
+        examples=[
+            "amd64",
+            '["arm64", "riscv64"]',
+        ]
+    )
+    """Target architecture for the build.
+
+    If this field is a string containing the target architecture, it will be parsed at
+    runtime into a single-entry list. ``build-for`` is optional if the name of the
+    platform is a valid ``build-for`` entry, but the model will contain the correct
+    value.
+    """
 
     @pydantic.field_validator("build_on", "build_for", mode="before")
     @classmethod
@@ -114,11 +138,38 @@ class GenericPlatformsDict(dict[str, PT]):
     _shorthand_keys: ClassVar[type[enum.Enum] | Iterable[enum.Enum]] = (
         craft_platforms.DebianArchitecture
     )
+    """This class variable dictates what keys make valid shorthand names.
+
+    Valid shorthand names may be used as keys with a null value, being placed into both
+    ``build-on`` and ``build-for``, as in:
+
+    .. code-block:: yaml
+
+       platforms:
+         amd64:
+
+    or may contain only a ``build-on`` key with an inferred ``build-for``, as in:
+
+    .. code-block:: yaml
+
+       platforms:
+         riscv64:
+           build-on: [amd64, riscv64]
+
+    Platform names that are not valid shorthand must contain both a ``build-on`` and
+    a ``build-for`` key.
+    """
 
     @classmethod
     def __get_pydantic_core_schema__(
         cls, source_type: type, handler: pydantic.GetCoreSchemaHandler
     ) -> cs.CoreSchema:
+        """Get the Pydantic CoreSchema for this PlatformsDict.
+
+        From a Pydantic perspective, this dict is merely a ``dict[str, PT]``, where
+        ``PT`` is the type of the Platform field. It is unlikely to need to override
+        this method.
+        """
         try:
             (value_type,) = get_args(
                 cls.__orig_bases__[0]  # type: ignore[attr-defined]
@@ -134,6 +185,13 @@ class GenericPlatformsDict(dict[str, PT]):
     def __get_pydantic_json_schema__(
         cls, core_schema: cs.CoreSchema, handler: pydantic.GetJsonSchemaHandler
     ) -> pydantic.json_schema.JsonSchemaValue:
+        """Get the JSON schema for this PlatformsDict.
+
+        This method converts the pydantic core schema into a JSON schema dictionary.
+        The default implementation adds the possible values from :attr:`_shorthand_keys`
+        as keys that do not require a value or can have ``build-on`` values without
+        declaring a ``build-for`` value.
+        """
         json_schema = handler(core_schema)
         json_schema = handler.resolve_ref_schema(json_schema)
         arch_pattern_values = "|".join(
@@ -161,8 +219,11 @@ class GenericPlatformsDict(dict[str, PT]):
 
 
 class PlatformsDict(GenericPlatformsDict[Platform]):
-    """A dictionary with a pydantic schema for the general platforms key.
+    """A dictionary with a Pydantic schema for the general platforms key.
 
-    It is a non-generic implementation of GenericPlatformsDict using the default
-    Platforms model.
+    This is the default Pydantic model for the ``platforms`` dictionary on a ``Project``
+    model. Most applications will simply use this without modification, as it provides
+    the default implementation. An application that uses the generic
+    :ref:`platform-schema` may use this directly. Applications that need their own
+    ``Platform`` model can override :py:class:`.GenericPlatformsDict`.
     """
