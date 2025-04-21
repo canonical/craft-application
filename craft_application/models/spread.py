@@ -44,7 +44,7 @@ class CraftSpreadBackend(SpreadBase):
     type: str | None = None
     allocate: str | None = None
     discard: str | None = None
-    systems: list[dict[str, CraftSpreadSystem | None]]
+    systems: list[str | dict[str, CraftSpreadSystem | None]]
     prepare: str | None = None
     restore: str | None = None
     prepare_each: str | None = None
@@ -121,7 +121,7 @@ class SpreadBackend(SpreadBaseModel):
     type: str | None = None
     allocate: str | None = None
     discard: str | None = None
-    systems: list[dict[str, SpreadSystem]] = pydantic.Field(default_factory=list)
+    systems: list[str | dict[str, SpreadSystem]] = pydantic.Field(default_factory=list)
     prepare: str | None = None
     restore: str | None = None
     prepare_each: str | None = None
@@ -143,11 +143,14 @@ class SpreadBackend(SpreadBaseModel):
 
     @staticmethod
     def systems_from_craft(
-        simple: list[dict[str, CraftSpreadSystem | None]],
-    ) -> list[dict[str, SpreadSystem]]:
+        simple: list[str | dict[str, CraftSpreadSystem | None]],
+    ) -> list[str | dict[str, SpreadSystem]]:
         """Create spread systems from the simplified version."""
-        systems: list[dict[str, SpreadSystem]] = []
+        systems: list[str | dict[str, SpreadSystem]] = []
         for item in simple:
+            if isinstance(item, str):
+                systems.append(item)
+                continue
             entry: dict[str, SpreadSystem] = {}
             for name, ssys in item.items():
                 entry[name] = SpreadSystem.from_craft(ssys)
