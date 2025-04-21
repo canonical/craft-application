@@ -17,6 +17,7 @@
 
 import pathlib
 import stat
+from collections.abc import Collection
 from unittest import mock
 
 import pytest
@@ -31,6 +32,53 @@ def testing_service(default_app_metadata) -> TestingService:
         app=default_app_metadata,
         services=mock.Mock(),  # TestingService doesn't rely on other services.
     )
+
+
+@pytest.mark.parametrize("shell", [False, True])
+@pytest.mark.parametrize("shell_after", [False, True])
+@pytest.mark.parametrize("debug", [False, True])
+@pytest.mark.parametrize("reuse", [False, True])
+@pytest.mark.parametrize("tests", [[], [pathlib.Path("tests/my-suite/my-test/")]])
+def test_get_spread_command(
+    testing_service: TestingService,
+    check,
+    in_project_path: pathlib.Path,
+    shell: bool,
+    shell_after: bool,
+    debug: bool,
+    reuse: bool,
+    tests: Collection[pathlib.Path],
+):
+    for test in tests:
+        test_dir = in_project_path / test
+        test_dir.mkdir(parents=True)
+        (test_dir / "task.yaml").touch()
+
+    actual = testing_service._get_spread_command(
+        shell=shell, shell_after=shell_after, debug=debug, reuse=reuse, tests=tests
+    )
+
+    if shell:
+        check.is_in("-shell", actual)
+    else:
+        check.is_not_in("-shell", actual)
+    if shell_after:
+        check.is_in("-shell-after", actual)
+    else:
+        check.is_not_in("-shell-after", actual)
+    if debug:
+        check.is_in("-debug", actual)
+    else:
+        check.is_not_in("-debug", actual)
+    if reuse:
+        check.is_in("-reuse", actual)
+        check.is_in("-resend", actual)
+    else:
+        check.is_not_in("-reuse", actual)
+        check.is_not_in("-resend", actual)
+
+    for test in tests:
+        check.is_in(f"craft:{test}", actual)
 
 
 @pytest.mark.parametrize("spread_name", ["craft.spread"])

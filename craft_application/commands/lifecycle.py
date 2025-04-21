@@ -448,7 +448,13 @@ class TestCommand(PackCommand):
     @override
     def _fill_parser(self, parser: argparse.ArgumentParser) -> None:
         # Skip the parser additions that `pack` adds.
-        super(LifecycleCommand, self)._fill_parser(parser)
+        super(PackCommand, self)._fill_parser(parser)
+        parser.add_argument(
+            "test_path",
+            nargs="*",
+            type=pathlib.Path,
+            default=(),
+        )
 
     @override
     def _run(
@@ -462,6 +468,11 @@ class TestCommand(PackCommand):
                 "The test command is experimental and subject to change without warning.",
                 permanent=True,
             )
+
+        testing_service = self._services.get("testing")
+
+        if parsed_args.test_path:
+            testing_service.validate_tests(parsed_args.test_path)
         # Output into the spread directory.
         parsed_args.output = pathlib.Path.cwd() / "spread"
         parsed_args.output.mkdir(exist_ok=True)
@@ -475,7 +486,13 @@ class TestCommand(PackCommand):
             return
 
         emit.progress("Testing project")
-        self._services.get("testing").test(pathlib.Path.cwd())
+        testing_service.test(
+            pathlib.Path.cwd(),
+            tests=parsed_args.test_path,
+            shell=parsed_args.shell,
+            shell_after=parsed_args.shell_after,
+            debug=parsed_args.debug,
+        )
         emit.progress("Tests succeeded")
 
 
