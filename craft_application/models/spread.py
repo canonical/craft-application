@@ -121,7 +121,9 @@ class SpreadBackend(SpreadBaseModel):
     type: str | None = None
     allocate: str | None = None
     discard: str | None = None
-    systems: list[str | dict[str, SpreadSystem]] = pydantic.Field(default_factory=list)
+    systems: list[str | dict[str, SpreadSystem]] = pydantic.Field(
+        default_factory=list[str | dict[str, SpreadSystem]]
+    )
     prepare: str | None = None
     restore: str | None = None
     prepare_each: str | None = None

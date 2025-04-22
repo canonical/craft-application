@@ -98,7 +98,7 @@ class _SafeYamlLoader(yaml.SafeLoader):
         )
 
 
-def safe_yaml_load(stream: TextIO) -> Any:  # noqa: ANN401 - The YAML could be anything
+def safe_yaml_load(stream: TextIO | str) -> Any:  # noqa: ANN401 - The YAML could be anything
     """Equivalent to pyyaml's safe_load function, but constraining duplicate keys.
 
     :param stream: Any text-like IO object.
@@ -109,7 +109,10 @@ def safe_yaml_load(stream: TextIO) -> Any:  # noqa: ANN401 - The YAML could be a
         # using our own safe loader.
         return yaml.load(stream, Loader=_SafeYamlLoader)  # noqa: S506
     except yaml.YAMLError as error:
-        filename = pathlib.Path(stream.name).name
+        if isinstance(stream, str):
+            filename = "(unknown)"
+        else:
+            filename = pathlib.Path(stream.name).name
         raise errors.YamlError.from_yaml_error(filename, error) from error
 
 
