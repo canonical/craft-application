@@ -29,10 +29,14 @@ from craft_application.models.grammar import (
     get_grammar_aware_part_keywords,
 )
 from craft_application.models.metadata import BaseMetadata
+from craft_application.models.platforms import (
+    GenericPlatformsDict,
+    Platform,
+    PlatformsDict,
+)
 from craft_application.models.project import (
     DEVEL_BASE_INFOS,
     DEVEL_BASE_WARNING,
-    Platform,
     Project,
 )
 from craft_application.models.spread import (
@@ -49,7 +53,9 @@ __all__ = [
     "CraftBaseModel",
     "get_grammar_aware_part_keywords",
     "GrammarAwareProject",
+    "GenericPlatformsDict",
     "Platform",
+    "PlatformsDict",
     "Project",
     "ProjectName",
     "ProjectTitle",
