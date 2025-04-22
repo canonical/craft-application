@@ -666,7 +666,7 @@ def test_shell_after(
     mock_subprocess_run.assert_called_once_with(["bash"], check=False)
 
 
-def xxtest_shell_after_pack(
+def test_shell_after_pack(
     app_metadata,
     fake_services,
     mocker,
