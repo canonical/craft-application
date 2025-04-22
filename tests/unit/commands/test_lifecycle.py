@@ -680,6 +680,7 @@ def test_shell_after_pack(
     )
     mock_lifecycle_run = mocker.patch.object(fake_services.lifecycle, "run")
     mock_pack = mocker.patch.object(fake_services.package, "pack")
+    mocker.patch("craft_application.services.package.PackageService.write_state")
     mocker.patch.object(
         fake_services.lifecycle.project_info, "execution_finished", return_value=True
     )
