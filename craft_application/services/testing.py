@@ -54,7 +54,9 @@ class TestingService(base.AppService):
             emit.trace(f"Temporary spread file:\n{temp_spread_file.read_text()}")
             self.run_spread(temp_dir_path)
 
-    def process_spread_yaml(self, dest: pathlib.Path, pack_state: models.PackState) -> None:
+    def process_spread_yaml(
+        self, dest: pathlib.Path, pack_state: models.PackState
+    ) -> None:
         """Process the spread configuration file.
 
         :param dest: the output path for spread.yaml.

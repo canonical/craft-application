@@ -81,7 +81,9 @@ class ProviderService(base.AppService):
         # this is a private attribute because it may not reflect the actual
         # provider name. Instead, self._provider.name should be used.
         self.__provider_name: str | None = provider_name
-        self._pack_state: models.PackState = models.PackState(artifact=None, resources=None)
+        self._pack_state: models.PackState = models.PackState(
+            artifact=None, resources=None
+        )
 
     @classmethod
     def is_managed(cls) -> bool:
@@ -353,7 +355,9 @@ class ProviderService(base.AppService):
                     f"Could not find log file {source_log_path.as_posix()} in instance."
                 )
 
-    def _capture_pack_state_from_instance(self, instance: craft_providers.Executor) -> None:
+    def _capture_pack_state_from_instance(
+        self, instance: craft_providers.Executor
+    ) -> None:
         """Fetch the pack state from inside `instance`."""
         state_path = util.get_managed_pack_state_path(self._app)
         with instance.temporarily_pull_file(source=state_path, missing_ok=True) as temp:
