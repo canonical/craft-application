@@ -39,7 +39,6 @@ class PackageService(base.AppService):
         super().__init__(app, services)
         self._resource_map: dict[str, pathlib.Path] | None = None
 
-
     @abc.abstractmethod
     def pack(self, prime_dir: pathlib.Path, dest: pathlib.Path) -> list[pathlib.Path]:
         """Create one or more packages as appropriate.
@@ -58,7 +57,9 @@ class PackageService(base.AppService):
         """Map resource name to artifact file name."""
         return self._resource_map
 
-    def write_state(self, artifact: pathlib.Path | None, resources: dict[str, pathlib.Path] | None) -> None:
+    def write_state(
+        self, artifact: pathlib.Path | None, resources: dict[str, pathlib.Path] | None
+    ) -> None:
         """Write the packaging state."""
         path = util.get_managed_pack_state_path(self._app)
         pack_state = models.PackState(artifact=artifact, resources=resources)

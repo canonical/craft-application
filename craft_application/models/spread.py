@@ -226,7 +226,7 @@ class SpreadYaml(SpreadBaseModel):
             "CRAFT_ARTIFACT": f"$PROJECT_PATH/{artifact}",
         }
 
-        for name, path in resources:
+        for name, path in resources.items():
             var_name = cls._translate_resource_name(name)
             environment[var_name] = path
 

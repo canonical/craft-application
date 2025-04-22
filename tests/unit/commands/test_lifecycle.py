@@ -683,6 +683,7 @@ def test_shell_after_pack(
     mocker.patch.object(
         fake_services.lifecycle.project_info, "execution_finished", return_value=True
     )
+    mocker.patch("craft_application.services.package.write_state")
     command = PackCommand(
         {
             "app": app_metadata,
