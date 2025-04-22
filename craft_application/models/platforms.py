@@ -16,6 +16,7 @@
 """Models that describe platforms."""
 
 import enum
+import re
 from collections.abc import Iterable, Mapping
 from typing import ClassVar, get_args
 
@@ -135,7 +136,9 @@ class GenericPlatformsDict(dict[str, PT]):
     ) -> pydantic.json_schema.JsonSchemaValue:
         json_schema = handler(core_schema)
         json_schema = handler.resolve_ref_schema(json_schema)
-        arch_pattern_values = "|".join(key.value for key in cls._shorthand_keys)
+        arch_pattern_values = "|".join(
+            re.escape(key.value) for key in cls._shorthand_keys
+        )
         arch_platform_schema = cs.typed_dict_schema(
             {
                 "build-on": cs.typed_dict_field(
