@@ -45,9 +45,8 @@ class Platform(base.CraftBaseModel):
     )
     """Architectures to build on.
 
-    If this field is a string containing the build-on architecture, it will be parsed
-    at runtime into a list of strings containing these architectures. This list must
-    contain unique values.
+    This list must contain unique values. If this field is a string containing the
+    build-on architecture, it will be parsed at runtime into a single-entry list.
     """
     build_for: SingleEntryList[str] | str = pydantic.Field(
         examples=[

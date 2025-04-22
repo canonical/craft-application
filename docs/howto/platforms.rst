@@ -75,7 +75,7 @@ pre-processes the ``platforms`` key before validating the model. The best way to
 this is through a series of integration tests that compare the loading of valid files
 to validation from the schema and vice versa.
 
-Craft-application does this with `a pair of integration tests
+Craft Application does this with `a pair of integration tests
 <platforms_integration_tests_>`_
 that check both valid files and invalid files. It is recommended that you copy these
 tests into your application and modify them as needed.
