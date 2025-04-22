@@ -69,7 +69,7 @@ class AppMetadata:
     summary: str | None = None
     version: str = field(init=False)
     docs_url: str | None = None
-    source_ignore_patterns: list[str] = field(default_factory=list)
+    source_ignore_patterns: list[str] = field(default_factory=list[str])
     managed_instance_project_path = pathlib.PurePosixPath("/root/project")
     project_variables: list[str] = field(default_factory=lambda: ["version"])
     mandatory_adoptable_fields: list[str] = field(default_factory=lambda: ["version"])
