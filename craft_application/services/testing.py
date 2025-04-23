@@ -104,7 +104,7 @@ class TestingService(base.AppService):
         try:
             with emit.open_stream("Running spread tests") as stream:
                 subprocess.run(
-                    [self._get_spread_executable(), "-v", "craft:" + system],
+                    [self._get_spread_executable(), "craft:" + system],
                     check=True,
                     stdout=stream,
                     stderr=stream,
