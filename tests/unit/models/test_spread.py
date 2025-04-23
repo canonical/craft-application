@@ -25,6 +25,10 @@ from craft_application.models.spread import SpreadBackend, SpreadSystem
     [
         (["ubuntu-24.04-64"], ["ubuntu-24.04-64"]),
         ([{"ubuntu-24.04-64": None}], [{"ubuntu-24.04-64": SpreadSystem(workers=1)}]),
+        (
+            ["ubuntu-24.04-64", {"ubuntu-24.04-64": None}],
+            ["ubuntu-24.04-64", {"ubuntu-24.04-64": SpreadSystem(workers=1)}],
+        ),
     ],
 )
 def test_systems_from_craft(systems, expected):
