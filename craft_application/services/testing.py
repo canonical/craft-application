@@ -22,9 +22,11 @@ import shutil
 import subprocess
 import tempfile
 
+import craft_platforms
+import distro
 from craft_cli import CraftError, emit
 
-from craft_application import models, os_release, util
+from craft_application import models, util
 
 from . import base
 
@@ -116,10 +118,10 @@ class TestingService(base.AppService):
 
         if name == "ci":
             try:
-                osrel = os_release.OsRelease()
-                os_id = osrel.id()
-                version_id = osrel.version_id()
-                system = f"{os_id}-{version_id}"
+                distro_base = craft_platforms.DistroBase.from_linux_distribution(
+                    distro.LinuxDistribution()
+                )
+                system = f"{distro_base.distribution}-{distro_base.series}"
             except (CraftError, FileNotFoundError):
                 system = ""
         else:

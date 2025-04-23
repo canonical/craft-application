@@ -19,6 +19,7 @@ import pathlib
 import stat
 from unittest import mock
 
+import craft_platforms
 import pytest
 from craft_cli import CraftError
 
@@ -78,13 +79,13 @@ def test_run_spread(
     testspec: str,
     mocker,
 ):
-    monkeypatch.delenv("CI")
+    monkeypatch.delenv("CI", raising=False)
 
     if env_var:
         monkeypatch.setenv(env_var, value)
-    mocker.patch("craft_application.os_release.OsRelease.id", return_value="id")
     mocker.patch(
-        "craft_application.os_release.OsRelease.version_id", return_value="1.0"
+        "craft_platforms.DistroBase.from_linux_distribution",
+        return_value=craft_platforms.DistroBase("id", "1.0"),
     )
     mocker.patch("shutil.which", return_value="spread")
     mock_run = mocker.patch("subprocess.run")
