@@ -598,7 +598,6 @@ def test_instance_clean_existing(
     clean_existing,
     mock_capture_pack_state,
 ):
-
     arch = craft_platforms.DebianArchitecture.from_host()
     base_name = craft_platforms.DistroBase("ubuntu", "24.04")
     build_info = craft_platforms.BuildInfo("foo", arch, arch, base_name)
