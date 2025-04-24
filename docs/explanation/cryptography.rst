@@ -11,7 +11,7 @@ Remote building
 ~~~~~~~~~~~~~~~
 
 Craft Application uses `launchpadlib`_ to interact with the `Launchpad`_ API and trigger
-remote builds. Login credentials for Launchpad are stored in an plain text file in the
+remote builds. Login credentials for Launchpad are stored in a plain text file in the
 XDG data directory.
 
 Arbitrary network connection
