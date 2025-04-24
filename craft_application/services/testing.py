@@ -137,11 +137,14 @@ class TestingService(base.AppService):
         if debug:
             cmd.append("-debug")
 
+        system = self._get_system()
+        backend_system_str = f"craft:{system}" if system else "craft"
+
         if tests:
             self.validate_tests(tests)
-            cmd.extend(f"craft:{test}" for test in tests)
+            cmd.extend(f"{backend_system_str}:{test}" for test in tests)
         else:
-            cmd.append("craft:")
+            cmd.append(f"{backend_system_str}:")
 
         emit.debug(f"Running spread as: {shlex.join(cmd)}")
 
@@ -161,13 +164,10 @@ class TestingService(base.AppService):
         :param spread_dir: The working directory where spread should run.
         :param shell: Whether to pass the ``-shell`` option to spread.
         """
+        emit.debug("Running spread tests.")
         spread_command = self._get_spread_command(
             tests=tests, shell=shell, shell_after=shell_after, debug=debug
         )
-
-        emit.debug("Running spread tests.")
-
-        system = self._get_system()
 
         try:
             with emit.open_stream("Running spread tests") as stream:

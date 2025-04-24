@@ -38,7 +38,6 @@ def testing_service(default_app_metadata) -> TestingService:
 @pytest.mark.parametrize("shell", [False, True])
 @pytest.mark.parametrize("shell_after", [False, True])
 @pytest.mark.parametrize("debug", [False, True])
-@pytest.mark.parametrize("reuse", [False, True])
 @pytest.mark.parametrize("tests", [[], [pathlib.Path("tests/my-suite/my-test/")]])
 def test_get_spread_command(
     testing_service: TestingService,
@@ -47,7 +46,6 @@ def test_get_spread_command(
     shell: bool,
     shell_after: bool,
     debug: bool,
-    reuse: bool,
     tests: Collection[pathlib.Path],
 ):
     for test in tests:
@@ -56,7 +54,7 @@ def test_get_spread_command(
         (test_dir / "task.yaml").touch()
 
     actual = testing_service._get_spread_command(
-        shell=shell, shell_after=shell_after, debug=debug, reuse=reuse, tests=tests
+        shell=shell, shell_after=shell_after, debug=debug, tests=tests
     )
 
     if shell:
@@ -71,12 +69,6 @@ def test_get_spread_command(
         check.is_in("-debug", actual)
     else:
         check.is_not_in("-debug", actual)
-    if reuse:
-        check.is_in("-reuse", actual)
-        check.is_in("-resend", actual)
-    else:
-        check.is_not_in("-reuse", actual)
-        check.is_not_in("-resend", actual)
 
     for test in tests:
         check.is_in(f"craft:{test}", actual)
@@ -116,7 +108,8 @@ def test_process_without_spread_file(new_dir, testing_service):
 
 
 @pytest.mark.parametrize(
-    ("env_var", "value", "testspec"), [("", "", "craft:"), ("CI", "1", "craft:id-1.0")]
+    ("env_var", "value", "testspec"),
+    [("", "", "craft:"), ("CI", "1", "craft:id-1.0:")],
 )
 def test_run_spread(
     testing_service: TestingService,
