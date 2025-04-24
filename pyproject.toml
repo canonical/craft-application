@@ -113,7 +113,7 @@ rye = { dev-dependencies = [
 ] }
 
 [tool.setuptools.dynamic]
-readme = {file = "README.rst"}
+readme = {file = "README.md"}
 
 [tool.setuptools_scm]
 write_to = "craft_application/_version.py"
@@ -141,9 +141,9 @@ git_describe_command = [
     "*[^0-9.]*",
 ]
 
-[tool.setuptools.packages.find]
-include = ["*craft*"]
-namespaces = false
+[tool.setuptools.package-dir]
+"craft_application" = "craft_application"
+"craft_parts_docs" = "docs/common"
 
 [tool.codespell]
 ignore-words-list = "buildd,crate,keyserver,comandos,ro,dedent,dedented"
