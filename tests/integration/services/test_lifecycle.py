@@ -171,8 +171,13 @@ def test_package_repositories_in_overlay(
         sources_path.parent.mkdir(parents=True, exist_ok=True)
         sources_path.touch()
 
-    mocker.patch("craft_archives.repo.apt_key_manager.AptKeyManager.install_key_from_keyserver", new=fake_install_key)
-    mocker.patch("craft_archives.repo.apt_sources_manager.AptSourcesManager._install_sources")
+    mocker.patch(
+        "craft_archives.repo.apt_key_manager.AptKeyManager.install_key_from_keyserver",
+        new=fake_install_key,
+    )
+    mocker.patch(
+        "craft_archives.repo.apt_sources_manager.AptSourcesManager._install_sources"
+    )
 
     fake_project.package_repositories = package_repositories
     fake_project.parts = parts
