@@ -77,9 +77,9 @@ Test your validation and schema
 After building a custom platforms model, it is important to ensure that your schema
 and the actual project
 are treated the same way. This is necessary because the :ref:`ProjectService`
-pre-processes the ``platforms`` key before validating the model. The best way to do
-this is through a series of integration tests that compare the loading of valid files
-to validation from the schema and vice versa.
+pre-processes the ``platforms`` key before validating the model. The best way to
+audit is through a series of integration tests that compare the loading of valid files
+to validation from the schema, and the other way around.
 
 Craft Application does this with `a pair of integration tests
 <platforms_integration_tests_>`_

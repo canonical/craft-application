@@ -1,7 +1,7 @@
 Models
 ======
 
-Craft application uses `Pydantic`_ to describe the models used in ``<app>.yaml`` files.
+Craft Application uses `Pydantic`_ to describe the models used in ``<app>.yaml`` files.
 This helps generate `JSON schemas`_ for the files, improving editor integration.
 The top-level ``Project`` model is nested with several other models.
 
