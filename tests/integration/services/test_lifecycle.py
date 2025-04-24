@@ -161,6 +161,19 @@ def test_package_repositories_in_overlay(
     # is undesired and will fail without root.
     mocker.patch("craft_application.util.repositories.install_package_repositories")
 
+    # Mock apt key install to avoid failures in keyserver access from the test runners
+    def fake_install_key(self, *, key_id: str, key_server: str):
+        apt_path = tmp_path / "work/overlay/overlay/etc/apt"
+        keyring_path = apt_path / "keyrings/craft-9BE21867.gpg"
+        keyring_path.parent.mkdir(parents=True, exist_ok=True)
+        keyring_path.touch()
+        sources_path = apt_path / "sources.list.d/craft-ppa-mozillateam_ppa.sources"
+        sources_path.parent.mkdir(parents=True, exist_ok=True)
+        sources_path.touch()
+
+    mocker.patch("craft_archives.repo.apt_key_manager.AptKeyManager.install_key_from_keyserver", new=fake_install_key)
+    mocker.patch("craft_archives.repo.apt_sources_manager.AptSourcesManager._install_sources")
+
     fake_project.package_repositories = package_repositories
     fake_project.parts = parts
     service = LifecycleService(
