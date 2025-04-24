@@ -48,7 +48,7 @@ The ``platforms`` dictionary is implemented as a non-generic child class of
 Inheritance
 -----------
 
-Applications may override the default platform model by inheriting from the
+Applications may override the default model for each platform by inheriting from the
 ``craft_application.models.Platform`` class and modifying it as needed.
 There is a how-to guide to :doc:`/howto/platforms` with implementation instructions.
 The class has several validators that may need to be modified.
