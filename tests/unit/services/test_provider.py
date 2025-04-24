@@ -63,6 +63,13 @@ def fake_build_info(fake_base):
     )
 
 
+@pytest.fixture
+def mock_capture_pack_state(mocker) -> None:
+    mocker.patch(
+        "craft_application.services.provider.ProviderService._capture_pack_state_from_instance"
+    )
+
+
 @pytest.mark.parametrize(
     ("given_environment", "expected_environment"),
     [
@@ -555,6 +562,7 @@ def test_instance(
     fake_build_info,
     allow_unstable,
     mock_provider,
+    mock_capture_pack_state,
 ):
     with provider_service.instance(
         fake_build_info, work_dir=tmp_path, allow_unstable=allow_unstable
@@ -588,7 +596,9 @@ def test_instance_clean_existing(
     provider_service,
     mock_provider,
     clean_existing,
+    mock_capture_pack_state,
 ):
+
     arch = craft_platforms.DebianArchitecture.from_host()
     base_name = craft_platforms.DistroBase("ubuntu", "24.04")
     build_info = craft_platforms.BuildInfo("foo", arch, arch, base_name)
@@ -649,7 +659,9 @@ def test_load_bashrc_missing(
 
 
 @pytest.fixture
-def setup_fetch_logs_provider(monkeypatch, provider_service, tmp_path):
+def setup_fetch_logs_provider(
+    monkeypatch, provider_service, mocker, tmp_path, mock_capture_pack_state
+):
     """Return a function that, when called, mocks the provider_service's instance()."""
 
     def _setup(*, should_have_logfile: bool):
@@ -698,7 +710,6 @@ def test_instance_fetch_logs(
     tmp_path,
 ):
     """Test that logs from the build instance are fetched in case of success."""
-
     # Setup the build instance and pretend the command inside it finished successfully.
     provider_service = setup_fetch_logs_provider(should_have_logfile=True)
     mock_append = mocker.patch.object(emit, "append_to_log")
