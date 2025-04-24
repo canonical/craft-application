@@ -5,9 +5,8 @@ When consuming these docs, be sure to substitute |star| and |Starcraft| with the
 appropriate terms for your product. For example:
 
 ```
-.. include:: common/craft-application/how-to/build-remotely.rst
-
 .. |star| replace:: charm
-
 .. |Starcraft| replace:: Charmcraft
+
+.. include:: common/craft-application/how-to/build-remotely.rst
 ```
