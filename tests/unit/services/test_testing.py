@@ -42,12 +42,14 @@ def testing_service(default_app_metadata) -> TestingService:
 def test_get_spread_command(
     testing_service: TestingService,
     check,
+    mocker,
     in_project_path: pathlib.Path,
     shell: bool,
     shell_after: bool,
     debug: bool,
     tests: Collection[pathlib.Path],
 ):
+    mocker.patch("shutil.which", return_value="/usr/local/bin/craft.spread")
     for test in tests:
         test_dir = in_project_path / test
         test_dir.mkdir(parents=True)
