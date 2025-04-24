@@ -4,13 +4,13 @@
 Changelog
 *********
 
-5.0.4 (2025-MM-DD)
+5.0.4 (2025-04-24)
 ------------------
 
 Fixes
 =====
 
-- Fix inconsistent command output in GitRepo.remote_contains, by removing
+- Fix inconsistent command output in ``GitRepo.remote_contains`` by removing
   colors and columns.
 
 For a complete list of commits, check out the `5.0.4`_ release on GitHub.
