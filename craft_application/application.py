@@ -56,6 +56,7 @@ DEFAULT_CLI_LOGGERS = frozenset(
         "craft_providers",
         "craft_store",
         "craft_application",
+        "httpx",  # Used by craft-store
     }
 )
 

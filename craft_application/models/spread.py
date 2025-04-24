@@ -162,7 +162,7 @@ class SpreadSuite(SpreadBaseModel):
     """Processed spread suite configuration."""
 
     summary: str
-    systems: list[str]
+    systems: list[str] | None
     environment: dict[str, str] | None
     prepare: str | None
     restore: str | None

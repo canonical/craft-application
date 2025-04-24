@@ -4,6 +4,20 @@
 Changelog
 *********
 
+5.1.0 (2025-MM-DD)
+------------------
+
+Application
+===========
+
+- The application now has craft-cli capture logs from HTTPX by default,
+  logging store requests for craft-store's Publisher Gateway.
+
+Fixes
+=====
+
+- Set a system matching the host when running the test command on CI.
+
 5.0.4 (2025-04-24)
 ------------------
 

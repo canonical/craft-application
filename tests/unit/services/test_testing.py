@@ -19,6 +19,7 @@ import pathlib
 import stat
 from unittest import mock
 
+import craft_platforms
 import pytest
 from craft_cli import CraftError
 
@@ -64,3 +65,38 @@ def test_get_app_spread_executable_error(
 def test_process_without_spread_file(new_dir, testing_service):
     with pytest.raises(CraftError, match="Could not find 'spread.yaml'"):
         testing_service.process_spread_yaml(new_dir / "wherever")
+
+
+@pytest.mark.parametrize(
+    ("env_var", "value", "testspec"), [("", "", "craft:"), ("CI", "1", "craft:id-1.0")]
+)
+def test_run_spread(
+    testing_service: TestingService,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: pathlib.Path,
+    env_var: str,
+    value: str,
+    testspec: str,
+    mocker,
+):
+    monkeypatch.delenv("CI", raising=False)
+
+    if env_var:
+        monkeypatch.setenv(env_var, value)
+    mocker.patch(
+        "craft_platforms.DistroBase.from_linux_distribution",
+        return_value=craft_platforms.DistroBase("id", "1.0"),
+    )
+    mocker.patch("shutil.which", return_value="spread")
+    mock_run = mocker.patch("subprocess.run")
+
+    testing_service.run_spread(tmp_path)
+    assert mock_run.mock_calls == [
+        mock.call(
+            ["spread", "-v", testspec],
+            check=True,
+            stdout=mock.ANY,
+            stderr=mock.ANY,
+            cwd=tmp_path,
+        ),
+    ]
