@@ -1,7 +1,7 @@
 Customize platforms in a project model
 ======================================
 
-Not all crafts can use the default model for platforms. When it's not possible, the
+Not all applications can use the default model for platforms. When it's not possible, the
 application must perform this override in a prescribed manner:
 
 Override the ``Platform`` model
@@ -69,7 +69,8 @@ said validation.
 Test your validation and schema
 -------------------------------
 
-After building this, it is important to ensure that your schema and the actual project
+After building a custom platforms model, it is important to ensure that your schema
+and the actual project
 are treated the same way. This is necessary because the :ref:`ProjectService`
 pre-processes the ``platforms`` key before validating the model. The best way to do
 this is through a series of integration tests that compare the loading of valid files
