@@ -1,8 +1,11 @@
 Customize platforms in a project model
 ======================================
 
-Not all applications can use the default model for platforms. When it's not possible, the
-application must perform this override in a prescribed manner:
+Most applications can use the default model for platforms, if an application needs to
+extend the ``Platform`` model (for example to limit the available architectures or add
+more fields to a platform description) or adjust the valid platform names (for example
+to provide alternative shorthand values), it must do so in the following prescribed
+manner.
 
 Override the ``Platform`` model
 -------------------------------
@@ -12,8 +15,6 @@ model with your own platform definition. If possible, it is best to make a child
 model that inherits from ``Platform`` and overrides the various validators as needed.
 The ``Platform`` model does not need to take into account shorthand forms that are
 missing either the ``build-on`` or ``build-for`` fields.
-
-Overriding the ``Platform`` model may not always be necessary.
 
 Make a ``PlatformsDict``
 ------------------------
@@ -28,6 +29,7 @@ include (if necessary) your custom ``Platform`` model. If this is the only diffe
 needed, the body of the class can be empty:
 
 .. code-block:: python
+    :caption: mycraft/models/project.py
 
     class MyPlatformsDict(GenericPlatformsDict[MyPlatform]):
         """A custom Platforms dict for MyCraft."""
@@ -37,6 +39,7 @@ If different keys can be considered shorthand values, you can replace
 appropriate set of shorthand keys:
 
 .. code-block:: python
+    :caption: mycraft/models/project.py
 
     class OnlyRiscv64ShorthandDict(GenericPlatformsDict[Platform]):
         """A custom PlatformsDict class that only allows "riscv64" as shorthand."""
@@ -57,6 +60,8 @@ Once you have a non-generic child class of
 project model:
 
 .. code-block:: python
+    :caption: mycraft/models/project.py
+    :emphasize-lines: 4
 
     class MyProject(Project):
         """A Project class for MyCraft."""

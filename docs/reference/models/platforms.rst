@@ -35,7 +35,6 @@ The following shows conceptually all valid ways to create platform entries:
 
 .. kitbash-model:: craft_application.models.Platform
 
-
 Default ``platforms`` schema
 ----------------------------
 

@@ -16,10 +16,10 @@ Application
 Models
 ======
 
-- A new :class:`~craft_application.models.PlatformsDict` model describes how the
-  ``platforms`` key on a project model is interpreted. Along with this comes a new
-  :doc:`how-to guide </howto/platforms>` that describes how to implement an
-  application-specific ``platforms`` model.
+- A new :class:`~craft_application.models.PlatformsDict` dictionary class describes
+  how the ``platforms`` key on a project model is interpreted. Along with this comes
+  a new :doc:`how-to guide </howto/platforms>` that describes how to implement
+  application-specific ``platforms`` keys.
 
 5.0.3 (2025-04-14)
 ------------------
