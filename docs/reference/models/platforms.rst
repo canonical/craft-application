@@ -1,10 +1,10 @@
 Platforms
 =========
 
-The ``platforms`` key on a project has a default schema as well as a way for an
-application to override it.
+A project's ``platforms`` key has a default schema as well as a way for
+applications to override it.
 
-The following shows conceptually all valid ways to create platform entries:
+The following mockup shows all the valid ways to create platform entries:
 
 .. code-block:: yaml
 
@@ -35,8 +35,8 @@ The following shows conceptually all valid ways to create platform entries:
 
 .. kitbash-model:: craft_application.models.Platform
 
-Default ``platforms`` schema
-----------------------------
+Default ``PlatformsDict``
+-------------------------
 
 The ``platforms`` dictionary is implemented as a non-generic child class of
 :class:`~craft_application.models.GenericPlatformsDict`.
