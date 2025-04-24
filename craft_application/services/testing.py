@@ -24,6 +24,8 @@ import subprocess
 import tempfile
 from collections.abc import Collection
 
+import craft_platforms
+import distro
 from craft_cli import CraftError, emit
 
 from craft_application import models, util
@@ -163,7 +165,10 @@ class TestingService(base.AppService):
             tests=tests, shell=shell, shell_after=shell_after, debug=debug
         )
 
-        emit.progress("Running spread tests")
+        emit.debug("Running spread tests.")
+
+        system = self._get_system()
+
         try:
             with emit.open_stream("Running spread tests") as stream:
                 subprocess.run(
@@ -180,8 +185,27 @@ class TestingService(base.AppService):
                 retcode=exc.returncode,
             )
 
+    def _get_backend_type(self) -> str:
+        return "ci" if os.environ.get("CI") else "lxd-vm"
+
+    def _get_system(self) -> str:
+        name = self._get_backend_type()
+
+        if name == "ci":
+            try:
+                distro_base = craft_platforms.DistroBase.from_linux_distribution(
+                    distro.LinuxDistribution()
+                )
+                system = f"{distro_base.distribution}-{distro_base.series}"
+            except (CraftError, FileNotFoundError):
+                system = ""
+        else:
+            system = ""
+
+        return system
+
     def _get_backend(self) -> models.SpreadBackend:
-        name = "ci" if os.environ.get("CI") else "lxd-vm"
+        name = self._get_backend_type()
 
         return models.SpreadBackend(
             type="adhoc",
