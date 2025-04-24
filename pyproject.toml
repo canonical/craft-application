@@ -143,7 +143,7 @@ git_describe_command = [
 
 [tool.setuptools.package-dir]
 "craft_application" = "craft_application"
-"craft_parts_docs" = "docs/common"
+"craft_application_docs" = "docs/common"
 
 [tool.codespell]
 ignore-words-list = "buildd,crate,keyserver,comandos,ro,dedent,dedented"
