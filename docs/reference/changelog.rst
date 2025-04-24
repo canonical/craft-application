@@ -13,6 +13,26 @@ Application
 - The application now has craft-cli capture logs from HTTPX by default,
   logging store requests for craft-store's Publisher Gateway.
 
+Fixes
+======
+
+- `#698 <https://github.com/canonical/craft-application/issues/698>`_ - the spread
+  backend model now allows string system names (not just mappings).
+- Set a system matching the host when running the test command on CI.
+
+For a complete list of commits, check out the `5.1.0`_ release on GitHub.
+
+5.0.4 (2025-04-24)
+------------------
+
+Fixes
+=====
+
+- Fix inconsistent command output in ``GitRepo.remote_contains`` by removing
+  colors and columns.
+
+For a complete list of commits, check out the `5.0.4`_ release on GitHub.
+
 5.0.3 (2025-04-14)
 ------------------
 
@@ -704,3 +724,5 @@ For a complete list of commits, check out the `2.7.0`_ release on GitHub.
 .. _5.0.1: https://github.com/canonical/craft-application/releases/tag/5.0.1
 .. _5.0.2: https://github.com/canonical/craft-application/releases/tag/5.0.2
 .. _5.0.3: https://github.com/canonical/craft-application/releases/tag/5.0.3
+.. _5.0.4: https://github.com/canonical/craft-application/releases/tag/5.0.4
+.. _5.1.0: https://github.com/canonical/craft-application/releases/tag/5.1.0
