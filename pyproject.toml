@@ -113,7 +113,7 @@ rye = { dev-dependencies = [
 ] }
 
 [tool.setuptools.dynamic]
-readme = {file = "README.md"}
+readme = {file = "README.rst"}
 
 [tool.setuptools_scm]
 write_to = "craft_application/_version.py"
