@@ -454,6 +454,7 @@ class TestCommand(PackCommand):
             nargs="*",
             type=pathlib.Path,
             default=(),
+            help="Path to a spread test (directory containing a task.yaml file). If not provided, all tests are run. May be repeated.",
         )
 
     @override
