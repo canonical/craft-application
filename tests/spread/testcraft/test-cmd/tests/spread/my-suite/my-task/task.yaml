@@ -1,0 +1,11 @@
+summary: An example spread test.
+
+prepare: |
+  echo Preparing the test
+
+execute: |
+  echo Running the test
+  env
+
+restore: |
+  echo Restoring the test
