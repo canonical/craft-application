@@ -7,3 +7,4 @@ Explanation
    :maxdepth: 1
 
    build-plans
+   Cryptographic technology <cryptography>

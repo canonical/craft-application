@@ -4,7 +4,7 @@
 Changelog
 *********
 
-5.2.0 (2025-MM-DD)
+5.2.0 (2025-04-25)
 ------------------
 
 Commands
@@ -13,7 +13,19 @@ Commands
 - The ``test`` command now accepts paths to specific tests as well as the
   ``--debug``, ``--shell`` and ``--shell-after`` parameters.
 
-For a complete list of commits, check out the `5.1.0`_ release on GitHub.
+Models
+======
+
+- A new :doc:`how-to guide </howto/platforms>` describes how to implement
+  application-specific ``platforms`` keys.
+
+Services
+========
+
+- The ``TestingService`` now sets environment variables containing the
+  names of the generated artifact and resource files.
+
+For a complete list of commits, check out the `5.2.0`_ release on GitHub.
 
 5.1.0 (2025-04-24)
 ------------------
@@ -639,7 +651,7 @@ Application
 Models
 ======
 
-* Adds a default ``Platform`` model. See :doc:`platforms</reference/platforms>`
+* Adds a default ``Platform`` model. See :doc:`platforms</reference/models/platforms>`
   for a reference of the model.
 * Adds a default ``get_build_plan()`` function to the ``BuildPlanner`` class.
   See :doc:`Build plans</explanation/build-plans>` for an explanation of how
