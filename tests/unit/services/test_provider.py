@@ -638,6 +638,7 @@ def test_load_bashrc_missing(
     fake_build_info,
     allow_unstable,
     mocker,
+    mock_capture_pack_state,
 ):
     """Test that we handle the case where the bashrc file is missing."""
     mock_provider = mock.MagicMock(spec=craft_providers.Provider)
@@ -835,6 +836,7 @@ def test_run_managed(
     fake_build_info: craft_platforms.BuildInfo,
     fetch: bool,
     mock_provider,
+    mock_capture_pack_state,
 ):
     mock_fetch = mock.MagicMock()
     fake_services.register("fetch", mock.Mock(return_value=mock_fetch))
