@@ -432,8 +432,10 @@ dev-plucky = [
 ]
 docs = [
     { name = "canonical-sphinx" },
+    { name = "pydantic-kitbash" },
     { name = "sphinx-autobuild" },
     { name = "sphinx-lint" },
+    { name = "sphinxext-rediraffe" },
 ]
 lint = [
     { name = "black" },
@@ -493,8 +495,10 @@ dev-oracular = [{ name = "python-apt", marker = "sys_platform == 'linux'", speci
 dev-plucky = [{ name = "python-apt", marker = "sys_platform == 'linux'", specifier = ">=2.9.9", index = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels/" }]
 docs = [
     { name = "canonical-sphinx", specifier = "~=0.4.0" },
+    { name = "pydantic-kitbash", specifier = "==0.0.3" },
     { name = "sphinx-autobuild", specifier = "==2024.10.3" },
     { name = "sphinx-lint", specifier = "==1.0.0" },
+    { name = "sphinxext-rediraffe", specifier = ">=0.2.7" },
 ]
 lint = [
     { name = "black", specifier = "~=24.0" },
@@ -1221,6 +1225,21 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/86/aa/837821ecf0c022bbb74ca132e117c358321e72e7f9702d1b6a03758545e2/pydantic_core-2.27.2-pp310-pypy310_pp73-musllinux_1_1_armv7l.whl", hash = "sha256:0296abcb83a797db256b773f45773da397da75a08f5fcaef41f2044adec05f50", size = 2116582, upload_time = "2024-12-18T11:31:17.423Z" },
     { url = "https://files.pythonhosted.org/packages/81/b0/5e74656e95623cbaa0a6278d16cf15e10a51f6002e3ec126541e95c29ea3/pydantic_core-2.27.2-pp310-pypy310_pp73-musllinux_1_1_x86_64.whl", hash = "sha256:0d75070718e369e452075a6017fbf187f788e17ed67a3abd47fa934d001863d9", size = 2151985, upload_time = "2024-12-18T11:31:19.901Z" },
     { url = "https://files.pythonhosted.org/packages/63/37/3e32eeb2a451fddaa3898e2163746b0cffbbdbb4740d38372db0490d67f3/pydantic_core-2.27.2-pp310-pypy310_pp73-win_amd64.whl", hash = "sha256:7e17b560be3c98a8e3aa66ce828bdebb9e9ac6ad5466fba92eb74c4c95cb1151", size = 2004715, upload_time = "2024-12-18T11:31:22.821Z" },
+]
+
+[[package]]
+name = "pydantic-kitbash"
+version = "0.0.3"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "docutils" },
+    { name = "pydantic" },
+    { name = "pyyaml" },
+    { name = "sphinx" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/b1/35/c4ad89e9a866c5473685afabaf1ce4dbcd7988b966d7f5b1eb6ac8463c06/pydantic_kitbash-0.0.3.tar.gz", hash = "sha256:d86c490f7aa31e465910e8d057ef6921fbe9ae001b3b84e8032a7e1f6687e43f", size = 116044, upload_time = "2025-04-24T17:49:43.896Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/d2/db/4c4563ae8597425ea5d7e38aaa75ccdc0a3716a016c653448f5fe074acdd/pydantic_kitbash-0.0.3-py3-none-any.whl", hash = "sha256:d12f0ea24d95a26f96a3911b8ac9967ff26d4a0fc38b21f19132279231b82e96", size = 12279, upload_time = "2025-04-24T17:49:42.729Z" },
 ]
 
 [[package]]
@@ -1960,6 +1979,18 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/3b/44/6716b257b0aa6bfd51a1b31665d1c205fb12cb5ad56de752dfa15657de2f/sphinxcontrib_serializinghtml-2.0.0.tar.gz", hash = "sha256:e9d912827f872c029017a53f0ef2180b327c3f7fd23c87229f7a8e8b70031d4d", size = 16080, upload_time = "2024-07-29T01:10:09.332Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/52/a7/d2782e4e3f77c8450f727ba74a8f12756d5ba823d81b941f1b04da9d033a/sphinxcontrib_serializinghtml-2.0.0-py3-none-any.whl", hash = "sha256:6e2cb0eef194e10c27ec0023bfeb25badbbb5868244cf5bc5bdc04e4464bf331", size = 92072, upload_time = "2024-07-29T01:10:08.203Z" },
+]
+
+[[package]]
+name = "sphinxext-rediraffe"
+version = "0.2.7"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "sphinx" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/1f/b4/e5fbb493f796430230189a1ce5f9beff1ac1b98619fc71ed35deca6059a5/sphinxext-rediraffe-0.2.7.tar.gz", hash = "sha256:651dcbfae5ffda9ffd534dfb8025f36120e5efb6ea1a33f5420023862b9f725d", size = 8735, upload_time = "2021-04-16T11:42:28.206Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/76/4f/c8797e796199e55cf6c8979ecdf5f4b09b81e93f87b3193c759faea63263/sphinxext_rediraffe-0.2.7-py3-none-any.whl", hash = "sha256:9e430a52d4403847f4ffb3a8dd6dfc34a9fe43525305131f52ed899743a5fd8c", size = 8267, upload_time = "2021-04-16T11:42:26.95Z" },
 ]
 
 [[package]]
