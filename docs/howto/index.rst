@@ -7,3 +7,4 @@ How-To
    :maxdepth: 1
 
    partitions
+   platforms

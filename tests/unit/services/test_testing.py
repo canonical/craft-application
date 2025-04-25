@@ -23,6 +23,7 @@ import craft_platforms
 import pytest
 from craft_cli import CraftError
 
+from craft_application import models
 from craft_application.services.testing import TestingService
 
 
@@ -63,8 +64,9 @@ def test_get_app_spread_executable_error(
 
 
 def test_process_without_spread_file(new_dir, testing_service):
+    state = models.PackState(artifact=None, resources=None)
     with pytest.raises(CraftError, match="Could not find 'spread.yaml'"):
-        testing_service.process_spread_yaml(new_dir / "wherever")
+        testing_service.process_spread_yaml(new_dir / "wherever", state)
 
 
 @pytest.mark.parametrize(
@@ -93,7 +95,7 @@ def test_run_spread(
     testing_service.run_spread(tmp_path)
     assert mock_run.mock_calls == [
         mock.call(
-            ["spread", "-v", testspec],
+            ["spread", testspec],
             check=True,
             stdout=mock.ANY,
             stderr=mock.ANY,
