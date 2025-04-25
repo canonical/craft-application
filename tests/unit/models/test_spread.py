@@ -40,7 +40,7 @@ from craft_application.models import spread as model
     ],
 )
 def test_systems_from_craft(systems, expected):
-    assert SpreadBackend.systems_from_craft(systems) == expected
+    assert model.SpreadBackend.systems_from_craft(systems) == expected
 
 
 _CRAFT_SPREAD = """
