@@ -17,9 +17,11 @@
 
 import pathlib
 import stat
+from collections.abc import Collection
 from unittest import mock
 
 import craft_platforms
+import distro
 import pytest
 from craft_cli import CraftError
 
@@ -33,6 +35,59 @@ def testing_service(default_app_metadata) -> TestingService:
         app=default_app_metadata,
         services=mock.Mock(),  # TestingService doesn't rely on other services.
     )
+
+
+@pytest.mark.parametrize("shell", [False, True])
+@pytest.mark.parametrize("shell_after", [False, True])
+@pytest.mark.parametrize("debug", [False, True])
+@pytest.mark.parametrize("tests", [[], [pathlib.Path("tests/my-suite/my-test/")]])
+@pytest.mark.parametrize("is_ci", [False, True])
+def test_get_spread_command(
+    testing_service: TestingService,
+    check,
+    mocker,
+    monkeypatch,
+    in_project_path: pathlib.Path,
+    shell: bool,
+    shell_after: bool,
+    debug: bool,
+    tests: Collection[pathlib.Path],
+    is_ci: bool,
+):
+    # Set the CI environment variable to 1 if is_ci, or empty otherwise.
+    monkeypatch.setenv("CI", "1" * int(is_ci))
+    mocker.patch("shutil.which", return_value="/usr/local/bin/craft.spread")
+    for test in tests:
+        test_dir = in_project_path / test
+        test_dir.mkdir(parents=True)
+        (test_dir / "task.yaml").touch()
+
+    actual = testing_service._get_spread_command(
+        shell=shell, shell_after=shell_after, debug=debug, tests=tests
+    )
+
+    if shell:
+        check.is_in("-shell", actual)
+    else:
+        check.is_not_in("-shell", actual)
+    if shell_after:
+        check.is_in("-shell-after", actual)
+    else:
+        check.is_not_in("-shell-after", actual)
+    if debug:
+        check.is_in("-debug", actual)
+    else:
+        check.is_not_in("-debug", actual)
+
+    for test in tests:
+        if is_ci:
+            distro_base = craft_platforms.DistroBase.from_linux_distribution(
+                distro.LinuxDistribution()
+            )
+            expected = f"{distro_base.distribution}-{distro_base.series}:{test}"
+        else:
+            expected = test
+        check.is_in(f"craft:{expected}", actual)
 
 
 @pytest.mark.parametrize("spread_name", ["craft.spread"])
@@ -70,7 +125,8 @@ def test_process_without_spread_file(new_dir, testing_service):
 
 
 @pytest.mark.parametrize(
-    ("env_var", "value", "testspec"), [("", "", "craft:"), ("CI", "1", "craft:id-1.0")]
+    ("env_var", "value", "testspec"),
+    [("", "", "craft:"), ("CI", "1", "craft:id-1.0:")],
 )
 def test_run_spread(
     testing_service: TestingService,
@@ -95,7 +151,7 @@ def test_run_spread(
     testing_service.run_spread(tmp_path)
     assert mock_run.mock_calls == [
         mock.call(
-            ["spread", testspec],
+            ["spread", "-v", testspec],
             check=True,
             stdout=mock.ANY,
             stderr=mock.ANY,

@@ -1,0 +1,12 @@
+summary: test the test command as though running in CI.
+
+environment:
+  CRAFT_BUILD_ENVIRONMENT/managed: ""
+  CRAFT_BUILD_ENVIRONMENT/destructive: host
+  CI: "1"
+
+execute: |
+  testcraft test tests/spread/my-suite/my-task
+
+restore: |
+  testcraft clean

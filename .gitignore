@@ -148,3 +148,6 @@ dmypy.json
 
 # Visual Studio Code
 .vscode/
+
+# Ignore testcraft and similar files in the main directory.
+/*craft.yaml

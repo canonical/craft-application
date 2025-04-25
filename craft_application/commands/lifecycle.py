@@ -456,7 +456,14 @@ class TestCommand(PackCommand):
     @override
     def _fill_parser(self, parser: argparse.ArgumentParser) -> None:
         # Skip the parser additions that `pack` adds.
-        super(LifecycleCommand, self)._fill_parser(parser)
+        super(PackCommand, self)._fill_parser(parser)
+        parser.add_argument(
+            "test_path",
+            nargs="*",
+            type=pathlib.Path,
+            default=(),
+            help="Path to a spread test (directory containing a task.yaml file). If not provided, all tests are run. May be repeated.",
+        )
 
     @override
     def _run(
@@ -470,10 +477,20 @@ class TestCommand(PackCommand):
                 "The test command is experimental and subject to change without warning.",
                 permanent=True,
             )
+
+        testing_service = self._services.get("testing")
+
+        if parsed_args.test_path:
+            testing_service.validate_tests(parsed_args.test_path)
         # Output into the spread directory.
         parsed_args.output = pathlib.Path.cwd() / "spread"
         parsed_args.output.mkdir(exist_ok=True)
         parsed_args.fetch_service_policy = None
+
+        # Don't enter a shell during the packing step, but save those values
+        # for the testing service.
+        shell, shell_after = parsed_args.shell, parsed_args.shell_after
+        parsed_args.shell, parsed_args.shell_after = (False, False)
 
         # Pack the packages.
         super()._run(parsed_args, step_name, **kwargs)
@@ -494,7 +511,14 @@ class TestCommand(PackCommand):
             raise RuntimeError("No artifact files to test.")
 
         emit.progress("Testing project")
-        self._services.get("testing").test(pathlib.Path.cwd(), pack_state)
+        testing_service.test(
+            pathlib.Path.cwd(),
+            pack_state=pack_state,
+            tests=parsed_args.test_path,
+            shell=shell,
+            shell_after=shell_after,
+            debug=parsed_args.debug,
+        )
         emit.progress("Tests succeeded")
 
 

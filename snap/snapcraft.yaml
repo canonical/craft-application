@@ -8,6 +8,9 @@ version: dev
 grade: devel
 confinement: classic
 
+environment:
+  PATH: "$SNAP/bin:/snap/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+
 base: core24
 platforms:
   amd64:
@@ -87,3 +90,17 @@ parts:
 
       rm "${CRAFT_PART_INSTALL}/bin/python"
       ln -s ../usr/bin/python3.12 "${CRAFT_PART_INSTALL}/bin/python"
+
+  spread:
+    plugin: go
+    source: https://github.com/canonical/spread.git
+    source-commit: d6447c43754c8ca0741901e9db73d5fdb4d21c93 # 'main' as of 28-March-2025
+    build-snaps:
+      - go
+    build-attributes:
+      - enable-patchelf
+    build-environment:
+      - CGO_ENABLED: "0"
+      - GOFLAGS: -trimpath -ldflags=-w -ldflags=-s
+    organize:
+      bin/spread: bin/craft.spread

@@ -18,9 +18,11 @@
 
 import os
 import pathlib
+import shlex
 import shutil
 import subprocess
 import tempfile
+from collections.abc import Collection
 
 import craft_platforms
 import distro
@@ -36,7 +38,32 @@ class TestingService(base.AppService):
 
     __test__ = False  # Tell pytest this service is not a test class.
 
-    def test(self, project_path: pathlib.Path, pack_state: models.PackState) -> None:
+    def validate_tests(self, tests: Collection[pathlib.Path]) -> None:
+        """Validate that each of the provided test names exists."""
+        emit.debug("Checking that the specified test paths are valid")
+        invalid_tests: list[str] = []
+        for test in tests:
+            if (test / "task.yaml").is_file():
+                continue
+            invalid_tests.append(str(test))
+        if invalid_tests:
+            invalid_tests_str = util.humanize_list(invalid_tests, "and")
+            raise CraftError(
+                f"Invalid test value(s): {invalid_tests_str}",
+                resolution="Check the test paths and try again",
+                logpath_report=False,
+            )
+
+    def test(
+        self,
+        project_path: pathlib.Path,
+        pack_state: models.PackState,
+        *,
+        tests: Collection[pathlib.Path] = (),
+        shell: bool = False,
+        shell_after: bool = False,
+        debug: bool = False,
+    ) -> None:
         """Run the full set of spread tests.
 
         This method is likely the all you need to call.
@@ -52,7 +79,13 @@ class TestingService(base.AppService):
             temp_spread_file = temp_dir_path / "spread.yaml"
             self.process_spread_yaml(temp_spread_file, pack_state)
             emit.trace(f"Temporary spread file:\n{temp_spread_file.read_text()}")
-            self.run_spread(temp_dir_path)
+            self.run_spread(
+                temp_dir_path,
+                tests=tests,
+                shell=shell,
+                shell_after=shell_after,
+                debug=debug,
+            )
 
     def process_spread_yaml(
         self, dest: pathlib.Path, pack_state: models.PackState
@@ -95,19 +128,62 @@ class TestingService(base.AppService):
         emit.trace(f"Writing processed spread file to {dest}")
         spread_yaml.to_yaml_file(dest)
 
-    def run_spread(self, spread_dir: pathlib.Path) -> None:
-        """Run spread on the processed project file.
-
-        :param spread_yaml: The path of the processed spread.yaml
-        """
-        emit.debug("Running spread tests.")
+    def _get_spread_command(
+        self,
+        *,
+        tests: Collection[pathlib.Path] = (),
+        shell: bool = False,
+        shell_after: bool = False,
+        debug: bool = False,
+    ) -> list[str]:
+        """Get the full spread command to run."""
+        cmd = [
+            self._get_spread_executable(),
+            "-v",
+        ]
+        if shell:
+            cmd.append("-shell")
+        if shell_after:
+            cmd.append("-shell-after")
+        if debug:
+            cmd.append("-debug")
 
         system = self._get_system()
+        backend_system_str = f"craft:{system}" if system else "craft"
+
+        if tests:
+            self.validate_tests(tests)
+            cmd.extend(f"{backend_system_str}:{test}" for test in tests)
+        else:
+            cmd.append(f"{backend_system_str}:")
+
+        emit.debug(f"Running spread as: {shlex.join(cmd)}")
+
+        return cmd
+
+    def run_spread(
+        self,
+        spread_dir: pathlib.Path,
+        *,
+        tests: Collection[pathlib.Path] = (),
+        shell: bool = False,
+        shell_after: bool = False,
+        debug: bool = False,
+    ) -> None:
+        """Run spread on the processed project file.
+
+        :param spread_dir: The working directory where spread should run.
+        :param shell: Whether to pass the ``-shell`` option to spread.
+        """
+        emit.debug("Running spread tests.")
+        spread_command = self._get_spread_command(
+            tests=tests, shell=shell, shell_after=shell_after, debug=debug
+        )
 
         try:
             with emit.open_stream("Running spread tests") as stream:
                 subprocess.run(
-                    [self._get_spread_executable(), "craft:" + system],
+                    spread_command,
                     check=True,
                     stdout=stream,
                     stderr=stream,
