@@ -44,6 +44,7 @@ from craft_application.models.spread import (
     SpreadBackend,
     SpreadYaml,
 )
+from craft_application.models.state import PackState
 
 
 __all__ = [
@@ -54,6 +55,7 @@ __all__ = [
     "get_grammar_aware_part_keywords",
     "GrammarAwareProject",
     "GenericPlatformsDict",
+    "PackState",
     "Platform",
     "PlatformsDict",
     "Project",

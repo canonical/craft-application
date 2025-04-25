@@ -21,6 +21,7 @@ from craft_application.util.logging import setup_loggers
 from craft_application.util.paths import (
     get_filename_from_url_path,
     get_managed_logpath,
+    get_managed_pack_state_path,
     get_work_dir,
 )
 from craft_application.util.platforms import (
@@ -48,6 +49,7 @@ __all__ = [
     "setup_loggers",
     "get_filename_from_url_path",
     "get_managed_logpath",
+    "get_managed_pack_state_path",
     "get_work_dir",
     "get_host_architecture",
     "convert_architecture_deb_to_platform",

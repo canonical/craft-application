@@ -4,6 +4,14 @@
 Changelog
 *********
 
+5.2.0 (2025-04-25)
+------------------
+
+Services
+========
+
+- The ``TestingService`` now sets environment variables containing the
+  names of the generated artifact and resource files.
 5.1.0 (2025-04-24)
 ------------------
 
