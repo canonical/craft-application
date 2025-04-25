@@ -83,7 +83,7 @@ types = [
     "types-urllib3",
 ]
 docs = [
-    "canonical-sphinx~=0.4.0",
+    "canonical-sphinx[full]~=0.4.0",
     "pydantic-kitbash==0.0.3",
     "sphinx-autobuild==2024.10.3",
     "sphinx-lint==1.0.0",
@@ -143,9 +143,9 @@ git_describe_command = [
     "*[^0-9.]*",
 ]
 
-[tool.setuptools.packages.find]
-include = ["*craft*"]
-namespaces = false
+[tool.setuptools.package-dir]
+"craft_application" = "craft_application"
+"craft_application_docs" = "docs/common"
 
 [tool.codespell]
 ignore-words-list = "buildd,crate,keyserver,comandos,ro,dedent,dedented"
