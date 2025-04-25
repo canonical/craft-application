@@ -8,3 +8,4 @@ How-To
 
    build-remotely
    partitions
+   platforms

@@ -8,7 +8,7 @@ Reference
 
    changelog
    environment-variables
-   platforms
+   models/index
    pytest-plugin
    remote-builds
    services/index

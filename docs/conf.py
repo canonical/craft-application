@@ -40,7 +40,13 @@ linkcheck_ignore = [
     "https://github.com/canonical/[a-z]*craft[a-z-]*/releases/.*",
 ]
 
-extensions = ["canonical_sphinx", "sphinx.ext.autodoc", "sphinx.ext.intersphinx"]
+extensions = [
+    "canonical_sphinx",
+    "sphinx.ext.autodoc",
+    "sphinx.ext.intersphinx",
+    "sphinxext.rediraffe",
+    "pydantic_kitbash",
+]
 
 rst_epilog = """
 .. include:: /reuse/links.txt
@@ -71,3 +77,6 @@ intersphinx_mapping = {
         None,
     ),
 }
+
+# Client-side page redirects.
+rediraffe_redirects = "redirects.txt"

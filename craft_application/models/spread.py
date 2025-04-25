@@ -15,6 +15,9 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Models representing spread projects."""
 
+import pathlib
+import re
+
 import pydantic
 from typing_extensions import Any, Self
 
@@ -210,17 +213,26 @@ class SpreadYaml(SpreadBaseModel):
         simple: CraftSpreadYaml,
         *,
         craft_backend: SpreadBackend,
+        artifact: pathlib.Path,
+        resources: dict[str, pathlib.Path],
     ) -> Self:
         """Create the spread configuration from the simplified version."""
+        environment = {
+            "SUDO_USER": "",
+            "SUDO_UID": "",
+            "LANG": "C.UTF-8",
+            "LANGUAGE": "en",
+            "PROJECT_PATH": "/root/proj",
+            "CRAFT_ARTIFACT": f"$PROJECT_PATH/{artifact}",
+        }
+
+        for name, path in resources.items():
+            var_name = cls._translate_resource_name(name)
+            environment[f"CRAFT_RESOURCE_{var_name}"] = f"$PROJECT_PATH/{path}"
+
         return cls(
             project="craft-test",
-            environment={
-                "SUDO_USER": "",
-                "SUDO_UID": "",
-                "LANG": "C.UTF-8",
-                "LANGUAGE": "en",
-                "PROJECT_PATH": "/root/proj",
-            },
+            environment=environment,
             backends=cls._backends_from_craft(simple.backends, craft_backend),
             suites=cls._suites_from_craft(simple.suites),
             exclude=simple.exclude or [".git", ".tox"],
@@ -232,6 +244,10 @@ class SpreadYaml(SpreadBaseModel):
             kill_timeout=simple.kill_timeout or None,
             reroot="..",
         )
+
+    @staticmethod
+    def _translate_resource_name(name: str) -> str:
+        return re.sub(r"[^A-Za-z0-9_]", "_", name).upper()
 
     @staticmethod
     def _backends_from_craft(
