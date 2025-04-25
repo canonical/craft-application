@@ -4,6 +4,17 @@
 Changelog
 *********
 
+5.2.0 (2025-MM-DD)
+------------------
+
+Commands
+========
+
+- The ``test`` command now accepts paths to specific tests as well as the
+  ``--debug``, ``--shell`` and ``--shell-after`` parameters.
+
+For a complete list of commits, check out the `5.1.0`_ release on GitHub.
+
 5.1.0 (2025-04-24)
 ------------------
 
@@ -726,3 +737,4 @@ For a complete list of commits, check out the `2.7.0`_ release on GitHub.
 .. _5.0.3: https://github.com/canonical/craft-application/releases/tag/5.0.3
 .. _5.0.4: https://github.com/canonical/craft-application/releases/tag/5.0.4
 .. _5.1.0: https://github.com/canonical/craft-application/releases/tag/5.1.0
+.. _5.2.0: https://github.com/canonical/craft-application/releases/tag/5.2.0
