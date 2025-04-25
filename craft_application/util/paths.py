@@ -38,6 +38,17 @@ def get_managed_logpath(app: AppMetadata) -> pathlib.PosixPath:
     )
 
 
+def get_managed_pack_state_path(app: AppMetadata) -> pathlib.PosixPath:
+    """Get the path to the pack state file inside a build instance.
+
+    Note that this always returns a PosixPath, as it refers to a path inside of
+    a Linux-based build instance.
+    """
+    return pathlib.PosixPath(
+        f"/tmp/{app.name}-pack.yaml"  # noqa: S108 - only applies inside managed instance.
+    )
+
+
 def get_filename_from_url_path(url: str) -> str:
     """Get just the filename of a URL path."""
     return pathlib.PurePosixPath(urllib.parse.urlparse(url).path).name

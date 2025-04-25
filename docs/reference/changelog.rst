@@ -13,6 +13,12 @@ Models
 - A new :doc:`how-to guide </howto/platforms>` describes how to implement
   application-specific ``platforms`` keys.
 
+Services
+========
+
+- The ``TestingService`` now sets environment variables containing the
+  names of the generated artifact and resource files.
+
 5.1.0 (2025-04-24)
 ------------------
 
