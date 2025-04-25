@@ -1,7 +1,7 @@
 Customize platforms in a project model
 ======================================
 
-Most applications can use the default model for platforms, if an application needs to
+Most applications can use the default model for platforms. If an application needs to
 extend the ``Platform`` model (for example to limit the available architectures or add
 more fields to a platform description) or adjust the valid platform names (for example
 to provide alternative shorthand values), it must do so in the following prescribed
