@@ -75,7 +75,10 @@ class TestingService(base.AppService):
         craft_backend = self._get_backend()
 
         if not pack_state.artifact:
-            raise RuntimeError("No artifact files to test.")
+            raise CraftError(
+                "No artifact files to test.",
+                resolution="Ensure that artifact files are generated before running the test.",
+            )
 
         with spread_path.open() as file:
             data = util.safe_yaml_load(file)
