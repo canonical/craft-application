@@ -478,6 +478,11 @@ class TestCommand(PackCommand):
         parsed_args.output.mkdir(exist_ok=True)
         parsed_args.fetch_service_policy = None
 
+        # Don't enter a shell during the packing step, but save those values
+        # for the testing service.
+        shell, shell_after = parsed_args.shell, parsed_args.shell_after
+        parsed_args.shell, parsed_args.shell_after = (False, False)
+
         # Pack the packages.
         super()._run(parsed_args, step_name, **kwargs)
 
@@ -489,8 +494,8 @@ class TestCommand(PackCommand):
         testing_service.test(
             pathlib.Path.cwd(),
             tests=parsed_args.test_path,
-            shell=parsed_args.shell,
-            shell_after=parsed_args.shell_after,
+            shell=shell,
+            shell_after=shell_after,
             debug=parsed_args.debug,
         )
         emit.progress("Tests succeeded")

@@ -3,7 +3,7 @@ backends:
     type: adhoc
     allocate: "false"
     systems:
-      - ubuntu-24.04-64:
+      - ubuntu-24.04:
 
 prepare: |
   true
