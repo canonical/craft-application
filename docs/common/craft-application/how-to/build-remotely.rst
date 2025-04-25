@@ -1,6 +1,6 @@
 .. _how-to-build-remotely:
 
-Build |star|\s remotely
+Build a |star| remotely
 =======================
 
 This guide shows you how to offload |star| builds to the Launchpad `build farm
