@@ -6,6 +6,7 @@ appropriate terms for your product. For example:
 
 ```
 .. |star| replace:: charm
+.. |app-command| replace:: charmcraft
 .. |Starcraft| replace:: Charmcraft
 
 .. include:: common/craft-application/how-to/build-remotely.rst

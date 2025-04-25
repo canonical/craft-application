@@ -7,9 +7,10 @@ This guide shows you how to offload |star| builds to the Launchpad `build farm
 <https://launchpad.net/builders>`_. By building remotely, you can concurrently assemble
 |star|\s for all supported architectures.
 
-.. important::
+.. admonition:: Experimental
+    :class: important
 
-    The ``remote-build`` command is experimental and therefore subject to
+    The ``remote-build`` command is an experimental feature and therefore subject to
     change.
 
 
@@ -30,10 +31,10 @@ If you don't already have an account, you can sign up `here
 Ensure project is version-controlled by Git
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-To start a remote build on Launchpad, your project must be version-controlled by
-Git. Note that the repository doesn't need to be hosted on Launchpad prior to
-build, as |Starcraft| will automatically upload the Git repository in the current
-working directory to Launchpad on your behalf.
+To start a remote build on Launchpad, your project must be version-controlled by Git.
+Note that the repository doesn't need to be hosted on Launchpad prior to build, as
+|Starcraft| will automatically upload the Git repository in the current working
+directory to Launchpad on your behalf.
 
 
 .. _start-a-remote-build:
@@ -45,10 +46,14 @@ In the root directory of your project, begin a remote build with:
 
 .. parsed-literal::
 
-    |star|\craft remote-build
+    |app-command| remote-build
 
-When you enter the above command, |Starcraft| will ask you to acknowledge that all
-remote builds are publicly available on Launchpad.
+This will create a temporary Launchpad repository to house your project. If you instead
+wish to upload the repository to an existing Launchpad project, append the ``--project``
+option and the project's name to the previous command.
+
+If the Launchpad project is public, |Starcraft| will then ask you to acknowledge that
+all remote builds are publicly available on Launchpad.
 
 .. terminal::
 
@@ -58,32 +63,18 @@ remote builds are publicly available on Launchpad.
 
 If you aren't logged in or haven't yet :ref:`registered for Launchpad
 <sign-up-for-a-launchpad-account>`, |Starcraft| will ask you to do so in your web
-browser. If this is your first time initiating a remote build from your current
-host, you will then be asked to authorize access to your Launchpad account.
+browser. If this is your first time initiating a remote build from your current host,
+you will then be asked to authorize access to your Launchpad account.
 
-Once authorized, your project is uploaded to Launchpad and placed in the build
-queues for each architecture defined in your project file. Unless interrupted or
-timed out, the status of each build will be continuously monitored and reported
-back to you.
+Once authorized, your project is uploaded to Launchpad and placed in the build queues
+for each architecture defined in your project file. Unless interrupted or timed out, the
+status of each build will be continuously monitored and reported back to you.
 
 If you wish to stop monitoring the build at any time, you can :ref:`interrupt it
 <interrupt-a-build>`.
 
-
-Check the build results
------------------------
-
 Once all of your builds have either built successfully or failed, your |star|\s are
 downloaded to the root of your project along with their build logs.
-
-Your completed build can also be viewed on Launchpad by going to:
-
-.. code-block:: text
-
-    https://code.launchpad.net/~<user>/<user>-craft-remote-build/+git/<build-id>
-
-Replace ``<user>`` with your Launchpad username and ``<build-id>`` with the ID
-displayed when you started your build.
 
 
 .. _interrupt-a-build:
@@ -92,13 +83,13 @@ Interrupt a build
 -----------------
 
 Due to build queue lengths varying per architecture, you may want to append the
-``--launchpad-timeout=<seconds>`` option to ``remote-build`` to stop monitoring
-the build locally after a certain amount of time has elapsed.
+``--launchpad-timeout=<seconds>`` option to ``remote-build`` to stop monitoring the
+build locally after a certain amount of time has elapsed.
 
-If a build is in progress, it can also be interrupted using :kbd:`Ctrl` +
-:kbd:`C`, which will give you the option to cancel the build and perform
-cleanup. If cancelled, you will not have the option to :ref:`recover this build
-later <recover-interrupted-builds>`.
+If a build is in progress, it can also be interrupted using :kbd:`Ctrl` + :kbd:`C`,
+which will give you the option to cancel the build and perform cleanup. If cancelled,
+you will not have the option to :ref:`recover this build later
+<recover-interrupted-builds>`.
 
 
 .. _recover-interrupted-builds:
@@ -106,9 +97,9 @@ later <recover-interrupted-builds>`.
 Recover interrupted builds
 --------------------------
 
-To resume a build that was interrupted or timed out, navigate to the root of
-your project and run:
+To resume a build that was interrupted or timed out, navigate to the root of your
+project and run:
 
 .. parsed-literal::
 
-    |star|\craft remote-build --recover
+    |app-command| remote-build --recover

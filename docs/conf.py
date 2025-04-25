@@ -22,6 +22,18 @@ author = "Canonical Group Ltd"
 
 copyright = f"2023-{datetime.date.today().year}, {author}"  # noqa: A001
 
+exclude_patterns = [
+    "_build",
+    "Thumbs.db",
+    ".DS_Store",
+    "**venv",
+    "base",
+    "sphinx-resources",
+    "common/README.md",
+    "common/craft-application/how-to/build-remotely.rst",
+    "common/craft-application/reference/remote-builds.rst",
+]
+
 # links to ignore when checking links
 linkcheck_ignore = [
     # Ignore releases, since we'll include the next release before it exists.
