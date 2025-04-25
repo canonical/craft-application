@@ -1213,7 +1213,15 @@ def test_remote_contains(
     response: bool,
 ) -> None:
     fake_process.register(
-        [expected_git_command, "branch", "--remotes", "--contains", "fake-commit-sha"],
+        [
+            expected_git_command,
+            "branch",
+            "--color=never",
+            "--column=never",
+            "--remotes",
+            "--contains",
+            "fake-commit-sha",
+        ],
         stdout=command_output,
     )
     git_repo = GitRepo(empty_repository)
@@ -1229,7 +1237,15 @@ def test_remote_contains_fails_if_subprocess_fails(
     expected_git_command: str,
 ) -> None:
     fake_process.register(
-        [expected_git_command, "branch", "--remotes", "--contains", "fake-commit-sha"],
+        [
+            expected_git_command,
+            "branch",
+            "--color=never",
+            "--column=never",
+            "--remotes",
+            "--contains",
+            "fake-commit-sha",
+        ],
         returncode=1,
     )
     git_repo = GitRepo(empty_repository)
