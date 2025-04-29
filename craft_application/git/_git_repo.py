@@ -710,6 +710,18 @@ class GitRepo:
             ) from error
         return cls(path)
 
+    def get_config_value(self, key: str) -> str | None:
+        """Get value for the configuration key if available else return None."""
+        try:
+            return cast(str, self._repo.config[key])
+        except KeyError:
+            logger.debug("Config key %r not found in the repository", key)
+            return None
+
+    def set_config_value(self, key: str, value: str) -> None:
+        """Set new value for the configuration key."""
+        self._repo.config[key] = value
+
     @classmethod
     @lru_cache(maxsize=1)
     def get_git_command(cls) -> str:
