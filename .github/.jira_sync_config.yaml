@@ -2,7 +2,7 @@ settings:
   components:
     - Craft Application
   labels:
-    - Triaged
+    - "Status: Triaged"
   # Adds a comment with the JIRA ID
   add_gh_comment: true
   # Reflect changes on JIRA
@@ -16,7 +16,9 @@ settings:
     opened: Triaged
     closed: done
   label_mapping:
-    enhancement: Story
-    bug: Bug
-    spike: Spike
-    epic: Epic
+    "Type: Enhancement": Story
+    "Type: Bug": Bug
+    "Type: Research": Spike
+    "Type: Documentation": Documentation
+    "Type: Cleanup": Task
+    "Type: Refactor": Task
