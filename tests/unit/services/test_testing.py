@@ -151,7 +151,7 @@ def test_run_spread(
     testing_service.run_spread(tmp_path)
     assert mock_run.mock_calls == [
         mock.call(
-            ["spread", "-v", testspec],
+            ["spread", testspec],
             check=True,
             stdout=mock.ANY,
             stderr=mock.ANY,
