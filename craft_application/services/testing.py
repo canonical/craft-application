@@ -137,10 +137,7 @@ class TestingService(base.AppService):
         debug: bool = False,
     ) -> list[str]:
         """Get the full spread command to run."""
-        cmd = [
-            self._get_spread_executable(),
-            "-v",
-        ]
+        cmd = [self._get_spread_executable()]
         if shell:
             cmd.append("-shell")
         if shell_after:

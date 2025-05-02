@@ -3,10 +3,12 @@ summary: test the test command as though running in CI.
 environment:
   CRAFT_BUILD_ENVIRONMENT/managed: ""
   CRAFT_BUILD_ENVIRONMENT/destructive: host
+  CMDLINE/managed: ""
+  CMDLINE/destructive: --destructive-mode
   CI: "1"
 
 execute: |
-  testcraft test tests/spread/my-suite/my-task
+  testcraft test tests/spread/my-suite/my-task $CMDLINE
 
 restore: |
   testcraft clean
