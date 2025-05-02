@@ -4,6 +4,14 @@
 Changelog
 *********
 
+5.2.1 (2025-XX-YY)
+------------------
+
+Commands
+========
+
+- Reduce spread verbosity level when running the ``test`` command.
+
 5.2.0 (2025-04-25)
 ------------------
 
