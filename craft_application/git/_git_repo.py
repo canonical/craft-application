@@ -714,7 +714,7 @@ class GitRepo:
         """Get value for the configuration key if available else return None."""
         try:
             return cast(str, self._repo.config[key])
-        except KeyError:
+        except (KeyError, ValueError):
             logger.debug("Config key %r not found in the repository", key)
             return None
 
