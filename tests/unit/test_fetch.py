@@ -17,6 +17,7 @@
 
 import re
 import subprocess
+import textwrap
 from pathlib import Path
 from unittest import mock
 from unittest.mock import call
@@ -310,3 +311,88 @@ def test_get_certificate_dir(mocker):
 
     expected = Path("/home/user/snap/fetch-service/common/craft/fetch-certificate")
     assert cert_dir == expected
+
+
+@pytest.mark.parametrize(
+    "config",
+    [
+        pytest.param(
+            textwrap.dedent(
+                """
+                devices:
+                  eth0:
+                    name: eth0
+                    network: lxdbr0
+                    type: nic
+                """
+            ),
+            id="default-device",
+        ),
+        pytest.param(
+            textwrap.dedent(
+                """
+                devices:
+                  eth0:
+                    name: eth0
+                    nictype: bridged
+                    parent: lxdbr0
+                    type: nic
+                """
+            ),
+            id="old-default-device",
+        ),
+    ],
+)
+def test_get_gateway(mocker, config):
+    gateway = "10.207.202.1"
+    ip_route = f"10.207.202.0/24 proto kernel scope link src {gateway}"
+    mocker.patch.object(
+        subprocess,
+        "run",
+        side_effect=[mock.Mock(stdout=text) for text in [config, ip_route]],
+    )
+
+    actual_gateway = fetch._get_gateway(LXDInstance(name="test-instance"))
+
+    assert gateway == actual_gateway
+
+
+@pytest.mark.parametrize(
+    ("config", "expected_error"),
+    [
+        pytest.param(
+            "name: test-name",
+            "Couldn't find a network device named 'eth0'.",
+            id="no-devices",
+        ),
+        pytest.param(
+            textwrap.dedent(
+                """
+                name: test-name
+                devices:
+                  custom:
+                    name: wrong-device
+                """
+            ),
+            "Couldn't find a network device named 'eth0'.",
+            id="missing-eth0",
+        ),
+        pytest.param(
+            textwrap.dedent(
+                """
+                name: test-name
+                devices:
+                  eth0:
+                    name: test-device
+                """
+            ),
+            "Couldn't find the network name of the default network device.",
+            id="missing-network-name",
+        ),
+    ],
+)
+def test_get_gateway_errors(config, expected_error, mocker):
+    mocker.patch.object(subprocess, "run", side_effect=[mock.Mock(stdout=config)])
+
+    with pytest.raises(errors.FetchServiceError, match=expected_error):
+        fetch._get_gateway(LXDInstance(name="test-instance"))
