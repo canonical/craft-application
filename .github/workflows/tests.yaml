@@ -1,0 +1,58 @@
+name: Tests
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  snap-build:
+    runs-on: [noble, amd64]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Build snap
+        uses: canonical/action-build@v1
+        id: snap
+      - name: Upload snap artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: snap
+          path: ${{ steps.snap.outputs.snap }}
+
+  snap-test:
+    strategy:
+      matrix:
+        os:
+          #- [jammy, amd64]
+          - [noble, amd64]
+    needs:
+      - snap-build
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Download snap artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: snap
+      - name: Install dependencies
+        run: |
+          sudo snap install testcraft_*.snap --dangerous --classic
+      - name: Run spread tests
+        run: |
+          set -x
+          git tag
+          git describe
+          /snap/bin/testcraft pack --verbose  # remove once craft-application issue #752 is fixed
+          echo ==========================
+          /snap/bin/testcraft pack --verbose
+          echo ==========================
+          git tag
+          git describe
+          /snap/bin/testcraft test --verbose

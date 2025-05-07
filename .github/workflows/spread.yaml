@@ -6,7 +6,7 @@ on:
     branches:
       - main
 
-jobs:
+xjobs:
   snap-build:
     runs-on: [self-hosted, amd64]
     steps:
