@@ -26,6 +26,7 @@ from functools import cache
 from typing import Any, cast
 
 import craft_providers
+import craft_providers.lxd
 import requests
 from craft_cli import emit
 from pydantic import Field
@@ -407,25 +408,72 @@ def _configure_apt(instance: craft_providers.Executor, net_info: NetInfo) -> Non
 
 
 def _get_gateway(instance: craft_providers.Executor) -> str:
-    from craft_providers.lxd import LXDInstance
-
-    if not isinstance(instance, LXDInstance):
+    if not isinstance(instance, craft_providers.lxd.LXDInstance):
         raise TypeError("Don't know how to handle non-lxd instances")
 
+    config = _get_config(instance)
+    network_device = _get_network_name(config)
+
+    route = subprocess.check_output(
+        ["ip", "route", "show", "dev", network_device],
+        text=True,
+    )
+    return route.strip().split()[-1]
+
+
+def _get_config(instance: craft_providers.lxd.LXDInstance) -> dict[str, Any]:
+    """Get the config for a lxc instance."""
     instance_name = instance.instance_name
     project = instance.project
     output = subprocess.check_output(
         ["lxc", "--project", project, "config", "show", instance_name, "--expanded"],
         text=True,
     )
-    config = util.safe_yaml_load(io.StringIO(output))
-    network = config["devices"]["eth0"]["network"]
 
-    route = subprocess.check_output(
-        ["ip", "route", "show", "dev", network],
-        text=True,
+    raw_config = util.safe_yaml_load(io.StringIO(output))
+
+    if not isinstance(raw_config, dict):
+        emit.trace(f"Config: {raw_config}")
+        raise errors.FetchServiceError("Failed to parse LXD instance config.")
+
+    return cast(dict[str, Any], raw_config)
+
+
+def _get_network_name(config: dict[Any, Any]) -> str:
+    """Get the network name of the default network device.
+
+    LXD 4 and newer create the following default network device:
+    eth0:
+      name: eth0
+      network: lxdbr0
+      type: nic
+    LXD 3 and older create the following default network device:
+    eth0:
+      name: eth0
+      nictype: bridged
+      parent: lxdbr0
+      type: nic
+
+    :param config: A dictionary of LXD configuration objects.
+
+    :returns: The network name of the default network device.
+    """
+    try:
+        device = config["devices"]["eth0"]
+    except (KeyError, TypeError):
+        raise errors.FetchServiceError("Couldn't find a network device named 'eth0'.")
+    emit.debug(f"Parsing the network device 'eth0': {device}")
+
+    if name := device.get("network"):
+        return str(name)
+
+    if name := device.get("parent"):
+        return str(name)
+
+    raise errors.FetchServiceError(
+        message="Couldn't find the network name of the default network device.",
+        resolution="Use a LXD installation with a default network configuration.",
     )
-    return route.strip().split()[-1]
 
 
 def _obtain_certificate() -> tuple[pathlib.Path, pathlib.Path]:

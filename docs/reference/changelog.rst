@@ -4,8 +4,19 @@
 Changelog
 *********
 
-5.3.0 (2025-XX-YY)
+5.X.Y (2025-MM-DD)
 ------------------
+
+Application
+===========
+
+- Fix an issue where the fetch-service would fail to find the network used
+  by LXD containers.
+
+Commands
+========
+
+- Reduce spread verbosity level when running the ``test`` command.
 
 Git
 ===
@@ -13,16 +24,6 @@ Git
 - Add API to modify repository configuration.
 
 For a complete list of commits, check out the `5.3.0`_ release on GitHub.
-
-5.2.1 (2025-XX-YY)
-------------------
-
-Commands
-========
-
-- Reduce spread verbosity level when running the ``test`` command.
-
-For a complete list of commits, check out the `5.2.1`_ release on GitHub.
 
 5.2.0 (2025-04-25)
 ------------------
@@ -770,5 +771,4 @@ For a complete list of commits, check out the `2.7.0`_ release on GitHub.
 .. _5.0.4: https://github.com/canonical/craft-application/releases/tag/5.0.4
 .. _5.1.0: https://github.com/canonical/craft-application/releases/tag/5.1.0
 .. _5.2.0: https://github.com/canonical/craft-application/releases/tag/5.2.0
-.. _5.2.1: https://github.com/canonical/craft-application/releases/tag/5.2.1
 .. _5.3.0: https://github.com/canonical/craft-application/releases/tag/5.3.0
