@@ -16,6 +16,7 @@
 """Git module integration tests."""
 
 import pathlib
+import re
 
 import pytest
 
@@ -130,3 +131,21 @@ def test_update_repo_configuration(git_repo: GitRepo) -> None:
     assert git_repo.get_config_value(key) == old_value
     git_repo.set_config_value(key, new_value)
     assert git_repo.get_config_value(key) == new_value
+
+
+def test_update_boolean_with_string_value(git_repo: GitRepo) -> None:
+    key = "core.bare"
+    new_value = "incorrect-boolean"
+    # this makes repository inaccessible via git CLI client
+    # fatal: bad boolean config value 'incorrect-boolean' for 'core.bare'
+    git_repo.set_config_value(key, new_value)
+    assert git_repo.get_config_value(key) == new_value
+
+
+def test_incorrect_config_key(git_repo: GitRepo) -> None:
+    key = "craft.incorrect&test*key"
+    new_value = "not-important"
+    with pytest.raises(
+        ValueError, match=re.escape(f"invalid config item name {key!r}")
+    ):
+        git_repo.set_config_value(key, new_value)

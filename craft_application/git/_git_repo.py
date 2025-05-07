@@ -719,7 +719,10 @@ class GitRepo:
             return None
 
     def set_config_value(self, key: str, value: str) -> None:
-        """Set new value for the configuration key."""
+        """Set new value for the configuration key.
+
+        :raises ValueError: if configuration is incorrect
+        """
         self._repo.config[key] = value
 
     @classmethod
