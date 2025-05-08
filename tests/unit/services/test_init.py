@@ -291,7 +291,7 @@ def test_failed_render_does_not_leave_files(
     template_mock.render.side_effect = errors.CraftError("Something bad happened")
     mock_environment.get_template.return_value = template_mock
     mock_environment.list_templates.return_value = [filename.name]
-    with pytest.raises(errors.CraftError):
+    with pytest.raises(errors.CraftError, match="Something bad happened"):
         init_service._render_project(
             environment=mock_environment,
             project_dir=project_dir,
