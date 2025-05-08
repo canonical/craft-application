@@ -18,6 +18,11 @@ Commands
 
 - Reduce spread verbosity level when running the ``test`` command.
 
+Fixes
+======
+
+- ``InitService`` no longer leaves empty files if rendering template fails.
+
 For a complete list of commits, check out the `5.2.1`_ release on GitHub.
 
 5.2.0 (2025-04-25)
