@@ -188,7 +188,7 @@ class TestingService(base.AppService):
                 )
         except subprocess.CalledProcessError as exc:
             raise CraftError(
-                "spread run failed",
+                "Testing failed.",
                 reportable=False,
                 retcode=exc.returncode,
             )
