@@ -519,7 +519,7 @@ class TestCommand(PackCommand):
             shell_after=shell_after,
             debug=parsed_args.debug,
         )
-        emit.progress("Tests succeeded")
+        emit.progress("Testing successful.", permanent=True)
 
 
 class CleanCommand(_BaseLifecycleCommand):
