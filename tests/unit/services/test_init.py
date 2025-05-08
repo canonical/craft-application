@@ -20,6 +20,7 @@ import os
 import pathlib
 import shutil
 import textwrap
+from unittest import mock
 
 import jinja2
 import pytest
@@ -269,6 +270,38 @@ def test_render_project_non_templates(filename, init_service, tmp_path):
     )
 
     assert (project_dir / filename).read_text() == "test content"
+
+
+@pytest.mark.usefixtures("mock_loader")
+def test_failed_render_does_not_leave_files(
+    init_service: services.InitService,
+    tmp_path: pathlib.Path,
+    mocker: pytest_mock.MockerFixture,
+):
+    """Do not create empty file if render fails."""
+    filename = pathlib.Path("some_template.j2")
+    mock_environment = mocker.patch("jinja2.Environment", spec=jinja2.Environment)
+    project_dir = tmp_path / "project"
+    project_dir.mkdir(exist_ok=True)
+    template_dir = tmp_path / "templates"
+    (template_dir / filename).parent.mkdir(parents=True, exist_ok=True)
+    (template_dir / filename).write_text("test content")
+
+    template_mock = mock.MagicMock(spec=jinja2.Template)
+    template_mock.render.side_effect = errors.CraftError("Something bad happenned")
+    mock_environment.get_template.return_value = template_mock
+    mock_environment.list_templates.return_value = [filename.name]
+    with pytest.raises(errors.CraftError):
+        init_service._render_project(
+            environment=mock_environment,
+            project_dir=project_dir,
+            template_dir=template_dir,
+            context={"name": "my-project", "version": init_service.default_version},
+        )
+
+    assert not (project_dir / filename.stem).exists(), (
+        f"File {filename.name!r} should not be created"
+    )
 
 
 @pytest.mark.usefixtures("mock_loader")
