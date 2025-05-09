@@ -482,10 +482,6 @@ class TestCommand(PackCommand):
 
         if parsed_args.test_path:
             testing_service.validate_tests(parsed_args.test_path)
-        # Output into the spread directory.
-        parsed_args.output = pathlib.Path.cwd() / "spread"
-        parsed_args.output.mkdir(exist_ok=True)
-        parsed_args.fetch_service_policy = None
 
         # Don't enter a shell during the packing step, but save those values
         # for the testing service.
