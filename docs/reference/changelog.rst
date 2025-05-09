@@ -27,6 +27,7 @@ Fixes
 ======
 
 - Improve test result messages.
+- ``InitService`` no longer leaves empty files if rendering template fails.
 
 For a complete list of commits, check out the `5.3.0`_ release on GitHub.
 
