@@ -64,8 +64,11 @@ def write_metadata(snap_path: pathlib.Path, content: str) -> None:
     snap_metadata.write_text(content)
 
 
-def test_import_fallback_in_non_snap_environment() -> None:
+def test_import_fallback_in_non_snap_environment(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """Fallback to previous one if not running as a snap."""
+    monkeypatch.delenv("SNAP", raising=False)
     assert find_ssl_cert_dir() == _FALLBACK_PATH, (
         "Use fallback if not installed as a snap."
     )
