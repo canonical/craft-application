@@ -300,7 +300,7 @@ def test_failed_render_does_not_leave_files(
         )
 
     assert not (project_dir / filename.stem).exists(), (
-        f"File {filename.name!r} should not be created"
+        f"File {filename.stem!r} should not be created"
     )
 
 
