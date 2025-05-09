@@ -23,6 +23,11 @@ Git
 
 - Add API to modify repository configuration.
 
+Fixes
+======
+
+- Improve test result messages.
+
 For a complete list of commits, check out the `5.3.0`_ release on GitHub.
 
 5.2.0 (2025-04-25)
