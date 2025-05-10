@@ -72,7 +72,7 @@ dev = [
     "jsonschema>=4.23.0",
 ]
 lint = [
-    "black~=24.0",
+    "black~=25.1",
     "codespell[toml]==2.4.1",
     "yamllint==1.35.1"
 ]
