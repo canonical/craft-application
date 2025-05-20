@@ -187,6 +187,13 @@ def test_run_spread_interactive(
     mock_emitter = mock.MagicMock(spec=craft_cli.messages.Emitter)
     mocker.patch.object(craft_application.services.testing, "emit", mock_emitter)
 
+    fake_host = craft_platforms.DistroBase(distribution="ubuntu", series="24.04")
+    mocker.patch.object(
+        craft_platforms.DistroBase,
+        "from_linux_distribution",
+        return_value=fake_host,
+    )
+
     testing_service.run_spread(
         tmp_path, shell=shell, shell_after=shell_after, debug=debug
     )
