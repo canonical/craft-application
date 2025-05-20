@@ -186,7 +186,7 @@ class TestingService(base.AppService):
                 # until we implement a protocol to pause the emitter and handle
                 # terminal input and output inside an open_stream context. See
                 # https://github.com/canonical/craft-cli/issues/347
-                emit.debug("Interactive test selected, pause emitter to execute spread")
+                emit.debug("Pausing emitter for interactive spread shell")
                 with emit.pause():
                     subprocess.run(spread_command, check=True, cwd=spread_dir)
             else:
