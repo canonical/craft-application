@@ -177,15 +177,26 @@ class TestingService(base.AppService):
             tests=tests, shell=shell, shell_after=shell_after, debug=debug
         )
 
+        is_interactive = shell or shell_after or debug
+
         try:
-            with emit.open_stream("Running spread tests") as stream:
-                subprocess.run(
-                    spread_command,
-                    check=True,
-                    stdout=stream,
-                    stderr=stream,
-                    cwd=spread_dir,
-                )
+            if is_interactive:
+                # Don't pipe output into stream if spread runs in interactive
+                # mode. This allows spread to run with proper terminal management
+                # until we implement a protocol to pause the emitter and handle
+                # terminal input and output inside an open_stream context. See
+                # https://github.com/canonical/craft-cli/issues/347
+                with emit.pause():
+                    subprocess.run(spread_command, check=True, cwd=spread_dir)
+            else:
+                with emit.open_stream("Running spread tests") as stream:
+                    subprocess.run(
+                        spread_command,
+                        check=True,
+                        stdout=stream,
+                        stderr=stream,
+                        cwd=spread_dir,
+                    )
         except subprocess.CalledProcessError as exc:
             raise CraftError(
                 "Testing failed.",
