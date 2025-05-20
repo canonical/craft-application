@@ -12,6 +12,8 @@ Application
 
 - Fix an issue where the fetch-service would fail to find the network used
   by LXD containers.
+- Remove the unused ``_set_global_environment()`` function. This function has
+  been replaced by ``update_project_environment()`` in the Project service.
 
 Commands
 ========

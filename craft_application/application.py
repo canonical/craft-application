@@ -701,14 +701,6 @@ class Application:
             pvars[var] = str(yaml_data.get(var, ""))
         return pvars
 
-    def _set_global_environment(self, info: craft_parts.ProjectInfo) -> None:
-        """Populate the ProjectInfo's global environment."""
-        info.global_environment.update(
-            {
-                "CRAFT_PROJECT_VERSION": info.get_project_var("version", raw_read=True),
-            }
-        )
-
     def _setup_logging(self) -> None:
         """Initialize the logging system."""
         # Set the logging level to DEBUG for all craft-libraries. This is OK even if
