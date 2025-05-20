@@ -22,14 +22,13 @@ import textwrap
 from textwrap import dedent
 
 import craft_platforms
-import craft_providers.bases
 import pytest
 
 from craft_application import util
 from craft_application.errors import CraftValidationError
 from craft_application.models import (
-    DEVEL_BASE_INFOS,
     DEVEL_BASE_WARNING,
+    DEVEL_BASES,
     Platform,
     Project,
     constraints,
@@ -382,8 +381,8 @@ def test_devel_base_devel_build_base(emitter):
         version="1.0",
         parts={},
         platforms={"arm64": None},  # pyright: ignore[reportArgumentType]
-        base=f"ubuntu@{DEVEL_BASE_INFOS[0].current_devel_base.value}",
-        build_base=f"ubuntu@{DEVEL_BASE_INFOS[0].current_devel_base.value}",
+        base=f"ubuntu@{DEVEL_BASES[0].value}",
+        build_base=f"ubuntu@{DEVEL_BASES[0].value}",
     )
 
     emitter.assert_message(DEVEL_BASE_WARNING)
@@ -420,34 +419,8 @@ def test_devel_base_no_build_base():
         name="project-name",
         version="1.0",
         parts={},
-        base=f"ubuntu@{DEVEL_BASE_INFOS[0].current_devel_base.value}",
+        base=f"ubuntu@{DEVEL_BASES[0]}",
         platforms={"arm64": None},  # pyright: ignore[reportArgumentType]
-    )
-
-
-def test_devel_base_error():
-    """Raise an error if base is 'devel' and build-base is not 'devel'."""
-    with pytest.raises(CraftValidationError) as exc_info:
-        FakeBuildBaseProject.from_yaml_data(
-            {
-                "name": "project-name",
-                "version": "1.0",
-                "parts": {},
-                "platforms": {"arm64": None},
-                "base": f"ubuntu@{DEVEL_BASE_INFOS[0].current_devel_base.value}",
-                "build_base": f"ubuntu@{craft_providers.bases.ubuntu.BuilddBaseAlias.JAMMY.value}",
-            },
-            pathlib.Path("testcraft.yaml"),
-        )
-
-    expected_devel = DEVEL_BASE_INFOS[0].current_devel_base.value
-    assert exc_info.match(
-        dedent(
-            f"""
-    Bad testcraft.yaml content:
-    - a development build-base must be used when base is 'ubuntu@{expected_devel}'
-    """
-        ).strip()
     )
 
 

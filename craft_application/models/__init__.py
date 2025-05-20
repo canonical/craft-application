@@ -35,8 +35,8 @@ from craft_application.models.platforms import (
     PlatformsDict,
 )
 from craft_application.models.project import (
-    DEVEL_BASE_INFOS,
     DEVEL_BASE_WARNING,
+    DEVEL_BASES,
     Project,
 )
 from craft_application.models.spread import (
@@ -49,8 +49,8 @@ from craft_application.models.state import PackState
 
 __all__ = [
     "BaseMetadata",
-    "DEVEL_BASE_INFOS",
     "DEVEL_BASE_WARNING",
+    "DEVEL_BASES",
     "CraftBaseModel",
     "get_grammar_aware_part_keywords",
     "GrammarAwareProject",
