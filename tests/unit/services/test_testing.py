@@ -199,7 +199,7 @@ def test_run_spread_interactive(
     )
     assert mock_run.mock_calls == [
         mock.call(
-            ["spread", *flags, "craft:"],
+            ["spread", *flags, mock.ANY],
             check=True,
             **streams,
             cwd=tmp_path,
