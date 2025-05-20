@@ -18,6 +18,7 @@
 import pathlib
 import stat
 from collections.abc import Collection
+from typing import Any
 from unittest import mock
 
 import craft_cli.messages
@@ -179,7 +180,7 @@ def test_run_spread_interactive(
     shell_after: bool,
     debug: bool,
     flags: list[str],
-    streams: dict[str, any],
+    streams: dict[str, Any],
 ):
     mocker.patch("shutil.which", return_value="spread")
     mock_run = mocker.patch("subprocess.run")
