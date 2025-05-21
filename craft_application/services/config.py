@@ -96,7 +96,7 @@ class SnapConfigHandler(ConfigHandler):
             raise OSError("Not running as a snap.")
         try:
             self._snap = snaphelpers.SnapConfig()
-        except KeyError:
+        except (KeyError, AttributeError):
             raise OSError("Not running as a snap.")
         except snaphelpers.SnapCtlError:
             # Most likely to happen in a container that has the snap environment set.

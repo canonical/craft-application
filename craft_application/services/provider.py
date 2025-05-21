@@ -18,6 +18,7 @@
 from __future__ import annotations
 
 import contextlib
+import enum
 import io
 import os
 import pathlib
@@ -96,6 +97,11 @@ class ProviderService(base.AppService):
         for name in DEFAULT_FORWARD_ENVIRONMENT_VARIABLES:
             if name in os.environ:
                 self.environment[name] = os.getenv(name)
+
+        app_upper = self._app.name.upper()
+        for config_item, value in self._services.get("config").get_all().items():
+            value_out = value.name if isinstance(value, enum.Enum) else str(value)
+            self.environment[f"{app_upper}_{config_item.upper()}"] = value_out
 
         for scheme, value in urllib.request.getproxies().items():
             self.environment[f"{scheme.lower()}_proxy"] = value
