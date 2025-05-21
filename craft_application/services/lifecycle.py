@@ -225,6 +225,12 @@ class LifecycleService(base.AppService):
         emit.debug(f"Project vars: {self._project_vars}")
         emit.debug(f"Adopting part: {self._project.adopt_info}")
 
+        source_ignore_patterns = [
+            *self._app.source_ignore_patterns,
+            "spread.yaml",
+            "spread"
+        ]
+
         try:
             return LifecycleManager(
                 {"parts": self._project.parts},
@@ -232,7 +238,7 @@ class LifecycleService(base.AppService):
                 arch=build_for,
                 cache_dir=self._cache_dir,
                 work_dir=self._work_dir,
-                ignore_local_sources=self._app.source_ignore_patterns,
+                ignore_local_sources=source_ignore_patterns,
                 parallel_build_count=util.get_parallel_build_count(self._app.name),
                 project_vars_part_name=self._project.adopt_info,
                 project_vars=self._project_vars,

@@ -288,6 +288,13 @@ def test_init_parts_error(
         service.setup()
 
     assert exc_info.value.args == expected.args
+    assert mock_lifecycle.mock_calls[0].kwargs["ignore_local_sources"] == [
+        "*.snap",
+        "*.charm",
+        "*.starcraft",
+        "spread.yaml",
+        "spread",
+    ]
 
 
 def test_init_with_feature_package_repositories(
