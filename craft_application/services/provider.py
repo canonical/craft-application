@@ -46,7 +46,10 @@ if TYPE_CHECKING:  # pragma: no cover
     from craft_application.services import ServiceFactory
 
 
-DEFAULT_FORWARD_ENVIRONMENT_VARIABLES: Iterable[str] = ()
+DEFAULT_FORWARD_ENVIRONMENT_VARIABLES: Iterable[str] = (
+    "CRAFT_PARALLEL_BUILD_COUNT",
+    "CRAFT_MAX_PARALLEL_BUILD_COUNT",
+)
 
 _REQUESTED_SNAPS: dict[str, Snap] = {}
 """Additional snaps to be installed using provider."""

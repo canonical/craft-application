@@ -4,6 +4,17 @@
 Changelog
 *********
 
+5.2.1 (2025-05-21)
+------------------
+
+Services
+========
+
+- `CRAFT_PARALLEL_BUILD_COUNT` and `CRAFT_MAX_PARALLEL_BUILD_COUNT` are now forwarded
+  to managed instances.
+
+For a complete list of commits, check out the `5.2.1`_ release on GitHub.
+
 5.2.0 (2025-04-25)
 ------------------
 
