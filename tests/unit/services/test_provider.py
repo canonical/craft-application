@@ -17,6 +17,7 @@
 
 import pathlib
 import pkgutil
+import subprocess
 import uuid
 from typing import NamedTuple
 from unittest import mock
@@ -24,6 +25,7 @@ from unittest import mock
 import craft_platforms
 import craft_providers
 import pytest
+import pytest_subprocess
 from craft_cli import emit
 from craft_providers import bases, lxd, multipass
 from craft_providers.actions.snap_installer import Snap
@@ -108,7 +110,37 @@ def test_setup_proxy_environment(
     for var, value in given_environment.items():
         monkeypatch.setenv(var, value)
 
-    expected_environment |= {"CRAFT_MANAGED_MODE": "1"}
+    service = provider.ProviderService(
+        app_metadata,
+        fake_services,
+        work_dir=pathlib.Path(),
+    )
+    service.setup()
+
+    for key, value in expected_environment.items():
+        assert service.environment[key] == value
+
+
+@pytest.mark.parametrize(
+    ("given_environment", "expected_environment"),
+    [
+        ({"CRAFT_VERBOSITY_LEVEL": "trace"}, {"TESTCRAFT_VERBOSITY_LEVEL": "TRACE"}),
+        (
+            {"TESTCRAFT_PARALLEL_BUILD_COUNT": "13"},
+            {"TESTCRAFT_PARALLEL_BUILD_COUNT": "13"},
+        ),
+    ],
+)
+def test_setup_config_values(
+    monkeypatch: pytest.MonkeyPatch,
+    app_metadata,
+    fake_services,
+    fake_project,
+    given_environment: dict[str, str],
+    expected_environment: dict[str, str],
+):
+    for var, value in given_environment.items():
+        monkeypatch.setenv(var, value)
 
     service = provider.ProviderService(
         app_metadata,
@@ -117,7 +149,8 @@ def test_setup_proxy_environment(
     )
     service.setup()
 
-    assert service.environment == expected_environment
+    for key, value in expected_environment.items():
+        assert service.environment[key] == value
 
 
 @pytest.mark.parametrize(
@@ -189,11 +222,18 @@ def test_install_snap(
     monkeypatch,
     app_metadata,
     fake_project,
+    fake_process: pytest_subprocess.FakeProcess,
     fake_services,
     install_snap,
     environment,
     snaps,
 ):
+    monkeypatch.setattr("snaphelpers._ctl.Popen", subprocess.Popen)
+    fake_process.register(
+        ["/usr/bin/snapctl", "get", "-d", fake_process.any()],
+        stdout="{}",
+        occurrences=1000,
+    )
     monkeypatch.delenv("SNAP", raising=False)
     monkeypatch.delenv("CRAFT_SNAP_CHANNEL", raising=False)
     monkeypatch.delenv("SNAP_INSTANCE_NAME", raising=False)
