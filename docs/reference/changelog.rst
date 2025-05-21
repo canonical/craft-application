@@ -28,6 +28,7 @@ Fixes
 
 - Improve test result messages.
 - ``InitService`` no longer leaves empty files if rendering template fails.
+- Don't repull sources on test files changes.
 
 For a complete list of commits, check out the `5.3.0`_ release on GitHub.
 
