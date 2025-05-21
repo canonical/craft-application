@@ -209,3 +209,15 @@ class ConfigService(base.AppService):
                     return cast(T, field_type[value.upper()])
         field_adapter = pydantic.TypeAdapter(field_type)
         return field_adapter.validate_strings(value)
+
+    def get_all(self) -> dict[str, Any]:
+        """Get a dictionary of the complete configuration per the ConfigModel.
+
+        Configuration items that are unset but have no default value are not included
+        in the resulting mapping.
+        """
+        config: dict[str, Any] = {}
+        for field in self._app.ConfigModel.model_fields:
+            with contextlib.suppress(KeyError):
+                config[field] = self.get(field)
+        return config

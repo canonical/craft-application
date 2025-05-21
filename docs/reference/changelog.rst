@@ -23,6 +23,12 @@ Git
 
 - Add API to modify repository configuration.
 
+Services
+========
+
+- Add a ``get_all()`` method to the ``ConfigService``, which returns a ``dict`` of
+  all current configuration values.
+
 Fixes
 ======
 
