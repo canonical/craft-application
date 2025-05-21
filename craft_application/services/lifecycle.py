@@ -227,6 +227,8 @@ class LifecycleService(base.AppService):
 
         source_ignore_patterns = [
             *self._app.source_ignore_patterns,
+            # Ignore spread.yaml and spread to prevent repulling sources
+            # when test files are changed.
             "spread.yaml",
             "spread"
         ]
