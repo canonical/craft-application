@@ -230,7 +230,7 @@ class LifecycleService(base.AppService):
             # Ignore spread.yaml and spread to prevent repulling sources
             # when test files are changed.
             "spread.yaml",
-            "spread"
+            "spread",
         ]
 
         try:
