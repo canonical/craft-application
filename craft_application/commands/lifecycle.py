@@ -400,7 +400,7 @@ class PackCommand(LifecycleCommand):
                 _launch_shell()
             raise
 
-        packages = self._normalize_paths(packages, root=self._app.project_dir)
+        packages = self._normalize_paths(packages, root=pathlib.Path())
 
         if parsed_args.fetch_service_policy and packages:
             self._services.fetch.create_project_manifest(packages)
@@ -439,11 +439,12 @@ class PackCommand(LifecycleCommand):
 
         :return: The normalized list of artifact paths.
         """
-        normalized = []
+        resolved_root = root.resolve()
+        normalized: list[pathlib.Path] = []
         for package in packages:
             path = package.resolve()
-            if path.is_relative_to(root):
-                normalized.append(path.relative_to(root))
+            if path.is_relative_to(resolved_root):
+                normalized.append(path.relative_to(resolved_root))
         return normalized
 
     @override
