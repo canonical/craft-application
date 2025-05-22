@@ -400,9 +400,6 @@ class PackCommand(LifecycleCommand):
                 _launch_shell()
             raise
 
-        # Normalize paths to the packaged artifacts to be relative to the
-        # project root. Paths outside of the project directory are removed
-        # from the list.
         packages = self._normalize_paths(packages, root=self._app.project_dir)
 
         if parsed_args.fetch_service_policy and packages:
@@ -431,6 +428,15 @@ class PackCommand(LifecycleCommand):
     def _normalize_paths(
         packages: list[pathlib.Path], root: pathlib.Path
     ) -> list[pathlib.Path]:
+        """Normalize paths to the packaged artifacts to be relative to the
+        project root. Paths outside of the project directory are removed
+        from the list.
+
+        :param packages: The list of packaged artifact paths.
+        :param root: The project root directory.
+
+        :return: The normalized list of artifact paths.
+        """
         normalized = []
         for package in packages:
             path = package.resolve()
