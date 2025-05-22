@@ -440,7 +440,7 @@ class PackCommand(LifecycleCommand):
         normalized = []
         for package in packages:
             path = package.resolve()
-            if root in path.parents:
+            if path.is_relative_to(root):
                 normalized.append(path.relative_to(root))
         return normalized
 
