@@ -249,7 +249,7 @@ def test_default_config_handler_success(default_config_handler, item, expected):
         ),
     ],
 )
-# @pytest.mark.usefixtures("production_mode")
+@pytest.mark.usefixtures("production_mode")
 def test_config_service_converts_type(
     monkeypatch: pytest.MonkeyPatch,
     fake_process: pytest_subprocess.FakeProcess,
