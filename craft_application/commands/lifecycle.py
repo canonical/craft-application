@@ -400,6 +400,11 @@ class PackCommand(LifecycleCommand):
                 _launch_shell()
             raise
 
+        # Normalize paths to the packaged artifacts to be relative to the
+        # project root. Paths outside of the project directory are removed
+        # from the list.
+        packages = self._normalize_paths(packages, root=self._app.project_dir)
+
         if parsed_args.fetch_service_policy and packages:
             self._services.fetch.create_project_manifest(packages)
 
@@ -421,6 +426,17 @@ class PackCommand(LifecycleCommand):
 
         if shell_after:
             _launch_shell()
+
+    @staticmethod
+    def _normalize_paths(
+        packages: list[pathlib.Path], root: pathlib.Path
+    ) -> list[pathlib.Path]:
+        normalized = []
+        for package in packages:
+            path = package.resolve()
+            if root in path.parents:
+                normalized.append(path.relative_to(root))
+        return normalized
 
     @override
     def _run(

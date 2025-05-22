@@ -813,3 +813,20 @@ def test_run_post_prime_managed_mode(
     command.run(parsed_args)
 
     mocked_run_post_prime_steps.assert_called_once()
+
+
+@pytest.mark.parametrize(
+    ("root", "paths", "result"),
+    [
+        ("/", ["/foo"], ["foo"]),
+        ("/foo", ["/foo/bar", "/foo/baz"], ["bar", "baz"]),
+        ("/foo", ["relative"], []),
+        ("/foo", ["/not/inside/foo"], []),
+        ("/foo", ["/foo/bar", "/not/inside/foo"], ["bar"]),
+    ],
+)
+def test_normalize_paths(root, paths, result):
+    normalized_path = PackCommand._normalize_paths(
+        [pathlib.Path(p) for p in paths], root=pathlib.Path(root)
+    )
+    assert normalized_path == [pathlib.Path(p) for p in result]
