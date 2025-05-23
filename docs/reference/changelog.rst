@@ -32,6 +32,7 @@ Fixes
 - ``InitService`` no longer leaves empty files if rendering template fails.
 - Enable terminal output when testing with ``--debug``, ``--shell``, or
   ``--shell-after`` parameters.
+- Don't repull sources on test files changes.
 
 For a complete list of commits, check out the `5.3.0`_ release on GitHub.
 
