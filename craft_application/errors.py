@@ -379,4 +379,3 @@ class InitError(CraftError):
 
 class ArtifactCreationError(CraftError):
     """Errors to do with artifact file generation."""
-
