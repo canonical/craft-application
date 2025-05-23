@@ -93,6 +93,13 @@ ACTION_MESSAGES = types.MappingProxyType(
     }
 )
 
+DEFAULT_IGNORE_PATTERNS = [
+    # Ignore spread.yaml and spread to prevent repulling sources
+    # when test files are changed.
+    "spread.yaml",
+    "spread",
+]
+
 
 def _get_parts_action_message(action: Action) -> str:
     """Get a user-readable message for a particular craft-parts action."""
@@ -227,10 +234,7 @@ class LifecycleService(base.AppService):
 
         source_ignore_patterns = [
             *self._app.source_ignore_patterns,
-            # Ignore spread.yaml and spread to prevent repulling sources
-            # when test files are changed.
-            "spread.yaml",
-            "spread",
+            *DEFAULT_IGNORE_PATTERNS,
         ]
 
         try:
