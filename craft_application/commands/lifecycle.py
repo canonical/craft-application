@@ -438,7 +438,7 @@ class PackCommand(LifecycleCommand):
         :param root: The project root directory.
 
         :return: The normalized list of artifact paths.
-        :raises: ArtifactGenerationError if a path is invalid.
+        :raises: ArtifactCreationError if a path is invalid.
         """
         resolved_root = root.resolve()
         normalized: list[pathlib.Path] = []
