@@ -443,6 +443,9 @@ class PackCommand(LifecycleCommand):
         resolved_root = root.resolve()
         normalized: list[pathlib.Path] = []
         invalid: list[pathlib.Path] = []
+        emit.debug(f"packages paths: {packages}")
+        emit.debug(f"resolved root: {resolved_root}")
+
         for package in packages:
             path = package.resolve()
             if path.is_relative_to(resolved_root):
@@ -457,6 +460,8 @@ class PackCommand(LifecycleCommand):
                 details=f"The following files are invalid:\n{invalid_files}",
                 resolution="Change the output directory when packing.",
             )
+
+        emit.debug(f"normalized packages paths: {normalized}")
         return normalized
 
     @override
