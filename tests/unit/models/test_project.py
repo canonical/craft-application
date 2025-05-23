@@ -86,6 +86,11 @@ def full_project():
             "license": "LGPLv3",
             "platforms": {"arm64": None},
             "parts": PARTS_DICT,
+            "filesystems": {
+                "default": [
+                    {"mount": "/", "device": "(default)"},
+                ]
+            },
         }
     )
 
@@ -112,6 +117,11 @@ FULL_PROJECT_DICT = {
             "build-on": ["arm64"],
             "build-for": ["arm64"],
         }
+    },
+    "filesystems": {
+        "default": [
+            {"mount": "/", "device": "(default)"},
+        ]
     },
 }
 
@@ -541,6 +551,88 @@ def test_unmarshal_invalid_repositories(
 ):
     """Test that package-repositories are validated in Project with package repositories feature."""
     full_project_dict["package-repositories"] = repositories_val
+    project_path = pathlib.Path("myproject.yaml")
+
+    with pytest.raises(CraftValidationError) as error:
+        Project.from_yaml_data(full_project_dict, project_path)
+
+    assert error.value.args[0] == "\n".join(
+        ("Bad myproject.yaml content:", *error_lines)
+    )
+
+
+def test_unmarshal_filesystems(full_project_dict):
+    """Test that filesystems are allowed in Project."""
+    full_project_dict["filesystems"] = {
+        "default": [{"mount": "/", "device": "(default)"}]
+    }
+    project_path = pathlib.Path("myproject.yaml")
+    project = Project.from_yaml_data(full_project_dict, project_path)
+
+    assert project.filesystems == {"default": [{"mount": "/", "device": "(default)"}]}
+
+
+def test_unmarshal_no_filesystems(full_project_dict):
+    """Test that filesystems are allowed to be None in Project."""
+    full_project_dict["filesystems"] = None
+    project_path = pathlib.Path("myproject.yaml")
+
+    project = Project.from_yaml_data(full_project_dict, project_path)
+
+    assert project.filesystems is None
+
+
+@pytest.mark.parametrize(
+    ("filesystems_val", "error_lines"),
+    [
+        (
+            [],
+            ["- input should be a valid dictionary (in field 'filesystems')"],
+        ),
+        (
+            {"test": {}},
+            [
+                "- input should be a valid list (in field 'filesystems.test')",
+            ],
+        ),
+        (
+            {"test": []},
+            [
+                "- list should have at least 1 item after validation, not 0 (in field 'filesystems.test')",
+            ],
+        ),
+        (
+            {
+                "test": [
+                    {
+                        "mount": "/test",
+                        "device": "(default)",
+                    }
+                ]
+            },
+            [
+                "- a filesystem first entry must map the '/' mount. (in field 'filesystems.test')",
+            ],
+        ),
+        (
+            {
+                "test": [
+                    {
+                        "test": "foo",
+                    }
+                ]
+            },
+            [
+                "- field 'mount' required in 'filesystems.test' configuration",
+                "- field 'device' required in 'filesystems.test' configuration",
+                "- extra inputs are not permitted (in field 'filesystems.test.test')",
+            ],
+        ),
+    ],
+)
+def test_unmarshal_invalid_filesystems(full_project_dict, filesystems_val, error_lines):
+    """Test that filesystems are validated in Project."""
+    full_project_dict["filesystems"] = filesystems_val
     project_path = pathlib.Path("myproject.yaml")
 
     with pytest.raises(CraftValidationError) as error:

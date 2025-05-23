@@ -19,3 +19,7 @@ license: LGPLv3
 parts:
   my-part:
     plugin: nil
+filesystems:
+  default:
+  - mount: /
+    device: (default)
