@@ -26,6 +26,7 @@ import pytest
 import pytest_mock
 from craft_parts import Features
 
+from craft_application import errors
 from craft_application.application import AppMetadata
 from craft_application.commands.lifecycle import (
     BuildCommand,
@@ -820,13 +821,33 @@ def test_run_post_prime_managed_mode(
     [
         ("/", ["/foo"], ["foo"]),
         ("/foo", ["/foo/bar", "/foo/baz"], ["bar", "baz"]),
-        ("/foo", ["relative"], []),
-        ("/foo", ["/not/inside/foo"], []),
-        ("/foo", ["/foo/bar", "/not/inside/foo"], ["bar"]),
     ],
 )
-def test_normalize_paths(root, paths, result):
-    normalized_path = PackCommand._normalize_paths(
+def test_relativize_paths_valid(root, paths, result):
+    normalized_path = PackCommand._relativize_paths(
         [pathlib.Path(p) for p in paths], root=pathlib.Path(root)
     )
     assert normalized_path == [pathlib.Path(p) for p in result]
+
+
+def test_relativize_paths_valid_relative(new_dir):
+    normalized_path = PackCommand._relativize_paths(
+        [pathlib.Path("relative")], root=new_dir
+    )
+    assert normalized_path == [pathlib.Path("relative")]
+
+
+@pytest.mark.parametrize(
+    ("root", "paths"),
+    [
+        ("/foo", ["relative"]),
+        ("/foo", ["/not/inside/foo"]),
+        ("/foo", ["/foo/bar", "/not/inside/foo"]),
+    ],
+)
+def test_relativize_paths_invalid(root, paths):
+    with pytest.raises(errors.ArtifactCreationError) as raised:
+        PackCommand._relativize_paths(
+            [pathlib.Path(p) for p in paths], root=pathlib.Path(root)
+        )
+    assert str(raised.value) == "Cannot create packages outside of the project tree."
