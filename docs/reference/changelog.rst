@@ -12,6 +12,8 @@ Application
 
 - Fix an issue where the fetch-service would fail to find the network used
   by LXD containers.
+- ``_set_global_environment`` method marked as deprecated for removal in the next
+  major release.
 
 Commands
 ========
