@@ -457,7 +457,7 @@ class PackCommand(LifecycleCommand):
             invalid_files = "\n".join([f"- {name}" for name in invalid])
             raise errors.ArtifactCreationError(
                 "Cannot create packages outside of the project tree.",
-                details=f"The following files are invalid:\n{invalid_files}",
+                details=f"The following file paths are invalid:\n{invalid_files}",
                 resolution="Change the output directory when packing.",
             )
 
