@@ -400,7 +400,7 @@ class PackCommand(LifecycleCommand):
                 _launch_shell()
             raise
 
-        packages = self._normalize_paths(packages, root=pathlib.Path())
+        packages = self._relativize_paths(packages, root=pathlib.Path())
 
         if parsed_args.fetch_service_policy and packages:
             self._services.fetch.create_project_manifest(packages)
