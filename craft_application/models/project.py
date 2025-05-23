@@ -32,7 +32,6 @@ from craft_application.models.constraints import (
     ProjectName,
     ProjectTitle,
     SummaryStr,
-    UniqueList,
     UniqueStrList,
     VersionStr,
 )
@@ -106,11 +105,11 @@ def _validate_package_repository(repository: dict[str, Any]) -> dict[str, Any]:
 def _validate_layout(layout: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Validate a layout item.
 
-    :param layout_item: a dictionary representing a layout item.
-    :returns: That same dictionary, if valid.
-    :raises: ValueError if the layout item is not valid.
+    :param layout: a list representing a layout.
+    :returns: That same list, if valid.
+    :raises: ValueError if the layout is not valid.
     """
-    # This check is not always used, import it here to avoid unnecessary
+    # This check is not always used, import it here to avoid unnecessary import
     from craft_parts.utils import layout_utils  # type: ignore[import-untyped]
 
     layout_utils.validate_layout(layout)
@@ -161,7 +160,9 @@ class Project(base.CraftBaseModel):
         dict[
             str,
             Annotated[
-                UniqueList[dict[str, Any]], pydantic.AfterValidator(_validate_layout)
+                list[dict[str, Any]],
+                pydantic.Field(min_length=1),
+                pydantic.AfterValidator(_validate_layout),
             ],
         ]
         | None
