@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import contextlib
 import types
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import craft_platforms
@@ -43,8 +44,6 @@ from craft_application.services import base
 from craft_application.util import repositories
 
 if TYPE_CHECKING:  # pragma: no cover
-    from pathlib import Path
-
     from craft_application.application import AppMetadata
     from craft_application.services import ServiceFactory
 
@@ -92,13 +91,6 @@ ACTION_MESSAGES = types.MappingProxyType(
         ),
     }
 )
-
-DEFAULT_IGNORE_PATTERNS = [
-    # Ignore spread.yaml and spread to prevent repulling sources
-    # when test files are changed.
-    "spread.yaml",
-    "spread",
-]
 
 
 def _get_parts_action_message(action: Action) -> str:
@@ -234,8 +226,12 @@ class LifecycleService(base.AppService):
 
         source_ignore_patterns = [
             *self._app.source_ignore_patterns,
-            *DEFAULT_IGNORE_PATTERNS,
         ]
+
+        if Path("spread/.extension").exists():
+            # Ignore spread.yaml and spread to prevent repulling sources
+            # when test files are changed.
+            source_ignore_patterns.extend(["spread.yaml", "spread"])
 
         try:
             return LifecycleManager(

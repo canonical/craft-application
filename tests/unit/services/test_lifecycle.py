@@ -268,7 +268,7 @@ def test_init_parts_error(
     app_metadata,
     fake_project,
     fake_services,
-    tmp_path,
+    new_dir,
     error,
     expected,
 ):
@@ -279,8 +279,8 @@ def test_init_parts_error(
         app_metadata,
         fake_services,
         project=fake_project,
-        work_dir=tmp_path,
-        cache_dir=tmp_path,
+        work_dir=new_dir,
+        cache_dir=new_dir,
         platform=None,
     )
 
@@ -288,6 +288,32 @@ def test_init_parts_error(
         service.setup()
 
     assert exc_info.value.args == expected.args
+    assert mock_lifecycle.mock_calls[0].kwargs["ignore_local_sources"] == [
+        "*.snap",
+        "*.charm",
+        "*.starcraft",
+    ]
+
+
+def test_init_parts_ignore_spread(
+    app_metadata, fake_project, fake_services, monkeypatch, new_dir
+):
+    mock_lifecycle = mock.Mock()
+    monkeypatch.setattr(lifecycle, "LifecycleManager", mock_lifecycle)
+
+    service = lifecycle.LifecycleService(
+        app_metadata,
+        fake_services,
+        work_dir=new_dir,
+        cache_dir=new_dir,
+    )
+
+    extension_path = Path("spread/.extension")
+    extension_path.parent.mkdir()
+    extension_path.touch()
+
+    service.setup()
+
     assert mock_lifecycle.mock_calls[0].kwargs["ignore_local_sources"] == [
         "*.snap",
         "*.charm",
