@@ -1,6 +1,6 @@
 # This file is part of craft-application.
 #
-# Copyright 2023-2024 Canonical Ltd.
+# Copyright 2023-2025 Canonical Ltd.
 #
 # This program is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Lesser General Public License version 3, as
@@ -246,6 +246,7 @@ class LifecycleService(base.AppService):
                 project_vars=self._project_vars,
                 track_stage_packages=True,
                 partitions=self._services.get("project").partitions,
+                layouts=self._project.filesystems,
                 **self._manager_kwargs,
             )
         except PartsError as err:
