@@ -25,7 +25,7 @@ from craft_cli import CommandGroup, emit
 from craft_parts.features import Features
 from typing_extensions import override
 
-from craft_application import util
+from craft_application import errors, util
 from craft_application.commands import base
 
 TEMP_SPREAD_FILE_NAME = ".craft-spread.yaml"
@@ -400,6 +400,8 @@ class PackCommand(LifecycleCommand):
                 _launch_shell()
             raise
 
+        packages = self._relativize_paths(packages, root=pathlib.Path())
+
         if parsed_args.fetch_service_policy and packages:
             self._services.fetch.create_project_manifest(packages)
 
@@ -421,6 +423,46 @@ class PackCommand(LifecycleCommand):
 
         if shell_after:
             _launch_shell()
+
+    @staticmethod
+    def _relativize_paths(
+        packages: list[pathlib.Path], root: pathlib.Path
+    ) -> list[pathlib.Path]:
+        """Normalize package paths to be relative to the project root.
+
+        Convert absolute paths of the packed artifacts to paths relative
+        to the project top directory, or raise an error if artifact paths
+        are not inside the project tree.
+
+        :param packages: The list of packaged artifact paths.
+        :param root: The project root directory.
+
+        :return: The normalized list of artifact paths.
+        :raises: ArtifactCreationError if a path is invalid.
+        """
+        resolved_root = root.resolve()
+        normalized: list[pathlib.Path] = []
+        invalid: list[pathlib.Path] = []
+        emit.debug(f"packages paths: {packages}")
+        emit.debug(f"resolved root: {resolved_root}")
+
+        for package in packages:
+            path = package.resolve()
+            if path.is_relative_to(resolved_root):
+                normalized.append(path.relative_to(resolved_root))
+            else:
+                invalid.append(package)
+
+        if invalid:
+            invalid_files = "\n".join([f"- {name}" for name in invalid])
+            raise errors.ArtifactCreationError(
+                "Cannot create packages outside of the project tree.",
+                details=f"The following file paths are invalid:\n{invalid_files}",
+                resolution="Change the output directory when packing.",
+            )
+
+        emit.debug(f"normalized packages paths: {normalized}")
+        return normalized
 
     @override
     def _run(
