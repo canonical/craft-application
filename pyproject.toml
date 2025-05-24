@@ -74,7 +74,7 @@ dev = [
 lint = [
     "black~=24.0",
     "codespell[toml]==2.4.1",
-    "yamllint==1.35.1"
+    "yamllint==1.37.1"
 ]
 types = [
     "mypy[reports]==1.12.0",
