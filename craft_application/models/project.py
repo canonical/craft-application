@@ -18,7 +18,6 @@
 This defines the structure of the input file (e.g. snapcraft.yaml)
 """
 
-import dataclasses
 from typing import Annotated, Any
 
 import craft_parts
@@ -40,25 +39,9 @@ from craft_application.models.platforms import (
     PlatformsDict,
 )
 
-
-@dataclasses.dataclass
-class DevelBaseInfo:
-    """Devel base information for an OS."""
-
-    current_devel_base: craft_providers.bases.BaseAlias
-    """The base that the 'devel' alias currently points to."""
-
-    devel_base: craft_providers.bases.BaseAlias
-    """The devel base."""
-
-
-# A list of DevelBaseInfo objects that define an OS's current devel base and devel base.
-DEVEL_BASE_INFOS = [
-    DevelBaseInfo(
-        # current_devel_base should point to 25.04, which is not available yet
-        current_devel_base=craft_providers.bases.ubuntu.BuilddBaseAlias.DEVEL,
-        devel_base=craft_providers.bases.ubuntu.BuilddBaseAlias.DEVEL,
-    ),
+# A list of devel base aliases
+DEVEL_BASES = [
+    craft_providers.bases.ubuntu.BuilddBaseAlias.DEVEL,
 ]
 
 DEVEL_BASE_WARNING = (
@@ -191,23 +174,12 @@ class Project(base.CraftBaseModel):
         if not base:
             return build_base
 
-        base_alias = cls._providers_base(base)
-
-        # if the base does not map to a base alias, do not validate the build-base
-        if not base_alias:
-            return build_base
-
         build_base_alias = cls._providers_base(build_base or base)
 
         # warn if a devel build-base is being used, error if a devel build-base is not
         # used for a devel base
-        for devel_base_info in DEVEL_BASE_INFOS:
-            if base_alias == devel_base_info.current_devel_base:
-                if build_base_alias == devel_base_info.devel_base:
-                    emit.message(DEVEL_BASE_WARNING)
-                else:
-                    raise ValueError(
-                        f"A development build-base must be used when base is {base!r}"
-                    )
+        for devel_base in DEVEL_BASES:
+            if build_base_alias == devel_base:
+                emit.message(DEVEL_BASE_WARNING)
 
         return build_base
