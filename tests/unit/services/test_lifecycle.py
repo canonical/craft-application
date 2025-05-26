@@ -362,6 +362,32 @@ def test_init_with_partitions(
     assert fake_platform in service._lcm._project_info.partitions
 
 
+@pytest.mark.usefixtures("enable_partitions")
+@pytest.mark.usefixtures("enable_overlay")
+def test_init_with_filesystems(
+    app_metadata,
+    fake_project,
+    fake_services,
+    tmp_path,
+):
+    filesystems = {"default": [{"mount": "/", "device": "foo"}]}
+    fake_project.filesystems = filesystems.copy()
+    fake_services.get("project").set(fake_project)
+
+    service = lifecycle.LifecycleService(
+        app_metadata,
+        fake_services,
+        project=fake_project,
+        work_dir=tmp_path,
+        cache_dir=tmp_path,
+        platform=None,
+    )
+    assert service._lcm is None
+    service.setup()
+    assert service._lcm is not None
+    assert service._lcm._project_info.layouts == filesystems
+
+
 def test_prime_dir(lifecycle_service, tmp_path):
     prime_dir = lifecycle_service.prime_dir
 
