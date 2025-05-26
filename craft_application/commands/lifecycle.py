@@ -526,6 +526,7 @@ class TestCommand(PackCommand):
             testing_service.validate_tests(parsed_args.test_path)
 
         parsed_args.output = pathlib.Path.cwd()
+        parsed_args.fetch_service_policy = None
 
         # Don't enter a shell during the packing step, but save those values
         # for the testing service.
