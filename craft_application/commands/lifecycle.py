@@ -389,10 +389,12 @@ class PackCommand(LifecycleCommand):
             _launch_shell()
             return
 
+        output = parsed_args.output or pathlib.Path()
+
         emit.progress("Packing...")
         try:
             packages = self._services.package.pack(
-                self._services.lifecycle.prime_dir, parsed_args.output
+                self._services.lifecycle.prime_dir, output
             )
         except Exception as err:
             if debug:
