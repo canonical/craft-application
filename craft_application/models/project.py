@@ -110,7 +110,7 @@ def _validate_layout(layout: list[dict[str, Any]]) -> list[dict[str, Any]]:
     :raises: ValueError if the layout is not valid.
     """
     # This check is not always used, import it here to avoid unnecessary import
-    from craft_parts.layout import validate_layout  # type: ignore[import-untyped]
+    from craft_parts.layouts import validate_layout  # type: ignore[import-untyped]
 
     validate_layout(layout)
     return layout
