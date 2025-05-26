@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import contextlib
 import types
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import craft_platforms
@@ -43,8 +44,6 @@ from craft_application.services import base
 from craft_application.util import repositories
 
 if TYPE_CHECKING:  # pragma: no cover
-    from pathlib import Path
-
     from craft_application.application import AppMetadata
     from craft_application.services import ServiceFactory
 
@@ -225,6 +224,15 @@ class LifecycleService(base.AppService):
         emit.debug(f"Project vars: {self._project_vars}")
         emit.debug(f"Adopting part: {self._project.adopt_info}")
 
+        source_ignore_patterns = [
+            *self._app.source_ignore_patterns,
+        ]
+
+        if Path("spread/.extension").exists():
+            # Ignore spread.yaml and spread to prevent repulling sources
+            # when test files are changed.
+            source_ignore_patterns.extend(["spread.yaml", "spread"])
+
         try:
             return LifecycleManager(
                 {"parts": self._project.parts},
@@ -232,7 +240,7 @@ class LifecycleService(base.AppService):
                 arch=build_for,
                 cache_dir=self._cache_dir,
                 work_dir=self._work_dir,
-                ignore_local_sources=self._app.source_ignore_patterns,
+                ignore_local_sources=source_ignore_patterns,
                 parallel_build_count=util.get_parallel_build_count(self._app.name),
                 project_vars_part_name=self._project.adopt_info,
                 project_vars=self._project_vars,
