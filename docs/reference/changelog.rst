@@ -33,6 +33,7 @@ Fixes
 - Enable terminal output when testing with ``--debug``, ``--shell``, or
   ``--shell-after`` parameters.
 - Don't repull sources on test files changes.
+- Generate artifacts for testing in the project root directory.
 - Normalize the list of artifacts packed in ``PackageService`` to be relative
   to the project root directory.
 
