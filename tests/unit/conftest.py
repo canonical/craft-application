@@ -64,9 +64,7 @@ def mock_services(monkeypatch, app_metadata, fake_project, project_path):
     services.ServiceFactory.register(
         "remote_build", mock.Mock(spec=services.RemoteBuildService)
     )
-    services.ServiceFactory.register(
-        "testing", mock.Mock(spec=services.TestingService)
-    )
+    services.ServiceFactory.register("testing", mock.Mock(spec=services.TestingService))
 
     def forgiving_is_subclass(child, parent):
         if not isinstance(child, type):
