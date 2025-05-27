@@ -38,6 +38,7 @@ from craft_application.commands.lifecycle import (
     PrimeCommand,
     PullCommand,
     StageCommand,
+    TestCommand,
     get_lifecycle_command_group,
 )
 from craft_application.services.service_factory import ServiceFactory
@@ -851,3 +852,45 @@ def test_relativize_paths_invalid(root, paths):
             [pathlib.Path(p) for p in paths], root=pathlib.Path(root)
         )
     assert str(raised.value) == "Cannot create packages outside of the project tree."
+
+
+@pytest.mark.parametrize(
+    ("debug", "shell", "shell_after", "tests"),
+    [
+        (False, False, False, None),
+        (True, True, True, "something"),
+    ],
+)
+def test_test_run(
+    emitter, mock_services, app_metadata, debug, shell, shell_after, tests
+):
+    mock_services.package.pack.return_value = [pathlib.Path("package.zip")]
+    parsed_args = argparse.Namespace(
+        destructive_mode=True,
+        parts=["my-part"],
+        debug=debug,
+        shell=shell,
+        shell_after=shell_after,
+        test_path=tests,
+    )
+    command = TestCommand(
+        {
+            "app": app_metadata,
+            "services": mock_services,
+        }
+    )
+
+    command.run(parsed_args)
+
+    mock_services.package.pack.assert_called_once_with(
+        mock_services.lifecycle.prime_dir,
+        pathlib.Path.cwd(),
+    )
+    mock_services.testing.test.assert_called_once_with(
+        pathlib.Path.cwd(),
+        pack_state=mock.ANY,
+        shell=shell,
+        shell_after=shell_after,
+        debug=debug,
+        tests=tests,
+    )
