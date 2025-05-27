@@ -12,6 +12,8 @@ Application
 
 - Fix an issue where the fetch-service would fail to find the network used
   by LXD containers.
+- ``_set_global_environment`` method marked as deprecated for removal in the next
+  major release.
 
 Commands
 ========
@@ -28,6 +30,12 @@ Fixes
 
 - Improve test result messages.
 - ``InitService`` no longer leaves empty files if rendering template fails.
+- Enable terminal output when testing with ``--debug``, ``--shell``, or
+  ``--shell-after`` parameters.
+- Don't repull sources on test files changes.
+- Generate artifacts for testing in the project root directory.
+- Normalize the list of artifacts packed in ``PackageService`` to be relative
+  to the project root directory.
 
 For a complete list of commits, check out the `5.3.0`_ release on GitHub.
 

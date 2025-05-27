@@ -702,7 +702,17 @@ class Application:
         return pvars
 
     def _set_global_environment(self, info: craft_parts.ProjectInfo) -> None:
-        """Populate the ProjectInfo's global environment."""
+        """Populate the ProjectInfo's global environment.
+
+        DEPRECATED: This method is deprecated and is not called by default.
+        Use ``ProjectService.update_project_environment`` instead.
+        """
+        warnings.warn(
+            "Application._set_global_environment is deprecated and not called by "
+            "default. Use ProjectService.update_project_environment instead.",
+            category=DeprecationWarning,
+            stacklevel=1,
+        )
         info.global_environment.update(
             {
                 "CRAFT_PROJECT_VERSION": info.get_project_var("version", raw_read=True),

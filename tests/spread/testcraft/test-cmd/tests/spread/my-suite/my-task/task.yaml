@@ -6,6 +6,7 @@ prepare: |
 execute: |
   echo Running the test
   env
+  test -f "$CRAFT_ARTIFACT"
 
 restore: |
   echo Restoring the test

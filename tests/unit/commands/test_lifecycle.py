@@ -26,6 +26,7 @@ import pytest
 import pytest_mock
 from craft_parts import Features
 
+from craft_application import errors
 from craft_application.application import AppMetadata
 from craft_application.commands.lifecycle import (
     BuildCommand,
@@ -37,6 +38,7 @@ from craft_application.commands.lifecycle import (
     PrimeCommand,
     PullCommand,
     StageCommand,
+    TestCommand,
     get_lifecycle_command_group,
 )
 from craft_application.services.service_factory import ServiceFactory
@@ -813,3 +815,82 @@ def test_run_post_prime_managed_mode(
     command.run(parsed_args)
 
     mocked_run_post_prime_steps.assert_called_once()
+
+
+@pytest.mark.parametrize(
+    ("root", "paths", "result"),
+    [
+        ("/", ["/foo"], ["foo"]),
+        ("/foo", ["/foo/bar", "/foo/baz"], ["bar", "baz"]),
+    ],
+)
+def test_relativize_paths_valid(root, paths, result):
+    normalized_path = PackCommand._relativize_paths(
+        [pathlib.Path(p) for p in paths], root=pathlib.Path(root)
+    )
+    assert normalized_path == [pathlib.Path(p) for p in result]
+
+
+def test_relativize_paths_valid_relative(new_dir):
+    normalized_path = PackCommand._relativize_paths(
+        [pathlib.Path("relative")], root=new_dir
+    )
+    assert normalized_path == [pathlib.Path("relative")]
+
+
+@pytest.mark.parametrize(
+    ("root", "paths"),
+    [
+        ("/foo", ["relative"]),
+        ("/foo", ["/not/inside/foo"]),
+        ("/foo", ["/foo/bar", "/not/inside/foo"]),
+    ],
+)
+def test_relativize_paths_invalid(root, paths):
+    with pytest.raises(errors.ArtifactCreationError) as raised:
+        PackCommand._relativize_paths(
+            [pathlib.Path(p) for p in paths], root=pathlib.Path(root)
+        )
+    assert str(raised.value) == "Cannot create packages outside of the project tree."
+
+
+@pytest.mark.parametrize(
+    ("debug", "shell", "shell_after", "tests"),
+    [
+        (False, False, False, None),
+        (True, True, True, "something"),
+    ],
+)
+def test_test_run(
+    emitter, mock_services, app_metadata, debug, shell, shell_after, tests
+):
+    mock_services.package.pack.return_value = [pathlib.Path("package.zip")]
+    parsed_args = argparse.Namespace(
+        destructive_mode=True,
+        parts=["my-part"],
+        debug=debug,
+        shell=shell,
+        shell_after=shell_after,
+        test_path=tests,
+    )
+    command = TestCommand(
+        {
+            "app": app_metadata,
+            "services": mock_services,
+        }
+    )
+
+    command.run(parsed_args)
+
+    mock_services.package.pack.assert_called_once_with(
+        mock_services.lifecycle.prime_dir,
+        pathlib.Path.cwd(),
+    )
+    mock_services.testing.test.assert_called_once_with(
+        pathlib.Path.cwd(),
+        pack_state=mock.ANY,
+        shell=shell,
+        shell_after=shell_after,
+        debug=debug,
+        tests=tests,
+    )

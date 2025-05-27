@@ -18,13 +18,16 @@
 import pathlib
 import stat
 from collections.abc import Collection
+from typing import Any
 from unittest import mock
 
+import craft_cli.messages
 import craft_platforms
 import distro
 import pytest
 from craft_cli import CraftError
 
+import craft_application.services.testing
 from craft_application import models
 from craft_application.services.testing import TestingService
 
@@ -158,3 +161,54 @@ def test_run_spread(
             cwd=tmp_path,
         ),
     ]
+
+
+@pytest.mark.parametrize(
+    ("shell", "shell_after", "debug", "flags", "streams"),
+    [
+        (True, False, False, ["-shell"], {}),
+        (False, True, False, ["-shell-after"], {}),
+        (False, False, True, ["-debug"], {}),
+        (False, False, False, [], {"stdout": mock.ANY, "stderr": mock.ANY}),
+    ],
+)
+def test_run_spread_interactive(
+    tmp_path,
+    mocker,
+    testing_service: TestingService,
+    shell: bool,
+    shell_after: bool,
+    debug: bool,
+    flags: list[str],
+    streams: dict[str, Any],
+):
+    mocker.patch("shutil.which", return_value="spread")
+    mock_run = mocker.patch("subprocess.run")
+    mock_emitter = mock.MagicMock(spec=craft_cli.messages.Emitter)
+    mocker.patch.object(craft_application.services.testing, "emit", mock_emitter)
+
+    fake_host = craft_platforms.DistroBase(distribution="ubuntu", series="24.04")
+    mocker.patch.object(
+        craft_platforms.DistroBase,
+        "from_linux_distribution",
+        return_value=fake_host,
+    )
+
+    testing_service.run_spread(
+        tmp_path, shell=shell, shell_after=shell_after, debug=debug
+    )
+    assert mock_run.mock_calls == [
+        mock.call(
+            ["spread", *flags, mock.ANY],
+            check=True,
+            **streams,
+            cwd=tmp_path,
+        ),
+    ]
+
+    if shell or shell_after or debug:
+        mock_emitter.pause.assert_called()
+        mock_emitter.open_stream.assert_not_called()
+    else:
+        mock_emitter.pause.assert_not_called()
+        mock_emitter.open_stream.assert_called()
