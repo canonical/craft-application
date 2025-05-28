@@ -4,14 +4,12 @@
 Changelog
 *********
 
-5.X.Y (2025-MM-DD)
+5.3.0 (2025-05-28)
 ------------------
 
 Application
 ===========
 
-- Fix an issue where the fetch-service would fail to find the network used
-  by LXD containers.
 - ``_set_global_environment`` method marked as deprecated for removal in the next
   major release.
 
@@ -28,6 +26,8 @@ Git
 Fixes
 ======
 
+- Fix an issue where the fetch-service would fail to find the network used
+  by LXD containers.
 - Improve test result messages.
 - ``InitService`` no longer leaves empty files if rendering template fails.
 - Enable terminal output when testing with ``--debug``, ``--shell``, or
