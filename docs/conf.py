@@ -18,9 +18,26 @@
 import datetime
 
 project = "Craft Application"
-author = "Canonical Group Ltd"
+author = "Canonical"
 
-copyright = f"2023-{datetime.date.today().year}, {author}"  # noqa: A001
+copyright = "2023-%s, %s" % (datetime.date.today().year, author)
+
+# region Configuration for canonical-sphinx
+ogp_site_url = "https://canonical-craft-application.readthedocs-hosted.com/"
+ogp_site_name = project
+ogp_image = "https://assets.ubuntu.com/v1/253da317-image-document-ubuntudocs.svg"
+
+html_context = {
+    "product_page": "github.com/canonical/craft-application",
+    "github_url": "https://github.com/canonical/craft-application",
+}
+
+# Target repository for the edit button on pages
+html_theme_options = {
+    "source_edit_link": "https://github.com/canonical/craft-application",
+}
+
+# endregion
 
 exclude_patterns = [
     "_build",
@@ -30,7 +47,7 @@ exclude_patterns = [
     "base",
     "sphinx-resources",
     "common/README.md",
-    "common/craft-application/how-to/build-remotely.rst",
+    "common/craft-application/how-to-guides/build-remotely.rst",
     "common/craft-application/reference/remote-builds.rst",
 ]
 
@@ -48,19 +65,34 @@ extensions = [
     "pydantic_kitbash",
 ]
 
-rst_epilog = """
-.. include:: /reuse/links.txt
-"""
+templates_path = ["_templates"]
+exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 
+show_authors = False
 
-# Canonical-sphinx
-ogp_site_url = "https://canonical-craft-application.readthedocs-hosted.com/"
-ogp_site_name = project
+# endregion
+# region Options for HTML output
+# https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
-html_context = {
-    "product_page": "github.com/canonical/craft-application",
-    "github_url": "https://github.com/canonical/craft-application",
+html_theme = "furo"
+html_static_path = ["_static"]
+html_css_files = [
+    "css/custom.css",
+]
+
+# endregion
+# region Options for extensions
+# Intersphinx extension
+# https://www.sphinx-doc.org/en/master/usage/extensions/intersphinx.html#configuration
+
+intersphinx_mapping = {
+    "python": ("https://docs.python.org/3", None),
 }
+
+# Type hints configuration
+set_type_checking_flag = True
+typehints_fully_qualified = False
+always_document_param_types = True
 
 # Github config
 github_username = "canonical"
