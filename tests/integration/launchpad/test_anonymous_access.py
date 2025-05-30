@@ -8,7 +8,8 @@ from craft_application import launchpad
 def _ignore_staging() -> bool:
     """Check if we should ignore staging."""
     # If the base API page is up, run the tests as normal.
-    return requests.get("https://api.staging.launchpad.net/devel/").status_code >= 500
+    api_result = requests.get("https://api.staging.launchpad.net/devel/", timeout=4.0)
+    return api_result.status_code >= 500
 
 
 _IGNORE_STAGING = _ignore_staging()

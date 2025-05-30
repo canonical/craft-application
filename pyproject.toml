@@ -402,3 +402,10 @@ classmethod-decorators = ["pydantic.validator", "pydantic.root_validator"]
     "I001", # isort leaves init files alone by default, this makes ruff ignore them too.
     "F401", # Allows unused imports in __init__ files.
 ]
+
+# Temporary ignores - should be removed once this issue is resolved
+# https://github.com/canonical/craft-application/issues/306
+"tests/integration/launchpad/test_anonymous_access.py" = [
+    "FIX002",  # TODO comments
+    "ERA001",  # Commented-out code
+]

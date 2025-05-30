@@ -169,12 +169,12 @@ def test_create_session(strict, expected_policy):
     session_data = fetch.create_session(strict=strict)
 
     assert session_data.session_id == "my-session-id"
-    assert session_data.token == "my-session-token"
+    assert session_data.token == "my-session-token"  # noqa: S105
 
 
 @assert_requests
 def test_teardown_session():
-    session_data = fetch.SessionData(id="my-session-id", token="my-session-token")
+    session_data = fetch.SessionData(id="my-session-id", token="my-session-token")  # noqa: S106
     default_timeout = 10.0
 
     # Call to delete token
@@ -218,7 +218,7 @@ def test_configure_build_instance(mocker):
         fetch, "_obtain_certificate", return_value=("fake-cert.crt", "key.pem")
     )
 
-    session_data = fetch.SessionData(id="my-session-id", token="my-session-token")
+    session_data = fetch.SessionData(id="my-session-id", token="my-session-token")  # noqa: S106
     instance = mock.MagicMock(spec_set=LXDInstance)
     assert isinstance(instance, LXDInstance)
 

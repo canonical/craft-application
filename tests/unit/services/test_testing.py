@@ -50,11 +50,11 @@ def test_get_spread_command(
     mocker,
     monkeypatch,
     in_project_path: pathlib.Path,
-    shell: bool,
-    shell_after: bool,
-    debug: bool,
+    shell: bool,  # noqa: FBT001
+    shell_after: bool,  # noqa: FBT001
+    debug: bool,  # noqa: FBT001
     tests: Collection[pathlib.Path],
-    is_ci: bool,
+    is_ci: bool,  # noqa: FBT001
 ):
     # Set the CI environment variable to 1 if is_ci, or empty otherwise.
     monkeypatch.setenv("CI", "1" * int(is_ci))
@@ -175,9 +175,9 @@ def test_run_spread_interactive(
     tmp_path,
     mocker,
     testing_service: TestingService,
-    shell: bool,
-    shell_after: bool,
-    debug: bool,
+    shell: bool,  # noqa: FBT001
+    shell_after: bool,  # noqa: FBT001
+    debug: bool,  # noqa: FBT001
     flags: list[str],
     streams: dict[str, Any],
 ):
