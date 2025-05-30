@@ -51,7 +51,7 @@ Commands
 Models
 ======
 
-- A new :doc:`how-to guide </howto/platforms>` describes how to implement
+- A new :doc:`how-to guide </how-to-guides/platforms>` describes how to implement
   application-specific ``platforms`` keys.
 
 Services
