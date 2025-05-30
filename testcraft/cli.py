@@ -17,12 +17,12 @@
 
 from typing import Any
 
-import craft_cli
-
 import craft_application
+import craft_cli
 from craft_application.commands.lifecycle import (
     TestCommand,
 )
+
 from testcraft.application import TESTCRAFT
 from testcraft.services import register_services
 

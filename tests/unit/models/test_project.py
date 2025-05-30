@@ -24,7 +24,6 @@ from textwrap import dedent
 import craft_platforms
 import craft_providers.bases
 import pytest
-
 from craft_application import util
 from craft_application.errors import CraftValidationError
 from craft_application.models import (

@@ -28,6 +28,11 @@ import craft_platforms
 import distro
 import pytest
 import pytest_check
+from craft_application import errors, models, util
+from craft_application.errors import EmptyBuildPlanError, PartsLifecycleError
+from craft_application.services import lifecycle
+from craft_application.services.buildplan import BuildPlanService
+from craft_application.util import repositories
 from craft_parts import (
     Action,
     ActionType,
@@ -41,12 +46,6 @@ from craft_parts import (
 from craft_parts.executor import (
     ExecutionContext,  # pyright: ignore[reportPrivateImportUsage]
 )
-
-from craft_application import errors, models, util
-from craft_application.errors import EmptyBuildPlanError, PartsLifecycleError
-from craft_application.services import lifecycle
-from craft_application.services.buildplan import BuildPlanService
-from craft_application.util import repositories
 
 
 def skip_if_build_plan_empty(build_planner: BuildPlanService):

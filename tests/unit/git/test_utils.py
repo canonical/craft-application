@@ -20,9 +20,8 @@ import textwrap
 from typing import cast
 
 import pytest
-from pyfakefs import fake_filesystem
-
 from craft_application.git._utils import _FALLBACK_PATH, find_ssl_cert_dir
+from pyfakefs import fake_filesystem
 
 
 @pytest.fixture

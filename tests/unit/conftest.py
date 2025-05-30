@@ -21,7 +21,6 @@ from unittest import mock
 
 import pytest
 import pytest_mock
-
 from craft_application import git, services
 from craft_application.services import service_factory
 

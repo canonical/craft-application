@@ -24,8 +24,6 @@ import craft_parts
 import craft_platforms
 import pytest
 import pytest_mock
-from craft_parts import Features
-
 from craft_application import errors
 from craft_application.application import AppMetadata
 from craft_application.commands.lifecycle import (
@@ -42,6 +40,7 @@ from craft_application.commands.lifecycle import (
     get_lifecycle_command_group,
 )
 from craft_application.services.service_factory import ServiceFactory
+from craft_parts import Features
 
 PARTS_LISTS = [[], ["my-part"], ["my-part", "your-part"]]
 SHELL_PARAMS = [

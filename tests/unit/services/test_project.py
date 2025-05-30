@@ -22,12 +22,11 @@ from unittest import mock
 import craft_platforms
 import pytest
 import pytest_mock
-from hypothesis import given, strategies
-
 from craft_application import errors
 from craft_application.application import AppMetadata
 from craft_application.services.project import ProjectService
 from craft_application.services.service_factory import ServiceFactory
+from hypothesis import given, strategies
 
 
 @pytest.fixture

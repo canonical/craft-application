@@ -34,10 +34,9 @@ from unittest.mock import MagicMock, call
 
 import craft_providers
 import pytest
-from freezegun import freeze_time
-
 from craft_application import fetch, services
 from craft_application.services import fetch as service_module
+from freezegun import freeze_time
 
 
 @pytest.fixture

@@ -18,12 +18,11 @@
 import argparse
 
 import pytest
-from craft_cli import emit
-
 from craft_application.commands import RemoteBuild
 from craft_application.errors import RemoteBuildError
 from craft_application.launchpad.models import BuildState
 from craft_application.services import RemoteBuildService
+from craft_cli import emit
 
 
 @pytest.fixture
