@@ -16,9 +16,11 @@ settings:
     opened: Triaged
     closed: done
   label_mapping:
-    "Type: Enhancement": Story
     "Type: Bug": Bug
-    "Type: Research": Spike
-    "Type: Documentation": Documentation
     "Type: Cleanup": Task
+    "Type: Documentation": Task
+    "Type: Enhancement": Task
+    "Type: Invalid": Task
+    "Type: Question": Spike
     "Type: Refactor": Task
+    "Type: Research": Spike

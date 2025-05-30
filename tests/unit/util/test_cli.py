@@ -17,7 +17,6 @@
 from datetime import datetime, timedelta, timezone
 
 import pytest
-
 from craft_application.util import format_timestamp
 
 pytestmark = [

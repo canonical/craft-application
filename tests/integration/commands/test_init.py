@@ -22,7 +22,6 @@ import sys
 import textwrap
 
 import pytest
-
 from craft_application.commands import InitCommand
 
 # init operates in the current working directory

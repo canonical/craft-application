@@ -20,6 +20,7 @@ import tarfile
 
 import craft_application
 from craft_application.services import package
+
 from testcraft.models.metadata import Metadata
 
 

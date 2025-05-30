@@ -19,7 +19,6 @@ import pathlib
 import re
 
 import pytest
-
 from craft_application.git import NO_PUSH_URL, Commit, GitError, GitRepo
 
 

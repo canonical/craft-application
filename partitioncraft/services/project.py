@@ -19,9 +19,8 @@ Needed so we can set partitions.
 """
 
 import craft_platforms
-from typing_extensions import override
-
 from craft_application.services import project
+from typing_extensions import override
 
 
 class PartitioncraftProjectService(project.ProjectService):

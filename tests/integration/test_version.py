@@ -18,9 +18,8 @@
 import re
 import subprocess
 
-import pytest
-
 import craft_application
+import pytest
 
 
 def _repo_has_version_tag() -> bool:

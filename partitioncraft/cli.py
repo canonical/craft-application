@@ -17,9 +17,9 @@
 
 from typing import Any
 
+import craft_application
 import craft_cli
 
-import craft_application
 from partitioncraft.application import PARTITIONCRAFT, Partitioncraft
 from partitioncraft.services import register_services
 

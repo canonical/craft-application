@@ -57,7 +57,6 @@ ifeq ($(wildcard /usr/share/doc/fuse-overlayfs/copyright),)
 APT_PACKAGES += fuse-overlayfs
 endif
 
-
 # Used for installing build dependencies in CI.
 .PHONY: install-build-deps
 install-build-deps: install-lint-build-deps install-fetch-service install-lxd
