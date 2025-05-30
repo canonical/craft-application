@@ -57,7 +57,7 @@ def test_set_policy(fetch_service, policy):
 
 
 def test_create_session_already_exists(fetch_service):
-    fetch_service._session_data = fetch.SessionData(id="id", token="token")
+    fetch_service._session_data = fetch.SessionData(id="id", token="token")  # noqa: S106
 
     expected = re.escape(
         "create_session() called but there's already a live fetch-service session."

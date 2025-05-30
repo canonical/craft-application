@@ -13,7 +13,7 @@ def _ignore_staging() -> bool:
     if datetime.date.today() >= datetime.date(2025, 6, 1):
         return False
     # If the main web page is up, run the tests as normal.
-    return requests.get("https://staging.launchpad.net").status_code >= 500
+    return requests.get("https://staging.launchpad.net").status_code >= 500  # noqa: S113
 
 
 _IGNORE_STAGING = _ignore_staging()
