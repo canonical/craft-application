@@ -25,9 +25,8 @@ from collections.abc import Generator
 
 import craft_platforms
 import craft_providers
-from craft_providers.actions.snap_installer import Snap
-
 from craft_application.services import provider
+from craft_providers.actions.snap_installer import Snap
 
 
 class PartitioncraftProviderService(provider.ProviderService):

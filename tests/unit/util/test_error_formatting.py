@@ -19,7 +19,6 @@ import textwrap
 
 import pytest
 import pytest_check
-
 from craft_application.util.error_formatting import (
     FieldLocationTuple,
     format_pydantic_error,

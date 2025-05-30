@@ -19,10 +19,9 @@
 from unittest.mock import MagicMock
 
 import pytest
-from snaphelpers import SnapCtlError
-
 from craft_application.errors import CraftValidationError
 from craft_application.util import SnapConfig, get_snap_config, is_running_from_snap
+from snaphelpers import SnapCtlError
 
 
 @pytest.fixture

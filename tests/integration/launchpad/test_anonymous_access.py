@@ -4,7 +4,6 @@ import datetime
 
 import pytest
 import requests
-
 from craft_application import launchpad
 
 

@@ -24,12 +24,11 @@ import craft_platforms
 import pytest
 import pytest_check
 import pytest_mock
-from craft_cli.pytest_plugin import RecordingEmitter
-from craft_platforms import BuildInfo, DebianArchitecture, DistroBase
-
 from craft_application.errors import EmptyBuildPlanError
 from craft_application.services.buildplan import BuildPlanService
 from craft_application.services.service_factory import ServiceFactory
+from craft_cli.pytest_plugin import RecordingEmitter
+from craft_platforms import BuildInfo, DebianArchitecture, DistroBase
 
 
 def test__gen_exhaustive_build_plan(

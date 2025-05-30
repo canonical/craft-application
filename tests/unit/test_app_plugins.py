@@ -25,15 +25,14 @@ from types import ModuleType
 from typing import cast
 
 import pytest
-from craft_cli import emit
-from overrides import override
-
 from craft_application import (
     Application,
     AppService,
     commands,
     services,
 )
+from craft_cli import emit
+from overrides import override
 
 FAKE_APP = "boopcraft"
 PLUGIN_GROUP_NAME = "craft_application_plugins.application"

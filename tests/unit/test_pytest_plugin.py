@@ -22,9 +22,8 @@ import craft_parts
 import craft_platforms
 import pytest
 import pytest_check
-from pyfakefs.fake_filesystem import FakeFilesystem
-
 from craft_application import services, util
+from pyfakefs.fake_filesystem import FakeFilesystem
 
 
 def test_sets_debug_mode_auto_used(app_metadata):

@@ -26,7 +26,6 @@ import pygit2.enums
 import pytest
 import pytest_mock
 import pytest_subprocess
-
 from craft_application.git import (
     COMMIT_SHA_LEN,
     COMMIT_SHORT_SHA_LEN,
@@ -47,6 +46,7 @@ from craft_application.remote import (
     RemoteBuildInvalidGitRepoError,
     check_git_repo_for_remote_build,
 )
+
 from tests.conftest import RepositoryDefinition
 
 

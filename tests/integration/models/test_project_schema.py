@@ -17,7 +17,6 @@ import pathlib
 
 import jsonschema
 import pytest
-
 from craft_application import models, util
 from craft_application.errors import CraftValidationError
 from craft_application.models.platforms import Platform
