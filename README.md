@@ -1,62 +1,50 @@
-<If the software has approved imagery or logo, add it here.>
+# Craft Application
 
-# Starcraft
+[![Documentation Status][rtd-badge]][rtd-latest]
+[![Codecov Status][codecov-badge]][codecov-status]
+[![Ruff status][ruff-badge]][ruff-site]
 
-<Include the build status badges.>
+Craft Application is the base library for all Starcraft applications.
 
-<Answer elevator-pitch questions about the software – What is it? What does it do? What
-essential problem does it solve? Who is it useful for?>
+Its purpose is to provide a single source of truth for the implementation of
+common Starcraft mechanisms, such as application services and project models.
 
-<If it's a library or framework and the solutions it provides are more open-ended, you
-can describe the project's overarching philosophy.>
-
-## Basic usage
-
-<Show the essence of the product with carefully-chosen examples of it in use. Give the
-prospective user a sense of what the software _feels_ like.>
-
-<This could be the constituent parts of the main user story, or smaller individual
-stories. Some examples:>
-
-- <For CLI apps and tools, three-to-five invocations of essential commands>
-- <For frameworks, some short examples of the structures and syntax>
-- <For libraries, the library name (`import <package>`) and the main APIs>
-
-## Installation
-
-<Briefly describe what platforms the software is supported on.>
-
-<Provide the simplest way to install it, prioritising the snap release on Ubuntu.>
-
-<If available, link to other installation methods in the documentation.>
+This library is most useful for app developers in the Starcraft family.
 
 ## Documentation
 
-<Encourage the reader to start their journey with the documentation and link to it.>
+The [Craft Application documentation][rtd-latest] provides guidance about
+understanding and using the library.
 
 ## Community and support
 
-<Invite the user to participate in the community, with a link to the Code of Conduct and
-its central forums.>
-
 You can report any issues or bugs on the project's [GitHub
-repository](https://github.com/canonical/starcraft/issues).
+repository](https://github.com/canonical/craft-application/issues).
 
-Starcraft is covered by the [Ubuntu Code of
+Craft Application is covered by the [Ubuntu Code of
 Conduct](https://ubuntu.com/community/ethos/code-of-conduct).
 
-## Contribute to Starcraft
+## Contribute to Craft Application
 
-Starcraft is open source and part of the Canonical family. We would love your help.
+Craft Application is open source and part of the Canonical family. We would love
+your help.
 
 If you're interested, start with the [contribution guide](HACKING.md).
 
-We welcome any suggestions and help with the docs. The [Canonical Open Documentation
-Academy](https://github.com/canonical/open-documentation-academy) is the hub for doc
-development, including Starcraft docs. No prior coding experience is required.
+We welcome any suggestions and help with the docs. The [Canonical Open
+Documentation Academy](https://github.com/canonical/open-documentation-academy)
+is the hub for doc development, including Craft Application docs. No prior
+coding experience is required.
 
 ## License and copyright
 
-Starcraft is released under the [GPL-3.0 license](LICENSE).
+Craft Application is released under the [GPL-3.0 license](LICENSE).
 
-© <start year>-<current year> Canonical Ltd.
+© 2023-2025 Canonical Ltd.
+
+[rtd-badge]: https://readthedocs.com/projects/canonical-craft-application/badge/?version=latest
+[rtd-latest]: https://canonical-craft-application.readthedocs-hosted.com/en/latest/
+[ruff-badge]: https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json
+[ruff-site]: https://github.com/astral-sh/ruff
+[codecov-badge]: https://codecov.io/github/canonical/craft-application/coverage.svg?branch=master
+[codecov-status]: https://codecov.io/github/canonical/craft-application?branch=master
