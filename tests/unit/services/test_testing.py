@@ -43,9 +43,7 @@ def testing_service(default_app_metadata) -> TestingService:
 @pytest.mark.parametrize("shell", [False, True])
 @pytest.mark.parametrize("shell_after", [False, True])
 @pytest.mark.parametrize("debug", [False, True])
-@pytest.mark.parametrize(
-    "test_expressions", [[], ["tests/my-suite/my-test/"]]
-)
+@pytest.mark.parametrize("test_expressions", [[], ["tests/my-suite/my-test/"]])
 @pytest.mark.parametrize("is_ci", [False, True])
 def test_get_spread_command(
     testing_service: TestingService,
