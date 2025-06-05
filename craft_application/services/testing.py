@@ -136,7 +136,7 @@ class TestingService(base.AppService):
 
         if test_expressions:
             # User provided test expressions are passed to spread.
-            cmd.extend([str(exp) for exp in test_expressions])
+            cmd.extend(list(test_expressions))
         else:
             # Use the craft backend. If running on CI, also set the system.
             system = self._get_system()

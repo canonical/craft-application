@@ -502,7 +502,7 @@ class TestCommand(PackCommand):
         parser.add_argument(
             "test_expressions",
             nargs="*",
-            type=pathlib.Path,
+            type=str,
             default=(),
             help="Optional spread test expressions. If not provided, all craft backend tests are run.",
         )
