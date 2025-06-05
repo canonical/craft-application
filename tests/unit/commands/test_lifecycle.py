@@ -871,7 +871,7 @@ def test_test_run(
         debug=debug,
         shell=shell,
         shell_after=shell_after,
-        test_path=tests,
+        test_expressions=tests,
     )
     command = TestCommand(
         {
@@ -892,5 +892,5 @@ def test_test_run(
         shell=shell,
         shell_after=shell_after,
         debug=debug,
-        tests=tests,
+        test_expressions=tests,
     )

@@ -38,28 +38,12 @@ class TestingService(base.AppService):
 
     __test__ = False  # Tell pytest this service is not a test class.
 
-    def validate_tests(self, tests: Collection[pathlib.Path]) -> None:
-        """Validate that each of the provided test names exists."""
-        emit.debug("Checking that the specified test paths are valid")
-        invalid_tests: list[str] = []
-        for test in tests:
-            if (test / "task.yaml").is_file():
-                continue
-            invalid_tests.append(str(test))
-        if invalid_tests:
-            invalid_tests_str = util.humanize_list(invalid_tests, "and")
-            raise CraftError(
-                f"Invalid test value(s): {invalid_tests_str}",
-                resolution="Check the test paths and try again",
-                logpath_report=False,
-            )
-
     def test(
         self,
         project_path: pathlib.Path,
         pack_state: models.PackState,
         *,
-        tests: Collection[pathlib.Path] = (),
+        test_expressions: Collection[pathlib.Path] = (),
         shell: bool = False,
         shell_after: bool = False,
         debug: bool = False,
@@ -68,7 +52,12 @@ class TestingService(base.AppService):
 
         This method is likely the all you need to call.
 
-        :param project_path: the path to the project directory containing spread.yaml.
+        :param project_path: The path to the project directory containing spread.yaml.
+        :param pack_state: An object containing the list of packed artifacts.
+        :param test_expressions: A list of spread test expressions.
+        :param shell: Whether to shell into the spread test instance.
+        :param shell_after: Whether to shell into the spread test instance after the test runs.
+        :param debug: Whether to shell into the spread test instance if the test fails.
         """
         with tempfile.TemporaryDirectory(
             prefix=".craft-spread-",
@@ -81,7 +70,7 @@ class TestingService(base.AppService):
             emit.trace(f"Temporary spread file:\n{temp_spread_file.read_text()}")
             self.run_spread(
                 temp_dir_path,
-                tests=tests,
+                test_expressions=test_expressions,
                 shell=shell,
                 shell_after=shell_after,
                 debug=debug,
@@ -131,7 +120,7 @@ class TestingService(base.AppService):
     def _get_spread_command(
         self,
         *,
-        tests: Collection[pathlib.Path] = (),
+        test_expressions: Collection[pathlib.Path] = (),
         shell: bool = False,
         shell_after: bool = False,
         debug: bool = False,
@@ -145,14 +134,13 @@ class TestingService(base.AppService):
         if debug:
             cmd.append("-debug")
 
-        system = self._get_system()
-        backend_system_str = f"craft:{system}" if system else "craft"
-
-        if tests:
-            self.validate_tests(tests)
-            cmd.extend(f"{backend_system_str}:{test}" for test in tests)
+        if test_expressions:
+            # User provided test expressions are passed to spread.
+            cmd.extend([str(exp) for exp in test_expressions])
         else:
-            cmd.append(f"{backend_system_str}:")
+            # Use the craft backend. If running on CI, also set the system.
+            system = self._get_system()
+            cmd.append(f"craft:{system}" if system else "craft")
 
         emit.debug(f"Running spread as: {shlex.join(cmd)}")
 
@@ -162,7 +150,7 @@ class TestingService(base.AppService):
         self,
         spread_dir: pathlib.Path,
         *,
-        tests: Collection[pathlib.Path] = (),
+        test_expressions: Collection[pathlib.Path] = (),
         shell: bool = False,
         shell_after: bool = False,
         debug: bool = False,
@@ -170,11 +158,17 @@ class TestingService(base.AppService):
         """Run spread on the processed project file.
 
         :param spread_dir: The working directory where spread should run.
-        :param shell: Whether to pass the ``-shell`` option to spread.
+        :param test_expressions: A list of spread test expressions.
+        :param shell: Whether to shell into the spread test instance.
+        :param shell_after: Whether to shell into the spread test instance after the test runs.
+        :param debug: Whether to shell into the spread test instance if the test fails.
         """
         emit.debug("Running spread tests.")
         spread_command = self._get_spread_command(
-            tests=tests, shell=shell, shell_after=shell_after, debug=debug
+            test_expressions=test_expressions,
+            shell=shell,
+            shell_after=shell_after,
+            debug=debug,
         )
 
         is_interactive = shell or shell_after or debug
