@@ -179,12 +179,12 @@ VersionStr = Annotated[
         strict=False,
         coerce_numbers_to_str=True,
         title="version string",
-        description="The version of the project.",
+        description="The version of the project, enclosed in quotation marks.",
         examples=[
-            "0.1",
-            "1.0.0",
-            "v1.0.0",
-            "24.04",
+            '"0.1"',
+            '"1.0.0"',
+            '"v1.0.0"',
+            '"24.04"',
         ],
     ),
 ]
