@@ -17,7 +17,7 @@
 
 import pathlib
 import stat
-from collections.abc import Collection
+from collections.abc import Iterable
 from typing import Any
 from unittest import mock
 
@@ -44,7 +44,7 @@ def testing_service(default_app_metadata) -> TestingService:
 @pytest.mark.parametrize("shell_after", [False, True])
 @pytest.mark.parametrize("debug", [False, True])
 @pytest.mark.parametrize(
-    "test_expressions", [[], [pathlib.Path("tests/my-suite/my-test/")]]
+    "test_expressions", [[], ["tests/my-suite/my-test/"]]
 )
 @pytest.mark.parametrize("is_ci", [False, True])
 def test_get_spread_command(
@@ -56,7 +56,7 @@ def test_get_spread_command(
     shell: bool,
     shell_after: bool,
     debug: bool,
-    test_expressions: Collection[pathlib.Path],
+    test_expressions: Iterable[str],
     is_ci: bool,
 ):
     # Set the CI environment variable to 1 if is_ci, or empty otherwise.
