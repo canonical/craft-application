@@ -22,7 +22,7 @@ import shlex
 import shutil
 import subprocess
 import tempfile
-from collections.abc import Collection
+from collections.abc import Iterable
 
 import craft_platforms
 import distro
@@ -43,7 +43,7 @@ class TestingService(base.AppService):
         project_path: pathlib.Path,
         pack_state: models.PackState,
         *,
-        test_expressions: Collection[pathlib.Path] = (),
+        test_expressions: Iterable[str] = (),
         shell: bool = False,
         shell_after: bool = False,
         debug: bool = False,
@@ -120,7 +120,7 @@ class TestingService(base.AppService):
     def _get_spread_command(
         self,
         *,
-        test_expressions: Collection[pathlib.Path] = (),
+        test_expressions: Iterable[str] = (),
         shell: bool = False,
         shell_after: bool = False,
         debug: bool = False,
@@ -150,7 +150,7 @@ class TestingService(base.AppService):
         self,
         spread_dir: pathlib.Path,
         *,
-        test_expressions: Collection[pathlib.Path] = (),
+        test_expressions: Iterable[str] = (),
         shell: bool = False,
         shell_after: bool = False,
         debug: bool = False,
