@@ -276,6 +276,7 @@ def test_config_service_converts_type(
 )
 def test_get_all(
     monkeypatch: pytest.MonkeyPatch,
+    app_metadata,
     fake_process: pytest_subprocess.FakeProcess,
     fake_services,
     environment_variables: dict[str, str],
@@ -283,7 +284,10 @@ def test_get_all(
     monkeypatch.setattr("snaphelpers._ctl.Popen", subprocess.Popen)
     for key, value in environment_variables.items():
         monkeypatch.setenv(key, value)
-    fake_process.register(["/usr/bin/snapctl", fake_process.any()], stdout="{}")
+    for config_item in app_metadata.ConfigModel.model_fields:
+        fake_process.register(
+            f"/usr/bin/snapctl get -d {config_item.replace('_', '-')}", stdout="{}"
+        )
     config = fake_services.config.get_all()
     for var, value in environment_variables.items():
         config_name = var.partition("_")[2].lower()

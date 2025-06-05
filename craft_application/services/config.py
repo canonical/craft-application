@@ -218,6 +218,13 @@ class ConfigService(base.AppService):
         """
         config: dict[str, Any] = {}
         for field in self._app.ConfigModel.model_fields:
-            with contextlib.suppress(KeyError):
-                config[field] = self.get(field)
+            try:
+                config_value = self.get(field)
+            except KeyError:
+                continue
+            with contextlib.suppress(AttributeError):
+                default_value = getattr(self._app.ConfigModel, field).default
+                if config_value == default_value:
+                    continue
+            config[field] = config_value
         return config

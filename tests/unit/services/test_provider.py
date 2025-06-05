@@ -15,6 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Unit tests for provider service"""
 
+import enum
 import pathlib
 import pkgutil
 import subprocess
@@ -354,18 +355,32 @@ def test_is_managed(managed_value, expected, monkeypatch):
     assert provider.ProviderService.is_managed() == expected
 
 
-def test_forward_environment_variables(monkeypatch, provider_service):
+def test_forward_environment_variables(monkeypatch, provider_service, fake_services):
     var_contents = uuid.uuid4().hex
     for var in provider.DEFAULT_FORWARD_ENVIRONMENT_VARIABLES:
         monkeypatch.setenv(var, f"{var}__{var_contents}")
 
     provider_service.setup()
 
+    # Exclude forwarded proxy variables from the host in this check.
+    del_vars = set()
+    for variable in provider_service.environment:
+        if variable.lower().endswith("proxy"):
+            del_vars.add(variable)
+    for variable in del_vars:
+        del provider_service.environment[variable]
+
     assert provider_service.environment == {
         provider_service.managed_mode_env_var: "1",
         **{
             var: f"{var}__{var_contents}"
             for var in provider.DEFAULT_FORWARD_ENVIRONMENT_VARIABLES
+        },
+        **{
+            f"TESTCRAFT_{config.upper()}": (
+                value.name if isinstance(value, enum.Enum) else str(value)
+            )
+            for config, value in fake_services.get("config").get_all().items()
         },
     }
 
