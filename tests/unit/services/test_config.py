@@ -263,3 +263,32 @@ def test_config_service_converts_type(
         monkeypatch.setenv(key, value)
     fake_process.register(["/usr/bin/snapctl", fake_process.any()], stdout="{}")
     assert fake_services.config.get(item) == expected
+
+
+@pytest.mark.parametrize(
+    "environment_variables",
+    [
+        {},
+        {"CRAFT_PARALLEL_BUILD_COUNT": "1337"},
+        {"CRAFT_MAX_PARALLEL_BUILD_COUNT": "1138"},
+        {"TESTCRAFT_DEBUG": "True", "TESTCRAFT_PARALLEL_BUILD_COUNT": "0"},
+    ],
+)
+def test_get_all(
+    monkeypatch: pytest.MonkeyPatch,
+    app_metadata,
+    fake_process: pytest_subprocess.FakeProcess,
+    fake_services,
+    environment_variables: dict[str, str],
+):
+    monkeypatch.setattr("snaphelpers._ctl.Popen", subprocess.Popen)
+    for key, value in environment_variables.items():
+        monkeypatch.setenv(key, value)
+    for config_item in app_metadata.ConfigModel.model_fields:
+        fake_process.register(
+            f"/usr/bin/snapctl get -d {config_item.replace('_', '-')}", stdout="{}"
+        )
+    config = fake_services.config.get_all()
+    for var, value in environment_variables.items():
+        config_name = var.partition("_")[2].lower()
+        assert str(config[config_name]) == value

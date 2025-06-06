@@ -96,7 +96,7 @@ class SnapConfigHandler(ConfigHandler):
             raise OSError("Not running as a snap.")
         try:
             self._snap = snaphelpers.SnapConfig()
-        except KeyError:
+        except (KeyError, AttributeError):
             raise OSError("Not running as a snap.")
         except snaphelpers.SnapCtlError:
             # Most likely to happen in a container that has the snap environment set.
@@ -209,3 +209,22 @@ class ConfigService(base.AppService):
                     return cast(T, field_type[value.upper()])
         field_adapter = pydantic.TypeAdapter(field_type)
         return field_adapter.validate_strings(value)
+
+    def get_all(self) -> dict[str, Any]:
+        """Get a dictionary of the complete configuration per the ConfigModel.
+
+        Configuration items that are unset but have no default value are not included
+        in the resulting mapping.
+        """
+        config: dict[str, Any] = {}
+        for field in self._app.ConfigModel.model_fields:
+            try:
+                config_value = self.get(field)
+            except KeyError:
+                continue
+            with contextlib.suppress(AttributeError):
+                default_value = getattr(self._app.ConfigModel, field).default
+                if config_value == default_value:
+                    continue
+            config[field] = config_value
+        return config

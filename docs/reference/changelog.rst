@@ -23,6 +23,14 @@ Git
 
 - Add API to modify repository configuration.
 
+Services
+========
+
+- Add a ``get_all()`` method to the ``ConfigService``, which returns a ``dict`` of
+  all current configuration values.
+- The ``ProviderService`` now passes all values from the ``ConfigService`` to the
+  inner instance's environment.
+
 Fixes
 ======
 
