@@ -7,6 +7,13 @@ Changelog
 5.4.0 (2025-MM-DD)
 ------------------
 
+Services
+========
+
+- Deprecate the ``work_dir`` parameter on :meth:`ProviderService.instance`. The
+  parameter is still used if provided, but is now optional. It will be removed in
+  a future release.
+
 Models
 ======
 
@@ -63,15 +70,10 @@ Commands
 
 - The ``test`` command now accepts paths to specific tests as well as the
   ``--debug``, ``--shell`` and ``--shell-after`` parameters.
-=======
-4.x.x (YYYY-MMM-DD)
--------------------
->>>>>>> 7e225ac (feat(models): expose Part type)
 
 Models
 ======
 
-<<<<<<< HEAD
 - A new :doc:`how-to guide </howto/platforms>` describes how to implement
   application-specific ``platforms`` keys.
 
