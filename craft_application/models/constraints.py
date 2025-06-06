@@ -82,13 +82,12 @@ SingleEntryDict = Annotated[
 ]
 
 _PROJECT_NAME_DESCRIPTION = """\
-The name of this project. This is used when uploading, publishing, or installing.
+The name of the project. This is used when uploading, publishing, or installing.
 
-Project name rules:
-* Valid characters are lower-case ASCII letters, numerals and hyphens.
-* Must contain at least one letter
-* May not start or end with a hyphen
-* May not have two hyphens in a row
+The project name must consist only of lower-case ASCII letters (``a-z``), numerals
+(``0-9``), and hyphens (``-``). It must contain at least one letter, not start or end
+with a hyphen, and not contain two consecutive hyphens. The maximum length is 40
+characters.
 """
 
 PROJECT_NAME_REGEX = r"^([a-z0-9][a-z0-9-]?)*[a-z]+([a-z0-9-]?[a-z0-9])*$"
@@ -146,7 +145,7 @@ SummaryStr = Annotated[
     pydantic.Field(
         max_length=78,
         title="Summary",
-        description="A short description of your project.",
+        description="A short description of the project.",
         examples=[
             "Linux for Human Beings",
             "The cross-platform desktop application for JupyterLab",
@@ -180,12 +179,12 @@ VersionStr = Annotated[
         strict=False,
         coerce_numbers_to_str=True,
         title="version string",
-        description="A string containing the version of the project",
+        description="The version of the project, enclosed in quotation marks.",
         examples=[
-            "0.1",
-            "1.0.0",
-            "v1.0.0",
-            "24.04",
+            '"0.1"',
+            '"1.0.0"',
+            '"v1.0.0"',
+            '"24.04"',
         ],
     ),
 ]
