@@ -1,7 +1,5 @@
 """Tests for anonymous access."""
 
-import datetime
-
 import pytest
 import requests
 
@@ -10,11 +8,8 @@ from craft_application import launchpad
 
 def _ignore_staging() -> bool:
     """Check if we should ignore staging."""
-    # Extend acceptance of staging being down to the end of May
-    if datetime.date.today() >= datetime.date(2025, 6, 1):
-        return False
-    # If the main web page is up, run the tests as normal.
-    return requests.get("https://staging.launchpad.net").status_code >= 500
+    # If the base API page is up, run the tests as normal.
+    return requests.get("https://api.staging.launchpad.net/devel/").status_code >= 500
 
 
 _IGNORE_STAGING = _ignore_staging()
