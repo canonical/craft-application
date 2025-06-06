@@ -1,6 +1,6 @@
-# Starcraft
+# Craft Application
 
-Welcome to Starcraft! We hope this document helps you get started. Before contributing
+Welcome to Craft Application! We hope this document helps you get started. Before contributing
 any code, please sign the
 [Canonical Contributor Licence Agreement](http://www.ubuntu.com/legal/contributors).
 

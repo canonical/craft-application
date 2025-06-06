@@ -41,12 +41,12 @@ classifiers = [
 ]
 requires-python = ">=3.10"
 readme = { file = "README.md", content-type = "text/markdown" }
-license = "LGPL-3.0-or-later"
+license = { file = "LICENSE" }
 
 [project.entry-points.pytest11]
 craft_application = "craft_application.pytest_plugin"
 
-[dependency-groups]
+[project.optional-dependencies]
 remote = [
     # Support for remote-build is optional.
     "launchpadlib>=1.10.16",
@@ -54,6 +54,8 @@ remote = [
 apt = [
     "python-apt>=2.4.0;sys_platform=='linux'",
 ]
+
+[dependency-groups]
 dev = [
     "coverage[toml]==7.6.12",
     "hypothesis>=6.0",
@@ -125,6 +127,22 @@ constraint-dependencies = [
     "webencodings>=0.4.0",
     "wheel>=0.38",
 ]
+conflicts = [
+    [
+        { group = "dev-jammy" },
+        { group = "dev-noble" },
+        { group = "dev-oracular" },
+        { group = "dev-plucky" },
+    ]
+]
+
+[[tool.uv.index]]
+name = "python-apt-wheels"
+url = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels/"  # workaround to get python-apt to install across multiple platforms
+explicit = true
+
+[tool.uv.sources]
+python-apt = { index = "python-apt-wheels" }
 
 
 [build-system]
@@ -133,14 +151,6 @@ requires = [
     "setuptools_scm[toml]>=8.1"
 ]
 build-backend = "setuptools.build_meta"
-
-[tool]
-rye = { dev-dependencies = [
-    "pytest-xdist>=3.6.1",
-] }
-
-[tool.setuptools.dynamic]
-readme = {file = "README.rst"}
 
 [tool.setuptools_scm]
 write_to = "craft_application/_version.py"

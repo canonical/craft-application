@@ -49,6 +49,9 @@ exclude_patterns = [
     "common/README.md",
     "common/craft-application/how-to-guides/build-remotely.rst",
     "common/craft-application/reference/remote-builds.rst",
+
+    # There's no tutorials right now, so just hide the scaffolding
+    "tutorials",
 ]
 
 # links to ignore when checking links
@@ -66,7 +69,6 @@ extensions = [
 ]
 
 templates_path = ["_templates"]
-exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 
 show_authors = False
 
@@ -112,3 +114,8 @@ intersphinx_mapping = {
 
 # Client-side page redirects.
 rediraffe_redirects = "redirects.txt"
+
+# Reuse epilog
+rst_epilog = """
+.. include:: /reuse/links.txt
+"""
