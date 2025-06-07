@@ -23,19 +23,18 @@ import uuid
 from typing import NamedTuple
 from unittest import mock
 
+import craft_application
 import craft_platforms
 import craft_providers
 import pytest
 import pytest_subprocess
-from craft_cli import emit
-from craft_providers import bases, lxd, multipass
-from craft_providers.actions.snap_installer import Snap
-
-import craft_application
 from craft_application import errors
 from craft_application.services import provider
 from craft_application.services.service_factory import ServiceFactory
 from craft_application.util import snap_config
+from craft_cli import emit
+from craft_providers import bases, lxd, multipass
+from craft_providers.actions.snap_installer import Snap
 
 
 @pytest.fixture
@@ -889,7 +888,7 @@ def test_run_managed(
     default_app_metadata: craft_application.AppMetadata,
     fake_services: ServiceFactory,
     fake_build_info: craft_platforms.BuildInfo,
-    fetch: bool,
+    fetch: bool,  # noqa: FBT001
     mock_provider,
     mock_capture_pack_state,
 ):

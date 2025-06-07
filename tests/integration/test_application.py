@@ -18,15 +18,14 @@ import pathlib
 import shutil
 import textwrap
 
+import craft_application
+import craft_application.commands
 import craft_cli
 import pytest
 import pytest_check
-from typing_extensions import override
-
-import craft_application
-import craft_application.commands
 from craft_application import util
 from craft_application.util import yaml
+from typing_extensions import override
 
 
 class FakeApplication(craft_application.Application):

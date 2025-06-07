@@ -16,7 +16,6 @@
 """Unit tests for system util module."""
 
 import pytest
-
 from craft_application import util
 from craft_application.errors import InvalidParameterError
 

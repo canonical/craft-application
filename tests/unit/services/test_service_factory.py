@@ -20,9 +20,8 @@ from unittest import mock
 
 import pytest
 import pytest_check
-from craft_cli import emit
-
 from craft_application import AppMetadata, services
+from craft_cli import emit
 
 pytestmark = [
     pytest.mark.filterwarnings("ignore:Registering services on service factory")

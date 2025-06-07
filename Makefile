@@ -1,7 +1,11 @@
 PROJECT=craft_application
+# Define when more than the main package tree requires coverage
+# like is the case for snapcraft (snapcraft and snapcraft_legacy):
+# COVERAGE_SOURCE="starcraft"
 UV_TEST_GROUPS := "--group=dev"
 UV_DOCS_GROUPS := "--group=docs"
 UV_LINT_GROUPS := "--group=lint" "--group=types"
+UV_TICS_GROUPS := "--group=tics"
 
 # If you have dev dependencies that depend on your distro version, uncomment these:
 ifneq ($(wildcard /etc/os-release),)
@@ -11,6 +15,7 @@ ifdef VERSION_CODENAME
 UV_TEST_GROUPS += "--group=dev-$(VERSION_CODENAME)"
 UV_DOCS_GROUPS += "--group=dev-$(VERSION_CODENAME)"
 UV_LINT_GROUPS += "--group=dev-$(VERSION_CODENAME)"
+UV_TICS_GROUPS += "--group=dev-$(VERSION_CODENAME)"
 endif
 
 include common.mk
@@ -19,22 +24,17 @@ include common.mk
 format: format-ruff format-codespell format-prettier  ## Run all automatic formatters
 
 .PHONY: lint
-lint: lint-ruff lint-codespell lint-mypy lint-prettier lint-pyright lint-shellcheck lint-docs lint-twine  ## Run all linters
+lint: lint-ruff lint-codespell lint-mypy lint-prettier lint-pyright lint-shellcheck lint-docs lint-twine lint-uv-lockfile  ## Run all linters
 
 .PHONY: pack
 pack: pack-pip  ## Build all packages
 
-.PHONY: publish
-publish: publish-pypi  ## Publish packages
-
-.PHONY: publish-pypi
-publish-pypi: clean pack-pip lint-twine  ##- Publish Python packages to pypi
-	uv tool run twine upload dist/*
-
-.PHONY: schema
-schema: install-uv  ## Make a schema file for testcraft.
-	mkdir -p schema
-	uv run python -c 'from craft_application.models import Project;import json; print(json.dumps(Project.model_json_schema(), indent=2))' > schema/testcraft.json
+.PHONY: pack-snap
+pack-snap: snap/snapcraft.yaml  ##- Build snap package
+ifeq ($(shell which snapcraft),)
+	sudo snap install --classic snapcraft
+endif
+	snapcraft pack
 
 # Find dependencies that need installing
 APT_PACKAGES :=
@@ -56,7 +56,6 @@ endif
 ifeq ($(wildcard /usr/share/doc/fuse-overlayfs/copyright),)
 APT_PACKAGES += fuse-overlayfs
 endif
-
 
 # Used for installing build dependencies in CI.
 .PHONY: install-build-deps

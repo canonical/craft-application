@@ -1,7 +1,7 @@
 .. _reference:
 
 Reference
-*********
+=========
 
 .. toctree::
    :maxdepth: 1
@@ -12,9 +12,3 @@ Reference
    pytest-plugin
    remote-builds
    services/index
-
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
