@@ -43,7 +43,7 @@ def testing_service(default_app_metadata) -> TestingService:
 @pytest.mark.parametrize("shell", [False, True])
 @pytest.mark.parametrize("shell_after", [False, True])
 @pytest.mark.parametrize("debug", [False, True])
-@pytest.mark.parametrize("test_expressions", [[], ["tests/my-suite/my-test/"]])
+@pytest.mark.parametrize("test_expressions", [[], ["exp1", "exp2"]])
 @pytest.mark.parametrize("is_ci", [False, True])
 def test_get_spread_command(
     testing_service: TestingService,
@@ -51,15 +51,26 @@ def test_get_spread_command(
     mocker,
     monkeypatch,
     in_project_path: pathlib.Path,
-    shell: bool,
-    shell_after: bool,
-    debug: bool,
+    shell: bool,  # noqa: FBT001
+    shell_after: bool,  # noqa: FBT001
+    debug: bool,  # noqa: FBT001
     test_expressions: Iterable[str],
-    is_ci: bool,
+    is_ci: bool,  # noqa: FBT001
 ):
     # Set the CI environment variable to 1 if is_ci, or empty otherwise.
     monkeypatch.setenv("CI", "1" * int(is_ci))
     mocker.patch("shutil.which", return_value="/usr/local/bin/craft.spread")
+
+    fake_distro = mocker.Mock()
+    fake_distro.distribution = "mydistro"
+    fake_distro.series = "99"
+    mocker.patch(
+        "craft_platforms.DistroBase.from_linux_distribution", return_value=fake_distro
+    )
+    mocker.patch(
+        "craft_application.services.testing.TestingService._filter_spread_jobs",
+        return_value=["craft:mydistro-99:my/suite/"],
+    )
 
     actual = testing_service._get_spread_command(
         shell=shell,
@@ -81,15 +92,77 @@ def test_get_spread_command(
     else:
         check.is_not_in("-debug", actual)
 
-    if is_ci and not test_expressions:
-        distro_base = craft_platforms.DistroBase.from_linux_distribution(
-            distro.LinuxDistribution()
-        )
-        expected = f"{distro_base.distribution}-{distro_base.series}"
-        check.is_in(f"craft:{expected}", actual)
+    if is_ci:
+        if test_expressions:
+            check.is_in(f"craft:mydistro-99:my/suite/", actual)
+        else:
+            check.is_in(f"craft:mydistro-99", actual)
     else:
         for expression in test_expressions:
             check.is_in(str(expression), actual)
+
+
+def test_get_spread_command_no_jobs(
+    testing_service: TestingService, mocker, monkeypatch
+):
+    # Set the CI environment variable to 1 if is_ci, or empty otherwise.
+    monkeypatch.setenv("CI", "1")
+    mocker.patch("shutil.which", return_value="spread")
+
+    fake_distro = mocker.Mock()
+    fake_distro.distribution = "mydistro"
+    fake_distro.series = "99"
+    mocker.patch(
+        "craft_platforms.DistroBase.from_linux_distribution", return_value=fake_distro
+    )
+    mocker.patch(
+        "craft_application.services.testing.TestingService._filter_spread_jobs",
+        return_value=[],
+    )
+
+    with pytest.raises(CraftError) as raised:
+        testing_service._get_spread_command(test_expressions=["exp1", "exp2"])
+
+    assert str(raised.value) == "No matches for test the specified test filters."
+
+
+def test_get_spread_command_ci_expression(
+    mocker,
+    monkeypatch: pytest.MonkeyPatch,
+    testing_service: TestingService,
+):
+    # The jobs returned by `spread -list exp1 exp2`
+    fake_proc = mock.Mock()
+    fake_proc.stdout = "\n".join(
+        [
+            "backend:system:my/suite/",
+            "craft:mydistro-100:my/suite/",
+            "craft:mydistro-101:my/suite/",
+        ]
+    )
+
+    monkeypatch.setenv("CI", "1")
+    mocker.patch("shutil.which", return_value="spread")
+    mock_run = mocker.patch("subprocess.run", return_value=fake_proc)
+
+    fake_distro = mocker.Mock()
+    fake_distro.distribution = "mydistro"
+    fake_distro.series = "100"
+
+    mocker.patch(
+        "craft_platforms.DistroBase.from_linux_distribution", return_value=fake_distro
+    )
+
+    command = testing_service._get_spread_command(test_expressions=["exp1", "exp2"])
+    assert mock_run.mock_calls == [
+        mock.call(
+            ["spread", "-list", "exp1", "exp2"],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+    ]
+    assert command == ["spread", "craft:mydistro-100:my/suite/"]
 
 
 @pytest.mark.parametrize("spread_name", ["craft.spread"])
@@ -211,3 +284,39 @@ def test_run_spread_interactive(
     else:
         mock_emitter.pause.assert_not_called()
         mock_emitter.open_stream.assert_called()
+
+
+@pytest.mark.parametrize(
+    ("jobs", "prefix", "result"),
+    [
+        ([], "", []),
+        (["b1:sys:job", "b2:sys:job"], "b", []),  # Partial string won't match
+        (["b1:sys:job", "b2:sys:job"], "b1", ["b1:sys:job"]),
+        (["b1:sys:job", "b2:sys:job"], "b1:sys", ["b1:sys:job"]),
+        (["b1:sys:job", "b2:sys:job"], "b3", []),
+    ],
+)
+def test_filter_spread_jobs(
+    mocker,
+    testing_service: TestingService,
+    jobs: list[str],
+    prefix: str,
+    result: list[str],
+):
+    fake_proc = mock.Mock()
+    fake_proc.stdout = "\n".join(jobs)
+
+    mocker.patch("shutil.which", return_value="spread")
+    mock_run = mocker.patch("subprocess.run", return_value=fake_proc)
+
+    filtered = testing_service._filter_spread_jobs(["exp1", "exp2"], prefix=prefix)
+
+    assert mock_run.mock_calls == [
+        mock.call(
+            ["spread", "-list", "exp1", "exp2"],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+    ]
+    assert filtered == result

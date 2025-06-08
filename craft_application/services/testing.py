@@ -134,17 +134,39 @@ class TestingService(base.AppService):
         if debug:
             cmd.append("-debug")
 
+        ci_system = self._get_ci_system()
+        craft_prefix = f"craft:{ci_system}" if ci_system else "craft"
+
         if test_expressions:
+            if self._running_on_ci():
+                test_expressions = self._filter_spread_jobs(
+                    test_expressions, prefix=craft_prefix
+                )
+                if not test_expressions:
+                    raise CraftError(
+                        "No matches for test the specified test filters.",
+                        resolution="Ensure that test filters are correctly specified.",
+                    )
+
             # User provided test expressions are passed to spread.
             cmd.extend(list(test_expressions))
         else:
             # Use the craft backend. If running on CI, also set the system.
-            system = self._get_system()
-            cmd.append(f"craft:{system}" if system else "craft")
+            cmd.append(craft_prefix)
 
         emit.debug(f"Running spread as: {shlex.join(cmd)}")
 
         return cmd
+
+    def _get_spread_list_command(
+        self,
+        test_expressions: Iterable[str],
+    ) -> list[str]:
+        """Get the full spread command to run."""
+        spread_command = [self._get_spread_executable()]
+        spread_command.append("-list")
+        spread_command.extend(list(test_expressions))
+        return spread_command
 
     def run_spread(
         self,
@@ -202,10 +224,11 @@ class TestingService(base.AppService):
     def _get_backend_type(self) -> str:
         return "ci" if os.environ.get("CI") else "lxd-vm"
 
-    def _get_system(self) -> str:
-        name = self._get_backend_type()
+    def _running_on_ci(self) -> bool:
+        return self._get_backend_type() == "ci"
 
-        if name == "ci":
+    def _get_ci_system(self) -> str:
+        if self._running_on_ci():
             try:
                 distro_base = craft_platforms.DistroBase.from_linux_distribution(
                     distro.LinuxDistribution()
@@ -248,3 +271,30 @@ class TestingService(base.AppService):
             resolution="This is likely a packaging bug that needs reporting.",
             retcode=os.EX_SOFTWARE,
         )
+
+    def _filter_spread_jobs(
+        self, test_expressions: Iterable[str], *, prefix: str
+    ) -> list[str]:
+        """Expand the list of spread jobs and filter by prefix.
+
+        :param test_expressions: A list of spread test expressions.
+        :param prefix: The prefix used to filter expressions.
+        :return: A list of expressions starting with prefix.
+        """
+        spread_command = self._get_spread_list_command(test_expressions)
+        try:
+            proc = subprocess.run(
+                spread_command, capture_output=True, text=True, check=True
+            )
+        except subprocess.CalledProcessError as exc:
+            emit.debug(f"error executing 'spread -list': {exc!s}")
+            return []
+
+        # Prevent matching partial elements
+        prefix = prefix.rstrip(":") + ":"
+
+        # Include jobs if it starts with craft:<host system>
+        jobs = [line for line in proc.stdout.splitlines() if line.startswith(prefix)]
+        emit.debug(f"filtered jobs: {jobs}")
+
+        return jobs

@@ -8,6 +8,7 @@ environment:
   CI: "1"
 
 execute: |
+  testcraft test $CMDLINE
   testcraft test tests/spread/my-suite/my-task $CMDLINE
   testcraft test other:...:tests/spread/my-suite/my-task $CMDLINE
 
