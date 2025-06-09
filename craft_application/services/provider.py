@@ -48,6 +48,7 @@ if TYPE_CHECKING:  # pragma: no cover
 
 
 DEFAULT_FORWARD_ENVIRONMENT_VARIABLES: Iterable[str] = ()
+IGNORE_CONFIG_ITEMS: Iterable[str] = ("platform", "verbosity_level")
 
 _REQUESTED_SNAPS: dict[str, Snap] = {}
 """Additional snaps to be installed using provider."""
@@ -100,6 +101,8 @@ class ProviderService(base.AppService):
 
         app_upper = self._app.name.upper()
         for config_item, value in self._services.get("config").get_all().items():
+            if config_item in IGNORE_CONFIG_ITEMS:
+                continue
             value_out = value.name if isinstance(value, enum.Enum) else str(value)
             self.environment[f"{app_upper}_{config_item.upper()}"] = value_out
 
