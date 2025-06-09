@@ -24,7 +24,6 @@ from unittest import mock
 import craft_application.services.testing
 import craft_cli.messages
 import craft_platforms
-import distro
 import pytest
 from craft_application import models
 from craft_application.services.testing import TestingService
@@ -93,9 +92,9 @@ def test_get_spread_command(
 
     if is_ci:
         if test_expressions:
-            check.is_in(f"craft:mydistro-99:my/suite/", actual)
+            check.is_in("craft:mydistro-99:my/suite/", actual)
         else:
-            check.is_in(f"craft:mydistro-99", actual)
+            check.is_in("craft:mydistro-99", actual)
     else:
         for expression in test_expressions:
             check.is_in(str(expression), actual)
@@ -132,12 +131,10 @@ def test_get_spread_command_ci_expression(
 ):
     # The jobs returned by `spread -list exp1 exp2`
     fake_proc = mock.Mock()
-    fake_proc.stdout = "\n".join(
-        [
-            "backend:system:my/suite/",
-            "craft:mydistro-100:my/suite/",
-            "craft:mydistro-101:my/suite/",
-        ]
+    fake_proc.stdout = (
+        "backend:system:my/suite/\n"
+        "craft:mydistro-100:my/suite/\n"
+        "craft:mydistro-101:my/suite/"
     )
 
     monkeypatch.setenv("CI", "1")
