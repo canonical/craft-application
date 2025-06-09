@@ -18,12 +18,11 @@
 import argparse
 
 import pytest
-from craft_cli import emit
-
 from craft_application.commands import RemoteBuild
 from craft_application.errors import RemoteBuildError
 from craft_application.launchpad.models import BuildState
 from craft_application.services import RemoteBuildService
+from craft_cli import emit
 
 
 @pytest.fixture
@@ -129,10 +128,10 @@ def test_remote_build_run(remote_build, mocker, fake_services, tmp_path, emitter
 def test_set_project_succeeds(
     mocker,
     remote_build: RemoteBuild,
-    accept_public: bool,
-    is_private: bool,
+    accept_public: bool,  # noqa: FBT001
+    is_private: bool,  # noqa: FBT001
     project: str | None,
-    confirm: bool,
+    confirm: bool,  # noqa: FBT001
 ) -> None:
     # Remote build should succeed if any of the following were done:
     # - The `--launchpad-accept-public-upload` flag was used
@@ -164,7 +163,10 @@ def test_set_project_succeeds(
     ],
 )
 def test_set_project_failures(
-    mocker, remote_build: RemoteBuild, is_private: bool, project: str | None
+    mocker,
+    remote_build: RemoteBuild,
+    is_private: bool,  # noqa: FBT001
+    project: str | None,
 ) -> None:
     # Remote build should fail if there is no confirmation and either:
     # - Project is public

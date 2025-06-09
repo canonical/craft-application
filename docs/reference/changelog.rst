@@ -4,6 +4,14 @@
 Changelog
 *********
 
+5.4.0 (2025-MM-DD)
+------------------
+
+Models
+======
+
+- Expose ``Part`` type
+
 5.3.0 (2025-05-28)
 ------------------
 
@@ -22,6 +30,14 @@ Git
 ===
 
 - Add API to modify repository configuration.
+
+Services
+========
+
+- Add a ``get_all()`` method to the ``ConfigService``, which returns a ``dict`` of
+  all current configuration values.
+- The ``ProviderService`` now passes all values from the ``ConfigService`` to the
+  inner instance's environment.
 
 Fixes
 ======
@@ -51,7 +67,7 @@ Commands
 Models
 ======
 
-- A new :doc:`how-to guide </howto/platforms>` describes how to implement
+- A new :doc:`how-to guide </how-to-guides/platforms>` describes how to implement
   application-specific ``platforms`` keys.
 
 Services

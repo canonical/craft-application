@@ -21,15 +21,14 @@ from collections.abc import Iterable
 from typing import Any
 from unittest import mock
 
+import craft_application.services.testing
 import craft_cli.messages
 import craft_platforms
 import distro
 import pytest
-from craft_cli import CraftError
-
-import craft_application.services.testing
 from craft_application import models
 from craft_application.services.testing import TestingService
+from craft_cli import CraftError
 
 
 @pytest.fixture(scope="module")
@@ -248,9 +247,9 @@ def test_run_spread_interactive(
     tmp_path,
     mocker,
     testing_service: TestingService,
-    shell: bool,
-    shell_after: bool,
-    debug: bool,
+    shell: bool,  # noqa: FBT001
+    shell_after: bool,  # noqa: FBT001
+    debug: bool,  # noqa: FBT001
     flags: list[str],
     streams: dict[str, Any],
 ):

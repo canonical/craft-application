@@ -21,7 +21,6 @@ import dataclasses
 from pathlib import Path
 
 import pytest
-
 from craft_application import errors, models
 from craft_application.services import package
 

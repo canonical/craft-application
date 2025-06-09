@@ -20,7 +20,6 @@ import argparse
 import pathlib
 
 import pytest
-
 from craft_application.commands import InitCommand
 from craft_application.errors import InitError
 

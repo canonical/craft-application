@@ -15,24 +15,26 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Unit tests for provider service"""
 
+import enum
 import pathlib
 import pkgutil
+import subprocess
 import uuid
 from typing import NamedTuple
 from unittest import mock
 
+import craft_application
 import craft_platforms
 import craft_providers
 import pytest
-from craft_cli import emit
-from craft_providers import bases, lxd, multipass
-from craft_providers.actions.snap_installer import Snap
-
-import craft_application
+import pytest_subprocess
 from craft_application import errors
 from craft_application.services import provider
 from craft_application.services.service_factory import ServiceFactory
 from craft_application.util import snap_config
+from craft_cli import emit
+from craft_providers import bases, lxd, multipass
+from craft_providers.actions.snap_installer import Snap
 
 
 @pytest.fixture
@@ -108,7 +110,37 @@ def test_setup_proxy_environment(
     for var, value in given_environment.items():
         monkeypatch.setenv(var, value)
 
-    expected_environment |= {"CRAFT_MANAGED_MODE": "1"}
+    service = provider.ProviderService(
+        app_metadata,
+        fake_services,
+        work_dir=pathlib.Path(),
+    )
+    service.setup()
+
+    for key, value in expected_environment.items():
+        assert service.environment[key] == value
+
+
+@pytest.mark.parametrize(
+    ("given_environment", "expected_environment"),
+    [
+        ({"CRAFT_VERBOSITY_LEVEL": "trace"}, {"TESTCRAFT_VERBOSITY_LEVEL": "TRACE"}),
+        (
+            {"TESTCRAFT_PARALLEL_BUILD_COUNT": "13"},
+            {"TESTCRAFT_PARALLEL_BUILD_COUNT": "13"},
+        ),
+    ],
+)
+def test_setup_config_values(
+    monkeypatch: pytest.MonkeyPatch,
+    app_metadata,
+    fake_services,
+    fake_project,
+    given_environment: dict[str, str],
+    expected_environment: dict[str, str],
+):
+    for var, value in given_environment.items():
+        monkeypatch.setenv(var, value)
 
     service = provider.ProviderService(
         app_metadata,
@@ -117,7 +149,8 @@ def test_setup_proxy_environment(
     )
     service.setup()
 
-    assert service.environment == expected_environment
+    for key, value in expected_environment.items():
+        assert service.environment[key] == value
 
 
 @pytest.mark.parametrize(
@@ -189,11 +222,18 @@ def test_install_snap(
     monkeypatch,
     app_metadata,
     fake_project,
+    fake_process: pytest_subprocess.FakeProcess,
     fake_services,
     install_snap,
     environment,
     snaps,
 ):
+    monkeypatch.setattr("snaphelpers._ctl.Popen", subprocess.Popen)
+    fake_process.register(
+        ["/usr/bin/snapctl", "get", "-d", fake_process.any()],
+        stdout="{}",
+        occurrences=1000,
+    )
     monkeypatch.delenv("SNAP", raising=False)
     monkeypatch.delenv("CRAFT_SNAP_CHANNEL", raising=False)
     monkeypatch.delenv("SNAP_INSTANCE_NAME", raising=False)
@@ -314,18 +354,32 @@ def test_is_managed(managed_value, expected, monkeypatch):
     assert provider.ProviderService.is_managed() == expected
 
 
-def test_forward_environment_variables(monkeypatch, provider_service):
+def test_forward_environment_variables(monkeypatch, provider_service, fake_services):
     var_contents = uuid.uuid4().hex
     for var in provider.DEFAULT_FORWARD_ENVIRONMENT_VARIABLES:
         monkeypatch.setenv(var, f"{var}__{var_contents}")
 
     provider_service.setup()
 
+    # Exclude forwarded proxy variables from the host in this check.
+    del_vars = set()
+    for variable in provider_service.environment:
+        if variable.lower().endswith("proxy"):
+            del_vars.add(variable)
+    for variable in del_vars:
+        del provider_service.environment[variable]
+
     assert provider_service.environment == {
         provider_service.managed_mode_env_var: "1",
         **{
             var: f"{var}__{var_contents}"
             for var in provider.DEFAULT_FORWARD_ENVIRONMENT_VARIABLES
+        },
+        **{
+            f"TESTCRAFT_{config.upper()}": (
+                value.name if isinstance(value, enum.Enum) else str(value)
+            )
+            for config, value in fake_services.get("config").get_all().items()
         },
     }
 
@@ -834,7 +888,7 @@ def test_run_managed(
     default_app_metadata: craft_application.AppMetadata,
     fake_services: ServiceFactory,
     fake_build_info: craft_platforms.BuildInfo,
-    fetch: bool,
+    fetch: bool,  # noqa: FBT001
     mock_provider,
     mock_capture_pack_state,
 ):

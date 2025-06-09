@@ -16,7 +16,6 @@
 """Tests for the remote build service."""
 
 import pytest
-
 from craft_application import errors
 
 

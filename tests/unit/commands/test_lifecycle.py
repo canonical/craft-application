@@ -24,8 +24,6 @@ import craft_parts
 import craft_platforms
 import pytest
 import pytest_mock
-from craft_parts import Features
-
 from craft_application import errors
 from craft_application.application import AppMetadata
 from craft_application.commands.lifecycle import (
@@ -42,6 +40,7 @@ from craft_application.commands.lifecycle import (
     get_lifecycle_command_group,
 )
 from craft_application.services.service_factory import ServiceFactory
+from craft_parts import Features
 
 PARTS_LISTS = [[], ["my-part"], ["my-part", "your-part"]]
 SHELL_PARAMS = [
@@ -161,10 +160,10 @@ def test_use_provider(
     monkeypatch: pytest.MonkeyPatch,
     app_metadata: AppMetadata,
     fake_services: ServiceFactory,
-    destructive: bool,
-    managed: bool,
+    destructive: bool,  # noqa: FBT001
+    managed: bool,  # noqa: FBT001
     build_env: str,
-    expected: bool,
+    expected: bool,  # noqa: FBT001
 ):
     cls = get_fake_command_class(LifecycleCommand, managed=False)
     command = cls({"app": app_metadata, "services": fake_services})
@@ -271,7 +270,7 @@ def test_run_manager_for_build_plan(
     mocker: pytest_mock.MockerFixture,
     app_metadata: AppMetadata,
     fake_services: ServiceFactory,
-    fetch: bool,
+    fetch: bool,  # noqa: FBT001
 ):
     build = craft_platforms.BuildInfo(
         platform="Tall",
