@@ -124,7 +124,7 @@ def test_setup_proxy_environment(
 @pytest.mark.parametrize(
     ("given_environment", "expected_environment"),
     [
-        ({"CRAFT_VERBOSITY_LEVEL": "trace"}, {"TESTCRAFT_VERBOSITY_LEVEL": "TRACE"}),
+        ({"CRAFT_DEBUG": "1"}, {"TESTCRAFT_DEBUG": "True"}),
         (
             {"TESTCRAFT_PARALLEL_BUILD_COUNT": "13"},
             {"TESTCRAFT_PARALLEL_BUILD_COUNT": "13"},
@@ -380,6 +380,7 @@ def test_forward_environment_variables(monkeypatch, provider_service, fake_servi
                 value.name if isinstance(value, enum.Enum) else str(value)
             )
             for config, value in fake_services.get("config").get_all().items()
+            if config not in provider.IGNORE_CONFIG_ITEMS and value is not None
         },
     }
 
