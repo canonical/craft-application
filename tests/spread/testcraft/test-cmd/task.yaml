@@ -10,7 +10,7 @@ environment:
 execute: |
   testcraft test $CMDLINE
   testcraft test tests/spread/my-suite/my-task $CMDLINE
-  testcraft test other:...:tests/spread/my-suite/my-task $CMDLINE
+  testcraft test other:...:tests/spread/my-suite/my-task $CMDLINE 2>&1 || true | MATCH "No matches"
 
 restore: |
   testcraft clean
