@@ -124,10 +124,21 @@ def test_get_spread_command_no_jobs(
     assert str(raised.value) == "No matches for test the specified test filters."
 
 
+@pytest.mark.parametrize(
+    ("expressions", "run_spread_list", "cmdline"),
+    [
+        (["exp1", "exp2"], True, ["spread", "craft:mydistro-100:my/suite/"]),
+        (["craft"], False, ["spread", "craft:mydistro-100"]),
+        (["craft:"], False, ["spread", "craft:mydistro-100"]),
+    ],
+)
 def test_get_spread_command_ci_expression(
     mocker,
     monkeypatch: pytest.MonkeyPatch,
     testing_service: TestingService,
+    expressions: list[str],
+    run_spread_list: bool,  # noqa: FBT001
+    cmdline: list[str],
 ):
     # The jobs returned by `spread -list exp1 exp2`
     fake_proc = mock.Mock()
@@ -149,16 +160,17 @@ def test_get_spread_command_ci_expression(
         "craft_platforms.DistroBase.from_linux_distribution", return_value=fake_distro
     )
 
-    command = testing_service._get_spread_command(test_expressions=["exp1", "exp2"])
-    assert mock_run.mock_calls == [
-        mock.call(
-            ["spread", "-list", "exp1", "exp2"],
-            capture_output=True,
-            text=True,
-            check=True,
-        )
-    ]
-    assert command == ["spread", "craft:mydistro-100:my/suite/"]
+    command = testing_service._get_spread_command(test_expressions=expressions)
+    if run_spread_list:
+        assert mock_run.mock_calls == [
+            mock.call(
+                ["spread", "-list", *expressions],
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+        ]
+    assert command == cmdline
 
 
 @pytest.mark.parametrize("spread_name", ["craft.spread"])

@@ -137,8 +137,16 @@ class TestingService(base.AppService):
         ci_system = self._get_ci_system()
         craft_prefix = f"craft:{ci_system}" if ci_system else "craft"
 
-        if test_expressions:
+        if (
+            self._running_on_ci()
+            and test_expressions == ["craft"]
+            or test_expressions == ["craft:"]
+        ):
+            # Set craft backend and host system to avoid job expansion.
+            cmd.append(craft_prefix)
+        elif test_expressions:
             if self._running_on_ci():
+                # On CI, expand and filter jobs.
                 test_expressions = self._filter_spread_jobs(
                     test_expressions, prefix=craft_prefix
                 )
