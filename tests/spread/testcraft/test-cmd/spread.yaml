@@ -1,3 +1,5 @@
+project: test-cmd
+
 backends:
   craft:
     type: adhoc

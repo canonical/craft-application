@@ -168,6 +168,7 @@ def test_get_spread_command_ci_expression(
                 capture_output=True,
                 text=True,
                 check=True,
+                cwd=pathlib.Path.cwd(),
             )
         ]
     assert command == cmdline
@@ -325,6 +326,7 @@ def test_filter_spread_jobs(
             capture_output=True,
             text=True,
             check=True,
+            cwd=pathlib.Path.cwd(),
         )
     ]
     assert filtered == result

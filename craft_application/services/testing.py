@@ -124,6 +124,7 @@ class TestingService(base.AppService):
         shell: bool = False,
         shell_after: bool = False,
         debug: bool = False,
+        cwd: pathlib.Path | None = None,
     ) -> list[str]:
         """Get the full spread command to run."""
         cmd = [self._get_spread_executable()]
@@ -136,6 +137,7 @@ class TestingService(base.AppService):
 
         ci_system = self._get_ci_system()
         craft_prefix = f"craft:{ci_system}" if ci_system else "craft"
+        spread_dir = cwd or pathlib.Path.cwd()
 
         if (
             self._running_on_ci()
@@ -148,7 +150,9 @@ class TestingService(base.AppService):
             if self._running_on_ci():
                 # On CI, expand and filter jobs.
                 test_expressions = self._filter_spread_jobs(
-                    test_expressions, prefix=craft_prefix
+                    test_expressions,
+                    prefix=craft_prefix,
+                    cwd=spread_dir,
                 )
                 if not test_expressions:
                     raise CraftError(
@@ -174,6 +178,9 @@ class TestingService(base.AppService):
         spread_command = [self._get_spread_executable()]
         spread_command.append("-list")
         spread_command.extend(list(test_expressions))
+
+        emit.debug(f"Running spread -list as: {shlex.join(spread_command)}")
+
         return spread_command
 
     def run_spread(
@@ -199,6 +206,7 @@ class TestingService(base.AppService):
             shell=shell,
             shell_after=shell_after,
             debug=debug,
+            cwd=spread_dir,
         )
 
         is_interactive = shell or shell_after or debug
@@ -281,7 +289,11 @@ class TestingService(base.AppService):
         )
 
     def _filter_spread_jobs(
-        self, test_expressions: Iterable[str], *, prefix: str
+        self,
+        test_expressions: Iterable[str],
+        *,
+        prefix: str,
+        cwd: pathlib.Path | None = None,
     ) -> list[str]:
         """Expand the list of spread jobs and filter by prefix.
 
@@ -289,10 +301,15 @@ class TestingService(base.AppService):
         :param prefix: The prefix used to filter expressions.
         :return: A list of expressions starting with prefix.
         """
+        spread_dir = cwd or pathlib.Path.cwd()
         spread_command = self._get_spread_list_command(test_expressions)
         try:
             proc = subprocess.run(
-                spread_command, capture_output=True, text=True, check=True
+                spread_command,
+                capture_output=True,
+                text=True,
+                check=True,
+                cwd=spread_dir,
             )
         except subprocess.CalledProcessError as exc:
             emit.debug(f"error executing 'spread -list': {exc!s}")
