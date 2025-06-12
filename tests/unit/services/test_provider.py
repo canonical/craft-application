@@ -65,13 +65,6 @@ def fake_build_info(fake_base):
     )
 
 
-@pytest.fixture
-def mock_capture_pack_state(mocker) -> None:
-    mocker.patch(
-        "craft_application.services.provider.ProviderService._capture_pack_state_from_instance"
-    )
-
-
 @pytest.mark.parametrize(
     ("given_environment", "expected_environment"),
     [
@@ -617,7 +610,6 @@ def test_instance(
     fake_build_info,
     allow_unstable,
     mock_provider,
-    mock_capture_pack_state,
 ):
     with provider_service.instance(
         fake_build_info, work_dir=tmp_path, allow_unstable=allow_unstable
@@ -651,7 +643,6 @@ def test_instance_clean_existing(
     provider_service,
     mock_provider,
     clean_existing,
-    mock_capture_pack_state,
 ):
     arch = craft_platforms.DebianArchitecture.from_host()
     base_name = craft_platforms.DistroBase("ubuntu", "24.04")
@@ -693,7 +684,6 @@ def test_load_bashrc_missing(
     fake_build_info,
     allow_unstable,
     mocker,
-    mock_capture_pack_state,
 ):
     """Test that we handle the case where the bashrc file is missing."""
     mock_provider = mock.MagicMock(spec=craft_providers.Provider)
@@ -714,9 +704,7 @@ def test_load_bashrc_missing(
 
 
 @pytest.fixture
-def setup_fetch_logs_provider(
-    monkeypatch, provider_service, mocker, tmp_path, mock_capture_pack_state
-):
+def setup_fetch_logs_provider(monkeypatch, provider_service, mocker, tmp_path):
     """Return a function that, when called, mocks the provider_service's instance()."""
 
     def _setup(*, should_have_logfile: bool):
@@ -891,7 +879,6 @@ def test_run_managed(
     fake_build_info: craft_platforms.BuildInfo,
     fetch: bool,  # noqa: FBT001
     mock_provider,
-    mock_capture_pack_state,
 ):
     mock_fetch = mock.MagicMock()
     fake_services.register("fetch", mock.Mock(return_value=mock_fetch))
@@ -909,6 +896,7 @@ def test_run_managed(
         env={
             "CRAFT_VERBOSITY_LEVEL": mock.ANY,
             "CRAFT_PLATFORM": fake_build_info.platform,
+            "CRAFT_STATE_DIR": mock.ANY,
         },
     )
 

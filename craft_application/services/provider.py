@@ -190,7 +190,6 @@ class ProviderService(base.AppService):
                 yield instance
             finally:
                 self._capture_logs_from_instance(instance)
-                self._capture_pack_state_from_instance(instance)
 
     def get_base(
         self,
@@ -364,19 +363,6 @@ class ProviderService(base.AppService):
                     f"Could not find log file {source_log_path.as_posix()} in instance."
                 )
 
-    def _capture_pack_state_from_instance(
-        self, instance: craft_providers.Executor
-    ) -> None:
-        """Fetch the pack state from inside `instance`."""
-        state_path = util.get_managed_pack_state_path(self._app)
-        with instance.temporarily_pull_file(source=state_path, missing_ok=True) as temp:
-            if temp:
-                self._pack_state = models.PackState.from_yaml_file(temp)
-            else:
-                emit.debug(
-                    f"Could not find state file {state_path.as_posix()} in instance."
-                )
-
     def _setup_instance_bashrc(self, instance: craft_providers.Executor) -> None:
         """Set up the instance's bashrc to export environment."""
         bashrc = pkgutil.get_data("craft_application", "misc/instance_bashrc")
@@ -449,6 +435,9 @@ class ProviderService(base.AppService):
             if enable_fetch_service:
                 session_env = self._services.get("fetch").create_session(instance)
                 env.update(session_env)
+
+            state_env = self._services.get("state").configure_instance(instance)
+            env.update(state_env)
 
             emit.debug(f"Running in instance: {command}")
             try:
