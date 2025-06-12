@@ -18,6 +18,7 @@
 from __future__ import annotations
 
 import pathlib
+import tempfile
 import urllib.parse
 from typing import TYPE_CHECKING
 
@@ -66,3 +67,14 @@ def get_work_dir(project_dir: pathlib.Path) -> pathlib.Path:
     if is_managed_mode():
         return pathlib.Path("/root")
     return project_dir
+
+
+def get_home_temporary_directory() -> pathlib.Path:
+    """Create a persistent temporary directory in the home directory where Multipass has access.
+
+    This is useful when mounting a directory to Multipass, which can't access /tmp.
+
+    :returns: A path to a temporary directory in the home directory.
+    """
+    tmp_dir = tempfile.mkdtemp(suffix=".tmp-craft", dir=pathlib.Path.home())
+    return pathlib.Path(tmp_dir)

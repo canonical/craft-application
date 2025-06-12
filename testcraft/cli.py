@@ -24,12 +24,14 @@ from craft_application.commands.lifecycle import (
 )
 
 from testcraft.application import TESTCRAFT
+from testcraft.commands import StateCommand
 from testcraft.services import register_services
 
 
 def register_commands(app: craft_application.Application) -> None:
     """Register extra commands for testcraft."""
     app.add_command_group("Lifecycle", [TestCommand], ordered=True)
+    app.add_command_group("State", [StateCommand])
 
 
 def create_app() -> craft_application.Application:

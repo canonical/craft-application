@@ -26,6 +26,7 @@ from craft_application.services.project import ProjectService
 from craft_application.services.provider import ProviderService
 from craft_application.services.remotebuild import RemoteBuildService
 from craft_application.services.request import RequestService
+from craft_application.services.state import StateService
 
 # ServiceFactory must be imported after the actual services
 from craft_application.services.service_factory import ServiceFactory
@@ -43,4 +44,5 @@ __all__ = [
     "RemoteBuildService",
     "RequestService",
     "ServiceFactory",
+    "StateService",
 ]
