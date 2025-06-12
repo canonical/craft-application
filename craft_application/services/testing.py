@@ -139,7 +139,7 @@ class TestingService(base.AppService):
         craft_prefix = f"craft:{ci_system}" if ci_system else "craft"
         spread_dir = cwd or pathlib.Path.cwd()
 
-        if self._running_on_ci() and test_expressions in (["craft"], ["craft:"]):
+        if self._running_on_ci() and list(test_expressions) in (["craft"], ["craft:"]):
             # Set craft backend and host system to avoid job expansion.
             cmd.append(craft_prefix)
         elif test_expressions:
