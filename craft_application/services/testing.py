@@ -22,7 +22,7 @@ import shlex
 import shutil
 import subprocess
 import tempfile
-from collections.abc import Collection
+from collections.abc import Iterable
 
 import craft_platforms
 import distro
@@ -38,28 +38,12 @@ class TestingService(base.AppService):
 
     __test__ = False  # Tell pytest this service is not a test class.
 
-    def validate_tests(self, tests: Collection[pathlib.Path]) -> None:
-        """Validate that each of the provided test names exists."""
-        emit.debug("Checking that the specified test paths are valid")
-        invalid_tests: list[str] = []
-        for test in tests:
-            if (test / "task.yaml").is_file():
-                continue
-            invalid_tests.append(str(test))
-        if invalid_tests:
-            invalid_tests_str = util.humanize_list(invalid_tests, "and")
-            raise CraftError(
-                f"Invalid test value(s): {invalid_tests_str}",
-                resolution="Check the test paths and try again",
-                logpath_report=False,
-            )
-
     def test(
         self,
         project_path: pathlib.Path,
         pack_state: models.PackState,
         *,
-        tests: Collection[pathlib.Path] = (),
+        test_expressions: Iterable[str] = (),
         shell: bool = False,
         shell_after: bool = False,
         debug: bool = False,
@@ -68,7 +52,12 @@ class TestingService(base.AppService):
 
         This method is likely the all you need to call.
 
-        :param project_path: the path to the project directory containing spread.yaml.
+        :param project_path: The path to the project directory containing spread.yaml.
+        :param pack_state: An object containing the list of packed artifacts.
+        :param test_expressions: A list of spread test expressions.
+        :param shell: Whether to shell into the spread test instance.
+        :param shell_after: Whether to shell into the spread test instance after the test runs.
+        :param debug: Whether to shell into the spread test instance if the test fails.
         """
         with tempfile.TemporaryDirectory(
             prefix=".craft-spread-",
@@ -81,7 +70,7 @@ class TestingService(base.AppService):
             emit.trace(f"Temporary spread file:\n{temp_spread_file.read_text()}")
             self.run_spread(
                 temp_dir_path,
-                tests=tests,
+                test_expressions=test_expressions,
                 shell=shell,
                 shell_after=shell_after,
                 debug=debug,
@@ -131,10 +120,11 @@ class TestingService(base.AppService):
     def _get_spread_command(
         self,
         *,
-        tests: Collection[pathlib.Path] = (),
+        test_expressions: Iterable[str] = (),
         shell: bool = False,
         shell_after: bool = False,
         debug: bool = False,
+        cwd: pathlib.Path | None = None,
     ) -> list[str]:
         """Get the full spread command to run."""
         cmd = [self._get_spread_executable()]
@@ -145,24 +135,55 @@ class TestingService(base.AppService):
         if debug:
             cmd.append("-debug")
 
-        system = self._get_system()
-        backend_system_str = f"craft:{system}" if system else "craft"
+        ci_system = self._get_ci_system()
+        craft_prefix = f"craft:{ci_system}" if ci_system else "craft"
+        spread_dir = cwd or pathlib.Path.cwd()
 
-        if tests:
-            self.validate_tests(tests)
-            cmd.extend(f"{backend_system_str}:{test}" for test in tests)
+        if self._running_on_ci() and list(test_expressions) in (["craft"], ["craft:"]):
+            # Set craft backend and host system to avoid job expansion.
+            cmd.append(craft_prefix)
+        elif test_expressions:
+            if self._running_on_ci():
+                # On CI, expand and filter jobs.
+                test_expressions = self._filter_spread_jobs(
+                    test_expressions,
+                    prefix=craft_prefix,
+                    cwd=spread_dir,
+                )
+                if not test_expressions:
+                    raise CraftError(
+                        "No matches for test the specified test filters.",
+                        resolution="Ensure that test filters are correctly specified.",
+                    )
+
+            # User provided test expressions are passed to spread.
+            cmd.extend(list(test_expressions))
         else:
-            cmd.append(f"{backend_system_str}:")
+            # Use the craft backend. If running on CI, also set the system.
+            cmd.append(craft_prefix)
 
         emit.debug(f"Running spread as: {shlex.join(cmd)}")
 
         return cmd
 
+    def _get_spread_list_command(
+        self,
+        test_expressions: Iterable[str],
+    ) -> list[str]:
+        """Get the full spread command to run."""
+        spread_command = [self._get_spread_executable()]
+        spread_command.append("-list")
+        spread_command.extend(list(test_expressions))
+
+        emit.debug(f"Running spread -list as: {shlex.join(spread_command)}")
+
+        return spread_command
+
     def run_spread(
         self,
         spread_dir: pathlib.Path,
         *,
-        tests: Collection[pathlib.Path] = (),
+        test_expressions: Iterable[str] = (),
         shell: bool = False,
         shell_after: bool = False,
         debug: bool = False,
@@ -170,11 +191,18 @@ class TestingService(base.AppService):
         """Run spread on the processed project file.
 
         :param spread_dir: The working directory where spread should run.
-        :param shell: Whether to pass the ``-shell`` option to spread.
+        :param test_expressions: A list of spread test expressions.
+        :param shell: Whether to shell into the spread test instance.
+        :param shell_after: Whether to shell into the spread test instance after the test runs.
+        :param debug: Whether to shell into the spread test instance if the test fails.
         """
         emit.debug("Running spread tests.")
         spread_command = self._get_spread_command(
-            tests=tests, shell=shell, shell_after=shell_after, debug=debug
+            test_expressions=test_expressions,
+            shell=shell,
+            shell_after=shell_after,
+            debug=debug,
+            cwd=spread_dir,
         )
 
         is_interactive = shell or shell_after or debug
@@ -208,10 +236,11 @@ class TestingService(base.AppService):
     def _get_backend_type(self) -> str:
         return "ci" if os.environ.get("CI") else "lxd-vm"
 
-    def _get_system(self) -> str:
-        name = self._get_backend_type()
+    def _running_on_ci(self) -> bool:
+        return self._get_backend_type() == "ci"
 
-        if name == "ci":
+    def _get_ci_system(self) -> str:
+        if self._running_on_ci():
             try:
                 distro_base = craft_platforms.DistroBase.from_linux_distribution(
                     distro.LinuxDistribution()
@@ -254,3 +283,39 @@ class TestingService(base.AppService):
             resolution="This is likely a packaging bug that needs reporting.",
             retcode=os.EX_SOFTWARE,
         )
+
+    def _filter_spread_jobs(
+        self,
+        test_expressions: Iterable[str],
+        *,
+        prefix: str,
+        cwd: pathlib.Path | None = None,
+    ) -> list[str]:
+        """Expand the list of spread jobs and filter by prefix.
+
+        :param test_expressions: A list of spread test expressions.
+        :param prefix: The prefix used to filter expressions.
+        :return: A list of expressions starting with prefix.
+        """
+        spread_dir = cwd or pathlib.Path.cwd()
+        spread_command = self._get_spread_list_command(test_expressions)
+        try:
+            proc = subprocess.run(
+                spread_command,
+                capture_output=True,
+                text=True,
+                check=True,
+                cwd=spread_dir,
+            )
+        except subprocess.CalledProcessError as exc:
+            emit.debug(f"error executing 'spread -list': {exc!s}")
+            return []
+
+        # Prevent matching partial elements
+        prefix = prefix.rstrip(":") + ":"
+
+        # Include jobs if it starts with craft:<host system>
+        jobs = [line for line in proc.stdout.splitlines() if line.startswith(prefix)]
+        emit.debug(f"filtered jobs: {jobs}")
+
+        return jobs

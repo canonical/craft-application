@@ -500,11 +500,11 @@ class TestCommand(PackCommand):
         # Skip the parser additions that `pack` adds.
         super(PackCommand, self)._fill_parser(parser)
         parser.add_argument(
-            "test_path",
+            "test_expressions",
             nargs="*",
-            type=pathlib.Path,
+            type=str,
             default=(),
-            help="Path to a spread test (directory containing a task.yaml file). If not provided, all tests are run. May be repeated.",
+            help="Optional spread test expressions. If not provided, all craft backend tests are run.",
         )
 
     @override
@@ -521,10 +521,6 @@ class TestCommand(PackCommand):
             )
 
         testing_service = self._services.get("testing")
-
-        if parsed_args.test_path:
-            testing_service.validate_tests(parsed_args.test_path)
-
         parsed_args.output = pathlib.Path.cwd()
         parsed_args.fetch_service_policy = None
 
@@ -555,7 +551,7 @@ class TestCommand(PackCommand):
         testing_service.test(
             pathlib.Path.cwd(),
             pack_state=pack_state,
-            tests=parsed_args.test_path,
+            test_expressions=parsed_args.test_expressions,
             shell=shell,
             shell_after=shell_after,
             debug=parsed_args.debug,
