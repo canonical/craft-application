@@ -19,6 +19,6 @@ jobs:
       fast-test-python-versions: '["3.10", "3.12"]'
       slow-test-platforms: '["ubuntu-22.04", "ubuntu-24.04"]'
       slow-test-python-versions: '["3.10", "3.12"]'
-      lowest-python-platform: '["jammy", "amd64"]'
+      lowest-python-platform: ubuntu-22.04
       lowest-python-version: "3.10"
       use-lxd: true
