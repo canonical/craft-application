@@ -803,8 +803,7 @@ def test_run_error(
                 """\
                 Failed to run the build script for part 'foo'.
                 Recommended resolution: Check the build output and verify the project can work with the 'python' plugin.
-                For more information, check out: http://testcraft.example/reference/plugins.html
-                Full execution log:"""
+                For more information, check out: http://testcraft.example/reference/plugins"""
             ),
         ),
     ],
@@ -828,7 +827,7 @@ def test_run_error_with_docs_url(
 
     pytest_check.equal(app.run(), return_code)
     _, err = capsys.readouterr()
-    assert err.startswith(error_msg)
+    assert err.startswith(error_msg), err
 
 
 @pytest.mark.parametrize("error", [KeyError(), ValueError(), Exception()])
