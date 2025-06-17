@@ -502,7 +502,7 @@ requires-dist = [
     { name = "craft-archives", specifier = ">=2.0.0" },
     { name = "craft-cli", specifier = "~=3.0" },
     { name = "craft-grammar", specifier = ">=2.0.0" },
-    { name = "craft-parts", specifier = ">=2.1.1" },
+    { name = "craft-parts", git = "https://github.com/canonical/craft-parts.git?rev=work%2FCRAFT-4559-Prototype-the-alias-mechanism" },
     { name = "craft-platforms", specifier = ">=0.6.0" },
     { name = "craft-providers", specifier = ">=2.1.0" },
     { name = "jinja2", specifier = ">=3.1.6,<4.0.0" },
@@ -608,8 +608,8 @@ wheels = [
 
 [[package]]
 name = "craft-parts"
-version = "2.8.0"
-source = { registry = "https://pypi.org/simple" }
+version = "2.12.0.post30+g5b60823"
+source = { git = "https://github.com/canonical/craft-parts.git?rev=work%2FCRAFT-4559-Prototype-the-alias-mechanism#5b608237892b816853029d474f50c060a55ace47" }
 dependencies = [
     { name = "overrides" },
     { name = "pydantic" },
@@ -618,10 +618,6 @@ dependencies = [
     { name = "requests" },
     { name = "requests-unixsocket2" },
     { name = "tomli", marker = "python_full_version < '3.11' or (extra == 'group-17-craft-application-dev-jammy' and extra == 'group-17-craft-application-dev-noble') or (extra == 'group-17-craft-application-dev-jammy' and extra == 'group-17-craft-application-dev-plucky') or (extra == 'group-17-craft-application-dev-jammy' and extra == 'group-17-craft-application-dev-questing') or (extra == 'group-17-craft-application-dev-noble' and extra == 'group-17-craft-application-dev-plucky') or (extra == 'group-17-craft-application-dev-noble' and extra == 'group-17-craft-application-dev-questing') or (extra == 'group-17-craft-application-dev-plucky' and extra == 'group-17-craft-application-dev-questing')" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/38/af/3a36df71dd40f0267e5f7c5d2b0dbe92886a5170475e3a9876dbf88b2eb4/craft_parts-2.8.0.tar.gz", hash = "sha256:689c0baf4465eed5366bd02580867973cb3285ae3dc43dc9842c87ec37fbd7bc", size = 653143, upload-time = "2025-04-10T15:38:13.132Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/06/0e/c6f4a2b148e35fe80a3bfbbd4f58d501a3d65b9a974fd4263f4144505e4f/craft_parts-2.8.0-py3-none-any.whl", hash = "sha256:e0a9d97d673859a7b67eed2df4a7e2202191b4aa87366c9a6831b82ee50dacf9", size = 460069, upload-time = "2025-04-10T15:38:10.917Z" },
 ]
 
 [[package]]
@@ -1869,7 +1865,7 @@ wheels = [
 
 [[package]]
 name = "requests"
-version = "2.32.3"
+version = "2.32.4"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "certifi" },
@@ -1877,9 +1873,9 @@ dependencies = [
     { name = "idna" },
     { name = "urllib3" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/63/70/2bf7780ad2d390a8d301ad0b550f1581eadbd9a20f896afe06353c2a2913/requests-2.32.3.tar.gz", hash = "sha256:55365417734eb18255590a9ff9eb97e9e1da868d4ccd6402399eaf68af20a760", size = 131218, upload-time = "2024-05-29T15:37:49.536Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/e1/0a/929373653770d8a0d7ea76c37de6e41f11eb07559b103b1c02cafb3f7cf8/requests-2.32.4.tar.gz", hash = "sha256:27d0316682c8a29834d3264820024b62a36942083d52caf2f14c0591336d3422", size = 135258, upload-time = "2025-06-09T16:43:07.34Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/f9/9b/335f9764261e915ed497fcdeb11df5dfd6f7bf257d4a6a2a686d80da4d54/requests-2.32.3-py3-none-any.whl", hash = "sha256:70761cfe03c773ceb22aa2f671b4757976145175cdfca038c02654d061d6dcc6", size = 64928, upload-time = "2024-05-29T15:37:47.027Z" },
+    { url = "https://files.pythonhosted.org/packages/7c/e4/56027c4a6b4ae70ca9de302488c5ca95ad4a39e190093d6c1a8ace08341b/requests-2.32.4-py3-none-any.whl", hash = "sha256:27babd3cda2a6d50b30443204ee89830707d396671944c998b5975b031ac2b2c", size = 64847, upload-time = "2025-06-09T16:43:05.728Z" },
 ]
 
 [[package]]

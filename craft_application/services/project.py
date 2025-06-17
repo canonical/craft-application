@@ -24,6 +24,7 @@ import craft_parts
 import craft_platforms
 import pydantic
 from craft_cli import emit
+from craft_parts.partitions import PartitionList
 
 from craft_application import errors, grammar, util
 from craft_application.models import Platform
@@ -365,8 +366,13 @@ class ProjectService(base.AppService):
         partitions = self.get_partitions_for(
             platform=platform, build_for=build_for, build_on=build_on
         )
+        partition_list: PartitionList | None = None
+        if partitions:
+            partition_list = PartitionList(concrete_partitions=partitions)
         work_dir = util.get_work_dir(self._project_dir)
-        project_dirs = craft_parts.ProjectDirs(work_dir=work_dir, partitions=partitions)
+        project_dirs = craft_parts.ProjectDirs(
+            work_dir=work_dir, partitions=partition_list
+        )
         info = craft_parts.ProjectInfo(
             application_name=self._app.name,  # not used in environment expansion
             cache_dir=pathlib.Path(),  # not used in environment expansion
@@ -375,7 +381,7 @@ class ProjectService(base.AppService):
             project_name=project_data.get("name", ""),
             project_dirs=project_dirs,
             project_vars=environment_vars,
-            partitions=partitions,
+            partitions=partition_list,
         )
 
         self.update_project_environment(info)
