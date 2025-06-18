@@ -21,7 +21,7 @@ import pathlib
 import re
 import shutil
 from collections.abc import Sequence
-from typing import TYPE_CHECKING, Any, cast, final
+from typing import TYPE_CHECKING, cast, final
 
 import craft_cli
 import craft_providers
@@ -52,7 +52,7 @@ class StateService(base.AppService):
     Data is accessed via structured paths. For example:
 
         state_service = app._services.get("state")
-        state_service.set("artifacts", "platform-1", "my-artifact.txt")
+        state_service.set("artifacts", "platform-1", value="my-artifact.txt")
         state_service.get("artifacts", "platform-1")
 
     :raises StateServiceError: If the state directory can't be determined.
@@ -64,11 +64,12 @@ class StateService(base.AppService):
         self, app: AppMetadata, services: service_factory.ServiceFactory
     ) -> None:
         super().__init__(app, services)
-        self.__state: dict[str, Any] = {}
         self.__state_dir = StateService._get_state_dir()
 
         # only the outer instance manages the state dir
-        if not util.is_managed_mode():
+        if util.is_managed_mode():
+            craft_cli.emit.debug("Not managing state directory in managed mode.")
+        else:
             self._create_state_dir()
             atexit.register(self._destroy_state_dir)
 
@@ -99,7 +100,9 @@ class StateService(base.AppService):
                 f"Failed to get value for {StateService._format_keys(*keys)!r}: {err.args[0]}"
             ) from err
 
-        craft_cli.emit.debug(f"Read {StateService._format_keys(*keys)!r} = {value!r}.")
+        craft_cli.emit.debug(
+            f"Got value {value!r} for {StateService._format_keys(*keys)!r}."
+        )
         return value
 
     @final
@@ -127,7 +130,7 @@ class StateService(base.AppService):
         # this is an error:              set("A", "$invalid$", value="B"}
         # but this wouldn't be an error: set("A", value={"$invalid$": "B"})
         if isinstance(value, dict):
-            raise TypeError("Can't set value {value!r} because it's a dictionary.")
+            raise TypeError(f"Can't set value {value!r} because it's a dictionary.")
 
         file_name = keys[0]
         data = self._load_state_file(file_name)
@@ -141,7 +144,7 @@ class StateService(base.AppService):
 
         self._save_state_file(file_name, data)
 
-        craft_cli.emit.debug(f"Set {StateService._format_keys(*keys)!r} = {value!r}.")
+        craft_cli.emit.debug(f"Set {StateService._format_keys(*keys)!r} to {value!r}.")
 
     @final
     def configure_instance(self, instance: craft_providers.Executor) -> dict[str, str]:
@@ -299,7 +302,7 @@ class StateService(base.AppService):
 
         if not re.fullmatch(r"[A-Za-z0-9_]+", keys[0]):
             raise KeyError(
-                f"The first key in {StateService._format_keys(*keys)} must only "
+                f"The first key in {StateService._format_keys(*keys)!r} must only "
                 "contain ASCII alphanumeric characters and _ (underscores)."
             )
 
@@ -358,7 +361,7 @@ class StateService(base.AppService):
             raise ValueError("Can't save state file over 1MiB in size.")
 
         try:
-            file_path.write_text(util.dump_yaml(data))
+            file_path.write_text(raw_data)
         except PermissionError as err:
             raise errors.StateServiceError(
                 "Failed to write state file due to insufficient permissions."

@@ -175,7 +175,10 @@ def test_registering_new_commands(
 @pytest.mark.usefixtures("pretend_jammy")
 @pytest.mark.parametrize("project", (d.name for d in VALID_PROJECTS_DIR.iterdir()))
 def test_project_managed(capsys, monkeypatch, tmp_path, project, create_app):
+    state_dir = tmp_path / "state"
+    state_dir.mkdir()
     monkeypatch.setenv("CRAFT_MANAGED_MODE", "1")
+    monkeypatch.setenv("CRAFT_STATE_DIR", str(state_dir))
     monkeypatch.setattr("sys.argv", ["testcraft", "pack"])
     monkeypatch.chdir(tmp_path)
     shutil.copytree(VALID_PROJECTS_DIR / project, tmp_path, dirs_exist_ok=True)

@@ -235,7 +235,7 @@ class ServiceFactory:
     @classmethod
     def get_class(
         cls, name: Literal["state", "StateService", "StateClass"]
-    ) -> type[services.RequestService]: ...
+    ) -> type[services.StateService]: ...
     @overload
     @classmethod
     def get_class(
