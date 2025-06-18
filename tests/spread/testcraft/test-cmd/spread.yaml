@@ -1,5 +1,13 @@
+project: test-cmd
+
 backends:
   craft:
+    type: adhoc
+    allocate: "false"
+    systems:
+      - ubuntu-24.04:
+
+  other:
     type: adhoc
     allocate: "false"
     systems:
