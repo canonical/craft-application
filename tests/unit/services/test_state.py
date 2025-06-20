@@ -18,6 +18,7 @@
 import os
 import pathlib
 import re
+import sys
 from collections.abc import Callable
 from unittest import mock
 
@@ -239,6 +240,8 @@ def test_state_dir_managed_mode_error(state_service_factory):
 @pytest.mark.usefixtures("no_state_dir_env_var")
 def test_state_dir_xdg(state_service_factory, monkeypatch, tmp_path, emitter):
     """Create the state dir from XDG_RUNTIME_DIR."""
+    # on linux, '/tmp/pytest-...' will get replaced with a temporary dir in the home dir
+    monkeypatch.setattr(sys, "platform", "other")
     state_dir = (tmp_path / "xdg_runtime" / str(os.getpid())).resolve()
     monkeypatch.setenv("XDG_RUNTIME_DIR", str(state_dir.parent))
 
@@ -246,28 +249,32 @@ def test_state_dir_xdg(state_service_factory, monkeypatch, tmp_path, emitter):
 
     # create the state directory in user mode
     assert state_dir.exists()
-    emitter.assert_debug("Getting state directory from XDG_RUNTIME_DIR.")
+    emitter.assert_debug("Getting runtime directory.")
     emitter.assert_debug(f"Using {str(state_dir)!r} for the state directory.")
 
 
 @pytest.mark.usefixtures("no_state_dir_env_var")
-def test_state_dir_xdg_error(state_service_factory, mocker, tmp_path, emitter):
-    """Fallback to a temp home directory if the xdg dir fails."""
+def test_state_dir_home_temp(
+    state_service_factory, mocker, monkeypatch, tmp_path, emitter
+):
+    """Use a temp dir in the home dir instead of in '/tmp' on linux."""
     state_dir = (tmp_path / "state").resolve()
     mocker.patch(
-        "craft_application.services.state.BaseDirectory.get_runtime_dir",
-        side_effect=KeyError(),
+        "craft_application.services.state.platformdirs.user_runtime_path",
+        return_value=pathlib.Path("/tmp/statedir"),
     )
     mocker.patch(
         "craft_application.util.get_home_temporary_directory", return_value=state_dir
     )
+    monkeypatch.setattr(sys, "platform", "linux")
 
     state_service_factory()
 
     # create the state directory in user mode
-    assert state_dir.exists()
-    emitter.assert_debug("Couldn't get XDG_RUNTIME_DIR.")
+    emitter.assert_debug("Getting runtime directory.")
+    emitter.assert_debug("Getting home temporary directory.")
     emitter.assert_debug(f"Using {str(state_dir)!r} for the state directory.")
+    assert state_dir.exists()
 
 
 @pytest.mark.usefixtures("state_dir")

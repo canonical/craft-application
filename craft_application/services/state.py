@@ -20,13 +20,14 @@ import os
 import pathlib
 import re
 import shutil
+import sys
 from collections.abc import Sequence
 from typing import TYPE_CHECKING, cast, final
 
 import craft_cli
 import craft_providers
+import platformdirs
 import yaml
-from xdg import BaseDirectory  # type: ignore[import-untyped]
 
 from craft_application import errors, util
 from craft_application._const import CRAFT_DEBUG_ENV, CRAFT_STATE_DIR_ENV
@@ -271,17 +272,16 @@ class StateService(base.AppService):
                 f"Couldn't get state directory from {CRAFT_STATE_DIR_ENV} in managed mode."
             )
         else:
-            craft_cli.emit.debug("Getting state directory from XDG_RUNTIME_DIR.")
-            try:
-                # Using the PID as a subdir prevents conflicts when running
-                # multiple executions of the same application in parallel.
-                state_dir = pathlib.Path(BaseDirectory.get_runtime_dir()) / str(
-                    os.getpid()
-                )
-            except KeyError:
-                craft_cli.emit.debug("Couldn't get XDG_RUNTIME_DIR.")
+            craft_cli.emit.debug("Getting runtime directory.")
+            # Using the PID as a subdir prevents conflicts when running
+            # multiple executions of the same application in parallel.
+            state_dir = platformdirs.user_runtime_path(
+                str(os.getpid()), ensure_exists=True
+            )
+            if sys.platform == "linux" and state_dir.is_relative_to("/tmp"):  # noqa: S108 (use of /tmp)
                 # Use the home dir because the state dir will get mounted
                 # in the instance and Multipass can't access /tmp.
+                craft_cli.emit.debug("Getting home temporary directory.")
                 state_dir = util.get_home_temporary_directory()
 
         state_dir = state_dir.resolve()
