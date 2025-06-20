@@ -12,6 +12,12 @@ Models
 
 - Expose ``Part`` type
 
+Services
+========
+
+- Add a new State service that manages a global state between manager and managed
+  instances of an application.
+
 5.3.0 (2025-05-28)
 ------------------
 
