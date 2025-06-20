@@ -19,7 +19,9 @@ import os
 import pathlib
 import re
 from collections.abc import Callable
+from unittest import mock
 
+import craft_providers
 import pytest
 from craft_application import _const, errors
 from craft_application.services import StateService, state
@@ -27,7 +29,11 @@ from craft_application.services import StateService, state
 
 @pytest.fixture
 def state_service_factory(app_metadata, fake_services) -> Callable[[], StateService]:
-    """A factory for creating a state service."""
+    """A factory for creating a state service.
+
+    Useful when environment variables or mocks need to be configured
+    before initializing the service.
+    """
 
     def _get_service():
         """Return an instance of the StateService."""
@@ -38,16 +44,149 @@ def state_service_factory(app_metadata, fake_services) -> Callable[[], StateServ
 
 @pytest.fixture
 def state_dir(monkeypatch, tmp_path) -> pathlib.Path:
-    """Ensure CRAFT_STATE_DIR is set to a temporary directory."""
+    """Sets CRAFT_STATE_DIR to 'tmp_path/state'."""
     state_dir = (tmp_path / "state").resolve()
     monkeypatch.setenv(_const.CRAFT_STATE_DIR_ENV, str(state_dir))
     return state_dir
 
 
 @pytest.fixture
+def state_service(state_dir, state_service_factory) -> StateService:
+    """Return an instance of the StateService.
+
+    Uses a state dir of 'tmp_path/state'.
+    """
+    return state_service_factory()
+
+
+@pytest.fixture
 def no_state_dir_env_var(monkeypatch) -> None:
     """Ensure CRAFT_STATE_DIR is not set."""
     monkeypatch.delenv(_const.CRAFT_STATE_DIR_ENV, raising=False)
+
+
+###########################
+# Getter and setter tests #
+###########################
+
+
+def test_get_and_set(state_service, state_dir, emitter):
+    """Test getting and setting a value in the state service."""
+    state_service.set("foo", "bar", value="baz")
+    value = state_service.get("foo", "bar")
+
+    assert value == "baz"
+    emitter.assert_debug("Setting 'foo.bar' to 'baz'.")
+    emitter.assert_debug("Set 'foo.bar' to 'baz'.")
+    emitter.assert_debug("Getting value for 'foo.bar'.")
+    emitter.assert_debug("Got value 'baz' for 'foo.bar'.")
+
+
+def test_get_invalid_path(state_service, state_dir):
+    """Error if an item the path doesn't exist."""
+    state_service.set("foo", "bar", value="baz")
+    expected_error = re.escape(
+        "Failed to get value for 'foo.non-existent': 'non-existent' doesn't exist."
+    )
+
+    with pytest.raises(KeyError, match=expected_error):
+        state_service.get("foo", "non-existent")
+
+
+def test_get_invalid_path_top_level(state_service, state_dir):
+    """Error if the top level item in the path doesn't exist."""
+    expected_error = re.escape(
+        "Failed to get value for 'foo.bar.baz': 'foo' doesn't exist."
+    )
+
+    with pytest.raises(KeyError, match=expected_error):
+        state_service.get("foo", "bar", "baz")
+
+
+def test_get_non_dict_path(state_service, state_dir):
+    """Error if an item in the path isn't a dictionary."""
+    state_service.set("foo", "bar", value="baz")
+    expected_error = re.escape(
+        "Failed to get value for 'foo.bar.baz': can't traverse into node at 'bar'."
+    )
+
+    with pytest.raises(KeyError, match=expected_error):
+        state_service.get("foo", "bar", "baz")
+
+
+def test_set_non_dict_path(state_service, state_dir):
+    """Error if an item in the path isn't a dictionary."""
+    state_service.set("foo", "bar", value="baz")
+    expected_error = re.escape(
+        "Failed to set 'foo.bar.baz' to 'new-value': can't traverse into node at 'bar'."
+    )
+
+    with pytest.raises(KeyError, match=expected_error):
+        state_service.set("foo", "bar", "baz", value="new-value")
+
+
+@pytest.mark.parametrize(
+    ("func", "kwargs"),
+    [
+        ("get", {}),
+        ("set", {"value": "baz"}),
+    ],
+)
+def test_get_no_keys(func, kwargs, state_service, state_dir):
+    """Error if no keys are provided."""
+    expected_error = "No keys provided."
+
+    with pytest.raises(KeyError, match=expected_error):
+        getattr(state_service, func)(**kwargs)
+
+
+@pytest.mark.parametrize(
+    "first_key",
+    ["", " ", "123$$$"],
+)
+@pytest.mark.parametrize(
+    ("func", "kwargs"),
+    [
+        ("get", {}),
+        ("set", {"value": "baz"}),
+    ],
+)
+def test_get_invalid_first_key(
+    func, kwargs, first_key, state_service_factory, state_dir
+):
+    """Error if the first key is invalid."""
+    state_service = state_service_factory()
+    expected_error = re.escape(
+        f"The first key in '{first_key}.foo.bar' must only "
+        "contain ASCII alphanumeric characters and _ (underscores)."
+    )
+
+    with pytest.raises(KeyError, match=expected_error):
+        getattr(state_service, func)(first_key, "foo", "bar", **kwargs)
+
+
+def test_set_overwrite(state_service_factory, state_dir, emitter):
+    """Overwrite an item that already exists."""
+    state_service = state_service_factory()
+    state_service.set("foo", "bar", value="baz")
+
+    state_service.set("foo", "bar", value="new-value", overwrite=True)
+
+    emitter.assert_debug("Setting 'foo.bar' to 'baz'.")
+    emitter.assert_debug("Overwriting existing value.")
+    emitter.assert_debug("Set 'foo.bar' to 'new-value'.")
+
+
+def test_set_overwrite_error(state_service_factory, state_dir):
+    """Error if overwrite is false."""
+    state_service = state_service_factory()
+    state_service.set("foo", "bar", value="baz")
+    expected_error = re.escape(
+        "Failed to set 'foo.bar' to 'new-value': key 'bar' already exists and overwrite is false."
+    )
+
+    with pytest.raises(ValueError, match=expected_error):
+        state_service.set("foo", "bar", value="new-value", overwrite=False)
 
 
 ##############################
@@ -166,87 +305,136 @@ def test_keep_state_dir(state_service_factory, state_dir, monkeypatch):
     assert state_dir.exists()
 
 
-def test_configure_instance():
+def test_configure_instance(state_service, state_dir, emitter):
     """Configure the instance."""
-    # No point in testing this since we need to switch to pushing and pulling state files in and out of instances
+    mock_instance = mock.Mock(spec=craft_providers.Executor)
 
+    env = state_service.configure_instance(mock_instance)
 
-###########################
-# Getter and setter tests #
-###########################
-
-
-def test_get_and_set(state_service_factory, state_dir, emitter):
-    """Test getting and setting a value in the state service."""
-    state_service = state_service_factory()
-
-    state_service.set("foo", "bar", value="baz")
-    value = state_service.get("foo", "bar")
-
-    assert value == "baz"
-    emitter.assert_debug("Setting 'foo.bar' to 'baz'.")
-    emitter.assert_debug("Set 'foo.bar' to 'baz'.")
-    emitter.assert_debug("Getting value for 'foo.bar'.")
-    emitter.assert_debug("Got value 'baz' for 'foo.bar'.")
-
-
-def test_get_invalid_path(state_service_factory, state_dir):
-    """Error if an item the path doesn't exist."""
-    state_service = state_service_factory()
-    state_service.set("foo", "bar", value="baz")
-    expected_error = re.escape(
-        "Failed to get value for 'foo.non-existent': 'non-existent' doesn't exist."
+    mock_instance.mount.assert_called_once_with(host_source=state_dir, target=state_dir)
+    assert env == {"CRAFT_STATE_DIR": str(state_dir)}
+    emitter.assert_debug(
+        f"Mounting state directory {str(state_dir)!r} in the instance."
     )
 
-    with pytest.raises(KeyError, match=expected_error):
-        state_service.get("foo", "non-existent")
+
+###############################
+# State file management tests #
+###############################
 
 
-def test_get_invalid_path_top_level(state_service_factory, state_dir):
-    """Error if the top level item in the path doesn't exist."""
-    state_service = state_service_factory()
+def test_load_state_file(state_service, state_dir, emitter):
+    """Load a state file."""
+    (state_dir / "foo.yaml").write_text("foo: test-value")
+    state_data = state_service._load_state_file("foo")
+
+    assert state_data == {"foo": "test-value"}
+    emitter.assert_debug(f"Loading state file {str(state_dir / 'foo.yaml')!r}.")
+
+
+def test_load_state_file_nonexistent(state_service, state_dir, emitter):
+    """Return an empty dict if the state file doesn't exist."""
+    state_data = state_service._load_state_file("foo")
+
+    assert state_data == {}
+    emitter.assert_debug(f"Loading state file {str(state_dir / 'foo.yaml')!r}.")
+    emitter.assert_debug("State file doesn't exist.")
+
+
+def test_load_state_file_permission_error(state_service, state_dir, mocker):
+    """Error if the state file can't be read."""
+    mocker.patch(
+        "craft_application.services.state.pathlib.Path.exists",
+        side_effect=PermissionError,
+    )
     expected_error = re.escape(
-        "Failed to get value for 'foo.bar.baz': 'foo' doesn't exist."
+        f"Can't load state file {str(state_dir / 'foo.yaml')!r} due to insufficient permissions."
     )
 
-    with pytest.raises(KeyError, match=expected_error):
-        state_service.get("foo", "bar", "baz")
+    with pytest.raises(errors.StateServiceError, match=expected_error):
+        state_service._load_state_file("foo")
 
 
-def test_get_non_dict_path(state_service_factory, state_dir):
-    """Error if an item in the path isn't a dictionary."""
-    state_service = state_service_factory()
-    state_service.set("foo", "bar", value="baz")
+def test_load_state_file_not_a_file(state_service, state_dir):
+    """Error if a state file isn't a file."""
+    (state_dir / "foo.yaml").mkdir()
     expected_error = re.escape(
-        "Failed to get value for 'foo.bar.baz': can't traverse into node at 'bar'."
+        f"Can't load state file {str(state_dir / 'foo.yaml')!r} because it's not a regular file."
     )
 
-    with pytest.raises(KeyError, match=expected_error):
-        state_service.get("foo", "bar", "baz")
+    with pytest.raises(errors.StateServiceError, match=expected_error):
+        state_service._load_state_file("foo")
 
 
-def test_get_no_keys(state_service_factory, state_dir):
-    """Error if no keys are provided."""
-    state_service = state_service_factory()
-    expected_error = "No keys provided."
-
-    with pytest.raises(KeyError, match=expected_error):
-        state_service.get()
-
-
-@pytest.mark.parametrize(
-    "first_key",
-    [
-        "123$$$",
-    ],
-)
-def test_invalid_first_key(first_key, state_service_factory, state_dir):
-    """Error if the first key is invalid."""
-    state_service = state_service_factory()
+def test_load_state_file_os_error(state_service, state_dir, mocker):
+    """Error if reading the state file fails."""
+    mocker.patch(
+        "craft_application.services.state.pathlib.Path.read_text", side_effect=OSError
+    )
+    (state_dir / "foo.yaml").write_text("key: value")
     expected_error = re.escape(
-        f"The first key in '{first_key}.foo.bar' must only "
-        "contain ASCII alphanumeric characters and _ (underscores)."
+        f"Can't load state file {str(state_dir / 'foo.yaml')!r}."
     )
 
-    with pytest.raises(KeyError, match=expected_error):
-        state_service.get(first_key, "foo", "bar")
+    with pytest.raises(errors.StateServiceError, match=expected_error):
+        state_service._load_state_file("foo")
+
+
+def test_load_state_file_invalid_yaml(state_service, state_dir):
+    """Error if the state file isn't valid YAML."""
+    (state_dir / "foo.yaml").write_text("}invalid yaml")
+    expected_error = re.escape(
+        f"Can't parse state file {str(state_dir / 'foo.yaml')!r}."
+    )
+
+    with pytest.raises(errors.StateServiceError, match=expected_error):
+        state_service._load_state_file("foo")
+
+
+def test_save_state_file(state_service, state_dir, emitter):
+    """Save a state file."""
+    state_service._save_state_file("foo", {"foo": "test-value"})
+
+    saved_file = state_dir / "foo.yaml"
+    assert saved_file.exists()
+    assert saved_file.read_text() == "foo: test-value\n"
+    emitter.assert_debug(f"Writing state to {str(saved_file)!r}.")
+
+
+@pytest.mark.slow
+def test_save_state_file_large_file(state_service, state_dir, emitter):
+    """Save files up to and including 1 MiB in size."""
+    # exactly 1 MiB
+    value = "a" * (1024 * 1024 - len("foo: \n"))
+
+    state_service._save_state_file("foo", {"foo": value})
+
+    saved_file = state_dir / "foo.yaml"
+    assert saved_file.exists()
+    assert saved_file.read_text() == f"foo: {value}\n"
+    emitter.assert_debug(f"Writing state to {str(saved_file)!r}.")
+
+
+@pytest.mark.slow
+def test_save_state_file_large_file_error(state_service, state_dir):
+    """Error if the file is greater than 1 MiB."""
+    # exactly 1 MiB + 1 byte
+    value = "a" * (1024 * 1024 - len("foo: \n") + 1)
+    expected_error = re.escape("Can't save state file over 1 MiB in size.")
+
+    with pytest.raises(ValueError, match=expected_error):
+        state_service._save_state_file("foo", {"foo": value})
+
+
+def test_save_state_file_permission_error(state_service, state_dir, mocker):
+    """Error if the state file can't be saved."""
+    mocker.patch(
+        "craft_application.services.state.pathlib.Path.write_text",
+        side_effect=PermissionError,
+    )
+    expected_error = re.escape(
+        f"Can't save state file {str(state_dir / 'foo.yaml')!r} due to insufficient permissions."
+    )
+
+    with pytest.raises(errors.StateServiceError, match=expected_error):
+        state_service._save_state_file("foo", {"foo": "test-value"})

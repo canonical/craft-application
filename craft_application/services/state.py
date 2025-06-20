@@ -157,7 +157,9 @@ class StateService(base.AppService):
         :returns: The environment variables that that are required by the state service
             in the instance.
         """
-        craft_cli.emit.debug(f"Mounting state directory {self.__state_dir} in instance")
+        craft_cli.emit.debug(
+            f"Mounting state directory {str(self.__state_dir)!r} in the instance."
+        )
         instance.mount(host_source=self.__state_dir, target=self.__state_dir)
         return {CRAFT_STATE_DIR_ENV: str(self.__state_dir)}
 
@@ -205,8 +207,13 @@ class StateService(base.AppService):
         key, *remaining = keys
 
         if len(keys) == 1:
-            if key in data and not overwrite:
-                raise ValueError(f"key {key!r} already exists and overwrite is false.")
+            if key in data:
+                if overwrite:
+                    craft_cli.emit.debug("Overwriting existing value.")
+                else:
+                    raise ValueError(
+                        f"key {key!r} already exists and overwrite is false."
+                    )
             data[key] = value
             return
 
@@ -310,7 +317,8 @@ class StateService(base.AppService):
     def _load_state_file(self, file_name: str) -> dict[str, ValueType]:
         """Load a state file.
 
-        :param file_name: The name of the state file to load.
+        :param file_name: The name of the state file to load in the state directory
+            with no file extension.
 
         :returns: A dictionary of state data or an empty dictionary if the file doesn't exist.
 
@@ -325,21 +333,23 @@ class StateService(base.AppService):
                 return {}
         except PermissionError as err:
             raise errors.StateServiceError(
-                "Couldn't load state file due to insufficient permissions."
+                f"Can't load state file {str(file_path)!r} due to insufficient permissions."
             ) from err
 
         if not file_path.is_file():
             raise errors.StateServiceError(
-                f"Couldn't load state file {str(file_path)!r} because it's not a regular file."
+                f"Can't load state file {str(file_path)!r} because it's not a regular file."
             )
 
         try:
             return cast(dict[str, ValueType], yaml.safe_load(file_path.read_text()))
-        except (yaml.YAMLError, OSError) as err:
+        except OSError as err:
             raise errors.StateServiceError(
                 message=f"Can't load state file {str(file_path)!r}.",
-                # this probably shouldn't be in the details
-                details=f"Error: {err}",
+            ) from err
+        except yaml.YAMLError as err:
+            raise errors.StateServiceError(
+                message=f"Can't parse state file {str(file_path)!r}.",
             ) from err
 
     @final
@@ -358,11 +368,11 @@ class StateService(base.AppService):
         craft_cli.emit.debug(f"Writing state to {str(file_path)!r}.")
         raw_data = util.dump_yaml(data)
         if len(raw_data) > 1024 * 1024:
-            raise ValueError("Can't save state file over 1MiB in size.")
+            raise ValueError("Can't save state file over 1 MiB in size.")
 
         try:
             file_path.write_text(raw_data)
         except PermissionError as err:
             raise errors.StateServiceError(
-                "Failed to write state file due to insufficient permissions."
+                f"Can't save state file {str(file_path)!r} due to insufficient permissions."
             ) from err
