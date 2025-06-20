@@ -416,9 +416,6 @@ class PackCommand(LifecycleCommand):
             emit.progress(f"Packed: {package_names}", permanent=True)
             artifact, resources = packages[0], self._services.package.resource_map
 
-        # This will use the provider shared registry after it's implemented
-        # in craft-providers, to allow transparent data transfer from instances
-        # or unmanaged runs.
         self._services.package.write_state(artifact=artifact, resources=resources)
 
         if shell_after:
@@ -536,13 +533,7 @@ class TestCommand(PackCommand):
             # Run the rest of this outside the managed instance.
             return
 
-        # This will use the provider shared registry after it's implemented
-        # in craft-providers, to allow transparent data transfer from instances
-        # or unmanaged runs.
-        if parsed_args.destructive_mode:
-            pack_state = self._services.package.read_state()
-        else:
-            pack_state = self._services.provider.get_pack_state()
+        pack_state = self._services.package.read_state()
 
         if not pack_state.artifact:
             raise RuntimeError("No artifact files to test.")

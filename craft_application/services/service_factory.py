@@ -47,6 +47,7 @@ _DEFAULT_SERVICES = {
     "project": "ProjectService",
     "provider": "ProviderService",
     "remote_build": "RemoteBuildService",
+    "state": "StateService",
     "request": "RequestService",
     "testing": "TestingService",
 }
@@ -83,6 +84,7 @@ class ServiceFactory:
         fetch: services.FetchService
         init: services.InitService
         testing: services.TestingService
+        state: services.StateService
 
     def __init__(
         self,
@@ -232,6 +234,11 @@ class ServiceFactory:
     @overload
     @classmethod
     def get_class(
+        cls, name: Literal["state", "StateService", "StateClass"]
+    ) -> type[services.StateService]: ...
+    @overload
+    @classmethod
+    def get_class(
         cls, name: Literal["testing", "TestingService", "TestingClass"]
     ) -> type[services.TestingService]: ...
     @overload
@@ -279,6 +286,8 @@ class ServiceFactory:
     def get(self, service: Literal["remote_build"]) -> services.RemoteBuildService: ...
     @overload
     def get(self, service: Literal["request"]) -> services.RequestService: ...
+    @overload
+    def get(self, service: Literal["state"]) -> services.StateService: ...
     @overload
     def get(self, service: Literal["testing"]) -> services.TestingService: ...
     @overload
