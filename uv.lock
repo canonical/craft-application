@@ -608,8 +608,8 @@ wheels = [
 
 [[package]]
 name = "craft-parts"
-version = "2.12.0.post30+g5b60823"
-source = { git = "https://github.com/canonical/craft-parts.git?rev=work%2FCRAFT-4559-Prototype-the-alias-mechanism#5b608237892b816853029d474f50c060a55ace47" }
+version = "2.13.0.post13+g66917ff"
+source = { git = "https://github.com/canonical/craft-parts.git?rev=work%2FCRAFT-4559-Prototype-the-alias-mechanism#66917ff3f33794a3ae2366dd44e9f9d5a9352b19" }
 dependencies = [
     { name = "overrides" },
     { name = "pydantic" },
