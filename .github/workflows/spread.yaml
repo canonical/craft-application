@@ -1,0 +1,63 @@
+name: Spread
+on:
+  pull_request:
+  merge_group:
+  push:
+    branches:
+      - main
+
+jobs:
+  snap-build:
+    runs-on: [self-hosted, amd64]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Build snap
+        uses: snapcore/action-build@v1
+        id: snap
+      - name: Upload snap artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: snap
+          path: ${{ steps.snap.outputs.snap }}
+
+  snap-tests:
+    runs-on: spread-installed
+    needs: [snap-build]
+    strategy:
+      fail-fast: false
+      matrix:
+        spread:
+          - "google:"
+
+    steps:
+      - name: Cleanup job workspace
+        run: |
+          rm -rf "${{ github.workspace }}"
+          mkdir "${{ github.workspace }}"
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          submodules: true
+
+      - name: Download snap artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: snap
+
+      - name: Run spread
+        run: |
+          mv *.snap tests/spread/
+          spread ${{ matrix.spread }}
+
+      - name: Discard spread workers
+        if: always()
+        run: |
+          shopt -s nullglob
+          for r in .spread-reuse.*.yaml; do
+            spread -discard -reuse-pid="$(echo "$r" | grep -o -E '[0-9]+')"
+          done

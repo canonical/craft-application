@@ -1,0 +1,15 @@
+name: pack-multi
+version: "0.1"
+
+base: ubuntu@24.04
+platforms:
+  ppc64el:
+    build-on: [amd64, arm64, ppc64el, s390x, riscv64]
+    build-for: [ppc64el]
+  s390x:
+    build-on: [amd64, arm64, ppc64el, s390x, riscv64]
+    build-for: s390x
+
+parts:
+  my-test:
+    plugin: nil

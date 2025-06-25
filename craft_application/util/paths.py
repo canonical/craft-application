@@ -14,11 +14,14 @@
 # You should have received a copy of the GNU Lesser General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Utility functions and helpers related to path handling."""
+
 from __future__ import annotations
 
 import pathlib
 import urllib.parse
 from typing import TYPE_CHECKING
+
+from craft_application.util.platforms import is_managed_mode
 
 if TYPE_CHECKING:
     from craft_application import AppMetadata
@@ -35,6 +38,31 @@ def get_managed_logpath(app: AppMetadata) -> pathlib.PosixPath:
     )
 
 
+def get_managed_pack_state_path(app: AppMetadata) -> pathlib.PosixPath:
+    """Get the path to the pack state file inside a build instance.
+
+    Note that this always returns a PosixPath, as it refers to a path inside of
+    a Linux-based build instance.
+    """
+    return pathlib.PosixPath(
+        f"/tmp/{app.name}-pack.yaml"  # noqa: S108 - only applies inside managed instance.
+    )
+
+
 def get_filename_from_url_path(url: str) -> str:
     """Get just the filename of a URL path."""
     return pathlib.PurePosixPath(urllib.parse.urlparse(url).path).name
+
+
+def get_work_dir(project_dir: pathlib.Path) -> pathlib.Path:
+    """Get the work directory to hand to craft-parts.
+
+    :param project_dir: The directory containing the project
+    :returns: The craft-parts work directory.
+
+    When running in managed mode, this returns the managed mode work directory
+    of ``/root``. Otherwise, it returns the project directory.
+    """
+    if is_managed_mode():
+        return pathlib.Path("/root")
+    return project_dir

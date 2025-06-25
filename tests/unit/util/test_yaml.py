@@ -14,12 +14,13 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Tests for internal model utilities."""
+
 import io
 import pathlib
 
+import craft_platforms
 import pytest
 import pytest_check
-
 from craft_application import errors
 from craft_application.util import yaml
 
@@ -89,6 +90,7 @@ def test_safe_yaml_loader_specific_error(yaml_text: str, error_msg: str):
             {"sort_keys": True},
             "comes_first: true\nordered: 'yes'\n",
         ),
+        ({"arch": craft_platforms.DebianArchitecture.RISCV64}, {}, "arch: riscv64\n"),
     ],
 )
 def test_dump_yaml_to_string(data, kwargs, expected):

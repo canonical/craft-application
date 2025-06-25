@@ -14,18 +14,19 @@
 #  You should have received a copy of the GNU Lesser General Public License
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Tests for fetch-service-related functions."""
+
 import re
 import subprocess
+import textwrap
 from pathlib import Path
 from unittest import mock
 from unittest.mock import call
 
 import pytest
 import responses
+from craft_application import errors, fetch
 from craft_providers.lxd import LXDInstance
 from responses import matchers
-
-from craft_application import errors, fetch
 
 CONTROL = fetch._DEFAULT_CONFIG.control
 PROXY = fetch._DEFAULT_CONFIG.proxy
@@ -153,28 +154,36 @@ def test_start_service_not_installed(mocker):
     ("strict", "expected_policy"), [(True, "strict"), (False, "permissive")]
 )
 def test_create_session(strict, expected_policy):
+    create_session_timeout = 5.0
     responses.add(
         responses.POST,
         f"http://localhost:{CONTROL}/session",
         json={"id": "my-session-id", "token": "my-session-token"},
         status=200,
-        match=[matchers.json_params_matcher({"policy": expected_policy})],
+        match=[
+            matchers.json_params_matcher({"policy": expected_policy}),
+            matchers.request_kwargs_matcher({"timeout": create_session_timeout}),
+        ],
     )
 
     session_data = fetch.create_session(strict=strict)
 
     assert session_data.session_id == "my-session-id"
-    assert session_data.token == "my-session-token"
+    assert session_data.token == "my-session-token"  # noqa: S105
 
 
 @assert_requests
 def test_teardown_session():
-    session_data = fetch.SessionData(id="my-session-id", token="my-session-token")
+    session_data = fetch.SessionData(id="my-session-id", token="my-session-token")  # noqa: S106
+    default_timeout = 10.0
 
     # Call to delete token
     responses.delete(
         f"http://localhost:{CONTROL}/session/{session_data.session_id}/token",
-        match=[matchers.json_params_matcher({"token": session_data.token})],
+        match=[
+            matchers.json_params_matcher({"token": session_data.token}),
+            matchers.request_kwargs_matcher({"timeout": default_timeout}),
+        ],
         json={},
         status=200,
     )
@@ -182,18 +191,21 @@ def test_teardown_session():
     responses.get(
         f"http://localhost:{CONTROL}/session/{session_data.session_id}",
         json={},
+        match=[matchers.request_kwargs_matcher({"timeout": default_timeout})],
         status=200,
     )
     # Call to delete session
     responses.delete(
         f"http://localhost:{CONTROL}/session/{session_data.session_id}",
         json={},
+        match=[matchers.request_kwargs_matcher({"timeout": default_timeout})],
         status=200,
     )
     # Call to delete session resources
     responses.delete(
         f"http://localhost:{CONTROL}/resources/{session_data.session_id}",
         json={},
+        match=[matchers.request_kwargs_matcher({"timeout": default_timeout})],
         status=200,
     )
 
@@ -206,7 +218,7 @@ def test_configure_build_instance(mocker):
         fetch, "_obtain_certificate", return_value=("fake-cert.crt", "key.pem")
     )
 
-    session_data = fetch.SessionData(id="my-session-id", token="my-session-token")
+    session_data = fetch.SessionData(id="my-session-id", token="my-session-token")  # noqa: S106
     instance = mock.MagicMock(spec_set=LXDInstance)
     assert isinstance(instance, LXDInstance)
 
@@ -298,3 +310,88 @@ def test_get_certificate_dir(mocker):
 
     expected = Path("/home/user/snap/fetch-service/common/craft/fetch-certificate")
     assert cert_dir == expected
+
+
+@pytest.mark.parametrize(
+    "config",
+    [
+        pytest.param(
+            textwrap.dedent(
+                """
+                devices:
+                  eth0:
+                    name: eth0
+                    network: lxdbr0
+                    type: nic
+                """
+            ),
+            id="default-device",
+        ),
+        pytest.param(
+            textwrap.dedent(
+                """
+                devices:
+                  eth0:
+                    name: eth0
+                    nictype: bridged
+                    parent: lxdbr0
+                    type: nic
+                """
+            ),
+            id="old-default-device",
+        ),
+    ],
+)
+def test_get_gateway(mocker, config):
+    gateway = "10.207.202.1"
+    ip_route = f"10.207.202.0/24 proto kernel scope link src {gateway}"
+    mocker.patch.object(
+        subprocess,
+        "run",
+        side_effect=[mock.Mock(stdout=text) for text in [config, ip_route]],
+    )
+
+    actual_gateway = fetch._get_gateway(LXDInstance(name="test-instance"))
+
+    assert gateway == actual_gateway
+
+
+@pytest.mark.parametrize(
+    ("config", "expected_error"),
+    [
+        pytest.param(
+            "name: test-name",
+            "Couldn't find a network device named 'eth0'.",
+            id="no-devices",
+        ),
+        pytest.param(
+            textwrap.dedent(
+                """
+                name: test-name
+                devices:
+                  custom:
+                    name: wrong-device
+                """
+            ),
+            "Couldn't find a network device named 'eth0'.",
+            id="missing-eth0",
+        ),
+        pytest.param(
+            textwrap.dedent(
+                """
+                name: test-name
+                devices:
+                  eth0:
+                    name: test-device
+                """
+            ),
+            "Couldn't find the network name of the default network device.",
+            id="missing-network-name",
+        ),
+    ],
+)
+def test_get_gateway_errors(config, expected_error, mocker):
+    mocker.patch.object(subprocess, "run", side_effect=[mock.Mock(stdout=config)])
+
+    with pytest.raises(errors.FetchServiceError, match=expected_error):
+        fetch._get_gateway(LXDInstance(name="test-instance"))

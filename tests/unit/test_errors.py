@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU Lesser General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Tests for error classes."""
+
 import textwrap
 
 import craft_parts
@@ -21,14 +22,13 @@ import pydantic
 import pytest
 import pytest_check
 import yaml
-from pydantic import BaseModel
-from typing_extensions import Self
-
 from craft_application.errors import (
     CraftValidationError,
     PartsLifecycleError,
     YamlError,
 )
+from pydantic import BaseModel
+from typing_extensions import Self
 
 
 @pytest.mark.parametrize(

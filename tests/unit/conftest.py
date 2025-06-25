@@ -21,44 +21,36 @@ from unittest import mock
 
 import pytest
 import pytest_mock
-
-from craft_application import git, services, util
+from craft_application import git, services
 from craft_application.services import service_factory
-
-BASIC_PROJECT_YAML = """
-name: myproject
-version: 1.0
-base: ubuntu@24.04
-platforms:
-  arm64:
-parts:
-  mypart:
-    plugin: nil
-"""
-
-
-@pytest.fixture(params=["amd64", "arm64", "riscv64"])
-def fake_host_architecture(monkeypatch, request) -> str:
-    monkeypatch.setattr(util, "get_host_architecture", lambda: request.param)
-    return request.param
 
 
 @pytest.fixture
-def provider_service(
-    app_metadata, fake_project, fake_build_plan, fake_services, tmp_path
+def project_service(
+    app_metadata, fake_services, project_path, fake_project_service_class
 ):
-    return services.ProviderService(
+    fake_services.register("project", fake_project_service_class)
+    return fake_project_service_class(
         app_metadata,
         fake_services,
-        project=fake_project,
-        work_dir=tmp_path,
-        build_plan=fake_build_plan,
+        project_dir=project_path,
     )
 
 
 @pytest.fixture
-def mock_services(monkeypatch, app_metadata, fake_project):
-    services.ServiceFactory.register("config", mock.Mock(spec=services.ConfigService))
+def provider_service(app_metadata, fake_project, fake_services, tmp_path):
+    return services.ProviderService(
+        app_metadata,
+        fake_services,
+        work_dir=tmp_path,
+    )
+
+
+@pytest.fixture
+def mock_services(monkeypatch, app_metadata, fake_project, project_path):
+    mock_config = mock.Mock(spec=services.ConfigService)
+    mock_config.return_value.get.return_value = None
+    services.ServiceFactory.register("config", mock_config)
     services.ServiceFactory.register("fetch", mock.Mock(spec=services.FetchService))
     services.ServiceFactory.register("init", mock.MagicMock(spec=services.InitService))
     services.ServiceFactory.register(
@@ -71,6 +63,7 @@ def mock_services(monkeypatch, app_metadata, fake_project):
     services.ServiceFactory.register(
         "remote_build", mock.Mock(spec=services.RemoteBuildService)
     )
+    services.ServiceFactory.register("testing", mock.Mock(spec=services.TestingService))
 
     def forgiving_is_subclass(child, parent):
         if not isinstance(child, type):
@@ -82,7 +75,9 @@ def mock_services(monkeypatch, app_metadata, fake_project):
     monkeypatch.setattr(
         service_factory, "issubclass", forgiving_is_subclass, raising=False
     )
-    return services.ServiceFactory(app_metadata, project=fake_project)
+    factory = services.ServiceFactory(app_metadata, project=fake_project)
+    factory.update_kwargs("project", project_dir=project_path)
+    return factory
 
 
 @pytest.fixture
@@ -107,14 +102,3 @@ def expected_git_command(
     which_res = f"/some/path/to/{git.CRAFTGIT_BINARY_NAME}" if craftgit_exists else None
     mocker.patch("shutil.which", return_value=which_res)
     return git.CRAFTGIT_BINARY_NAME if craftgit_exists else git.GIT_FALLBACK_BINARY_NAME
-
-
-@pytest.fixture
-def fake_project_file(monkeypatch, tmp_path):
-    project_dir = tmp_path / "project"
-    project_dir.mkdir()
-    project_path = project_dir / "testcraft.yaml"
-    project_path.write_text(BASIC_PROJECT_YAML)
-    monkeypatch.chdir(project_dir)
-
-    return project_path

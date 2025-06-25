@@ -25,15 +25,14 @@ from types import ModuleType
 from typing import cast
 
 import pytest
-from craft_cli import emit
-from overrides import override
-
 from craft_application import (
     Application,
     AppService,
     commands,
     services,
 )
+from craft_cli import emit
+from overrides import override
 
 FAKE_APP = "boopcraft"
 PLUGIN_GROUP_NAME = "craft_application_plugins.application"
@@ -51,7 +50,7 @@ def entry_points_faker():
     og_modules = sys.modules
 
     def entry_points_faker(
-        entry_points: list[tuple[str, str, callable]] | None = None  # type: ignore[reportGeneralTypeIssues]
+        entry_points: list[tuple[str, str, callable]] | None = None,  # type: ignore[reportGeneralTypeIssues]
     ):
         # All go under this group for our purposes
         entry_points_txt = f"[{PLUGIN_GROUP_NAME}]\n"
@@ -109,9 +108,39 @@ def fake_service():
 
 
 def test_app_no_plugins(monkeypatch, app_metadata, fake_services, emitter):
-    Application(app_metadata, fake_services)
+    app = Application(app_metadata, fake_services)
+    app._setup_logging()
+    app._load_plugins()
     with pytest.raises(AssertionError):
         emitter.assert_debug("Loading app plugin .*", regex=True)
+
+
+@pytest.mark.usefixtures("fake_project_file")
+def test_app_plugin_load_fails(
+    app_metadata, fake_service, fake_services, emitter, entry_points_faker
+):
+    def broken_configure(app: Application):
+        raise Exception("Help!")  # noqa: TRY002
+
+    entry_points_faker(
+        [(PLUGIN_ENTRY_POINT_NAME, PLUGIN_MODULE_NAME, broken_configure)]
+    )
+    app = Application(app_metadata, fake_services)
+    app._setup_logging()
+
+    # Should not raise an exception
+    app._load_plugins()
+
+    emitter.assert_debug(f"Loading app plugin {PLUGIN_ENTRY_POINT_NAME}")
+    emitter.assert_progress(
+        f"Failed to load plugin {PLUGIN_ENTRY_POINT_NAME}",
+        permanent=True,
+    )
+    for msg in emitter.interactions:
+        if msg.args[0] == "debug" and msg.args[1].startswith("Traceback"):
+            assert msg.args[1].endswith("Exception: Help!\n")
+            return
+    raise AssertionError("Didn't find traceback")
 
 
 @pytest.mark.usefixtures("fake_project_file")
@@ -120,7 +149,9 @@ def test_app_plugin_loaded(
 ):
     entry_points_faker()
 
-    Application(app_metadata, fake_services)
+    app = Application(app_metadata, fake_services)
+    app._setup_logging()
+    app._load_plugins()
     emitter.assert_debug(f"Loading app plugin {PLUGIN_ENTRY_POINT_NAME}")
 
 
@@ -135,7 +166,9 @@ def test_app_two_plugins_loaded(
         ]
     )
 
-    Application(app_metadata, fake_services)
+    app = Application(app_metadata, fake_services)
+    app._setup_logging()
+    app._load_plugins()
     emitter.assert_debug(f"Loading app plugin {PLUGIN_ENTRY_POINT_NAME}")
     emitter.assert_debug("Loading app plugin anothername")
 
@@ -153,6 +186,8 @@ def test_app_plugin_adds_service(
 
     entry_points_faker([(PLUGIN_ENTRY_POINT_NAME, PLUGIN_MODULE_NAME, configure)])
     app = Application(app_metadata, fake_services)
+    app._setup_logging()
+    app._load_plugins()
 
     assert cast(FakeService, app.services.get("fake")).get_a_thing() == "a thing"
 

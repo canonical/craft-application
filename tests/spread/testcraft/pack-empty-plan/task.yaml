@@ -1,0 +1,7 @@
+summary: test testcraft pack with multiple platforms
+
+execute: |
+  (! testcraft pack) |& MATCH "No build matches"
+
+restore: |
+  rm -rf *.testcraft

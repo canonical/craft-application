@@ -36,10 +36,12 @@ from typing_extensions import Self
 try:
     import pygit2  # type: ignore[import-untyped]
 except Exception:  # noqa: BLE001 (narrower types are provided by the import)
+    from ._utils import find_ssl_cert_dir
+
     # This environment comes from ssl.get_default_verify_paths
     _old_env = os.getenv("SSL_CERT_DIR")
-    # Needs updating when the base changes for applications' snap
-    os.environ["SSL_CERT_DIR"] = "/snap/core22/current/etc/ssl/certs"
+
+    os.environ["SSL_CERT_DIR"] = find_ssl_cert_dir()
     import pygit2  # type: ignore[import-untyped]
 
     # Restore the environment in case the application shells out and the
@@ -588,6 +590,8 @@ class GitRepo:
         checking_command = [
             self.get_git_command(),
             "branch",
+            "--color=never",
+            "--column=never",
             "--remotes",
             "--contains",
             commit_sha,
@@ -705,6 +709,21 @@ class GitRepo:
                 f"cannot clone repository: {url} to {str(path)!r}"
             ) from error
         return cls(path)
+
+    def get_config_value(self, key: str) -> str | None:
+        """Get value for the configuration key if available else return None."""
+        try:
+            return cast(str, self._repo.config[key])  # pyright: ignore[reportUnnecessaryCast]
+        except (KeyError, ValueError):
+            logger.debug("Config key %r not found in the repository", key)
+            return None
+
+    def set_config_value(self, key: str, value: str) -> None:
+        """Set new value for the configuration key.
+
+        :raises ValueError: if configuration is incorrect
+        """
+        self._repo.config[key] = value
 
     @classmethod
     @lru_cache(maxsize=1)

@@ -14,6 +14,7 @@
 #  You should have received a copy of the GNU Lesser General Public License
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Tests for the remote build service."""
+
 import datetime
 import pathlib
 from unittest import mock
@@ -23,12 +24,12 @@ import lazr.restfulclient.errors
 import lazr.restfulclient.resource
 import platformdirs
 import pytest
-
 from craft_application import errors, git, launchpad, services
 from craft_application.remote.errors import (
     RemoteBuildGitError,
     RemoteBuildInvalidGitRepoError,
 )
+
 from tests.unit.services.conftest import (
     get_mock_callable,
 )

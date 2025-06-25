@@ -14,6 +14,7 @@
 #  You should have received a copy of the GNU Lesser General Public License
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Unit tests for main Launchpad client."""
+
 from __future__ import annotations
 
 import enum
@@ -24,10 +25,9 @@ import launchpadlib.launchpad
 import launchpadlib.uris
 import lazr.restfulclient.errors
 import pytest
-from lazr.restfulclient.resource import Entry
-
 from craft_application import launchpad
 from craft_application.launchpad import models
+from lazr.restfulclient.resource import Entry
 
 
 def flatten_enum(e: type[enum.Enum]) -> list:

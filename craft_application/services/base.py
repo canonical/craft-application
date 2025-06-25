@@ -14,6 +14,7 @@
 #  You should have received a copy of the GNU Lesser General Public License
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Abstract base service class."""
+
 from __future__ import annotations
 
 import abc
@@ -22,7 +23,6 @@ import typing
 from craft_cli import emit
 
 if typing.TYPE_CHECKING:
-    from craft_application import models
     from craft_application.application import AppMetadata
     from craft_application.services import ServiceFactory
 
@@ -43,21 +43,3 @@ class AppService(metaclass=abc.ABCMeta):  # noqa: B024
     def setup(self) -> None:
         """Application-specific service setup."""
         emit.debug(f"Setting up {self.__class__.__name__}")
-
-
-class ProjectService(AppService, metaclass=abc.ABCMeta):
-    """A service that requires access to a project.
-
-    The ServiceFactory will refuse to instantiate a subclass of this service if
-    no project can be created or the project is invalid.
-    """
-
-    def __init__(
-        self,
-        app: AppMetadata,
-        services: ServiceFactory,
-        *,
-        project: models.Project,
-    ) -> None:
-        super().__init__(app=app, services=services)
-        self._project = project

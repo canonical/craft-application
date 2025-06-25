@@ -15,13 +15,13 @@
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """Tests for init command."""
+
 import os
 import pathlib
 import sys
 import textwrap
 
 import pytest
-
 from craft_application.commands import InitCommand
 
 # init operates in the current working directory

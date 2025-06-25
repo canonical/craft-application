@@ -72,7 +72,8 @@ def process_part(
             # all keys in the dictionary must be a string
             for item in unprocessed_grammar:  # type: ignore[reportUnknownVariableType]
                 if isinstance(item, dict) and any(
-                    not isinstance(key, str) for key in item  # type: ignore[reportUnknownVariableType]
+                    not isinstance(key, str)
+                    for key in item  # type: ignore[reportUnknownVariableType]
                 ):
                     continue
 
@@ -95,7 +96,7 @@ def process_part(
         # - scalar values should return as a single object, not in a list.
         # - dict values should return as a dict, not in a list.
         if key not in _NON_SCALAR_VALUES or key in _DICT_ONLY_VALUES:
-            processed_grammar = processed_grammar[0] if processed_grammar else None
+            processed_grammar = processed_grammar[0] if processed_grammar else None  # type: ignore[assignment]
 
         part_yaml_data[key] = processed_grammar
 

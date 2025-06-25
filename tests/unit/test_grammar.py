@@ -15,10 +15,8 @@
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Unit tests for craft-application grammar process."""
 
-
 import pydantic
 import pytest
-
 from craft_application.models.grammar import (
     GrammarAwareProject,
     _GrammarAwarePart,

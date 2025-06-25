@@ -15,20 +15,26 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Unit tests for provider service"""
 
+import enum
 import pathlib
 import pkgutil
+import subprocess
 import uuid
 from typing import NamedTuple
 from unittest import mock
 
+import craft_application
+import craft_platforms
 import craft_providers
 import pytest
+import pytest_subprocess
+from craft_application import errors
+from craft_application.services import provider
+from craft_application.services.service_factory import ServiceFactory
+from craft_application.util import snap_config
+from craft_cli import emit
 from craft_providers import bases, lxd, multipass
 from craft_providers.actions.snap_installer import Snap
-
-from craft_application import errors, models, util
-from craft_application.services import provider
-from craft_application.util import platforms, snap_config
 
 
 @pytest.fixture
@@ -41,6 +47,29 @@ def mock_provider(monkeypatch, provider_service):
     )
 
     return mocked_provider
+
+
+@pytest.fixture(autouse=True)
+def reset_provider_snaps() -> None:
+    provider._REQUESTED_SNAPS.clear()
+
+
+@pytest.fixture(scope="module")
+def fake_build_info(fake_base):
+    arch = craft_platforms.DebianArchitecture.from_host()
+    return craft_platforms.BuildInfo(
+        platform=str(arch),
+        build_on=arch,
+        build_for=arch,
+        build_base=fake_base,
+    )
+
+
+@pytest.fixture
+def mock_capture_pack_state(mocker) -> None:
+    mocker.patch(
+        "craft_application.services.provider.ProviderService._capture_pack_state_from_instance"
+    )
 
 
 @pytest.mark.parametrize(
@@ -75,25 +104,53 @@ def test_setup_proxy_environment(
     app_metadata,
     fake_services,
     fake_project,
-    fake_build_plan,
     given_environment: dict[str, str],
     expected_environment: dict[str, str],
 ):
     for var, value in given_environment.items():
         monkeypatch.setenv(var, value)
 
-    expected_environment |= {"CRAFT_MANAGED_MODE": "1"}
+    service = provider.ProviderService(
+        app_metadata,
+        fake_services,
+        work_dir=pathlib.Path(),
+    )
+    service.setup()
+
+    for key, value in expected_environment.items():
+        assert service.environment[key] == value
+
+
+@pytest.mark.parametrize(
+    ("given_environment", "expected_environment"),
+    [
+        ({"CRAFT_DEBUG": "1"}, {"TESTCRAFT_DEBUG": "True"}),
+        (
+            {"TESTCRAFT_PARALLEL_BUILD_COUNT": "13"},
+            {"TESTCRAFT_PARALLEL_BUILD_COUNT": "13"},
+        ),
+    ],
+)
+def test_setup_config_values(
+    monkeypatch: pytest.MonkeyPatch,
+    app_metadata,
+    fake_services,
+    fake_project,
+    given_environment: dict[str, str],
+    expected_environment: dict[str, str],
+):
+    for var, value in given_environment.items():
+        monkeypatch.setenv(var, value)
 
     service = provider.ProviderService(
         app_metadata,
         fake_services,
-        project=fake_project,
         work_dir=pathlib.Path(),
-        build_plan=fake_build_plan,
     )
     service.setup()
 
-    assert service.environment == expected_environment
+    for key, value in expected_environment.items():
+        assert service.environment[key] == value
 
 
 @pytest.mark.parametrize(
@@ -165,12 +222,18 @@ def test_install_snap(
     monkeypatch,
     app_metadata,
     fake_project,
-    fake_build_plan,
+    fake_process: pytest_subprocess.FakeProcess,
     fake_services,
     install_snap,
     environment,
     snaps,
 ):
+    monkeypatch.setattr("snaphelpers._ctl.Popen", subprocess.Popen)
+    fake_process.register(
+        ["/usr/bin/snapctl", "get", "-d", fake_process.any()],
+        stdout="{}",
+        occurrences=1000,
+    )
     monkeypatch.delenv("SNAP", raising=False)
     monkeypatch.delenv("CRAFT_SNAP_CHANNEL", raising=False)
     monkeypatch.delenv("SNAP_INSTANCE_NAME", raising=False)
@@ -181,9 +244,7 @@ def test_install_snap(
     service = provider.ProviderService(
         app_metadata,
         fake_services,
-        project=fake_project,
         work_dir=pathlib.Path(),
-        build_plan=fake_build_plan,
         install_snap=install_snap,
     )
     service.setup()
@@ -192,6 +253,89 @@ def test_install_snap(
         assert service.snaps == snaps
     else:
         assert service.snaps == []
+
+
+@pytest.mark.parametrize(
+    "additional_snaps",
+    [
+        pytest.param([], id="no_snaps"),
+        pytest.param(
+            [
+                Snap(name="another-craft", channel="latest/edge"),
+            ],
+            id="single_snap",
+        ),
+        pytest.param(
+            [
+                Snap(name="another-craft", channel="latest/edge"),
+                Snap(name="yet-another-craft", channel="latest/beta", classic=True),
+                Snap(name="stable-craft", channel="stable"),
+            ],
+            id="multiple_snaps",
+        ),
+    ],
+)
+@pytest.mark.parametrize("install_snap", [True, False])
+def test_install_registered_snaps_alongside_testcraft(
+    monkeypatch,
+    app_metadata,
+    fake_project,
+    fake_services,
+    install_snap,
+    additional_snaps: list[Snap],
+):
+    for snap in additional_snaps:
+        provider.ProviderService.register_snap(snap.name, snap)
+    snaps = [
+        *additional_snaps,
+        Snap(name="testcraft", channel="latest/stable", classic=True),
+    ]
+
+    monkeypatch.delenv("SNAP", raising=False)
+    monkeypatch.delenv("CRAFT_SNAP_CHANNEL", raising=False)
+    monkeypatch.delenv("SNAP_INSTANCE_NAME", raising=False)
+    monkeypatch.delenv("SNAP_NAME", raising=False)
+    monkeypatch.delenv("CRAFT_SNAP_CHANNEL", raising=False)
+    service = provider.ProviderService(
+        app_metadata,
+        fake_services,
+        work_dir=pathlib.Path(),
+        install_snap=install_snap,
+    )
+    service.setup()
+
+    if install_snap:
+        assert service.snaps == snaps
+    else:
+        assert service.snaps == []
+
+
+def test_snap_register(provider_service: provider.ProviderService) -> None:
+    provider_service.register_snap("test-snap", Snap(name="test-snap", channel="test"))
+    assert "test-snap" in provider._REQUESTED_SNAPS
+
+
+def test_snap_unregister(provider_service: provider.ProviderService) -> None:
+    provider_service.register_snap("test-snap", Snap(name="test-snap", channel="test"))
+
+    provider_service.unregister_snap("test-snap")
+
+
+def test_snap_unregister_twice(provider_service: provider.ProviderService) -> None:
+    snap_name = "test-snap"
+    provider_service.register_snap(snap_name, Snap(name="test-snap", channel="test"))
+
+    provider_service.unregister_snap(snap_name)
+    with pytest.raises(ValueError, match=f"Snap not registered: {snap_name!r}"):
+        provider_service.unregister_snap(snap_name)
+
+
+def test_snap_unregister_non_existent(
+    provider_service: provider.ProviderService,
+) -> None:
+    snap_name = "test-snap"
+    with pytest.raises(ValueError, match=f"Snap not registered: {snap_name!r}"):
+        provider_service.unregister_snap(snap_name)
 
 
 @pytest.mark.parametrize(
@@ -210,18 +354,33 @@ def test_is_managed(managed_value, expected, monkeypatch):
     assert provider.ProviderService.is_managed() == expected
 
 
-def test_forward_environment_variables(monkeypatch, provider_service):
+def test_forward_environment_variables(monkeypatch, provider_service, fake_services):
     var_contents = uuid.uuid4().hex
     for var in provider.DEFAULT_FORWARD_ENVIRONMENT_VARIABLES:
         monkeypatch.setenv(var, f"{var}__{var_contents}")
 
     provider_service.setup()
 
+    # Exclude forwarded proxy variables from the host in this check.
+    del_vars = set()
+    for variable in provider_service.environment:
+        if variable.lower().endswith("proxy"):
+            del_vars.add(variable)
+    for variable in del_vars:
+        del provider_service.environment[variable]
+
     assert provider_service.environment == {
         provider_service.managed_mode_env_var: "1",
         **{
             var: f"{var}__{var_contents}"
             for var in provider.DEFAULT_FORWARD_ENVIRONMENT_VARIABLES
+        },
+        **{
+            f"TESTCRAFT_{config.upper()}": (
+                value.name if isinstance(value, enum.Enum) else str(value)
+            )
+            for config, value in fake_services.get("config").get_all().items()
+            if config not in provider.IGNORE_CONFIG_ITEMS and value is not None
         },
     }
 
@@ -251,15 +410,20 @@ def test_get_lxd_provider(monkeypatch, provider_service, lxd_remote, check):
     ],
 )
 def test_get_instance_name(platform, platform_str, new_dir, provider_service):
-    build_info = models.BuildInfo(
-        platform, "riscv64", "riscv64", bases.BaseName("ubuntu", "24.04")
+    build_info = craft_platforms.BuildInfo(
+        platform,
+        craft_platforms.DebianArchitecture.RISCV64,
+        craft_platforms.DebianArchitecture.RISCV64,
+        craft_platforms.DistroBase("ubuntu", "24.04"),
     )
     inode_number = str(new_dir.stat().st_ino)
     provider_service._build_plan = [build_info]
     expected_name = f"testcraft-full-project-{platform_str}-{inode_number}"
 
     assert (
-        provider_service._get_instance_name(work_dir=new_dir, build_info=build_info)
+        provider_service._get_instance_name(
+            work_dir=new_dir, build_info=build_info, project_name="full-project"
+        )
         == expected_name
     )
 
@@ -443,17 +607,6 @@ def test_get_base_packages(provider_service):
 
 
 @pytest.mark.parametrize("allow_unstable", [True, False])
-@pytest.mark.parametrize(
-    "base_name",
-    [
-        ("ubuntu", "devel"),
-        ("ubuntu", "24.10"),
-        ("ubuntu", "24.04"),
-        ("ubuntu", "22.04"),
-        ("ubuntu", "20.04"),
-        ("almalinux", "9"),
-    ],
-)
 def test_instance(
     check,
     emitter,
@@ -461,15 +614,13 @@ def test_instance(
     app_metadata,
     fake_project,
     provider_service,
-    base_name,
+    fake_build_info,
     allow_unstable,
     mock_provider,
+    mock_capture_pack_state,
 ):
-    arch = util.get_host_architecture()
-    build_info = models.BuildInfo("foo", arch, arch, base_name)
-
     with provider_service.instance(
-        build_info, work_dir=tmp_path, allow_unstable=allow_unstable
+        fake_build_info, work_dir=tmp_path, allow_unstable=allow_unstable
     ) as instance:
         pass
 
@@ -500,10 +651,11 @@ def test_instance_clean_existing(
     provider_service,
     mock_provider,
     clean_existing,
+    mock_capture_pack_state,
 ):
-    arch = util.get_host_architecture()
-    base_name = bases.BaseName("ubuntu", "24.04")
-    build_info = models.BuildInfo("foo", arch, arch, base_name)
+    arch = craft_platforms.DebianArchitecture.from_host()
+    base_name = craft_platforms.DistroBase("ubuntu", "24.04")
+    build_info = craft_platforms.BuildInfo("foo", arch, arch, base_name)
 
     with provider_service.instance(
         build_info, work_dir=tmp_path, clean_existing=clean_existing
@@ -533,23 +685,15 @@ def test_load_bashrc(emitter):
 
 
 @pytest.mark.parametrize("allow_unstable", [True, False])
-@pytest.mark.parametrize(
-    "base_name",
-    [
-        ("ubuntu", "devel"),
-        ("ubuntu", "22.04"),
-        ("centos", "7"),
-        ("almalinux", "9"),
-    ],
-)
 def test_load_bashrc_missing(
     monkeypatch,
     emitter,
     tmp_path,
     provider_service,
-    base_name,
+    fake_build_info,
     allow_unstable,
     mocker,
+    mock_capture_pack_state,
 ):
     """Test that we handle the case where the bashrc file is missing."""
     mock_provider = mock.MagicMock(spec=craft_providers.Provider)
@@ -558,12 +702,10 @@ def test_load_bashrc_missing(
         "get_provider",
         lambda name: mock_provider,
     )
-    arch = util.get_host_architecture()
-    build_info = models.BuildInfo("foo", arch, arch, base_name)
 
     mocker.patch.object(pkgutil, "get_data", return_value=None)
     with provider_service.instance(
-        build_info, work_dir=tmp_path, allow_unstable=allow_unstable
+        fake_build_info, work_dir=tmp_path, allow_unstable=allow_unstable
     ) as instance:
         instance._setup_instance_bashrc(instance)
     emitter.assert_debug(
@@ -572,7 +714,9 @@ def test_load_bashrc_missing(
 
 
 @pytest.fixture
-def setup_fetch_logs_provider(monkeypatch, provider_service, tmp_path):
+def setup_fetch_logs_provider(
+    monkeypatch, provider_service, mocker, tmp_path, mock_capture_pack_state
+):
     """Return a function that, when called, mocks the provider_service's instance()."""
 
     def _setup(*, should_have_logfile: bool):
@@ -611,27 +755,25 @@ def setup_fetch_logs_provider(monkeypatch, provider_service, tmp_path):
     return _setup
 
 
-def _get_build_info() -> models.BuildInfo:
-    arch = util.get_host_architecture()
-    return models.BuildInfo(
-        platform=arch,
-        build_on=arch,
-        build_for=arch,
-        base=bases.BaseName("ubuntu", "22.04"),
-    )
-
-
 def test_instance_fetch_logs(
-    provider_service, setup_fetch_logs_provider, check, emitter
+    provider_service,
+    setup_fetch_logs_provider,
+    check,
+    emitter,
+    fake_build_info,
+    mocker,
+    tmp_path,
 ):
     """Test that logs from the build instance are fetched in case of success."""
-
     # Setup the build instance and pretend the command inside it finished successfully.
     provider_service = setup_fetch_logs_provider(should_have_logfile=True)
-    with provider_service.instance(
-        build_info=_get_build_info(),
-        work_dir=pathlib.Path(),
-    ) as mock_instance:
+    mock_append = mocker.patch.object(emit, "append_to_log")
+    with (
+        provider_service.instance(
+            build_info=fake_build_info,
+            work_dir=pathlib.Path(),
+        ) as mock_instance,
+    ):
         pass
 
     # Now check that the logs from the build instance were collected.
@@ -640,28 +782,33 @@ def test_instance_fetch_logs(
             source=pathlib.PosixPath("/tmp/testcraft.log"), missing_ok=True
         )
 
-    expected = [
-        mock.call("debug", "Logs retrieved from managed instance:"),
-        mock.call("debug", ":: some"),
-        mock.call("debug", ":: log data"),
-        mock.call("debug", ":: here"),
-    ]
-
     with check:
-        emitter.assert_interactions(expected)
+        emitter.assert_debug("Logs retrieved from managed instance:")
+
+    mock_append.assert_called_once()
 
 
 def test_instance_fetch_logs_error(
-    provider_service, setup_fetch_logs_provider, check, emitter
+    provider_service,
+    setup_fetch_logs_provider,
+    check,
+    emitter,
+    fake_build_info,
+    mocker,
+    tmp_path,
 ):
     """Test that logs from the build instance are fetched in case of errors."""
 
     # Setup the build instance and pretend the command inside it finished with error.
     provider_service = setup_fetch_logs_provider(should_have_logfile=True)
-    with pytest.raises(RuntimeError), provider_service.instance(
-        build_info=_get_build_info(),
-        work_dir=pathlib.Path(),
-    ) as mock_instance:
+    mock_append = mocker.patch.object(emit, "append_to_log")
+    with (
+        pytest.raises(RuntimeError),
+        provider_service.instance(
+            build_info=fake_build_info,
+            work_dir=pathlib.Path(),
+        ) as mock_instance,
+    ):
         raise RuntimeError("Faking an error in the build instance!")
 
     # Now check that the logs from the build instance were collected.
@@ -670,26 +817,21 @@ def test_instance_fetch_logs_error(
             source=pathlib.PosixPath("/tmp/testcraft.log"), missing_ok=True
         )
 
-    expected = [
-        mock.call("debug", "Logs retrieved from managed instance:"),
-        mock.call("debug", ":: some"),
-        mock.call("debug", ":: log data"),
-        mock.call("debug", ":: here"),
-    ]
-
     with check:
-        emitter.assert_interactions(expected)
+        emitter.assert_debug("Logs retrieved from managed instance:")
+
+    mock_append.assert_called_once()
 
 
 def test_instance_fetch_logs_missing_file(
-    provider_service, setup_fetch_logs_provider, check, emitter
+    provider_service, setup_fetch_logs_provider, check, emitter, fake_build_info
 ):
     """Test that we handle the case where the logfile is missing."""
 
     # Setup the build instance and pretend the command inside it finished successfully.
     provider_service = setup_fetch_logs_provider(should_have_logfile=False)
     with provider_service.instance(
-        build_info=_get_build_info(),
+        build_info=fake_build_info,
         work_dir=pathlib.Path(),
     ) as mock_instance:
         pass
@@ -707,59 +849,69 @@ def test_instance_fetch_logs_missing_file(
         emitter.assert_interactions(expected)
 
 
-_test_base = bases.BaseName("ubuntu", "22.04")
-
-
 @pytest.mark.parametrize(
-    ("build_infos", "expected_on_fors"),
-    [
-        # A single build info, matching the current architecture
+    ("arch", "expected_platforms"),
+    [  # Based on the fake project yaml in tests/conftest.py
         (
-            [models.BuildInfo("foo", "current", "current", _test_base)],
-            ["foo"],
+            craft_platforms.DebianArchitecture.AMD64,
+            ["64-bit-pc", "some-phone", "risky", "s390x"],
         ),
-        # Two build infos, both matching the current architecture
-        (
-            [
-                models.BuildInfo("foo", "current", "current", _test_base),
-                models.BuildInfo("foo2", "current", "other", _test_base),
-            ],
-            ["foo", "foo2"],
-        ),
-        # Three build infos, only one matches current architecture
-        (
-            [
-                models.BuildInfo("foo", "current", "current", _test_base),
-                models.BuildInfo("foo2", "other", "other", _test_base),
-                models.BuildInfo("foo3", "other", "other2", _test_base),
-            ],
-            ["foo"],
-        ),
-        # Two build infos, none matches current architecture
-        (
-            [
-                models.BuildInfo("foo2", "other", "other", _test_base),
-                models.BuildInfo("foo3", "other", "other2", _test_base),
-            ],
-            [],
-        ),
+        (craft_platforms.DebianArchitecture.ARM64, ["some-phone", "risky", "s390x"]),
+        (craft_platforms.DebianArchitecture.ARMHF, ["s390x"]),
+        (craft_platforms.DebianArchitecture.RISCV64, ["risky", "s390x"]),
+        (craft_platforms.DebianArchitecture.PPC64EL, ["ppc64el", "risky", "s390x"]),
     ],
 )
-def test_clean_instances(
-    provider_service, tmp_path, mocker, build_infos, expected_on_fors
-):
-    mocker.patch.object(platforms, "get_host_architecture", return_value="current")
-
+def test_clean_instances(provider_service, tmp_path, mocker, arch, expected_platforms):
+    mocker.patch.object(
+        craft_platforms.DebianArchitecture,
+        "from_host",
+        return_value=arch,
+    )
     current_provider = provider_service.get_provider()
     mock_clean = mocker.patch.object(current_provider, "clean_project_environments")
 
-    provider_service._build_plan = build_infos
     provider_service.clean_instances()
 
     work_dir_inode = tmp_path.stat().st_ino
 
     expected_mock_calls = [
-        mock.call(instance_name=f"testcraft-full-project-{on_for}-{work_dir_inode}")
-        for on_for in expected_on_fors
+        mock.call(instance_name=f"testcraft-full-project-{platform}-{work_dir_inode}")
+        for platform in expected_platforms
     ]
     assert mock_clean.mock_calls == expected_mock_calls
+
+
+@pytest.mark.parametrize("fetch", [False, True])
+def test_run_managed(
+    monkeypatch: pytest.MonkeyPatch,
+    provider_service: provider.ProviderService,
+    default_app_metadata: craft_application.AppMetadata,
+    fake_services: ServiceFactory,
+    fake_build_info: craft_platforms.BuildInfo,
+    fetch: bool,  # noqa: FBT001
+    mock_provider,
+    mock_capture_pack_state,
+):
+    mock_fetch = mock.MagicMock()
+    fake_services.register("fetch", mock.Mock(return_value=mock_fetch))
+    monkeypatch.setattr("sys.argv", ["[unused]", "pack", "--verbose"])
+    instance_context = (
+        mock_provider.launched_environment.return_value.__enter__.return_value
+    )
+
+    provider_service.run_managed(fake_build_info, enable_fetch_service=fetch)
+
+    instance_context.execute_run.assert_called_once_with(
+        ["testcraft", "pack", "--verbose"],
+        cwd=default_app_metadata.managed_instance_project_path,
+        check=True,
+        env={
+            "CRAFT_VERBOSITY_LEVEL": mock.ANY,
+            "CRAFT_PLATFORM": fake_build_info.platform,
+        },
+    )
+
+    if fetch:
+        mock_fetch.create_session.assert_called_once_with(instance_context)
+        mock_fetch.teardown_session.assert_called_once_with()

@@ -16,7 +16,6 @@
 """Tests for the remote build service."""
 
 import pytest
-
 from craft_application import errors
 
 
@@ -25,6 +24,7 @@ def public_project_name(request):
     return request.param
 
 
+@pytest.mark.slow
 def test_use_public_project(anonymous_remote_build_service, public_project_name):
     """Test that we can get a real (public) project using an anonymous client."""
     anonymous_remote_build_service.set_project(public_project_name)
@@ -32,6 +32,7 @@ def test_use_public_project(anonymous_remote_build_service, public_project_name)
     assert anonymous_remote_build_service._lp_project.name == public_project_name
 
 
+@pytest.mark.slow
 def test_error_with_nonexistent_project(anonymous_remote_build_service):
     """Test failing gracefully with a nonexistent project."""
     name = "this launchpad project does not exist!"
@@ -42,6 +43,7 @@ def test_error_with_nonexistent_project(anonymous_remote_build_service):
         anonymous_remote_build_service.set_project(name)
 
 
+@pytest.mark.slow
 def test_project_is_public(anonymous_remote_build_service, public_project_name):
     """Test that the given project is public."""
     anonymous_remote_build_service.set_project(public_project_name)

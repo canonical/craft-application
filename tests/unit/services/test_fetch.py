@@ -22,6 +22,7 @@ Note that most of the fetch-service functionality is already tested either on:
 As such, this module mostly unit-tests error paths coming from wrong usage of
 the FetchService class.
 """
+
 import contextlib
 import json
 import pathlib
@@ -33,33 +34,30 @@ from unittest.mock import MagicMock, call
 
 import craft_providers
 import pytest
-from craft_providers import bases
-from freezegun import freeze_time
-
-from craft_application import ProviderService, fetch, services
-from craft_application.models import BuildInfo
+from craft_application import fetch, services
 from craft_application.services import fetch as service_module
+from freezegun import freeze_time
 
 
 @pytest.fixture
 def fetch_service(app, fake_services, fake_project):
-    build_info = BuildInfo(
-        platform="amd64",
-        build_on="amd64",
-        build_for="amd64",
-        base=bases.BaseName("ubuntu", "24.04"),
-    )
     return services.FetchService(
         app,
         fake_services,
-        project=fake_project,
-        build_plan=[build_info],
-        session_policy="strict",
     )
 
 
+@pytest.mark.parametrize("policy", ["strict", "permissive"])
+def test_set_policy(fetch_service, policy):
+    assert fetch_service._session_policy == "strict"
+
+    fetch_service.set_policy(policy)
+
+    assert fetch_service._session_policy == policy
+
+
 def test_create_session_already_exists(fetch_service):
-    fetch_service._session_data = fetch.SessionData(id="id", token="token")
+    fetch_service._session_data = fetch.SessionData(id="id", token="token")  # noqa: S106
 
     expected = re.escape(
         "create_session() called but there's already a live fetch-service session."
@@ -147,7 +145,9 @@ def test_teardown_session_create_manifest(
     fetch_service.teardown_session()
 
     expected_file = manifest_data_dir / "craft-manifest-expected.json"
-    obtained_file = tmp_path / f"{fake_project.name}_{fake_project.version}_amd64.json"
+    obtained_file = (
+        tmp_path / f"{fake_project.name}_{fake_project.version}_64-bit-pc.json"
+    )
 
     assert obtained_file.read_text() + "\n" == expected_file.read_text()
 
@@ -179,7 +179,7 @@ def test_warning_experimental(mocker, fetch_service, run_on_host, emitter):
     mocker.patch.object(fetch, "start_service")
     mocker.patch.object(fetch, "verify_installed")
     mocker.patch.object(fetch, "_get_service_base_dir", return_value=pathlib.Path())
-    mocker.patch.object(ProviderService, "is_managed", return_value=not run_on_host)
+    mocker.patch("craft_application.util.is_managed_mode", return_value=not run_on_host)
 
     fetch_service.setup()
 
@@ -196,7 +196,7 @@ def test_warning_experimental(mocker, fetch_service, run_on_host, emitter):
 def test_setup_managed(mocker, fetch_service):
     """The fetch-service process should only be checked/started when running on the host."""
     mock_start = mocker.patch.object(fetch, "start_service")
-    mocker.patch.object(ProviderService, "is_managed", return_value=True)
+    mocker.patch("craft_application.util.is_managed_mode", return_value=True)
 
     fetch_service.setup()
 

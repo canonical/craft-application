@@ -14,18 +14,17 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Tests for CraftBaseModel"""
+
 from pathlib import Path
 
 import pydantic
 import pytest
+from craft_application import errors, models
 from hypothesis import given, strategies
 from overrides import override
 
-from craft_application import errors, models
-
 
 class MyBaseModel(models.CraftBaseModel):
-
     value1: int
     value2: str
 
@@ -63,7 +62,6 @@ def test_model_reference_slug_errors():
 
 
 class CoerceModel(models.CraftBaseModel):
-
     stringy: str
 
 

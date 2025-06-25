@@ -14,12 +14,12 @@
 # You should have received a copy of the GNU General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Starcraft versioning tests."""
+
 import re
 import subprocess
 
-import pytest
-
 import craft_application
+import pytest
 
 
 def _repo_has_version_tag() -> bool:

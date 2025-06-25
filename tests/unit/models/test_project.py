@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Tests for BaseProject"""
+
 import copy
 import pathlib
 import re
@@ -22,16 +23,12 @@ from textwrap import dedent
 
 import craft_platforms
 import craft_providers.bases
-import pydantic
 import pytest
-
 from craft_application import util
 from craft_application.errors import CraftValidationError
 from craft_application.models import (
     DEVEL_BASE_INFOS,
     DEVEL_BASE_WARNING,
-    BuildInfo,
-    BuildPlanner,
     Platform,
     Project,
     constraints,
@@ -127,43 +124,6 @@ def full_project_dict():
 @pytest.mark.parametrize(
     ("incoming", "expected"),
     [
-        (
-            craft_platforms.BuildInfo(
-                "my-platform",
-                craft_platforms.DebianArchitecture.RISCV64,
-                "all",
-                craft_platforms.DistroBase("ubuntu", "24.04"),
-            ),
-            BuildInfo(
-                "my-platform",
-                "riscv64",
-                "all",
-                craft_providers.bases.BaseName("ubuntu", "24.04"),
-            ),
-        ),
-        (
-            craft_platforms.BuildInfo(
-                "my-platform",
-                craft_platforms.DebianArchitecture.RISCV64,
-                craft_platforms.DebianArchitecture.AMD64,
-                craft_platforms.DistroBase("almalinux", "9"),
-            ),
-            BuildInfo(
-                "my-platform",
-                "riscv64",
-                "amd64",
-                craft_providers.bases.BaseName("almalinux", "9"),
-            ),
-        ),
-    ],
-)
-def test_build_info_from_platforms(incoming, expected):
-    assert BuildInfo.from_platforms(incoming) == expected
-
-
-@pytest.mark.parametrize(
-    ("incoming", "expected"),
-    [
         *(
             pytest.param(
                 {"build-on": arch, "build-for": arch},
@@ -174,8 +134,8 @@ def test_build_info_from_platforms(incoming, expected):
         ),
         *(
             pytest.param(
-                {"build-on": arch},
-                Platform(build_on=[arch]),
+                {"build-on": arch, "build-for": "all"},
+                Platform(build_on=[arch], build_for=["all"]),
                 id=f"build-on-only-{arch}",
             )
             for arch in craft_platforms.DebianArchitecture
@@ -231,6 +191,35 @@ def test_platform_from_platform_dict(incoming, expected):
 )
 def test_platform_from_platforms(incoming, expected):
     assert Platform.from_platforms(incoming) == expected
+
+
+@pytest.mark.parametrize(
+    ("value", "match"),
+    [
+        pytest.param({}, "build-on\n  Field required", id="empty"),
+        pytest.param(
+            {"build-on": [], "build-for": ["all"]},
+            "build-on\n  Value should have at least 1 item",
+            id="empty-build-on",
+        ),
+        pytest.param(
+            {"build-on": ["all"], "build-for": ["all"]},
+            "'all' cannot be used for 'build-on'",
+            id="build-on-all",
+        ),
+        pytest.param(
+            {"build-on": ["s390x"]}, r"build-for\n\s+Field required", id="no-build-for"
+        ),
+        pytest.param(
+            {"build-on": ["s390x"], "build-for": ["amd64", "riscv64"]},
+            r"List should have at most 1 item",
+            id="build-for-many",
+        ),
+    ],
+)
+def test_platform_validation_errors(value, match):
+    with pytest.raises(ValueError, match=match):
+        Platform.model_validate(value)
 
 
 @pytest.mark.parametrize(
@@ -561,7 +550,7 @@ def test_unmarshal_invalid_repositories(
     )
 
 
-@pytest.mark.parametrize("model", [Project, BuildPlanner])
+@pytest.mark.parametrize("model", [Project])
 @pytest.mark.parametrize("platform_label", ["unknown", "ubuntu@24.04:unknown"])
 def test_platform_invalid_arch(model, platform_label, basic_project_dict):
     basic_project_dict["platforms"] = {platform_label: None}
@@ -572,16 +561,19 @@ def test_platform_invalid_arch(model, platform_label, basic_project_dict):
 
     assert error.value.args[0] == (
         "Bad myproject.yaml content:\n"
-        f"- 'unknown' is not a valid DebianArchitecture (in field 'platforms.{platform_label}.build-on')\n"
-        f"- 'unknown' is not a valid DebianArchitecture (in field 'platforms.{platform_label}.build-for')"
+        f"- 'unknown' is not a valid Debian architecture. (in field 'platforms.{platform_label}.build-on')\n"
+        f"- 'unknown' is not a valid Debian architecture. (in field 'platforms.{platform_label}.build-for')"
     )
 
 
-@pytest.mark.parametrize("model", [Project, BuildPlanner])
+@pytest.mark.parametrize("model", [Project])
 @pytest.mark.parametrize("arch", ["unknown", "ubuntu@24.04:unknown"])
 @pytest.mark.parametrize("field_name", ["build-on", "build-for"])
 def test_platform_invalid_build_arch(model, arch, field_name, basic_project_dict):
-    basic_project_dict["platforms"] = {"amd64": {field_name: [arch]}}
+    other_field = next(iter({"build-on", "build-for"} - {field_name}))
+    basic_project_dict["platforms"] = {
+        "mine": {field_name: [arch], other_field: ["amd64"]}
+    }
     project_path = pathlib.Path("myproject.yaml")
 
     with pytest.raises(CraftValidationError) as error:
@@ -589,166 +581,9 @@ def test_platform_invalid_build_arch(model, arch, field_name, basic_project_dict
 
     error_lines = [
         "Bad myproject.yaml content:",
-        "- field 'build-on' required in 'platforms.amd64' configuration",
-        f"- 'unknown' is not a valid DebianArchitecture (in field 'platforms.amd64.{field_name}')",
+        f"- 'unknown' is not a valid Debian architecture. (in field 'platforms.mine.{field_name}')",
     ]
-    if field_name == "build-on":
-        error_lines.pop(1)
     assert error.value.args[0] == "\n".join(error_lines)
-
-
-@pytest.mark.parametrize(
-    ("platforms", "expected_build_info"),
-    [
-        pytest.param({}, [], id="empty"),
-        pytest.param(
-            {"platform1": {"build-on": ["arm64"], "build-for": ["s390x"]}},
-            [
-                BuildInfo(
-                    platform="platform1",
-                    build_on="arm64",
-                    build_for="s390x",
-                    base=craft_providers.bases.BaseName(name="ubuntu", version="24.04"),
-                ),
-            ],
-            id="simple",
-        ),
-        pytest.param(
-            {"arm64": {"build-on": ["s390x"]}},
-            [
-                BuildInfo(
-                    platform="arm64",
-                    build_on="s390x",
-                    build_for="arm64",
-                    base=craft_providers.bases.BaseName(name="ubuntu", version="24.04"),
-                ),
-            ],
-            id="implicit-build-for-the-platform",
-        ),
-        pytest.param(
-            {"arm64": None},
-            [
-                BuildInfo(
-                    platform="arm64",
-                    build_on="arm64",
-                    build_for="arm64",
-                    base=craft_providers.bases.BaseName(name="ubuntu", version="24.04"),
-                ),
-            ],
-            id="implicit-build-on-and-for-the-platform",
-        ),
-        pytest.param(
-            {
-                "ppc64el": None,
-                "riscv64": {"build-on": ["amd64"]},
-                "platform1": {"build-on": ["s390x"], "build-for": ["s390x"]},
-                "platform2": {"build-on": ["amd64", "arm64"], "build-for": ["arm64"]},
-            },
-            [
-                BuildInfo(
-                    platform="ppc64el",
-                    build_on="ppc64el",
-                    build_for="ppc64el",
-                    base=craft_providers.bases.BaseName(name="ubuntu", version="24.04"),
-                ),
-                BuildInfo(
-                    platform="riscv64",
-                    build_on="amd64",
-                    build_for="riscv64",
-                    base=craft_providers.bases.BaseName(name="ubuntu", version="24.04"),
-                ),
-                BuildInfo(
-                    platform="platform1",
-                    build_on="s390x",
-                    build_for="s390x",
-                    base=craft_providers.bases.BaseName(name="ubuntu", version="24.04"),
-                ),
-                BuildInfo(
-                    platform="platform2",
-                    build_on="amd64",
-                    build_for="arm64",
-                    base=craft_providers.bases.BaseName(name="ubuntu", version="24.04"),
-                ),
-                BuildInfo(
-                    platform="platform2",
-                    build_on="arm64",
-                    build_for="arm64",
-                    base=craft_providers.bases.BaseName(name="ubuntu", version="24.04"),
-                ),
-            ],
-            id="complex",
-        ),
-        pytest.param(
-            {"arm64": {"build-on": ["arm64"], "build-for": ["all"]}},
-            [
-                BuildInfo(
-                    platform="arm64",
-                    build_on="arm64",
-                    build_for="all",
-                    base=craft_providers.bases.BaseName(name="ubuntu", version="24.04"),
-                ),
-            ],
-            id="all",
-        ),
-    ],
-)
-def test_get_build_plan(platforms, expected_build_info):
-    """Create valid build plans from a set of platforms."""
-    build_plan = BuildPlanner(
-        base="ubuntu@24.04", platforms=platforms, build_base=None
-    ).get_build_plan()
-
-    assert build_plan == expected_build_info
-
-
-@pytest.mark.parametrize(
-    "platforms",
-    [
-        pytest.param(
-            {
-                "arm64": {"build-on": ["arm64"], "build-for": ["all"]},
-                "s390x": {"build-on": ["s390x"], "build-for": ["s390x"]},
-            },
-            id="simple",
-        ),
-        pytest.param(
-            {
-                "ppc64el": None,
-                "riscv64": {"build-on": ["amd64"]},
-                "arm64": {"build-on": ["arm64"], "build-for": ["all"]},
-                "platform1": {"build-on": ["s390x"], "build-for": ["s390x"]},
-                "platform2": {"build-on": ["amd64", "arm64"], "build-for": ["arm64"]},
-            },
-            id="complex",
-        ),
-    ],
-)
-def test_get_build_plan_all_with_other_platforms(platforms):
-    """`build-for: all` is not allowed with other platforms."""
-    with pytest.raises(pydantic.ValidationError) as raised:
-        BuildPlanner(base="ubuntu@24.04", platforms=platforms, build_base=None)
-
-    assert (
-        "one of the platforms has 'all' in 'build-for', but there are"
-        f" {len(platforms)} platforms: upon release they will conflict."
-        "'all' should only be used if there is a single item"
-    ) in str(raised.value)
-
-
-def test_get_build_plan_build_on_all():
-    """`build-on: all` is not allowed."""
-    with pytest.raises(pydantic.ValidationError) as raised:
-        BuildPlanner.model_validate(
-            {
-                "base": "ubuntu@24.04",
-                "platforms": {
-                    "arm64": {"build-on": ["all"], "build-for": ["s390x"]},
-                },
-                "build_base": None,
-            }
-        )
-
-    assert "'all' cannot be used for 'build-on'" in str(raised.value)
 
 
 def test_invalid_part_error(basic_project_dict):

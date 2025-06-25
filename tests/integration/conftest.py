@@ -21,11 +21,11 @@ import sys
 import tempfile
 from unittest import mock
 
+import craft_platforms
 import pytest
-from craft_providers import bases, lxd, multipass
-
 from craft_application import launchpad
 from craft_application.services import provider, remotebuild
+from craft_providers import lxd, multipass
 
 
 def pytest_configure(config: pytest.Config):
@@ -45,14 +45,12 @@ def pytest_runtest_setup(item: pytest.Item):
 
 
 @pytest.fixture
-def provider_service(app_metadata, fake_project, fake_build_plan, fake_services):
+def provider_service(app_metadata, fake_services):
     """Provider service with install snap disabled for integration tests"""
     return provider.ProviderService(
         app_metadata,
         fake_services,
-        project=fake_project,
         work_dir=pathlib.Path(),
-        build_plan=fake_build_plan,
         install_snap=False,
     )
 
@@ -92,8 +90,10 @@ def snap_safe_tmp_path():
 @pytest.fixture
 def pretend_jammy(mocker) -> None:
     """Pretend we're running on jammy. Used for tests that use destructive mode."""
-    fake_host = bases.BaseName(name="ubuntu", version="22.04")
-    mocker.patch("craft_application.util.get_host_base", return_value=fake_host)
+    fake_host = craft_platforms.DistroBase("ubuntu", "22.04")
+    mocker.patch(
+        "craft_platforms.DistroBase.from_linux_distribution", return_value=fake_host
+    )
 
 
 @pytest.fixture

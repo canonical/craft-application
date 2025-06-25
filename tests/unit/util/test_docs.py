@@ -14,8 +14,8 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Tests for documentation functions."""
-import pytest
 
+import pytest
 from craft_application.util import docs
 
 

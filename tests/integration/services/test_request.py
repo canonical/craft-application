@@ -14,6 +14,7 @@
 #  You should have received a copy of the GNU Lesser General Public License
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Integration tests for the Request service."""
+
 import hashlib
 from unittest.mock import call
 
@@ -34,6 +35,7 @@ import pytest_check
         )
     ],
 )
+@pytest.mark.slow
 def test_get_real_file(tmp_path, emitter, request_service, url, checksum, size):
     result = request_service.download_with_progress(url, tmp_path)
     actual_hash = hashlib.sha256(result.read_bytes()).hexdigest()
@@ -61,8 +63,11 @@ def test_get_real_file(tmp_path, emitter, request_service, url, checksum, size):
         },
     ],
 )
+@pytest.mark.slow
 def test_get_real_files(tmp_path, request_service, files):
-    result = request_service.download_files_with_progress({f: tmp_path for f in files})
+    result = request_service.download_files_with_progress(
+        dict.fromkeys(files, tmp_path)
+    )
 
     for url, path in result.items():
         expected_hash = files[url]

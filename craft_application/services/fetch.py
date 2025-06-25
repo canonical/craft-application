@@ -14,8 +14,10 @@
 #  You should have received a copy of the GNU Lesser General Public License
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Service class to communicate with the fetch-service."""
+
 from __future__ import annotations
 
+import atexit
 import json
 import pathlib
 import subprocess
@@ -26,11 +28,13 @@ import craft_providers
 from craft_cli import emit
 from typing_extensions import override
 
-from craft_application import fetch, models, services, util
+from craft_application import fetch, util
 from craft_application.models.manifest import CraftManifest, ProjectManifest
+from craft_application.services import base
 
 if typing.TYPE_CHECKING:
     from craft_application.application import AppMetadata
+    from craft_application.services import service_factory
 
 
 _PROJECT_MANIFEST_MANAGED_PATH = pathlib.Path(
@@ -38,7 +42,7 @@ _PROJECT_MANIFEST_MANAGED_PATH = pathlib.Path(
 )
 
 
-class FetchService(services.ProjectService):
+class FetchService(base.AppService):
     """Service class that handles communication with the fetch-service.
 
     This Service is able to spawn a fetch-service instance and create sessions
@@ -60,22 +64,17 @@ class FetchService(services.ProjectService):
     def __init__(
         self,
         app: AppMetadata,
-        services: services.ServiceFactory,
-        *,
-        project: models.Project,
-        build_plan: list[models.BuildInfo],
-        session_policy: str,
+        services: service_factory.ServiceFactory,
     ) -> None:
         """Create a new FetchService.
 
         :param session_policy: Whether the created fetch-service sessions should
           be "strict" or "permissive".
         """
-        super().__init__(app, services, project=project)
+        super().__init__(app, services)
         self._fetch_process = None
         self._session_data = None
-        self._build_plan = build_plan
-        self._session_policy = session_policy
+        self._session_policy: str = "strict"  # Default to strict policy.
         self._instance = None
 
     @override
@@ -83,7 +82,7 @@ class FetchService(services.ProjectService):
         """Start the fetch-service process with proper arguments."""
         super().setup()
 
-        if not self._services.get_class("provider").is_managed():
+        if not util.is_managed_mode():
             # Early fail if the fetch-service is not installed.
             fetch.verify_installed()
 
@@ -96,6 +95,13 @@ class FetchService(services.ProjectService):
 
             self._fetch_process = fetch.start_service()
 
+            # When we exit the application, we'll shut down the fetch service.
+            atexit.register(self.shutdown, force=True)
+
+    def set_policy(self, policy: typing.Literal["strict", "permissive"]) -> None:
+        """Set the policy for the fetch service."""
+        self._session_policy = policy
+
     def create_session(self, instance: craft_providers.Executor) -> dict[str, str]:
         """Create a new session.
 
@@ -106,7 +112,6 @@ class FetchService(services.ProjectService):
             raise ValueError(
                 "create_session() called but there's already a live fetch-service session."
             )
-
         strict_session = self._session_policy == "strict"
         self._session_data = fetch.create_session(strict=strict_session)
         self._instance = instance
@@ -152,22 +157,26 @@ class FetchService(services.ProjectService):
 
         Only supports a single generated artifact, and only in managed runs.
         """
-        if not self._services.ProviderClass.is_managed():
+        build = self._services.get("build_plan").plan()[0]
+        # mypy doesn't accept accept ignore[union-attr] for unknown reasons.
+        if not self._services.ProviderClass.is_managed():  # type: ignore  # noqa: PGH003
             emit.debug("Unable to generate the project manifest on the host.")
             return
 
         emit.debug(f"Generating project manifest at {_PROJECT_MANIFEST_MANAGED_PATH}")
+        project = self._services.get("project").get()
         project_manifest = ProjectManifest.from_packed_artifact(
-            self._project, self._build_plan[0], artifacts[0]
+            project, build, artifacts[0]
         )
         project_manifest.to_yaml_file(_PROJECT_MANIFEST_MANAGED_PATH)
 
     def _create_craft_manifest(
         self, project_manifest: pathlib.Path, session_report: dict[str, typing.Any]
     ) -> None:
-        name = self._project.name
-        version = self._project.version
-        platform = self._build_plan[0].platform
+        project = self._services.get("project").get()
+        name = project.name
+        version = project.version
+        platform = self._services.get("build_plan").plan()[0].platform
 
         manifest_path = pathlib.Path(f"{name}_{version}_{platform}.json")
         emit.debug(f"Generating craft manifest at {manifest_path}")

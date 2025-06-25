@@ -18,17 +18,18 @@
 
 import os
 import pathlib
+import shutil
 import textwrap
+from unittest import mock
 
 import jinja2
 import pytest
 import pytest_check
 import pytest_mock
-from craft_cli.pytest_plugin import RecordingEmitter
-
 from craft_application import errors, services
 from craft_application.git import GitRepo, short_commit_sha
 from craft_application.models.constraints import MESSAGE_INVALID_NAME
+from craft_cli.pytest_plugin import RecordingEmitter
 
 
 @pytest.fixture
@@ -146,8 +147,14 @@ def test_get_templates_environment(init_service, mocker):
 
 @pytest.mark.usefixtures("mock_loader")
 @pytest.mark.parametrize("project_file", [None, "file.txt"])
-def test_check_for_existing_files(init_service, tmp_path, project_file):
+def test_check_for_existing_files(
+    init_service, tmp_path, project_path: pathlib.Path, project_file
+):
     """No-op if there are no overlapping files."""
+    # Cleanup: we don't want the project directory to exist in this case.
+    assert project_path.is_relative_to(tmp_path)
+    shutil.rmtree(project_path)
+
     # create template
     template_dir = tmp_path / "templates"
     template_dir.mkdir()
@@ -164,11 +171,11 @@ def test_check_for_existing_files(init_service, tmp_path, project_file):
 
 
 @pytest.mark.usefixtures("mock_loader")
-def test_check_for_existing_files_error(init_service, tmp_path):
+def test_check_for_existing_files_error(init_service, tmp_path, project_path):
     """Error if there are overlapping files."""
     expected_error = textwrap.dedent(
         f"""\
-        Cannot initialise project in {str(tmp_path / 'project')!r} because it would overwrite existing files.
+        Cannot initialise project in {str(tmp_path / "project")!r} because it would overwrite existing files.
         Existing files are:
           - file.txt"""
     )
@@ -177,13 +184,11 @@ def test_check_for_existing_files_error(init_service, tmp_path):
     template_dir.mkdir()
     (template_dir / "file.txt").touch()
     # create project with a different file
-    project_dir = tmp_path / "project"
-    project_dir.mkdir()
-    (project_dir / "file.txt").touch()
+    (project_path / "file.txt").touch()
 
     with pytest.raises(errors.InitError, match=expected_error):
         init_service.check_for_existing_files(
-            project_dir=project_dir, template_dir=template_dir
+            project_dir=project_path, template_dir=template_dir
         )
 
 
@@ -196,7 +201,7 @@ def test_copy_template_file(init_service, tmp_path, template_filename):
     template_file.write_text("content")
     # create project with an existing file
     project_dir = tmp_path / "project"
-    project_dir.mkdir()
+    project_dir.mkdir(exist_ok=True)
 
     init_service._copy_template_file(template_filename, template_dir, project_dir)
 
@@ -229,7 +234,7 @@ def test_copy_template_file_exists(init_service, tmp_path, template_name, emitte
 def test_render_project_with_templates(filename, init_service, tmp_path):
     """Render template files."""
     project_dir = tmp_path / "project"
-    project_dir.mkdir()
+    project_dir.mkdir(exist_ok=True)
     template_dir = tmp_path / "templates"
     (template_dir / filename).parent.mkdir(parents=True, exist_ok=True)
     (template_dir / filename).write_text("{{ name }}")
@@ -250,7 +255,7 @@ def test_render_project_with_templates(filename, init_service, tmp_path):
 def test_render_project_non_templates(filename, init_service, tmp_path):
     """Copy non-template files when rendering a project."""
     project_dir = tmp_path / "project"
-    project_dir.mkdir()
+    project_dir.mkdir(exist_ok=True)
     template_dir = tmp_path / "templates"
     (template_dir / filename).parent.mkdir(parents=True, exist_ok=True)
     (template_dir / filename).write_text("test content")
@@ -267,10 +272,42 @@ def test_render_project_non_templates(filename, init_service, tmp_path):
 
 
 @pytest.mark.usefixtures("mock_loader")
+def test_failed_render_does_not_leave_files(
+    init_service: services.InitService,
+    tmp_path: pathlib.Path,
+    mocker: pytest_mock.MockerFixture,
+):
+    """Do not create empty file if render fails."""
+    filename = pathlib.Path("some_template.j2")
+    mock_environment = mocker.patch("jinja2.Environment", spec=jinja2.Environment)
+    project_dir = tmp_path / "project"
+    project_dir.mkdir(exist_ok=True)
+    template_dir = tmp_path / "templates"
+    (template_dir / filename).parent.mkdir(parents=True, exist_ok=True)
+    (template_dir / filename).write_text("test content")
+
+    template_mock = mock.MagicMock(spec=jinja2.Template)
+    template_mock.render.side_effect = errors.CraftError("Something bad happened")
+    mock_environment.get_template.return_value = template_mock
+    mock_environment.list_templates.return_value = [filename.name]
+    with pytest.raises(errors.CraftError, match="Something bad happened"):
+        init_service._render_project(
+            environment=mock_environment,
+            project_dir=project_dir,
+            template_dir=template_dir,
+            context={"name": "my-project", "version": init_service.default_version},
+        )
+
+    assert not (project_dir / filename.stem).exists(), (
+        f"File {filename.stem!r} should not be created"
+    )
+
+
+@pytest.mark.usefixtures("mock_loader")
 def test_render_project_executable(init_service, tmp_path):
     """Test that executable permissions are set on rendered files."""
     project_dir = tmp_path / "project"
-    project_dir.mkdir()
+    project_dir.mkdir(exist_ok=True)
     template_dir = tmp_path / "templates"
     template_dir.mkdir()
     for filename in ["file-1.sh.j2", "file-2.sh"]:

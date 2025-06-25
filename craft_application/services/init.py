@@ -15,6 +15,7 @@
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """Service for initializing a project."""
+
 from __future__ import annotations
 
 import os
@@ -192,8 +193,7 @@ class InitService(base.AppService):
                 emit.trace(f"Skipping file {template_name} as it is already present")
                 continue
             path.parent.mkdir(parents=True, exist_ok=True)
-            with path.open("wt", encoding="utf8") as file:
-                file.write(template.render(context))
+            path.write_text(template.render(context), encoding="utf8")
             shutil.copystat((template_dir / template_name), path)
         emit.progress("Rendered project.")
 

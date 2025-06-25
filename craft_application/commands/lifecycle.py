@@ -1,4 +1,4 @@
-# Copyright 2023-2024 Canonical Ltd.
+# Copyright 2023-2025 Canonical Ltd.
 #
 # This program is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Lesser General Public License version 3, as
@@ -12,10 +12,10 @@
 # You should have received a copy of the GNU Lesser General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Basic lifecycle commands for a Craft Application."""
+
 from __future__ import annotations
 
 import argparse
-import os
 import pathlib
 import subprocess
 import textwrap
@@ -25,7 +25,10 @@ from craft_cli import CommandGroup, emit
 from craft_parts.features import Features
 from typing_extensions import override
 
+from craft_application import errors, util
 from craft_application.commands import base
+
+TEMP_SPREAD_FILE_NAME = ".craft-spread.yaml"
 
 
 def get_lifecycle_command_group() -> CommandGroup:
@@ -77,31 +80,26 @@ class _BaseLifecycleCommand(base.ExtensibleCommand):
         )
 
     @override
-    def get_managed_cmd(self, parsed_args: argparse.Namespace) -> list[str]:
-        cmd = super().get_managed_cmd(parsed_args)
-
-        cmd.extend(parsed_args.parts)
-
-        return cmd
-
-    @override
     def provider_name(self, parsed_args: argparse.Namespace) -> str | None:
         return "lxd" if parsed_args.use_lxd else None
 
-    @override
-    def run_managed(self, parsed_args: argparse.Namespace) -> bool:
-        """Return whether the command should run in managed mode or not.
+    def _run_manager_for_build_plan(self, fetch_service_policy: str | None) -> None:
+        """Run this command in managed mode, iterating over the generated build plan."""
+        provider = self._services.get("provider")
+        for build in self._services.get("build_plan").plan():
+            provider.run_managed(build, bool(fetch_service_policy))
 
-        The command will run in managed mode unless the `--destructive-mode` flag
-        is passed OR `CRAFT_BUILD_ENVIRONMENT` is set to `host`.
-        """
+    def _use_provider(self, parsed_args: argparse.Namespace) -> bool:
+        """Determine whether to build in a managed provider."""
+        if util.is_managed_mode():
+            return False
         if parsed_args.destructive_mode:
             emit.debug(
                 "Not running managed mode because `--destructive-mode` was passed"
             )
             return False
 
-        build_env = os.getenv("CRAFT_BUILD_ENVIRONMENT")
+        build_env = self._services.get("config").get("build_environment")
         if build_env and build_env.lower().strip() == "host":
             emit.debug(
                 f"Not running managed mode because CRAFT_BUILD_ENVIRONMENT={build_env}"
@@ -156,23 +154,6 @@ class LifecycleCommand(_BaseLifecycleCommand):
         )
 
     @override
-    def get_managed_cmd(self, parsed_args: argparse.Namespace) -> list[str]:
-        """Get the command to run in managed mode.
-
-        :param parsed_args: The parsed arguments used.
-        :returns: A list of strings ready to be passed into a craft-providers executor.
-        :raises: RuntimeError if this command is not supposed to run managed.
-        """
-        cmd = super().get_managed_cmd(parsed_args)
-
-        if getattr(parsed_args, "shell", False):
-            cmd.append("--shell")
-        if getattr(parsed_args, "shell_after", False):
-            cmd.append("--shell-after")
-
-        return cmd
-
-    @override
     def _run(
         self,
         parsed_args: argparse.Namespace,
@@ -181,6 +162,24 @@ class LifecycleCommand(_BaseLifecycleCommand):
     ) -> None:
         """Run a lifecycle step command."""
         super()._run(parsed_args)
+
+        build_planner = self.services.get("build_plan")
+        config = self.services.get("config")
+        platform = getattr(parsed_args, "platform", None) or config.get("platform")
+        if platform:
+            build_planner.set_platforms(platform)
+        build_for = getattr(parsed_args, "build_for", None) or config.get("build_for")
+        if build_for:
+            build_planner.set_build_fors(build_for)
+
+        if self._use_provider(parsed_args):
+            fetch_service_policy = getattr(parsed_args, "fetch_service_policy", None)
+            if fetch_service_policy:
+                self._services.get("fetch").set_policy(
+                    fetch_service_policy  # type: ignore[reportArgumentType]
+                )
+            self._run_manager_for_build_plan(fetch_service_policy)
+            return
 
         shell = getattr(parsed_args, "shell", False)
         shell_after = getattr(parsed_args, "shell_after", False)
@@ -326,6 +325,10 @@ class PrimeCommand(LifecyclePartsCommand):
     ) -> None:
         """Run the prime command."""
         super()._run(parsed_args, step_name=step_name)
+        if self._use_provider(parsed_args=parsed_args):
+            return
+        # Only run the post prime steps in the process that
+        # ran the lifecycle
         self._run_post_prime_steps()
 
 
@@ -362,14 +365,12 @@ class PackCommand(LifecycleCommand):
             dest="fetch_service_policy",
         )
 
-    @override
-    def _run(
+    def _run_real(
         self,
         parsed_args: argparse.Namespace,
         step_name: str | None = None,
-        **kwargs: Any,
     ) -> None:
-        """Run the pack command."""
+        """Run the actual pack command."""
         if step_name not in ("pack", None):
             raise RuntimeError(f"Step name {step_name} passed to pack command.")
 
@@ -399,19 +400,163 @@ class PackCommand(LifecycleCommand):
                 _launch_shell()
             raise
 
+        packages = self._relativize_paths(packages, root=pathlib.Path())
+
         if parsed_args.fetch_service_policy and packages:
             self._services.fetch.create_project_manifest(packages)
 
         if not packages:
             emit.progress("No packages created.", permanent=True)
+            artifact, resources = None, None
         elif len(packages) == 1:
             emit.progress(f"Packed {packages[0].name}", permanent=True)
+            artifact, resources = packages[0], None
         else:
             package_names = ", ".join(pkg.name for pkg in packages)
             emit.progress(f"Packed: {package_names}", permanent=True)
+            artifact, resources = packages[0], self._services.package.resource_map
+
+        # This will use the provider shared registry after it's implemented
+        # in craft-providers, to allow transparent data transfer from instances
+        # or unmanaged runs.
+        self._services.package.write_state(artifact=artifact, resources=resources)
 
         if shell_after:
             _launch_shell()
+
+    @staticmethod
+    def _relativize_paths(
+        packages: list[pathlib.Path], root: pathlib.Path
+    ) -> list[pathlib.Path]:
+        """Normalize package paths to be relative to the project root.
+
+        Convert absolute paths of the packed artifacts to paths relative
+        to the project top directory, or raise an error if artifact paths
+        are not inside the project tree.
+
+        :param packages: The list of packaged artifact paths.
+        :param root: The project root directory.
+
+        :return: The normalized list of artifact paths.
+        :raises: ArtifactCreationError if a path is invalid.
+        """
+        resolved_root = root.resolve()
+        normalized: list[pathlib.Path] = []
+        invalid: list[pathlib.Path] = []
+        emit.debug(f"packages paths: {packages}")
+        emit.debug(f"resolved root: {resolved_root}")
+
+        for package in packages:
+            path = package.resolve()
+            if path.is_relative_to(resolved_root):
+                normalized.append(path.relative_to(resolved_root))
+            else:
+                invalid.append(package)
+
+        if invalid:
+            invalid_files = "\n".join([f"- {name}" for name in invalid])
+            raise errors.ArtifactCreationError(
+                "Cannot create packages outside of the project tree.",
+                details=f"The following file paths are invalid:\n{invalid_files}",
+                resolution="Change the output directory when packing.",
+            )
+
+        emit.debug(f"normalized packages paths: {normalized}")
+        return normalized
+
+    @override
+    def _run(
+        self,
+        parsed_args: argparse.Namespace,
+        step_name: str | None = None,
+        **kwargs: Any,
+    ) -> None:
+        if self._use_provider(parsed_args=parsed_args):
+            return super()._run(parsed_args=parsed_args, step_name=step_name)
+        return self._run_real(parsed_args=parsed_args, step_name=step_name)
+
+
+class TestCommand(PackCommand):
+    """Command to run project tests.
+
+    The test command invokes the spread command with a processed spread.yaml
+    configuration file.
+
+    This command is opt-in for applications in craft-application 5 and will become
+    a standard lifecycle command in a future major release.
+    """
+
+    name = "test"
+    help_msg = "Run project tests"
+    overview = textwrap.dedent(
+        """
+        Run spread tests for the project.
+        """
+    )
+    common = True
+
+    @override
+    def _fill_parser(self, parser: argparse.ArgumentParser) -> None:
+        # Skip the parser additions that `pack` adds.
+        super(PackCommand, self)._fill_parser(parser)
+        parser.add_argument(
+            "test_expressions",
+            nargs="*",
+            type=str,
+            default=(),
+            help="Optional spread test expressions. If not provided, all craft backend tests are run.",
+        )
+
+    @override
+    def _run(
+        self,
+        parsed_args: argparse.Namespace,
+        step_name: str | None = None,
+        **kwargs: Any,
+    ) -> None:
+        if not util.is_managed_mode():
+            emit.progress(
+                "The test command is experimental and subject to change without warning.",
+                permanent=True,
+            )
+
+        testing_service = self._services.get("testing")
+        parsed_args.output = pathlib.Path.cwd()
+        parsed_args.fetch_service_policy = None
+
+        # Don't enter a shell during the packing step, but save those values
+        # for the testing service.
+        shell, shell_after = parsed_args.shell, parsed_args.shell_after
+        parsed_args.shell, parsed_args.shell_after = (False, False)
+
+        # Pack the packages.
+        super()._run(parsed_args, step_name, **kwargs)
+
+        if util.is_managed_mode():
+            # Run the rest of this outside the managed instance.
+            return
+
+        # This will use the provider shared registry after it's implemented
+        # in craft-providers, to allow transparent data transfer from instances
+        # or unmanaged runs.
+        if parsed_args.destructive_mode:
+            pack_state = self._services.package.read_state()
+        else:
+            pack_state = self._services.provider.get_pack_state()
+
+        if not pack_state.artifact:
+            raise RuntimeError("No artifact files to test.")
+
+        emit.progress("Testing project")
+        testing_service.test(
+            pathlib.Path.cwd(),
+            pack_state=pack_state,
+            test_expressions=parsed_args.test_expressions,
+            shell=shell,
+            shell_after=shell_after,
+            debug=parsed_args.debug,
+        )
+        emit.progress("Testing successful.", permanent=True)
 
 
 class CleanCommand(_BaseLifecycleCommand):
@@ -461,26 +606,15 @@ class CleanCommand(_BaseLifecycleCommand):
         """
         super()._run(parsed_args)
 
-        if not super().run_managed(parsed_args) or not self._should_clean_instances(
-            parsed_args
-        ):
-            self._services.lifecycle.clean(parsed_args.parts)
-        else:
+        build_managed = self._use_provider(parsed_args)
+        clean_instances = self._should_clean_instances(parsed_args)
+
+        if build_managed and clean_instances:
             self._services.provider.clean_instances()
-
-    @override
-    def run_managed(self, parsed_args: argparse.Namespace) -> bool:
-        """Return whether the command should run in managed mode or not.
-
-        Clean will run in managed mode unless:
-        - the `--destructive-mode` flag is provided OR
-        - `CRAFT_BUILD_ENVIRONMENT` is set to `host` OR
-        - a list of specific parts to clean is provided
-        """
-        if not super().run_managed(parsed_args):
-            return False
-
-        return not self._should_clean_instances(parsed_args)
+        elif build_managed:
+            self._run_manager_for_build_plan(fetch_service_policy=None)
+        else:
+            self._services.get("lifecycle").clean(parsed_args.parts)
 
     @staticmethod
     def _should_clean_instances(parsed_args: argparse.Namespace) -> bool:

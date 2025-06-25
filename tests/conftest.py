@@ -14,39 +14,146 @@
 # You should have received a copy of the GNU Lesser General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Shared data for all craft-application tests."""
+
 from __future__ import annotations
 
+import io
 import os
 import pathlib
 import shutil
 import subprocess
 from dataclasses import dataclass
 from importlib import metadata
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 from unittest.mock import Mock
 
+import craft_application
 import craft_parts
+import craft_platforms
+import distro
 import jinja2
 import pydantic
 import pytest
+from craft_application import application, errors, git, launchpad, models, services
+from craft_application.services import service_factory
+from craft_application.services.fetch import FetchService
+from craft_application.util import yaml
 from craft_cli import EmitterMode, emit
-from craft_providers import bases
 from jinja2 import FileSystemLoader
 from typing_extensions import override
-
-import craft_application
-from craft_application import application, git, launchpad, models, services, util
-from craft_application.services import service_factory
 
 if TYPE_CHECKING:  # pragma: no cover
     from collections.abc import Iterator
 
 
-def _create_fake_build_plan(num_infos: int = 1) -> list[models.BuildInfo]:
-    """Create a build plan that is able to execute on the running system."""
-    arch = util.get_host_architecture()
-    base = util.get_host_base()
-    return [models.BuildInfo("foo", arch, arch, base)] * num_infos
+FAKE_PROJECT_YAML_TEMPLATE = """\
+name: full-project
+title: A fully-defined project
+summary: A fully-defined craft-application project.
+description: |
+  A fully-defined craft-application project.
+
+  This is a full description.
+version: 1.0.0.post64+git12345678
+license: LGPLv3
+
+base: {base}
+platforms:
+  64-bit-pc:
+    build-on: amd64  # Testing vectorisation of build-on
+    build-for: [amd64]
+  some-phone:
+    build-on: [amd64, arm64, s390x]
+    build-for: arm64  # Testing vectorisation of build-for
+  ppc64el:  # Testing expansion of architecture name.
+  risky:
+    build-on: [amd64, arm64, ppc64el, riscv64, s390x]
+    build-for: [riscv64]
+  s390x:
+    build-on: [amd64, arm64, armhf, i386, ppc64el, riscv64, s390x]
+    build-for: [s390x]
+
+contact: author@project.org
+issues: https://github.com/canonical/craft-application/issues
+source-code: https://github.com/canonical/craft-application
+
+parts:
+  some-part:
+    plugin: nil
+    build-environment:
+      - BUILD_ON: $CRAFT_ARCH_BUILD_ON
+      - BUILD_FOR: $CRAFT_ARCH_BUILD_FOR
+"""
+
+
+@pytest.fixture(
+    params=[
+        "64-bit-pc",
+        "some-phone",
+        "ppc64el",
+        "risky",
+        "s390x",
+    ]
+)
+def fake_platform(request: pytest.FixtureRequest) -> str:
+    return request.param
+
+
+@pytest.fixture
+def platform_independent_project(fake_project_file, fake_project):
+    """Turn the fake project into a platform-independent project.
+
+    This is needed because `build-for: [all]` implies a single platform. So
+    """
+    fake_project.platforms = {
+        "platform-independent": {
+            "build-on": [str(arch) for arch in craft_platforms.DebianArchitecture],
+            "build-for": ["all"],
+        }
+    }
+    fake_project_file.write_text(fake_project.to_yaml_string())
+
+
+@pytest.fixture
+def fake_project_yaml():
+    current_base = craft_platforms.DistroBase.from_linux_distribution(
+        distro.LinuxDistribution(
+            include_lsb=False, include_uname=False, include_oslevel=False
+        )
+    )
+    return FAKE_PROJECT_YAML_TEMPLATE.format(
+        base=f"{current_base.distribution}@{current_base.series}"
+    )
+
+
+@pytest.fixture
+def fake_project_file(in_project_path, fake_project_yaml):
+    project_file = in_project_path / "testcraft.yaml"
+    project_file.write_text(fake_project_yaml)
+
+    return project_file
+
+
+@pytest.fixture
+def fake_project(fake_project_yaml) -> models.Project:
+    with io.StringIO(fake_project_yaml) as project_io:
+        return models.Project.unmarshal(yaml.safe_yaml_load(project_io))
+
+
+@pytest.fixture(
+    params=[
+        craft_platforms.DistroBase("ubuntu", "18.04"),
+        craft_platforms.DistroBase("ubuntu", "20.04"),
+        craft_platforms.DistroBase("ubuntu", "22.04"),
+        craft_platforms.DistroBase("ubuntu", "24.04"),
+        craft_platforms.DistroBase("ubuntu", "24.10"),
+        craft_platforms.DistroBase("ubuntu", "devel"),
+        craft_platforms.DistroBase("almalinux", "9"),
+    ],
+    scope="session",
+)
+def fake_base(request: pytest.FixtureRequest):
+    return request.param
 
 
 @pytest.fixture(autouse=True)
@@ -56,25 +163,12 @@ def reset_services():
 
 
 @pytest.fixture
-def features(request) -> dict[str, bool]:
-    """Fixture that controls the enabled features.
-
-    To use it, mark the test with the features that should be enabled. For example:
-
-    @pytest.mark.enable_features("build_secrets")
-    def test_with_build_secrets(...)
-    """
-    features = {}
-
-    for feature_marker in request.node.iter_markers("enable_features"):
-        for feature_name in feature_marker.args:
-            features[feature_name] = True
-
-    return features
+def in_project_dir(project_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Put us in the project directory made by project_path."""
+    monkeypatch.chdir(project_path)
 
 
 class FakeConfigModel(craft_application.ConfigModel):
-
     my_str: str
     my_int: int
     my_bool: bool
@@ -105,21 +199,20 @@ def default_app_metadata(fake_config_model) -> craft_application.AppMetadata:
 
 
 @pytest.fixture
-def app_metadata(features, fake_config_model) -> craft_application.AppMetadata:
+def app_metadata(fake_config_model) -> craft_application.AppMetadata:
     with pytest.MonkeyPatch.context() as m:
         m.setattr(metadata, "version", lambda _: "3.14159")
         return craft_application.AppMetadata(
             "testcraft",
             "A fake app for testing craft-application",
             source_ignore_patterns=["*.snap", "*.charm", "*.starcraft"],
-            features=craft_application.AppFeatures(**features),
             docs_url="www.testcraft.example/docs/{version}",
             ConfigModel=fake_config_model,
         )
 
 
 @pytest.fixture
-def app_metadata_docs(features) -> craft_application.AppMetadata:
+def app_metadata_docs() -> craft_application.AppMetadata:
     with pytest.MonkeyPatch.context() as m:
         m.setattr(metadata, "version", lambda _: "3.14159")
         return craft_application.AppMetadata(
@@ -127,55 +220,7 @@ def app_metadata_docs(features) -> craft_application.AppMetadata:
             "A fake app for testing craft-application",
             docs_url="http://testcraft.example",
             source_ignore_patterns=["*.snap", "*.charm", "*.starcraft"],
-            features=craft_application.AppFeatures(**features),
         )
-
-
-@pytest.fixture
-def fake_project() -> models.Project:
-    arch = util.get_host_architecture()
-    return models.Project(
-        name="full-project",  # pyright: ignore[reportArgumentType]
-        title="A fully-defined project",  # pyright: ignore[reportArgumentType]
-        base="ubuntu@24.04",
-        version="1.0.0.post64+git12345678",  # pyright: ignore[reportArgumentType]
-        contact="author@project.org",
-        issues="https://github.com/canonical/craft-application/issues",
-        source_code="https://github.com/canonical/craft-application",  # pyright: ignore[reportArgumentType]
-        summary="A fully-defined craft-application project.",  # pyright: ignore[reportArgumentType]
-        description="A fully-defined craft-application project. (description)",
-        license="LGPLv3",
-        parts={"my-part": {"plugin": "nil"}},
-        platforms={"foo": models.Platform(build_on=[arch], build_for=[arch])},
-        package_repositories=None,
-        adopt_info=None,
-    )
-
-
-@pytest.fixture
-def fake_build_plan(request) -> list[models.BuildInfo]:
-    num_infos = getattr(request, "param", 1)
-    return _create_fake_build_plan(num_infos)
-
-
-@pytest.fixture
-def full_build_plan(mocker) -> list[models.BuildInfo]:
-    """A big build plan with multiple bases and build-for targets."""
-    host_arch = util.get_host_architecture()
-    build_plan = []
-    for release in ("20.04", "22.04", "24.04"):
-        build_plan.extend(
-            models.BuildInfo(
-                f"ubuntu-{release}-{build_for}",
-                host_arch,
-                build_for,
-                bases.BaseName("ubuntu", release),
-            )
-            for build_for in (host_arch, "s390x", "riscv64")
-        )
-
-    mocker.patch.object(models.BuildPlanner, "get_build_plan", return_value=build_plan)
-    return build_plan
 
 
 @pytest.fixture
@@ -201,8 +246,13 @@ def enable_overlay() -> Iterator[craft_parts.Features]:
 
 
 @pytest.fixture
+def build_plan_service(fake_services):
+    return fake_services.get("build_plan")
+
+
+@pytest.fixture
 def lifecycle_service(
-    app_metadata, fake_project, fake_services, fake_build_plan, mocker, tmp_path
+    app_metadata, fake_project, fake_services, mocker, tmp_path
 ) -> services.LifecycleService:
     work_dir = tmp_path / "work"
     cache_dir = tmp_path / "cache"
@@ -214,7 +264,6 @@ def lifecycle_service(
         work_dir=work_dir,
         cache_dir=cache_dir,
         platform=None,
-        build_plan=fake_build_plan,
     )
     service.setup()
     mocker.patch.object(
@@ -245,21 +294,64 @@ def emitter_verbosity(request):
 
 
 @pytest.fixture
-def fake_provider_service_class(fake_build_plan):
+def fake_project_service_class(fake_project) -> type[services.ProjectService]:
+    class FakeProjectService(services.ProjectService):
+        # This is a final method, but we're overriding it here for convenience when
+        # doing internal testing.
+        @override
+        def _load_raw_project(self):  # type: ignore[reportIncompatibleMethodOverride]
+            return fake_project.marshal()
+
+        # Don't care if the project file exists during this testing.
+        # Silencing B019 because we're replicating an inherited method.
+        @override
+        def resolve_project_file_path(self):
+            return (self._project_dir / f"{self._app.name}.yaml").resolve()
+
+        def set(self, value: models.Project) -> None:
+            """Set the project model. Only for use during testing!"""
+            self._project_model = value
+            self._platform = next(iter(value.platforms))
+            self._build_for = value.platforms[self._platform].build_for[0]  # type: ignore[reportOptionalSubscript]
+
+        @override
+        def get_partitions_for(
+            self,
+            *,
+            platform: str,
+            build_for: str,
+            build_on: craft_platforms.DebianArchitecture,
+        ) -> list[str] | None:
+            """Make this flexible for whether we have partitions or not.
+
+            If we have partitions, we get the default, one for the platform and
+            one for build_for.
+            """
+            if craft_parts.Features().enable_partitions:
+                return ["default", *{platform, build_for}]
+            return None
+
+        def get_partitions(self) -> list[str] | None:
+            """Make this flexible for whether we have partitions or not."""
+            if craft_parts.Features().enable_partitions:
+                return ["default", "a"]
+            return None
+
+    return FakeProjectService
+
+
+@pytest.fixture
+def fake_provider_service_class(project_path):
     class FakeProviderService(services.ProviderService):
         def __init__(
             self,
             app: application.AppMetadata,
             services: services.ServiceFactory,
-            *,
-            project: models.Project,
         ):
             super().__init__(
                 app,
                 services,
-                project=project,
-                work_dir=pathlib.Path(),
-                build_plan=fake_build_plan,
+                work_dir=project_path,
             )
 
     return FakeProviderService
@@ -272,7 +364,7 @@ def fake_package_service_class():
             self, prime_dir: pathlib.Path, dest: pathlib.Path
         ) -> list[pathlib.Path]:
             assert prime_dir.exists()
-            pkg = dest / f"package_{self._project.version}.tar.zst"
+            pkg = dest / "package_1.0.tar.zst"
             pkg.touch()
             return [pkg]
 
@@ -284,12 +376,11 @@ def fake_package_service_class():
 
 
 @pytest.fixture
-def fake_lifecycle_service_class(tmp_path, fake_build_plan):
+def fake_lifecycle_service_class(tmp_path):
     class FakeLifecycleService(services.LifecycleService):
         def __init__(
             self,
             app: application.AppMetadata,
-            project: models.Project,
             services: services.ServiceFactory,
             **kwargs: Any,
         ):
@@ -297,11 +388,9 @@ def fake_lifecycle_service_class(tmp_path, fake_build_plan):
             super().__init__(
                 app,
                 services,
-                project=project,
                 work_dir=kwargs.pop("work_dir", tmp_path / "work"),
                 cache_dir=kwargs.pop("cache_dir", tmp_path / "cache"),
                 platform=None,
-                build_plan=fake_build_plan,
                 **kwargs,
             )
 
@@ -329,23 +418,47 @@ def fake_remote_build_service_class():
 
 @pytest.fixture
 def fake_services(
+    request: pytest.FixtureRequest,
     tmp_path,
     app_metadata,
     fake_project,
     fake_lifecycle_service_class,
     fake_package_service_class,
+    fake_project_service_class,
     fake_init_service_class,
     fake_remote_build_service_class,
+    project_path,
 ):
     services.ServiceFactory.register("package", fake_package_service_class)
     services.ServiceFactory.register("lifecycle", fake_lifecycle_service_class)
     services.ServiceFactory.register("init", fake_init_service_class)
     services.ServiceFactory.register("remote_build", fake_remote_build_service_class)
-    factory = services.ServiceFactory(app_metadata, project=fake_project)
+    services.ServiceFactory.register("project", fake_project_service_class)
+    factory = services.ServiceFactory(app_metadata)
     factory.update_kwargs(
         "lifecycle", work_dir=tmp_path, cache_dir=tmp_path / "cache", build_plan=[]
     )
-    return factory
+    factory.update_kwargs("project", project_dir=project_path)
+    factory.update_kwargs("provider", work_dir=project_path)
+    platform = (
+        request.getfixturevalue("fake_platform")
+        if "fake_platform" in request.fixturenames
+        else None
+    )
+    build_for = (
+        request.getfixturevalue("build_for")
+        if "build_for" in request.fixturenames
+        else None
+    )
+
+    try:
+        factory.get("project").configure(platform=platform, build_for=build_for)
+    except errors.ProjectGenerationError as exc:
+        pytest.skip(str(exc))
+    yield factory
+
+    if fetch := cast(FetchService | None, factory._services.get("fetch")):
+        fetch.shutdown(force=True)
 
 
 class FakeApplication(application.Application):
@@ -358,23 +471,12 @@ class FakeApplication(application.Application):
     def set_project(self, project):
         self._Application__project = project
 
-    @override
-    def _extra_yaml_transform(
-        self,
-        yaml_data: dict[str, Any],
-        *,
-        build_on: str,
-        build_for: str | None,
-    ) -> dict[str, Any]:
-        self.build_on = build_on
-        self.build_for = build_for
-
-        return yaml_data
-
 
 @pytest.fixture
-def app(app_metadata, fake_services):
-    return FakeApplication(app_metadata, fake_services)
+def app(app_metadata, fake_services, tmp_path):
+    application = FakeApplication(app_metadata, fake_services)
+    application._work_dir = tmp_path
+    return application
 
 
 @pytest.fixture

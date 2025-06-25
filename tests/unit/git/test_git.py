@@ -26,7 +26,6 @@ import pygit2.enums
 import pytest
 import pytest_mock
 import pytest_subprocess
-
 from craft_application.git import (
     COMMIT_SHA_LEN,
     COMMIT_SHORT_SHA_LEN,
@@ -47,6 +46,7 @@ from craft_application.remote import (
     RemoteBuildInvalidGitRepoError,
     check_git_repo_for_remote_build,
 )
+
 from tests.conftest import RepositoryDefinition
 
 
@@ -564,7 +564,7 @@ def test_push_url_hide_token(url, expected_url, mocker, empty_working_directory)
         repo.push_url(
             remote_url=url,
             remote_branch="test-branch",
-            token="test-token",
+            token="test-token",  # noqa: S106
         )
 
     # token should be hidden in the log output
@@ -644,8 +644,7 @@ def test_clone_repository_wraps_called_process_error(
     with pytest.raises(GitError) as raised:
         GitRepo.clone_repository(url=fake_repo_url, path=empty_working_directory)
     assert raised.value.details == (
-        f"cannot clone repository: {fake_repo_url} "
-        f"to {str(empty_working_directory)!r}"
+        f"cannot clone repository: {fake_repo_url} to {str(empty_working_directory)!r}"
     )
 
 
@@ -775,9 +774,9 @@ def test_check_git_repo_remote_not_exists(mocker, empty_working_directory):
     mocked_remotes = mocker.patch.object(repo._repo, "remotes")
     mocked_remotes.__getitem__.side_effect = KeyError
 
-    assert (
-        repo.remote_exists(non_existing_remote) is False
-    ), f"Remote {non_existing_remote} should not exist"
+    assert repo.remote_exists(non_existing_remote) is False, (
+        f"Remote {non_existing_remote} should not exist"
+    )
     mocked_remotes.__getitem__.assert_called_with(non_existing_remote)
 
 
@@ -817,8 +816,7 @@ def test_check_git_repo_add_remote_pygit_error_is_wrapped(
     with pytest.raises(GitError) as ge:
         repo.add_remote(new_remote_name, "https://git.fake-remote-url.localhost")
     expected_err_msg = (
-        "could not add remote to a git "
-        f"repository in {str(empty_working_directory)!r}."
+        f"could not add remote to a git repository in {str(empty_working_directory)!r}."
     )
     assert ge.value.details == expected_err_msg
 
@@ -1074,9 +1072,9 @@ def test_retriving_last_commit(empty_repository: Path) -> None:
     assert commit is not None, "Commit should be created and retrieved"
     assert len(commit.sha) == COMMIT_SHA_LEN, "Commit hash should have full length"
     assert is_commit(commit.sha), "Returned value should be a valid commit"
-    assert (
-        commit.sha[:COMMIT_SHORT_SHA_LEN] == commit.short_sha
-    ), "Commit should have proper short version"
+    assert commit.sha[:COMMIT_SHORT_SHA_LEN] == commit.short_sha, (
+        "Commit should have proper short version"
+    )
 
 
 def test_last_commit_on_empty_repository(empty_repository: Path) -> None:
@@ -1215,7 +1213,15 @@ def test_remote_contains(
     response: bool,
 ) -> None:
     fake_process.register(
-        [expected_git_command, "branch", "--remotes", "--contains", "fake-commit-sha"],
+        [
+            expected_git_command,
+            "branch",
+            "--color=never",
+            "--column=never",
+            "--remotes",
+            "--contains",
+            "fake-commit-sha",
+        ],
         stdout=command_output,
     )
     git_repo = GitRepo(empty_repository)
@@ -1231,7 +1237,15 @@ def test_remote_contains_fails_if_subprocess_fails(
     expected_git_command: str,
 ) -> None:
     fake_process.register(
-        [expected_git_command, "branch", "--remotes", "--contains", "fake-commit-sha"],
+        [
+            expected_git_command,
+            "branch",
+            "--color=never",
+            "--column=never",
+            "--remotes",
+            "--contains",
+            "fake-commit-sha",
+        ],
         returncode=1,
     )
     git_repo = GitRepo(empty_repository)

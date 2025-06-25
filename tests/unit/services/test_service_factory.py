@@ -12,15 +12,16 @@
 # You should have received a copy of the GNU Lesser General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Tests for ServiceFactory"""
+
 from __future__ import annotations
 
+import pathlib
 from unittest import mock
 
 import pytest
 import pytest_check
-from craft_cli import emit
-
 from craft_application import AppMetadata, services
+from craft_cli import emit
 
 pytestmark = [
     pytest.mark.filterwarnings("ignore:Registering services on service factory")
@@ -36,6 +37,7 @@ def factory(
     tmp_path,
     app_metadata,
     fake_project,
+    fake_project_file,
     fake_package_service_class,
     fake_lifecycle_service_class,
 ):
@@ -44,7 +46,6 @@ def factory(
 
     factory = services.ServiceFactory(
         app_metadata,
-        project=fake_project,
     )
     factory.update_kwargs(
         "lifecycle",
@@ -52,6 +53,7 @@ def factory(
         cache_dir=tmp_path / "cache",
         build_plan=[],
     )
+    factory.update_kwargs("project", project_dir=fake_project_file.parent)
     return factory
 
 
@@ -97,21 +99,17 @@ def test_register_service_by_reference_with_module():
 
 def test_register_services_in_init(
     app_metadata,
-    fake_project,
     fake_package_service_class,
     fake_lifecycle_service_class,
     fake_provider_service_class,
 ):
     factory = services.ServiceFactory(
         app_metadata,
-        project=fake_project,
         PackageClass=fake_package_service_class,
-        LifecycleClass=fake_lifecycle_service_class,
         ProviderClass=fake_provider_service_class,
     )
 
     pytest_check.is_instance(factory.package, fake_package_service_class)
-    pytest_check.is_instance(factory.lifecycle, fake_lifecycle_service_class)
     pytest_check.is_instance(factory.provider, fake_provider_service_class)
 
 
@@ -131,17 +129,16 @@ def test_set_kwargs(
         def __new__(cls, *args, **kwargs):
             return cls.mock_class(*args, **kwargs)
 
-    factory = services.ServiceFactory(
-        app_metadata, project=fake_project, PackageClass=MockPackageService
-    )
+    services.ServiceFactory.register("package", MockPackageService)
+    factory = services.ServiceFactory(app_metadata, project=fake_project)
 
-    with pytest.warns(PendingDeprecationWarning):
+    with pytest.warns(DeprecationWarning):
         factory.set_kwargs("package", **kwargs)
 
     check.equal(factory.package, MockPackageService.mock_class.return_value)
     with check:
         MockPackageService.mock_class.assert_called_once_with(
-            app=app_metadata, services=factory, project=fake_project, **kwargs
+            app=app_metadata, services=factory, **kwargs
         )
 
 
@@ -175,9 +172,8 @@ def test_update_kwargs(
         def __new__(cls, *args, **kwargs):
             return cls.mock_class(*args, **kwargs)
 
-    factory = services.ServiceFactory(
-        app_metadata, project=fake_project, PackageClass=MockPackageService
-    )
+    services.ServiceFactory.register("package", MockPackageService)
+    factory = services.ServiceFactory(app_metadata, project=fake_project)
 
     factory.update_kwargs("package", **first_kwargs)
     factory.update_kwargs("package", **second_kwargs)
@@ -185,7 +181,7 @@ def test_update_kwargs(
     pytest_check.is_(factory.package, MockPackageService.mock_class.return_value)
     with pytest_check.check():
         MockPackageService.mock_class.assert_called_once_with(
-            app=app_metadata, services=factory, project=fake_project, **expected
+            app=app_metadata, services=factory, **expected
         )
 
 
@@ -220,6 +216,10 @@ def test_get_class_not_registered():
 def test_get_default_services(
     factory, fake_package_service_class, fake_lifecycle_service_class
 ):
+    project_service = factory.get("project")
+    pytest_check.is_instance(project_service, services.ProjectService)
+    project_service.configure(platform=None, build_for=None)
+
     pytest_check.is_instance(factory.get("package"), fake_package_service_class)
     pytest_check.is_instance(factory.get("lifecycle"), fake_lifecycle_service_class)
     pytest_check.is_instance(factory.get("config"), services.ConfigService)
@@ -250,8 +250,7 @@ def test_get_unregistered_service(factory):
 
 
 def test_get_project_service_error(factory):
-    factory.project = None
-    with pytest.raises(ValueError, match="LifecycleService requires a project"):
+    with pytest.raises(RuntimeError, match="Project not configured yet."):
         factory.get("lifecycle")
 
 
@@ -284,18 +283,6 @@ def test_getattr_not_a_service_class(app_metadata, fake_project):
         _ = factory.package
 
 
-def test_getattr_project_none(app_metadata, fake_package_service_class):
-    factory = services.ServiceFactory(
-        app_metadata, PackageClass=fake_package_service_class
-    )
-
-    with pytest.raises(
-        ValueError,
-        match="^FakePackageService requires a project to be available before creation.$",
-    ):
-        _ = factory.package
-
-
 def test_service_setup(app_metadata, fake_project, fake_package_service_class, emitter):
     class FakePackageService(fake_package_service_class):
         def setup(self) -> None:
@@ -313,7 +300,10 @@ def test_mandatory_adoptable_field(
     fake_project,
     fake_lifecycle_service_class,
     fake_package_service_class,
+    fake_project_service_class,
+    fake_project_file: pathlib.Path,
 ):
+    services.ServiceFactory.register("project", fake_project_service_class)
     app_metadata = AppMetadata(
         "testcraft",
         "A fake app for testing craft-application",
@@ -328,8 +318,11 @@ def test_mandatory_adoptable_field(
         PackageClass=fake_package_service_class,
         LifecycleClass=fake_lifecycle_service_class,
     )
+    factory.update_kwargs("project", project_dir=fake_project_file.parent)
+    factory.get("project").configure(platform=None, build_for=None)
+    factory.get("project").set(fake_project)  # type: ignore[reportAttributeAccessIssue]
 
-    _ = factory.lifecycle
+    factory.get("lifecycle")
 
 
 @pytest.mark.parametrize(

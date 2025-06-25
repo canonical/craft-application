@@ -14,12 +14,16 @@
 # You should have received a copy of the GNU Lesser General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 """craft-parts lifecycle integration."""
+
 from __future__ import annotations
 
 import contextlib
 import types
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+import craft_platforms
+import distro
 from craft_cli import emit
 from craft_parts import (
     Action,
@@ -40,10 +44,7 @@ from craft_application.services import base
 from craft_application.util import repositories
 
 if TYPE_CHECKING:  # pragma: no cover
-    from pathlib import Path
-
     from craft_application.application import AppMetadata
-    from craft_application.models import Project
     from craft_application.services import ServiceFactory
 
 
@@ -111,7 +112,7 @@ def _get_step(step_name: str) -> Step:
         raise RuntimeError(f"Invalid target step {step_name!r}") from None
 
 
-class LifecycleService(base.ProjectService):
+class LifecycleService(base.AppService):
     """Create and manage the parts lifecycle.
 
     :param app: An AppMetadata object containing metadata about the application.
@@ -124,31 +125,59 @@ class LifecycleService(base.ProjectService):
         LifecycleManager on initialisation.
     """
 
+    _project: models.Project
+
     def __init__(
         self,
         app: AppMetadata,
         services: ServiceFactory,
         *,
-        project: Project,
         work_dir: Path | str,
         cache_dir: Path | str,
-        build_plan: list[models.BuildInfo],
-        partitions: list[str] | None = None,
         **lifecycle_kwargs: Any,
     ) -> None:
-        super().__init__(app, services, project=project)
+        super().__init__(app, services)
         self._work_dir = work_dir
         self._cache_dir = cache_dir
-        self._build_plan = build_plan
-        self._partitions = partitions
         self._manager_kwargs = lifecycle_kwargs
         self._lcm: LifecycleManager = None  # type: ignore[assignment]
 
     @override
     def setup(self) -> None:
         """Initialize the LifecycleManager with previously-set arguments."""
+        self._project = self._services.get("project").get()
         self._lcm = self._init_lifecycle_manager()
         callbacks.register_post_step(self.post_prime, step_list=[Step.PRIME])
+
+    def _get_build(self) -> craft_platforms.BuildInfo:
+        """Get the build for this run."""
+        plan = self._services.get("build_plan").plan()
+        if not plan:
+            raise errors.EmptyBuildPlanError
+        return plan[0]
+
+    def _validate_build_plan(self) -> None:
+        """Validate that the build plan is usable for a lifecycle run."""
+        plan = self._services.get("build_plan").plan()
+        match len(plan):
+            case 0:
+                raise errors.EmptyBuildPlanError
+            case 1:
+                build = plan[0]
+            case _:
+                raise errors.MultipleBuildsError(plan)
+
+        host_base = craft_platforms.DistroBase.from_linux_distribution(
+            distro.LinuxDistribution()
+        )
+        if build.build_base.series == "devel":
+            # If the build base is "devel", we don't try to match the specific
+            # version as that is a moving target; Just ensure the systems are the
+            # same.
+            if build.build_base.distribution != host_base.distribution:
+                raise errors.IncompatibleBaseError(host_base, build.build_base)
+        elif build.build_base != host_base:
+            raise errors.IncompatibleBaseError(host_base, build.build_base)
 
     def _get_build_for(self) -> str:
         """Get the ``build_for`` architecture for craft-parts.
@@ -163,8 +192,12 @@ class LifecycleService(base.ProjectService):
         # correctly fail later on when run() is called (but not necessarily when
         # something else like clean() is called).
         # We also use the host arch if the build-for is 'all'
-        if self._build_plan and self._build_plan[0].build_for != "all":
-            return str(self._build_plan[0].build_for)
+        try:
+            build = self._get_build()
+        except errors.EmptyBuildPlanError:
+            return util.get_host_architecture()
+        if build.build_for != "all":
+            return str(build.build_for)
         return util.get_host_architecture()
 
     def _init_lifecycle_manager(self) -> LifecycleManager:
@@ -191,6 +224,15 @@ class LifecycleService(base.ProjectService):
         emit.debug(f"Project vars: {self._project_vars}")
         emit.debug(f"Adopting part: {self._project.adopt_info}")
 
+        source_ignore_patterns = [
+            *self._app.source_ignore_patterns,
+        ]
+
+        if Path("spread/.extension").exists():
+            # Ignore spread.yaml and spread to prevent repulling sources
+            # when test files are changed.
+            source_ignore_patterns.extend(["spread.yaml", "spread"])
+
         try:
             return LifecycleManager(
                 {"parts": self._project.parts},
@@ -198,12 +240,12 @@ class LifecycleService(base.ProjectService):
                 arch=build_for,
                 cache_dir=self._cache_dir,
                 work_dir=self._work_dir,
-                ignore_local_sources=self._app.source_ignore_patterns,
+                ignore_local_sources=source_ignore_patterns,
                 parallel_build_count=util.get_parallel_build_count(self._app.name),
                 project_vars_part_name=self._project.adopt_info,
                 project_vars=self._project_vars,
                 track_stage_packages=True,
-                partitions=self._partitions,
+                partitions=self._services.get("project").partitions,
                 **self._manager_kwargs,
             )
         except PartsError as err:
@@ -239,8 +281,7 @@ class LifecycleService(base.ProjectService):
         """Run the lifecycle manager for the parts."""
         target_step = _get_step(step_name) if step_name else None
 
-        # Now that we are actually going to run we can validate what we're building.
-        _validate_build_plan(self._build_plan)
+        self._validate_build_plan()
 
         try:
             if self._project.package_repositories:
@@ -317,10 +358,9 @@ class LifecycleService(base.ProjectService):
     def __repr__(self) -> str:
         work_dir = self._work_dir
         cache_dir = self._cache_dir
-        plan = self._build_plan
         return (
-            f"{self.__class__.__name__}({self._app!r}, {self._project!r}, "
-            f"{work_dir=}, {cache_dir=}, {plan=}, **{self._manager_kwargs!r})"
+            f"{self.__class__.__name__}({self._app!r}, "
+            f"{work_dir=}, {cache_dir=}, **{self._manager_kwargs!r})"
         )
 
     def _get_local_keys_path(self) -> Path | None:
@@ -330,24 +370,3 @@ class LifecycleService(base.ProjectService):
         overridden by subclasses that do.
         """
         return None
-
-
-def _validate_build_plan(build_plan: list[models.BuildInfo]) -> None:
-    """Check that the build plan has exactly 1 compatible build info."""
-    if not build_plan:
-        raise errors.EmptyBuildPlanError
-
-    if len(build_plan) > 1:
-        raise errors.MultipleBuildsError(matching_builds=build_plan)
-
-    build_base = build_plan[0].base
-    host_base = util.get_host_base()
-
-    if build_base.version == "devel":
-        # If the build base is "devel", we don't try to match the specific
-        # version as that is a moving target; Just ensure the systems are the
-        # same.
-        if build_base.name != host_base.name:
-            raise errors.IncompatibleBaseError(host_base, build_base)
-    elif build_base != host_base:
-        raise errors.IncompatibleBaseError(host_base, build_base)

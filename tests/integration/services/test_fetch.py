@@ -14,6 +14,7 @@
 #  You should have received a copy of the GNU Lesser General Public License
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Tests for FetchService."""
+
 import contextlib
 import io
 import json
@@ -24,15 +25,13 @@ import textwrap
 from functools import cache
 from unittest import mock
 
+import craft_platforms
 import craft_providers
 import pytest
-from craft_cli import EmitterMode, emit
-from craft_providers import bases
-
 from craft_application import errors, fetch, services, util
 from craft_application.application import DEFAULT_CLI_LOGGERS
-from craft_application.models import BuildInfo
 from craft_application.services.fetch import _PROJECT_MANIFEST_MANAGED_PATH
+from craft_cli import EmitterMode, emit
 
 
 @cache
@@ -79,24 +78,24 @@ def mock_instance():
 
 
 @pytest.fixture
-def app_service(app_metadata, fake_services, fake_project, fake_build_plan):
+def app_service(app_metadata, fake_services, fake_project):
     fetch_service = services.FetchService(
         app_metadata,
         fake_services,
-        project=fake_project,
-        build_plan=fake_build_plan,
-        session_policy="permissive",
     )
+    fetch_service.set_policy("permissive")
     yield fetch_service
     fetch_service.shutdown(force=True)
 
 
+@pytest.mark.slow
 def test_start_service(app_service):
     assert not fetch.is_service_online()
     app_service.setup()
     assert fetch.is_service_online()
 
 
+@pytest.mark.slow
 def test_start_service_already_up(app_service, request):
     # Create a fetch-service "manually"
     fetch_process = fetch.start_service()
@@ -112,16 +111,11 @@ def test_start_service_already_up(app_service, request):
 @pytest.mark.parametrize(
     "port",
     [
-        pytest.param(
-            fetch._DEFAULT_CONFIG.control,
-            marks=pytest.mark.xfail(
-                reason="Needs https://github.com/canonical/fetch-service/issues/208 fixed",
-                strict=True,
-            ),
-        ),
+        pytest.param(fetch._DEFAULT_CONFIG.control),
         fetch._DEFAULT_CONFIG.proxy,
     ],
 )
+@pytest.mark.slow
 def test_start_service_port_taken(app_service, request, port):
     # "Occupy" one of the necessary ports manually.
     soc = socket.create_server(("localhost", port), reuse_port=True)
@@ -137,6 +131,7 @@ def test_start_service_port_taken(app_service, request, port):
         app_service.setup()
 
 
+@pytest.mark.slow
 def test_shutdown_service(app_service):
     assert not fetch.is_service_online()
 
@@ -153,6 +148,7 @@ def test_shutdown_service(app_service):
     assert not fetch.is_service_online()
 
 
+@pytest.mark.slow
 def test_create_teardown_session(
     app_service, mocker, tmp_path, monkeypatch, mock_instance
 ):
@@ -171,6 +167,7 @@ def test_create_teardown_session(
     assert "artifacts" in report
 
 
+@pytest.mark.slow
 def test_service_logging(app_service, mocker, tmp_path, monkeypatch, mock_instance):
     monkeypatch.chdir(tmp_path)
     mocker.patch.object(fetch, "_get_gateway", return_value="127.0.0.1")
@@ -211,14 +208,15 @@ def test_service_logging(app_service, mocker, tmp_path, monkeypatch, mock_instan
 # Bash script to setup the build instance before the actual testing.
 setup_environment = (
     textwrap.dedent(
-        """
-    #! /bin/bash
-    set -euo pipefail
+        """\
+        #! /bin/bash
+        set -euo pipefail
 
-    apt install -y python3.10-venv
-    python3 -m venv venv
-    venv/bin/pip install requests
-"""
+        apt update
+        apt install -y python3.10-venv
+        python3 -m venv venv
+        venv/bin/pip install requests
+        """
     )
     .strip()
     .encode("ascii")
@@ -248,13 +246,15 @@ check_requests = (
 def lxd_instance(snap_safe_tmp_path, provider_service):
     provider_service.get_provider("lxd")
 
-    arch = util.get_host_architecture()
-    build_info = BuildInfo("foo", arch, arch, bases.BaseName("ubuntu", "22.04"))
+    arch = craft_platforms.DebianArchitecture.from_host()
+    build_info = craft_platforms.BuildInfo(
+        "foo", arch, arch, craft_platforms.DistroBase("ubuntu", "22.04")
+    )
     instance = provider_service.instance(build_info, work_dir=snap_safe_tmp_path)
 
     with instance as executor:
         executor.push_file_io(
-            destination=pathlib.Path("/root/setup-environment.sh"),
+            destination=pathlib.PosixPath("/root/setup-environment.sh"),
             content=io.BytesIO(setup_environment),
             file_mode="0644",
         )
@@ -270,6 +270,7 @@ def lxd_instance(snap_safe_tmp_path, provider_service):
             executor.delete()
 
 
+@pytest.mark.slow
 def test_build_instance_integration(
     app_service,
     lxd_instance,
@@ -330,7 +331,9 @@ def test_build_instance_integration(
     # Check that the fetching of the "craft-application" wheel went through the inspector.
     assert ("craft-application", "application/x.python.wheel") in artifacts_and_types
 
-    manifest_path = tmp_path / f"{fake_project.name}_{fake_project.version}_foo.json"
+    manifest_path = (
+        tmp_path / f"{fake_project.name}_{fake_project.version}_64-bit-pc.json"
+    )
     assert manifest_path.is_file()
 
     with manifest_path.open("r") as f:

@@ -1,6 +1,6 @@
 # This file is part of craft-application.
 #
-# Copyright 2023 Canonical Ltd.
+# Copyright 2023,2025 Canonical Ltd.
 #
 # This program is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Lesser General Public License version 3, as
@@ -17,7 +17,6 @@
 
 from craft_application.application import (
     Application,
-    AppFeatures,
     AppMetadata,
 )
 from craft_application import models
@@ -44,7 +43,6 @@ except ImportError:  # pragma: no cover
 __all__ = [
     "__version__",
     "Application",
-    "AppFeatures",
     "AppMetadata",
     "AppService",
     "ConfigModel",

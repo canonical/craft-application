@@ -14,6 +14,7 @@
 #  You should have received a copy of the GNU Lesser General Public License
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Unit tests for the Request service."""
+
 from unittest.mock import call
 
 import craft_cli.pytest_plugin
@@ -90,7 +91,7 @@ def test_download_with_progress(
     ],
 )
 def test_download_files_with_progress(tmp_path, emitter, request_service, downloads):
-    files = {url: tmp_path for url in downloads}
+    files = dict.fromkeys(downloads, tmp_path)
     for url, data in downloads.items():
         responses.add(
             responses.GET, url, body=data, headers={"Content-Length": str(len(data))}
@@ -98,10 +99,14 @@ def test_download_files_with_progress(tmp_path, emitter, request_service, downlo
 
     results = request_service.download_files_with_progress(files)
 
-    assert emitter.interactions[0] == call(
-        "progress_bar",
-        f"Downloading {len(downloads)} files",
-        sum(len(dl) for dl in downloads.values()),
+    emitter.assert_interactions(
+        [
+            call(
+                "progress_bar",
+                f"Downloading {len(downloads)} files",
+                sum(len(dl) for dl in downloads.values()),
+            )
+        ]
     )
     for file in downloads.values():
         if len(file) > 0:  # Advance doesn't get called on empty files

@@ -12,16 +12,16 @@
 #  You should have received a copy of the GNU Lesser General Public License
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Tests for AppCommand."""
+
 from __future__ import annotations
 
 import argparse
 from unittest import mock
 
 import pytest
+from craft_application.commands import base
 from craft_cli import EmitterMode, emit
 from typing_extensions import override
-
-from craft_application.commands import base
 
 
 @pytest.fixture

@@ -1,4 +1,4 @@
-# noqa: A005 (stdlib-module-shadowing)
+# noqa: A005
 # This file is part of craft_application.
 #
 # Copyright 2023 Canonical Ltd.
@@ -15,6 +15,7 @@
 # You should have received a copy of the GNU Lesser General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Logging helpers."""
+
 import logging
 
 

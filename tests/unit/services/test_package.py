@@ -14,13 +14,13 @@
 #  You should have received a copy of the GNU Lesser General Public License
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Tests for PackageService."""
+
 from __future__ import annotations
 
 import dataclasses
 from pathlib import Path
 
 import pytest
-
 from craft_application import errors, models
 from craft_application.services import package
 
@@ -36,7 +36,7 @@ class FakePackageService(package.PackageService):
 
 
 def test_write_metadata(tmp_path, app_metadata, fake_project, fake_services):
-    service = FakePackageService(app_metadata, fake_services, project=fake_project)
+    service = FakePackageService(app_metadata, fake_services)
     metadata_file = tmp_path / "metadata.yaml"
     assert not metadata_file.exists()
 
@@ -67,7 +67,6 @@ def test_update_project_variable_unset(
     service = FakePackageService(
         app_metadata,
         fake_services,
-        project=fake_project,
     )
 
     def _get_project_var(name: str, *, raw_read: bool = False) -> str:
@@ -96,7 +95,6 @@ def test_update_project_variable_optional(
     service = FakePackageService(
         app_metadata,
         fake_services,
-        project=fake_project,
     )
 
     def _get_project_var(name: str, *, raw_read: bool = False) -> str:
@@ -106,4 +104,4 @@ def test_update_project_variable_optional(
 
     service.update_project()
 
-    assert service._project.version == "foo"
+    assert fake_services.get("project").get().version == "foo"

@@ -1,0 +1,106 @@
+name: testcraft
+summary: A craft for testing craft-application
+description: |
+  This is a snap for testing craft-application.
+# adopt-info: testcraft  # Real apps should include adopt-info rather than version.
+version: dev
+
+grade: devel
+confinement: classic
+
+environment:
+  PATH: "$SNAP/bin:/snap/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+
+base: core24
+platforms:
+  amd64:
+  arm64:
+  armhf:
+  riscv64:
+  s390x:
+  ppc64el:
+
+apps:
+  testcraft:
+    command: bin/python -m testcraft
+  partitioncraft:
+    command: bin/python -m partitioncraft
+
+parts:
+  python:
+    plugin: nil
+    build-attributes:
+      - enable-patchelf
+    stage-packages:
+      - libpython3-stdlib
+      - libpython3.12-stdlib
+      - libpython3.12-minimal
+      - python3.12-minimal
+      - python3-minimal
+  apt:
+    plugin: nil
+    build-attributes:
+      - enable-patchelf
+    stage-packages:
+      - apt
+      - apt-transport-https
+      - apt-utils
+      - binutils
+  python-apt:
+    plugin: nil
+    stage-packages:
+      - python3-apt
+    organize:
+      usr/lib/python3/dist-packages/*: lib/python3.12/site-packages/
+    build-attributes:
+      - enable-patchelf
+  libs:
+    plugin: nil
+    stage-packages:
+      - libgit2-1.7
+    build-attributes:
+      - enable-patchelf
+  testcraft:
+    source: .
+    after: [python-apt, libs]
+    plugin: nil # Real crafts should just use the uv plugin.
+    build-snaps:
+      - astral-uv
+    build-packages:
+      - git
+      - cargo # for building maturin and other rust-based packages
+      - libffi-dev # for building cffi
+      - libgit2-dev # for pygit2
+    build-environment:
+      # - UV_NO_BINARY: "1"  # Uncomment this for any real, released craft.
+      - UV_FROZEN: "true"
+      - UV_COMPILE_BYTECODE: "1"
+      - UV_PYTHON: /usr/bin/python3.12
+      - UV_PROJECT_ENVIRONMENT: "${CRAFT_PART_INSTALL}"
+      - MAKEOPTS: -j$(nproc --all)
+    build-attributes:
+      - enable-patchelf
+    override-build: |
+      uv venv --relocatable --allow-existing "${CRAFT_PART_INSTALL}"
+      uv sync --no-dev --no-editable --reinstall
+
+      # Include the actual fake apps
+      cp -r testcraft "${CRAFT_PART_INSTALL}/lib/python3.12/site-packages/"
+      cp -r partitioncraft "${CRAFT_PART_INSTALL}/lib/python3.12/site-packages/"
+
+      rm "${CRAFT_PART_INSTALL}/bin/python"
+      ln -s ../usr/bin/python3.12 "${CRAFT_PART_INSTALL}/bin/python"
+
+  spread:
+    plugin: go
+    source: https://github.com/canonical/spread.git
+    source-commit: d6447c43754c8ca0741901e9db73d5fdb4d21c93 # 'main' as of 28-March-2025
+    build-snaps:
+      - go
+    build-attributes:
+      - enable-patchelf
+    build-environment:
+      - CGO_ENABLED: "0"
+      - GOFLAGS: -trimpath -ldflags=-w -ldflags=-s
+    organize:
+      bin/spread: bin/craft.spread

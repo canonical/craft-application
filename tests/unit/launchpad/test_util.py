@@ -14,13 +14,13 @@
 #  You should have received a copy of the GNU Lesser General Public License
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Tests for utility functions."""
+
 from unittest import mock
 
 import pytest
+from craft_application.launchpad import models, util
 from hypothesis import given, strategies
 from lazr.restfulclient.resource import Entry
-
-from craft_application.launchpad import models, util
 
 
 @given(
