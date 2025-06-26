@@ -61,6 +61,17 @@ Fixes
 
 For a complete list of commits, check out the `5.3.0`_ release on GitHub.
 
+5.2.1 (2025-05-23)
+------------------
+
+Services
+========
+
+- ``CRAFT_PARALLEL_BUILD_COUNT`` and ``CRAFT_MAX_PARALLEL_BUILD_COUNT`` are now
+  forwarded to managed instances.
+
+For a complete list of commits, check out the `5.2.1`_ release on GitHub.
+
 5.2.0 (2025-04-25)
 ------------------
 
@@ -807,4 +818,5 @@ For a complete list of commits, check out the `2.7.0`_ release on GitHub.
 .. _5.0.4: https://github.com/canonical/craft-application/releases/tag/5.0.4
 .. _5.1.0: https://github.com/canonical/craft-application/releases/tag/5.1.0
 .. _5.2.0: https://github.com/canonical/craft-application/releases/tag/5.2.0
+.. _5.2.1: https://github.com/canonical/craft-application/releases/tag/5.2.1
 .. _5.3.0: https://github.com/canonical/craft-application/releases/tag/5.3.0
