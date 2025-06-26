@@ -441,11 +441,11 @@ def test_save_state_file_large_file_error(state_service, state_dir):
         state_service._save_state_file("foo", {"foo": value})
 
 
-def test_save_state_file_permission_error(state_service, state_dir, mocker):
+def test_save_state_file_error(state_service, state_dir, mocker):
     """Error if the state file can't be saved."""
     mocker.patch(
         "craft_application.services.state.pathlib.Path.write_text",
-        side_effect=PermissionError,
+        side_effect=OSError,
     )
     expected_error = re.escape(
         f"Can't save state file {str(state_dir / 'foo.yaml')!r}."

@@ -1,4 +1,0 @@
-Got value set by outer instance: test-value
-Got value set by outer instance: test-value
-Got value set by inner instance: test-platform1
-Got value set by inner instance: test-platform2
