@@ -175,25 +175,30 @@ def test_registering_new_commands(
 @pytest.mark.usefixtures("pretend_jammy")
 @pytest.mark.parametrize("project", (d.name for d in VALID_PROJECTS_DIR.iterdir()))
 def test_project_managed(capsys, monkeypatch, tmp_path, project, create_app):
-    state_dir = tmp_path / "state"
-    state_dir.mkdir()
     monkeypatch.setenv("CRAFT_MANAGED_MODE", "1")
-    monkeypatch.setenv("CRAFT_STATE_DIR", str(state_dir))
     monkeypatch.setattr("sys.argv", ["testcraft", "pack"])
     monkeypatch.chdir(tmp_path)
     shutil.copytree(VALID_PROJECTS_DIR / project, tmp_path, dirs_exist_ok=True)
 
     app = create_app()
     app._work_dir = tmp_path
+    # manually manage the state dir since there is no manager here
+    state_dir = app.services.get("state")._state_dir
+    if state_dir.exists():
+        shutil.rmtree(state_dir)
+    state_dir.mkdir(parents=True)
 
-    assert app.run() == 0
+    try:
+        assert app.run() == 0
 
-    assert (tmp_path / "package_1.0.tar.zst").exists()
-    captured = capsys.readouterr()
-    assert (
-        captured.err.splitlines()[-1]
-        == (VALID_PROJECTS_DIR / project / "stderr").read_text()
-    )
+        assert (tmp_path / "package_1.0.tar.zst").exists()
+        captured = capsys.readouterr()
+        assert (
+            captured.err.splitlines()[-1]
+            == (VALID_PROJECTS_DIR / project / "stderr").read_text()
+        )
+    finally:
+        shutil.rmtree(state_dir)
 
 
 @pytest.mark.slow
