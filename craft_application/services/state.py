@@ -177,7 +177,7 @@ class StateService(base.AppService):
     @property
     def _managed_state_dir(self) -> pathlib.PurePosixPath:
         """The path to the managed state directory."""
-        return pathlib.PurePosixPath("/tmp/craft-state/")  # noqa: S108 (hardcoded-temp-file)
+        return pathlib.PurePosixPath("/tmp/craft-state")  # noqa: S108 (hardcoded-temp-file)
 
     @final
     def _get(self, *keys: str, data: dict[str, ValueType]) -> ValueType:
