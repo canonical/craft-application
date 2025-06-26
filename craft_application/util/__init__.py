@@ -23,6 +23,7 @@ from craft_application.util.paths import (
     get_managed_logpath,
     get_managed_pack_state_path,
     get_work_dir,
+    get_home_temporary_directory,
 )
 from craft_application.util.platforms import (
     get_host_architecture,
@@ -51,6 +52,7 @@ __all__ = [
     "get_managed_logpath",
     "get_managed_pack_state_path",
     "get_work_dir",
+    "get_home_temporary_directory",
     "get_host_architecture",
     "convert_architecture_deb_to_platform",
     "get_snap_config",

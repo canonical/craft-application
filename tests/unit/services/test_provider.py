@@ -65,13 +65,6 @@ def fake_build_info(fake_base):
     )
 
 
-@pytest.fixture
-def mock_capture_pack_state(mocker) -> None:
-    mocker.patch(
-        "craft_application.services.provider.ProviderService._capture_pack_state_from_instance"
-    )
-
-
 @pytest.mark.parametrize(
     ("given_environment", "expected_environment"),
     [
@@ -614,10 +607,10 @@ def test_instance(
     app_metadata,
     fake_project,
     provider_service,
+    state_service,
     fake_build_info,
     allow_unstable,
     mock_provider,
-    mock_capture_pack_state,
 ):
     with provider_service.instance(
         fake_build_info, work_dir=tmp_path, allow_unstable=allow_unstable
@@ -633,9 +626,15 @@ def test_instance(
             allow_unstable=allow_unstable,
         )
     with check:
-        instance.mount.assert_called_once_with(
-            host_source=tmp_path, target=app_metadata.managed_instance_project_path
-        )
+        assert instance.mount.mock_calls == [
+            mock.call(
+                host_source=tmp_path, target=app_metadata.managed_instance_project_path
+            ),
+            mock.call(
+                host_source=state_service._state_dir,
+                target=state_service._managed_state_dir,
+            ),
+        ]
         instance.push_file_io.assert_called_once_with(
             destination=pathlib.Path("/root/.bashrc"),
             content=mock.ANY,
@@ -651,7 +650,6 @@ def test_instance_clean_existing(
     provider_service,
     mock_provider,
     clean_existing,
-    mock_capture_pack_state,
 ):
     arch = craft_platforms.DebianArchitecture.from_host()
     base_name = craft_platforms.DistroBase("ubuntu", "24.04")
@@ -693,7 +691,6 @@ def test_load_bashrc_missing(
     fake_build_info,
     allow_unstable,
     mocker,
-    mock_capture_pack_state,
 ):
     """Test that we handle the case where the bashrc file is missing."""
     mock_provider = mock.MagicMock(spec=craft_providers.Provider)
@@ -714,9 +711,7 @@ def test_load_bashrc_missing(
 
 
 @pytest.fixture
-def setup_fetch_logs_provider(
-    monkeypatch, provider_service, mocker, tmp_path, mock_capture_pack_state
-):
+def setup_fetch_logs_provider(monkeypatch, provider_service, mocker, tmp_path):
     """Return a function that, when called, mocks the provider_service's instance()."""
 
     def _setup(*, should_have_logfile: bool):
@@ -891,7 +886,6 @@ def test_run_managed(
     fake_build_info: craft_platforms.BuildInfo,
     fetch: bool,  # noqa: FBT001
     mock_provider,
-    mock_capture_pack_state,
 ):
     mock_fetch = mock.MagicMock()
     fake_services.register("fetch", mock.Mock(return_value=mock_fetch))

@@ -184,13 +184,13 @@ class ProviderService(base.AppService):
                 # https://github.com/canonical/craft-providers/issues/315
                 target=self._app.managed_instance_project_path,  # type: ignore[arg-type]
             )
+            self._services.get("state").configure_instance(instance)
             emit.debug("Instance launched and working directory mounted")
             self._setup_instance_bashrc(instance)
             try:
                 yield instance
             finally:
                 self._capture_logs_from_instance(instance)
-                self._capture_pack_state_from_instance(instance)
 
     def get_base(
         self,
@@ -362,19 +362,6 @@ class ProviderService(base.AppService):
             else:
                 emit.debug(
                     f"Could not find log file {source_log_path.as_posix()} in instance."
-                )
-
-    def _capture_pack_state_from_instance(
-        self, instance: craft_providers.Executor
-    ) -> None:
-        """Fetch the pack state from inside `instance`."""
-        state_path = util.get_managed_pack_state_path(self._app)
-        with instance.temporarily_pull_file(source=state_path, missing_ok=True) as temp:
-            if temp:
-                self._pack_state = models.PackState.from_yaml_file(temp)
-            else:
-                emit.debug(
-                    f"Could not find state file {state_path.as_posix()} in instance."
                 )
 
     def _setup_instance_bashrc(self, instance: craft_providers.Executor) -> None:
