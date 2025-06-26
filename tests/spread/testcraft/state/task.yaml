@@ -1,17 +1,12 @@
-summary: test the test command as though running in CI.
-
-environment:
-  CI: "1"
+summary: test the state service
 
 execute: |
-  exit 0
+  testcraft state > output.txt 2>&1
 
-  # Spread tests run as root and LXD will return an error on write:
-  # PermissionError: [Errno 13] Permission denied: '/run/user/0/1922/inner.yaml'
-
-  testcraft state 2> actual-output.txt
-
-  diff actual-output.txt expected-output.txt
+  # ensure testcraft is able to read and write data in and out of the instance
+  grep "Got value set by outer instance: test-value" output.txt
+  grep "Got value set by inner instance: test-platform1" output.txt
+  grep "Got value set by inner instance: test-platform2" output.txt
 
 restore: |
-  rm actual-output.txt
+  rm output.txt

@@ -251,6 +251,11 @@ def build_plan_service(fake_services):
 
 
 @pytest.fixture
+def state_service(fake_services):
+    return fake_services.get("state")
+
+
+@pytest.fixture
 def lifecycle_service(
     app_metadata, fake_project, fake_services, mocker, tmp_path
 ) -> services.LifecycleService:

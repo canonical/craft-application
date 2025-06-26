@@ -184,6 +184,7 @@ class ProviderService(base.AppService):
                 # https://github.com/canonical/craft-providers/issues/315
                 target=self._app.managed_instance_project_path,  # type: ignore[arg-type]
             )
+            self._services.get("state").configure_instance(instance)
             emit.debug("Instance launched and working directory mounted")
             self._setup_instance_bashrc(instance)
             try:
@@ -435,9 +436,6 @@ class ProviderService(base.AppService):
             if enable_fetch_service:
                 session_env = self._services.get("fetch").create_session(instance)
                 env.update(session_env)
-
-            state_env = self._services.get("state").configure_instance(instance)
-            env.update(state_env)
 
             emit.debug(f"Running in instance: {command}")
             try:

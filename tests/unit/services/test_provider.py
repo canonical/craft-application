@@ -607,6 +607,7 @@ def test_instance(
     app_metadata,
     fake_project,
     provider_service,
+    state_service,
     fake_build_info,
     allow_unstable,
     mock_provider,
@@ -625,9 +626,15 @@ def test_instance(
             allow_unstable=allow_unstable,
         )
     with check:
-        instance.mount.assert_called_once_with(
-            host_source=tmp_path, target=app_metadata.managed_instance_project_path
-        )
+        assert instance.mount.mock_calls == [
+            mock.call(
+                host_source=tmp_path, target=app_metadata.managed_instance_project_path
+            ),
+            mock.call(
+                host_source=state_service._state_dir,
+                target=state_service._managed_state_dir,
+            ),
+        ]
         instance.push_file_io.assert_called_once_with(
             destination=pathlib.Path("/root/.bashrc"),
             content=mock.ANY,
@@ -896,7 +903,6 @@ def test_run_managed(
         env={
             "CRAFT_VERBOSITY_LEVEL": mock.ANY,
             "CRAFT_PLATFORM": fake_build_info.platform,
-            "CRAFT_STATE_DIR": mock.ANY,
         },
     )
 

@@ -20,12 +20,14 @@ import os
 import pathlib
 import re
 import shutil
+import stat
 import sys
 from collections.abc import Sequence
 from typing import TYPE_CHECKING, cast, final
 
 import craft_cli
 import craft_providers
+import craft_providers.lxd
 import platformdirs
 import yaml
 
@@ -60,12 +62,15 @@ class StateService(base.AppService):
     :raises StateServiceError: If the state directory can't be created.
     """
 
+    __state_dir: pathlib.Path
+    """The path to the state directory."""
+
     @final
     def __init__(
         self, app: AppMetadata, services: service_factory.ServiceFactory
     ) -> None:
         super().__init__(app, services)
-        self.__state_dir = StateService._get_state_dir()
+        self.__state_dir = self._get_state_dir()
 
         # only the outer instance manages the state dir
         if util.is_managed_mode():
@@ -127,12 +132,6 @@ class StateService(base.AppService):
         )
         self._validate_keys(*keys)
 
-        # Prevent short-circuiting key validation. Otherwise,
-        # this is an error:              set("A", "$invalid$", value="B"}
-        # but this wouldn't be an error: set("A", value={"$invalid$": "B"})
-        if isinstance(value, dict):
-            raise TypeError(f"Can't set value {value!r} because it's a dictionary.")
-
         file_name = keys[0]
         data = self._load_state_file(file_name)
 
@@ -148,21 +147,37 @@ class StateService(base.AppService):
         craft_cli.emit.debug(f"Set {StateService._format_keys(*keys)!r} to {value!r}.")
 
     @final
-    def configure_instance(self, instance: craft_providers.Executor) -> dict[str, str]:
+    def configure_instance(self, instance: craft_providers.Executor) -> None:
         """Configure an instance for the state service.
 
-        Mounts the state directory in the instance.
-
         :param instance: The instance to configure.
-
-        :returns: The environment variables that that are required by the state service
-            in the instance.
         """
         craft_cli.emit.debug(
-            f"Mounting state directory {str(self.__state_dir)!r} in the instance."
+            f"Mounting state directory {str(self._state_dir)!r} to {str(self._managed_state_dir)!r}."
         )
-        instance.mount(host_source=self.__state_dir, target=self.__state_dir)
-        return {CRAFT_STATE_DIR_ENV: str(self.__state_dir)}
+
+        # give LXD access to the state directory when running as root
+        if os.geteuid() == 0 and isinstance(instance, craft_providers.lxd.LXDInstance):
+            craft_cli.emit.debug(
+                f"Adding o+rwx permissions to {str(self._state_dir)!r}."
+            )
+            mode = self._state_dir.stat().st_mode
+            new_mode = mode | stat.S_IROTH | stat.S_IWOTH | stat.S_IXOTH
+            self._state_dir.chmod(new_mode)
+
+        instance.mount(host_source=self._state_dir, target=self._managed_state_dir)
+
+    @final
+    @property
+    def _state_dir(self) -> pathlib.Path:
+        """The path to the state directory."""
+        return self.__state_dir
+
+    @final
+    @property
+    def _managed_state_dir(self) -> pathlib.PurePosixPath:
+        """The path to the managed state directory."""
+        return pathlib.PurePosixPath("/tmp/craft-state/")  # noqa: S108 (hardcoded-temp-file)
 
     @final
     def _get(self, *keys: str, data: dict[str, ValueType]) -> ValueType:
@@ -232,7 +247,7 @@ class StateService(base.AppService):
         application exits with an error.
         """
         if not os.getenv(CRAFT_DEBUG_ENV):
-            shutil.rmtree(self.__state_dir)
+            shutil.rmtree(self._state_dir)
 
     @final
     def _create_state_dir(self) -> None:
@@ -241,36 +256,33 @@ class StateService(base.AppService):
         :raises StateServiceError: If the directory can't be created.
         """
         try:
-            self.__state_dir.mkdir(parents=True, exist_ok=True)
+            self._state_dir.mkdir(parents=True, exist_ok=True)
         except FileExistsError as err:
             raise errors.StateServiceError(
-                f"Failed to create state dir at {str(self.__state_dir)!r} because a "
+                f"Failed to create state dir at {str(self._state_dir)!r} because a "
                 "file with that name already exists."
             ) from err
 
     @final
-    @staticmethod
-    def _get_state_dir() -> pathlib.Path:
+    def _get_state_dir(self) -> pathlib.Path:
         """Get the state directory.
 
         Prefers, in order:
+        1. /tmp/craft-state/, in managed mode.
         1. The CRAFT_STATE_DIR environment variable.
         2. XDG_RUNTIME_DIR environment variable and a subdirectory with the outer instance's PID.
         3. A temporary directory in the user's home directory.
-
-        When running in managed mode, the state directory must be set by CRAFT_STATE_DIR.
 
         :raises StateServiceError: If the directory can't be determined.
 
         :returns: The path to the state directory.
         """
-        if state_dir_env := os.getenv(CRAFT_STATE_DIR_ENV):
-            state_dir = pathlib.Path(state_dir_env)
+        if util.is_managed_mode():
+            craft_cli.emit.debug("Getting state directory for a managed instance.")
+            state_dir = pathlib.Path(self._managed_state_dir)
+        elif state_dir_env := os.getenv(CRAFT_STATE_DIR_ENV):
             craft_cli.emit.debug(f"Getting state directory from {CRAFT_STATE_DIR_ENV}.")
-        elif util.is_managed_mode():
-            raise errors.StateServiceError(
-                f"Couldn't get state directory from {CRAFT_STATE_DIR_ENV} in managed mode."
-            )
+            state_dir = pathlib.Path(state_dir_env)
         else:
             craft_cli.emit.debug("Getting runtime directory.")
             # Using the PID as a subdir prevents conflicts when running
@@ -324,7 +336,7 @@ class StateService(base.AppService):
 
         :raises StateServiceError: If the state file can't be loaded.
         """
-        file_path = self.__state_dir / f"{file_name}.yaml"
+        file_path = self._state_dir / f"{file_name}.yaml"
         craft_cli.emit.debug(f"Loading state file {str(file_path)!r}.")
 
         try:
@@ -364,7 +376,7 @@ class StateService(base.AppService):
         :raises ValueError: If the state file would be greater than 1MiB in size.
         :raises StateServiceError: If the file can't be saved.
         """
-        file_path = self.__state_dir / f"{file_name}.yaml"
+        file_path = self._state_dir / f"{file_name}.yaml"
         craft_cli.emit.debug(f"Writing state to {str(file_path)!r}.")
         raw_data = util.dump_yaml(data)
         if len(raw_data) > 1024 * 1024:
@@ -372,7 +384,7 @@ class StateService(base.AppService):
 
         try:
             file_path.write_text(raw_data)
-        except PermissionError as err:
+        except OSError as err:
             raise errors.StateServiceError(
-                f"Can't save state file {str(file_path)!r} due to insufficient permissions."
+                f"Can't save state file {str(file_path)!r}."
             ) from err

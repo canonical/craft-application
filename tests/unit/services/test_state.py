@@ -23,6 +23,7 @@ from collections.abc import Callable
 from unittest import mock
 
 import craft_providers
+import craft_providers.lxd
 import pytest
 from craft_application import _const, errors
 from craft_application.services import StateService, state
@@ -221,20 +222,9 @@ def test_state_dir_managed_mode(
     # don't create the state directory in managed mode
     assert not state_dir.exists()
     mock_register.assert_not_called()
-    emitter.assert_debug("Getting state directory from CRAFT_STATE_DIR.")
-    emitter.assert_debug(f"Using {str(state_dir)!r} for the state directory.")
+    emitter.assert_debug("Getting state directory for a managed instance.")
+    emitter.assert_debug("Using '/tmp/craft-state' for the state directory.")
     emitter.assert_debug("Not managing state directory in managed mode.")
-
-
-@pytest.mark.usefixtures("managed_mode", "no_state_dir_env_var")
-def test_state_dir_managed_mode_error(state_service_factory):
-    """Error if CRAFT_STATE_DIR isn't set in managed mode."""
-    expected_error = re.escape(
-        "Couldn't get state directory from CRAFT_STATE_DIR in managed mode."
-    )
-
-    with pytest.raises(errors.StateServiceError, match=expected_error):
-        state_service_factory()
 
 
 @pytest.mark.usefixtures("no_state_dir_env_var")
@@ -316,12 +306,30 @@ def test_configure_instance(state_service, state_dir, emitter):
     """Configure the instance."""
     mock_instance = mock.Mock(spec=craft_providers.Executor)
 
-    env = state_service.configure_instance(mock_instance)
+    state_service.configure_instance(mock_instance)
 
-    mock_instance.mount.assert_called_once_with(host_source=state_dir, target=state_dir)
-    assert env == {"CRAFT_STATE_DIR": str(state_dir)}
+    mock_instance.mount.assert_called_once_with(
+        host_source=state_dir, target=pathlib.PurePosixPath("/tmp/craft-state")
+    )
     emitter.assert_debug(
-        f"Mounting state directory {str(state_dir)!r} in the instance."
+        f"Mounting state directory {str(state_dir)!r} to '/tmp/craft-state'."
+    )
+
+
+def test_configure_instance_lxd_root_user(state_service, state_dir, emitter, mocker):
+    """Add o+rwx permissions when running as root with LXD."""
+    mock_instance = mock.Mock(spec=craft_providers.lxd.LXDInstance)
+    mocker.patch("os.geteuid", return_value=0)
+
+    state_service.configure_instance(mock_instance)
+
+    mock_instance.mount.assert_called_once_with(
+        host_source=state_dir, target=pathlib.PurePosixPath("/tmp/craft-state")
+    )
+    assert (state_dir.stat().st_mode & 0o007) == 0o007
+    emitter.assert_debug(f"Adding o+rwx permissions to {str(state_dir)!r}.")
+    emitter.assert_debug(
+        f"Mounting state directory {str(state_dir)!r} to '/tmp/craft-state'."
     )
 
 
@@ -440,7 +448,7 @@ def test_save_state_file_permission_error(state_service, state_dir, mocker):
         side_effect=PermissionError,
     )
     expected_error = re.escape(
-        f"Can't save state file {str(state_dir / 'foo.yaml')!r} due to insufficient permissions."
+        f"Can't save state file {str(state_dir / 'foo.yaml')!r}."
     )
 
     with pytest.raises(errors.StateServiceError, match=expected_error):
