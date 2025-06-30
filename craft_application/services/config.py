@@ -21,7 +21,6 @@ import abc
 import contextlib
 import enum
 import os
-from collections.abc import Iterable
 from typing import TYPE_CHECKING, Any, TypeVar, cast, final
 
 import pydantic
@@ -34,6 +33,8 @@ from craft_application import _config, application, util
 from craft_application.services import base
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable
+
     from craft_application.services.service_factory import ServiceFactory
 
 

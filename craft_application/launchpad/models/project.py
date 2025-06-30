@@ -31,10 +31,8 @@
 from __future__ import annotations  # noqa: I001
 
 import enum
-from collections.abc import Iterable
 
 import launchpadlib.errors  # type: ignore[import-untyped]
-from lazr.restfulclient.resource import Entry  # type: ignore[import-untyped]
 from typing_extensions import Self, Any
 from typing import TYPE_CHECKING
 
@@ -43,6 +41,10 @@ from craft_application.launchpad import errors
 from craft_application.util import retry
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable
+
+    from lazr.restfulclient.resource import Entry
+
     from craft_application.launchpad import Launchpad
 
 
