@@ -33,9 +33,8 @@ def mock_parent_template_dir(tmp_path, mocker):
     """Mock the parent template directory."""
     mocker.patch.object(
         InitCommand,
-        "parent_template_dir",
-        pathlib.Path(tmp_path) / "templates",
-    )
+        "template_dir_parent",
+    ).return_value.__enter__.return_value = pathlib.Path(tmp_path) / "templates"
 
 
 @pytest.fixture

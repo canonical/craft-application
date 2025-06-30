@@ -7,6 +7,12 @@ Changelog
 5.7.0 (2025-MM-DD)
 ------------------
 
+Commands
+========
+
+- ``InitCommand`` now keeps the parent template directory context alive while it's in
+  use.
+
 Services
 ========
 
