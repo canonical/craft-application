@@ -7,6 +7,11 @@ Changelog
 5.4.0 (2025-MM-DD)
 ------------------
 
+Commands
+========
+
+- ``InitCommand`` now keeps the parent template dir context alive while it's in use.
+
 Models
 ======
 
