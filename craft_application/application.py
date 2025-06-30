@@ -32,8 +32,8 @@ from typing import TYPE_CHECKING, Any, Literal, cast, final
 
 import craft_cli
 import craft_platforms
-import craft_providers
 from craft_parts.errors import PartsError
+from craft_providers.errors import ProviderError
 from platformdirs import user_cache_path
 
 from craft_application import _config, commands, errors, models, util
@@ -418,7 +418,7 @@ class Application:
                             **extra_args,
                         )
                 except subprocess.CalledProcessError as exc:
-                    raise craft_providers.ProviderError(
+                    raise ProviderError(
                         f"Failed to execute {self.app.name} in instance."
                     ) from exc
                 finally:
@@ -635,7 +635,7 @@ class Application:
                 cause=err,
             )
             return_code = 1
-        except craft_providers.ProviderError as err:
+        except ProviderError as err:
             self._emit_error(
                 craft_cli.CraftError(
                     err.brief, details=err.details, resolution=err.resolution
