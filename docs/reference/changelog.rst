@@ -4,13 +4,20 @@
 Changelog
 *********
 
-5.4.0 (2025-MM-DD)
+5.4.0 (2025-06-30)
 ------------------
 
 Models
 ======
 
-- Expose ``Part`` type
+- Expose ``Part`` type.
+
+Commands
+========
+
+- Allow Spread test expressions to be used as options for the test command.
+
+For a complete list of commits, check out the `5.4.0`_ release on GitHub.
 
 5.3.0 (2025-05-28)
 ------------------
@@ -40,7 +47,7 @@ Services
   inner instance's environment.
 
 Fixes
-======
+=====
 
 - Fix an issue where the fetch-service would fail to find the network used
   by LXD containers.
