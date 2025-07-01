@@ -23,11 +23,14 @@ import shlex
 import subprocess
 from dataclasses import dataclass
 from functools import cache
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import craft_providers
 import craft_providers.lxd
-import requests
+
+if TYPE_CHECKING:
+    from requests import Response
+
 from craft_cli import emit
 from pydantic import Field
 from requests.auth import HTTPBasicAuth
@@ -319,7 +322,9 @@ def _service_request(
     endpoint: str,
     json: dict[str, Any] | None = None,
     timeout: float = 10.0,
-) -> requests.Response:
+) -> "Response":
+    import requests
+
     headers = {
         "Content-type": "application/json",
     }

@@ -20,7 +20,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import craft_cli
-import requests
 
 from craft_application import util
 from craft_application.services import base
@@ -39,6 +38,8 @@ class RequestService(base.AppService):
     def __init__(
         self, app: AppMetadata, services: service_factory.ServiceFactory
     ) -> None:
+        import requests
+
         super().__init__(app, services)
         self._session = requests.Session()
         self._session.headers["User-Agent"] = f"{self._app.name}/{self._app.version}"
