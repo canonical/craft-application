@@ -17,7 +17,11 @@
 
 from __future__ import annotations
 
-import enum
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    import enum
+
 import pathlib
 from unittest import mock
 

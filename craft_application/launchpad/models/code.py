@@ -30,10 +30,8 @@
 # pyright: reportIndexIssue=false
 from __future__ import annotations
 
-import datetime
 import enum
 from abc import ABCMeta
-from collections.abc import Collection
 from typing import TYPE_CHECKING, cast
 
 from typing_extensions import Self
@@ -43,6 +41,9 @@ from craft_application.launchpad import errors
 from .base import InformationType, LaunchpadObject
 
 if TYPE_CHECKING:
+    import datetime
+    from collections.abc import Collection
+
     from craft_application.launchpad import Launchpad
 
 

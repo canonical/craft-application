@@ -20,11 +20,9 @@ from __future__ import annotations
 import atexit
 import json
 import pathlib
-import subprocess
 import typing
 from functools import partial
 
-import craft_providers
 from craft_cli import emit
 from typing_extensions import override
 
@@ -33,6 +31,10 @@ from craft_application.models.manifest import CraftManifest, ProjectManifest
 from craft_application.services import base
 
 if typing.TYPE_CHECKING:
+    import subprocess
+
+    import craft_providers
+
     from craft_application.application import AppMetadata
     from craft_application.services import service_factory
 

@@ -17,8 +17,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Collection, Iterable, Sequence
-from typing import Any, Literal, final
+from typing import TYPE_CHECKING, Any, Literal, final
 
 import craft_platforms
 from craft_cli import emit
@@ -26,6 +25,9 @@ from craft_cli import emit
 from craft_application.errors import EmptyBuildPlanError
 
 from . import base
+
+if TYPE_CHECKING:
+    from collections.abc import Collection, Iterable, Sequence
 
 
 class BuildPlanService(base.AppService):

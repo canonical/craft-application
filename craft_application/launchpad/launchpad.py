@@ -25,8 +25,7 @@
 
 from __future__ import annotations
 
-import pathlib
-from typing import Any, Literal, overload
+from typing import TYPE_CHECKING, Any, Literal, overload
 
 import launchpadlib.launchpad  # type: ignore[import-untyped]
 import launchpadlib.uris  # type: ignore[import-untyped]
@@ -35,6 +34,9 @@ import platformdirs
 from typing_extensions import Self
 
 from . import models
+
+if TYPE_CHECKING:
+    import pathlib
 
 DEFAULT_CACHE_PATH = platformdirs.user_cache_path("launchpad-client")
 
