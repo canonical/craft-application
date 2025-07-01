@@ -379,3 +379,7 @@ class InitError(CraftError):
 
 class ArtifactCreationError(CraftError):
     """Errors to do with artifact file generation."""
+
+
+class StateServiceError(CraftError):
+    """Errors related to the state service."""

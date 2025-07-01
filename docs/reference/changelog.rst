@@ -4,6 +4,18 @@
 Changelog
 *********
 
+5.5.0 (2025-MM-DD)
+------------------
+
+Services
+========
+
+- Add a new State service that manages a global state between manager and managed
+  instances of an application.
+
+
+For a complete list of commits, check out the `5.5.0`_ release on GitHub.
+
 5.4.0 (2025-06-30)
 ------------------
 
@@ -822,3 +834,4 @@ For a complete list of commits, check out the `2.7.0`_ release on GitHub.
 .. _5.2.1: https://github.com/canonical/craft-application/releases/tag/5.2.1
 .. _5.3.0: https://github.com/canonical/craft-application/releases/tag/5.3.0
 .. _5.4.0: https://github.com/canonical/craft-application/releases/tag/5.4.0
+.. _5.5.0: https://github.com/canonical/craft-application/releases/tag/5.5.0

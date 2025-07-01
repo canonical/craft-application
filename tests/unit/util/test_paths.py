@@ -16,6 +16,7 @@
 """Tests for internal path utilities."""
 
 import pathlib
+import shutil
 
 import pytest
 from craft_application import util
@@ -61,3 +62,14 @@ def test_get_work_dir_managed(tmp_path):
     expected = pathlib.Path("/root")
     assert util.get_work_dir(tmp_path) == expected
     assert tmp_path != expected
+
+
+def test_get_home_temporary_directory():
+    temp_dir = util.get_home_temporary_directory()
+
+    try:
+        assert temp_dir.is_dir()
+        assert temp_dir.relative_to(pathlib.Path.home())
+        assert temp_dir.name.endswith(".tmp-craft")
+    finally:
+        shutil.rmtree(temp_dir)
