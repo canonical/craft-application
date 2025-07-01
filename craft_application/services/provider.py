@@ -26,7 +26,6 @@ import pkgutil
 import subprocess
 import sys
 import urllib.request
-from collections.abc import Generator, Iterable, Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -43,6 +42,8 @@ from craft_application.services import base
 from craft_application.util import platforms, snap_config
 
 if TYPE_CHECKING:  # pragma: no cover
+    from collections.abc import Generator, Iterable, Sequence
+
     from craft_application.application import AppMetadata
     from craft_application.services import ServiceFactory
 

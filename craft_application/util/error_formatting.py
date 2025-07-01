@@ -17,10 +17,12 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable
-from typing import NamedTuple
+from typing import TYPE_CHECKING, NamedTuple
 
-from pydantic import error_wrappers
+if TYPE_CHECKING:
+    from collections.abc import Iterable
+
+    from pydantic import error_wrappers
 
 
 class FieldLocationTuple(NamedTuple):

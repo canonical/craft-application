@@ -18,13 +18,15 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from craft_cli import emit
-from craft_parts import (
-    LifecycleManager,
-    ProjectInfo,
-)
+
+if TYPE_CHECKING:
+    from craft_parts import (
+        LifecycleManager,
+        ProjectInfo,
+    )
 
 
 def install_package_repositories(
