@@ -43,7 +43,7 @@ from craft_application.util import retry
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
-    from lazr.restfulclient.resource import Entry
+    from lazr.restfulclient.resource import Entry  # type: ignore[import-untyped]
 
     from craft_application.launchpad import Launchpad
 
