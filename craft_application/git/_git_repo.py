@@ -23,9 +23,8 @@ import shutil
 import subprocess
 import time
 from functools import lru_cache
-from pathlib import Path
 from shlex import quote
-from typing import Final, cast
+from typing import TYPE_CHECKING, Final, cast
 
 from craft_parts.utils import os_utils
 from typing_extensions import Self
@@ -54,6 +53,9 @@ except Exception:  # noqa: BLE001 (narrower types are provided by the import)
 from ._consts import CRAFTGIT_BINARY_NAME, GIT_FALLBACK_BINARY_NAME, NO_PUSH_URL
 from ._errors import GitError
 from ._models import Commit, GitType, short_commit_sha
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 logger = logging.getLogger(__name__)
 

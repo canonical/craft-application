@@ -18,11 +18,14 @@
 from __future__ import annotations
 
 import dataclasses
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pytest
 from craft_application import errors, models
 from craft_application.services import package
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 class FakePackageService(package.PackageService):

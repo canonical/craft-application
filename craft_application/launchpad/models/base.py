@@ -30,7 +30,6 @@
 from __future__ import annotations
 
 import enum
-from collections.abc import Mapping
 from typing import TYPE_CHECKING
 
 import lazr.restfulclient.errors  # type: ignore[import-untyped]
@@ -40,6 +39,8 @@ from typing_extensions import Any
 from craft_application.launchpad import errors, util
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
+
     from craft_application.launchpad import Launchpad
 
 

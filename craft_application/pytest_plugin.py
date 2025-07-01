@@ -18,7 +18,6 @@ from __future__ import annotations
 import os
 import pathlib
 import platform
-from collections.abc import Iterator
 from typing import TYPE_CHECKING
 
 import craft_platforms
@@ -28,6 +27,8 @@ from craft_application import util
 from craft_application.util import platforms
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator
+
     from pyfakefs.fake_filesystem import FakeFilesystem
 
 
