@@ -438,10 +438,10 @@ dependencies = [
 
 [package.optional-dependencies]
 apt = [
-    { name = "python-apt", version = "2.4.0+ubuntu4", source = { registry = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels/" }, marker = "(sys_platform == 'linux' and extra == 'group-17-craft-application-dev-jammy') or (extra == 'group-17-craft-application-dev-jammy' and extra == 'group-17-craft-application-dev-noble') or (extra == 'group-17-craft-application-dev-jammy' and extra == 'group-17-craft-application-dev-plucky') or (extra == 'group-17-craft-application-dev-jammy' and extra == 'group-17-craft-application-dev-questing') or (extra == 'group-17-craft-application-dev-noble' and extra == 'group-17-craft-application-dev-plucky') or (extra == 'group-17-craft-application-dev-noble' and extra == 'group-17-craft-application-dev-questing') or (extra == 'group-17-craft-application-dev-plucky' and extra == 'group-17-craft-application-dev-questing')" },
-    { name = "python-apt", version = "2.7.7+ubuntu3", source = { registry = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels/" }, marker = "(sys_platform == 'linux' and extra == 'group-17-craft-application-dev-noble') or (extra == 'group-17-craft-application-dev-noble' and extra == 'group-17-craft-application-dev-plucky') or (extra == 'group-17-craft-application-dev-noble' and extra == 'group-17-craft-application-dev-questing') or (extra == 'group-17-craft-application-dev-jammy' and extra == 'group-17-craft-application-dev-noble') or (extra == 'group-17-craft-application-dev-jammy' and extra == 'group-17-craft-application-dev-plucky') or (extra == 'group-17-craft-application-dev-jammy' and extra == 'group-17-craft-application-dev-questing') or (extra == 'group-17-craft-application-dev-plucky' and extra == 'group-17-craft-application-dev-questing')" },
-    { name = "python-apt", version = "2.9.9", source = { registry = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels/" }, marker = "(sys_platform == 'linux' and extra == 'group-17-craft-application-dev-plucky') or (extra == 'group-17-craft-application-dev-plucky' and extra == 'group-17-craft-application-dev-questing') or (extra == 'group-17-craft-application-dev-jammy' and extra == 'group-17-craft-application-dev-noble') or (extra == 'group-17-craft-application-dev-jammy' and extra == 'group-17-craft-application-dev-plucky') or (extra == 'group-17-craft-application-dev-jammy' and extra == 'group-17-craft-application-dev-questing') or (extra == 'group-17-craft-application-dev-noble' and extra == 'group-17-craft-application-dev-plucky') or (extra == 'group-17-craft-application-dev-noble' and extra == 'group-17-craft-application-dev-questing')" },
-    { name = "python-apt", version = "3.0.0", source = { registry = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels/" }, marker = "(sys_platform == 'linux' and extra != 'group-17-craft-application-dev-jammy' and extra != 'group-17-craft-application-dev-noble' and extra != 'group-17-craft-application-dev-plucky') or (extra == 'group-17-craft-application-dev-jammy' and extra == 'group-17-craft-application-dev-noble') or (extra == 'group-17-craft-application-dev-jammy' and extra == 'group-17-craft-application-dev-plucky') or (extra == 'group-17-craft-application-dev-jammy' and extra == 'group-17-craft-application-dev-questing') or (extra == 'group-17-craft-application-dev-noble' and extra == 'group-17-craft-application-dev-plucky') or (extra == 'group-17-craft-application-dev-noble' and extra == 'group-17-craft-application-dev-questing') or (extra == 'group-17-craft-application-dev-plucky' and extra == 'group-17-craft-application-dev-questing')" },
+    { name = "python-apt", version = "2.4.0+ubuntu4", source = { registry = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels" }, marker = "(sys_platform == 'linux' and extra == 'group-17-craft-application-dev-jammy') or (extra == 'group-17-craft-application-dev-jammy' and extra == 'group-17-craft-application-dev-noble') or (extra == 'group-17-craft-application-dev-jammy' and extra == 'group-17-craft-application-dev-plucky') or (extra == 'group-17-craft-application-dev-jammy' and extra == 'group-17-craft-application-dev-questing') or (extra == 'group-17-craft-application-dev-noble' and extra == 'group-17-craft-application-dev-plucky') or (extra == 'group-17-craft-application-dev-noble' and extra == 'group-17-craft-application-dev-questing') or (extra == 'group-17-craft-application-dev-plucky' and extra == 'group-17-craft-application-dev-questing')" },
+    { name = "python-apt", version = "2.7.7+ubuntu3", source = { registry = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels" }, marker = "(sys_platform == 'linux' and extra == 'group-17-craft-application-dev-noble') or (extra == 'group-17-craft-application-dev-noble' and extra == 'group-17-craft-application-dev-plucky') or (extra == 'group-17-craft-application-dev-noble' and extra == 'group-17-craft-application-dev-questing') or (extra == 'group-17-craft-application-dev-jammy' and extra == 'group-17-craft-application-dev-noble') or (extra == 'group-17-craft-application-dev-jammy' and extra == 'group-17-craft-application-dev-plucky') or (extra == 'group-17-craft-application-dev-jammy' and extra == 'group-17-craft-application-dev-questing') or (extra == 'group-17-craft-application-dev-plucky' and extra == 'group-17-craft-application-dev-questing')" },
+    { name = "python-apt", version = "2.9.9", source = { registry = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels" }, marker = "(sys_platform == 'linux' and extra == 'group-17-craft-application-dev-plucky') or (extra == 'group-17-craft-application-dev-plucky' and extra == 'group-17-craft-application-dev-questing') or (extra == 'group-17-craft-application-dev-jammy' and extra == 'group-17-craft-application-dev-noble') or (extra == 'group-17-craft-application-dev-jammy' and extra == 'group-17-craft-application-dev-plucky') or (extra == 'group-17-craft-application-dev-jammy' and extra == 'group-17-craft-application-dev-questing') or (extra == 'group-17-craft-application-dev-noble' and extra == 'group-17-craft-application-dev-plucky') or (extra == 'group-17-craft-application-dev-noble' and extra == 'group-17-craft-application-dev-questing')" },
+    { name = "python-apt", version = "3.0.0", source = { registry = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels" }, marker = "(sys_platform == 'linux' and extra != 'group-17-craft-application-dev-jammy' and extra != 'group-17-craft-application-dev-noble' and extra != 'group-17-craft-application-dev-plucky') or (extra == 'group-17-craft-application-dev-jammy' and extra == 'group-17-craft-application-dev-noble') or (extra == 'group-17-craft-application-dev-jammy' and extra == 'group-17-craft-application-dev-plucky') or (extra == 'group-17-craft-application-dev-jammy' and extra == 'group-17-craft-application-dev-questing') or (extra == 'group-17-craft-application-dev-noble' and extra == 'group-17-craft-application-dev-plucky') or (extra == 'group-17-craft-application-dev-noble' and extra == 'group-17-craft-application-dev-questing') or (extra == 'group-17-craft-application-dev-plucky' and extra == 'group-17-craft-application-dev-questing')" },
 ]
 remote = [
     { name = "launchpadlib" },
@@ -465,16 +465,16 @@ dev = [
     { name = "responses" },
 ]
 dev-jammy = [
-    { name = "python-apt", version = "2.4.0+ubuntu4", source = { registry = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels/" }, marker = "sys_platform == 'linux'" },
+    { name = "python-apt", version = "2.4.0+ubuntu4", source = { registry = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels" }, marker = "sys_platform == 'linux'" },
 ]
 dev-noble = [
-    { name = "python-apt", version = "2.7.7+ubuntu3", source = { registry = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels/" }, marker = "sys_platform == 'linux'" },
+    { name = "python-apt", version = "2.7.7+ubuntu3", source = { registry = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels" }, marker = "sys_platform == 'linux'" },
 ]
 dev-plucky = [
-    { name = "python-apt", version = "2.9.9", source = { registry = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels/" }, marker = "sys_platform == 'linux'" },
+    { name = "python-apt", version = "2.9.9", source = { registry = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels" }, marker = "sys_platform == 'linux'" },
 ]
 dev-questing = [
-    { name = "python-apt", version = "3.0.0", source = { registry = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels/" }, marker = "sys_platform == 'linux'" },
+    { name = "python-apt", version = "3.0.0", source = { registry = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels" }, marker = "sys_platform == 'linux'" },
 ]
 docs = [
     { name = "canonical-sphinx", extra = ["full"] },
@@ -503,16 +503,16 @@ requires-dist = [
     { name = "craft-archives", specifier = ">=2.0.0" },
     { name = "craft-cli", specifier = "~=3.0" },
     { name = "craft-grammar", specifier = ">=2.0.0" },
-    { name = "craft-parts", specifier = ">=2.1.1" },
+    { name = "craft-parts", git = "https://github.com/canonical/craft-parts.git?rev=work%2Fperf%2Fimport-requests-when-needed" },
     { name = "craft-platforms", specifier = ">=0.6.0" },
-    { name = "craft-providers", specifier = ">=2.1.0" },
+    { name = "craft-providers", git = "https://github.com/canonical/craft-providers.git?rev=work%2Fperf%2Flimit-requests-imports" },
     { name = "jinja2", specifier = ">=3.1.6,<4.0.0" },
     { name = "launchpadlib", marker = "extra == 'remote'", specifier = ">=1.10.16" },
     { name = "license-expression", specifier = ">=30.0.0" },
     { name = "platformdirs", specifier = ">=3.10" },
     { name = "pydantic", specifier = "~=2.0" },
     { name = "pygit2", specifier = ">=1.13.0,<1.15.0" },
-    { name = "python-apt", marker = "sys_platform == 'linux' and extra == 'apt'", specifier = ">=2.4.0", index = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels/" },
+    { name = "python-apt", marker = "sys_platform == 'linux' and extra == 'apt'", specifier = ">=2.4.0", index = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels" },
     { name = "pyyaml", specifier = ">=6.0" },
     { name = "requests" },
     { name = "snap-helpers", specifier = ">=0.4.2" },
@@ -537,10 +537,10 @@ dev = [
     { name = "pytest-time", specifier = ">=0.3.1" },
     { name = "responses", specifier = "~=0.25.0" },
 ]
-dev-jammy = [{ name = "python-apt", marker = "sys_platform == 'linux'", specifier = "~=2.4.0", index = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels/" }]
-dev-noble = [{ name = "python-apt", marker = "sys_platform == 'linux'", specifier = "~=2.7.0", index = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels/" }]
-dev-plucky = [{ name = "python-apt", marker = "sys_platform == 'linux'", specifier = "~=2.9.9", index = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels/" }]
-dev-questing = [{ name = "python-apt", marker = "sys_platform == 'linux'", specifier = "~=3.0.0", index = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels/" }]
+dev-jammy = [{ name = "python-apt", marker = "sys_platform == 'linux'", specifier = "~=2.4.0", index = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels" }]
+dev-noble = [{ name = "python-apt", marker = "sys_platform == 'linux'", specifier = "~=2.7.0", index = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels" }]
+dev-plucky = [{ name = "python-apt", marker = "sys_platform == 'linux'", specifier = "~=2.9.9", index = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels" }]
+dev-questing = [{ name = "python-apt", marker = "sys_platform == 'linux'", specifier = "~=3.0.0", index = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels" }]
 docs = [
     { name = "canonical-sphinx", extras = ["full"], specifier = "~=0.4.0" },
     { name = "pydantic-kitbash", specifier = "==0.0.3" },
@@ -609,8 +609,8 @@ wheels = [
 
 [[package]]
 name = "craft-parts"
-version = "2.12.0"
-source = { registry = "https://pypi.org/simple" }
+version = "2.14.0.post13+g3cec709"
+source = { git = "https://github.com/canonical/craft-parts.git?rev=work%2Fperf%2Fimport-requests-when-needed#3cec7094c69ef3956e17675a872f93ac54fbd8ca" }
 dependencies = [
     { name = "overrides" },
     { name = "pydantic" },
@@ -619,10 +619,6 @@ dependencies = [
     { name = "requests" },
     { name = "requests-unixsocket2" },
     { name = "tomli", marker = "python_full_version < '3.11' or (extra == 'group-17-craft-application-dev-jammy' and extra == 'group-17-craft-application-dev-noble') or (extra == 'group-17-craft-application-dev-jammy' and extra == 'group-17-craft-application-dev-plucky') or (extra == 'group-17-craft-application-dev-jammy' and extra == 'group-17-craft-application-dev-questing') or (extra == 'group-17-craft-application-dev-noble' and extra == 'group-17-craft-application-dev-plucky') or (extra == 'group-17-craft-application-dev-noble' and extra == 'group-17-craft-application-dev-questing') or (extra == 'group-17-craft-application-dev-plucky' and extra == 'group-17-craft-application-dev-questing')" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/f0/6f/e562ab023757609671fe1c1093a469b982bb86297aa610a6a49a6b3424f0/craft_parts-2.12.0.tar.gz", hash = "sha256:cd20fbb1d0b2b8476d162d939d26100c60d912d0a55b876b56464dee635226fb", size = 739230, upload-time = "2025-06-06T17:50:45.54Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/08/30/b19fdbe20db1c1fe503d0c7cd32ed62b98a8cea06639a666e8e046d7476a/craft_parts-2.12.0-py3-none-any.whl", hash = "sha256:25dbfd6e0805e6fa3070e349820790f482d78aa34f9adde87d8e7da7d69b534f", size = 475124, upload-time = "2025-06-06T17:50:43.602Z" },
 ]
 
 [[package]]
@@ -641,18 +637,14 @@ wheels = [
 
 [[package]]
 name = "craft-providers"
-version = "2.3.0"
-source = { registry = "https://pypi.org/simple" }
+version = "2.3.1.post29+g013b516"
+source = { git = "https://github.com/canonical/craft-providers.git?rev=work%2Fperf%2Flimit-requests-imports#013b516bda9b95af4e5cd83d60a6fedffdb5a818" }
 dependencies = [
     { name = "packaging" },
     { name = "pydantic" },
     { name = "pyyaml" },
     { name = "requests" },
     { name = "requests-unixsocket2" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/69/d9/5c9195dbd410c978ef8f7172ddef7ab86d10f501560ee49dcdae1497e8f4/craft_providers-2.3.0.tar.gz", hash = "sha256:8b9f60d587d118e35e6cf0c28ffffafe5c8e40e3e6c49da3b171a3d18a070ffa", size = 190942, upload-time = "2025-05-09T13:47:13.886Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/02/38/d685644a31f1aa4cc5805a99b9cd40c9b481dffdadc1f39e9a3429f8ec44/craft_providers-2.3.0-py2.py3-none-any.whl", hash = "sha256:fc539d0d675286cd596ba3534364da80696f38ef63241a9c059283d8ccae531c", size = 104402, upload-time = "2025-05-09T13:47:12.258Z" },
 ]
 
 [[package]]
@@ -687,7 +679,7 @@ name = "exceptiongroup"
 version = "1.3.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "typing-extensions", marker = "python_full_version < '3.13' or (extra == 'group-17-craft-application-dev-jammy' and extra == 'group-17-craft-application-dev-noble') or (extra == 'group-17-craft-application-dev-jammy' and extra == 'group-17-craft-application-dev-plucky') or (extra == 'group-17-craft-application-dev-jammy' and extra == 'group-17-craft-application-dev-questing') or (extra == 'group-17-craft-application-dev-noble' and extra == 'group-17-craft-application-dev-plucky') or (extra == 'group-17-craft-application-dev-noble' and extra == 'group-17-craft-application-dev-questing') or (extra == 'group-17-craft-application-dev-plucky' and extra == 'group-17-craft-application-dev-questing')" },
+    { name = "typing-extensions", marker = "python_full_version < '3.11' or (extra == 'group-17-craft-application-dev-jammy' and extra == 'group-17-craft-application-dev-noble') or (extra == 'group-17-craft-application-dev-jammy' and extra == 'group-17-craft-application-dev-plucky') or (extra == 'group-17-craft-application-dev-jammy' and extra == 'group-17-craft-application-dev-questing') or (extra == 'group-17-craft-application-dev-noble' and extra == 'group-17-craft-application-dev-plucky') or (extra == 'group-17-craft-application-dev-noble' and extra == 'group-17-craft-application-dev-questing') or (extra == 'group-17-craft-application-dev-plucky' and extra == 'group-17-craft-application-dev-questing')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/0b/9f/a65090624ecf468cdca03533906e7c69ed7588582240cfe7cc9e770b50eb/exceptiongroup-1.3.0.tar.gz", hash = "sha256:b241f5885f560bc56a59ee63ca4c6a8bfa46ae4ad651af316d4e81817bb9fd88", size = 29749, upload-time = "2025-05-10T17:42:51.123Z" }
 wheels = [
@@ -1604,7 +1596,7 @@ wheels = [
 [[package]]
 name = "python-apt"
 version = "2.4.0+ubuntu4"
-source = { registry = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels/" }
+source = { registry = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels" }
 resolution-markers = [
     "python_full_version >= '3.12'",
     "python_full_version == '3.11.*'",
@@ -1633,7 +1625,7 @@ wheels = [
 [[package]]
 name = "python-apt"
 version = "2.7.7+ubuntu3"
-source = { registry = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels/" }
+source = { registry = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels" }
 resolution-markers = [
     "python_full_version >= '3.12'",
     "python_full_version == '3.11.*'",
@@ -1662,7 +1654,7 @@ wheels = [
 [[package]]
 name = "python-apt"
 version = "2.9.9"
-source = { registry = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels/" }
+source = { registry = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels" }
 resolution-markers = [
     "python_full_version >= '3.12'",
     "python_full_version == '3.11.*'",
@@ -1678,7 +1670,7 @@ wheels = [
 [[package]]
 name = "python-apt"
 version = "3.0.0"
-source = { registry = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels/" }
+source = { registry = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels" }
 resolution-markers = [
     "python_full_version >= '3.12'",
     "python_full_version == '3.11.*'",

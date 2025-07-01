@@ -33,7 +33,6 @@ if TYPE_CHECKING:
 
 from craft_cli import emit
 from pydantic import Field
-from requests.auth import HTTPBasicAuth
 
 from craft_application import errors, util
 from craft_application.models import CraftBaseModel
@@ -324,6 +323,7 @@ def _service_request(
     timeout: float = 10.0,
 ) -> "Response":
     import requests
+    from requests.auth import HTTPBasicAuth
 
     headers = {
         "Content-type": "application/json",
