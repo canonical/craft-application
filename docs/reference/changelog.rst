@@ -4,13 +4,20 @@
 Changelog
 *********
 
-5.4.0 (2025-MM-DD)
+5.4.0 (2025-06-30)
 ------------------
 
 Models
 ======
 
-- Expose ``Part`` type
+- Expose the ``Part`` type.
+
+Commands
+========
+
+- The ``test`` command now accepts Spread test expressions.
+
+For a complete list of commits, check out the `5.4.0`_ release on GitHub.
 
 5.3.0 (2025-05-28)
 ------------------
@@ -40,7 +47,7 @@ Services
   inner instance's environment.
 
 Fixes
-======
+=====
 
 - Fix an issue where the fetch-service would fail to find the network used
   by LXD containers.
@@ -814,3 +821,4 @@ For a complete list of commits, check out the `2.7.0`_ release on GitHub.
 .. _5.2.0: https://github.com/canonical/craft-application/releases/tag/5.2.0
 .. _5.2.1: https://github.com/canonical/craft-application/releases/tag/5.2.1
 .. _5.3.0: https://github.com/canonical/craft-application/releases/tag/5.3.0
+.. _5.4.0: https://github.com/canonical/craft-application/releases/tag/5.4.0
