@@ -10,12 +10,12 @@ Changelog
 Models
 ======
 
-- Expose ``Part`` type.
+- Expose the ``Part`` type.
 
 Commands
 ========
 
-- Allow Spread test expressions to be used as options for the test command.
+- The ``test`` command now accepts Spread test expressions.
 
 For a complete list of commits, check out the `5.4.0`_ release on GitHub.
 
