@@ -30,6 +30,7 @@
 # pyright: reportIndexIssue=false
 from __future__ import annotations
 
+import datetime  # noqa: TC003
 import enum
 from abc import ABCMeta
 from typing import TYPE_CHECKING, cast
@@ -41,7 +42,6 @@ from craft_application.launchpad import errors
 from .base import InformationType, LaunchpadObject
 
 if TYPE_CHECKING:
-    import datetime
     from collections.abc import Collection
 
     from craft_application.launchpad import Launchpad
