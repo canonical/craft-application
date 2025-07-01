@@ -379,6 +379,9 @@ class StateService(base.AppService):
         file_path = self._state_dir / f"{file_name}.yaml"
         craft_cli.emit.debug(f"Writing state to {str(file_path)!r}.")
         raw_data = util.dump_yaml(data)
+
+        # There isn't a hard limit on the size of a state file but we shouldn't be serializing
+        # an unlimited amount of data, so 1 MiB is a reasonable maximum.
         if len(raw_data) > 1024 * 1024:
             raise ValueError("Can't save state file over 1 MiB in size.")
 
