@@ -24,7 +24,6 @@ import os
 import pathlib
 import time
 import urllib.parse
-from collections.abc import Collection, Iterable, Mapping
 from typing import TYPE_CHECKING, Any, cast
 from urllib import parse
 
@@ -43,6 +42,8 @@ from craft_application.remote import (
 from craft_application.services import base
 
 if TYPE_CHECKING:  # pragma: no cover
+    from collections.abc import Collection, Iterable, Mapping
+
     from craft_application import AppMetadata, ServiceFactory
 
 DEFAULT_POLL_INTERVAL = 30

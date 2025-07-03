@@ -17,13 +17,15 @@
 
 from __future__ import annotations
 
-import pathlib
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pydantic
 from typing_extensions import Self
 
 from craft_application import errors, util
+
+if TYPE_CHECKING:
+    import pathlib
 
 
 def alias_generator(s: str) -> str:

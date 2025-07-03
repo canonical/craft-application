@@ -17,10 +17,11 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable, Iterable
 from typing import TYPE_CHECKING, Literal, overload
 
 if TYPE_CHECKING:  # pragma: no cover
+    from collections.abc import Callable, Iterable
+
     # Caution: Removing these from type checking will result in circular imports.
     from craft_application.commands.base import ParserCallback, RunCallback
 

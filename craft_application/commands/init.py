@@ -15,17 +15,19 @@
 
 from __future__ import annotations
 
-import argparse
 import importlib.resources
 import pathlib
 from textwrap import dedent
-from typing import cast
+from typing import TYPE_CHECKING, cast
 
 import craft_cli
 
 from craft_application.util import humanize_list
 
 from . import base
+
+if TYPE_CHECKING:
+    import argparse
 
 
 class InitCommand(base.AppCommand):
