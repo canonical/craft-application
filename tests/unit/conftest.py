@@ -82,9 +82,7 @@ def mock_services(monkeypatch, app_metadata, fake_project, project_path):
 
 @pytest.fixture
 def clear_git_binary_name_cache() -> None:
-    from craft_application.git import GitRepo
-
-    GitRepo.get_git_command.cache_clear()
+    git.GitRepo.get_git_command.cache_clear()
 
 
 @pytest.fixture(

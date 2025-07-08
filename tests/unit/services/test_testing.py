@@ -49,11 +49,11 @@ def test_get_spread_command(
     mocker,
     monkeypatch,
     in_project_path: pathlib.Path,
-    shell: bool,  # noqa: FBT001
-    shell_after: bool,  # noqa: FBT001
-    debug: bool,  # noqa: FBT001
+    shell: bool,
+    shell_after: bool,
+    debug: bool,
     test_expressions: Iterable[str],
-    is_ci: bool,  # noqa: FBT001
+    is_ci: bool,
 ):
     # Set the CI environment variable to 1 if is_ci, or empty otherwise.
     monkeypatch.setenv("CI", "1" * int(is_ci))
@@ -137,7 +137,7 @@ def test_get_spread_command_ci_expression(
     monkeypatch: pytest.MonkeyPatch,
     testing_service: TestingService,
     expressions: list[str],
-    run_spread_list: bool,  # noqa: FBT001
+    run_spread_list: bool,
     cmdline: list[str],
 ):
     # The jobs returned by `spread -list exp1 exp2`
@@ -257,9 +257,9 @@ def test_run_spread_interactive(
     tmp_path,
     mocker,
     testing_service: TestingService,
-    shell: bool,  # noqa: FBT001
-    shell_after: bool,  # noqa: FBT001
-    debug: bool,  # noqa: FBT001
+    shell: bool,
+    shell_after: bool,
+    debug: bool,
     flags: list[str],
     streams: dict[str, Any],
 ):
