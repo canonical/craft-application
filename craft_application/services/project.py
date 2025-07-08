@@ -78,7 +78,7 @@ class ProjectService(base.AppService):
 
         if platform and build_for:
             self._platform = platform
-            self._build_for = _convert_build_for(build_for)
+            self._build_for = self._convert_build_for(build_for)
             self.__is_configured = True
             return
 
@@ -96,7 +96,7 @@ class ProjectService(base.AppService):
             else:
                 if build_for:
                     # Gives a clean error if the value of build_for is invalid.
-                    _convert_build_for(build_for)
+                    self._convert_build_for(build_for)
                     raise errors.ProjectGenerationError(
                         f"Cannot generate a project that builds on "
                         f"{self._build_on} and builds for {build_for}"
@@ -107,7 +107,7 @@ class ProjectService(base.AppService):
                 platform = next(iter(platforms))
                 self._platform = platform
                 build_for = platforms[platform]["build-for"][0]
-                self._build_for = _convert_build_for(build_for)
+                self._build_for = self._convert_build_for(build_for)
                 self._build_on = craft_platforms.DebianArchitecture(
                     platforms[platform]["build-on"][0]
                 )
@@ -493,26 +493,28 @@ class ProjectService(base.AppService):
             )
         return self._project_model
 
+    @staticmethod
+    def _convert_build_for(
+        architecture: str,
+    ) -> craft_platforms.DebianArchitecture | Literal["all"]:
+        """Convert a build-for value to a valid internal value.
 
-def _convert_build_for(
-    architecture: str,
-) -> craft_platforms.DebianArchitecture | Literal["all"]:
-    """Convert a build-for value to a valid internal value.
-
-    :param architecture: A valid build-for architecture as a string
-    :returns: The architecture as a DebianArchitecture or the special case string "all"
-    :raises: CraftValidationError if the given value is not valid for build-for.
-    """
-    try:
-        return (
-            "all"
-            if architecture == "all"
-            else craft_platforms.DebianArchitecture(architecture)
-        )
-    except ValueError:
-        raise errors.CraftValidationError(
-            f"{architecture!r} is not a valid Debian architecture",
-            resolution="Use a supported Debian architecture name.",
-            reportable=False,
-            logpath_report=False,
-        ) from None
+        :param architecture: A valid build-for architecture as a string
+        :returns: The architecture as a DebianArchitecture or the special case string "all"
+        :raises: CraftValidationError if the given value is not valid for build-for.
+        """
+        # Convert distro@series:architecture to just the architecture.
+        # architecture = architecture.rpartition(":")[2]
+        try:
+            return (
+                "all"
+                if architecture == "all"
+                else craft_platforms.DebianArchitecture(architecture)
+            )
+        except ValueError:
+            raise errors.CraftValidationError(
+                f"{architecture!r} is not a valid Debian architecture",
+                resolution="Use a supported Debian architecture name.",
+                reportable=False,
+                logpath_report=False,
+            ) from None

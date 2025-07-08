@@ -137,6 +137,21 @@ def test_load_raw_project_invalid(
             {"s390x": {"build-on": ["ppc64el"], "build-for": ["s390x"]}},
             id="null-build-for-valid-name",
         ),
+        pytest.param(
+            {
+                "jammy": {
+                    "build-on": ["ubuntu@22.04:amd64"],
+                    "build-for": ["ubuntu@22.04:amd64"],
+                }
+            },
+            {
+                "jammy": {
+                    "build-on": ["ubuntu@22.04:amd64"],
+                    "build-for": ["ubuntu@22.04:amd64"],
+                }
+            },
+            id="multi-platform",
+        ),
     ],
 )
 def test_get_platforms(
