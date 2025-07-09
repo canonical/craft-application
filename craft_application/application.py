@@ -511,7 +511,7 @@ class Application:
         """Register plugins for this application."""
         if not plugins:
             return
-        from craft_parts.plugins import register
+        from craft_parts.plugins import register  # noqa: PLC0415
 
         craft_cli.emit.trace("Registering plugins...")
         craft_cli.emit.trace(f"Plugins: {', '.join(plugins.keys())}")
