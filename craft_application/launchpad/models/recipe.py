@@ -31,7 +31,6 @@ from __future__ import annotations
 import enum
 import time
 from abc import abstractmethod
-from collections.abc import Collection, Iterable
 from typing import TYPE_CHECKING, ClassVar, Literal
 
 import lazr.restfulclient.errors  # type: ignore[import-untyped]
@@ -44,6 +43,8 @@ from . import build
 from .base import LaunchpadObject, Pocket
 
 if TYPE_CHECKING:
+    from collections.abc import Collection, Iterable
+
     from craft_application.launchpad import Launchpad
 
 
