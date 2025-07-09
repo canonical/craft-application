@@ -10,6 +10,9 @@ execute: |
 
   testcraft init
 
+  # Speed up the tests by not shutting down the instance.
+  export CRAFT_IDLE_MINS=2
+
   # Test each step of the lifecycle in order.
   testcraft pull
   testcraft build
