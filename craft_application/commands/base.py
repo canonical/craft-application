@@ -19,7 +19,7 @@ from __future__ import annotations
 
 import abc
 import warnings
-from typing import TYPE_CHECKING, Any, Optional, Protocol, final
+from typing import TYPE_CHECKING, Any, Protocol, final
 
 from craft_cli import BaseCommand, emit
 from typing_extensions import Self
