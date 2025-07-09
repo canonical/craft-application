@@ -81,7 +81,7 @@ def _optional_pyfakefs(request: pytest.FixtureRequest) -> FakeFilesystem | None:
     """Get pyfakefs if it's in use by the fixture request."""
     if {"fs", "fs_class", "fs_module", "fs_session"} & set(request.fixturenames):
         try:
-            from pyfakefs.fake_filesystem import FakeFilesystem
+            from pyfakefs.fake_filesystem import FakeFilesystem  # noqa: PLC0415
 
             fs = request.getfixturevalue("fs")
             if isinstance(fs, FakeFilesystem):
