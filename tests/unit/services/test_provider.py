@@ -884,7 +884,7 @@ def test_run_managed(
     default_app_metadata: craft_application.AppMetadata,
     fake_services: ServiceFactory,
     fake_build_info: craft_platforms.BuildInfo,
-    fetch: bool,  # noqa: FBT001
+    fetch: bool,
     mock_provider,
 ):
     mock_fetch = mock.MagicMock()

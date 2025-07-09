@@ -701,7 +701,9 @@ def test_clone_repository_appends_correct_parameters_to_clone_command(
     mocker.patch("craft_application.git._git_repo.is_repo", side_effect=[False, True])
     mocked_init = mocker.patch.object(GitRepo, "_init_repo")
     fake_repo_url = "fake-repository-url.localhost"
-    from craft_application.git._git_repo import logger as git_repo_logger
+    from craft_application.git._git_repo import (  # noqa: PLC0415
+        logger as git_repo_logger,
+    )
 
     _ = GitRepo.clone_repository(
         url=fake_repo_url,

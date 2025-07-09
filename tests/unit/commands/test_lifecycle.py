@@ -160,10 +160,10 @@ def test_use_provider(
     monkeypatch: pytest.MonkeyPatch,
     app_metadata: AppMetadata,
     fake_services: ServiceFactory,
-    destructive: bool,  # noqa: FBT001
-    managed: bool,  # noqa: FBT001
+    destructive: bool,
+    managed: bool,
     build_env: str,
-    expected: bool,  # noqa: FBT001
+    expected: bool,
 ):
     cls = get_fake_command_class(LifecycleCommand, managed=False)
     command = cls({"app": app_metadata, "services": fake_services})
@@ -270,7 +270,7 @@ def test_run_manager_for_build_plan(
     mocker: pytest_mock.MockerFixture,
     app_metadata: AppMetadata,
     fake_services: ServiceFactory,
-    fetch: bool,  # noqa: FBT001
+    fetch: bool,
 ):
     build = craft_platforms.BuildInfo(
         platform="Tall",

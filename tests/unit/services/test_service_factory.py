@@ -132,7 +132,7 @@ def test_set_kwargs(
     services.ServiceFactory.register("package", MockPackageService)
     factory = services.ServiceFactory(app_metadata, project=fake_project)
 
-    with pytest.warns(DeprecationWarning):
+    with pytest.warns(DeprecationWarning, match="set_kwargs is deprecated"):
         factory.set_kwargs("package", **kwargs)
 
     check.equal(factory.package, MockPackageService.mock_class.return_value)
