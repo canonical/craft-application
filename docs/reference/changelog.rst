@@ -7,11 +7,19 @@ Changelog
 5.5.0 (2025-MM-DD)
 ------------------
 
+Configuration
+=============
+
+- Add an ``idle_time`` configuration option that, if set, will delay the shutdown of
+  VMs or containers launched for building and packing.
+
 Services
 ========
 
 - Add a new State service that manages a global state between manager and managed
   instances of an application.
+- Add provider idle time to the ``ProviderService``, allowing the reuse of a VM or
+  container without shutting it down and starting it back up.
 
 
 For a complete list of commits, check out the `5.5.0`_ release on GitHub.
