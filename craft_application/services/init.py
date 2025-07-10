@@ -19,10 +19,8 @@
 from __future__ import annotations
 
 import os
-import pathlib
 import shutil
 import typing
-from re import Pattern
 from typing import Any
 
 import jinja2
@@ -38,6 +36,9 @@ from craft_application.models.constraints import (
 from . import base
 
 if typing.TYPE_CHECKING:  # pragma: no cover
+    import pathlib
+    from re import Pattern
+
     from craft_application.application import AppMetadata
     from craft_application.services import ServiceFactory
 

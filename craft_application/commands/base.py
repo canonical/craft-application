@@ -18,15 +18,18 @@
 from __future__ import annotations
 
 import abc
-import argparse
 import warnings
-from typing import Any, Protocol, final
+from typing import TYPE_CHECKING, Any, Protocol, final
 
 from craft_cli import BaseCommand, emit
 from typing_extensions import Self
 
 from craft_application import application, util
-from craft_application.services import service_factory
+
+if TYPE_CHECKING:
+    import argparse
+
+    from craft_application.services import service_factory
 
 
 class ParserCallback(Protocol):
