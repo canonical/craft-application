@@ -25,10 +25,10 @@ from craft_cli import CommandGroup, emit
 from craft_parts.features import Features
 from typing_extensions import override
 
-from craft_application import errors, util
+from craft_application import errors, models, util
 from craft_application.commands import base
 
-TEMP_SPREAD_FILE_NAME = ".craft-spread.yaml"
+_PACKED_FILE_LIST_PATH = ".craft/packed-files"
 
 
 def get_lifecycle_command_group() -> CommandGroup:
@@ -389,6 +389,12 @@ class PackCommand(LifecycleCommand):
             _launch_shell()
             return
 
+        if self._is_already_packed():
+            emit.progress("Skipping pack (already ran)")
+            if shell_after:
+                _launch_shell()
+            return
+
         emit.progress("Packing...")
         try:
             packages = self._services.package.pack(
@@ -416,10 +422,81 @@ class PackCommand(LifecycleCommand):
             emit.progress(f"Packed: {package_names}", permanent=True)
             artifact, resources = packages[0], self._services.package.resource_map
 
+        self._save_packed_file_list(artifact=artifact, resources=resources)
         self._services.package.write_state(artifact=artifact, resources=resources)
 
         if shell_after:
             _launch_shell()
+
+    def _is_already_packed(self) -> bool:
+        """Verify whether the artifacts are already packed and up-to-date."""
+        # 1. A file containing the list of packed artifacts is created after
+        #    packing. Before packing, check if the list file exists. If not, we
+        #    never packed before and packing is necessary.
+        # 2. Check the most recent prime state timestamp. These are generated
+        #    when parts are primed. If this information can't be retrieved, we
+        #    repack.
+        # 3. If any part was primed after the artifacts were generated, we need
+        #    to pack again. Note that if there's any change in parts, the part
+        #    will be reprimed before the pack step and artifacts will be repacked.
+        # 4. If any previously packed file is missing, we repack everything.
+        # 5. Otherwise, the existing files are up-to-date and no repacking is
+        #    required.
+
+        pack_time = self._get_packed_file_list_timestamp()
+        if pack_time is None:
+            return False
+
+        prime_time = self._services.lifecycle.prime_state_timestamp
+        if prime_time is None:
+            # This should never happen under normal circumstances, but manual
+            # manipulation of state files is possible.
+            return False
+
+        if prime_time >= pack_time:
+            return False
+
+        artifact, resources = self._load_packed_file_list()
+        return not self._is_missing_packed_files(artifact, resources)
+
+    def _is_missing_packed_files(self, artifact: pathlib.Path | None, resources: dict[str, pathlib.Path] | None) -> bool:
+        """Verify if the artifact and resource files exist."""
+        paths: list[pathlib.Path] = []
+        if artifact:
+            paths.append(artifact)
+        if resources:
+            paths.extend(list(resources.values()))
+
+        for path in paths:   # noqa: SIM110 (improve readability)
+            if not path.is_file():
+               return True
+
+        return False
+
+    def _load_packed_file_list(self) -> tuple[pathlib.Path, dict[str, pathlib.Path]]:
+        """Load a list of artifact and resources."""
+        work_dir = self._services.lifecycle.project_info.work_dir
+        file_list_path = work_dir / _PACKED_FILE_LIST_PATH
+        if not file_list_path.is_file():
+            return (None, None)
+
+        data = models.PackState.from_yaml_file(file_list_path)
+        return (data.artifact, data.resources)
+
+    def _save_packed_file_list(self, artifact: pathlib.Path | None, resources: dict[str, pathlib.Path] | None) -> None:
+        """Save the list of the given artifact and resources."""
+        work_dir = self._services.lifecycle.project_info.work_dir
+        file_list_path = work_dir / _PACKED_FILE_LIST_PATH
+        file_list_path.parent.mkdir(parents=True, exist_ok=True)
+        data = models.PackState(artifact=artifact, resources=resources)
+        data.to_yaml_file(file_list_path)
+
+    def _get_packed_file_list_timestamp(self) -> int | None:
+        work_dir = self._services.lifecycle.project_info.work_dir
+        file_list_path = work_dir / _PACKED_FILE_LIST_PATH
+        if not file_list_path.is_file():
+            return None
+        return file_list_path.stat().st_mtime_ns
 
     @staticmethod
     def _relativize_paths(
