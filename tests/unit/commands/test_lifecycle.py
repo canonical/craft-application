@@ -861,8 +861,21 @@ def test_relativize_paths_invalid(root, paths):
     ],
 )
 def test_test_run(
-    emitter, mock_services, app_metadata, debug, shell, shell_after, tests
+    emitter,
+    mock_services,
+    app_metadata,
+    debug,
+    shell,
+    shell_after,
+    tests,
+    fake_project_file,
+    fake_platform,
 ):
+    mock_services.get("build_plan").set_platforms(fake_platform)
+    try:
+        mock_services.get("build_plan").plan()
+    except errors.EmptyBuildPlanError:
+        pytest.skip(f"Can't build for {fake_platform}")
     mock_services.package.pack.return_value = [pathlib.Path("package.zip")]
     parsed_args = argparse.Namespace(
         destructive_mode=True,
@@ -871,6 +884,8 @@ def test_test_run(
         shell=shell,
         shell_after=shell_after,
         test_expressions=tests,
+        platform=fake_platform,
+        build_for=None,
     )
     command = TestCommand(
         {
@@ -881,11 +896,11 @@ def test_test_run(
 
     command.run(parsed_args)
 
-    mock_services.package.pack.assert_called_once_with(
+    mock_services.get("package").pack.assert_called_once_with(
         mock_services.lifecycle.prime_dir,
         pathlib.Path.cwd(),
     )
-    mock_services.testing.test.assert_called_once_with(
+    mock_services.get("testing").test.assert_called_once_with(
         pathlib.Path.cwd(),
         pack_state=mock.ANY,
         shell=shell,

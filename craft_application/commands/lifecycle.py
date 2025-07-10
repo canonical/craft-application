@@ -16,12 +16,13 @@
 from __future__ import annotations
 
 import argparse
+import os
 import pathlib
 import subprocess
 import textwrap
 from typing import Any
 
-from craft_cli import CommandGroup, emit
+from craft_cli import CommandGroup, CraftError, emit
 from craft_parts.features import Features
 from typing_extensions import override
 
@@ -511,43 +512,74 @@ class TestCommand(PackCommand):
         step_name: str | None = None,
         **kwargs: Any,
     ) -> None:
-        if not util.is_managed_mode():
-            emit.progress(
-                "The test command is experimental and subject to change without warning.",
-                permanent=True,
-            )
-
-        testing_service = self._services.get("testing")
+        # Add values for super classes like pack.
         parsed_args.output = pathlib.Path.cwd()
         parsed_args.fetch_service_policy = None
+
+        if util.is_managed_mode():
+            # If we're in managed mode, we just need to pack.
+            return super()._run(parsed_args=parsed_args, step_name=step_name, **kwargs)
+        emit.progress(
+            "The test command is experimental and subject to change without warning.",
+            permanent=True,
+        )
+
+        build_planner = self._services.get("build_plan")
+        if parsed_args.platform:
+            os.environ["CRAFT_PLATFORM"] = parsed_args.platform
+            build_planner.set_platforms(parsed_args.platform)
+        if parsed_args.build_for:
+            os.environ["CRAFT_BUILD_FOR"] = parsed_args.build_for
+            build_planner.set_platforms(parsed_args.build_for)
+
+        if parsed_args.destructive_mode:
+            match len(plan := build_planner.plan()):
+                case 0:
+                    raise errors.EmptyBuildPlanError
+                case 1:
+                    emit.progress(
+                        "Packing on the current host. Tests will still occur as usual.",
+                        permanent=True,
+                    )
+                case _:
+                    raise errors.MultipleBuildsError(plan)
+
+        testing_service = self._services.get("testing")
 
         # Don't enter a shell during the packing step, but save those values
         # for the testing service.
         shell, shell_after = parsed_args.shell, parsed_args.shell_after
         parsed_args.shell, parsed_args.shell_after = (False, False)
 
-        # Pack the packages.
-        super()._run(parsed_args, step_name, **kwargs)
+        package = self._services.get("package")
+        provider = self._services.get("provider")
 
-        if util.is_managed_mode():
-            # Run the rest of this outside the managed instance.
-            return
+        # This loop allows us to (pack, test) for each platform.
+        for build_info in build_planner.plan():
+            emit.progress(f"Packing platform '{build_info.platform}'")
+            parsed_args.platform = build_info.platform
+            if parsed_args.destructive_mode:
+                self._run_real(parsed_args, "pack", **kwargs)
+            else:
+                provider.run_managed(build_info, enable_fetch_service=False)
+            pack_state = package.read_state(build_info.platform)
+            if pack_state.artifact is None:
+                raise CraftError(
+                    f"No artifact was packed for platform '{build_info.platform}'",
+                    resolution=f"Ensure platform '{build_info.platform}' packs correctly.",
+                )
+            emit.progress(f"Testing platform '{build_info.platform}'")
+            testing_service.test(
+                pathlib.Path.cwd(),
+                pack_state=pack_state,
+                test_expressions=parsed_args.test_expressions,
+                shell=shell,
+                shell_after=shell_after,
+                debug=parsed_args.debug,
+            )
 
-        pack_state = self._services.package.read_state()
-
-        if not pack_state.artifact:
-            raise RuntimeError("No artifact files to test.")
-
-        emit.progress("Testing project")
-        testing_service.test(
-            pathlib.Path.cwd(),
-            pack_state=pack_state,
-            test_expressions=parsed_args.test_expressions,
-            shell=shell,
-            shell_after=shell_after,
-            debug=parsed_args.debug,
-        )
         emit.progress("Testing successful.", permanent=True)
+        return None
 
 
 class CleanCommand(_BaseLifecycleCommand):
