@@ -1014,8 +1014,8 @@ def test_is_missing_packed_files(
     [
         (None, None, False, False),  # No times available
         (None, 1000, False, False),  # Primed but pack time not available
-        (1500, 1000, False, True),   # Pack is more recent and files exist
-        (1500, 1000, True, False),   # No packed artifacts
+        (1500, 1000, False, True),  # Pack is more recent and files exist
+        (1500, 1000, True, False),  # No packed artifacts
         (1500, None, False, False),  # No prime time (should never happen)
         (1000, 1500, False, False),  # Prime time is more recent than pack
     ],
