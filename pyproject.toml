@@ -64,7 +64,7 @@ dev = [
     "pytest-check==2.4.1",
     "pytest-cov==5.0.0",
     "pytest-freezer==0.4.9",
-    "pytest-mock==3.14.0",
+    "pytest-mock~=3.14",
     "pytest-rerunfailures==14.0",
     "pytest-subprocess~=1.5.2",
     "pytest-time>=0.3.1",
@@ -76,14 +76,14 @@ lint = [
     "codespell[toml]==2.4.1",
 ]
 types = [
-    "mypy[reports]==1.12.0",
+    "mypy[reports]~=1.16",
     "types-pyyaml",
     "types-requests",
     "types-urllib3",
 ]
 docs = [
     "canonical-sphinx[full]~=0.4.0",
-    "pydantic-kitbash==0.0.3",
+    "pydantic-kitbash~=0.0.3",
     "sphinx-autobuild==2024.10.3",
     "sphinx-lint==1.0.0",
     "sphinxext-rediraffe>=0.2.7",
