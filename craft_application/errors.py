@@ -21,8 +21,6 @@ All errors inherit from craft_cli.CraftError.
 from __future__ import annotations
 
 import os
-import pathlib
-from collections.abc import Collection, Sequence
 from typing import TYPE_CHECKING, Literal
 
 import craft_platforms
@@ -34,6 +32,9 @@ from craft_application.util.error_formatting import format_pydantic_errors
 from craft_application.util.string import humanize_list
 
 if TYPE_CHECKING:  # pragma: no cover
+    import pathlib
+    from collections.abc import Collection, Sequence
+
     import craft_parts
     import pydantic
     from typing_extensions import Self
@@ -379,3 +380,7 @@ class InitError(CraftError):
 
 class ArtifactCreationError(CraftError):
     """Errors to do with artifact file generation."""
+
+
+class StateServiceError(CraftError):
+    """Errors related to the state service."""

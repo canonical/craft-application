@@ -96,7 +96,7 @@ def _validate_package_repository(repository: dict[str, Any]) -> dict[str, Any]:
     :raises: ValueError if the repository is not valid.
     """
     # This check is not always used, import it here to avoid unnecessary
-    from craft_archives import repo  # type: ignore[import-untyped]
+    from craft_archives import repo  # type: ignore[import-untyped]  # noqa: PLC0415
 
     repo.validate_repository(repository)
     return repository

@@ -322,6 +322,9 @@ select = [ # Base linting rule selections.
     # The team have chosen to only use type-checking blocks when necessary to prevent circular imports.
     # As such, the only enabled type-checking checks are those that warn of an import that needs to be
     # removed from a type-checking block.
+    "TC001",  # Checks for first-party imports that are only used for type annotations
+    "TC002",  # Checks for third-party imports that are only used for type annotations
+    "TC003",  # Checks for standard library imports that are only used for type annotations
     "TC004",  # Remove imports from type-checking guard blocks if used at runtime
     "TC005",  # Delete empty type-checking blocks
     "ARG",    # Unused arguments
@@ -397,10 +400,14 @@ classmethod-decorators = ["pydantic.validator", "pydantic.root_validator"]
     "PLR0913", # Allow many arguments for test functions (useful if we need many fixtures)
     "PLR2004", # Allow magic values in tests
     "SLF",     # Allow accessing private members from tests.
+    "FBT001",  # Boolean-typed parametrized tests can be useful
 ]
 "__init__.py" = [
     "I001", # isort leaves init files alone by default, this makes ruff ignore them too.
     "F401", # Allows unused imports in __init__ files.
+]
+"craft_application/**.py" = [
+    "PT028",   # Testing service conflicts with this rule.
 ]
 
 # Temporary ignores - should be removed once this issue is resolved

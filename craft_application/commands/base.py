@@ -18,15 +18,18 @@
 from __future__ import annotations
 
 import abc
-import argparse
 import warnings
-from typing import Any, Optional, Protocol, final
+from typing import TYPE_CHECKING, Any, Protocol, final
 
 from craft_cli import BaseCommand, emit
 from typing_extensions import Self
 
 from craft_application import application, util
-from craft_application.services import service_factory
+
+if TYPE_CHECKING:
+    import argparse
+
+    from craft_application.services import service_factory
 
 
 class ParserCallback(Protocol):
@@ -189,9 +192,7 @@ class ExtensibleCommand(AppCommand):
         """Run the real run method for an ExtensibleCommand."""
 
     @final
-    def run(
-        self: Self, parsed_args: argparse.Namespace, **kwargs: Any
-    ) -> Optional[int]:  # noqa: UP007
+    def run(self: Self, parsed_args: argparse.Namespace, **kwargs: Any) -> int | None:
         """Run any prologue callbacks, the main command, and any epilogue callbacks."""
         result = None
         for prologue in util.get_unique_callbacks(self.__class__, "_prologue"):

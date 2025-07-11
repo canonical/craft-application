@@ -15,13 +15,16 @@
 
 from __future__ import annotations
 
-import pathlib
+from typing import TYPE_CHECKING
 from unittest import mock
 
 import pytest
 import pytest_check
 from craft_application import AppMetadata, services
 from craft_cli import emit
+
+if TYPE_CHECKING:
+    import pathlib
 
 pytestmark = [
     pytest.mark.filterwarnings("ignore:Registering services on service factory")
@@ -132,7 +135,7 @@ def test_set_kwargs(
     services.ServiceFactory.register("package", MockPackageService)
     factory = services.ServiceFactory(app_metadata, project=fake_project)
 
-    with pytest.warns(DeprecationWarning):
+    with pytest.warns(DeprecationWarning, match="set_kwargs is deprecated"):
         factory.set_kwargs("package", **kwargs)
 
     check.equal(factory.package, MockPackageService.mock_class.return_value)

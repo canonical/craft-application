@@ -18,13 +18,15 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from craft_cli import emit
-from craft_parts import (
-    LifecycleManager,
-    ProjectInfo,
-)
+
+if TYPE_CHECKING:
+    from craft_parts import (
+        LifecycleManager,
+        ProjectInfo,
+    )
 
 
 def install_package_repositories(
@@ -40,7 +42,7 @@ def install_package_repositories(
     :param local_keys_path: The optional local directory containing public
       keys (for repositories that don't use the keyserver).
     """
-    from craft_archives import repo  # type: ignore[import-untyped]
+    from craft_archives import repo  # type: ignore[import-untyped]  # noqa: PLC0415
 
     if not package_repositories:
         emit.debug("No package repositories specified, none to install.")
@@ -58,7 +60,7 @@ def install_package_repositories(
 
 def install_overlay_repositories(overlay_dir: Path, project_info: ProjectInfo) -> None:
     """Install overlay repositories in the environment."""
-    from craft_archives import repo  # type: ignore[import-untyped]
+    from craft_archives import repo  # type: ignore[import-untyped]  # noqa: PLC0415
 
     package_repositories = project_info.package_repositories
     if package_repositories:

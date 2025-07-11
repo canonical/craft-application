@@ -198,11 +198,12 @@ def test_service_logging(app_service, mocker, tmp_path, monkeypatch, mock_instan
     lines = logfile.read_text().splitlines()
     create = discard = 0
     for line in lines:
-        if "creating session" in line:
+        if "create permissive session" in line:
             create += 1
         if "discarding session" in line:
             discard += 1
-    assert create == discard == expected
+    assert create == expected
+    assert discard == expected
 
 
 # Bash script to setup the build instance before the actual testing.

@@ -18,7 +18,8 @@
 from __future__ import annotations
 
 import abc
-from typing import TYPE_CHECKING
+import pathlib
+from typing import TYPE_CHECKING, cast
 
 from craft_cli import emit
 
@@ -26,8 +27,6 @@ from craft_application import errors, models, util
 from craft_application.services import base
 
 if TYPE_CHECKING:  # pragma: no cover
-    import pathlib
-
     from craft_application.application import AppMetadata
     from craft_application.services import ServiceFactory
 
@@ -61,16 +60,33 @@ class PackageService(base.AppService):
         self, artifact: pathlib.Path | None, resources: dict[str, pathlib.Path] | None
     ) -> None:
         """Write the packaging state."""
-        path = util.get_managed_pack_state_path(self._app)
-        pack_state = models.PackState(artifact=artifact, resources=resources)
-        pack_state.to_yaml_file(path)
+        platform = self._services.get("build_plan").plan()[0].platform
+        state_service = self._services.get("state")
+
+        state_service.set(
+            "artifact", platform, value=str(artifact) if artifact else None
+        )
+        state_service.set(
+            "resources",
+            platform,
+            value={k: str(v) for k, v in resources.items()} if resources else None,
+        )
 
     def read_state(self) -> models.PackState:
         """Read the packaging state."""
-        path = util.get_managed_pack_state_path(self._app)
-        with path.open() as f:
-            data = util.safe_yaml_load(f)
-        return models.PackState.unmarshal(data)
+        platform = self._services.get("build_plan").plan()[0].platform
+        state_service = self._services.get("state")
+
+        artifact = cast(str | None, state_service.get("artifact", platform))
+        resources = cast(
+            dict[str, str] | None, state_service.get("resources", platform)
+        )
+        return models.PackState(
+            artifact=pathlib.Path(artifact) if artifact else None,
+            resources={k: pathlib.Path(v) for k, v in resources.items()}
+            if resources
+            else None,
+        )
 
     @property
     @abc.abstractmethod
