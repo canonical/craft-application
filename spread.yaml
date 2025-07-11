@@ -127,6 +127,9 @@ prepare: |
   sudo snap install --dangerous --classic tests/spread/*.snap
   sudo snap alias testcraft.partitioncraft partitioncraft
 
+restore-each: |
+  testcraft clean || true
+
 suites:
   tests/spread/testcraft/:
     summary: Tests for testcraft core functionality
