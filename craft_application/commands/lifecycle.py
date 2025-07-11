@@ -459,7 +459,9 @@ class PackCommand(LifecycleCommand):
         artifact, resources = self._load_packed_file_list()
         return not self._is_missing_packed_files(artifact, resources)
 
-    def _is_missing_packed_files(self, artifact: pathlib.Path | None, resources: dict[str, pathlib.Path] | None) -> bool:
+    def _is_missing_packed_files(
+        self, artifact: pathlib.Path | None, resources: dict[str, pathlib.Path] | None
+    ) -> bool:
         """Verify if the artifact and resource files exist."""
         paths: list[pathlib.Path] = []
         if artifact:
@@ -467,9 +469,9 @@ class PackCommand(LifecycleCommand):
         if resources:
             paths.extend(list(resources.values()))
 
-        for path in paths:   # noqa: SIM110 (improve readability)
+        for path in paths:  # noqa: SIM110 (improve readability)
             if not path.is_file():
-               return True
+                return True
 
         return False
 
@@ -483,7 +485,9 @@ class PackCommand(LifecycleCommand):
         data = models.PackState.from_yaml_file(file_list_path)
         return (data.artifact, data.resources)
 
-    def _save_packed_file_list(self, artifact: pathlib.Path | None, resources: dict[str, pathlib.Path] | None) -> None:
+    def _save_packed_file_list(
+        self, artifact: pathlib.Path | None, resources: dict[str, pathlib.Path] | None
+    ) -> None:
         """Save the list of the given artifact and resources."""
         work_dir = self._services.lifecycle.project_info.work_dir
         file_list_path = work_dir / _PACKED_FILE_LIST_PATH
