@@ -20,7 +20,7 @@ import os
 import pathlib
 import subprocess
 import textwrap
-from typing import Any
+from typing import Any, Literal, cast
 
 from craft_cli import CommandGroup, CraftError, emit
 from craft_parts.features import Features
@@ -60,6 +60,9 @@ class _BaseLifecycleCommand(base.ExtensibleCommand):
     environment) but do not have to provide shell access into the environment.
     """
 
+    _allow_destructive: bool = True
+    _show_lxd_arg: bool = True
+
     @override
     def _run(self, parsed_args: argparse.Namespace, **kwargs: Any) -> None:
         emit.trace(f"lifecycle command: {self.name!r}, arguments: {parsed_args!r}")
@@ -69,16 +72,18 @@ class _BaseLifecycleCommand(base.ExtensibleCommand):
         super()._fill_parser(parser)  # type: ignore[arg-type]
 
         group = parser.add_mutually_exclusive_group()
-        group.add_argument(
-            "--destructive-mode",
-            action="store_true",
-            help="Build in the current host",
-        )
-        group.add_argument(
-            "--use-lxd",
-            action="store_true",
-            help="Build in a LXD container.",
-        )
+        if self._allow_destructive:
+            group.add_argument(
+                "--destructive-mode",
+                action="store_true",
+                help="Build in the current host",
+            )
+        if self._show_lxd_arg:
+            group.add_argument(
+                "--use-lxd",
+                action="store_true",
+                help="Build in a LXD container.",
+            )
 
     @override
     def provider_name(self, parsed_args: argparse.Namespace) -> str | None:
@@ -117,6 +122,8 @@ class LifecycleCommand(_BaseLifecycleCommand):
     the lifecycle but cannot be run on a specific part.
     """
 
+    _allow_build_for: bool = True
+
     @override
     def _fill_parser(self, parser: argparse.ArgumentParser) -> None:
         super()._fill_parser(parser)
@@ -147,12 +154,13 @@ class LifecycleCommand(_BaseLifecycleCommand):
             metavar="name",
             help="Set platform to build for",
         )
-        group.add_argument(
-            "--build-for",
-            type=str,
-            metavar="arch",
-            help="Set architecture to build for",
-        )
+        if self._allow_build_for:
+            group.add_argument(
+                "--build-for",
+                type=str,
+                metavar="arch",
+                help="Set architecture to build for",
+            )
 
     @override
     def _run(
@@ -492,6 +500,9 @@ class TestCommand(PackCommand):
         """
     )
     common = True
+    _allow_destructive = False
+    _show_lxd_arg = False
+    _allow_build_for = False
 
     @override
     def _fill_parser(self, parser: argparse.ArgumentParser) -> None:
@@ -514,7 +525,6 @@ class TestCommand(PackCommand):
     ) -> None:
         # Add values for super classes like pack.
         parsed_args.output = pathlib.Path.cwd()
-        parsed_args.fetch_service_policy = None
 
         if util.is_managed_mode():
             # If we're in managed mode, we just need to pack.
@@ -528,40 +538,32 @@ class TestCommand(PackCommand):
         if parsed_args.platform:
             os.environ["CRAFT_PLATFORM"] = parsed_args.platform
             build_planner.set_platforms(parsed_args.platform)
-        if parsed_args.build_for:
-            os.environ["CRAFT_BUILD_FOR"] = parsed_args.build_for
-            build_planner.set_platforms(parsed_args.build_for)
-
-        if parsed_args.destructive_mode:
-            match len(plan := build_planner.plan()):
-                case 0:
-                    raise errors.EmptyBuildPlanError
-                case 1:
-                    emit.progress(
-                        "Packing on the current host. Tests will still occur as usual.",
-                        permanent=True,
-                    )
-                case _:
-                    raise errors.MultipleBuildsError(plan)
 
         testing_service = self._services.get("testing")
+        package = self._services.get("package")
+        provider = self._services.get("provider")
+
+        fetch_service_policy = cast(
+            Literal["strict", "permissive", None],
+            getattr(parsed_args, "fetch_service_policy", None),
+        )
+        if fetch_service_policy:
+            self._services.get("fetch").set_policy(
+                fetch_service_policy  # type: ignore[reportArgumentType]
+            )
 
         # Don't enter a shell during the packing step, but save those values
         # for the testing service.
         shell, shell_after = parsed_args.shell, parsed_args.shell_after
         parsed_args.shell, parsed_args.shell_after = (False, False)
 
-        package = self._services.get("package")
-        provider = self._services.get("provider")
-
         # This loop allows us to (pack, test) for each platform.
         for build_info in build_planner.plan():
             emit.progress(f"Packing platform '{build_info.platform}'")
             parsed_args.platform = build_info.platform
-            if parsed_args.destructive_mode:
-                self._run_real(parsed_args, "pack", **kwargs)
-            else:
-                provider.run_managed(build_info, enable_fetch_service=False)
+            provider.run_managed(
+                build_info, enable_fetch_service=bool(fetch_service_policy)
+            )
             pack_state = package.read_state(build_info.platform)
             if pack_state.artifact is None:
                 raise CraftError(

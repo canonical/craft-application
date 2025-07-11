@@ -156,14 +156,9 @@ class LifecycleService(base.AppService):
             raise errors.EmptyBuildPlanError
         return plan[0]
 
-    def _validate_build_plan(
-        self, build_info: craft_platforms.BuildInfo | None = None
-    ) -> None:
+    def _validate_build_plan(self) -> None:
         """Validate that the build plan is usable for a lifecycle run."""
-        if build_info is None:
-            plan = self._services.get("build_plan").plan()
-        else:
-            plan = [build_info]
+        plan = self._services.get("build_plan").plan()
         match len(plan):
             case 0:
                 raise errors.EmptyBuildPlanError
@@ -286,19 +281,16 @@ class LifecycleService(base.AppService):
         self,
         step_name: str | None,
         part_names: list[str] | None = None,
-        *,
-        build_info: craft_platforms.BuildInfo | None = None,
     ) -> None:
         """Run the lifecycle manager for the parts.
 
         :param step_name: The name of the target step (defaults to running the
             entire lifecycle)
         :param part_names: Which parts to build (defaults to all parts)
-        :param build_info: A specific build item to run.
         """
         target_step = _get_step(step_name) if step_name else None
 
-        self._validate_build_plan(build_info=build_info)
+        self._validate_build_plan()
 
         try:
             if self._project.package_repositories:

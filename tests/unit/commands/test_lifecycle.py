@@ -860,6 +860,7 @@ def test_relativize_paths_invalid(root, paths):
         (True, True, True, "something"),
     ],
 )
+@pytest.mark.parametrize("fetch_service_policy", [None, "strict", "permissive"])
 def test_test_run(
     emitter,
     mock_services,
@@ -870,6 +871,7 @@ def test_test_run(
     tests,
     fake_project_file,
     fake_platform,
+    fetch_service_policy,
 ):
     mock_services.get("build_plan").set_platforms(fake_platform)
     try:
@@ -878,7 +880,6 @@ def test_test_run(
         pytest.skip(f"Can't build for {fake_platform}")
     mock_services.package.pack.return_value = [pathlib.Path("package.zip")]
     parsed_args = argparse.Namespace(
-        destructive_mode=True,
         parts=["my-part"],
         debug=debug,
         shell=shell,
@@ -886,6 +887,7 @@ def test_test_run(
         test_expressions=tests,
         platform=fake_platform,
         build_for=None,
+        fetch_service_policy=fetch_service_policy,
     )
     command = TestCommand(
         {
@@ -896,9 +898,9 @@ def test_test_run(
 
     command.run(parsed_args)
 
-    mock_services.get("package").pack.assert_called_once_with(
-        mock_services.lifecycle.prime_dir,
-        pathlib.Path.cwd(),
+    mock_services.get("provider").run_managed.assert_called_once_with(
+        mock_services.get("build_plan").plan()[0],
+        enable_fetch_service=bool(fetch_service_policy),
     )
     mock_services.get("testing").test.assert_called_once_with(
         pathlib.Path.cwd(),
