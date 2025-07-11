@@ -505,7 +505,7 @@ def test_pack_fill_parser(
 )
 @pytest.mark.parametrize("parts", PARTS_LISTS)
 def test_pack_run(
-    emitter, mock_services, app_metadata, parts, tmp_path, packages, message
+    mocker, emitter, mock_services, app_metadata, parts, tmp_path, packages, message
 ):
     mock_services.package.pack.return_value = packages
     parsed_args = argparse.Namespace(
@@ -517,10 +517,8 @@ def test_pack_run(
             "services": mock_services,
         }
     )
-    command._services.lifecycle.project_info.work_dir = tmp_path
-    command._services.package.resource_map = {p.stem: p for p in packages[1:]} or None
-
-    command._services.lifecycle.project_info.work_dir = tmp_path
+    mocker.patch.object(command._services.lifecycle.project_info, "work_dir", tmp_path)
+    command._services.package.resource_map = {p.stem: p for p in packages[1:]} or None  # pyright: ignore[reportAttributeAccessIssue]
 
     command.run(parsed_args)
 
@@ -537,7 +535,12 @@ def test_pack_run(
     [("strict", True), ("permissive", True), (None, False)],
 )
 def test_pack_fetch_manifest(
-    mock_services, app_metadata, tmp_path, fetch_service_policy, expect_create_called
+    mocker,
+    mock_services,
+    app_metadata,
+    tmp_path,
+    fetch_service_policy,
+    expect_create_called,
 ):
     packages = [pathlib.Path("package.zip")]
     mock_services.package.pack.return_value = packages
@@ -552,7 +555,7 @@ def test_pack_fetch_manifest(
             "services": mock_services,
         }
     )
-    command._services.lifecycle.project_info.work_dir = tmp_path
+    mocker.patch.object(command._services.lifecycle.project_info, "work_dir", tmp_path)
 
     command.run(parsed_args)
 
@@ -867,7 +870,15 @@ def test_relativize_paths_invalid(root, paths):
     ],
 )
 def test_test_run(
-    emitter, mock_services, app_metadata, debug, shell, shell_after, tests, tmp_path
+    mocker,
+    emitter,
+    mock_services,
+    app_metadata,
+    debug,
+    shell,
+    shell_after,
+    tests,
+    tmp_path,
 ):
     mock_services.package.pack.return_value = [pathlib.Path("package.zip")]
     parsed_args = argparse.Namespace(
@@ -884,7 +895,7 @@ def test_test_run(
             "services": mock_services,
         }
     )
-    command._services.lifecycle.project_info.work_dir = tmp_path
+    mocker.patch.object(command._services.lifecycle.project_info, "work_dir", tmp_path)
 
     command.run(parsed_args)
 
@@ -904,7 +915,7 @@ def test_test_run(
 
 def test_get_packed_file_list_timestamp(mocker, new_dir, app_metadata, fake_services):
     command = PackCommand({"app": app_metadata, "services": fake_services})
-    command._services.lifecycle.project_info.work_dir = new_dir
+    mocker.patch.object(command._services.lifecycle.project_info, "work_dir", new_dir)
 
     path = pathlib.Path(".craft/packed-files")
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -919,7 +930,7 @@ def test_get_packed_file_list_timestamp_no_file(
     mocker, new_dir, app_metadata, fake_services
 ):
     command = PackCommand({"app": app_metadata, "services": fake_services})
-    command._services.lifecycle.work_dir = new_dir
+    mocker.patch.object(command._services.lifecycle.project_info, "work_dir", new_dir)
     assert command._get_packed_file_list_timestamp() is None
 
 
@@ -932,10 +943,10 @@ def test_get_packed_file_list_timestamp_no_file(
     ],
 )
 def test_save_packed_file_list(
-    tmp_path, app_metadata, fake_services, artifact, resources
+    mocker, tmp_path, app_metadata, fake_services, artifact, resources
 ):
     command = PackCommand({"app": app_metadata, "services": fake_services})
-    command._services.lifecycle.project_info.work_dir = tmp_path
+    mocker.patch.object(command._services.lifecycle.project_info, "work_dir", tmp_path)
 
     command._save_packed_file_list(artifact, resources)
 
@@ -953,10 +964,10 @@ def test_save_packed_file_list(
     ],
 )
 def test_load_packed_file_list(
-    tmp_path, app_metadata, fake_services, artifact, resources
+    mocker, tmp_path, app_metadata, fake_services, artifact, resources
 ):
     command = PackCommand({"app": app_metadata, "services": fake_services})
-    command._services.lifecycle.project_info.work_dir = tmp_path
+    mocker.patch.object(command._services.lifecycle.project_info, "work_dir", tmp_path)
 
     data = models.PackState(artifact=artifact, resources=resources)
     (tmp_path / ".craft").mkdir()
@@ -968,9 +979,9 @@ def test_load_packed_file_list(
     assert resources == data.resources
 
 
-def test_load_packed_file_list_no_file(tmp_path, app_metadata, fake_services):
+def test_load_packed_file_list_no_file(mocker, tmp_path, app_metadata, fake_services):
     command = PackCommand({"app": app_metadata, "services": fake_services})
-    command._services.lifecycle.project_info.work_dir = tmp_path
+    mocker.patch.object(command._services.lifecycle.project_info, "work_dir", tmp_path)
 
     artifact, resources = command._load_packed_file_list()
 

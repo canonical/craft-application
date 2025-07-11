@@ -475,7 +475,9 @@ class PackCommand(LifecycleCommand):
 
         return False
 
-    def _load_packed_file_list(self) -> tuple[pathlib.Path | None, dict[str, pathlib.Path] | None]:
+    def _load_packed_file_list(
+        self,
+    ) -> tuple[pathlib.Path | None, dict[str, pathlib.Path] | None]:
         """Load a list of artifact and resources."""
         work_dir = self._services.lifecycle.project_info.work_dir
         file_list_path = work_dir / _PACKED_FILE_LIST_PATH
