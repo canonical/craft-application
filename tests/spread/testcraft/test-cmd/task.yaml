@@ -8,9 +8,12 @@ environment:
   CI: "1"
 
 execute: |
-  testcraft test $CMDLINE
+  CRAFT_VERBOSITY_LEVEL=verbose testcraft test $CMDLINE 2> test_out.log
+  grep -q "platform 'a'" test_out.log
+  grep -q "platform 'b'" test_out.log
   testcraft test tests/spread/my-suite/my-task $CMDLINE
   testcraft test other:...:tests/spread/my-suite/my-task $CMDLINE 2>&1 | MATCH "No matches"
 
 restore: |
   testcraft clean
+  rm -f test_out.log

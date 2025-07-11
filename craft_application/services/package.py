@@ -72,9 +72,15 @@ class PackageService(base.AppService):
             value={k: str(v) for k, v in resources.items()} if resources else None,
         )
 
-    def read_state(self) -> models.PackState:
-        """Read the packaging state."""
-        platform = self._services.get("build_plan").plan()[0].platform
+    def read_state(self, platform: str | None = None) -> models.PackState:
+        """Read the packaging state.
+
+        :param platform: The name of the platform to read. If not provided, uses the
+            first platform in the build plan.
+        :returns: A PackState object containing the artifact and resources.
+        """
+        if platform is None:
+            platform = self._services.get("build_plan").plan()[0].platform
         state_service = self._services.get("state")
 
         artifact = cast(str | None, state_service.get("artifact", platform))
