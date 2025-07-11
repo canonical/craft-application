@@ -391,6 +391,8 @@ class PackCommand(LifecycleCommand):
 
         if self._is_already_packed():
             emit.progress("Skipping pack (already ran)")
+            artifact, resources = self._load_packed_file_list()
+            self._services.package.write_state(artifact=artifact, resources=resources)
             if shell_after:
                 _launch_shell()
             return
