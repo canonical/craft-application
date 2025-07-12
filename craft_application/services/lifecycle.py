@@ -225,6 +225,7 @@ class LifecycleService(base.AppService):
         emit.debug(f"Adopting part: {self._project.adopt_info}")
 
         source_ignore_patterns = [
+            ".craft",  # in case of unmanaged lifecycle run
             *self._app.source_ignore_patterns,
         ]
 
@@ -250,6 +251,11 @@ class LifecycleService(base.AppService):
             )
         except PartsError as err:
             raise errors.PartsLifecycleError.from_parts_error(err) from err
+
+    @property
+    def prime_state_timestamp(self) -> float | None:
+        """The timestamp of the most recently primed part's prime state file."""
+        return self._lcm.get_prime_state_timestamp()
 
     @property
     def prime_dir(self) -> Path:
