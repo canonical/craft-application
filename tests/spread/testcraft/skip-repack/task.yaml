@@ -14,22 +14,23 @@ execute: |
   testcraft pack
 
   # Repacking is not necessary
-  testcraft pack | MATCH "Skipping pack"
+  testcraft pack 2>&1 | MATCH "Skipping pack"
 
   # If we delete the package we must repack
   rm repack-test-0.1-platform-independent.testcraft
-  testcraft pack | MATCH "Packing"
+  testcraft pack 2>&1 | MATCH "Packing"
   test -f repack-test-0.1-platform-independent.testcraft
 
   # Repacking is not necessary
-  testcraft pack | MATCH "Skipping pack"
+  testcraft pack 2>&1 | MATCH "Skipping pack"
 
   # Add another part triggers repack
-  echo "  other-part:\n    plugin: nil" >> testcraft.yaml
-  testcraft pack | MATCH "Packing"
+  echo "  other-part:" >> testcraft.yaml
+  echo "    plugin: nil" >> testcraft.yaml
+  testcraft pack 2>&1 | MATCH "Packing"
 
   # Repacking is not necessary
-  testcraft pack | MATCH "Skipping pack"
+  testcraft pack 2>&1 | MATCH "Skipping pack"
 
 restore: |
-  rm -rf init-test
+  rm -rf repack-test

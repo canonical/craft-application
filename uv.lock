@@ -609,8 +609,8 @@ wheels = [
 
 [[package]]
 name = "craft-parts"
-version = "2.16.0.post3+gcd70e3e"
-source = { git = "https://github.com/canonical/craft-parts?rev=CRAFT-4642-Test-must-only-pack-if-necessary#cd70e3e9500bb5a50b4bad40e686a3602aeb8773" }
+version = "2.16.0.post3+ga041080"
+source = { git = "https://github.com/canonical/craft-parts?rev=CRAFT-4642-Test-must-only-pack-if-necessary#a04108054e9c55046e8729a8c0ec205d6bbb78df" }
 dependencies = [
     { name = "overrides" },
     { name = "pydantic" },
