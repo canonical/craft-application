@@ -393,6 +393,11 @@ class PackCommand(LifecycleCommand):
             emit.progress("Skipping pack (already ran)")
             artifact, resources = self._load_packed_file_list()
             self._services.package.write_state(artifact=artifact, resources=resources)
+
+            paths = (artifact, list(resources.values())) if resources else (artifact,)
+            files = ", ".join(str(p) for p in paths)
+            emit.progress(f"Already packed: {files}", permanent=True)
+
             if shell_after:
                 _launch_shell()
             return
