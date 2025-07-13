@@ -130,8 +130,6 @@ prepare: |
 suites:
   tests/spread/testcraft/:
     summary: Tests for testcraft core functionality
-    restore-each: |
-      testcraft clean
 
   tests/spread/partitioncraft/:
     summary: Tests for partitioncraft (app with partitions enabled)

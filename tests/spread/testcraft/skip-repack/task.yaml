@@ -32,5 +32,7 @@ execute: |
   # Repacking is not necessary
   testcraft pack 2>&1 | MATCH "Skipping pack"
 
+  testcraft clean
+
 restore: |
-  rm -rf repack-test
+  rm -Rf repack-test
