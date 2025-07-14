@@ -1,18 +1,14 @@
 summary: test the test command as though running in CI.
 
 environment:
-  CRAFT_BUILD_ENVIRONMENT/managed: ""
-  CRAFT_BUILD_ENVIRONMENT/destructive: host
-  CMDLINE/managed: ""
-  CMDLINE/destructive: --destructive-mode
   CI: "1"
 
 execute: |
-  CRAFT_VERBOSITY_LEVEL=verbose testcraft test $CMDLINE 2> test_out.log
+  CRAFT_VERBOSITY_LEVEL=TRACE testcraft test 2>&1 | tee test_out.log
   grep -q "platform 'a'" test_out.log
   grep -q "platform 'b'" test_out.log
-  testcraft test tests/spread/my-suite/my-task $CMDLINE
-  testcraft test other:...:tests/spread/my-suite/my-task $CMDLINE 2>&1 | MATCH "No matches"
+  testcraft test tests/spread/my-suite/my-task
+  testcraft test other:...:tests/spread/my-suite/my-task 2>&1 | MATCH "No matches"
 
 restore: |
   testcraft clean

@@ -87,7 +87,7 @@ class _BaseLifecycleCommand(base.ExtensibleCommand):
 
     @override
     def provider_name(self, parsed_args: argparse.Namespace) -> str | None:
-        return "lxd" if parsed_args.use_lxd else None
+        return "lxd" if getattr(parsed_args, "use_lxd", None) else None
 
     def _run_manager_for_build_plan(self, fetch_service_policy: str | None) -> None:
         """Run this command in managed mode, iterating over the generated build plan."""
@@ -411,7 +411,7 @@ class PackCommand(LifecycleCommand):
 
         packages = self._relativize_paths(packages, root=pathlib.Path())
 
-        if parsed_args.fetch_service_policy and packages:
+        if getattr(parsed_args, "fetch_service_policy", None) and packages:
             self._services.fetch.create_project_manifest(packages)
 
         if not packages:
