@@ -13,8 +13,10 @@ jobs:
   source-wheel:
     runs-on: [self-hosted]
     steps:
-      - name: Install uv
-        run: sudo snap install --classic astral-uv
+      - name: Install dependencies
+        run: |
+          sudo snap install --classic astral-uv
+          sudo apt install python3-venv
       - name: Checkout
         uses: actions/checkout@v4
       - name: Fetch tag annotations
