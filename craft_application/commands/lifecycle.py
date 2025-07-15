@@ -471,14 +471,15 @@ class PackCommand(LifecycleCommand):
         self, artifact: pathlib.Path | None, resources: dict[str, pathlib.Path] | None
     ) -> bool:
         """Verify if the artifact and resource files exist."""
-        paths: list[pathlib.Path] = []
         if artifact and not artifact.is_file():
             return True
+
         for path in resources.values():
             if not path.is_file():
                 return True
-        
+
         return False
+
     def _load_packed_file_list(
         self,
     ) -> tuple[pathlib.Path | None, dict[str, pathlib.Path] | None]:
