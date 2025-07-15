@@ -474,11 +474,11 @@ class PackCommand(LifecycleCommand):
         if artifact and not artifact.is_file():
             return True
 
-        for path in resources.values():
+        for path in resources.values():  # noqa: SIM110 (improve readability)
             if not path.is_file():
                 return True
 
-        return False  # noqa: SIM110 (improve readability)
+        return False
 
     def _load_packed_file_list(
         self,
