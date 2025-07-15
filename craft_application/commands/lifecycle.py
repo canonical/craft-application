@@ -478,7 +478,7 @@ class PackCommand(LifecycleCommand):
             if not path.is_file():
                 return True
 
-        return False
+        return False  # noqa: SIM110 (improve readability)
 
     def _load_packed_file_list(
         self,
