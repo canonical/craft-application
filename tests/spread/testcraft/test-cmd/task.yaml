@@ -13,4 +13,5 @@ execute: |
   testcraft test other:...:tests/spread/my-suite/my-task $CMDLINE 2>&1 | MATCH "No matches"
 
 restore: |
+  rm -f *.testcraft
   testcraft clean

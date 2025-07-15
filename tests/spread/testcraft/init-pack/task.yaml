@@ -25,4 +25,5 @@ execute: |
   fi
 
 restore: |
+  rm -f *.testcraft
   rm -rf init-test
