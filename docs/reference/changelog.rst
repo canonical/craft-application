@@ -13,6 +13,10 @@ Services
 - Add a new State service that manages a global state between manager and managed
   instances of an application.
 
+Commands
+========
+
+- The ``pack`` command will only repack if necessary.
 
 For a complete list of commits, check out the `5.5.0`_ release on GitHub.
 
