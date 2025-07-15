@@ -458,6 +458,7 @@ class PackCommand(LifecycleCommand):
         if prime_time is None:
             # This should never happen under normal circumstances, but manual
             # manipulation of state files is possible.
+            emit.debug("Couldn't find prime state timestamps.")
             return False
 
         if prime_time >= pack_time:
