@@ -473,6 +473,8 @@ class PackCommand(LifecycleCommand):
         """Verify if the artifact and resource files exist."""
         if artifact and not artifact.is_file():
             return True
+        if not resources:
+            return False
 
         for path in resources.values():  # noqa: SIM110 (improve readability)
             if not path.is_file():
