@@ -16,7 +16,8 @@ Services
 Commands
 ========
 
-- The ``pack`` command will only repack if necessary.
+- The ``pack`` command will only repack if necessary. The ``test`` command will
+  not recreate packages that already exist if the project has not been modified.
 
 For a complete list of commits, check out the `5.5.0`_ release on GitHub.
 
