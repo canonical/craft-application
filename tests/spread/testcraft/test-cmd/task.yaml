@@ -11,5 +11,6 @@ execute: |
   testcraft test other:...:tests/spread/my-suite/my-task 2>&1 | MATCH "No matches"
 
 restore: |
+  rm -f *.testcraft
   testcraft clean
   rm -f test_out.log

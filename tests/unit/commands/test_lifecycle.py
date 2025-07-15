@@ -24,7 +24,7 @@ import craft_parts
 import craft_platforms
 import pytest
 import pytest_mock
-from craft_application import errors
+from craft_application import errors, models
 from craft_application.application import AppMetadata
 from craft_application.commands.lifecycle import (
     BuildCommand,
@@ -39,6 +39,7 @@ from craft_application.commands.lifecycle import (
     TestCommand,
     get_lifecycle_command_group,
 )
+from craft_application.services import LifecycleService
 from craft_application.services.service_factory import ServiceFactory
 from craft_parts import Features
 
@@ -504,7 +505,7 @@ def test_pack_fill_parser(
 )
 @pytest.mark.parametrize("parts", PARTS_LISTS)
 def test_pack_run(
-    emitter, mock_services, app_metadata, parts, tmp_path, packages, message
+    mocker, emitter, mock_services, app_metadata, parts, tmp_path, packages, message
 ):
     mock_services.package.pack.return_value = packages
     parsed_args = argparse.Namespace(
@@ -516,6 +517,8 @@ def test_pack_run(
             "services": mock_services,
         }
     )
+    mocker.patch.object(command._services.lifecycle.project_info, "work_dir", tmp_path)
+    command._services.package.resource_map = {p.stem: p for p in packages[1:]} or None  # pyright: ignore[reportAttributeAccessIssue]
 
     command.run(parsed_args)
 
@@ -532,7 +535,12 @@ def test_pack_run(
     [("strict", True), ("permissive", True), (None, False)],
 )
 def test_pack_fetch_manifest(
-    mock_services, app_metadata, tmp_path, fetch_service_policy, expect_create_called
+    mocker,
+    mock_services,
+    app_metadata,
+    tmp_path,
+    fetch_service_policy,
+    expect_create_called,
 ):
     packages = [pathlib.Path("package.zip")]
     mock_services.package.pack.return_value = packages
@@ -547,6 +555,7 @@ def test_pack_fetch_manifest(
             "services": mock_services,
         }
     )
+    mocker.patch.object(command._services.lifecycle.project_info, "work_dir", tmp_path)
 
     command.run(parsed_args)
 
@@ -862,6 +871,7 @@ def test_relativize_paths_invalid(root, paths):
 )
 @pytest.mark.parametrize("fetch_service_policy", [None, "strict", "permissive"])
 def test_test_run(
+    mocker,
     emitter,
     mock_services,
     app_metadata,
@@ -910,3 +920,138 @@ def test_test_run(
         debug=debug,
         test_expressions=tests,
     )
+
+
+def test_get_packed_file_list_timestamp(mocker, new_dir, app_metadata, fake_services):
+    command = PackCommand({"app": app_metadata, "services": fake_services})
+    mocker.patch.object(command._services.lifecycle.project_info, "work_dir", new_dir)
+
+    path = pathlib.Path(".craft/packed-files")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.touch()
+    expected_time = path.stat().st_mtime_ns
+    actual_time = command._get_packed_file_list_timestamp()
+
+    assert actual_time == expected_time
+
+
+def test_get_packed_file_list_timestamp_no_file(
+    mocker, new_dir, app_metadata, fake_services
+):
+    command = PackCommand({"app": app_metadata, "services": fake_services})
+    mocker.patch.object(command._services.lifecycle.project_info, "work_dir", new_dir)
+    assert command._get_packed_file_list_timestamp() is None
+
+
+@pytest.mark.parametrize(
+    ("artifact", "resources"),
+    [
+        (None, None),
+        (pathlib.Path("foo"), None),
+        (pathlib.Path("foo"), {"bar": pathlib.Path("bar.tar.gz")}),
+    ],
+)
+def test_save_packed_file_list(
+    mocker, tmp_path, app_metadata, fake_services, artifact, resources
+):
+    command = PackCommand({"app": app_metadata, "services": fake_services})
+    mocker.patch.object(command._services.lifecycle.project_info, "work_dir", tmp_path)
+
+    command._save_packed_file_list(artifact, resources)
+
+    data = models.PackState.from_yaml_file(tmp_path / ".craft" / "packed-files")
+    assert data.artifact == artifact
+    assert data.resources == resources
+
+
+@pytest.mark.parametrize(
+    ("artifact", "resources"),
+    [
+        (None, None),
+        (pathlib.Path("foo"), None),
+        (pathlib.Path("foo"), {"bar": pathlib.Path("bar.gz")}),
+    ],
+)
+def test_load_packed_file_list(
+    mocker, tmp_path, app_metadata, fake_services, artifact, resources
+):
+    command = PackCommand({"app": app_metadata, "services": fake_services})
+    mocker.patch.object(command._services.lifecycle.project_info, "work_dir", tmp_path)
+
+    data = models.PackState(artifact=artifact, resources=resources)
+    (tmp_path / ".craft").mkdir()
+    data.to_yaml_file(tmp_path / ".craft" / "packed-files")
+
+    artifact, resources = command._load_packed_file_list()
+
+    assert artifact == data.artifact
+    assert resources == data.resources
+
+
+def test_load_packed_file_list_no_file(mocker, tmp_path, app_metadata, fake_services):
+    command = PackCommand({"app": app_metadata, "services": fake_services})
+    mocker.patch.object(command._services.lifecycle.project_info, "work_dir", tmp_path)
+
+    artifact, resources = command._load_packed_file_list()
+
+    assert artifact is None
+    assert resources is None
+
+
+@pytest.mark.parametrize(
+    ("artifact", "resources", "files", "result"),
+    [
+        (None, None, [], False),
+        (pathlib.Path("foo"), None, [], True),
+        (pathlib.Path("foo"), None, [pathlib.Path("foo")], False),
+        (
+            pathlib.Path("foo"),
+            {"bar": pathlib.Path("bar.gz")},
+            [pathlib.Path("foo")],
+            True,
+        ),
+        (
+            pathlib.Path("foo"),
+            {"bar": pathlib.Path("bar.gz")},
+            [pathlib.Path("foo"), pathlib.Path("bar.gz")],
+            False,
+        ),
+    ],
+)
+def test_is_missing_packed_files(
+    new_dir, app_metadata, fake_services, artifact, resources, files, result
+):
+    command = PackCommand({"app": app_metadata, "services": fake_services})
+
+    for f in files:
+        f.touch()
+
+    assert command._is_missing_packed_files(artifact, resources) == result
+
+
+@pytest.mark.parametrize(
+    ("pack_time", "prime_time", "is_missing", "result"),
+    [
+        (None, None, False, False),  # No times available
+        (None, 1000, False, False),  # Primed but pack time not available
+        (1500, 1000, False, True),  # Pack is more recent and files exist
+        (1500, 1000, True, False),  # No packed artifacts
+        (1500, None, False, False),  # No prime time (should never happen)
+        (1000, 1500, False, False),  # Prime time is more recent than pack
+    ],
+)
+def test_is_already_packed(
+    mocker, app_metadata, fake_services, pack_time, prime_time, is_missing, result
+):
+    command = PackCommand({"app": app_metadata, "services": fake_services})
+    mocker.patch(
+        "craft_application.commands.lifecycle.PackCommand._get_packed_file_list_timestamp",
+        return_value=pack_time,
+    )
+    mocker.patch.object(LifecycleService, "prime_state_timestamp", prime_time)
+    mocker.patch(
+        "craft_application.commands.lifecycle.PackCommand._is_missing_packed_files",
+        return_value=is_missing,
+    )
+
+    assert command._is_already_packed() == result
