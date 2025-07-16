@@ -43,6 +43,8 @@ class BuildPlanService(base.AppService):
     def set_platforms(self, *platform: str) -> None:
         """Set the platforms for the build plan."""
         self.__platforms = list(platform)
+        # Reset cached plan
+        self.__plan = None
 
     def set_build_fors(
         self, *build_for: craft_platforms.DebianArchitecture | str
@@ -52,6 +54,8 @@ class BuildPlanService(base.AppService):
             "all" if target == "all" else craft_platforms.DebianArchitecture(target)
             for target in build_for
         ]
+        # Reset cached plan
+        self.__plan = None
 
     @final
     def plan(self) -> Sequence[craft_platforms.BuildInfo]:

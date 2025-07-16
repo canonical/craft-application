@@ -80,6 +80,7 @@ class AppMetadata:
     ConfigModel: type[_config.ConfigModel] = _config.ConfigModel
 
     ProjectClass: type[models.Project] = models.Project
+    supports_multi_base: bool = False
 
     def __post_init__(self) -> None:
         setter = super().__setattr__

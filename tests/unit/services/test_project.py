@@ -16,7 +16,7 @@
 import dataclasses
 import pathlib
 import textwrap
-from typing import cast
+from typing import Any, cast
 from unittest import mock
 
 import craft_platforms
@@ -36,6 +36,56 @@ def real_project_service(fake_services: ServiceFactory):
     svc = fake_services.get("project")
     assert type(svc) is ProjectService
     return svc
+
+
+@pytest.mark.parametrize(
+    ("platforms_dict", "platform"),
+    [
+        *(
+            pytest.param({arch: None}, None, id=arch)
+            for arch in craft_platforms.DebianArchitecture
+        ),
+        pytest.param(
+            {"platform-independent": {"build-on": ["s390x"], "build-for": ["all"]}},
+            None,
+            id="platform-independent",
+        ),
+        *(
+            pytest.param(
+                {
+                    "noble": {
+                        "build-on": ["ubuntu@24.04:riscv64"],
+                        "build-for": ["ubuntu@24.04:riscv64"],
+                    },
+                    "jammy": {
+                        "build-on": ["ubuntu@22.04:amd64"],
+                        "build-for": ["ubuntu@22.04:amd64"],
+                    },
+                },
+                platform,
+                id=f"multi-base-{platform}",
+            )
+            for platform in [None, "noble", "jammy"]
+        ),
+        *(
+            pytest.param(
+                {"amd64": {"build-on": ["amd64", "arm64", "riscv64", "s390x"]}},
+                "amd64",
+                id=f"implicit-build-for-{platform}",
+            )
+            for platform in [None, "amd64"]
+        ),
+    ],
+)
+def test_configure_success_self_select(
+    real_project_service: ProjectService,
+    fake_host_architecture: craft_platforms.DebianArchitecture,
+    platforms_dict: dict[str, Any],
+    platform: str | None,
+):
+    real_project_service._load_raw_project = lambda: {"platforms": platforms_dict}  # type: ignore  # noqa: PGH003
+
+    real_project_service.configure(platform=platform, build_for=None)
 
 
 def test_resolve_file_path_success(
@@ -123,6 +173,16 @@ def test_load_raw_project_invalid(
             for arch in craft_platforms.DebianArchitecture
         ),
         pytest.param(
+            {"s390x": {"build-on": ["amd64", "arm64", "riscv64", "s390x"]}},
+            {
+                "s390x": {
+                    "build-on": ["amd64", "arm64", "riscv64", "s390x"],
+                    "build-for": ["s390x"],
+                }
+            },
+            id="implicit-build-for",
+        ),
+        pytest.param(
             {"ppc64el": {"build-on": ["amd64", "riscv64"]}},
             {"ppc64el": {"build-on": ["amd64", "riscv64"], "build-for": ["ppc64el"]}},
             id="only-build-on-valid-name",
@@ -137,6 +197,26 @@ def test_load_raw_project_invalid(
             {"s390x": {"build-on": ["ppc64el"], "build-for": ["s390x"]}},
             id="null-build-for-valid-name",
         ),
+        pytest.param(
+            {
+                "jammy": {
+                    "build-on": ["ubuntu@22.04:amd64"],
+                    "build-for": ["ubuntu@22.04:amd64"],
+                },
+                "ubuntu@24.04:riscv64": None,
+            },
+            {
+                "jammy": {
+                    "build-on": ["ubuntu@22.04:amd64"],
+                    "build-for": ["ubuntu@22.04:amd64"],
+                },
+                "ubuntu@24.04:riscv64": {
+                    "build-on": ["ubuntu@24.04:riscv64"],
+                    "build-for": ["ubuntu@24.04:riscv64"],
+                },
+            },
+            id="multi-platform",
+        ),
     ],
 )
 def test_get_platforms(
@@ -146,7 +226,14 @@ def test_get_platforms(
 ):
     real_project_service._load_raw_project = lambda: {"platforms": platforms}  # type: ignore  # noqa: PGH003
 
-    assert real_project_service.get_platforms() == expected
+    first_platforms = real_project_service.get_platforms()
+
+    assert first_platforms == expected
+
+    # Mutating this should not affect future calls.
+    assert "foo" not in first_platforms
+    first_platforms["foo"] = {"build-on": [], "build-for": []}
+    assert "foo" not in real_project_service.get_platforms()
 
 
 @pytest.mark.parametrize(
@@ -183,12 +270,31 @@ def test_get_platforms(
             r"input should be a valid dictionary.+'platforms.all'",
             id="invalid-short-name",
         ),
+        pytest.param(
+            {"ubuntu@26.04:riscv64": None},
+            r"^Testcraft does not support multi-base platforms$",
+            id="implicit-multi-base",
+        ),
+        pytest.param(
+            {
+                "something": {
+                    "build-on": ["ubuntu@26.04:riscv64"],
+                    "build-for": ["ubuntu@26.04:riscv64"],
+                }
+            },
+            r"^Testcraft does not support multi-base platforms$",
+            id="explicit-multi-base",
+        ),
     ],
 )
 def test_get_platforms_bad_value(
     real_project_service: ProjectService, platforms, match
 ):
     real_project_service._load_raw_project = lambda: {"platforms": platforms}  # type: ignore  # noqa: PGH003
+    # We have extra checks if we don't support multi-base.
+    real_project_service._app = dataclasses.replace(
+        real_project_service._app, supports_multi_base=False
+    )
 
     with pytest.raises(errors.CraftValidationError, match=match):
         real_project_service.get_platforms()
