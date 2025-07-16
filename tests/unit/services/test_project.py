@@ -226,7 +226,14 @@ def test_get_platforms(
 ):
     real_project_service._load_raw_project = lambda: {"platforms": platforms}  # type: ignore  # noqa: PGH003
 
-    assert real_project_service.get_platforms() == expected
+    first_platforms = real_project_service.get_platforms()
+
+    assert first_platforms == expected
+
+    # Mutating this should not affect future calls.
+    assert "foo" not in first_platforms
+    first_platforms["foo"] = {"build-on": [], "build-for": []}
+    assert "foo" not in real_project_service.get_platforms()
 
 
 @pytest.mark.parametrize(

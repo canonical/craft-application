@@ -72,7 +72,7 @@ class ProjectService(base.AppService):
         if self.is_configured:
             raise RuntimeError("Project is already configured.")
 
-        platforms = self.get_platforms().copy()
+        platforms = self.get_platforms()
         # This is needed if a child class doesn't necessarily vectorise all platforms
         # in get_platforms. This is needed for charmcraft's multi-platforms.
         if None in platforms.values():
@@ -262,7 +262,7 @@ class ProjectService(base.AppService):
         be defined by extensions, etc.
         """
         if self.__platforms:
-            return self.__platforms.copy()
+            return copy.deepcopy(self.__platforms)
         raw_project = self.get_raw()
         if "platforms" not in raw_project:
             return self._app_render_legacy_platforms()
@@ -275,12 +275,15 @@ class ProjectService(base.AppService):
                 file_name=self.project_file_name,
             ) from None
         self._validate_multi_base(self.__platforms)
-        return self.__platforms
+        return copy.deepcopy(self.__platforms)
 
     def _validate_multi_base(
         self, platforms: dict[str, craft_platforms.PlatformDict]
     ) -> None:
         """Ensure that the given platforms are not multi-base.
+
+        An application that supports multi-base platforms entries can override this
+        method to do any validation of multi-base platforms it may need.
 
         :param platforms: The platforms mapping to ensure is multi-base.
         :raises: CraftValidationError if the app does not support multi-base and one
