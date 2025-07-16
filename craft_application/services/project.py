@@ -300,10 +300,10 @@ class ProjectService(base.AppService):
                     if base:
                         multi_base_platforms.add(name)
         if multi_base_platforms:
-            invalid_platforms_str = ",".join(repr(p) for p in multi_base_platforms)
+            invalid_platforms_str = ", ".join(repr(p) for p in multi_base_platforms)
             raise errors.CraftValidationError(
                 f"{self._app.name.title()} does not support multi-base platforms",
-                resolution=f"Remove multi-base structure from platforms: {invalid_platforms_str}",
+                resolution=f"Remove multi-base structure from these platforms: {invalid_platforms_str}",
                 logpath_report=False,
                 retcode=os.EX_DATAERR,
             )
@@ -562,7 +562,7 @@ class ProjectService(base.AppService):
         """Convert a build-on value to a valid internal value.
 
         :param architecture: A valid build-for architecture as a string
-        :returns: The architecture as a DebianArchitecture or the special case string "all"
+        :returns: The architecture as a DebianArchitecture
         :raises: CraftValidationError if the given value is not valid for build-for.
         """
         # Convert distro@series:architecture to just the architecture.

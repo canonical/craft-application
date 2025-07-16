@@ -71,7 +71,7 @@ def real_project_service(fake_services: ServiceFactory):
             pytest.param(
                 {"amd64": {"build-on": ["amd64", "arm64", "riscv64", "s390x"]}},
                 "amd64",
-                id="implicit-build-for-{platform}",
+                id=f"implicit-build-for-{platform}",
             )
             for platform in [None, "amd64"]
         ),
