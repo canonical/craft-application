@@ -20,6 +20,7 @@ from __future__ import annotations
 import dataclasses
 import re
 from pathlib import Path
+from typing import TYPE_CHECKING
 from unittest import mock
 
 import craft_parts
@@ -31,7 +32,6 @@ import pytest_check
 from craft_application import errors, models, util
 from craft_application.errors import EmptyBuildPlanError, PartsLifecycleError
 from craft_application.services import lifecycle
-from craft_application.services.buildplan import BuildPlanService
 from craft_application.util import repositories
 from craft_parts import (
     Action,
@@ -46,6 +46,9 @@ from craft_parts import (
 from craft_parts.executor import (
     ExecutionContext,  # pyright: ignore[reportPrivateImportUsage]
 )
+
+if TYPE_CHECKING:
+    from craft_application.services.buildplan import BuildPlanService
 
 
 def skip_if_build_plan_empty(build_planner: BuildPlanService):
@@ -288,6 +291,7 @@ def test_init_parts_error(
 
     assert exc_info.value.args == expected.args
     assert mock_lifecycle.mock_calls[0].kwargs["ignore_local_sources"] == [
+        ".craft",
         "*.snap",
         "*.charm",
         "*.starcraft",
@@ -314,6 +318,7 @@ def test_init_parts_ignore_spread(
     service.setup()
 
     assert mock_lifecycle.mock_calls[0].kwargs["ignore_local_sources"] == [
+        ".craft",
         "*.snap",
         "*.charm",
         "*.starcraft",

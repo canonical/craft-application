@@ -1,0 +1,38 @@
+summary: test testcraft pack/repack
+
+environment:
+  CRAFT_BUILD_ENVIRONMENT/managed: ""
+  CRAFT_BUILD_ENVIRONMENT/destructive: host
+
+execute: |
+  mkdir repack-test
+  cd repack-test
+
+  testcraft init
+
+  # Run initial pack
+  testcraft pack
+
+  # Repacking is not necessary
+  testcraft pack 2>&1 | MATCH "Skipping pack"
+
+  # If we delete the package we must repack
+  rm repack-test-0.1-platform-independent.testcraft
+  testcraft pack 2>&1 | MATCH "Packing"
+  test -f repack-test-0.1-platform-independent.testcraft
+
+  # Repacking is not necessary
+  testcraft pack 2>&1 | MATCH "Skipping pack"
+
+  # Add another part triggers repack
+  echo "  other-part:" >> testcraft.yaml
+  echo "    plugin: nil" >> testcraft.yaml
+  testcraft pack 2>&1 | MATCH "Packing"
+
+  # Repacking is not necessary
+  testcraft pack 2>&1 | MATCH "Skipping pack"
+
+  testcraft clean
+
+restore: |
+  rm -Rf repack-test

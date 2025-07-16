@@ -17,7 +17,6 @@
 
 from __future__ import annotations
 
-import argparse
 import importlib
 import os
 import pathlib
@@ -26,23 +25,27 @@ import subprocess
 import sys
 import traceback
 import warnings
-from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
 from functools import cached_property
 from importlib import metadata
 from typing import TYPE_CHECKING, Any, Literal, cast, final
 
 import craft_cli
-import craft_parts
 import craft_platforms
 import craft_providers
-from craft_parts.plugins.plugins import PluginType
+from craft_parts.errors import PartsError
 from platformdirs import user_cache_path
 
 from craft_application import _config, commands, errors, models, util
 from craft_application.errors import PathInvalidError
 
 if TYPE_CHECKING:
+    import argparse
+    from collections.abc import Iterable, Sequence
+
+    from craft_parts.infos import ProjectInfo
+    from craft_parts.plugins.plugins import PluginType
+
     from craft_application.services import service_factory
 
 GLOBAL_VERSION = craft_cli.GlobalArgument(
@@ -509,10 +512,11 @@ class Application:
         """Register plugins for this application."""
         if not plugins:
             return
+        from craft_parts.plugins import register  # noqa: PLC0415
 
         craft_cli.emit.trace("Registering plugins...")
         craft_cli.emit.trace(f"Plugins: {', '.join(plugins.keys())}")
-        craft_parts.plugins.register(plugins)
+        register(plugins)
 
     def _register_default_plugins(self) -> None:
         """Register per application plugins when initializing."""
@@ -626,7 +630,7 @@ class Application:
         except craft_cli.CraftError as err:
             self._emit_error(err)
             return_code = err.retcode
-        except craft_parts.PartsError as err:
+        except PartsError as err:
             self._emit_error(
                 errors.PartsLifecycleError.from_parts_error(err),
                 cause=err,
@@ -702,7 +706,7 @@ class Application:
             pvars[var] = str(yaml_data.get(var, ""))
         return pvars
 
-    def _set_global_environment(self, info: craft_parts.ProjectInfo) -> None:
+    def _set_global_environment(self, info: ProjectInfo) -> None:
         """Populate the ProjectInfo's global environment.
 
         DEPRECATED: This method is deprecated and is not called by default.
