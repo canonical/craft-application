@@ -72,13 +72,17 @@ class ProjectService(base.AppService):
         if self.is_configured:
             raise RuntimeError("Project is already configured.")
 
-        platforms = self.get_platforms()
+        platforms = self.get_platforms().copy()
+        # This is needed if a child class doesn't necessarily vectorise all platforms
+        # in get_platforms. This is needed for charmcraft's multi-platforms.
+        if None in platforms.values():
+            self._vectorise_platforms(platforms)
         if platform and platform not in platforms:
             raise errors.InvalidPlatformError(platform, list(platforms.keys()))
 
         if platform and build_for:
             self._platform = platform
-            self._build_for = _convert_build_for(build_for)
+            self._build_for = self._convert_build_for(build_for)
             self.__is_configured = True
             return
 
@@ -96,7 +100,7 @@ class ProjectService(base.AppService):
             else:
                 if build_for:
                     # Gives a clean error if the value of build_for is invalid.
-                    _convert_build_for(build_for)
+                    self._convert_build_for(build_for)
                     raise errors.ProjectGenerationError(
                         f"Cannot generate a project that builds on "
                         f"{self._build_on} and builds for {build_for}"
@@ -107,8 +111,8 @@ class ProjectService(base.AppService):
                 platform = next(iter(platforms))
                 self._platform = platform
                 build_for = platforms[platform]["build-for"][0]
-                self._build_for = _convert_build_for(build_for)
-                self._build_on = craft_platforms.DebianArchitecture(
+                self._build_for = self._convert_build_for(build_for)
+                self._build_on = self._convert_build_on(
                     platforms[platform]["build-on"][0]
                 )
                 self.__is_configured = True
@@ -119,11 +123,7 @@ class ProjectService(base.AppService):
             # Any build-for in the platform is fine. For most crafts this is the
             # only build-for in the platform.
             build_for = platforms[platform]["build-for"][0]
-        self._build_for = (
-            build_for
-            if build_for == "all"
-            else craft_platforms.DebianArchitecture(build_for)
-        )
+        self._build_for = self._convert_build_for(build_for)
         self.__is_configured = True
 
     @property
@@ -211,8 +211,11 @@ class ProjectService(base.AppService):
         """Vectorise the platforms dictionary in place."""
         for name, data in platforms.items():
             if data is None:
-                # list call is needed until we have python 3.12 as minimum
-                if name not in list(craft_platforms.DebianArchitecture):
+                try:
+                    _, arch = craft_platforms.parse_base_and_architecture(name)
+                except ValueError:
+                    continue
+                if arch == "all":
                     continue
                 platforms[name] = {
                     "build-on": [name],
@@ -260,7 +263,7 @@ class ProjectService(base.AppService):
         """
         if self.__platforms:
             return self.__platforms.copy()
-        raw_project = self._load_raw_project()
+        raw_project = self.get_raw()
         if "platforms" not in raw_project:
             return self._app_render_legacy_platforms()
 
@@ -271,7 +274,39 @@ class ProjectService(base.AppService):
                 exc,
                 file_name=self.project_file_name,
             ) from None
+        self._validate_multi_base(self.__platforms)
         return self.__platforms
+
+    def _validate_multi_base(
+        self, platforms: dict[str, craft_platforms.PlatformDict]
+    ) -> None:
+        """Ensure that the given platforms are not multi-base.
+
+        :param platforms: The platforms mapping to ensure is multi-base.
+        :raises: CraftValidationError if the app does not support multi-base and one
+            or more platforms use multi-base structure.
+        """
+        if self._app.supports_multi_base:
+            return
+        multi_base_platforms: set[str] = set()
+        for name, data in platforms.items():
+            if not data:
+                base, _ = craft_platforms.parse_base_and_architecture(name)
+                if base:
+                    multi_base_platforms.add(name)
+            else:
+                for value in (*data.get("build-on", ()), *data.get("build-for", ())):
+                    base, _ = craft_platforms.parse_base_and_architecture(value)
+                    if base:
+                        multi_base_platforms.add(name)
+        if multi_base_platforms:
+            invalid_platforms_str = ",".join(repr(p) for p in multi_base_platforms)
+            raise errors.CraftValidationError(
+                f"{self._app.name.title()} does not support multi-base platforms",
+                resolution=f"Remove multi-base structure from platforms: {invalid_platforms_str}",
+                logpath_report=False,
+                retcode=os.EX_DATAERR,
+            )
 
     @final
     def _get_project_vars(self, yaml_data: dict[str, Any]) -> dict[str, str]:
@@ -370,7 +405,7 @@ class ProjectService(base.AppService):
         info = craft_parts.ProjectInfo(
             application_name=self._app.name,  # not used in environment expansion
             cache_dir=pathlib.Path(),  # not used in environment expansion
-            arch=build_for,
+            arch=str(self._convert_build_for(build_for)),
             parallel_build_count=util.get_parallel_build_count(self._app.name),
             project_name=project_data.get("name", ""),
             project_dirs=project_dirs,
@@ -493,26 +528,50 @@ class ProjectService(base.AppService):
             )
         return self._project_model
 
+    @staticmethod
+    def _convert_build_for(
+        architecture: str,
+    ) -> craft_platforms.DebianArchitecture | Literal["all"]:
+        """Convert a build-for value to a valid internal value.
 
-def _convert_build_for(
-    architecture: str,
-) -> craft_platforms.DebianArchitecture | Literal["all"]:
-    """Convert a build-for value to a valid internal value.
+        :param architecture: A valid build-for architecture as a string
+        :returns: The architecture as a DebianArchitecture or the special case string "all"
+        :raises: CraftValidationError if the given value is not valid for build-for.
+        """
+        # Convert distro@series:architecture to just the architecture.
+        architecture = architecture.rpartition(":")[2]
+        try:
+            return (
+                "all"
+                if architecture == "all"
+                else craft_platforms.DebianArchitecture(architecture)
+            )
+        except ValueError:
+            raise errors.CraftValidationError(
+                f"{architecture!r} is not a valid Debian architecture",
+                resolution="Use a supported Debian architecture name.",
+                reportable=False,
+                logpath_report=False,
+            ) from None
 
-    :param architecture: A valid build-for architecture as a string
-    :returns: The architecture as a DebianArchitecture or the special case string "all"
-    :raises: CraftValidationError if the given value is not valid for build-for.
-    """
-    try:
-        return (
-            "all"
-            if architecture == "all"
-            else craft_platforms.DebianArchitecture(architecture)
-        )
-    except ValueError:
-        raise errors.CraftValidationError(
-            f"{architecture!r} is not a valid Debian architecture",
-            resolution="Use a supported Debian architecture name.",
-            reportable=False,
-            logpath_report=False,
-        ) from None
+    @staticmethod
+    def _convert_build_on(
+        architecture: str,
+    ) -> craft_platforms.DebianArchitecture:
+        """Convert a build-on value to a valid internal value.
+
+        :param architecture: A valid build-for architecture as a string
+        :returns: The architecture as a DebianArchitecture or the special case string "all"
+        :raises: CraftValidationError if the given value is not valid for build-for.
+        """
+        # Convert distro@series:architecture to just the architecture.
+        architecture = architecture.rpartition(":")[2]
+        try:
+            return craft_platforms.DebianArchitecture(architecture)
+        except ValueError:
+            raise errors.CraftValidationError(
+                f"{architecture!r} is not a valid Debian architecture",
+                resolution="Use a supported Debian architecture name.",
+                reportable=False,
+                logpath_report=False,
+            ) from None

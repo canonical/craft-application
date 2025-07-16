@@ -208,6 +208,7 @@ def app_metadata(fake_config_model) -> craft_application.AppMetadata:
             source_ignore_patterns=["*.snap", "*.charm", "*.starcraft"],
             docs_url="www.testcraft.example/docs/{version}",
             ConfigModel=fake_config_model,
+            supports_multi_base=True,
         )
 
 

@@ -50,6 +50,7 @@ class BuildPlanService(base.AppService):
             "all" if target == "all" else craft_platforms.DebianArchitecture(target)
             for target in build_for
         ]
+        self.__plan = None
 
     @final
     def plan(self) -> Sequence[craft_platforms.BuildInfo]:

@@ -51,7 +51,7 @@ class Platform(base.CraftBaseModel):
     build_for: SingleEntryList[str] | str = pydantic.Field(
         examples=[
             "amd64",
-            ["arm64", "riscv64"],
+            ["riscv64"],
         ]
     )
     """Target architecture for the build.
