@@ -8,7 +8,10 @@ on:
 
 jobs:
   snap-build:
-    runs-on: [self-hosted, amd64]
+    strategy:
+      matrix:
+        arch: [amd64, arm64]
+    runs-on: [self-hosted, "${{ matrix.arch }}"]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -20,7 +23,7 @@ jobs:
       - name: Upload snap artifact
         uses: actions/upload-artifact@v4
         with:
-          name: snap
+          name: snap-${{ matrix.arch }}
           path: ${{ steps.snap.outputs.snap }}
 
   snap-tests:
@@ -29,8 +32,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        spread:
-          - "google:"
+        arch: [amd64, arm64]
+        include:
+          - arch: amd64
+            spread: "google:"
+          - arch: arm64
+            spread: "google-arm:"
 
     steps:
       - name: Cleanup job workspace
@@ -47,7 +54,7 @@ jobs:
       - name: Download snap artifact
         uses: actions/download-artifact@v4
         with:
-          name: snap
+          name: snap-${{ matrix.arch }}
 
       - name: Run spread
         run: |
