@@ -67,6 +67,14 @@ def real_project_service(fake_services: ServiceFactory):
             )
             for platform in [None, "noble", "jammy"]
         ),
+        *(
+            pytest.param(
+                {"amd64": {"build-on": ["amd64", "arm64", "riscv64", "s390x"]}},
+                "amd64",
+                id="implicit-build-for-{platform}",
+            )
+            for platform in [None, "amd64"]
+        ),
     ],
 )
 def test_configure_success_self_select(
@@ -163,6 +171,16 @@ def test_load_raw_project_invalid(
                 id=f"vectorise-{arch}",
             )
             for arch in craft_platforms.DebianArchitecture
+        ),
+        pytest.param(
+            {"s390x": {"build-on": ["amd64", "arm64", "riscv64", "s390x"]}},
+            {
+                "s390x": {
+                    "build-on": ["amd64", "arm64", "riscv64", "s390x"],
+                    "build-for": ["s390x"],
+                }
+            },
+            id="implicit-build-for",
         ),
         pytest.param(
             {"ppc64el": {"build-on": ["amd64", "riscv64"]}},
