@@ -4,7 +4,7 @@
 Changelog
 *********
 
-5.5.0 (2025-MM-DD)
+5.5.0 (2025-07-17)
 ------------------
 
 Services
@@ -12,12 +12,14 @@ Services
 
 - Add a new State service that manages a global state between manager and managed
   instances of an application.
+- Make the Project service compatible with multi-base platform definitions.
 
 Commands
 ========
 
 - The ``pack`` command will only repack if necessary. The ``test`` command will
   not recreate packages that already exist if the project has not been modified.
+- The ``test`` command will test all packed platforms.
 
 For a complete list of commits, check out the `5.5.0`_ release on GitHub.
 
