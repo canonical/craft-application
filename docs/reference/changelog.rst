@@ -12,7 +12,7 @@ Services
 
 - Add a new State service that manages a global state between manager and managed
   instances of an application.
-- Make the Project service compatible with multi-base platform definitions
+- Make the Project service compatible with multi-base platform definitions.
 
 Commands
 ========
