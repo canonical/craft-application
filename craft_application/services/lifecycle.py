@@ -283,8 +283,17 @@ class LifecycleService(base.AppService):
         """
         return self._lcm.get_primed_stage_packages(part_name=part_name)
 
-    def run(self, step_name: str | None, part_names: list[str] | None = None) -> None:
-        """Run the lifecycle manager for the parts."""
+    def run(
+        self,
+        step_name: str | None,
+        part_names: list[str] | None = None,
+    ) -> None:
+        """Run the lifecycle manager for the parts.
+
+        :param step_name: The name of the target step (defaults to running the
+            entire lifecycle)
+        :param part_names: Which parts to build (defaults to all parts)
+        """
         target_step = _get_step(step_name) if step_name else None
 
         self._validate_build_plan()

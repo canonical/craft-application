@@ -21,8 +21,8 @@ backends:
       - ubuntu-24.04-64:
           image: ubuntu-2404-64
           workers: 4
-          memory: 2G
-          storage: 10G
+          memory: 4G
+          storage: 20G
   # lxd:  # Disabled due to https://github.com/canonical/spread/issues/215
   #   systems:
   #     - ubuntu-24.04
@@ -126,6 +126,9 @@ prepare: |
 
   sudo snap install --dangerous --classic tests/spread/*.snap
   sudo snap alias testcraft.partitioncraft partitioncraft
+
+restore-each: |
+  testcraft clean || true
 
 suites:
   tests/spread/testcraft/:
