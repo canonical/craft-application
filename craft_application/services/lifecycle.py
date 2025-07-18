@@ -24,7 +24,7 @@ from typing import TYPE_CHECKING, Any
 
 import craft_platforms
 import distro
-from craft_cli import emit
+from craft_cli import CraftError, emit
 from craft_parts import (
     Action,
     ActionType,
@@ -321,6 +321,9 @@ class LifecycleService(base.AppService):
 
         except PartsError as err:
             raise errors.PartsLifecycleError.from_parts_error(err) from err
+        except CraftError:
+            # Raise CraftError as is.
+            raise
         except RuntimeError as err:
             raise RuntimeError(f"Parts processing internal error: {err}") from err
         except OSError as err:
