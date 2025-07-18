@@ -317,12 +317,7 @@ class LifecycleService(base.AppService):
                 actions = []
 
             emit.progress("Initialising lifecycle")
-            with self._lcm.action_executor() as aex:
-                for action in actions:
-                    message = _get_parts_action_message(action)
-                    emit.progress(message)
-                    with emit.open_stream() as stream:
-                        aex.execute(action, stdout=stream, stderr=stream)
+            self._exec(actions)
 
         except PartsError as err:
             raise errors.PartsLifecycleError.from_parts_error(err) from err
@@ -332,6 +327,18 @@ class LifecycleService(base.AppService):
             raise errors.PartsLifecycleError.from_os_error(err) from err
         except Exception as err:
             raise errors.PartsLifecycleError(f"Unknown error: {str(err)}") from err
+
+    def _exec(self, actions: list[Action]) -> None:
+        """Execute actions of the lifecycle.
+
+        Override this method to handle errors before craft-application.
+        """
+        with self._lcm.action_executor() as aex:
+            for action in actions:
+                message = _get_parts_action_message(action)
+                emit.progress(message)
+                with emit.open_stream() as stream:
+                    aex.execute(action, stdout=stream, stderr=stream)
 
     def post_prime(self, step_info: StepInfo) -> bool:
         """Perform any necessary post-lifecycle modifications to the prime directory.
