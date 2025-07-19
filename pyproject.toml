@@ -49,7 +49,7 @@ remote = [
     "launchpadlib>=1.10.16",
 ]
 dev = [
-    "coverage[toml]==7.6.3",
+    "coverage[toml]==7.9.2",
     "hypothesis>=6.0",
     "pyfakefs~=5.3",
     "pytest==8.3.3",
