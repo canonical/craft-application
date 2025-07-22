@@ -33,16 +33,16 @@ from craft_application.services.service_factory import ServiceFactory
 
 __all__ = [
     "AppService",
-    "FetchService",
-    "ProjectService",
     "ConfigService",
-    "LifecycleService",
+    "FetchService",
     "InitService",
-    "TestingService",
+    "LifecycleService",
     "PackageService",
+    "ProjectService",
     "ProviderService",
     "RemoteBuildService",
     "RequestService",
     "ServiceFactory",
     "StateService",
+    "TestingService",
 ]

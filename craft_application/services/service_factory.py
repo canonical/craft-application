@@ -47,8 +47,8 @@ _DEFAULT_SERVICES = {
     "project": "ProjectService",
     "provider": "ProviderService",
     "remote_build": "RemoteBuildService",
-    "state": "StateService",
     "request": "RequestService",
+    "state": "StateService",
     "testing": "TestingService",
 }
 _CAMEL_TO_PYTHON_CASE_REGEX = re.compile(r"(?<!^)(?=[A-Z])")
@@ -75,16 +75,16 @@ class ServiceFactory:
         # Cheeky hack that lets static type checkers report the correct types.
         # This does not need any new types added as the ``__getattr__`` method is
         # deprecated and we should encourage using ``get()`` instead.
-        package: services.PackageService
-        lifecycle: services.LifecycleService
-        provider: services.ProviderService
-        remote_build: services.RemoteBuildService
-        request: services.RequestService
         config: services.ConfigService
         fetch: services.FetchService
         init: services.InitService
-        testing: services.TestingService
+        lifecycle: services.LifecycleService
+        package: services.PackageService
+        provider: services.ProviderService
+        remote_build: services.RemoteBuildService
+        request: services.RequestService
         state: services.StateService
+        testing: services.TestingService
 
     def __init__(
         self,
