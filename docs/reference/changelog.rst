@@ -4,6 +4,15 @@
 Changelog
 *********
 
+
+5.6.0 (2025-XX-XX)
+------------------
+
+Application
+========
+
+- Enable applications overriding the lifecycle action execution
+
 5.5.0 (2025-07-17)
 ------------------
 
