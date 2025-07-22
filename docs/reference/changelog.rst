@@ -9,7 +9,7 @@ Changelog
 ------------------
 
 Application
-========
+===========
 
 - Enable applications overriding the lifecycle action execution
 
