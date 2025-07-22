@@ -322,7 +322,7 @@ class LifecycleService(base.AppService):
         except PartsError as err:
             raise errors.PartsLifecycleError.from_parts_error(err) from err
         except CraftError:
-            # Raise CraftError as is.
+            # CraftError passthrough to be handled by the application.
             raise
         except RuntimeError as err:
             raise RuntimeError(f"Parts processing internal error: {err}") from err
