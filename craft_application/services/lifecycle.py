@@ -334,7 +334,7 @@ class LifecycleService(base.AppService):
     def _exec(self, actions: list[Action]) -> None:
         """Execute actions of the lifecycle.
 
-        Override this method to handle errors before craft-application.
+        Applications must override this method to handle errors before craft-application.
         """
         with self._lcm.action_executor() as aex:
             for action in actions:
