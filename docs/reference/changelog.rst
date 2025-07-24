@@ -11,7 +11,7 @@ Changelog
 Application
 ===========
 
-- Enable applications overriding the lifecycle action execution
+- Allow applications to override the execution of lifecycle actions.
 
 5.5.0 (2025-07-17)
 ------------------
