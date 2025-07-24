@@ -5,13 +5,15 @@ Changelog
 *********
 
 
-5.6.0 (2025-XX-XX)
+5.6.0 (2025-07-24)
 ------------------
 
 Application
 ===========
 
 - Allow applications to override the execution of lifecycle actions.
+
+For a complete list of commits, check out the `5.6.0`_ release on GitHub.
 
 5.5.0 (2025-07-17)
 ------------------
@@ -851,3 +853,4 @@ For a complete list of commits, check out the `2.7.0`_ release on GitHub.
 .. _5.3.0: https://github.com/canonical/craft-application/releases/tag/5.3.0
 .. _5.4.0: https://github.com/canonical/craft-application/releases/tag/5.4.0
 .. _5.5.0: https://github.com/canonical/craft-application/releases/tag/5.5.0
+.. _5.6.0: https://github.com/canonical/craft-application/releases/tag/5.6.0
