@@ -62,6 +62,7 @@ class FetchService(base.AppService):
     _fetch_process: subprocess.Popen[str] | None
     _session_data: fetch.SessionData | None
     _instance: craft_providers.Executor | None
+    _proxy_cert: pathlib.Path | None
 
     def __init__(
         self,
@@ -78,6 +79,7 @@ class FetchService(base.AppService):
         self._session_data = None
         self._session_policy: str = "strict"  # Default to strict policy.
         self._instance = None
+        self._proxy_cert = None
 
     @override
     def setup(self) -> None:
@@ -95,7 +97,7 @@ class FetchService(base.AppService):
                 f"Logging output to {str(logpath)!r}."
             )
 
-            self._fetch_process = fetch.start_service()
+            self._fetch_process, self._proxy_cert = fetch.start_service()
 
             # When we exit the application, we'll shut down the fetch service.
             atexit.register(self.shutdown, force=True)
@@ -104,21 +106,22 @@ class FetchService(base.AppService):
         """Set the policy for the fetch service."""
         self._session_policy = policy
 
-    def create_session(self, instance: craft_providers.Executor) -> dict[str, str]:
-        """Create a new session.
-
-        :return: The environment variables that must be used by any process
-          that will use the new session.
-        """
+    def create_session(self, instance: craft_providers.Executor) -> None:
+        """Create a new session."""
         if self._session_data is not None:
             raise ValueError(
                 "create_session() called but there's already a live fetch-service session."
             )
+        if self._proxy_cert is None:
+            raise ValueError(
+                "create_session() was called before setting up the fetch service."
+            )
+
         strict_session = self._session_policy == "strict"
         self._session_data = fetch.create_session(strict=strict_session)
         self._instance = instance
-        emit.progress("Configuring fetch-service integration")
-        return fetch.configure_instance(instance, self._session_data)
+        net_info = fetch.NetInfo(instance, self._session_data)
+        self._services.get("proxy").configure(self._proxy_cert, net_info.http_proxy)
 
     def teardown_session(self) -> dict[str, typing.Any]:
         """Teardown and cleanup a previously-created session."""

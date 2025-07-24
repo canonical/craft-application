@@ -435,8 +435,10 @@ class ProviderService(base.AppService):
             clean_existing=enable_fetch_service,
         ) as instance:
             if enable_fetch_service:
-                session_env = self._services.get("fetch").create_session(instance)
-                env.update(session_env)
+                self._services.get("fetch").create_session(instance)
+
+            session_env = self._services.get("proxy").configure_instance(instance)
+            env.update(session_env)
 
             emit.debug(f"Running in instance: {command}")
             try:

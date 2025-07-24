@@ -888,7 +888,10 @@ def test_run_managed(
     mock_provider,
 ):
     mock_fetch = mock.MagicMock()
+    mock_proxy = mock.MagicMock()
+    mock_proxy.configure_instance.return_value = {"proxy_env_key": "proxy_env_value"}
     fake_services.register("fetch", mock.Mock(return_value=mock_fetch))
+    fake_services.register("proxy", mock.Mock(return_value=mock_proxy))
     monkeypatch.setattr("sys.argv", ["[unused]", "pack", "--verbose"])
     instance_context = (
         mock_provider.launched_environment.return_value.__enter__.return_value
@@ -903,9 +906,11 @@ def test_run_managed(
         env={
             "CRAFT_VERBOSITY_LEVEL": mock.ANY,
             "CRAFT_PLATFORM": fake_build_info.platform,
+            "proxy_env_key": "proxy_env_value",
         },
     )
 
     if fetch:
         mock_fetch.create_session.assert_called_once_with(instance_context)
         mock_fetch.teardown_session.assert_called_once_with()
+    mock_proxy.configure_instance.assert_called_once_with(instance_context)

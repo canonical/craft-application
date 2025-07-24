@@ -98,7 +98,7 @@ def test_start_service(app_service):
 @pytest.mark.slow
 def test_start_service_already_up(app_service, request):
     # Create a fetch-service "manually"
-    fetch_process = fetch.start_service()
+    fetch_process, _ = fetch.start_service()
     assert fetch.is_service_online()
     # Ensure its cleaned up when the test is done
     if fetch_process is not None:
@@ -287,7 +287,8 @@ def test_build_instance_integration(
 
     app_service.setup()
 
-    env = app_service.create_session(lxd_instance)
+    app_service.create_session(lxd_instance)
+    env = app_service._services.get("proxy").configure_instance(lxd_instance)
 
     try:
         # Install the hello Ubuntu package.
@@ -359,7 +360,7 @@ def test_build_instance_integration(
     # because streaming-brief is disabled in non-terminal runs.
     expected_err = textwrap.dedent(
         """\
-        Configuring fetch-service integration
+        Configuring proxy in instance.
         Installing certificate
         Configuring pip
         Configuring snapd

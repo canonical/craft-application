@@ -46,6 +46,7 @@ _DEFAULT_SERVICES = {
     "lifecycle": "LifecycleService",
     "project": "ProjectService",
     "provider": "ProviderService",
+    "proxy": "ProxyService",
     "remote_build": "RemoteBuildService",
     "request": "RequestService",
     "state": "StateService",
@@ -81,6 +82,7 @@ class ServiceFactory:
         lifecycle: services.LifecycleService
         package: services.PackageService
         provider: services.ProviderService
+        proxy: services.ProxyService
         remote_build: services.RemoteBuildService
         request: services.RequestService
         state: services.StateService
@@ -224,6 +226,11 @@ class ServiceFactory:
     @overload
     @classmethod
     def get_class(
+        cls, name: Literal["proxy", "ProxyService", "ProxyClass"]
+    ) -> type[services.ProxyService]: ...
+    @overload
+    @classmethod
+    def get_class(
         cls, name: Literal["remote_build", "RemoteBuildService", "RemoteBuildClass"]
     ) -> type[services.RemoteBuildService]: ...
     @overload
@@ -282,6 +289,8 @@ class ServiceFactory:
     def get(self, service: Literal["project"]) -> ProjectService: ...
     @overload
     def get(self, service: Literal["provider"]) -> services.ProviderService: ...
+    @overload
+    def get(self, service: Literal["proxy"]) -> services.ProxyService: ...
     @overload
     def get(self, service: Literal["remote_build"]) -> services.RemoteBuildService: ...
     @overload

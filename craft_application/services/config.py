@@ -181,7 +181,7 @@ class ConfigService(base.AppService):
     def get(self, item: str) -> Any:  # noqa: ANN401
         """Get the given configuration item."""
         if item not in self._app.ConfigModel.model_fields:
-            raise KeyError(r"unknown config item: {item!r}")
+            raise KeyError(f"unknown config item: {item!r}")
         field_info = self._app.ConfigModel.model_fields[item]
 
         for handler in self._handlers:
