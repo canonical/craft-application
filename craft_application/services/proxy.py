@@ -118,6 +118,18 @@ class ProxyService(base.AppService):
             )
 
     def _configure_apt(self, instance: craft_providers.Executor) -> None:
+        """Configure the proxy for apt.
+
+        This function is a no-op on systems without apt.
+        """
+        try:
+            self._execute_run(instance, ["test", "-d", "/etc/apt"])
+        except subprocess.CalledProcessError:
+            emit.debug(
+                "Not configuring the proxy for apt because apt isn't available in the instance."
+            )
+            return
+
         emit.progress("Configuring Apt")
         apt_config = f'Acquire::http::Proxy "{self.__http_proxy}";\n'
         apt_config += f'Acquire::https::Proxy "{self.__http_proxy}";\n'
