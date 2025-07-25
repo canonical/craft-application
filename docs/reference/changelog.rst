@@ -37,6 +37,11 @@ For a complete list of commits, check out the `5.5.0`_ release on GitHub.
 5.4.0 (2025-06-30)
 ------------------
 
+Commands
+========
+
+- ``InitCommand`` now keeps the parent template dir context alive while it's in use.
+
 Models
 ======
 

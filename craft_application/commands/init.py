@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import importlib.resources
 import pathlib
+from contextlib import AbstractContextManager
 from textwrap import dedent
 from typing import TYPE_CHECKING, cast
 
@@ -85,21 +86,18 @@ class InitCommand(base.AppCommand):
             ),
         )
 
-    @property
-    def parent_template_dir(self) -> pathlib.Path:
+    def parent_template_dir(self) -> AbstractContextManager[pathlib.Path]:
         """Return the path to the directory that contains all templates."""
-        with importlib.resources.path(
-            self._app.name, "templates"
-        ) as _parent_template_dir:
-            return _parent_template_dir
+        return importlib.resources.path(self._app.name, "templates")
 
     @property
     def profiles(self) -> list[str]:
         """A list of profile names generated from template directories."""
-        template_dirs = [
-            path for path in self.parent_template_dir.iterdir() if path.is_dir()
-        ]
-        return sorted([template.name for template in template_dirs])
+        with self.parent_template_dir() as parent_template_dir:
+            template_names = [
+                path.name for path in parent_template_dir.iterdir() if path.is_dir()
+            ]
+            return sorted(template_names)
 
     def run(self, parsed_args: argparse.Namespace) -> None:
         """Run the command."""
@@ -115,20 +113,21 @@ class InitCommand(base.AppCommand):
         )
 
         project_dir = self._get_project_dir(parsed_args)
-        template_dir = pathlib.Path(self.parent_template_dir / parsed_args.profile)
+        with self.parent_template_dir() as parent_template_dir:
+            template_dir = pathlib.Path(parent_template_dir / parsed_args.profile)
 
-        craft_cli.emit.progress("Checking project directory.")
-        self._services.init.check_for_existing_files(
-            project_dir=project_dir, template_dir=template_dir
-        )
+            craft_cli.emit.progress("Checking project directory.")
+            self._services.init.check_for_existing_files(
+                project_dir=project_dir, template_dir=template_dir
+            )
 
-        craft_cli.emit.progress("Initialising project.")
-        self._services.init.initialise_project(
-            project_dir=project_dir,
-            project_name=project_name,
-            template_dir=template_dir,
-        )
-        craft_cli.emit.message("Successfully initialised project.")
+            craft_cli.emit.progress("Initialising project.")
+            self._services.init.initialise_project(
+                project_dir=project_dir,
+                project_name=project_name,
+                template_dir=template_dir,
+            )
+            craft_cli.emit.message("Successfully initialised project.")
 
     def _get_name(self, parsed_args: argparse.Namespace) -> str:
         """Get name of the package that is about to be initialised.
