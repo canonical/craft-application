@@ -402,8 +402,11 @@ class Application:
                 clean_existing=self._enable_fetch_service,
             ) as instance:
                 if self._enable_fetch_service:
-                    session_env = self.services.fetch.create_session(instance)
-                    env.update(session_env)
+                    fetch_env = self.services.fetch.create_session(instance)
+                    env.update(fetch_env)
+
+                session_env = self.services.get("proxy").configure_instance(instance)
+                env.update(session_env)
 
                 cmd = [self.app.name, *sys.argv[1:]]
                 craft_cli.emit.debug(

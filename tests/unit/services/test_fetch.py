@@ -66,6 +66,33 @@ def test_create_session_already_exists(fetch_service):
         fetch_service.create_session(instance=MagicMock())
 
 
+def test_create_session(fetch_service, mocker):
+    """Create a session and configure the proxy service."""
+    session_data = fetch.SessionData(id="id", token="token")  # noqa: S106
+    mocker.patch.object(fetch, "create_session", return_value=session_data)
+    mocker.patch.object(fetch, "_get_gateway", return_value="test-gateway")
+    mock_configure_proxy = mocker.patch.object(services.ProxyService, "configure")
+    proxy_cert = pathlib.Path("test-cert.pem")
+    fetch_service._proxy_cert = proxy_cert
+
+    env = fetch_service.create_session(instance=MagicMock())
+
+    mock_configure_proxy.assert_called_once_with(
+        proxy_cert, "http://id:token@test-gateway:13444/"
+    )
+    assert env == {"GOPROXY": "direct"}
+
+
+def test_create_session_not_setup(fetch_service):
+    """Error if the create_session is called before the fetch service is setup."""
+    expected_error = re.escape(
+        "create_session() was called before setting up the fetch service."
+    )
+
+    with pytest.raises(ValueError, match=expected_error):
+        fetch_service.create_session(instance=MagicMock())
+
+
 def test_teardown_session_no_session(fetch_service):
     expected = re.escape(
         "teardown_session() called with no live fetch-service session."
@@ -174,9 +201,9 @@ def test_teardown_session_create_manifest(
 
 
 @pytest.mark.parametrize("run_on_host", [True, False])
-def test_warning_experimental(mocker, fetch_service, run_on_host, emitter):
+def test_warning_experimental(mocker, fetch_service, run_on_host, emitter, tmp_path):
     """The fetch-service warning should only be emitted when running on the host."""
-    mocker.patch.object(fetch, "start_service")
+    mocker.patch.object(fetch, "start_service", return_value=(None, tmp_path))
     mocker.patch.object(fetch, "verify_installed")
     mocker.patch.object(fetch, "_get_service_base_dir", return_value=pathlib.Path())
     mocker.patch("craft_application.util.is_managed_mode", return_value=not run_on_host)

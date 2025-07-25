@@ -4,6 +4,15 @@
 Changelog
 *********
 
+5.7.0 (2025-MM-DD)
+------------------
+
+Services
+========
+
+- Add a new Proxy service that configures an instance to connect to a proxy.
+
+For a complete list of commits, check out the `5.7.0`_ release on GitHub.
 
 5.6.0 (2025-07-24)
 ------------------
@@ -854,3 +863,4 @@ For a complete list of commits, check out the `2.7.0`_ release on GitHub.
 .. _5.4.0: https://github.com/canonical/craft-application/releases/tag/5.4.0
 .. _5.5.0: https://github.com/canonical/craft-application/releases/tag/5.5.0
 .. _5.6.0: https://github.com/canonical/craft-application/releases/tag/5.6.0
+.. _5.7.0: https://github.com/canonical/craft-application/releases/tag/5.7.0
