@@ -106,8 +106,12 @@ class FetchService(base.AppService):
         """Set the policy for the fetch service."""
         self._session_policy = policy
 
-    def create_session(self, instance: craft_providers.Executor) -> None:
-        """Create a new session."""
+    def create_session(self, instance: craft_providers.Executor) -> dict[str, str]:
+        """Create a new session.
+
+        :return: The environment variables that must be used by any process
+          that will use the new session.
+        """
         if self._session_data is not None:
             raise ValueError(
                 "create_session() called but there's already a live fetch-service session."
@@ -122,6 +126,7 @@ class FetchService(base.AppService):
         self._instance = instance
         net_info = fetch.NetInfo(instance, self._session_data)
         self._services.get("proxy").configure(self._proxy_cert, net_info.http_proxy)
+        return net_info.env
 
     def teardown_session(self) -> dict[str, typing.Any]:
         """Teardown and cleanup a previously-created session."""

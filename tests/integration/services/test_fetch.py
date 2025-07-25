@@ -287,8 +287,9 @@ def test_build_instance_integration(
 
     app_service.setup()
 
-    app_service.create_session(lxd_instance)
-    env = app_service._services.get("proxy").configure_instance(lxd_instance)
+    fetch_env = app_service.create_session(lxd_instance)
+    proxy_env = app_service._services.get("proxy").configure_instance(lxd_instance)
+    env = fetch_env | proxy_env
 
     try:
         # Install the hello Ubuntu package.

@@ -435,7 +435,8 @@ class ProviderService(base.AppService):
             clean_existing=enable_fetch_service,
         ) as instance:
             if enable_fetch_service:
-                self._services.get("fetch").create_session(instance)
+                fetch_env = self._services.get("fetch").create_session(instance)
+                env.update(fetch_env)
 
             session_env = self._services.get("proxy").configure_instance(instance)
             env.update(session_env)

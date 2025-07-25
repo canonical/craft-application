@@ -889,6 +889,7 @@ def test_run_managed(
 ):
     mock_fetch = mock.MagicMock()
     mock_proxy = mock.MagicMock()
+    mock_fetch.create_session.return_value = {"fetch_env_key": "fetch_env_value"}
     mock_proxy.configure_instance.return_value = {"proxy_env_key": "proxy_env_value"}
     fake_services.register("fetch", mock.Mock(return_value=mock_fetch))
     fake_services.register("proxy", mock.Mock(return_value=mock_proxy))
@@ -899,15 +900,18 @@ def test_run_managed(
 
     provider_service.run_managed(fake_build_info, enable_fetch_service=fetch)
 
+    expected_env = {
+        "CRAFT_VERBOSITY_LEVEL": mock.ANY,
+        "CRAFT_PLATFORM": fake_build_info.platform,
+        "proxy_env_key": "proxy_env_value",
+    }
+    if fetch:
+        expected_env["fetch_env_key"] = "fetch_env_value"
     instance_context.execute_run.assert_called_once_with(
         ["testcraft", "pack", "--verbose"],
         cwd=default_app_metadata.managed_instance_project_path,
         check=True,
-        env={
-            "CRAFT_VERBOSITY_LEVEL": mock.ANY,
-            "CRAFT_PLATFORM": fake_build_info.platform,
-            "proxy_env_key": "proxy_env_value",
-        },
+        env=expected_env,
     )
 
     if fetch:

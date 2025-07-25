@@ -75,11 +75,12 @@ def test_create_session(fetch_service, mocker):
     proxy_cert = pathlib.Path("test-cert.pem")
     fetch_service._proxy_cert = proxy_cert
 
-    fetch_service.create_session(instance=MagicMock())
+    env = fetch_service.create_session(instance=MagicMock())
 
     mock_configure_proxy.assert_called_once_with(
         proxy_cert, "http://id:token@test-gateway:13444/"
     )
+    assert env == {"GOPROXY": "direct"}
 
 
 def test_create_session_not_setup(fetch_service):
