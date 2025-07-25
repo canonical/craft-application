@@ -75,6 +75,10 @@ def test_configure_build_instance(mocker, proxy_service, new_dir):
             **default_args,
         ),
         call(
+            ["test", "-d", "/etc/apt"],
+            **default_args,
+        ),
+        call(
             ["/bin/rm", "-Rf", "/var/lib/apt/lists"],
             **default_args,
         ),
@@ -100,6 +104,73 @@ def test_configure_build_instance(mocker, proxy_service, new_dir):
         ),
         call(
             destination=pathlib.Path("/etc/apt/apt.conf.d/99proxy"),
+            content=mocker.ANY,
+            file_mode="0644",
+        ),
+    ]
+
+
+def test_configure_skip_apt(mocker, proxy_service, new_dir, emitter):
+    """Skip apt configuration if apt isn't available."""
+    proxy_cert = pathlib.Path("test.pem")
+    proxy_cert.touch()
+    proxy_service.configure(
+        proxy_cert=pathlib.Path("test.pem"), http_proxy="test-proxy"
+    )
+
+    def _has_apt(*args, **kwargs):
+        if args == (["test", "-d", "/etc/apt"],):
+            raise subprocess.CalledProcessError(1, [])
+        return mock.DEFAULT
+
+    mock_instance = mock.MagicMock(spec_set=LXDInstance)
+    mock_instance.execute_run.side_effect = _has_apt
+
+    proxy_service.configure_instance(mock_instance)
+
+    emitter.assert_debug(
+        "Not configuring the proxy for apt because apt isn't available in the instance."
+    )
+    # Execution calls on the instance
+    default_args = {"check": True, "stdout": subprocess.PIPE, "stderr": subprocess.PIPE}
+    assert mock_instance.execute_run.mock_calls == [
+        call(
+            ["/bin/sh", "-c", "/usr/sbin/update-ca-certificates > /dev/null"],
+            **default_args,
+        ),
+        call(
+            ["mkdir", "-p", "/root/.pip"],
+            **default_args,
+        ),
+        call(
+            ["systemctl", "restart", "snapd"],
+            **default_args,
+        ),
+        call(
+            ["snap", "set", "system", "proxy.http=test-proxy"],
+            **default_args,
+        ),
+        call(
+            ["snap", "set", "system", "proxy.https=test-proxy"],
+            **default_args,
+        ),
+        call(
+            ["test", "-d", "/etc/apt"],
+            **default_args,
+        ),
+    ]
+
+    # Files pushed to the instance
+    assert mock_instance.push_file.mock_calls == [
+        call(
+            source=proxy_cert,
+            destination=pathlib.Path("/usr/local/share/ca-certificates/local-ca.crt"),
+        )
+    ]
+
+    assert mock_instance.push_file_io.mock_calls == [
+        call(
+            destination=pathlib.Path("/root/.pip/pip.conf"),
             content=mocker.ANY,
             file_mode="0644",
         ),
