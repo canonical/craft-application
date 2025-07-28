@@ -4,6 +4,17 @@
 Changelog
 *********
 
+5.6.1 (2025-07-28)
+------------------
+
+Application
+===========
+
+- Applications must opt into skipping repack. This was done because it's not fully
+  backwards compatible (see:
+  `#821 <https://github.com/canonical/craft-application/issues/821>`_)
+
+For a complete list of commits, check out the `5.6.1`_ release on GitHub.
 
 5.6.0 (2025-07-24)
 ------------------
@@ -854,3 +865,4 @@ For a complete list of commits, check out the `2.7.0`_ release on GitHub.
 .. _5.4.0: https://github.com/canonical/craft-application/releases/tag/5.4.0
 .. _5.5.0: https://github.com/canonical/craft-application/releases/tag/5.5.0
 .. _5.6.0: https://github.com/canonical/craft-application/releases/tag/5.6.0
+.. _5.6.1: https://github.com/canonical/craft-application/releases/tag/5.6.1
