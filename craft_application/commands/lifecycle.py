@@ -446,6 +446,10 @@ class PackCommand(LifecycleCommand):
 
     def _is_already_packed(self) -> bool:
         """Verify whether the artifacts are already packed and up-to-date."""
+        # Gate the skip-repack feature.
+        if not self._app.skip_repack:
+            return False
+
         # 1. A file containing the list of packed artifacts is created after
         #    packing. Before packing, check if the list file exists. If not, we
         #    never packed before and packing is necessary.
