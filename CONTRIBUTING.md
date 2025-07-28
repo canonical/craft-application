@@ -283,9 +283,9 @@ Major changes require new documentation describing the feature's usage and
 specifications. For example, if you implement a new CLI command, describe its usage in
 one of the how-to guides and create a new reference for its options and flags.
 
-For features inherited by downstream applications, place documentation in the [common
-directory](/docs/common). The content should be application-agnostic so it can be
-integrated into the documentation of the affected craft tools.
+For features inherited by downstream apps, place documentation in the [common
+directory](/docs/common). The content should be app-agnostic so it can be integrated
+into the documentation of the affected craft tools.
 
 Ensure that feature changes and fixes are also documented in the relevant [release
 notes](docs/reference/changelog.rst).
@@ -296,7 +296,7 @@ Once you've updated the documentation, build the site locally with:
 make docs
 ```
 
-Check for errors in the documentation with:
+Check for problems in the documentation with:
 
 ```bash
 make lint-docs
