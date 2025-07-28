@@ -81,8 +81,8 @@ class AppMetadata:
 
     ProjectClass: type[models.Project] = models.Project
     supports_multi_base: bool = False
-    skip_repack: bool = (
-        False  # Gating for https://github.com/canonical/craft-application/pull/810
+    always_repack: bool = (
+        True  # Gating for https://github.com/canonical/craft-application/pull/810
     )
 
     def __post_init__(self) -> None:
