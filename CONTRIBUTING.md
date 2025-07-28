@@ -1,7 +1,7 @@
 # Contributing
 
 Craft Application has a community from all over the world, and we welcome all
-contributions
+contributions.
 
 Contributing offers an opportunity to polish your technical skills, develop as a
 professional, and get involved in the growing open source community. Craft Application
@@ -120,8 +120,8 @@ varies depending on the issue's complexity and scope.
 
 If you'd like to add a small feature or fix, check the project's GitHub issues to see if
 others have reported it. If they have, look into the current status of the topic. If no
-one else is working on it, add a comment stating that you'd like to take it on, and the
-Starcraft team will assign it to you.
+one else is working on it, add a comment stating that you'd like to take it on, and a
+Craft Application maintainer will assign it to you.
 
 If you don't find a related issue, [open
 one](https://github.com/canonical/craft-application/issues/new/choose) and indicate that
