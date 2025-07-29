@@ -2,7 +2,7 @@ project: test-cmd
 
 backends:
   craft:
-    type: adhoc
+    type: craft
     allocate: "false"
     systems:
       - ubuntu-24.04:

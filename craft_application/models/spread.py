@@ -255,7 +255,8 @@ class SpreadYaml(SpreadBaseModel):
     ) -> dict[str, SpreadBackend]:
         backends: dict[str, SpreadBackend] = {}
         for name, backend in simple.items():
-            if name == "craft":
+            # Spread assumes the backend name as the type when it's not explicitly declared.
+            if name == "craft" and (not backend.type or backend.type == "craft"):
                 craft_backend.systems = SpreadBackend.systems_from_craft(
                     backend.systems
                 )
