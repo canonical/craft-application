@@ -4,6 +4,15 @@
 Changelog
 *********
 
+5.6.2 (2025-MM-DD)
+------------------
+
+Fixes
+=====
+
+- Check the craft backend type before testing. The type must be ``craft`` to
+  allow the backend to be dynamically processed.
+
 5.6.1 (2025-07-28)
 ------------------
 
