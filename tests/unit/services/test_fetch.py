@@ -34,8 +34,12 @@ from unittest.mock import MagicMock, call
 
 import craft_providers
 import pytest
-from craft_application import fetch, services
+from craft_application import errors, fetch, services
 from craft_application.services import fetch as service_module
+from craft_application.services.fetch import (
+    EXTERNAL_FETCH_SERVICE_ENV_VAR,
+    PROXY_CERT_ENV_VAR,
+)
 from freezegun import freeze_time
 
 
@@ -228,3 +232,49 @@ def test_setup_managed(mocker, fetch_service):
     fetch_service.setup()
 
     assert not mock_start.called
+
+
+@pytest.mark.parametrize(
+    ("enable_command_line", "env_var_value", "expected_active"),
+    [
+        pytest.param(True, None, True, id="command line only"),
+        pytest.param(False, "1", True, id="env var only"),
+        pytest.param(False, None, False, id="neither"),
+    ],
+)
+def test_is_active(
+    fetch_service, monkeypatch, enable_command_line, env_var_value, expected_active
+):
+    monkeypatch.setenv(EXTERNAL_FETCH_SERVICE_ENV_VAR, env_var_value)
+    is_active = fetch_service.is_active(enable_command_line=enable_command_line)
+    assert is_active == expected_active
+
+
+def test_is_active_both(fetch_service, monkeypatch):
+    """Trying to set both CRAFT_USE_EXTERNAL_FETCH_SERVICE *and* --enable-fetch-service.
+
+    This is currently unsupported because the two code paths are too tied together.
+    """
+    monkeypatch.setenv(EXTERNAL_FETCH_SERVICE_ENV_VAR, "1")
+    with pytest.raises(errors.CraftError):
+        fetch_service.is_active(enable_command_line=True)
+
+
+def test_configure_session_external(
+    fetch_service, mocker, fake_services, monkeypatch, tmp_path
+):
+    fake_cert = tmp_path / "local-ca.crt"
+    fake_cert.touch()
+
+    proxy_service = fake_services.get("proxy")
+    spied_configure = mocker.spy(proxy_service, "configure")
+
+    monkeypatch.setenv(EXTERNAL_FETCH_SERVICE_ENV_VAR, "1")
+    monkeypatch.setenv(PROXY_CERT_ENV_VAR, str(fake_cert))
+    monkeypatch.setenv("http_proxy", "www.example.com")
+    fetch_service.setup()
+
+    env = fetch_service.configure_instance(instance=MagicMock())
+
+    assert env == fetch.NetInfo.env()
+    spied_configure.assert_called_once_with(fake_cert, "www.example.com")

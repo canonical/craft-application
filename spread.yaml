@@ -127,6 +127,9 @@ prepare: |
   sudo snap install --dangerous --classic tests/spread/*.snap
   sudo snap alias testcraft.partitioncraft partitioncraft
 
+  # Initialize LXD; some tests need it ready *before* testcraft is called
+  lxd init --auto
+
 restore-each: |
   testcraft clean || true
 

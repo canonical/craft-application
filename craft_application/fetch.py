@@ -95,8 +95,8 @@ class NetInfo:
         gw = self._gateway
         return f"http://{session.session_id}:{session.token}@{gw}:{port}/"
 
-    @property
-    def env(self) -> dict[str, str]:
+    @staticmethod
+    def env() -> dict[str, str]:
         """Environment variables to use for the proxy."""
         return {
             # Have go download directly from repositories
