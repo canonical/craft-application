@@ -312,3 +312,11 @@ def test_get_gateway_errors(config, expected_error, mocker):
 
     with pytest.raises(errors.FetchServiceError, match=expected_error):
         fetch._get_gateway(LXDInstance(name="test-instance"))
+
+
+def test_session_data_from_url():
+    url = "http://fa6264b0907e41049d121a0f137e612e:OCmKy78cRy5MsTIUyLyY@10.152.175.1:13444/"
+    session_data = fetch.from_existing_session(url)
+
+    assert session_data.session_id == "fa6264b0907e41049d121a0f137e612e"
+    assert session_data.token == "OCmKy78cRy5MsTIUyLyY"  # noqa: S105 (test password)

@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import atexit
 import json
+import os
 import pathlib
 import typing
 from functools import partial
@@ -42,6 +43,13 @@ if typing.TYPE_CHECKING:
 _PROJECT_MANIFEST_MANAGED_PATH = pathlib.Path(
     "/tmp/craft-project-manifest.yaml"  # noqa: S108 (possibly insecure)
 )
+
+EXTERNAL_FETCH_SERVICE_ENV_VAR = "CRAFT_USE_EXTERNAL_FETCH_SERVICE"
+PROXY_CERT_ENV_VAR = "CRAFT_PROXY_CERT"
+
+
+def _use_external_session() -> bool:
+    return os.getenv(EXTERNAL_FETCH_SERVICE_ENV_VAR) == "1"
 
 
 class FetchService(base.AppService):
@@ -80,13 +88,18 @@ class FetchService(base.AppService):
         self._session_policy: str = "strict"  # Default to strict policy.
         self._instance = None
         self._proxy_cert = None
+        self._external_session = False
 
     @override
     def setup(self) -> None:
         """Start the fetch-service process with proper arguments."""
         super().setup()
 
-        if not util.is_managed_mode():
+        self._external_session = _use_external_session()
+
+        if self._external_session:
+            self._proxy_cert = pathlib.Path(os.getenv(PROXY_CERT_ENV_VAR))
+        elif not util.is_managed_mode():
             # Early fail if the fetch-service is not installed.
             fetch.verify_installed()
 
@@ -105,6 +118,29 @@ class FetchService(base.AppService):
     def set_policy(self, policy: typing.Literal["strict", "permissive"]) -> None:
         """Set the policy for the fetch service."""
         self._session_policy = policy
+
+    @staticmethod
+    def is_active(*, enable_command_line: bool) -> bool:
+        """Whether the FetchService will be used in managed runs.
+
+        This can happen if:
+
+        - ``enable_command_line`` is True, in which case the service will create and
+            teardown fetch-service sessions;
+        -  CRAFT_USE_EXTERNAL_FETCH_SERVICE is True, in which case the service will use
+            a *pre-existing* fetch-service session.
+        """
+        return enable_command_line or _use_external_session()
+
+    def configure_instance(self, instance: craft_providers.Executor) -> dict[str, str]:
+        if self._external_session:
+            proxy_url = os.getenv("http_proxy")
+            # self._session_data, port = fetch.from_existing_session(proxy_url)
+            # net_info = fetch.NetInfo(instance, self._session_data, port=port)
+            self._services.get("proxy").configure(self._proxy_cert, proxy_url)
+            return fetch.NetInfo.env()
+
+        return self.create_session(instance)
 
     def create_session(self, instance: craft_providers.Executor) -> dict[str, str]:
         """Create a new session.
@@ -126,7 +162,13 @@ class FetchService(base.AppService):
         self._instance = instance
         net_info = fetch.NetInfo(instance, self._session_data)
         self._services.get("proxy").configure(self._proxy_cert, net_info.http_proxy)
-        return net_info.env
+        return net_info.env()
+
+    def teardown_instance(self) -> dict[str, typing.Any]:
+        if self._external_session:
+            return {}  # Nothing to do
+
+        return self.teardown_session()
 
     def teardown_session(self) -> dict[str, typing.Any]:
         """Teardown and cleanup a previously-created session."""

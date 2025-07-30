@@ -24,6 +24,7 @@ import subprocess
 from dataclasses import dataclass
 from functools import cache
 from typing import Any, cast
+from urllib.parse import urlparse
 
 import craft_providers
 import craft_providers.lxd
@@ -82,21 +83,25 @@ class NetInfo:
     """Network and proxy info linking a fetch-service session and a build instance."""
 
     def __init__(
-        self, instance: craft_providers.Executor, session_data: SessionData
+        self,
+        instance: craft_providers.Executor,
+        session_data: SessionData,
+        port: int | None = None,
     ) -> None:
         self._gateway = _get_gateway(instance)
         self._session_data = session_data
+        self._port = port
 
     @property
     def http_proxy(self) -> str:
         """Proxy string in the 'http://<session-id>:<session-token>@<ip>:<port>/."""
         session = self._session_data
-        port = _DEFAULT_CONFIG.proxy
+        port = self._port or _DEFAULT_CONFIG.proxy
         gw = self._gateway
         return f"http://{session.session_id}:{session.token}@{gw}:{port}/"
 
-    @property
-    def env(self) -> dict[str, str]:
+    @staticmethod
+    def env() -> dict[str, str]:
         """Environment variables to use for the proxy."""
         return {
             # Have go download directly from repositories
@@ -233,6 +238,16 @@ def create_session(*, strict: bool, timeout: float = 5.0) -> SessionData:
     data = _service_request("post", "session", json=json, timeout=timeout).json()
 
     return SessionData.unmarshal(data=data)
+
+
+def from_existing_session(url: str) -> tuple[SessionData, int]:
+    parsed = urlparse(url)
+    if parsed.port is None:
+        raise ValueError("")
+    return (
+        SessionData.unmarshal({"id": parsed.username, "token": parsed.password}),
+        parsed.port,
+    )
 
 
 def teardown_session(
