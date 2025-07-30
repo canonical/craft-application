@@ -219,6 +219,7 @@ def app_metadata(fake_config_model) -> craft_application.AppMetadata:
             docs_url="www.testcraft.example/docs/{version}",
             ConfigModel=fake_config_model,
             supports_multi_base=True,
+            always_repack=False,
         )
 
 
