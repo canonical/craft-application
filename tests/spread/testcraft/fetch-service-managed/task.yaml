@@ -4,7 +4,7 @@ prepare: |
   snap install fetch-service --candidate
 
 execute: |
-  testcraft pack --enable-fetch-service permissive
+  testcraft pack --enable-fetch-service strict
 
   test -f fetch-service*.testcraft
 
