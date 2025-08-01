@@ -326,8 +326,8 @@ def test_configure_instance_lxd_root_user(state_service, state_dir, emitter, moc
     mock_instance.mount.assert_called_once_with(
         host_source=state_dir, target=pathlib.PurePosixPath("/tmp/craft-state")
     )
-    assert (state_dir.stat().st_mode & 0o007) == 0o007
-    emitter.assert_debug(f"Adding o+rwx permissions to {str(state_dir)!r}.")
+    assert (state_dir.stat().st_mode & 0o077) == 0o077
+    emitter.assert_debug(f"Adding go+rwx permissions to {str(state_dir)!r}.")
     emitter.assert_debug(
         f"Mounting state directory {str(state_dir)!r} to '/tmp/craft-state'."
     )
