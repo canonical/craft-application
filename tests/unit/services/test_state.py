@@ -326,8 +326,8 @@ def test_configure_instance_lxd_root_user(state_service, state_dir, emitter, moc
     mock_instance.mount.assert_called_once_with(
         host_source=state_dir, target=pathlib.PurePosixPath("/tmp/craft-state")
     )
-    assert (state_dir.stat().st_mode & 0o007) == 0o007
-    emitter.assert_debug(f"Adding o+rwx permissions to {str(state_dir)!r}.")
+    assert (state_dir.stat().st_mode & 0o077) == 0o077
+    emitter.assert_debug(f"Adding go+rwx permissions to {str(state_dir)!r}.")
     emitter.assert_debug(
         f"Mounting state directory {str(state_dir)!r} to '/tmp/craft-state'."
     )
@@ -441,7 +441,21 @@ def test_save_state_file_large_file_error(state_service, state_dir):
         state_service._save_state_file("foo", {"foo": value})
 
 
-def test_save_state_file_error(state_service, state_dir, mocker):
+def test_save_state_file_permission_error(state_service, state_dir, mocker):
+    """Error if the state file can't be saved due to insufficient permissions."""
+    mocker.patch(
+        "craft_application.services.state.pathlib.Path.write_text",
+        side_effect=PermissionError,
+    )
+    expected_error = re.escape(
+        f"Can't save state file {str(state_dir / 'foo.yaml')!r} due to insufficient permissions."
+    )
+
+    with pytest.raises(errors.StateServiceError, match=expected_error):
+        state_service._save_state_file("foo", {"foo": "test-value"})
+
+
+def test_save_state_file_os_error(state_service, state_dir, mocker):
     """Error if the state file can't be saved."""
     mocker.patch(
         "craft_application.services.state.pathlib.Path.write_text",
