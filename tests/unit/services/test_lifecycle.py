@@ -33,6 +33,7 @@ from craft_application import errors, models, util
 from craft_application.errors import EmptyBuildPlanError, PartsLifecycleError
 from craft_application.services import lifecycle
 from craft_application.util import repositories
+from craft_cli import CraftError
 from craft_parts import (
     Action,
     ActionType,
@@ -514,6 +515,7 @@ def test_run_no_step(
         (OSError(0, "Hi"), PartsLifecycleError, "^Hi$"),
         (Exception("u wot m8"), PartsLifecycleError, "^Unknown error: u wot m8$"),
         (craft_parts.PartsError("parts error"), PartsLifecycleError, "^parts error$"),
+        (CraftError("parts error"), CraftError, "^parts error$"),
     ],
 )
 def test_run_failure(
@@ -808,3 +810,36 @@ def test_devel_base_no_error(fake_parts_lifecycle, build_plan_service, mocker):
 
     # Pass None as the step to ensure validation but skip the actual lifecycle run
     _ = fake_parts_lifecycle.run(None)
+
+
+class FooError(CraftError):
+    """Error to test CraftError pass through."""
+
+
+def test_override_exec(
+    tmp_path, app_metadata, fake_project, fake_services, fake_platform, mocker
+):
+    """Override LifecycleService _exec method."""
+
+    fake_services.get("build_plan").set_platforms(fake_platform)
+    skip_if_build_plan_empty(fake_services.get("build_plan"))
+
+    class LifecycleOverridingExec(lifecycle.LifecycleService):
+        def _exec(self, actions: list[Action]) -> None:
+            super()._exec(actions)
+            raise FooError("foo")
+
+    work_dir = tmp_path / "work"
+    cache_dir = tmp_path / "cache"
+    fake_lifecycle_service = LifecycleOverridingExec(
+        app_metadata,
+        fake_services,
+        work_dir=work_dir,
+        cache_dir=cache_dir,
+    )
+
+    fake_lifecycle_service.setup()
+
+    # Pass None as the step to ensure validation but skip the actual lifecycle run
+    with pytest.raises(FooError):
+        fake_lifecycle_service.run("prime")

@@ -98,8 +98,9 @@ def test_start_service(mocker, tmp_path):
     mock_process = mock_popen.return_value
     mock_process.poll.return_value = None
 
-    process = fetch.start_service()
+    process, proxy_cert = fetch.start_service()
     assert process is mock_process
+    assert proxy_cert == tmp_path / "cert.crt"
 
     assert mock_is_online.called
     assert mock_base_dir.called
@@ -129,12 +130,16 @@ def test_start_service(mocker, tmp_path):
     )
 
 
-def test_start_service_already_up(mocker):
+def test_start_service_already_up(mocker, tmp_path):
     """If the fetch-service is already up then a new process is *not* created."""
+    mocker.patch.object(fetch, "_get_service_base_dir", return_value=tmp_path)
     mock_is_online = mocker.patch.object(fetch, "is_service_online", return_value=True)
     mock_popen = mocker.patch.object(subprocess, "Popen")
 
-    assert fetch.start_service() is None
+    process, proxy_cert = fetch.start_service()
+
+    assert process is None
+    assert proxy_cert == tmp_path / "craft/fetch-certificate/local-ca.pem"
 
     assert mock_is_online.called
     assert not mock_popen.called
@@ -210,94 +215,6 @@ def test_teardown_session():
     )
 
     fetch.teardown_session(session_data)
-
-
-def test_configure_build_instance(mocker):
-    mocker.patch.object(fetch, "_get_gateway", return_value="127.0.0.1")
-    mocker.patch.object(
-        fetch, "_obtain_certificate", return_value=("fake-cert.crt", "key.pem")
-    )
-
-    session_data = fetch.SessionData(id="my-session-id", token="my-session-token")  # noqa: S106
-    instance = mock.MagicMock(spec_set=LXDInstance)
-    assert isinstance(instance, LXDInstance)
-
-    expected_proxy = f"http://my-session-id:my-session-token@127.0.0.1:{PROXY}/"
-    expected_env = {
-        "http_proxy": expected_proxy,
-        "https_proxy": expected_proxy,
-        "REQUESTS_CA_BUNDLE": "/usr/local/share/ca-certificates/local-ca.crt",
-        "CARGO_HTTP_CAINFO": "/usr/local/share/ca-certificates/local-ca.crt",
-        "GOPROXY": "direct",
-    }
-
-    env = fetch.configure_instance(instance, session_data)
-    assert env == expected_env
-
-    default_args = {"check": True, "stdout": subprocess.PIPE, "stderr": subprocess.PIPE}
-
-    # Execution calls on the instance
-    assert instance.execute_run.mock_calls == [
-        call(
-            ["/bin/sh", "-c", "/usr/sbin/update-ca-certificates > /dev/null"],
-            **default_args,
-        ),
-        call(
-            ["mkdir", "-p", "/root/.pip"],
-            **default_args,
-        ),
-        call(
-            ["systemctl", "restart", "snapd"],
-            **default_args,
-        ),
-        call(
-            [
-                "snap",
-                "set",
-                "system",
-                f"proxy.http={expected_proxy}",
-            ],
-            **default_args,
-        ),
-        call(
-            [
-                "snap",
-                "set",
-                "system",
-                f"proxy.https={expected_proxy}",
-            ],
-            **default_args,
-        ),
-        call(
-            ["/bin/rm", "-Rf", "/var/lib/apt/lists"],
-            **default_args,
-        ),
-        call(
-            ["apt", "update"],
-            **default_args,
-        ),
-    ]
-
-    # Files pushed to the instance
-    assert instance.push_file.mock_calls == [
-        call(
-            source="fake-cert.crt",
-            destination=Path("/usr/local/share/ca-certificates/local-ca.crt"),
-        )
-    ]
-
-    assert instance.push_file_io.mock_calls == [
-        call(
-            destination=Path("/root/.pip/pip.conf"),
-            content=mocker.ANY,
-            file_mode="0644",
-        ),
-        call(
-            destination=Path("/etc/apt/apt.conf.d/99proxy"),
-            content=mocker.ANY,
-            file_mode="0644",
-        ),
-    ]
 
 
 def test_get_certificate_dir(mocker):

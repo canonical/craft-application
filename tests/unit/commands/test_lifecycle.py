@@ -869,6 +869,7 @@ def test_relativize_paths_invalid(root, paths):
         (True, True, True, "something"),
     ],
 )
+@pytest.mark.parametrize("fetch_service_policy", [None, "strict", "permissive"])
 def test_test_run(
     mocker,
     emitter,
@@ -878,16 +879,25 @@ def test_test_run(
     shell,
     shell_after,
     tests,
-    tmp_path,
+    fake_project_file,
+    fake_platform,
+    fetch_service_policy,
 ):
+    mock_services.get("build_plan").set_platforms(fake_platform)
+    try:
+        mock_services.get("build_plan").plan()
+    except errors.EmptyBuildPlanError:
+        pytest.skip(f"Can't build for {fake_platform}")
     mock_services.package.pack.return_value = [pathlib.Path("package.zip")]
     parsed_args = argparse.Namespace(
-        destructive_mode=True,
         parts=["my-part"],
         debug=debug,
         shell=shell,
         shell_after=shell_after,
         test_expressions=tests,
+        platform=fake_platform,
+        build_for=None,
+        fetch_service_policy=fetch_service_policy,
     )
     command = TestCommand(
         {
@@ -895,15 +905,14 @@ def test_test_run(
             "services": mock_services,
         }
     )
-    mocker.patch.object(command._services.lifecycle.project_info, "work_dir", tmp_path)
 
     command.run(parsed_args)
 
-    mock_services.package.pack.assert_called_once_with(
-        mock_services.lifecycle.prime_dir,
-        pathlib.Path.cwd(),
+    mock_services.get("provider").run_managed.assert_called_once_with(
+        mock_services.get("build_plan").plan()[0],
+        enable_fetch_service=bool(fetch_service_policy),
     )
-    mock_services.testing.test.assert_called_once_with(
+    mock_services.get("testing").test.assert_called_once_with(
         pathlib.Path.cwd(),
         pack_state=mock.ANY,
         shell=shell,

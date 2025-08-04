@@ -24,6 +24,7 @@ from craft_application.services.testing import TestingService
 from craft_application.services.package import PackageService
 from craft_application.services.project import ProjectService
 from craft_application.services.provider import ProviderService
+from craft_application.services.proxy import ProxyService
 from craft_application.services.remotebuild import RemoteBuildService
 from craft_application.services.request import RequestService
 from craft_application.services.state import StateService
@@ -33,16 +34,17 @@ from craft_application.services.service_factory import ServiceFactory
 
 __all__ = [
     "AppService",
-    "FetchService",
-    "ProjectService",
     "ConfigService",
-    "LifecycleService",
+    "FetchService",
     "InitService",
-    "TestingService",
+    "LifecycleService",
     "PackageService",
+    "ProjectService",
     "ProviderService",
+    "ProxyService",
     "RemoteBuildService",
     "RequestService",
     "ServiceFactory",
     "StateService",
+    "TestingService",
 ]

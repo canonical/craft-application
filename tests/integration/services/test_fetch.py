@@ -18,11 +18,13 @@
 import contextlib
 import io
 import json
+import os
 import pathlib
 import shutil
 import socket
 import textwrap
 from functools import cache
+from typing import Any
 from unittest import mock
 
 import craft_platforms
@@ -30,7 +32,11 @@ import craft_providers
 import pytest
 from craft_application import errors, fetch, services, util
 from craft_application.application import DEFAULT_CLI_LOGGERS
-from craft_application.services.fetch import _PROJECT_MANIFEST_MANAGED_PATH
+from craft_application.services.fetch import (
+    _PROJECT_MANIFEST_MANAGED_PATH,
+    EXTERNAL_FETCH_SERVICE_ENV_VAR,
+    PROXY_CERT_ENV_VAR,
+)
 from craft_cli import EmitterMode, emit
 
 
@@ -98,7 +104,7 @@ def test_start_service(app_service):
 @pytest.mark.slow
 def test_start_service_already_up(app_service, request):
     # Create a fetch-service "manually"
-    fetch_process = fetch.start_service()
+    fetch_process, _ = fetch.start_service()
     assert fetch.is_service_online()
     # Ensure its cleaned up when the test is done
     if fetch_process is not None:
@@ -272,7 +278,7 @@ def lxd_instance(snap_safe_tmp_path, provider_service):
 
 
 @pytest.mark.slow
-def test_build_instance_integration(
+def test_build_instance_integration_managed_fetch_service(
     app_service,
     lxd_instance,
     tmp_path,
@@ -281,14 +287,106 @@ def test_build_instance_integration(
     manifest_data_dir,
     capsys,
 ):
+    """Test the scenario where the craft-application owns/spawns the fetch-service."""
+
+    # Configure the services, run commands in the instance
+    report = _perform_instance_test(
+        app_service,
+        lxd_instance,
+        tmp_path,
+        monkeypatch,
+        manifest_data_dir,
+    )
+
+    # Check the session report ("raw" fetch-service output)
+    _check_session_report(report)
+
+    # Check the project manifest json file (created from the report)
+    _check_manifest(tmp_path, fake_project)
+
+    # Basic checks on log output
+    _check_log(capsys)
+
+
+@pytest.mark.slow
+def test_build_instance_integration_external_fetch_service(
+    app_service,
+    lxd_instance,
+    tmp_path,
+    monkeypatch,
+    fake_project,
+    manifest_data_dir,
+    capsys,
+    request,
+):
+    """Test the scenario where the craft-application uses an existing fetch-service session."""
+    # spawn a fetch-service and create a session "externally"
+    session_data = _create_external_session(lxd_instance, monkeypatch, request)
+
+    # This is the 'trigger' that tells the FetchService to use an external session
+    assert os.getenv(EXTERNAL_FETCH_SERVICE_ENV_VAR) == "1"
+
+    # Configure the services, run commands in the instance
+    report = _perform_instance_test(
+        app_service,
+        lxd_instance,
+        tmp_path,
+        monkeypatch,
+        manifest_data_dir,
+    )
+    # The report dict is empty because in this scenario the service is *not* tearing
+    # down the session
+    assert len(report) == 0
+
+    # Tear down the session and get the report, "externally"
+    report = _teardown_external_session(monkeypatch, session_data)
+    # Basic verifications on the report
+    _check_session_report(report)
+
+    # Note that we can't check the manifest here, it doesn't exist (the session is not
+    # ours to delete).
+
+    # Basic verifications on the log output
+    _check_log(capsys)
+
+
+def _create_external_session(lxd_instance, monkeypatch, request) -> fetch.SessionData:
+    fetch_process, proxy_cert = fetch.start_service()
+
+    assert fetch_process is not None
+    request.addfinalizer(lambda: fetch.stop_service(fetch_process))
+
+    session = fetch.create_session(strict=False)
+    gateway = fetch._get_gateway(lxd_instance)
+
+    # Environment variables that signal we should use an existing session.
+    monkeypatch.setenv(EXTERNAL_FETCH_SERVICE_ENV_VAR, "1")
+    monkeypatch.setenv(PROXY_CERT_ENV_VAR, str(proxy_cert))
+    proxy_port = fetch._DEFAULT_CONFIG.proxy
+    url = f"http://{session.session_id}:{session.token}@{gateway}:{proxy_port}/"
+    monkeypatch.setenv("http_proxy", url)
+
+    return session
+
+
+def _teardown_external_session(monkeypatch, session_data) -> dict[str, Any]:
+    monkeypatch.delenv("http_proxy")
+    return fetch.teardown_session(session_data)
+
+
+def _perform_instance_test(
+    app_service, lxd_instance, tmp_path, monkeypatch, manifest_data_dir
+) -> dict[str, Any]:
     emit.init(EmitterMode.BRIEF, "testcraft", "hi", streaming_brief=True)
     util.setup_loggers(*DEFAULT_CLI_LOGGERS)
     monkeypatch.chdir(tmp_path)
 
     app_service.setup()
+    fetch_env = app_service.configure_instance(lxd_instance)
+    proxy_env = app_service._services.get("proxy").configure_instance(lxd_instance)
+    env = fetch_env | proxy_env
 
-    env = app_service.create_session(lxd_instance)
-
+    report = {}
     try:
         # Install the hello Ubuntu package.
         lxd_instance.execute_run(
@@ -316,8 +414,12 @@ def test_build_instance_integration(
         )
 
     finally:
-        report = app_service.teardown_session()
+        report.update(app_service.teardown_instance())
 
+    return report
+
+
+def _check_session_report(report) -> None:
     artifacts_and_types: list[tuple[str, str]] = []
 
     for artifact in report["artifacts"]:
@@ -332,6 +434,8 @@ def test_build_instance_integration(
     # Check that the fetching of the "craft-application" wheel went through the inspector.
     assert ("craft-application", "application/x.python.wheel") in artifacts_and_types
 
+
+def _check_manifest(tmp_path, fake_project) -> None:
     manifest_path = (
         tmp_path / f"{fake_project.name}_{fake_project.version}_64-bit-pc.json"
     )
@@ -354,12 +458,14 @@ def test_build_instance_integration(
     assert dependencies["craft-application"]["type"] == "application/x.python.wheel"
     assert dependencies["craft-application"]["component-version"] == "3.0.0"
 
+
+def _check_log(capsys) -> None:
     # Note: the messages don't show up as
     # 'Configuring fetch-service integration :: Installing certificate' noqa: ERA001 (commented-out code)
     # because streaming-brief is disabled in non-terminal runs.
     expected_err = textwrap.dedent(
         """\
-        Configuring fetch-service integration
+        Configuring proxy in instance.
         Installing certificate
         Configuring pip
         Configuring snapd

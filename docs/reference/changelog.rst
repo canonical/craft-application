@@ -4,7 +4,50 @@
 Changelog
 *********
 
-5.5.0 (2025-MM-DD)
+5.7.0 (2025-MM-DD)
+------------------
+
+Services
+========
+
+- Add a new Proxy service that configures an instance to connect to a proxy.
+
+For a complete list of commits, check out the `5.7.0`_ release on GitHub.
+
+5.6.2 (2025-08-01)
+------------------
+
+Services
+========
+
+- Fix a bug where the State service had insufficient permissions to write
+  to the state directory.
+
+For a complete list of commits, check out the `5.6.2`_ release on GitHub.
+
+5.6.1 (2025-07-28)
+------------------
+
+Application
+===========
+
+- Applications must opt into skipping repack. This was done because it's not fully
+  backwards compatible (see:
+  `#821 <https://github.com/canonical/craft-application/issues/821>`_)
+
+For a complete list of commits, check out the `5.6.1`_ release on GitHub.
+
+5.6.0 (2025-07-24)
+------------------
+
+Application
+===========
+
+- Allow applications to override the execution of lifecycle actions.
+
+For a complete list of commits, check out the `5.6.0`_ release on GitHub.
+
+5.5.0 (2025-07-17)
 ------------------
 
 Services
@@ -12,12 +55,14 @@ Services
 
 - Add a new State service that manages a global state between manager and managed
   instances of an application.
+- Make the Project service compatible with multi-base platform definitions.
 
 Commands
 ========
 
 - The ``pack`` command will only repack if necessary. The ``test`` command will
   not recreate packages that already exist if the project has not been modified.
+- The ``test`` command will test all packed platforms.
 
 For a complete list of commits, check out the `5.5.0`_ release on GitHub.
 
@@ -840,3 +885,7 @@ For a complete list of commits, check out the `2.7.0`_ release on GitHub.
 .. _5.3.0: https://github.com/canonical/craft-application/releases/tag/5.3.0
 .. _5.4.0: https://github.com/canonical/craft-application/releases/tag/5.4.0
 .. _5.5.0: https://github.com/canonical/craft-application/releases/tag/5.5.0
+.. _5.6.0: https://github.com/canonical/craft-application/releases/tag/5.6.0
+.. _5.6.1: https://github.com/canonical/craft-application/releases/tag/5.6.1
+.. _5.6.2: https://github.com/canonical/craft-application/releases/tag/5.6.2
+.. _5.7.0: https://github.com/canonical/craft-application/releases/tag/5.7.0

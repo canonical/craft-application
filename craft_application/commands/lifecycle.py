@@ -16,12 +16,13 @@
 from __future__ import annotations
 
 import argparse
+import os
 import pathlib
 import subprocess
 import textwrap
-from typing import Any
+from typing import Any, Literal, cast
 
-from craft_cli import CommandGroup, emit
+from craft_cli import CommandGroup, CraftError, emit
 from craft_parts.features import Features
 from typing_extensions import override
 
@@ -59,6 +60,9 @@ class _BaseLifecycleCommand(base.ExtensibleCommand):
     environment) but do not have to provide shell access into the environment.
     """
 
+    _allow_destructive: bool = True
+    _show_lxd_arg: bool = True
+
     @override
     def _run(self, parsed_args: argparse.Namespace, **kwargs: Any) -> None:
         emit.trace(f"lifecycle command: {self.name!r}, arguments: {parsed_args!r}")
@@ -68,20 +72,22 @@ class _BaseLifecycleCommand(base.ExtensibleCommand):
         super()._fill_parser(parser)  # type: ignore[arg-type]
 
         group = parser.add_mutually_exclusive_group()
-        group.add_argument(
-            "--destructive-mode",
-            action="store_true",
-            help="Build in the current host",
-        )
-        group.add_argument(
-            "--use-lxd",
-            action="store_true",
-            help="Build in a LXD container.",
-        )
+        if self._allow_destructive:
+            group.add_argument(
+                "--destructive-mode",
+                action="store_true",
+                help="Build in the current host",
+            )
+        if self._show_lxd_arg:
+            group.add_argument(
+                "--use-lxd",
+                action="store_true",
+                help="Build in a LXD container.",
+            )
 
     @override
     def provider_name(self, parsed_args: argparse.Namespace) -> str | None:
-        return "lxd" if parsed_args.use_lxd else None
+        return "lxd" if getattr(parsed_args, "use_lxd", None) else None
 
     def _run_manager_for_build_plan(self, fetch_service_policy: str | None) -> None:
         """Run this command in managed mode, iterating over the generated build plan."""
@@ -116,6 +122,8 @@ class LifecycleCommand(_BaseLifecycleCommand):
     the lifecycle but cannot be run on a specific part.
     """
 
+    _allow_build_for: bool = True
+
     @override
     def _fill_parser(self, parser: argparse.ArgumentParser) -> None:
         super()._fill_parser(parser)
@@ -146,12 +154,13 @@ class LifecycleCommand(_BaseLifecycleCommand):
             metavar="name",
             help="Set platform to build for",
         )
-        group.add_argument(
-            "--build-for",
-            type=str,
-            metavar="arch",
-            help="Set architecture to build for",
-        )
+        if self._allow_build_for:
+            group.add_argument(
+                "--build-for",
+                type=str,
+                metavar="arch",
+                help="Set architecture to build for",
+            )
 
     @override
     def _run(
@@ -415,7 +424,7 @@ class PackCommand(LifecycleCommand):
 
         packages = self._relativize_paths(packages, root=pathlib.Path())
 
-        if parsed_args.fetch_service_policy and packages:
+        if getattr(parsed_args, "fetch_service_policy", None) and packages:
             self._services.fetch.create_project_manifest(packages)
 
         if not packages:
@@ -437,6 +446,10 @@ class PackCommand(LifecycleCommand):
 
     def _is_already_packed(self) -> bool:
         """Verify whether the artifacts are already packed and up-to-date."""
+        # Gate the skip-repack feature.
+        if self._app.always_repack:
+            return False
+
         # 1. A file containing the list of packed artifacts is created after
         #    packing. Before packing, check if the list file exists. If not, we
         #    never packed before and packing is necessary.
@@ -581,6 +594,9 @@ class TestCommand(PackCommand):
         """
     )
     common = True
+    _allow_destructive = False
+    _show_lxd_arg = False
+    _allow_build_for = False
 
     @override
     def _fill_parser(self, parser: argparse.ArgumentParser) -> None:
@@ -601,43 +617,65 @@ class TestCommand(PackCommand):
         step_name: str | None = None,
         **kwargs: Any,
     ) -> None:
-        if not util.is_managed_mode():
-            emit.progress(
-                "The test command is experimental and subject to change without warning.",
-                permanent=True,
-            )
+        # Add values for super classes like pack.
+        parsed_args.output = pathlib.Path.cwd()
+
+        if util.is_managed_mode():
+            # If we're in managed mode, we just need to pack.
+            return super()._run(parsed_args=parsed_args, step_name=step_name, **kwargs)
+        emit.progress(
+            "The test command is experimental and subject to change without warning.",
+            permanent=True,
+        )
+
+        build_planner = self._services.get("build_plan")
+        if parsed_args.platform:
+            os.environ["CRAFT_PLATFORM"] = parsed_args.platform
+            build_planner.set_platforms(parsed_args.platform)
 
         testing_service = self._services.get("testing")
-        parsed_args.output = pathlib.Path.cwd()
-        parsed_args.fetch_service_policy = None
+        package = self._services.get("package")
+        provider = self._services.get("provider")
+
+        fetch_service_policy = cast(
+            Literal["strict", "permissive", None],
+            getattr(parsed_args, "fetch_service_policy", None),
+        )
+        if fetch_service_policy:
+            self._services.get("fetch").set_policy(
+                fetch_service_policy  # type: ignore[reportArgumentType]
+            )
 
         # Don't enter a shell during the packing step, but save those values
         # for the testing service.
         shell, shell_after = parsed_args.shell, parsed_args.shell_after
         parsed_args.shell, parsed_args.shell_after = (False, False)
 
-        # Pack the packages.
-        super()._run(parsed_args, step_name, **kwargs)
+        # This loop allows us to (pack, test) for each platform.
+        for build_info in build_planner.plan():
+            emit.progress(f"Packing platform '{build_info.platform}'")
+            parsed_args.platform = build_info.platform
+            provider.run_managed(
+                build_info, enable_fetch_service=bool(fetch_service_policy)
+            )
+            pack_state = package.read_state(build_info.platform)
+            if pack_state.artifact is None:
+                raise CraftError(
+                    f"No artifact was packed for platform '{build_info.platform}'",
+                    resolution=f"Ensure platform '{build_info.platform}' packs correctly.",
+                )
+            emit.progress(f"Testing platform '{build_info.platform}'")
+            testing_service.test(
+                pathlib.Path.cwd(),
+                pack_state=pack_state,
+                test_expressions=parsed_args.test_expressions,
+                shell=shell,
+                shell_after=shell_after,
+                debug=parsed_args.debug,
+            )
 
-        if util.is_managed_mode():
-            # Run the rest of this outside the managed instance.
-            return
-
-        pack_state = self._services.package.read_state()
-
-        if not pack_state.artifact:
-            raise RuntimeError("No artifact files to test.")
-
-        emit.progress("Testing project")
-        testing_service.test(
-            pathlib.Path.cwd(),
-            pack_state=pack_state,
-            test_expressions=parsed_args.test_expressions,
-            shell=shell,
-            shell_after=shell_after,
-            debug=parsed_args.debug,
-        )
         emit.progress("Testing successful.", permanent=True)
+        return None
 
 
 class CleanCommand(_BaseLifecycleCommand):
