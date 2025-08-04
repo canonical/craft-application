@@ -167,6 +167,7 @@ def test_update_kwargs(
     fake_package_service_class,
     first_kwargs,
     second_kwargs,
+    check,
     expected,
 ):
     class MockPackageService(fake_package_service_class):
@@ -181,8 +182,8 @@ def test_update_kwargs(
     factory.update_kwargs("package", **first_kwargs)
     factory.update_kwargs("package", **second_kwargs)
 
-    pytest_check.is_(factory.package, MockPackageService.mock_class.return_value)
-    with pytest_check.check():
+    check.is_(factory.package, MockPackageService.mock_class.return_value)
+    with check:
         MockPackageService.mock_class.assert_called_once_with(
             app=app_metadata, services=factory, **expected
         )
