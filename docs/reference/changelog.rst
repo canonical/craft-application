@@ -4,7 +4,7 @@
 Changelog
 *********
 
-5.6.2 (2025-MM-DD)
+5.6.3 (2025-08-05)
 ------------------
 
 Fixes
@@ -12,6 +12,17 @@ Fixes
 
 - Check the craft backend type before testing. The type must be ``craft`` to
   allow the backend to be dynamically processed.
+
+5.6.2 (2025-08-01)
+------------------
+
+Services
+========
+
+- Fix a bug where the State service had insufficient permissions to write
+  to the state directory.
+
+For a complete list of commits, check out the `5.6.2`_ release on GitHub.
 
 5.6.1 (2025-07-28)
 ------------------
@@ -875,3 +886,4 @@ For a complete list of commits, check out the `2.7.0`_ release on GitHub.
 .. _5.5.0: https://github.com/canonical/craft-application/releases/tag/5.5.0
 .. _5.6.0: https://github.com/canonical/craft-application/releases/tag/5.6.0
 .. _5.6.1: https://github.com/canonical/craft-application/releases/tag/5.6.1
+.. _5.6.2: https://github.com/canonical/craft-application/releases/tag/5.6.2

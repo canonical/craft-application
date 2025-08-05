@@ -159,10 +159,18 @@ class StateService(base.AppService):
         # give LXD access to the state directory when running as root
         if os.geteuid() == 0 and isinstance(instance, craft_providers.lxd.LXDInstance):
             craft_cli.emit.debug(
-                f"Adding o+rwx permissions to {str(self._state_dir)!r}."
+                f"Adding go+rwx permissions to {str(self._state_dir)!r}."
             )
             mode = self._state_dir.stat().st_mode
-            new_mode = mode | stat.S_IROTH | stat.S_IWOTH | stat.S_IXOTH
+            new_mode = (
+                mode
+                | stat.S_IRGRP
+                | stat.S_IWGRP
+                | stat.S_IXGRP
+                | stat.S_IROTH
+                | stat.S_IWOTH
+                | stat.S_IXOTH
+            )
             self._state_dir.chmod(new_mode)
 
         instance.mount(host_source=self._state_dir, target=self._managed_state_dir)
@@ -387,6 +395,11 @@ class StateService(base.AppService):
 
         try:
             file_path.write_text(raw_data)
+        # specific handling for permission errors as they are the most likely error to occur
+        except PermissionError as err:
+            raise errors.StateServiceError(
+                f"Can't save state file {str(file_path)!r} due to insufficient permissions."
+            ) from err
         except OSError as err:
             raise errors.StateServiceError(
                 f"Can't save state file {str(file_path)!r}."
