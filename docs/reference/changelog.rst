@@ -14,6 +14,17 @@ Services
 
 For a complete list of commits, check out the `5.7.0`_ release on GitHub.
 
+5.6.3 (2025-08-05)
+------------------
+
+Fixes
+=====
+
+- Check the craft backend type before testing. The type must be ``craft`` to
+  allow the backend to be dynamically processed.
+
+For a complete list of commits, check out the `5.6.2`_ release on GitHub.
+
 5.6.2 (2025-08-01)
 ------------------
 
@@ -888,4 +899,5 @@ For a complete list of commits, check out the `2.7.0`_ release on GitHub.
 .. _5.6.0: https://github.com/canonical/craft-application/releases/tag/5.6.0
 .. _5.6.1: https://github.com/canonical/craft-application/releases/tag/5.6.1
 .. _5.6.2: https://github.com/canonical/craft-application/releases/tag/5.6.2
+.. _5.6.3: https://github.com/canonical/craft-application/releases/tag/5.6.3
 .. _5.7.0: https://github.com/canonical/craft-application/releases/tag/5.7.0
