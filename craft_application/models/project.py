@@ -200,9 +200,6 @@ class Project(base.CraftBaseModel):
     )
     """The self-contained software pieces needed to create the final artifact.
 
-    Each part is pulled, built, staged, and primed according to the parts lifecycle
-    when packaging the project.
-
     A part's behavior is driven by its plugin. Custom behavior can be defined with the
     ``override-`` keys.
     """
