@@ -130,8 +130,8 @@ class Project(base.CraftBaseModel):
     describing what the project does and who may find it useful.
     """
 
-    base: str | None
-    build_base: str | None
+    base: str | None = None
+    build_base: str | None = None
 
     platforms: PlatformsDict = pydantic.Field(
         description="Determines which architectures the project builds and runs on.",
