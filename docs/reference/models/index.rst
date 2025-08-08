@@ -8,6 +8,7 @@ The top-level ``Project`` model is nested with several other models.
 .. toctree::
    :maxdepth: 1
 
+   project
    platforms
 
 

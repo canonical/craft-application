@@ -19,6 +19,7 @@ This defines the structure of the input file (e.g. snapcraft.yaml)
 """
 
 import dataclasses
+import textwrap
 from typing import Annotated, Any
 
 import craft_parts
@@ -118,21 +119,91 @@ class Project(base.CraftBaseModel):
     title: ProjectTitle | None = None
     version: VersionStr | None = None
     summary: SummaryStr | None = None
-    description: str | None = None
+
+    description: str | None = pydantic.Field(
+        default=None,
+        description="The full description of the project.",
+    )
+    """The full description of the project.
+
+    This is a free-form field, but it is typically assigned one to two brief paragraphs
+    describing what the project does and who may find it useful.
+    """
 
     base: str | None = None
     build_base: str | None = None
-    platforms: PlatformsDict
 
-    contact: str | UniqueStrList | None = None
-    issues: str | UniqueStrList | None = None
-    source_code: pydantic.AnyUrl | None = None
-    license: str | None = None
+    platforms: PlatformsDict = pydantic.Field(
+        description="Determines which architectures the project builds and runs on.",
+        examples=[
+            "{amd64: {build-on: [amd64], build-for: [amd64]}, arm64: {build-on: [amd64, arm64], build-for: [arm64]}}"
+        ],
+    )
+    """Determines which architectures the project builds and runs on.
 
-    adopt_info: str | None = None
+    If the platform name is a valid Debian architecture, the ``build-on`` and
+    ``build-for`` keys can be omitted.
+
+    The platform name describes a ``build-on``-``build-for`` pairing.  When setting
+    ``build-on`` and ``build-for``, the name is arbitrary but it's recommended to match
+    the platform name to the architecture set by ``build-for``.
+    """
+
+    contact: str | UniqueStrList | None = pydantic.Field(
+        default=None,
+        description="The author's contact links and email addresses.",
+        examples=["[contact@example.com, https://example.com/contact]"],
+    )
+
+    issues: str | UniqueStrList | None = pydantic.Field(
+        default=None,
+        description="The links and email addresses for submitting issues, bugs, and feature requests.",
+        examples=["[issues@example.com, https://example.com/issues]"],
+    )
+
+    source_code: pydantic.AnyUrl | None = pydantic.Field(
+        default=None,
+        description="The links to the source code of the project.",
+        examples=["[https://github.com/canonical/craft-application]"],
+    )
+
+    license: str | None = pydantic.Field(
+        default=None,
+        description="The project's license as an SPDX expression",
+        examples=["GPL-3.0+", "Apache-2.0"],
+    )
+    """The project's license as an SPDX expression.
+
+    Currently, only `SPDX 2.1 expressions <https://spdx.org/licenses/>`_ are supported.
+
+    For “or later” and “with exception” license styles, refer to `Appendix V of the SPDX
+    Specification 2.1
+    <https://web.archive.org/web/20230902152422/https://spdx.dev/spdx-specification-21-web-version/#h.twlc0ztnng3b>`_.
+    """
+
+    adopt_info: str | None = pydantic.Field(
+        default=None,
+        description="Selects a part to inherit metadata from.",
+        examples=["foo-part"],
+    )
 
     # parts are handled by craft-parts
-    parts: dict[str, Part]
+    parts: dict[str, Part] = pydantic.Field(
+        description="The self-contained software pieces needed to create the final artifact.",
+        examples=[
+            textwrap.dedent(
+                "{cloud-init: \
+                {plugin: python, \
+                source-type: git, \
+                source: https://git.launchpad.net/cloud-init}}"
+            ),
+        ],
+    )
+    """The self-contained software pieces needed to create the final artifact.
+
+    A part's behavior is driven by its plugin. Custom behavior can be defined with the
+    ``override-`` keys.
+    """
 
     package_repositories: (
         list[
@@ -141,7 +212,24 @@ class Project(base.CraftBaseModel):
             ]
         ]
         | None
-    ) = None
+    ) = pydantic.Field(
+        default=None,
+        description="The package repositories to use for build and stage packages.",
+        examples=[
+            textwrap.dedent(
+                "[{type: apt,\
+                components: [main],\
+                suites: [xenial],\
+                key-id: 78E1918602959B9C59103100F1831DDAFC42E99D,\
+                url: http://ppa.launchpad.net/snappy-dev/snapcraft-daily/ubuntu}]",
+            ),
+        ],
+    )
+    """The APT package repositories to use as sources for build and stage packages.
+
+    The Debian, Personal Package Archive (PPA), and Ubuntu Cloud Archive (UCA) package
+    formats are supported.
+    """
 
     @pydantic.field_validator("platforms", mode="before")
     @classmethod

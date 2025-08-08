@@ -84,9 +84,9 @@ SingleEntryDict = Annotated[
 _PROJECT_NAME_DESCRIPTION = """\
 The name of the project. This is used when uploading, publishing, or installing.
 
-The project name must consist only of lower-case ASCII letters (``a-z``), numerals
-(``0-9``), and hyphens (``-``). It must contain at least one letter, not start or end
-with a hyphen, and not contain two consecutive hyphens. The maximum length is 40
+The project name must consist only of lower-case ASCII letters (``a``-``z``), numerals
+(``0``-``9``), and hyphens (``-``). It must contain at least one letter, not start or
+end with a hyphen, and not contain two consecutive hyphens. The maximum length is 40
 characters.
 """
 
