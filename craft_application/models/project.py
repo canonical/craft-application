@@ -172,8 +172,9 @@ class Project(base.CraftBaseModel):
         description="The project's license as an SPDX expression",
         examples=["GPL-3.0+", "Apache-2.0"],
     )
-    """Currently, only `SPDX 2.1 expressions <https://spdx.org/licenses/>`_ are
-    supported.
+    """The project's license as an SPDX expression.
+
+    Currently, only `SPDX 2.1 expressions <https://spdx.org/licenses/>`_ are supported.
 
     For “or later” and “with exception” license styles, refer to `Appendix V of the SPDX
     Specification 2.1
