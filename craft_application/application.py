@@ -403,6 +403,7 @@ class Application:
                 build_info,
                 work_dir=self._work_dir,
                 clean_existing=self._enable_fetch_service,
+                use_base_instance=not self._enable_fetch_service,
             ) as instance:
                 if self._enable_fetch_service:
                     fetch_env = self.services.fetch.create_session(instance)

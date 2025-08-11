@@ -73,11 +73,25 @@ class ProxyService(base.AppService):
         emit.progress("Configuring proxy in instance.")
 
         self._install_certificate(instance)
-        self._configure_pip(instance)
-        self._configure_snapd(instance)
         self._configure_apt(instance)
 
         return self._env
+
+    def configure_packages(self, instance: craft_providers.Executor) -> None:
+        """Configure installed packages to connect to a proxy.
+
+        :param instance: The instance to configure.
+        """
+        if not self.__is_configured:
+            emit.debug(
+                "Skipping package configuration because the proxy service isn't configured."
+            )
+            return
+
+        emit.progress("Configuring packages in instance.")
+
+        self._configure_pip(instance)
+        self._configure_snapd(instance)
 
     @property
     def _env(self) -> dict[str, str]:
