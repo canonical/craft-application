@@ -624,6 +624,8 @@ def test_instance(
             instance_name=mock.ANY,
             base_configuration=mock.ANY,
             allow_unstable=allow_unstable,
+            prepare_instance=None,
+            use_base_instance=True,
         )
     with check:
         assert instance.mount.mock_calls == [

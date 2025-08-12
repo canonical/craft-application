@@ -42,7 +42,6 @@ def test_configure_build_instance(mocker, proxy_service, new_dir):
     mock_instance = mock.MagicMock(spec_set=LXDInstance)
 
     env = proxy_service.configure_instance(mock_instance)
-
     assert env == {
         "http_proxy": "test-proxy",
         "https_proxy": "test-proxy",
@@ -51,11 +50,25 @@ def test_configure_build_instance(mocker, proxy_service, new_dir):
         "GOPROXY": "direct",
     }
 
+    proxy_service.configure_packages(mock_instance)
+
     # Execution calls on the instance
     default_args = {"check": True, "stdout": subprocess.PIPE, "stderr": subprocess.PIPE}
     assert mock_instance.execute_run.mock_calls == [
         call(
             ["/bin/sh", "-c", "/usr/sbin/update-ca-certificates > /dev/null"],
+            **default_args,
+        ),
+        call(
+            ["test", "-d", "/etc/apt"],
+            **default_args,
+        ),
+        call(
+            ["/bin/rm", "-Rf", "/var/lib/apt/lists"],
+            **default_args,
+        ),
+        call(
+            ["apt", "update"],
             **default_args,
         ),
         call(
@@ -74,18 +87,6 @@ def test_configure_build_instance(mocker, proxy_service, new_dir):
             ["snap", "set", "system", "proxy.https=test-proxy"],
             **default_args,
         ),
-        call(
-            ["test", "-d", "/etc/apt"],
-            **default_args,
-        ),
-        call(
-            ["/bin/rm", "-Rf", "/var/lib/apt/lists"],
-            **default_args,
-        ),
-        call(
-            ["apt", "update"],
-            **default_args,
-        ),
     ]
 
     # Files pushed to the instance
@@ -98,12 +99,12 @@ def test_configure_build_instance(mocker, proxy_service, new_dir):
 
     assert mock_instance.push_file_io.mock_calls == [
         call(
-            destination=pathlib.Path("/root/.pip/pip.conf"),
+            destination=pathlib.Path("/etc/apt/apt.conf.d/99proxy"),
             content=mocker.ANY,
             file_mode="0644",
         ),
         call(
-            destination=pathlib.Path("/etc/apt/apt.conf.d/99proxy"),
+            destination=pathlib.Path("/root/.pip/pip.conf"),
             content=mocker.ANY,
             file_mode="0644",
         ),
@@ -127,6 +128,7 @@ def test_configure_skip_apt(mocker, proxy_service, new_dir, emitter):
     mock_instance.execute_run.side_effect = _has_apt
 
     proxy_service.configure_instance(mock_instance)
+    proxy_service.configure_packages(mock_instance)
 
     emitter.assert_debug(
         "Not configuring the proxy for apt because apt isn't available in the instance."
@@ -136,6 +138,10 @@ def test_configure_skip_apt(mocker, proxy_service, new_dir, emitter):
     assert mock_instance.execute_run.mock_calls == [
         call(
             ["/bin/sh", "-c", "/usr/sbin/update-ca-certificates > /dev/null"],
+            **default_args,
+        ),
+        call(
+            ["test", "-d", "/etc/apt"],
             **default_args,
         ),
         call(
@@ -152,10 +158,6 @@ def test_configure_skip_apt(mocker, proxy_service, new_dir, emitter):
         ),
         call(
             ["snap", "set", "system", "proxy.https=test-proxy"],
-            **default_args,
-        ),
-        call(
-            ["test", "-d", "/etc/apt"],
             **default_args,
         ),
     ]
@@ -182,6 +184,7 @@ def test_not_configured(proxy_service, emitter):
     mock_instance = mock.MagicMock(spec_set=LXDInstance)
 
     proxy_service.configure_instance(mock_instance)
+    proxy_service.configure_packages(mock_instance)
 
     emitter.assert_debug(
         "Skipping proxy configuration because the proxy service isn't configured."
