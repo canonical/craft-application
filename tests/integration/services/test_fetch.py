@@ -384,6 +384,7 @@ def _perform_instance_test(
     app_service.setup()
     fetch_env = app_service.configure_instance(lxd_instance)
     proxy_env = app_service._services.get("proxy").configure_instance(lxd_instance)
+    app_service._services.get("proxy").configure_packages(lxd_instance)
     env = fetch_env | proxy_env
 
     report = {}
@@ -467,10 +468,11 @@ def _check_log(capsys) -> None:
         """\
         Configuring proxy in instance.
         Installing certificate
-        Configuring pip
-        Configuring snapd
         Configuring Apt
         Refreshing Apt package listings
+        Configuring packages in instance.
+        Configuring pip
+        Configuring snapd
         """
     )
     _, captured_err = capsys.readouterr()
