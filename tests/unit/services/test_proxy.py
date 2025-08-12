@@ -56,6 +56,10 @@ def test_configure_build_instance(mocker, proxy_service, new_dir):
     default_args = {"check": True, "stdout": subprocess.PIPE, "stderr": subprocess.PIPE}
     assert mock_instance.execute_run.mock_calls == [
         call(
+            ["mkdir", "-p", "/usr/local/share/ca-certificates"],
+            **default_args,
+        ),
+        call(
             ["/bin/sh", "-c", "/usr/sbin/update-ca-certificates > /dev/null"],
             **default_args,
         ),
@@ -136,6 +140,10 @@ def test_configure_skip_apt(mocker, proxy_service, new_dir, emitter):
     # Execution calls on the instance
     default_args = {"check": True, "stdout": subprocess.PIPE, "stderr": subprocess.PIPE}
     assert mock_instance.execute_run.mock_calls == [
+        call(
+            ["mkdir", "-p", "/usr/local/share/ca-certificates"],
+            **default_args,
+        ),
         call(
             ["/bin/sh", "-c", "/usr/sbin/update-ca-certificates > /dev/null"],
             **default_args,

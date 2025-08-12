@@ -181,6 +181,10 @@ class ProxyService(base.AppService):
                 f"Proxy certificate {str(self.__proxy_cert)!r} isn't a file."
             )
 
+        self._execute_run(
+            instance,
+            ["mkdir", "-p", str(_PROXY_CERT_INSTANCE_PATH.parent)],
+        )
         instance.push_file(
             source=self.__proxy_cert,
             destination=_PROXY_CERT_INSTANCE_PATH,
