@@ -466,11 +466,11 @@ def _check_log(capsys) -> None:
     # because streaming-brief is disabled in non-terminal runs.
     expected_err = textwrap.dedent(
         """\
-        Configuring proxy in instance.
+        Configuring proxy in instance
         Installing certificate
         Configuring Apt
         Refreshing Apt package listings
-        Configuring packages in instance.
+        Configuring packages in instance
         Configuring pip
         Configuring snapd
         """

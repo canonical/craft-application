@@ -70,7 +70,7 @@ class ProxyService(base.AppService):
             )
             return {}
 
-        emit.progress("Configuring proxy in instance.")
+        emit.progress("Configuring proxy in instance")
 
         self._install_certificate(instance)
         self._configure_apt(instance)
@@ -88,7 +88,7 @@ class ProxyService(base.AppService):
             )
             return
 
-        emit.progress("Configuring packages in instance.")
+        emit.progress("Configuring packages in instance")
 
         self._configure_pip(instance)
         self._configure_snapd(instance)
