@@ -13,7 +13,7 @@
 #
 # You should have received a copy of the GNU Lesser General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
-"""Main Testcraft app."""
+"""Main Witchcraft app."""
 
 import craft_application
 from craft_application.application import Application
@@ -32,7 +32,7 @@ WITCHCRAFT = craft_application.AppMetadata(
 
 
 class Witchcraft(Application):
-    """Rockcraft application definition."""
+    """Witchcraft application definition."""
 
     @override
     def _enable_craft_parts_features(self) -> None:

@@ -13,13 +13,13 @@
 #
 # You should have received a copy of the GNU Lesser General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
-"""Testcraft metadata model."""
+"""Witchcraft metadata model."""
 
 from craft_application.models import metadata
 
 
 class Metadata(metadata.BaseMetadata):
-    """Testcraft metadata."""
+    """Witchcraft metadata."""
 
     name: str
     version: str

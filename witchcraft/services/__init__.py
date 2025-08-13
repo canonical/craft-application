@@ -19,7 +19,7 @@ import craft_application
 
 
 def register_services() -> None:
-    """Register Testcraft's services.
+    """Register Witchcraft's services.
 
     This registers with the ServiceFactory all the services that witchcraft
     adds or overrides.

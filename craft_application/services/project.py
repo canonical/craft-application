@@ -614,14 +614,14 @@ class ProjectService(base.AppService):
         if project.get("base") is None:
             raise RuntimeError("No base detected when getting support range.")
         base = craft_platforms.DistroBase.from_str(project.get("base", ""))
+        build_base: craft_platforms.DistroBase | None = None
         if project.get("build_base"):
-            build_base: craft_platforms.DistroBase | None = (
-                craft_platforms.DistroBase.from_str(project.get("build_base", ""))
+            build_base = craft_platforms.DistroBase.from_str(
+                project.get("build_base", "")
             )
+
             if build_base.series == "devel":  # type: ignore[union-attr]
                 build_base = None
-        else:
-            build_base = None
 
         today = datetime.date.today()
 
