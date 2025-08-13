@@ -610,17 +610,15 @@ class ProjectService(base.AppService):
 
         :raises: CraftValidationError if either is unsupported.
         """
-        project = self.get_raw()
-        if project.get("base") is None:
+        project = self.get()
+        if project.base is None:
             raise RuntimeError("No base detected when getting support range.")
-        base = craft_platforms.DistroBase.from_str(project.get("base", ""))
+        base = craft_platforms.DistroBase.from_str(project.base)
         build_base: craft_platforms.DistroBase | None = None
-        if project.get("build_base"):
-            build_base = craft_platforms.DistroBase.from_str(
-                project.get("build_base", "")
-            )
+        if project.build_base:
+            build_base = craft_platforms.DistroBase.from_str(project.build_base)
 
-            if build_base.series == "devel":  # type: ignore[union-attr]
+            if build_base.series == "devel":
                 build_base = None
 
         today = datetime.date.today()

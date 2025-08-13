@@ -331,6 +331,7 @@ def test_step_command_fill_parser(
 @pytest.mark.usefixtures("managed_mode")
 def test_step_command_run_explicit_step(app_metadata, mock_services, parts, step_name):
     cls = get_fake_command_class(LifecyclePartsCommand, managed=True)
+    mock_services.get("project").configure(platform=None, build_for=None)
 
     parsed_args = argparse.Namespace(destructive_mode=False, parts=parts)
     command = cls({"app": app_metadata, "services": mock_services})
@@ -344,6 +345,7 @@ def test_step_command_run_explicit_step(app_metadata, mock_services, parts, step
 
 @pytest.mark.parametrize("command_cls", MANAGED_LIFECYCLE_COMMANDS)
 def test_step_command_failure(app_metadata, mock_services, command_cls):
+    mock_services.get("project").configure(platform=None, build_for=None)
     parsed_args = argparse.Namespace(destructive_mode=True, parts=None)
     error_message = "Lifecycle run failed!"
 
@@ -370,6 +372,7 @@ def test_step_command_failure(app_metadata, mock_services, command_cls):
 @pytest.mark.usefixtures("managed_mode")
 def test_managed_concrete_commands_run(app_metadata, mock_services, command_cls, parts):
     parsed_args = argparse.Namespace(destructive_mode=False, parts=parts)
+    mock_services.get("project").configure(platform=None, build_for=None)
     command = command_cls({"app": app_metadata, "services": mock_services})
 
     command.run(parsed_args)
@@ -512,9 +515,11 @@ def test_pack_run(
     mocker, emitter, mock_services, app_metadata, parts, tmp_path, packages, message
 ):
     mock_services.package.pack.return_value = packages
+    mock_services.get("project").configure(platform=None, build_for=None)
     parsed_args = argparse.Namespace(
         destructive_mode=True, parts=parts, output=tmp_path, fetch_service_policy=None
     )
+
     command = PackCommand(
         {
             "app": app_metadata,
@@ -548,6 +553,7 @@ def test_pack_fetch_manifest(
 ):
     packages = [pathlib.Path("package.zip")]
     mock_services.package.pack.return_value = packages
+    mock_services.get("project").configure(platform=None, build_for=None)
     parsed_args = argparse.Namespace(
         destructive_mode=True,
         output=tmp_path,
