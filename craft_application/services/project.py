@@ -593,7 +593,9 @@ class ProjectService(base.AppService):
     ) -> bool:
         """Check if the given base is supported or in extended support on a date."""
         support_range = distro_support.get_support_range(base.distribution, base.series)
-        if support_range.is_supported_on(date):
+        if support_range.is_supported_on(date) or support_range.is_in_development_on(
+            date
+        ):
             return True
         try:
             return support_range.is_esm_on(date)
@@ -608,13 +610,13 @@ class ProjectService(base.AppService):
 
         :raises: CraftValidationError if either is unsupported.
         """
-        project = self.get()
-        if project.base is None:
+        project = self.get_raw()
+        if project.get("base") is None:
             raise RuntimeError("No base detected when getting support range.")
-        base = craft_platforms.DistroBase.from_str(project.base)
-        if project.build_base:
+        base = craft_platforms.DistroBase.from_str(project.get("base", ""))
+        if project.get("build_base"):
             build_base: craft_platforms.DistroBase | None = (
-                craft_platforms.DistroBase.from_str(project.build_base)
+                craft_platforms.DistroBase.from_str(project.get("build_base", ""))
             )
             if build_base.series == "devel":  # type: ignore[union-attr]
                 build_base = None

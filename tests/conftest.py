@@ -40,6 +40,7 @@ from craft_application.services.fetch import FetchService
 from craft_application.services.project import ProjectService
 from craft_application.util import yaml
 from craft_cli import EmitterMode, emit
+from craft_parts import callbacks
 from jinja2 import FileSystemLoader
 from typing_extensions import override
 
@@ -170,6 +171,12 @@ def fake_base(request: pytest.FixtureRequest):
 def reset_services():
     yield
     service_factory.ServiceFactory.reset()
+
+
+@pytest.fixture(autouse=True)
+def reset_craft_parts_callbacks():
+    yield
+    callbacks.unregister_all()
 
 
 @pytest.fixture

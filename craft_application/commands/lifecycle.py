@@ -181,7 +181,9 @@ class LifecycleCommand(_BaseLifecycleCommand):
         build_planner = self.services.get("build_plan")
 
         # If we check for supported bases, fail early for all unsupported bases.
-        if self._app.check_supported_base and not parsed_args.allow_unsupported_base:
+        if self._app.check_supported_base and not getattr(
+            parsed_args, "allow_unsupported_base", None
+        ):
             self.services.get("project").check_base_is_supported()
 
         config = self.services.get("config")
@@ -231,12 +233,12 @@ class LifecycleCommand(_BaseLifecycleCommand):
         step_name: str | None = None,
     ) -> None:
         """Run the lifecycle."""
-        self._services.lifecycle.run(step_name=step_name)
+        self._services.get("lifecycle").run(step_name=step_name)
 
     def _run_post_prime_steps(self) -> None:
         """Run post-prime steps."""
         self._services.package.update_project()
-        self._services.package.write_metadata(self._services.lifecycle.prime_dir)
+        self._services.package.write_metadata(self.services.get("lifecycle").prime_dir)
 
     @staticmethod
     def _should_add_shell_args() -> bool:
@@ -265,7 +267,7 @@ class LifecyclePartsCommand(LifecycleCommand):
         self, parsed_args: argparse.Namespace, step_name: str | None = None
     ) -> None:
         """Run the lifecycle, optionally for a part or list of parts."""
-        self._services.lifecycle.run(
+        self.services.get("lifecycle").run(
             step_name=step_name,
             part_names=parsed_args.parts,
         )
@@ -427,7 +429,7 @@ class PackCommand(LifecycleCommand):
         emit.progress("Packing...")
         try:
             packages = self._services.package.pack(
-                self._services.lifecycle.prime_dir, parsed_args.output
+                self.services.get("lifecycle").prime_dir, parsed_args.output
             )
         except Exception as err:
             if debug:
@@ -480,7 +482,7 @@ class PackCommand(LifecycleCommand):
         if pack_time is None:
             return False
 
-        prime_time = self._services.lifecycle.prime_state_timestamp
+        prime_time = self.services.get("lifecycle").prime_state_timestamp
         if prime_time is None:
             # This should never happen under normal circumstances, but manual
             # manipulation of state files is possible.
@@ -512,7 +514,7 @@ class PackCommand(LifecycleCommand):
         self,
     ) -> tuple[pathlib.Path | None, dict[str, pathlib.Path] | None]:
         """Load a list of artifact and resources."""
-        work_dir = self._services.lifecycle.project_info.work_dir
+        work_dir = self.services.get("lifecycle").project_info.work_dir
         file_list_path = work_dir / _PACKED_FILE_LIST_PATH
         if not file_list_path.is_file():
             return (None, None)
@@ -524,14 +526,14 @@ class PackCommand(LifecycleCommand):
         self, artifact: pathlib.Path | None, resources: dict[str, pathlib.Path] | None
     ) -> None:
         """Save the list of the given artifact and resources."""
-        work_dir = self._services.lifecycle.project_info.work_dir
+        work_dir = self.services.get("lifecycle").project_info.work_dir
         file_list_path = work_dir / _PACKED_FILE_LIST_PATH
         file_list_path.parent.mkdir(parents=True, exist_ok=True)
         data = models.PackState(artifact=artifact, resources=resources)
         data.to_yaml_file(file_list_path)
 
     def _get_packed_file_list_timestamp(self) -> int | None:
-        work_dir = self._services.lifecycle.project_info.work_dir
+        work_dir = self.services.get("lifecycle").project_info.work_dir
         file_list_path: pathlib.Path = work_dir / _PACKED_FILE_LIST_PATH
         if not file_list_path.is_file():
             return None
