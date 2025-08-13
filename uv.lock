@@ -447,7 +447,6 @@ remote = [
 dev = [
     { name = "coverage", extra = ["toml"] },
     { name = "craft-application", extra = ["remote"] },
-    { name = "craft-archives" },
     { name = "craft-providers" },
     { name = "hypothesis" },
     { name = "jsonschema" },
@@ -498,7 +497,7 @@ types = [
 [package.metadata]
 requires-dist = [
     { name = "annotated-types", specifier = ">=0.6.0" },
-    { name = "craft-archives", git = "https://github.com/canonical/craft-archives?rev=work%2FCRAFT-4634-b" },
+    { name = "craft-archives", specifier = ">=2.2.0" },
     { name = "craft-cli", specifier = "~=3.0" },
     { name = "craft-grammar", specifier = ">=2.0.0" },
     { name = "craft-parts", specifier = ">=2.18.0" },
@@ -523,7 +522,6 @@ provides-extras = ["remote", "apt"]
 dev = [
     { name = "coverage", extras = ["toml"], specifier = "~=7.9" },
     { name = "craft-application", extras = ["remote"] },
-    { name = "craft-archives", git = "https://github.com/canonical/craft-archives?rev=work%2FCRAFT-4634-b" },
     { name = "craft-providers", git = "https://github.com/canonical/craft-providers?rev=main" },
     { name = "hypothesis", specifier = ">=6.0" },
     { name = "jsonschema", specifier = ">=4.23.0" },
@@ -563,8 +561,8 @@ types = [
 
 [[package]]
 name = "craft-archives"
-version = "2.1.1.post6+g664e26e"
-source = { git = "https://github.com/canonical/craft-archives?rev=work%2FCRAFT-4634-b#664e26e1e370fc06d4e25e40ea147a7855ec3603" }
+version = "2.2.0"
+source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "distro" },
     { name = "launchpadlib" },
@@ -573,6 +571,10 @@ dependencies = [
     { name = "overrides" },
     { name = "pydantic" },
     { name = "python-debian" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/41/4c/63ce5d6c91b4b269f862460392bd70fd0594f7902641b5d0bc82aa3f1c41/craft_archives-2.2.0.tar.gz", hash = "sha256:0bfd6dc3c2710605b97292df952032af24bf94ebf2f284f355d70f1bb2e3fe20", size = 190579, upload-time = "2025-08-13T19:58:19.051Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/57/ee/b846bfadd719eac15b7aeed84bc4168065e5a230464d63ade46adfd89824/craft_archives-2.2.0-py3-none-any.whl", hash = "sha256:c5b1d51b1e7400c55562dfbd62581d71a2c72c3c08db61e2d52dd3f42c46346b", size = 38144, upload-time = "2025-08-13T19:58:17.599Z" },
 ]
 
 [[package]]
