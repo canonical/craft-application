@@ -18,7 +18,7 @@ Services
 ========
 
 - Add a new Proxy service that configures an instance to connect to a proxy.
-- The Lifecycle service configures the overlay to use ``old-releases.ubuntu.com`` if
+- The Lifecycle service now configures the overlay to use ``old-releases.ubuntu.com`` if
   the release has been migrated to that domain.
 
 For a complete list of commits, check out the `5.7.0`_ release on GitHub.
