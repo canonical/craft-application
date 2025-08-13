@@ -844,6 +844,7 @@ def test_check_base_is_supported_error(
         real_project_service.get().build_base = build_base
 
     with pytest.raises(
-        errors.CraftValidationError, match=r"(Build b|B)ase .+ is not supported."
+        errors.CraftValidationError,
+        match=r"(Build b|B)ase '[a-z]+@\d+\.\d+' has reached the end",
     ):
         real_project_service.check_base_is_supported()

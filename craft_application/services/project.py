@@ -643,18 +643,15 @@ class ProjectService(base.AppService):
         else:
             build_base_is_supported = base_is_supported
 
-        if base_is_supported:
-            if not build_base_is_supported:
-                raise errors.CraftValidationError(
-                    f"Build base {build_base} is not supported.",
-                    details="It is either end-of-life or still in development.",
-                    resolution="To build anyway, pass the --allow-unsupported-base flag.",
-                    retcode=os.EX_DATAERR,
-                )
-        else:
-            raise errors.CraftValidationError(
-                f"Base {base} is not supported.",
-                details="It is either end-of-life or still in development.",
-                resolution="To build anyway, pass the --allow-unsupported-base flag.",
-                retcode=os.EX_DATAERR,
-            )
+        if base_is_supported and build_base_is_supported:
+            return
+        message = (
+            f"Base '{base}' has reached the end of its lifespan."
+            if not base_is_supported
+            else f"Build base '{build_base}' has reached the end of its lifespan."
+        )
+        raise errors.CraftValidationError(
+            message,
+            resolution="If you know the risks and want to continue, rerun with --old-bases.",
+            retcode=os.EX_DATAERR,
+        )

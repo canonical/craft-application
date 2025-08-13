@@ -23,9 +23,9 @@ import pytest
 from craft_application.application import Application
 
 
-@pytest.mark.usefixtures("fake_process")  # We shouldn't get to spinning up a container.
+@pytest.mark.usefixtures("fake_process")  # Ensure we don't spin up a container.
 @freezegun.freeze_time("1829-10-1")  # No computers yet, no supported OS's.
-@pytest.mark.parametrize("command", ["pull"])
+@pytest.mark.parametrize("command", ["pull", "build", "stage", "pack"])
 def test_unsupported_base_error(
     app: Application,
     capsys,
@@ -39,4 +39,4 @@ def test_unsupported_base_error(
     _, stderr = capsys.readouterr()
 
     assert return_code == os.EX_DATAERR
-    assert re.match(r"Base .+ is not supported.", stderr)
+    assert re.match(r"(Build b|B)ase '[a-z]+@\d+\.\d+' has reached the end", stderr)

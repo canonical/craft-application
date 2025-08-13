@@ -76,6 +76,7 @@ def enable_overlay_eol(overlay_dir: Path, _unused_project_info: ProjectInfo) -> 
 
     This is automatically registered as a configure_overlay hook by the lifecycle
     service.
+    https://canonical-craft-parts.readthedocs-hosted.com/latest/reference/gen/craft_parts.callbacks/#craft_parts.callbacks.register_configure_overlay
     """
     import craft_archives.defaults  # noqa: PLC0415
 

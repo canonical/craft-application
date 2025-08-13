@@ -563,8 +563,8 @@ types = [
 
 [[package]]
 name = "craft-archives"
-version = "2.1.0.post26+gb23d555"
-source = { git = "https://github.com/canonical/craft-archives?rev=work%2FCRAFT-4634-b#b23d55527cd8e2c66c32f3926dadf55a1324b1fd" }
+version = "2.1.1.post6+g664e26e"
+source = { git = "https://github.com/canonical/craft-archives?rev=work%2FCRAFT-4634-b#664e26e1e370fc06d4e25e40ea147a7855ec3603" }
 dependencies = [
     { name = "distro" },
     { name = "launchpadlib" },

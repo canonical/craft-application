@@ -163,8 +163,9 @@ class LifecycleCommand(_BaseLifecycleCommand):
             )
         if self._app.check_supported_base:
             parser.add_argument(
-                "--allow-unsupported-base",
+                "--old-bases",
                 action="store_true",
+                dest="allow_unsupported_base",
                 help="Allow this run to work on an unsupported base.",
             )
 
