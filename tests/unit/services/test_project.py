@@ -20,6 +20,7 @@ from typing import Any, cast
 from unittest import mock
 
 import craft_platforms
+import freezegun
 import pytest
 import pytest_mock
 from craft_application import errors
@@ -796,3 +797,53 @@ def test_mandatory_adoptable_fields(
         str(exc_info.value)
         == "'adopt-info' not set and required fields are missing: 'license'"
     )
+
+
+@freezegun.freeze_time("2026-01-01")
+@pytest.mark.parametrize(
+    ("base", "build_base"),
+    [
+        ("ubuntu@18.04", None),
+        ("ubuntu@20.04", None),
+        ("ubuntu@22.04", None),
+        ("ubuntu@24.04", None),
+        ("ubuntu@25.10", None),
+        pytest.param("nonexistent@0.0", None, id="nonexistent-base"),
+        pytest.param("ubuntu@22.04", "ubuntu@devel", id="build-on-devel"),
+    ],
+)
+@pytest.mark.usefixtures("fake_project_file")
+def test_check_base_is_supported(
+    real_project_service: ProjectService, base: str, build_base: str | None
+):
+    real_project_service.configure(platform=None, build_for=None)
+    real_project_service.get().base = base
+    if build_base:
+        real_project_service.get().build_base = build_base
+
+    real_project_service.check_base_is_supported()
+
+
+@freezegun.freeze_time("2030-01-01")
+@pytest.mark.parametrize(
+    ("base", "build_base"),
+    [
+        ("ubuntu@16.04", None),
+        ("ubuntu@18.04", None),
+        pytest.param("ubuntu@25.10", None, id="interim-base-eol"),
+        pytest.param("ubuntu@24.04", "ubuntu@25.04", id="interim-build-base-eol"),
+    ],
+)
+@pytest.mark.usefixtures("fake_project_file")
+def test_check_base_is_supported_error(
+    real_project_service: ProjectService, base: str, build_base: str | None
+):
+    real_project_service.configure(platform=None, build_for=None)
+    real_project_service.get().base = base
+    if build_base:
+        real_project_service.get().build_base = build_base
+
+    with pytest.raises(
+        errors.CraftValidationError, match=r"(Build b|B)ase .+ is not supported."
+    ):
+        real_project_service.check_base_is_supported()

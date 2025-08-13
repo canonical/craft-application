@@ -1,0 +1,43 @@
+# This file is part of craft-application.
+#
+# Copyright 2024 Canonical Ltd.
+#
+# This program is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Lesser General Public License version 3, as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranties of MERCHANTABILITY,
+# SATISFACTORY QUALITY, or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License along
+# with this program.  If not, see <http://www.gnu.org/licenses/>.
+"""Integration tests for lifecycle commands."""
+
+import os
+import re
+
+import freezegun
+import pytest
+from craft_application.application import Application
+
+
+@pytest.mark.usefixtures("fake_process")  # We shouldn't get to spinning up a container.
+@freezegun.freeze_time("1829-10-1")  # No computers yet, no supported OS's.
+@pytest.mark.parametrize("command", ["pull"])
+def test_unsupported_base_error(
+    app: Application,
+    capsys,
+    monkeypatch,
+    command: str,
+    # new_path,
+):
+    """Initialise a project."""
+    monkeypatch.setattr("sys.argv", ["testcraft", command])
+
+    return_code = app.run()
+    _, stderr = capsys.readouterr()
+
+    assert return_code == os.EX_DATAERR
+    assert re.match(r"Base .+ is not supported.", stderr)

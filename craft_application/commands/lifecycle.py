@@ -161,6 +161,12 @@ class LifecycleCommand(_BaseLifecycleCommand):
                 metavar="arch",
                 help="Set architecture to build for",
             )
+        if self._app.check_supported_base:
+            parser.add_argument(
+                "--allow-unsupported-base",
+                action="store_true",
+                help="Allow this run to work on an unsupported base.",
+            )
 
     @override
     def _run(
@@ -173,6 +179,11 @@ class LifecycleCommand(_BaseLifecycleCommand):
         super()._run(parsed_args)
 
         build_planner = self.services.get("build_plan")
+
+        # If we check for supported bases, fail early for all unsupported bases.
+        if self._app.check_supported_base and not parsed_args.allow_unsupported_base:
+            self.services.get("project").check_base_is_supported()
+
         config = self.services.get("config")
         platform = getattr(parsed_args, "platform", None) or config.get("platform")
         if platform:
@@ -190,6 +201,8 @@ class LifecycleCommand(_BaseLifecycleCommand):
             self._run_manager_for_build_plan(fetch_service_policy)
             return
 
+        lifecycle = self.services.get("lifecycle")
+
         shell = getattr(parsed_args, "shell", False)
         shell_after = getattr(parsed_args, "shell_after", False)
         debug = getattr(parsed_args, "debug", False)
@@ -197,7 +210,7 @@ class LifecycleCommand(_BaseLifecycleCommand):
         step_name = step_name or self.name
 
         if shell:
-            previous_step = self._services.lifecycle.previous_step_name(step_name)
+            previous_step = lifecycle.previous_step_name(step_name)
             step_name = previous_step
             shell_after = True
 

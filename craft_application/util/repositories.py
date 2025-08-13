@@ -69,3 +69,17 @@ def install_overlay_repositories(overlay_dir: Path, project_info: ProjectInfo) -
             root=overlay_dir,
             key_assets=Path("/dev/null"),
         )
+
+
+def enable_overlay_eol(overlay_dir: Path, _unused_project_info: ProjectInfo) -> None:
+    """Configure an overlay layer to handle an EOL base.
+
+    This is automatically registered as a configure_overlay hook by the lifecycle
+    service.
+    """
+    import craft_archives.defaults  # noqa: PLC0415
+
+    if craft_archives.defaults.use_old_releases(root=overlay_dir):
+        emit.debug("Default sources in overlay changed to old-releases.")
+    else:
+        emit.debug("Default sources in overlay not changed.")

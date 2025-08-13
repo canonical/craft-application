@@ -16,14 +16,21 @@
 from __future__ import annotations
 
 import copy
+import datetime
 import os
 import pathlib
 from typing import TYPE_CHECKING, Any, Literal, cast, final
 
 import craft_parts
 import craft_platforms
+import distro_support
 import pydantic
 from craft_cli import emit
+from distro_support.errors import (
+    NoESMInfoError,
+    UnknownDistributionError,
+    UnknownVersionError,
+)
 
 from craft_application import errors, grammar, util
 from craft_application.models import Platform
@@ -579,3 +586,73 @@ class ProjectService(base.AppService):
                 reportable=False,
                 logpath_report=False,
             ) from None
+
+    @staticmethod
+    def _is_supported_or_esm_on(
+        *, base: craft_platforms.DistroBase, date: datetime.date
+    ) -> bool:
+        """Check if the given base is supported or in extended support on a date."""
+        support_range = distro_support.get_support_range(base.distribution, base.series)
+        if support_range.is_supported_on(date):
+            return True
+        try:
+            return support_range.is_esm_on(date)
+        except NoESMInfoError:
+            return False
+
+    def check_base_is_supported(self) -> None:
+        """Check that this project's base and build-base are supported.
+
+        This method assumes a single-base project. Applications that use multi-base
+        projects must override this in order to use it.
+
+        :raises: CraftValidationError if either is unsupported.
+        """
+        project = self.get()
+        if project.base is None:
+            raise RuntimeError("No base detected when getting support range.")
+        base = craft_platforms.DistroBase.from_str(project.base)
+        if project.build_base:
+            build_base: craft_platforms.DistroBase | None = (
+                craft_platforms.DistroBase.from_str(project.build_base)
+            )
+            if build_base.series == "devel":  # type: ignore[union-attr]
+                build_base = None
+        else:
+            build_base = None
+
+        today = datetime.date.today()
+
+        try:
+            base_is_supported = self._is_supported_or_esm_on(base=base, date=today)
+        except (UnknownDistributionError, UnknownVersionError) as error:
+            # If distro-support doesn't know about this base, assume it's supported.
+            emit.debug(str(error))
+            base_is_supported = True
+        if build_base is not None:
+            try:
+                build_base_is_supported = self._is_supported_or_esm_on(
+                    base=build_base, date=today
+                )
+            except (UnknownDistributionError, UnknownVersionError) as error:
+                # Likewise assume unknown build bases are supported.
+                emit.debug(str(error))
+                build_base_is_supported = True
+        else:
+            build_base_is_supported = base_is_supported
+
+        if base_is_supported:
+            if not build_base_is_supported:
+                raise errors.CraftValidationError(
+                    f"Build base {build_base} is not supported.",
+                    details="It is either end-of-life or still in development.",
+                    resolution="To build anyway, pass the --allow-unsupported-base flag.",
+                    retcode=os.EX_DATAERR,
+                )
+        else:
+            raise errors.CraftValidationError(
+                f"Base {base} is not supported.",
+                details="It is either end-of-life or still in development.",
+                resolution="To build anyway, pass the --allow-unsupported-base flag.",
+                retcode=os.EX_DATAERR,
+            )

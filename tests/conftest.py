@@ -220,6 +220,7 @@ def app_metadata(fake_config_model) -> craft_application.AppMetadata:
             ConfigModel=fake_config_model,
             supports_multi_base=True,
             always_repack=False,
+            check_supported_base=True,
         )
 
 

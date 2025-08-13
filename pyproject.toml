@@ -3,13 +3,15 @@ name = "craft-application"
 description = "A framework for *craft applications."
 dynamic = ["version"]
 dependencies = [
+    "craft-archives@git+https://github.com/canonical/craft-archives@work/CRAFT-4634-b",  # https://github.com/canonical/craft-archives/pull/192
+    "craft-providers@git+https://github.com/canonical/craft-providers@main",  # https://github.com/canonical/craft-providers/pull/772
     "annotated-types>=0.6.0",
-    "craft-archives>=2.0.0",
+    # "craft-archives>=2.0.0",
     "craft-cli~=3.0",
     "craft-grammar>=2.0.0",
     "craft-parts>=2.18.0",
     "craft-platforms>=0.6.0",
-    "craft-providers>=2.1.0",
+    # "craft-providers>=2.1.0",
     "Jinja2>=3.1.6,<4.0.0",
     "snap-helpers>=0.4.2",
     "platformdirs>=3.10",
@@ -27,6 +29,7 @@ dependencies = [
     "PyYaml>=6.0",
     "requests",
     "typing_extensions>=4.4.0",
+    "distro-support>=2025.8.13",
 ]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
@@ -57,6 +60,8 @@ apt = [
 
 [dependency-groups]
 dev = [
+    "craft-archives@git+https://github.com/canonical/craft-archives@work/CRAFT-4634-b",
+    "craft-providers@git+https://github.com/canonical/craft-providers@main",
     "coverage[toml]~=7.9",
     "hypothesis>=6.0",
     "pyfakefs~=5.3",

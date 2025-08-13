@@ -125,7 +125,7 @@ prepare: |
   sudo snap wait system seed.loaded
 
   sudo snap install --dangerous --classic tests/spread/*.snap
-  sudo snap alias testcraft.partitioncraft partitioncraft
+
 
   # Initialize LXD; some tests need it ready *before* testcraft is called
   lxd init --auto
@@ -139,3 +139,10 @@ suites:
 
   tests/spread/partitioncraft/:
     summary: Tests for partitioncraft (app with partitions enabled)
+    prepare: |
+      sudo snap alias testcraft.partitioncraft partitioncraft
+
+  tests/spread/witchcraft/:
+    summary: Tests for witchcraft (app with many features enabled)
+    prepare: |
+      sudo snap alias testcraft.witchcraft witchcraft
