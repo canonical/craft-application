@@ -12,7 +12,7 @@ execute: |
   faketime '2256-03-09' witchcraft pack |& MATCH "Base '[a-z0-9.@]+' has reached"
   faketime '2256-03-09' witchcraft pack --destructive-mode |& MATCH "Base '[a-z0-9.@]+' has reached"
 
-  faketime '2256-03-09' witchcraft pack --allow-unsupported-base --destructive-mode
+  faketime '2256-03-09' witchcraft pack --old-bases --destructive-mode
 
   if [[ $(find . -maxdepth 1 -name '*.witchcraft') == "" ]]; then
     echo "No witchcraft file created" >> /dev/stderr
