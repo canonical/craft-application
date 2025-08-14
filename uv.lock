@@ -1,5 +1,5 @@
 version = 1
-revision = 2
+revision = 3
 requires-python = ">=3.10"
 resolution-markers = [
     "python_full_version >= '3.12'",
@@ -645,8 +645,8 @@ wheels = [
 
 [[package]]
 name = "craft-providers"
-version = "2.4.0.post287+g28550d6"
-source = { git = "https://github.com/canonical/craft-providers?rev=CRAFT-4679-Redesign-fetch-service-integration-with-provider-instances#28550d6b26320f99a4b441610b2705c48bfe9931" }
+version = "2.4.0.post289+gc47b588"
+source = { git = "https://github.com/canonical/craft-providers?rev=CRAFT-4679-Redesign-fetch-service-integration-with-provider-instances#c47b5887772b527d22f74b8b5295b512fd45e277" }
 dependencies = [
     { name = "packaging" },
     { name = "pydantic" },
