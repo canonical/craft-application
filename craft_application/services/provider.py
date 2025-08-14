@@ -454,7 +454,7 @@ class ProviderService(base.AppService):
             work_dir=self._work_dir,
             clean_existing=active_fetch_service,
             prepare_instance=prepare_instance,
-            use_base_instance=not enable_fetch_service,
+            use_base_instance=not active_fetch_service,
         ) as instance:
             emit.debug(f"Running in instance: {command}")
             self._services.get("proxy").configure_packages(instance)
