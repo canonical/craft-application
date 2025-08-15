@@ -58,7 +58,7 @@ class ProxyService(base.AppService):
 
     @final
     def configure_instance(self, instance: craft_providers.Executor) -> dict[str, str]:
-        """Configure a build instance to connect to a proxy.
+        """Configure a build instance before the base image setup.
 
         :param instance: The instance to configure.
 
@@ -74,11 +74,14 @@ class ProxyService(base.AppService):
 
         self._install_certificate(instance)
         self._configure_apt(instance)
+        self._configure_pip(instance)
 
         return self._env
 
-    def configure_packages(self, instance: craft_providers.Executor) -> None:
-        """Configure installed packages to connect to a proxy.
+    def finalize_instance_configuration(
+        self, instance: craft_providers.Executor
+    ) -> None:
+        """Finish configuring a build instance after the base image setup.
 
         :param instance: The instance to configure.
         """
@@ -88,9 +91,8 @@ class ProxyService(base.AppService):
             )
             return
 
-        emit.progress("Configuring packages in instance")
+        emit.progress("Finalize instance configuration")
 
-        self._configure_pip(instance)
         self._configure_snapd(instance)
 
     @property

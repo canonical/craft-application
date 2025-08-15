@@ -457,7 +457,7 @@ class ProviderService(base.AppService):
             use_base_instance=not active_fetch_service,
         ) as instance:
             emit.debug(f"Running in instance: {command}")
-            self._services.get("proxy").configure_packages(instance)
+            self._services.get("proxy").finalize_instance_configuration(instance)
             try:
                 with emit.pause():
                     # Pyright doesn't fully understand craft_providers's CompletedProcess.

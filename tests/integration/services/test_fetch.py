@@ -384,7 +384,7 @@ def _perform_instance_test(
     app_service.setup()
     fetch_env = app_service.configure_instance(lxd_instance)
     proxy_env = app_service._services.get("proxy").configure_instance(lxd_instance)
-    app_service._services.get("proxy").configure_packages(lxd_instance)
+    app_service._services.get("proxy").finalize_instance_configuration(lxd_instance)
     env = fetch_env | proxy_env
 
     report = {}

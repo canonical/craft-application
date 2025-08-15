@@ -50,7 +50,7 @@ def test_configure_build_instance(mocker, proxy_service, new_dir):
         "GOPROXY": "direct",
     }
 
-    proxy_service.configure_packages(mock_instance)
+    proxy_service.finalize_instance_configuration(mock_instance)
 
     # Execution calls on the instance
     default_args = {"check": True, "stdout": subprocess.PIPE, "stderr": subprocess.PIPE}
@@ -132,7 +132,7 @@ def test_configure_skip_apt(mocker, proxy_service, new_dir, emitter):
     mock_instance.execute_run.side_effect = _has_apt
 
     proxy_service.configure_instance(mock_instance)
-    proxy_service.configure_packages(mock_instance)
+    proxy_service.finalize_instance_configuration(mock_instance)
 
     emitter.assert_debug(
         "Not configuring the proxy for apt because apt isn't available in the instance."
@@ -192,7 +192,7 @@ def test_not_configured(proxy_service, emitter):
     mock_instance = mock.MagicMock(spec_set=LXDInstance)
 
     proxy_service.configure_instance(mock_instance)
-    proxy_service.configure_packages(mock_instance)
+    proxy_service.finalize_instance_configuration(mock_instance)
 
     emitter.assert_debug(
         "Skipping proxy configuration because the proxy service isn't configured."
