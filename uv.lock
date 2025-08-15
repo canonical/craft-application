@@ -447,7 +447,6 @@ remote = [
 dev = [
     { name = "coverage", extra = ["toml"] },
     { name = "craft-application", extra = ["remote"] },
-    { name = "craft-providers" },
     { name = "hypothesis" },
     { name = "jsonschema" },
     { name = "pyfakefs" },
@@ -502,7 +501,7 @@ requires-dist = [
     { name = "craft-grammar", specifier = ">=2.0.0" },
     { name = "craft-parts", specifier = ">=2.18.0" },
     { name = "craft-platforms", specifier = ">=0.6.0" },
-    { name = "craft-providers", git = "https://github.com/canonical/craft-providers?rev=main" },
+    { name = "craft-providers", specifier = ">=3.0.0" },
     { name = "distro-support", specifier = ">=2025.8.13" },
     { name = "jinja2", specifier = ">=3.1.6,<4.0.0" },
     { name = "launchpadlib", marker = "extra == 'remote'", specifier = ">=1.10.16" },
@@ -522,7 +521,6 @@ provides-extras = ["remote", "apt"]
 dev = [
     { name = "coverage", extras = ["toml"], specifier = "~=7.9" },
     { name = "craft-application", extras = ["remote"] },
-    { name = "craft-providers", git = "https://github.com/canonical/craft-providers?rev=main" },
     { name = "hypothesis", specifier = ">=6.0" },
     { name = "jsonschema", specifier = ">=4.23.0" },
     { name = "pyfakefs", specifier = "~=5.3" },
@@ -640,14 +638,18 @@ wheels = [
 
 [[package]]
 name = "craft-providers"
-version = "2.4.0.post285+ge8f0ca9"
-source = { git = "https://github.com/canonical/craft-providers?rev=main#e8f0ca99260f1a95fe9b2c6d0b868a5475321722" }
+version = "3.0.0"
+source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "packaging" },
     { name = "pydantic" },
     { name = "pyyaml" },
     { name = "requests" },
     { name = "requests-unixsocket2" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/99/2f/3b1a7062c2d9b94f926d96356b63678d50aa44a2657a313adf2df4150bf6/craft_providers-3.0.0.tar.gz", hash = "sha256:07f669abd7b16d8bd983851ea173e932a1a2244cc81a457370c0979f71612f9c", size = 297244, upload-time = "2025-08-15T17:18:45.771Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/8a/d8/96ba745562fe90a73088f551a9be319cbb992aa416339f616b16227f78b2/craft_providers-3.0.0-py3-none-any.whl", hash = "sha256:9254045b1c1b47235b549d582355f816ac8819eda74a2368c8f12cb5431d1828", size = 112646, upload-time = "2025-08-15T17:18:44.685Z" },
 ]
 
 [[package]]
