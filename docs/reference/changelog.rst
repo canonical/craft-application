@@ -14,6 +14,14 @@ Services
 
 For a complete list of commits, check out the `5.7.0`_ release on GitHub.
 
+5.6.4 (2025-08-15)
+------------------
+
+Fixes
+=====
+
+- The ``--project-dir`` command option works again.
+
 5.6.3 (2025-08-05)
 ------------------
 
