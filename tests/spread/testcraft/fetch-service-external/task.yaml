@@ -42,11 +42,6 @@ execute: |
   export http_proxy=$(cat session_proxy_url.txt)
   export https_proxy=$(cat session_proxy_url.txt)
 
-  # The current implementation is bugged: when setting up the lxd instance snapd is
-  # configured to use the proxy but it doesn't (can't) recognize the fetch-service
-  # signature because we don't inject the certificate.
-  expected_error='cannot install system snap "snapd": Post "https://api.snapcraft.io/v2/snaps/refresh": tls: failed to verify certificate: x509: certificate signed by unknown authority'
-
   testcraft pack --verbosity=debug
   test -f fetch-service*.testcraft
 
