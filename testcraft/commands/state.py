@@ -15,14 +15,16 @@
 
 from __future__ import annotations
 
-import argparse
 from textwrap import dedent
-from typing import Optional
+from typing import TYPE_CHECKING
 
 import craft_cli
 from craft_application import util
 from craft_application.commands import base
 from overrides import override
+
+if TYPE_CHECKING:
+    import argparse
 
 
 class StateCommand(base.AppCommand):
@@ -44,7 +46,7 @@ class StateCommand(base.AppCommand):
         return True
 
     @override
-    def run(self, parsed_args: argparse.Namespace) -> Optional[int]:  # noqa: UP007
+    def run(self, parsed_args: argparse.Namespace) -> int | None:
         """Run the command.
 
         This command exercises:

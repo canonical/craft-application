@@ -4,6 +4,14 @@
 Changelog
 *********
 
+5.6.4 (2025-08-15)
+------------------
+
+Fixes
+=====
+
+- The ``--project-dir`` command option works again.
+
 5.6.3 (2025-08-05)
 ------------------
 
