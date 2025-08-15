@@ -4,7 +4,7 @@
 Changelog
 *********
 
-5.7.0 (2025-MM-DD)
+5.7.0 (2025-08-15)
 ------------------
 
 Application
@@ -18,6 +18,7 @@ Services
 ========
 
 - Add a new Proxy service that configures an instance to connect to a proxy.
+- The Provider Service can now add early proxy configuration to instances.
 - The Lifecycle service now configures the overlay to use ``old-releases.ubuntu.com`` if
   the release has been migrated to that domain.
 
