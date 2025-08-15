@@ -602,17 +602,18 @@ class Application:
             platform = platform.split(",", maxsplit=1)[0]
         if build_for and "," in build_for:
             build_for = build_for.split(",", maxsplit=1)[0]
-        if command.needs_project(dispatcher.parsed_args()):
+        craft_cli.emit.debug(f"Build plan: platform={platform}, build_for={build_for}")
+
+        self._pre_run(dispatcher)
+
+        if command.needs_project(parsed_args):
             project_service = self.services.get("project")
             # This branch always runs, except during testing.
             if not project_service.is_configured:
                 project_service.configure(platform=platform, build_for=build_for)
 
-        craft_cli.emit.debug(f"Build plan: platform={platform}, build_for={build_for}")
-        self._pre_run(dispatcher)
-
-        managed_mode = command.run_managed(dispatcher.parsed_args())
-        provider_name = command.provider_name(dispatcher.parsed_args())
+        managed_mode = command.run_managed(parsed_args)
+        provider_name = command.provider_name(parsed_args)
         self._configure_services(provider_name)
 
         return_code = 1  # General error
@@ -638,6 +639,8 @@ class Application:
         self._load_plugins()
 
         craft_cli.emit.debug("Preparing application...")
+
+        debug_mode = self.services.get("config").get("debug")
 
         try:
             return_code = self._run_inner()
@@ -701,7 +704,7 @@ class Application:
                 )
                 return_code = os.EX_SOFTWARE
             self._emit_error(transformed, cause=err)
-            if self.services.get("config").get("debug"):
+            if debug_mode:
                 raise
         else:
             craft_cli.emit.ended_ok()

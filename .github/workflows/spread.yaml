@@ -11,7 +11,7 @@ jobs:
     runs-on: [self-hosted, amd64]
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
       - name: Build snap
@@ -39,13 +39,13 @@ jobs:
           mkdir "${{ github.workspace }}"
 
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 1
           submodules: true
 
       - name: Download snap artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: snap
 
