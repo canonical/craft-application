@@ -389,7 +389,7 @@ def test_get_lxd_provider(monkeypatch, provider_service, lxd_remote, check):
     check.equal(actual, mock_provider.return_value)
     with check:
         mock_provider.assert_called_once_with(
-            lxd_project="testcraft", lxd_remote=lxd_remote
+            lxd_project="testcraft", lxd_remote=lxd_remote, intercept_mknod=True
         )
 
 
