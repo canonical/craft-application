@@ -470,8 +470,8 @@ def _check_log(capsys) -> None:
         Installing certificate
         Configuring Apt
         Refreshing Apt package listings
-        Configuring packages in instance
         Configuring pip
+        Finalizing instance configuration
         Configuring snapd
         """
     )
