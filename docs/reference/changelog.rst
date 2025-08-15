@@ -4,13 +4,14 @@
 Changelog
 *********
 
-5.7.0 (2025-MM-DD)
+5.7.0 (2025-08-15)
 ------------------
 
 Services
 ========
 
 - Add a new Proxy service that configures an instance to connect to a proxy.
+- The Provider Service can now add early proxy configuration to instances.
 
 For a complete list of commits, check out the `5.7.0`_ release on GitHub.
 
