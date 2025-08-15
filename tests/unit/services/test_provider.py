@@ -624,6 +624,8 @@ def test_instance(
             instance_name=mock.ANY,
             base_configuration=mock.ANY,
             allow_unstable=allow_unstable,
+            prepare_instance=None,
+            use_base_instance=True,
         )
     with check:
         assert instance.mount.mock_calls == [
@@ -888,11 +890,7 @@ def test_run_managed(
     mock_provider,
 ):
     mock_fetch = mock.MagicMock()
-    mock_proxy = mock.MagicMock()
-    mock_fetch.configure_instance.return_value = {"fetch_env_key": "fetch_env_value"}
-    mock_proxy.configure_instance.return_value = {"proxy_env_key": "proxy_env_value"}
     fake_services.register("fetch", mock.Mock(return_value=mock_fetch))
-    fake_services.register("proxy", mock.Mock(return_value=mock_proxy))
     fake_services.get_class(
         "fetch"
     ).is_active.return_value = fetch  # # pyright: ignore[reportFunctionMemberAccess]
@@ -902,14 +900,13 @@ def test_run_managed(
     )
 
     provider_service.run_managed(fake_build_info, enable_fetch_service=fetch)
+    instance_context.prepare_instance(instance_context)
 
     expected_env = {
         "CRAFT_VERBOSITY_LEVEL": mock.ANY,
         "CRAFT_PLATFORM": fake_build_info.platform,
-        "proxy_env_key": "proxy_env_value",
     }
-    if fetch:
-        expected_env["fetch_env_key"] = "fetch_env_value"
+
     instance_context.execute_run.assert_called_once_with(
         ["testcraft", "pack", "--verbose"],
         cwd=default_app_metadata.managed_instance_project_path,
@@ -917,7 +914,4 @@ def test_run_managed(
         env=expected_env,
     )
 
-    if fetch:
-        mock_fetch.configure_instance.assert_called_once_with(instance_context)
-        mock_fetch.teardown_instance.assert_called_once_with()
-    mock_proxy.configure_instance.assert_called_once_with(instance_context)
+    instance_context.prepare_instance.assert_called_once_with(mock.ANY)

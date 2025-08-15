@@ -42,7 +42,7 @@ from craft_application.services import base
 from craft_application.util import platforms, snap_config
 
 if TYPE_CHECKING:  # pragma: no cover
-    from collections.abc import Generator, Iterable, Sequence
+    from collections.abc import Callable, Generator, Iterable, Sequence
 
     from craft_application.application import AppMetadata
     from craft_application.services import ServiceFactory
@@ -143,7 +143,9 @@ class ProviderService(base.AppService):
         work_dir: pathlib.Path,
         allow_unstable: bool = True,
         clean_existing: bool = False,
+        use_base_instance: bool = True,
         project_name: str | None = None,
+        prepare_instance: Callable[[craft_providers.Executor], None] | None = None,
         **kwargs: bool | str | None,
     ) -> Generator[craft_providers.Executor, None, None]:
         """Context manager for getting a provider instance.
@@ -153,6 +155,8 @@ class ProviderService(base.AppService):
         :param allow_unstable: Whether to allow the use of unstable images.
         :param clean_existing: Whether pre-existing instances should be wiped
           and re-created.
+        :param use_base_instance: Whether we should copy the instance from a
+          base instance, if the provider offers that possibility.
         :returns: a context manager of the provider instance.
         """
         if not project_name:
@@ -178,6 +182,8 @@ class ProviderService(base.AppService):
             instance_name=instance_name,
             base_configuration=base,
             allow_unstable=allow_unstable,
+            use_base_instance=use_base_instance,
+            prepare_instance=prepare_instance,
         ) as instance:
             instance.mount(
                 host_source=work_dir,
@@ -432,12 +438,10 @@ class ProviderService(base.AppService):
         active_fetch_service = self._services.get_class("fetch").is_active(
             enable_command_line=enable_fetch_service
         )
+        emit.debug(f"active_fetch_service={active_fetch_service}")
 
-        with self.instance(
-            build_info=build_info,
-            work_dir=self._work_dir,
-            clean_existing=active_fetch_service,
-        ) as instance:
+        def prepare_instance(instance: craft_providers.Executor) -> None:
+            emit.debug("Preparing instance")
             if active_fetch_service:
                 fetch_env = self._services.get("fetch").configure_instance(instance)
                 env.update(fetch_env)
@@ -445,7 +449,15 @@ class ProviderService(base.AppService):
             session_env = self._services.get("proxy").configure_instance(instance)
             env.update(session_env)
 
+        with self.instance(
+            build_info=build_info,
+            work_dir=self._work_dir,
+            clean_existing=active_fetch_service,
+            prepare_instance=prepare_instance,
+            use_base_instance=not active_fetch_service,
+        ) as instance:
             emit.debug(f"Running in instance: {command}")
+            self._services.get("proxy").finalize_instance_configuration(instance)
             try:
                 with emit.pause():
                     # Pyright doesn't fully understand craft_providers's CompletedProcess.

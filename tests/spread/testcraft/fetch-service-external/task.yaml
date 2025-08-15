@@ -42,23 +42,7 @@ execute: |
   export http_proxy=$(cat session_proxy_url.txt)
   export https_proxy=$(cat session_proxy_url.txt)
 
-  # The current implementation is bugged: when setting up the lxd instance snapd is
-  # configured to use the proxy but it doesn't (can't) recognize the fetch-service
-  # signature because we don't inject the certificate.
-  expected_error='cannot install system snap "snapd": Post "https://api.snapcraft.io/v2/snaps/refresh": tls: failed to verify certificate: x509: certificate signed by unknown authority'
-
-  # The pack fails because the feature needs some work still (see issue #839):
-  # - During setup of the craft-providers lxd instance, we need to:
-  #   - do a full apt update (remove apt lists cache)
-  #   - push the certificate file and update-ca-certificates
-  # - We also need to *not* use a base-instance when doing fetch-service-enabled packs
-  #   (both kinds), because this session config can't be persisted in the instance.
-  # - If we do a full apt update during setup, we can stop doing one in the ProxyService.
-  #   (in fact today we *must*, because of a fetch-service bug with "double apt updates")
-  testcraft pack --verbosity=debug 2>&1 | MATCH "$expected_error"
-  # Remove this once the above issue^ is fixed
-  exit 0;
-
+  testcraft pack --verbosity=debug
   test -f fetch-service*.testcraft
 
   # Clear proxy variables, otherwise the curl calls themselves will try to use the

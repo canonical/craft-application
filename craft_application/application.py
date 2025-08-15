@@ -398,11 +398,15 @@ class Application:
                 f"Running {self.app.name}:{build_info.platform} in {build_info.build_for} instance..."
             )
             instance_path = pathlib.PosixPath("/root/project")
+            active_fetch_service = self.services.get("fetch").is_active(
+                enable_command_line=self._enable_fetch_service
+            )
 
             with self.services.provider.instance(
                 build_info,
                 work_dir=self._work_dir,
                 clean_existing=self._enable_fetch_service,
+                use_base_instance=not active_fetch_service,
             ) as instance:
                 if self._enable_fetch_service:
                     fetch_env = self.services.fetch.create_session(instance)

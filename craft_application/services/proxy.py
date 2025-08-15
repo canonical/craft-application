@@ -58,7 +58,7 @@ class ProxyService(base.AppService):
 
     @final
     def configure_instance(self, instance: craft_providers.Executor) -> dict[str, str]:
-        """Configure a build instance to connect to a proxy.
+        """Configure a build instance before the base image setup.
 
         :param instance: The instance to configure.
 
@@ -70,14 +70,30 @@ class ProxyService(base.AppService):
             )
             return {}
 
-        emit.progress("Configuring proxy in instance.")
+        emit.progress("Configuring proxy in instance")
 
         self._install_certificate(instance)
-        self._configure_pip(instance)
-        self._configure_snapd(instance)
         self._configure_apt(instance)
+        self._configure_pip(instance)
 
         return self._env
+
+    def finalize_instance_configuration(
+        self, instance: craft_providers.Executor
+    ) -> None:
+        """Finish configuring a build instance after the base image setup.
+
+        :param instance: The instance to configure.
+        """
+        if not self.__is_configured:
+            emit.debug(
+                "Skipping package configuration because the proxy service isn't configured."
+            )
+            return
+
+        emit.progress("Finalizing instance configuration")
+
+        self._configure_snapd(instance)
 
     @property
     def _env(self) -> dict[str, str]:
@@ -167,6 +183,10 @@ class ProxyService(base.AppService):
                 f"Proxy certificate {str(self.__proxy_cert)!r} isn't a file."
             )
 
+        self._execute_run(
+            instance,
+            ["mkdir", "-p", str(_PROXY_CERT_INSTANCE_PATH.parent)],
+        )
         instance.push_file(
             source=self.__proxy_cert,
             destination=_PROXY_CERT_INSTANCE_PATH,
