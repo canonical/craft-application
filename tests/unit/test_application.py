@@ -279,6 +279,7 @@ def test_run_managed_success(mocker, app, fake_host_architecture):
         ),
         work_dir=mock.ANY,
         clean_existing=False,
+        use_base_instance=True,
     )
     mock_pause.assert_called_once_with()
 
@@ -311,6 +312,7 @@ def test_run_managed_multiple(app, fake_host_architecture):
         ),
         work_dir=mock.ANY,
         clean_existing=False,
+        use_base_instance=True,
     )
 
     assert len(mock_provider.instance.mock_calls) > 1
@@ -337,6 +339,7 @@ def test_run_managed_specified_arch(app, fake_host_architecture, build_for):
         ),
         work_dir=mock.ANY,
         clean_existing=False,
+        use_base_instance=True,
     )
 
 
@@ -360,6 +363,7 @@ def test_run_managed_specified_platform(app, fake_platform, fake_host_architectu
         ),
         work_dir=mock.ANY,
         clean_existing=False,
+        use_base_instance=True,
     )
 
 
