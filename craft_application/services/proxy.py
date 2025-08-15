@@ -91,7 +91,7 @@ class ProxyService(base.AppService):
             )
             return
 
-        emit.progress("Finalize instance configuration")
+        emit.progress("Finalizing instance configuration")
 
         self._configure_snapd(instance)
 
