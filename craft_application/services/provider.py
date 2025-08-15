@@ -429,14 +429,21 @@ class ProviderService(base.AppService):
             f"Running managed {self._app.name} in managed {build_info.build_base} instance for platform {build_info.platform!r}"
         )
 
+        active_fetch_service = self._services.get_class("fetch").is_active(
+            enable_command_line=enable_fetch_service
+        )
+
         with self.instance(
             build_info=build_info,
             work_dir=self._work_dir,
-            clean_existing=enable_fetch_service,
+            clean_existing=active_fetch_service,
         ) as instance:
-            if enable_fetch_service:
-                session_env = self._services.get("fetch").create_session(instance)
-                env.update(session_env)
+            if active_fetch_service:
+                fetch_env = self._services.get("fetch").configure_instance(instance)
+                env.update(fetch_env)
+
+            session_env = self._services.get("proxy").configure_instance(instance)
+            env.update(session_env)
 
             emit.debug(f"Running in instance: {command}")
             try:
@@ -453,5 +460,5 @@ class ProviderService(base.AppService):
                     f"Failed to run {self._app.name} in instance"
                 ) from exc
             finally:
-                if enable_fetch_service:
-                    self._services.get("fetch").teardown_session()
+                if active_fetch_service:
+                    self._services.get("fetch").teardown_instance()

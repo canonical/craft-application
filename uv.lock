@@ -532,11 +532,11 @@ dev = [
     { name = "jsonschema", specifier = ">=4.23.0" },
     { name = "pyfakefs", specifier = "~=5.3" },
     { name = "pytest", specifier = "==8.4.1" },
-    { name = "pytest-check", specifier = "==2.4.1" },
-    { name = "pytest-cov", specifier = "==5.0.0" },
+    { name = "pytest-check", specifier = "==2.5.3" },
+    { name = "pytest-cov", specifier = "==6.2.1" },
     { name = "pytest-freezer", specifier = "==0.4.9" },
     { name = "pytest-mock", specifier = "~=3.14" },
-    { name = "pytest-rerunfailures", specifier = "==14.0" },
+    { name = "pytest-rerunfailures", specifier = "==15.1" },
     { name = "pytest-subprocess", specifier = "~=1.5.2" },
     { name = "pytest-time", specifier = ">=0.3.1" },
     { name = "responses", specifier = "~=0.25.0" },
@@ -547,7 +547,7 @@ dev-plucky = [{ name = "python-apt", marker = "sys_platform == 'linux'", specifi
 dev-questing = [{ name = "python-apt", marker = "sys_platform == 'linux'", specifier = "~=3.0.0", index = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels/" }]
 docs = [
     { name = "canonical-sphinx", extras = ["full"], specifier = "~=0.5.1" },
-    { name = "pydantic-kitbash", specifier = "~=0.0.3" },
+    { name = "pydantic-kitbash", specifier = "~=0.0.7" },
     { name = "sphinx-autobuild", specifier = "==2024.10.3" },
     { name = "sphinx-lint", specifier = "==1.0.0" },
     { name = "sphinxext-rediraffe", specifier = ">=0.2.7" },
@@ -645,7 +645,7 @@ wheels = [
 
 [[package]]
 name = "craft-providers"
-version = "2.3.0"
+version = "2.4.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "packaging" },
@@ -654,9 +654,9 @@ dependencies = [
     { name = "requests" },
     { name = "requests-unixsocket2" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/69/d9/5c9195dbd410c978ef8f7172ddef7ab86d10f501560ee49dcdae1497e8f4/craft_providers-2.3.0.tar.gz", hash = "sha256:8b9f60d587d118e35e6cf0c28ffffafe5c8e40e3e6c49da3b171a3d18a070ffa", size = 190942, upload-time = "2025-05-09T13:47:13.886Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/a9/82/3f642247778502c9f87e2d370bfc9da8cf2bdf4ca846548b0b7f7f2d23fc/craft_providers-2.4.0.tar.gz", hash = "sha256:7944c7e559f4cdb74220b2f19dcf7b84e566d6284550d67dd041b24106da355b", size = 274922, upload-time = "2025-07-14T18:19:39.946Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/02/38/d685644a31f1aa4cc5805a99b9cd40c9b481dffdadc1f39e9a3429f8ec44/craft_providers-2.3.0-py2.py3-none-any.whl", hash = "sha256:fc539d0d675286cd596ba3534364da80696f38ef63241a9c059283d8ccae531c", size = 104402, upload-time = "2025-05-09T13:47:12.258Z" },
+    { url = "https://files.pythonhosted.org/packages/5e/35/d585f953999099f682a4458f1339fcada7efa85a81ec18333a4caa8b1b89/craft_providers-2.4.0-py2.py3-none-any.whl", hash = "sha256:05415bce7412b533bd49362d05972a52434c8c138cef47d4e90eab40002c8f9d", size = 104800, upload-time = "2025-07-14T18:19:37.927Z" },
 ]
 
 [[package]]
@@ -1405,7 +1405,7 @@ wheels = [
 
 [[package]]
 name = "pydantic-kitbash"
-version = "0.0.6"
+version = "0.0.7"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "docutils" },
@@ -1413,9 +1413,9 @@ dependencies = [
     { name = "pyyaml" },
     { name = "sphinx" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/4a/c0/48066291bb9db968d42d6419fa666be077c893d17cdca0eac44cedb2e3d1/pydantic_kitbash-0.0.6.tar.gz", hash = "sha256:60b18ce727f06b6c5a3f8db5675bb6c423449bb59832c3e04cfef4b1568a84e9", size = 124406, upload-time = "2025-07-03T19:24:33.841Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/c6/b9/630281fa690b2449e70d59ce221c91d9633571c4a7c2dcd8469a59a8c7cc/pydantic_kitbash-0.0.7.tar.gz", hash = "sha256:14eda8a87401b09d746e1ad4157248d8c0d1841803bf609600143e567a687551", size = 131893, upload-time = "2025-08-01T16:26:32.107Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/46/4e/4f492ee0d832eb9d8ebd9915e35bff6fd09d658bc6fdb1f31d70495492cf/pydantic_kitbash-0.0.6-py3-none-any.whl", hash = "sha256:e16fa65ebfebe7d295e9b476641e253e02b18686e52bedc2ec65c46421d9875d", size = 13156, upload-time = "2025-07-03T19:24:32.342Z" },
+    { url = "https://files.pythonhosted.org/packages/56/05/4a05fbb8f72ae86060430e55349e1d504ee73973e9a767aeb9ecaf85a447/pydantic_kitbash-0.0.7-py3-none-any.whl", hash = "sha256:4ab60369cb8b3cbf289724df295a514bb309d2cb669d1d0c6d1eafaacf530ec5", size = 13645, upload-time = "2025-08-01T16:26:29.879Z" },
 ]
 
 [[package]]
@@ -1541,27 +1541,29 @@ wheels = [
 
 [[package]]
 name = "pytest-check"
-version = "2.4.1"
+version = "2.5.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "pytest" },
+    { name = "typing-extensions", marker = "python_full_version < '3.11' or (extra == 'group-17-craft-application-dev-jammy' and extra == 'group-17-craft-application-dev-noble') or (extra == 'group-17-craft-application-dev-jammy' and extra == 'group-17-craft-application-dev-plucky') or (extra == 'group-17-craft-application-dev-jammy' and extra == 'group-17-craft-application-dev-questing') or (extra == 'group-17-craft-application-dev-noble' and extra == 'group-17-craft-application-dev-plucky') or (extra == 'group-17-craft-application-dev-noble' and extra == 'group-17-craft-application-dev-questing') or (extra == 'group-17-craft-application-dev-plucky' and extra == 'group-17-craft-application-dev-questing')" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/15/d3/178a723f0420cf4e06fb6ddf43fc1ec68c1d0d4ea3db1ecf8f6df21b345f/pytest_check-2.4.1.tar.gz", hash = "sha256:5224efcef059bf7f0cda253f8d0f62704b4819ff48c93f51c675aea6a014f650", size = 28933, upload-time = "2024-08-28T04:53:36.394Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/7b/f8/58aa6cf0af7bc261c4606c28582258e76cec398a7d8bdc2e82de51039f84/pytest_check-2.5.3.tar.gz", hash = "sha256:2357d7df77c395d30c0c4957724fdfce1a75ea8bc9eb2308c0ffe56f62ac70ca", size = 27422, upload-time = "2025-04-04T01:44:43.188Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/c0/25/465756acbb66db47ad40e0be6b457d8644c7b9f882b2ff7f5e92dde07915/pytest_check-2.4.1-py3-none-any.whl", hash = "sha256:74f38938183880d9921aeb85662437d2b13e1e053e1bed7d186d54613d3068c7", size = 13789, upload-time = "2024-08-28T04:53:35.026Z" },
+    { url = "https://files.pythonhosted.org/packages/7a/29/d3fbd683c50aeb93d79377c904179c82f01f9f656299deb89328ab85b0a2/pytest_check-2.5.3-py3-none-any.whl", hash = "sha256:354685dfa63e714a20aa62b61c4d30d5acfa30891319df9046f59af653c3b9ba", size = 15998, upload-time = "2025-04-04T01:44:41.951Z" },
 ]
 
 [[package]]
 name = "pytest-cov"
-version = "5.0.0"
+version = "6.2.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "coverage", extra = ["toml"] },
+    { name = "pluggy" },
     { name = "pytest" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/74/67/00efc8d11b630c56f15f4ad9c7f9223f1e5ec275aaae3fa9118c6a223ad2/pytest-cov-5.0.0.tar.gz", hash = "sha256:5837b58e9f6ebd335b0f8060eecce69b662415b16dc503883a02f45dfeb14857", size = 63042, upload-time = "2024-03-24T20:16:34.856Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/18/99/668cade231f434aaa59bbfbf49469068d2ddd945000621d3d165d2e7dd7b/pytest_cov-6.2.1.tar.gz", hash = "sha256:25cc6cc0a5358204b8108ecedc51a9b57b34cc6b8c967cc2c01a4e00d8a67da2", size = 69432, upload-time = "2025-06-12T10:47:47.684Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/78/3a/af5b4fa5961d9a1e6237b530eb87dd04aea6eb83da09d2a4073d81b54ccf/pytest_cov-5.0.0-py3-none-any.whl", hash = "sha256:4f0764a1219df53214206bf1feea4633c3b558a2925c8b59f144f682861ce652", size = 21990, upload-time = "2024-03-24T20:16:32.444Z" },
+    { url = "https://files.pythonhosted.org/packages/bc/16/4ea354101abb1287856baa4af2732be351c7bee728065aed451b678153fd/pytest_cov-6.2.1-py3-none-any.whl", hash = "sha256:f5bc4c23f42f1cdd23c70b1dab1bbaef4fc505ba950d53e0081d0730dd7e86d5", size = 24644, upload-time = "2025-06-12T10:47:45.932Z" },
 ]
 
 [[package]]
@@ -1591,15 +1593,15 @@ wheels = [
 
 [[package]]
 name = "pytest-rerunfailures"
-version = "14.0"
+version = "15.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "packaging" },
     { name = "pytest" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/cc/a4/6de45fe850759e94aa9a55cda807c76245af1941047294df26c851dfb4a9/pytest-rerunfailures-14.0.tar.gz", hash = "sha256:4a400bcbcd3c7a4ad151ab8afac123d90eca3abe27f98725dc4d9702887d2e92", size = 21350, upload-time = "2024-03-13T08:21:39.444Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/a0/78/e6e358545537a8e82c4dc91e72ec0d6f80546a3786dd27c76b06ca09db77/pytest_rerunfailures-15.1.tar.gz", hash = "sha256:c6040368abd7b8138c5b67288be17d6e5611b7368755ce0465dda0362c8ece80", size = 26981, upload-time = "2025-05-08T06:36:33.483Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/dc/e7/e75bd157331aecc190f5f8950d7ea3d2cf56c3c57fb44da70e60b221133f/pytest_rerunfailures-14.0-py3-none-any.whl", hash = "sha256:4197bdd2eaeffdbf50b5ea6e7236f47ff0e44d1def8dae08e409f536d84e7b32", size = 12709, upload-time = "2024-03-13T08:21:37.199Z" },
+    { url = "https://files.pythonhosted.org/packages/f3/30/11d836ff01c938969efa319b4ebe2374ed79d28043a12bfc908577aab9f3/pytest_rerunfailures-15.1-py3-none-any.whl", hash = "sha256:f674c3594845aba8b23c78e99b1ff8068556cc6a8b277f728071fdc4f4b0b355", size = 13274, upload-time = "2025-05-08T06:36:32.029Z" },
 ]
 
 [[package]]

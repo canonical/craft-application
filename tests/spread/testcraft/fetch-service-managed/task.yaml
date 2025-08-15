@@ -1,0 +1,21 @@
+summary: Testcraft should create and manage an instance of the fetch service
+
+prepare: |
+  snap install fetch-service --candidate
+
+execute: |
+  testcraft pack --enable-fetch-service permissive
+
+  test -f fetch-service*.testcraft
+
+  # Check that the session-report was generated
+  test -f fetch-service*.json
+
+  # Smoke-checks to verify that the 'hello' deb went through the fetch service
+  MATCH '"component-name": "hello"' fetch-service*.json
+
+restore: |
+  testcraft clean
+  snap remove --purge fetch-service
+  rm fetch-service*.json
+  rm fetch-service*.testcraft

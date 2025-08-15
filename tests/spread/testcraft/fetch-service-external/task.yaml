@@ -1,0 +1,97 @@
+summary: Testcraft can use an external fetch service session
+
+priority: 100
+
+prepare: |
+  snap install --candidate fetch-service
+
+  # Some of these values match the current defaults used by the fetch-service, but we
+  # set them here too to protect against changes in those defaults
+  snap set fetch-service control.auth="craft:craft"
+  snap set fetch-service control.port=9999
+  snap set fetch-service proxy.port=9988
+  snap set fetch-service permissive=true
+  snap set fetch-service log.file="from-testcraft.log"
+  snap start fetch-service
+
+  # Give the service some time to start
+  sleep 5
+  # Make sure the service is up
+  curl -f http://localhost:9999/status
+
+  # Create a fetch-service session
+  curl -f -X POST -d '{"policy": "strict"}' http://craft:craft@localhost:9999/session --output session.json
+  session_id=$(jq -r .id session.json)
+  token=$(jq -r .token session.json)
+
+  # This assumes that the lxd network is lxdbr0
+  host_ip=$(ip -f inet addr show lxdbr0 | sed -En -e 's/.*inet ([0-9.]+).*/\1/p')
+
+  # Save the proxy url so that the 'execute' step can access it.
+  echo "http://${session_id}:${token}@${host_ip}:9988" > session_proxy_url.txt
+
+execute: |
+  # Configure testcraft to use the external session
+  export CRAFT_USE_EXTERNAL_FETCH_SERVICE=1
+
+  # Check that the fetch-service's certificate is there, use it
+  test -f /var/snap/fetch-service/current/local-ca.crt
+  export CRAFT_PROXY_CERT=/var/snap/fetch-service/current/local-ca.crt
+
+  # Set http_proxy and https_proxy variables to the value saved during 'prepare'
+  export http_proxy=$(cat session_proxy_url.txt)
+  export https_proxy=$(cat session_proxy_url.txt)
+
+  # The current implementation is bugged: when setting up the lxd instance snapd is
+  # configured to use the proxy but it doesn't (can't) recognize the fetch-service
+  # signature because we don't inject the certificate.
+  expected_error='cannot install system snap "snapd": Post "https://api.snapcraft.io/v2/snaps/refresh": tls: failed to verify certificate: x509: certificate signed by unknown authority'
+
+  # The pack fails because the feature needs some work still (see issue #839):
+  # - During setup of the craft-providers lxd instance, we need to:
+  #   - do a full apt update (remove apt lists cache)
+  #   - push the certificate file and update-ca-certificates
+  # - We also need to *not* use a base-instance when doing fetch-service-enabled packs
+  #   (both kinds), because this session config can't be persisted in the instance.
+  # - If we do a full apt update during setup, we can stop doing one in the ProxyService.
+  #   (in fact today we *must*, because of a fetch-service bug with "double apt updates")
+  testcraft pack --verbosity=debug 2>&1 | MATCH "$expected_error"
+  # Remove this once the above issue^ is fixed
+  exit 0;
+
+  test -f fetch-service*.testcraft
+
+  # Clear proxy variables, otherwise the curl calls themselves will try to use the
+  # proxy that we're about to teardown.
+  unset http_proxy
+  unset https_proxy
+
+  # Revoke the session token
+  session_id=$(jq -r .id session.json)
+  token=$(jq -r .token session.json)
+  curl -sf -X DELETE -d "{\"token\": \"${token}\"}" "http://localhost:9999/session/${session_id}/token"
+
+  # Get the session report
+  curl -sf "http://craft:craft@localhost:9999/session/${session_id}" | tee session_report.json
+
+  # Delete the session
+  curl -sf -X DELETE "http://craft:craft@localhost:9999/session/${session_id}"
+  # Delete session resources
+  curl -sf -X DELETE "http://craft:craft@localhost:9999/resources/${session_id}"
+
+  # Smoke-checks to verify that the 'hello' deb went through the fetch service
+  jq -r '(.artifacts[].metadata | select(.name=="hello")).type' session_report.json | MATCH "application/vnd.debian.binary-package"
+
+restore: |
+  testcraft clean
+  rm -f fetch-service*.testcraft
+  snap remove --purge fetch-service
+
+debug: |
+  logfile=/var/snap/fetch-service/current/from-testcraft.log
+  if [ -f ${logfile} ]; then
+    echo "fetch-service log output:"
+    cat ${logfile}
+  else
+    echo "fetch-service logfile does not exist."
+  fi
