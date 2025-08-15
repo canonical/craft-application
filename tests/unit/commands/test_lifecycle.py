@@ -43,6 +43,8 @@ from craft_application.services import LifecycleService
 from craft_application.services.service_factory import ServiceFactory
 from craft_parts import Features
 
+pytestmark = [pytest.mark.usefixtures("fake_project_file")]
+
 PARTS_LISTS = [[], ["my-part"], ["my-part", "your-part"]]
 SHELL_PARAMS = [
     ({"shell": False, "shell_after": False}, []),
@@ -119,7 +121,7 @@ def test_get_lifecycle_command_group(enable_overlay, commands):
 @pytest.mark.parametrize(("debug_dict", "debug_args"), DEBUG_PARAMS)
 @pytest.mark.parametrize(("shell_dict", "shell_args"), SHELL_PARAMS)
 def test_lifecycle_command_fill_parser(
-    app_metadata,
+    default_app_metadata,
     fake_services,
     build_env_dict,
     build_env_args,
@@ -130,7 +132,7 @@ def test_lifecycle_command_fill_parser(
 ):
     cls = get_fake_command_class(LifecycleCommand, managed=True)
     parser = argparse.ArgumentParser("parts_command")
-    command = cls({"app": app_metadata, "services": fake_services})
+    command = cls({"app": default_app_metadata, "services": fake_services})
     expected = {
         "platform": None,
         "build_for": None,
@@ -294,7 +296,7 @@ def test_run_manager_for_build_plan(
 @pytest.mark.parametrize(("shell_dict", "shell_args"), SHELL_PARAMS)
 @pytest.mark.parametrize("parts_args", PARTS_LISTS)
 def test_step_command_fill_parser(
-    app_metadata,
+    default_app_metadata,
     fake_services,
     parts_args,
     build_env_dict,
@@ -314,7 +316,7 @@ def test_step_command_fill_parser(
         **debug_dict,
         **build_env_dict,
     }
-    command = cls({"app": app_metadata, "services": fake_services})
+    command = cls({"app": default_app_metadata, "services": fake_services})
 
     command.fill_parser(parser)
 
@@ -329,6 +331,7 @@ def test_step_command_fill_parser(
 @pytest.mark.usefixtures("managed_mode")
 def test_step_command_run_explicit_step(app_metadata, mock_services, parts, step_name):
     cls = get_fake_command_class(LifecyclePartsCommand, managed=True)
+    mock_services.get("project").configure(platform=None, build_for=None)
 
     parsed_args = argparse.Namespace(destructive_mode=False, parts=parts)
     command = cls({"app": app_metadata, "services": mock_services})
@@ -342,6 +345,7 @@ def test_step_command_run_explicit_step(app_metadata, mock_services, parts, step
 
 @pytest.mark.parametrize("command_cls", MANAGED_LIFECYCLE_COMMANDS)
 def test_step_command_failure(app_metadata, mock_services, command_cls):
+    mock_services.get("project").configure(platform=None, build_for=None)
     parsed_args = argparse.Namespace(destructive_mode=True, parts=None)
     error_message = "Lifecycle run failed!"
 
@@ -368,6 +372,7 @@ def test_step_command_failure(app_metadata, mock_services, command_cls):
 @pytest.mark.usefixtures("managed_mode")
 def test_managed_concrete_commands_run(app_metadata, mock_services, command_cls, parts):
     parsed_args = argparse.Namespace(destructive_mode=False, parts=parts)
+    mock_services.get("project").configure(platform=None, build_for=None)
     command = command_cls({"app": app_metadata, "services": mock_services})
 
     command.run(parsed_args)
@@ -476,6 +481,8 @@ def test_pack_fill_parser(
         "build_for": None,
         "output": pathlib.Path(output_arg),
         "fetch_service_policy": None,
+        # This is here because app_metadata turns on checking unsupported bases.
+        "allow_unsupported_base": False,
         **shell_dict,
         **debug_dict,
         **build_env_dict,
@@ -508,9 +515,11 @@ def test_pack_run(
     mocker, emitter, mock_services, app_metadata, parts, tmp_path, packages, message
 ):
     mock_services.package.pack.return_value = packages
+    mock_services.get("project").configure(platform=None, build_for=None)
     parsed_args = argparse.Namespace(
         destructive_mode=True, parts=parts, output=tmp_path, fetch_service_policy=None
     )
+
     command = PackCommand(
         {
             "app": app_metadata,
@@ -544,6 +553,7 @@ def test_pack_fetch_manifest(
 ):
     packages = [pathlib.Path("package.zip")]
     mock_services.package.pack.return_value = packages
+    mock_services.get("project").configure(platform=None, build_for=None)
     parsed_args = argparse.Namespace(
         destructive_mode=True,
         output=tmp_path,
@@ -764,6 +774,7 @@ def test_debug_pack(
 
 
 def test_run_post_prime(app_metadata, mock_services, mocker, fake_project_file):
+    mock_services.get("project").configure(platform=None, build_for=None)
     command = PrimeCommand(
         {
             "app": app_metadata,
@@ -785,6 +796,7 @@ def test_run_post_prime(app_metadata, mock_services, mocker, fake_project_file):
 def test_run_post_prime_destructive_mode(
     app_metadata, mock_services, mocker, fake_project_file
 ):
+    mock_services.get("project").configure(platform=None, build_for=None)
     command = PrimeCommand(
         {
             "app": app_metadata,
@@ -807,6 +819,7 @@ def test_run_post_prime_destructive_mode(
 def test_run_post_prime_managed_mode(
     app_metadata, mock_services, mocker, fake_project_file
 ):
+    mock_services.get("project").configure(platform=None, build_for=None)
     command = PrimeCommand(
         {
             "app": app_metadata,

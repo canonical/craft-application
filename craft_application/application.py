@@ -67,12 +67,15 @@ DEFAULT_CLI_LOGGERS = frozenset(
 @final
 @dataclass(frozen=True)
 class AppMetadata:
-    """Metadata about a *craft application."""
+    """Metadata about a craft application."""
 
     name: str
+    """The name of the application."""
     summary: str | None = None
+    """A short summary of the application."""
     version: str = field(init=False)
     docs_url: str | None = None
+    """The root URL for the app's documentation."""
     source_ignore_patterns: list[str] = field(default_factory=list[str])
     managed_instance_project_path = pathlib.PurePosixPath("/root/project")
     project_variables: list[str] = field(default_factory=lambda: ["version"])
@@ -80,10 +83,24 @@ class AppMetadata:
     ConfigModel: type[_config.ConfigModel] = _config.ConfigModel
 
     ProjectClass: type[models.Project] = models.Project
+    """The project model to use for this app.
+
+    Most applications will need to override this, but a very basic application could use
+    the default model without modification.
+    """
     supports_multi_base: bool = False
     always_repack: bool = (
         True  # Gating for https://github.com/canonical/craft-application/pull/810
     )
+    check_supported_base: bool = False
+    """Whether this application allows building on unsupported bases.
+
+    When True, the app can build on a base even if it is end-of-life. Relevant apt
+    repositories will be migrated to ``old-releases.ubuntu.com``. Currently only
+    supports EOL Ubuntu releases.
+
+    When False, the repositories are not migrated and base support is not checked.
+    """
 
     def __post_init__(self) -> None:
         setter = super().__setattr__

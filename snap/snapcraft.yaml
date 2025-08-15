@@ -25,6 +25,8 @@ apps:
     command: bin/python -m testcraft
   partitioncraft:
     command: bin/python -m partitioncraft
+  witchcraft:
+    command: bin/python -m witchcraft
 
 parts:
   python:
@@ -87,6 +89,7 @@ parts:
       # Include the actual fake apps
       cp -r testcraft "${CRAFT_PART_INSTALL}/lib/python3.12/site-packages/"
       cp -r partitioncraft "${CRAFT_PART_INSTALL}/lib/python3.12/site-packages/"
+      cp -r witchcraft "${CRAFT_PART_INSTALL}/lib/python3.12/site-packages/"
 
       rm "${CRAFT_PART_INSTALL}/bin/python"
       ln -s ../usr/bin/python3.12 "${CRAFT_PART_INSTALL}/bin/python"

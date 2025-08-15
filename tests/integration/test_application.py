@@ -27,6 +27,7 @@ import pytest_check
 from craft_application import util
 from craft_application.commands.base import AppCommand
 from craft_application.util import yaml
+from craft_parts import callbacks
 from typing_extensions import override
 
 if TYPE_CHECKING:
@@ -236,6 +237,9 @@ def test_project_destructive(
 
     for dirname in ("parts", "stage", "prime"):
         assert (tmp_path / dirname).is_dir()
+
+    # Reset craft-parts hooks
+    callbacks.unregister_all()
 
     # Now run clean in destructive mode
     monkeypatch.setattr("sys.argv", ["testcraft", "clean", "--destructive-mode"])
