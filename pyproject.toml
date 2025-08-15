@@ -4,18 +4,17 @@ description = "A framework for *craft applications."
 dynamic = ["version"]
 dependencies = [
     "annotated-types>=0.6.0",
-    "craft-archives>=2.0.0",
+    "craft-archives>=2.2.0",
     "craft-cli~=3.0",
     "craft-grammar>=2.0.0",
     "craft-parts>=2.18.0",
     "craft-platforms>=0.6.0",
-    "craft-providers>=2.1.0",
+    "craft-providers>=3.0.0",
     "Jinja2>=3.1.6,<4.0.0",
     "snap-helpers>=0.4.2",
     "platformdirs>=3.10",
     "pydantic~=2.0",
     "license-expression>=30.0.0",
-    # "pydantic-yaml<1.0",
     # Pygit2 and libgit2 need to match versions.
     # Further info: https://www.pygit2.org/install.html#version-numbers
     # Minor versions of pygit2 can include breaking changes, so we need to check
@@ -27,6 +26,7 @@ dependencies = [
     "PyYaml>=6.0",
     "requests",
     "typing_extensions>=4.4.0",
+    "distro-support>=2025.8.13",
 ]
 classifiers = [
     "Development Status :: 5 - Production/Stable",

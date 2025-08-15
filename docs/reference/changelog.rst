@@ -7,13 +7,30 @@ Changelog
 5.7.0 (2025-08-15)
 ------------------
 
+Application
+===========
+
+- Add a :py:attr:`~craft_application.application.AppMetadata.check_supported_base`
+  option to ``AppMetadata``, allowing the application to opt into checking that the
+  base is supported.
+
 Services
 ========
 
 - Add a new Proxy service that configures an instance to connect to a proxy.
 - The Provider Service can now add early proxy configuration to instances.
+- The Lifecycle service now configures the overlay to use ``old-releases.ubuntu.com`` if
+  the release has been migrated to that domain.
 
 For a complete list of commits, check out the `5.7.0`_ release on GitHub.
+
+5.6.4 (2025-08-15)
+------------------
+
+Fixes
+=====
+
+- The ``--project-dir`` command option works again.
 
 5.6.3 (2025-08-05)
 ------------------

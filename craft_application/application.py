@@ -67,12 +67,15 @@ DEFAULT_CLI_LOGGERS = frozenset(
 @final
 @dataclass(frozen=True)
 class AppMetadata:
-    """Metadata about a *craft application."""
+    """Metadata about a craft application."""
 
     name: str
+    """The name of the application."""
     summary: str | None = None
+    """A short summary of the application."""
     version: str = field(init=False)
     docs_url: str | None = None
+    """The root URL for the app's documentation."""
     source_ignore_patterns: list[str] = field(default_factory=list[str])
     managed_instance_project_path = pathlib.PurePosixPath("/root/project")
     project_variables: list[str] = field(default_factory=lambda: ["version"])
@@ -80,10 +83,24 @@ class AppMetadata:
     ConfigModel: type[_config.ConfigModel] = _config.ConfigModel
 
     ProjectClass: type[models.Project] = models.Project
+    """The project model to use for this app.
+
+    Most applications will need to override this, but a very basic application could use
+    the default model without modification.
+    """
     supports_multi_base: bool = False
     always_repack: bool = (
         True  # Gating for https://github.com/canonical/craft-application/pull/810
     )
+    check_supported_base: bool = False
+    """Whether this application allows building on unsupported bases.
+
+    When True, the app can build on a base even if it is end-of-life. Relevant apt
+    repositories will be migrated to ``old-releases.ubuntu.com``. Currently only
+    supports EOL Ubuntu releases.
+
+    When False, the repositories are not migrated and base support is not checked.
+    """
 
     def __post_init__(self) -> None:
         setter = super().__setattr__
@@ -398,11 +415,15 @@ class Application:
                 f"Running {self.app.name}:{build_info.platform} in {build_info.build_for} instance..."
             )
             instance_path = pathlib.PosixPath("/root/project")
+            active_fetch_service = self.services.get("fetch").is_active(
+                enable_command_line=self._enable_fetch_service
+            )
 
             with self.services.provider.instance(
                 build_info,
                 work_dir=self._work_dir,
                 clean_existing=self._enable_fetch_service,
+                use_base_instance=not active_fetch_service,
             ) as instance:
                 if self._enable_fetch_service:
                     fetch_env = self.services.fetch.create_session(instance)
@@ -585,17 +606,18 @@ class Application:
             platform = platform.split(",", maxsplit=1)[0]
         if build_for and "," in build_for:
             build_for = build_for.split(",", maxsplit=1)[0]
-        if command.needs_project(dispatcher.parsed_args()):
+        craft_cli.emit.debug(f"Build plan: platform={platform}, build_for={build_for}")
+
+        self._pre_run(dispatcher)
+
+        if command.needs_project(parsed_args):
             project_service = self.services.get("project")
             # This branch always runs, except during testing.
             if not project_service.is_configured:
                 project_service.configure(platform=platform, build_for=build_for)
 
-        craft_cli.emit.debug(f"Build plan: platform={platform}, build_for={build_for}")
-        self._pre_run(dispatcher)
-
-        managed_mode = command.run_managed(dispatcher.parsed_args())
-        provider_name = command.provider_name(dispatcher.parsed_args())
+        managed_mode = command.run_managed(parsed_args)
+        provider_name = command.provider_name(parsed_args)
         self._configure_services(provider_name)
 
         return_code = 1  # General error
@@ -621,6 +643,8 @@ class Application:
         self._load_plugins()
 
         craft_cli.emit.debug("Preparing application...")
+
+        debug_mode = self.services.get("config").get("debug")
 
         try:
             return_code = self._run_inner()
@@ -684,7 +708,7 @@ class Application:
                 )
                 return_code = os.EX_SOFTWARE
             self._emit_error(transformed, cause=err)
-            if self.services.get("config").get("debug"):
+            if debug_mode:
                 raise
         else:
             craft_cli.emit.ended_ok()

@@ -40,6 +40,7 @@ from craft_application.services.fetch import FetchService
 from craft_application.services.project import ProjectService
 from craft_application.util import yaml
 from craft_cli import EmitterMode, emit
+from craft_parts import callbacks
 from jinja2 import FileSystemLoader
 from typing_extensions import override
 
@@ -172,6 +173,12 @@ def reset_services():
     service_factory.ServiceFactory.reset()
 
 
+@pytest.fixture(autouse=True)
+def reset_craft_parts_callbacks():
+    yield
+    callbacks.unregister_all()
+
+
 @pytest.fixture
 def in_project_dir(project_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Put us in the project directory made by project_path."""
@@ -220,6 +227,7 @@ def app_metadata(fake_config_model) -> craft_application.AppMetadata:
             ConfigModel=fake_config_model,
             supports_multi_base=True,
             always_repack=False,
+            check_supported_base=True,
         )
 
 

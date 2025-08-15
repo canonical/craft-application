@@ -200,14 +200,14 @@ class ConfigService(base.AppService):
         """Convert the value to the appropriate type."""
         if isinstance(field_type, type):  # pyright: ignore[reportUnnecessaryIsInstance]
             if issubclass(field_type, str):
-                return cast(T, field_type(value))
+                return field_type(value)
             if issubclass(field_type, bool):
                 return cast(T, util.strtobool(value))
             if issubclass(field_type, enum.Enum):
                 with contextlib.suppress(KeyError):
-                    return cast(T, field_type[value])
+                    return field_type[value]
                 with contextlib.suppress(KeyError):
-                    return cast(T, field_type[value.upper()])
+                    return field_type[value.upper()]
         field_adapter = pydantic.TypeAdapter(field_type)
         return field_adapter.validate_strings(value)
 

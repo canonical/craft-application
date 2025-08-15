@@ -1,0 +1,23 @@
+summary: test witchcraft packing on an EOL base.
+
+prepare: |
+  sudo apt-get --yes install faketime
+
+execute: |
+  # We didn't support any bases this far in the past.
+  faketime '1994-04-27' witchcraft pack |& MATCH "Base '[a-z0-9.@]+' has reached"
+  faketime '1994-04-27' witchcraft pack --destructive-mode |& MATCH "Base '[a-z0-9.@]+' has reached"
+
+  # Packing on an unsupported base is our last, best hope for peace.
+  faketime '2256-03-09' witchcraft pack |& MATCH "Base '[a-z0-9.@]+' has reached"
+  faketime '2256-03-09' witchcraft pack --destructive-mode |& MATCH "Base '[a-z0-9.@]+' has reached"
+
+  faketime '2256-03-09' witchcraft pack --old-bases --destructive-mode
+
+  if [[ $(find . -maxdepth 1 -name '*.witchcraft') == "" ]]; then
+    echo "No witchcraft file created" >> /dev/stderr
+    exit 1
+  fi
+
+restore: |
+  rm -f *.witchcraft
