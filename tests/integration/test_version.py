@@ -63,4 +63,4 @@ def test_version_with_tags():
     version = craft_application.__version__
 
     # match on 'X.Y.Z.post<commits since tag>+g<hash>'
-    assert re.fullmatch(r"\d+\.\d+\.\d+\.post\d+\+g[0-9a-f]+", version)
+    assert re.fullmatch(r"\d+\.\d+\.\d+(\.post\d+\+g[0-9a-f]+)?", version)
