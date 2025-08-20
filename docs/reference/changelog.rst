@@ -4,6 +4,17 @@
 Changelog
 *********
 
+5.6.5 (2025-08-20)
+------------------
+
+Services
+========
+
+- Prevent the reuse of instances created before the State service by
+  updating the Provider service's compatibility tag.
+
+For a complete list of commits, check out the `5.6.5`_ release on GitHub.
+
 5.6.4 (2025-08-15)
 ------------------
 
@@ -895,3 +906,4 @@ For a complete list of commits, check out the `2.7.0`_ release on GitHub.
 .. _5.6.0: https://github.com/canonical/craft-application/releases/tag/5.6.0
 .. _5.6.1: https://github.com/canonical/craft-application/releases/tag/5.6.1
 .. _5.6.2: https://github.com/canonical/craft-application/releases/tag/5.6.2
+.. _5.6.5: https://github.com/canonical/craft-application/releases/tag/5.6.5
