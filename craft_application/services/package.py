@@ -101,14 +101,13 @@ class PackageService(base.AppService):
 
     def update_project(self) -> None:
         """Update project fields with dynamic values set during the lifecycle."""
-        update_vars: dict[str, str] = {}
         project_info = self._services.lifecycle.project_info
-        for var in self._app.project_variables:
-            update_vars[var] = project_info.get_project_var(var)
+        update_vars = project_info.project_vars.marshal_one_attribute("value")
+        emit.debug(f"Project variable updates: {update_vars}")
 
-        emit.debug(f"Update project variables: {update_vars}")
-        project = self._services.get("project").get()
-        project.__dict__.update(update_vars)
+        project_service = self._services.get("project")
+        project_service.deep_update(update_vars)
+        project = project_service.get()
 
         # Give subclasses a chance to update the project with their own logic
         self._extra_project_updates()

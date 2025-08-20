@@ -4,6 +4,22 @@
 Changelog
 *********
 
+5.9.0 (unreleased)
+------------------
+
+Services
+========
+
+- Previously, only top-level keys in a project file could be managed with ``craftctl``.
+  Now, nested keys in a project file can be managed. Additionally, each key can now
+  be set by a different part.
+
+  Applications can override the Project service's
+  :py:meth:`~craft_application.project.ProjectService._create_project_vars`
+  method to define which keys can be managed and which parts can set them.
+
+For a complete list of commits, check out the `5.9.0`_ release on GitHub.
+
 5.8.0 (2025-08-28)
 ------------------
 
@@ -967,3 +983,4 @@ For a complete list of commits, check out the `2.7.0`_ release on GitHub.
 .. _5.7.0: https://github.com/canonical/craft-application/releases/tag/5.7.0
 .. _5.7.1: https://github.com/canonical/craft-application/releases/tag/5.7.1
 .. _5.8.0: https://github.com/canonical/craft-application/releases/tag/5.8.0
+.. _5.9.0: https://github.com/canonical/craft-application/releases/tag/5.9.0

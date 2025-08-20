@@ -19,6 +19,7 @@ import copy
 import datetime
 import os
 import pathlib
+import warnings
 from typing import TYPE_CHECKING, Any, Literal, cast, final
 
 import craft_parts
@@ -67,6 +68,7 @@ class ProjectService(base.AppService):
         self._build_on: craft_platforms.DebianArchitecture | None = None
         self._build_for: str | None = None
         self._platform: str | None = None
+        self._project_vars: craft_parts.ProjectVarInfo | None = None
 
     @final
     def configure(self, *, platform: str | None, build_for: str | None) -> None:
@@ -319,9 +321,59 @@ class ProjectService(base.AppService):
             )
 
     @final
-    def _get_project_vars(self, yaml_data: dict[str, Any]) -> dict[str, str]:
-        """Return a dict with project variables to be expanded."""
-        return {var: str(yaml_data.get(var, "")) for var in self._app.project_variables}
+    def _get_project_vars(
+        self,
+        yaml_data: dict[str, Any],  # noqa: ARG002 (unused-method-argument)
+    ) -> dict[str, Any]:
+        """Return a dict with project variables to be expanded.
+
+        DEPRECATED: This method is deprecated and is not called by default.
+        Use ``ProjectService.project_vars`` instead.
+        """
+        warnings.warn(
+            "'ProjectService._get_project_vars' is deprecated. "
+            "Use 'project_vars' property instead.",
+            category=DeprecationWarning,
+            stacklevel=1,
+        )
+        return (
+            self._project_vars.marshal_one_attribute("value")
+            if self._project_vars
+            else {}
+        )
+
+    @final
+    @property
+    def project_vars(self) -> craft_parts.ProjectVarInfo | None:
+        """Get the project vars."""
+        return self._project_vars
+
+    def _create_project_vars(
+        self, project: dict[str, Any]
+    ) -> craft_parts.ProjectVarInfo:
+        """Create the project variables.
+
+        By default, the project variables are created from
+        ``AppMetadata.project_variables`` and the project's ``adopt-info`` key.
+
+        Applications should override this method if they need to create project
+        variables dynamically from on project data.
+
+        :param project: The project data.
+
+        :returns: The project variables.
+        """
+        project_vars = craft_parts.ProjectVarInfo.unmarshal(
+            {
+                var: craft_parts.ProjectVar(
+                    value=project.get(var),
+                    part_name=project.get("adopt-info"),
+                ).marshal()
+                for var in self._app.project_variables
+            }
+        )
+        emit.trace(f"Created project variables {project_vars}.")
+        return project_vars
 
     def get_partitions_for(
         self,
@@ -406,7 +458,7 @@ class ProjectService(base.AppService):
                 "specified."
             )
 
-        environment_vars = self._get_project_vars(project_data)
+        self._project_vars = self._create_project_vars(project_data)
         partitions = self.get_partitions_for(
             platform=platform, build_for=build_for, build_on=build_on
         )
@@ -419,7 +471,7 @@ class ProjectService(base.AppService):
             parallel_build_count=util.get_parallel_build_count(self._app.name),
             project_name=project_data.get("name", ""),
             project_dirs=project_dirs,
-            project_vars=environment_vars,
+            project_vars=self.project_vars,
             partitions=partitions,
         )
 
@@ -685,3 +737,44 @@ class ProjectService(base.AppService):
             resolution="If you know the risks and want to continue, rerun with --old-bases.",
             retcode=os.EX_DATAERR,
         )
+
+    @final
+    def deep_update(self, update: dict[str, Any]) -> None:
+        """Perform a deep update of data in the project.
+
+        This method marshals the project and performs a recursive update on the
+        project dict, then unmarshals the project.
+
+        :param update: The dict to merge into the project model.
+
+        :raises RuntimeError: If the project doesn't exist.
+        """
+        emit.trace(f"Updating project model with {update}.")
+
+        if not self._project_model:
+            raise RuntimeError("Project doesn't exist.")
+
+        project_dict = self._project_model.marshal()
+        new_data = self._deep_update(project_dict, update)
+        self._project_model = self._app.ProjectClass.unmarshal(new_data)
+
+    @final
+    def _deep_update(
+        self, base: dict[str, Any], update: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Recursive helper to deep update a dict.
+
+        :param base: The base dict to update. This dict is modified in-place.
+        :param update: The dict to merge into the base dict.
+
+        :returns: The updated dict.
+        """
+        for key, new_value in update.items():
+            if isinstance(new_value, dict) and isinstance(base.get(key), dict):
+                base[key] = self._deep_update(
+                    cast(dict[str, Any], base[key]),
+                    cast(dict[str, Any], new_value),
+                )
+            else:
+                base[key] = new_value
+        return base
