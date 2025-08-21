@@ -104,12 +104,24 @@ def process_part(
 
 
 def process_parts(
-    *, parts_yaml_data: dict[str, Any], arch: str, target_arch: str
+    *,
+    parts_yaml_data: dict[str, Any],
+    arch: str,
+    target_arch: str,
+    platform_ids: set[str],
 ) -> dict[str, Any]:
     """Process grammar for parts.
 
-    :param yaml_data: unprocessed snapcraft.yaml.
-    :returns: process snapcraft.yaml.
+    :param yaml_data: The parts data with grammar to process. Grammar is
+        processed in-place in this dictionary.
+    :param arch: The architecture the system is on. This is used as the
+        selector for the 'on' statement.
+    :param target_arch: The architecture the system is to build for. This
+        is the selector for the 'to' statement.
+    :param platform_ids: The identifiers for the current platform to build.
+        These are the selectors for the 'for' statement. Duplicates are ignored.
+
+    :returns: The processed parts data.
     """
 
     def self_check(value: Any) -> bool:  # noqa: ANN401
@@ -118,7 +130,12 @@ def process_parts(
         )
 
     # TODO: make checker optional in craft-grammar.  # noqa: FIX002
-    processor = GrammarProcessor(arch=arch, target_arch=target_arch, checker=self_check)
+    processor = GrammarProcessor(
+        arch=arch,
+        target_arch=target_arch,
+        platforms=platform_ids,
+        checker=self_check,
+    )
 
     for part_name, part_data in parts_yaml_data.items():
         parts_yaml_data[part_name] = process_part(
