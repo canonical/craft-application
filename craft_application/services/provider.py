@@ -88,6 +88,11 @@ class ProviderService(base.AppService):
             artifact=None, resources=None
         )
 
+    @property
+    def compatibility_tag(self) -> str:
+        """Get craft-application's suffix for the compatibility tag."""
+        return ".1"
+
     @classmethod
     def is_managed(cls) -> bool:
         """Determine whether we're running in managed mode."""
@@ -225,7 +230,7 @@ class ProviderService(base.AppService):
             self.packages.extend(["gpg", "dirmngr"])
         return base_class(
             alias=alias,  # type: ignore[arg-type]
-            compatibility_tag=f"{self._app.name}-{base_class.compatibility_tag}",
+            compatibility_tag=f"{self._app.name}-{base_class.compatibility_tag}{self.compatibility_tag}",
             hostname=instance_name,
             snaps=self.snaps,
             environment=self.environment,
