@@ -119,7 +119,7 @@ def process_parts(
     :param target_arch: The architecture the system is to build for. This
         is the selector for the 'to' statement.
     :param platform_ids: The identifiers for the current platform to build.
-        These are the selectors for the 'for' statement. Duplicates are ignored.
+        These are the selectors for the 'for' statement.
 
     :returns: The processed parts data.
     """
