@@ -4,6 +4,16 @@
 Changelog
 *********
 
+5.8.0 (upcoming)
+----------------
+
+Application
+===========
+
+- Add a new ``for`` statement for advanced grammar to select against a platform.
+
+For a complete list of commits, check out the `5.8.0`_ release on GitHub.
+
 5.6.5 (2025-08-20)
 ------------------
 
@@ -931,3 +941,4 @@ For a complete list of commits, check out the `2.7.0`_ release on GitHub.
 .. _5.6.3: https://github.com/canonical/craft-application/releases/tag/5.6.3
 .. _5.6.5: https://github.com/canonical/craft-application/releases/tag/5.6.5
 .. _5.7.0: https://github.com/canonical/craft-application/releases/tag/5.7.0
+.. _5.8.0: https://github.com/canonical/craft-application/releases/tag/5.8.0
