@@ -10,7 +10,8 @@ Changelog
 Application
 ===========
 
-- Add a new ``for`` statement for advanced grammar to select against a platform.
+- Add the ``for`` selector to the YAML grammar. With it, crafters can set different
+  values depending on the active platform.
 
 For a complete list of commits, check out the `5.8.0`_ release on GitHub.
 
