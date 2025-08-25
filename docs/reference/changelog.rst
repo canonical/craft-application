@@ -4,6 +4,17 @@
 Changelog
 *********
 
+5.8.0 (upcoming)
+----------------
+
+Application
+===========
+
+- Add the ``for`` selector to the YAML grammar. With it, crafters can set different
+  values depending on the active platform.
+
+For a complete list of commits, check out the `5.8.0`_ release on GitHub.
+
 5.6.5 (2025-08-20)
 ------------------
 
@@ -931,3 +942,4 @@ For a complete list of commits, check out the `2.7.0`_ release on GitHub.
 .. _5.6.3: https://github.com/canonical/craft-application/releases/tag/5.6.3
 .. _5.6.5: https://github.com/canonical/craft-application/releases/tag/5.6.5
 .. _5.7.0: https://github.com/canonical/craft-application/releases/tag/5.7.0
+.. _5.8.0: https://github.com/canonical/craft-application/releases/tag/5.8.0
