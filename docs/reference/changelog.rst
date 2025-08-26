@@ -90,12 +90,20 @@ For a complete list of commits, check out the `5.6.0`_ release on GitHub.
 5.5.0 (2025-07-17)
 ------------------
 
+Configuration
+=============
+
+- Add an ``idle_time`` configuration option that, if set, will delay the shutdown of
+  VMs or containers launched for building and packing.
+
 Services
 ========
 
 - Add a new State service that manages a global state between manager and managed
   instances of an application.
 - Make the Project service compatible with multi-base platform definitions.
+- Add provider idle time to the ``ProviderService``, allowing the reuse of a VM or
+  container without shutting it down and starting it back up.
 
 Commands
 ========
