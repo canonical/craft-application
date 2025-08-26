@@ -13,6 +13,7 @@
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Unit tests for the ProjectService."""
 
+import copy
 import dataclasses
 import pathlib
 import textwrap
@@ -654,14 +655,19 @@ def test_render_for_invalid_platform(
 )
 @pytest.mark.usefixtures("fake_project_file")
 def test_render_for_grammar(
-    real_project_service: ProjectService, fake_project_dict, mocker
+    real_project_service: ProjectService,
+    fake_project_dict,
+    mocker,
+    app_metadata,
+    expected,
 ):
     """For statements only evaluate when 'enable_for_grammar' is set.
 
     Note that 'for' is still accepted when 'enable_for_grammar' is false,
     but it won't do anything because it won't match any platforms in craft-grammar.
     """
-    fake_project_dict["parts"] = {
+    project_data = copy.deepcopy(fake_project_dict)
+    project_data["parts"] = {
         "part1": {
             "plugin": "nil",
             "source": [
@@ -670,15 +676,13 @@ def test_render_for_grammar(
             ],
         },
     }
-    mocker.patch.object(
-        real_project_service, "_preprocess", return_value=fake_project_dict
-    )
+    mocker.patch.object(real_project_service, "_preprocess", return_value=project_data)
 
     result = real_project_service.render_for(
         build_for="arm64", build_on="riscv64", platform="risky"
     )
 
-    assert result.parts["part1"]["source"] == "source-1"
+    assert result.parts["part1"]["source"] == expected
 
 
 @pytest.mark.parametrize(
