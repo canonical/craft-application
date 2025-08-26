@@ -102,6 +102,9 @@ class AppMetadata:
     When False, the repositories are not migrated and base support is not checked.
     """
 
+    enable_for_grammar: bool = False
+    """Whether this application supports the 'for' variant of advanced grammar."""
+
     def __post_init__(self) -> None:
         setter = super().__setattr__
 

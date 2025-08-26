@@ -645,6 +645,43 @@ def test_render_for_invalid_platform(
 
 
 @pytest.mark.parametrize(
+    ("app_metadata", "expected"),
+    [
+        ({"enable_for_grammar": False}, None),
+        ({"enable_for_grammar": True}, "source-1"),
+    ],
+    indirect=["app_metadata"],
+)
+@pytest.mark.usefixtures("fake_project_file")
+def test_render_for_grammar(
+    real_project_service: ProjectService, fake_project_dict, mocker
+):
+    """For statements only evaluate when 'enable_for_grammar' is set.
+
+    Note that 'for' is still accepted when 'enable_for_grammar' is false,
+    but it won't do anything because it won't match any platforms in craft-grammar.
+    """
+    fake_project_dict["parts"] = {
+        "part1": {
+            "plugin": "nil",
+            "source": [
+                {"for risky": "source-1"},
+                {"for s390x": "source-2"},
+            ],
+        },
+    }
+    mocker.patch.object(
+        real_project_service, "_preprocess", return_value=fake_project_dict
+    )
+
+    result = real_project_service.render_for(
+        build_for="arm64", build_on="riscv64", platform="risky"
+    )
+
+    assert result.parts["part1"]["source"] == "source-1"
+
+
+@pytest.mark.parametrize(
     "build_for", [*(arch.value for arch in craft_platforms.DebianArchitecture), "all"]
 )
 @pytest.mark.usefixtures("fake_project_file")

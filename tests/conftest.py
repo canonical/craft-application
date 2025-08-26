@@ -216,18 +216,27 @@ def default_app_metadata(fake_config_model) -> craft_application.AppMetadata:
 
 
 @pytest.fixture
-def app_metadata(fake_config_model) -> craft_application.AppMetadata:
+def app_metadata(request, fake_config_model) -> craft_application.AppMetadata:
+    """Default app metadata.
+
+    :param request: kwargs to override metadata
+    """
+    kwargs = {
+        "source_ignore_patterns": ["*.snap", "*.charm", "*.starcraft"],
+        "docs_url": "www.testcraft.example/docs/{version}",
+        "ConfigModel": fake_config_model,
+        "supports_multi_base": True,
+        "always_repack": False,
+        "check_supported_base": True,
+        **getattr(request, "param", {}),
+    }
+
     with pytest.MonkeyPatch.context() as m:
         m.setattr(metadata, "version", lambda _: "3.14159")
         return craft_application.AppMetadata(
             "testcraft",
             "A fake app for testing craft-application",
-            source_ignore_patterns=["*.snap", "*.charm", "*.starcraft"],
-            docs_url="www.testcraft.example/docs/{version}",
-            ConfigModel=fake_config_model,
-            supports_multi_base=True,
-            always_repack=False,
-            check_supported_base=True,
+            **kwargs,
         )
 
 

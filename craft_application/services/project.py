@@ -488,7 +488,11 @@ class ProjectService(base.AppService):
             platform=platform,
         )
 
-        platform_ids = self.get_platform_identfiers(platform)
+        # only provide platform ids when the 'for' variant is enabled
+        if self._app.enable_for_grammar:
+            platform_ids: set[str] = self.get_platform_identfiers(platform)
+        else:
+            platform_ids = set()
 
         # Process grammar.
         if "parts" in project:
