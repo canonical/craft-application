@@ -13,20 +13,22 @@
 #
 # You should have received a copy of the GNU Lesser General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
-"""Services for witchcraft."""
+"""Special witchcraft project service."""
 
-import craft_application
+import craft_platforms
+from craft_application.services import project
+from typing_extensions import override
 
 
-def register_services() -> None:
-    """Register Witchcraft's services.
+class ProjectService(project.ProjectService):
+    """Witchcraft version of the Project Service."""
 
-    This registers with the ServiceFactory all the services that witchcraft
-    adds or overrides.
-    """
-    craft_application.ServiceFactory.register(
-        "package", "PackageService", module="witchcraft.services.package"
-    )
-    craft_application.ServiceFactory.register(
-        "project", "ProjectService", module="witchcraft.services.project"
-    )
+    @override
+    def get_partitions_for(
+        self,
+        *,
+        platform: str,
+        build_for: str,
+        build_on: craft_platforms.DebianArchitecture,
+    ) -> list[str] | None:
+        return ["default", "other"]

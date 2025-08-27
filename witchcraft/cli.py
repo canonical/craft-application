@@ -24,12 +24,14 @@ from craft_application.commands.lifecycle import (
 )
 
 from witchcraft.application import WITCHCRAFT, Witchcraft
+from witchcraft.commands.needsrepack import NeedsRepack
 from witchcraft.services import register_services
 
 
 def register_commands(app: craft_application.Application) -> None:
     """Register extra commands for witchcraft."""
     app.add_command_group("Lifecycle", [TestCommand], ordered=True)
+    app.add_command_group("Witchcraft", [NeedsRepack])
 
 
 def create_app() -> craft_application.Application:

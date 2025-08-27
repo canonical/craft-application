@@ -238,8 +238,13 @@ class LifecycleCommand(_BaseLifecycleCommand):
 
     def _run_post_prime_steps(self) -> None:
         """Run post-prime steps."""
-        self._services.package.update_project()
-        self._services.package.write_metadata(self.services.get("lifecycle").prime_dir)
+        package = self._services.get("package")
+        package.update_project()
+        lifecycle = self.services.get("lifecycle")
+        package.write_metadata(lifecycle.prime_dir)
+        if partitions := self._services.get("project").partitions:
+            for partition in partitions:
+                package.write_package_files(lifecycle.prime_dirs[partition], partition)
 
     @staticmethod
     def _should_add_shell_args() -> bool:
@@ -492,6 +497,8 @@ class PackCommand(LifecycleCommand):
 
         if prime_time >= pack_time:
             return False
+
+        return not self.services.get("package").needs_repack()
 
         artifact, resources = self._load_packed_file_list()
         return not self._is_missing_packed_files(artifact, resources)

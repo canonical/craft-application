@@ -19,9 +19,12 @@ from __future__ import annotations
 
 import abc
 import pathlib
-from typing import TYPE_CHECKING, cast
+import re
+from collections.abc import Callable, Iterator
+from typing import TYPE_CHECKING, cast, final
 
 from craft_cli import emit
+from typing_extensions import deprecated
 
 from craft_application import errors, models, util
 from craft_application.services import base
@@ -29,6 +32,19 @@ from craft_application.services import base
 if TYPE_CHECKING:  # pragma: no cover
     from craft_application.application import AppMetadata
     from craft_application.services import ServiceFactory
+
+
+def package_file(path: str | pathlib.Path, partition: str | None = None) -> Callable:
+    dest = pathlib.Path(path)
+    if dest.is_absolute():
+        raise ValueError(f"Destination must be relative, not {dest}")
+
+    def _function_wrapper(func: Callable) -> Callable:
+        func.__package_file_write_to__ = pathlib.Path(path)
+        func.__partition__ = partition
+        return func
+
+    return _function_wrapper
 
 
 class PackageService(base.AppService):
@@ -95,9 +111,10 @@ class PackageService(base.AppService):
         )
 
     @property
-    @abc.abstractmethod
+    @deprecated("Use Package Files instead.")
     def metadata(self) -> models.BaseMetadata:
         """The metadata model for this project."""
+        return models.BaseMetadata()
 
     def update_project(self) -> None:
         """Update project fields with dynamic values set during the lifecycle."""
@@ -137,3 +154,69 @@ class PackageService(base.AppService):
 
     def _extra_project_updates(self) -> None:
         """Perform domain-specific updates to the project before packing."""
+
+    def gen_artifact_names(self) -> Iterator[str]:
+        """Generate the names of all the artifacts this pack will produce."""
+        # Stupid hack to make this an empty generator.
+        yield from ()
+
+    def _app_needs_pack(self) -> bool:
+        """App-specific override to determine whether a pack is needed.
+
+        The default implementation of this simply returns False. However, an app may
+        override this method to perform any checks it needs to determine whether the project needs a repack.
+
+        The generic checks for package file updates and the like only run if this
+        method returns False.
+
+        :returns: False
+        """
+        return False
+
+    @final
+    def gen_partition_files(self, partition: str = "default"):
+        """Generate the package files for the given partition."""
+        for name in dir(self):
+            gen = getattr(self, name)
+            if callable(gen) and (
+                dest := getattr(gen, "__package_file_write_to__", None)
+            ):
+                part_re = cast(str | None, getattr(gen, "__partition__", None))
+                if part_re is not None and not re.fullmatch(part_re, partition):
+                    continue
+                yield (dest, gen)
+
+    def needs_pack(self, dest: pathlib.Path) -> bool:
+        if self._app_needs_pack():
+            return True
+        for name in self.gen_artifact_names():
+            if not pathlib.Path(name).exists():
+                return True
+        lifecycle_service = self._services.get("lifecycle")
+        if lifecycle_service.prime_state_timestamp is None:
+            emit.debug("Lifecycle was never primed. Assuming we need to pack")
+            return True
+        for name in self.gen_artifact_names():
+            artifact_path = dest / name
+            if not artifact_path.exists():
+                emit.debug(f"Needs pack because file doesn't exist: '{name}'")
+                return True
+            if lifecycle_service.prime_state_timestamp > artifact_path.stat().st_mtime:
+                emit.debug(f"Needs pack because file is older than prime state: {name}")
+                return True
+
+        for partition, partition_path in lifecycle_service.prime_dirs.items():
+            if not partition_path.is_dir():
+                return True
+            for path, generator in self.gen_partition_files(partition or "default"):
+                full_path = partition_path / path
+                new_content = generator(partition)
+                if full_path.exists() == (new_content is None):
+                    return True
+                if isinstance(new_content, str):
+                    old_content = full_path.read_text()
+                else:
+                    old_content = full_path.read_bytes()
+                if new_content != old_content:
+                    return True
+        return False

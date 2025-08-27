@@ -40,4 +40,4 @@ class Witchcraft(Application):
 
         # enable the craft-parts Features that we use here, right before
         # loading the project and validating its parts.
-        Features(enable_overlay=True)
+        Features(enable_overlay=True, enable_partitions=True)

@@ -264,6 +264,11 @@ class LifecycleService(base.AppService):
         return self._lcm.project_info.dirs.prime_dir
 
     @property
+    def prime_dirs(self) -> dict[str | None, Path]:
+        """The path to the prime directories"""
+        return self._lcm.project_info.dirs.prime_dirs
+
+    @property
     def project_info(self) -> ProjectInfo:
         """The lifecycle's ProjectInfo."""
         return self._lcm.project_info
