@@ -23,6 +23,7 @@ from textwrap import dedent
 
 import craft_platforms
 import craft_providers.bases
+import pydantic
 import pytest
 from craft_application import util
 from craft_application.errors import CraftValidationError
@@ -600,3 +601,33 @@ def test_invalid_part_error(basic_project_dict):
     )
     with pytest.raises(CraftValidationError, match=re.escape(expected)):
         Project.from_yaml_data(basic_project_dict, filepath=pathlib.Path("bla.yaml"))
+
+
+@pytest.mark.parametrize(
+    "updates",
+    [
+        pytest.param({}, id="unchanged"),
+        pytest.param({"base": "bare", "build-base": "ubuntu@24.04"}, id="bare-base"),
+    ],
+)
+def test_project_variants_validate_success(basic_project_dict, updates):
+    basic_project_dict.update(updates)
+
+    Project.model_validate(basic_project_dict)
+
+
+@pytest.mark.parametrize(
+    ("updates", "match"),
+    [
+        pytest.param(
+            {"base": "bare"},
+            "A build-base is required if base is 'bare'",
+            id="bare-base",
+        )
+    ],
+)
+def test_project_variants_validate_error(basic_project_dict, updates, match):
+    basic_project_dict.update(updates)
+
+    with pytest.raises(pydantic.ValidationError, match=match):
+        Project.model_validate(basic_project_dict)

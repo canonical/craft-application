@@ -12,6 +12,8 @@ Services
 
 - Prevent the reuse of instances created before the State service was added by
   updating the Provider service's compatibility tag.
+- Allow using ``base: bare`` with
+  :py:attr:`~craft_application.application.AppMetadata.check_supported_base`.
 
 Pytest plugin
 =============

@@ -803,6 +803,7 @@ def test_mandatory_adoptable_fields(
 @pytest.mark.parametrize(
     ("base", "build_base"),
     [
+        pytest.param("bare", "ubuntu@24.04", id="bare-base"),
         ("ubuntu@18.04", None),
         ("ubuntu@20.04", None),
         ("ubuntu@22.04", None),
@@ -817,9 +818,9 @@ def test_check_base_is_supported(
     real_project_service: ProjectService, base: str, build_base: str | None
 ):
     real_project_service.configure(platform=None, build_for=None)
-    real_project_service.get().base = base
     if build_base:
         real_project_service.get().build_base = build_base
+    real_project_service.get().base = base
 
     real_project_service.check_base_is_supported()
 

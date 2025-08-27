@@ -613,7 +613,10 @@ class ProjectService(base.AppService):
         project = self.get()
         if project.base is None:
             raise RuntimeError("No base detected when getting support range.")
-        base = craft_platforms.DistroBase.from_str(project.base)
+        if project.base == "bare":
+            base = None
+        else:
+            base = craft_platforms.DistroBase.from_str(project.base)
         build_base: craft_platforms.DistroBase | None = None
         if project.build_base:
             build_base = craft_platforms.DistroBase.from_str(project.build_base)
@@ -623,11 +626,14 @@ class ProjectService(base.AppService):
 
         today = datetime.date.today()
 
-        try:
-            base_is_supported = self._is_supported_or_esm_on(base=base, date=today)
-        except (UnknownDistributionError, UnknownVersionError) as error:
-            # If distro-support doesn't know about this base, assume it's supported.
-            emit.debug(str(error))
+        if base is not None:
+            try:
+                base_is_supported = self._is_supported_or_esm_on(base=base, date=today)
+            except (UnknownDistributionError, UnknownVersionError) as error:
+                # If distro-support doesn't know about this base, assume it's supported.
+                emit.debug(str(error))
+                base_is_supported = True
+        else:
             base_is_supported = True
         if build_base is not None:
             try:
