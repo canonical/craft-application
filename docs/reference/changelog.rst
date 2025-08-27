@@ -4,6 +4,23 @@
 Changelog
 *********
 
+5.7.1 (2025-08-27)
+------------------
+
+Services
+========
+
+- Prevent the reuse of instances created before the State service was added by
+  updating the Provider service's compatibility tag.
+
+Pytest plugin
+=============
+
+- Automatically reset Craft Parts callbacks after each test run with the
+  :py:func:`~craft_application.pytest_plugin._reset_craft_parts_callbacks` fixture.
+
+For a complete list of commits, check out the `5.7.1`_ release on GitHub.
+
 5.6.5 (2025-08-20)
 ------------------
 
@@ -931,3 +948,4 @@ For a complete list of commits, check out the `2.7.0`_ release on GitHub.
 .. _5.6.3: https://github.com/canonical/craft-application/releases/tag/5.6.3
 .. _5.6.5: https://github.com/canonical/craft-application/releases/tag/5.6.5
 .. _5.7.0: https://github.com/canonical/craft-application/releases/tag/5.7.0
+.. _5.7.1: https://github.com/canonical/craft-application/releases/tag/5.7.1
