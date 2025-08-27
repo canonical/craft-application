@@ -61,7 +61,7 @@ def skip_if_build_plan_empty(build_planner: BuildPlanService):
 
 from craft_application import errors, models, util
 from craft_application.errors import PartsLifecycleError
-from craft_application.models.project import BuildInfo
+import craft_platforms
 from craft_application.services import lifecycle
 from craft_application.util import repositories
 

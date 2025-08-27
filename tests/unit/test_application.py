@@ -53,11 +53,13 @@ from craft_application.commands import (
 )
 from craft_application.util import (
     get_host_architecture,  # pyright: ignore[reportGeneralTypeIssues]
+    ValidatorOptions,
 )
 from craft_cli import emit
 from craft_parts.plugins.plugins import PluginType
 from craft_providers import bases, lxd
 from overrides import override
+
 
 EMPTY_COMMAND_GROUP = craft_cli.CommandGroup("FakeCommands", [])
 
@@ -706,12 +708,7 @@ def test_run_success_managed(
     app,
     fake_project,
     mocker,
-    mock_pro_api_call,  # noqa: ARG001
-    monkeypatch,
-    app,
-    fake_project,
-    mocker,
-    mock_pro_api_call,  # noqa: ARG001
+    mock_pro_api_call,
 ):
     mocker.patch.object(app, "get_project", return_value=fake_project)
     app.run_managed = mock.Mock()
@@ -1335,7 +1332,7 @@ def test_doc_url_in_command_help(monkeypatch, capsys, app):
     [
         (False,             False,         1,                 None),
         (True,              True,          1,                 None),
-        (True,              False,         1,                 util.ValidatorOptions.AVAILABILITY),
+        (True,              False,         1,                 ValidatorOptions.AVAILABILITY),
         (False,             True,          0,                 None),
     ],
 )

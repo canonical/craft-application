@@ -696,20 +696,24 @@ class Application:
             run_managed = command.run_managed(dispatcher.parsed_args())
             is_managed = self.is_managed()
 
-        # Some commands (e.g. remote build) can allow multiple platforms
-        # or build-fors, comma-separated. In these cases, we create the
-        # project using the first defined platform.
-        if platform and "," in platform:
-            platform = platform.split(",", maxsplit=1)[0]
-        if build_for and "," in build_for:
-            build_for = build_for.split(",", maxsplit=1)[0]
-        craft_cli.emit.debug(f"Build plan: platform={platform}, build_for={build_for}")
+            # Some commands (e.g. remote build) can allow multiple platforms
+            # or build-fors, comma-separated. In these cases, we create the
+            # project using the first defined platform.
+            if platform and "," in platform:
+                platform = platform.split(",", maxsplit=1)[0]
+            if build_for and "," in build_for:
+                build_for = build_for.split(",", maxsplit=1)[0]
+            craft_cli.emit.debug(
+                f"Build plan: platform={platform}, build_for={build_for}"
+            )
 
-        # A ProServices instance will only be available for lifecycle commands,
-        # which may consume pro packages,
-        self._pro_services = getattr(dispatcher.parsed_args(), "pro", None)
-        # Check that pro services are correctly configured if available
-        self._check_pro_requirement(self._pro_services, managed_mode, self.is_managed())
+            # A ProServices instance will only be available for lifecycle commands,
+            # which may consume pro packages,
+            self._pro_services = getattr(dispatcher.parsed_args(), "pro", None)
+            # Check that pro services are correctly configured if available
+            self._check_pro_requirement(
+                self._pro_services, run_managed, self.is_managed()
+            )
 
             if run_managed or command.needs_project(dispatcher.parsed_args()):
                 self.services.project = self.get_project(
