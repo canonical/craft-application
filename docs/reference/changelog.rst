@@ -13,6 +13,12 @@ Application
 - Add the ``for`` selector to the YAML grammar. With it, crafters can set different
   values depending on the active platform.
 
+Services
+========
+
+- Project Service: Allow using ``base: bare`` with
+  :py:attr:`~craft_application.application.AppMetadata.check_supported_base`.
+
 For a complete list of commits, check out the `5.8.0`_ release on GitHub.
 
 5.7.1 (2025-08-27)
