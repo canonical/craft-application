@@ -359,6 +359,8 @@ ignore = [
 
     # Ignored due to conflicts with ruff's formatter:
     # https://docs.astral.sh/ruff/formatter/#conflicting-lint-rules
+    "COM812", # Missing trailing comma - mostly the same, but marginal differences.
+    "ISC001", # Single-line implicit string concatenation.
 
     # Ignored due to common usage in current code
     "TRY003", # Avoid specifying long messages outside the exception class
