@@ -1,0 +1,13 @@
+summary: Pack arbitrary testcraft files
+
+environment:
+  PROJECT/bare_base: bare-base
+
+execute: |
+  cd "${PROJECT}"
+  testcraft pack
+
+restore: |
+  cd "${PROJECT}"
+  rm -f *.testcraft
+  testcraft clean

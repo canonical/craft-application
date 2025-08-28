@@ -4,6 +4,17 @@
 Changelog
 *********
 
+5.8.0 (unreleased)
+------------------
+
+Services
+========
+
+- Project Service: Allow using ``base: bare`` with
+  :py:attr:`~craft_application.application.AppMetadata.check_supported_base`.
+
+For a complete list of commits, check out the `5.8.0`_ release on GitHub.
+
 5.7.1 (2025-08-27)
 ------------------
 
@@ -949,3 +960,4 @@ For a complete list of commits, check out the `2.7.0`_ release on GitHub.
 .. _5.6.5: https://github.com/canonical/craft-application/releases/tag/5.6.5
 .. _5.7.0: https://github.com/canonical/craft-application/releases/tag/5.7.0
 .. _5.7.1: https://github.com/canonical/craft-application/releases/tag/5.7.1
+.. _5.8.0: https://github.com/canonical/craft-application/releases/tag/5.8.0
