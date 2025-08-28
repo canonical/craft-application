@@ -7,10 +7,10 @@ environment:
 execute: |
   cd $PROJECT
 
-  testcraft pack --platform platform1
+  witchcraft pack --platform platform1
 
   mkdir output
-  tar --extract --file grammar-1.0-platform1.testcraft --directory output
+  tar --extract --file grammar-1.0-platform1.witchcraft --directory output
 
   # verify grammar was processed
   if ! grep "I was built for platform1" "output/hello-world.txt"; then
@@ -21,5 +21,5 @@ execute: |
 restore: |
   cd $PROJECT
 
-  rm -f *.testcraft
+  rm -f *.witchcraft
   rm -rf output

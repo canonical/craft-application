@@ -3,7 +3,7 @@ base: ubuntu@24.04
 version: "1.0"
 summary: test
 description: |
-  Exercise testcraft's advanced grammar statements, `on` and `to`.
+  Exercise witchcraft's advanced grammar statements, `on` and `to`.
 
 platforms:
   platform1:
