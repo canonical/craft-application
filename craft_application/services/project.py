@@ -488,6 +488,12 @@ class ProjectService(base.AppService):
             platform=platform,
         )
 
+        # only provide platform ids when the 'for' variant is enabled
+        if self._app.enable_for_grammar:
+            platform_ids: set[str] = self.get_platform_identfiers(platform)
+        else:
+            platform_ids = set()
+
         # Process grammar.
         if "parts" in project:
             emit.debug(f"Processing grammar (on {build_on} for {build_for})")
@@ -495,6 +501,7 @@ class ProjectService(base.AppService):
                 parts_yaml_data=project["parts"],
                 arch=build_on,
                 target_arch=build_for,
+                platform_ids=platform_ids,
             )
         project_model = self._app.ProjectClass.from_yaml_data(
             project, self.resolve_project_file_path()
@@ -512,6 +519,25 @@ class ProjectService(base.AppService):
                 )
 
         return project_model
+
+    def get_platform_identfiers(self, platform: str) -> set[str]:
+        """Get a list of identifiers for the current platform to build.
+
+        These identifiers are used as selectors in advanced grammar. By default,
+        the current platform is the only identifier.
+
+        Applications should override this method to generate custom identifiers.
+        For example, an application may take the platform ``ubuntu@26.04:riscv64``
+        and generate the following identifiers:
+
+          - ``ubuntu``
+          - ``ubuntu@26.04``
+          - ``riscv64``
+          - ``ubuntu@26.04:riscv64``
+
+        :returns: A set of identifiers for the current platform to build.
+        """
+        return {platform}
 
     def update_project_environment(self, info: craft_parts.ProjectInfo) -> None:
         """Update a ProjectInfo's global environment."""

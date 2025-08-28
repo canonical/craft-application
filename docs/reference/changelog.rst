@@ -4,8 +4,14 @@
 Changelog
 *********
 
-5.8.0 (unreleased)
+5.8.0 (2025-08-28)
 ------------------
+
+Application
+===========
+
+- Add the ``for`` selector to the YAML grammar. With it, crafters can set different
+  values depending on the active platform.
 
 Services
 ========

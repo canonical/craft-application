@@ -13,6 +13,7 @@
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Unit tests for the ProjectService."""
 
+import copy
 import dataclasses
 import pathlib
 import textwrap
@@ -642,6 +643,46 @@ def test_render_for_invalid_platform(
         )
 
     assert cast(str, exc_info.value.details).startswith("Valid platforms are: '")
+
+
+@pytest.mark.parametrize(
+    ("app_metadata", "expected"),
+    [
+        ({"enable_for_grammar": False}, None),
+        ({"enable_for_grammar": True}, "source-1"),
+    ],
+    indirect=["app_metadata"],
+)
+@pytest.mark.usefixtures("fake_project_file")
+def test_render_for_grammar(
+    real_project_service: ProjectService,
+    fake_project_dict,
+    mocker,
+    app_metadata,
+    expected,
+):
+    """For statements only evaluate when 'enable_for_grammar' is set.
+
+    Note that 'for' is still accepted when 'enable_for_grammar' is false,
+    but it won't do anything because it won't match any platforms in craft-grammar.
+    """
+    project_data = copy.deepcopy(fake_project_dict)
+    project_data["parts"] = {
+        "part1": {
+            "plugin": "nil",
+            "source": [
+                {"for risky": "source-1"},
+                {"for s390x": "source-2"},
+            ],
+        },
+    }
+    mocker.patch.object(real_project_service, "_preprocess", return_value=project_data)
+
+    result = real_project_service.render_for(
+        build_for="arm64", build_on="riscv64", platform="risky"
+    )
+
+    assert result.parts["part1"]["source"] == expected
 
 
 @pytest.mark.parametrize(

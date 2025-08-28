@@ -28,6 +28,7 @@ WITCHCRAFT = craft_application.AppMetadata(
     mandatory_adoptable_fields=["version"],
     always_repack=False,
     check_supported_base=True,
+    enable_for_grammar=True,
 )
 
 
