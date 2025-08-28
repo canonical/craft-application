@@ -7,6 +7,9 @@ execute: |
   mkdir output
   tar --extract --file project-vars-0.4-platform-independent.witchcraft --directory output
 
+  # drop the version to simplify the diff
+  sed -i '/^craft-application-version:/d' output/metadata.yaml
+
   if ! diff output/metadata.yaml expected-metadata.yaml; then
       echo "Unexpected metadata."
       exit 1
