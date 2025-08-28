@@ -23,7 +23,6 @@ from typing import Any, cast
 from craft_cli import emit
 from overrides import override  # pyright: ignore[reportUnknownVariableType]
 
-0
 from craft_application import errors
 from craft_application.commands import ExtensibleCommand
 from craft_application.launchpad.models import Build, BuildState

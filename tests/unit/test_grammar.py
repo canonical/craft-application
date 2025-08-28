@@ -17,7 +17,6 @@
 
 import pydantic
 import pytest
-
 from craft_application.models.grammar import (
     GrammarAwareProject,
     _GrammarAwarePart,

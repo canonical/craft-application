@@ -350,8 +350,6 @@ class Application:
             "lifecycle",
             cache_dir=self.cache_dir,
             work_dir=self._work_dir,
-            build_plan=self._build_plan,
-            partitions=self._partitions,
             use_host_sources=bool(self._pro_services),
         )
         self.services.update_kwargs(
@@ -453,15 +451,6 @@ class Application:
                 "CRAFT_VERBOSITY_LEVEL": craft_cli.emit.get_mode().name,
             }
 
-            if self.app.features.build_secrets:
-                # If using build secrets, put them in the environment of the managed
-                # instance.
-                secret_values = cast(secrets.BuildSecrets, self._secrets)
-                # disable logging CRAFT_SECRETS value passed to the managed instance
-                craft_cli.emit.set_secrets(list(secret_values.environment.values()))
-
-                env.update(secret_values.environment)
-
             extra_args["env"] = env
 
             craft_cli.emit.debug(
@@ -479,12 +468,6 @@ class Application:
                 use_base_instance=not active_fetch_service,
             ) as instance:
                 if self._enable_fetch_service:
-                    session_env = self.services.fetch.create_session(instance)
-                    env.update(session_env)
-
-                self._configure_instance_with_pro(instance)
-
-                if self._enable_fetch_service:
                     fetch_env = self.services.fetch.create_session(instance)
                     env.update(fetch_env)
 
@@ -497,6 +480,7 @@ class Application:
                 )
                 try:
                     with craft_cli.emit.pause():
+                        # Pyright doesn't fully understand craft_providers's CompletedProcess.
                         instance.execute_run(  # pyright: ignore[reportUnknownMemberType,reportUnknownVariableType]
                             cmd,
                             cwd=instance_path,
@@ -618,7 +602,6 @@ class Application:
         # Some commands might have a project_dir parameter. Those commands and
         # only those commands should get a project directory, but only when
         # not managed.
-
         if self.is_managed():
             self.project_dir = pathlib.Path("/root/project")
         elif project_dir := getattr(args, "project_dir", None):

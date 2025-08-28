@@ -24,9 +24,6 @@ from contextlib import nullcontext
 import craft_parts
 import craft_platforms
 import pytest
-from craft_cli import emit
-from craft_parts import Features
-
 import pytest_mock
 from craft_application import errors, models
 from craft_application.application import AppMetadata

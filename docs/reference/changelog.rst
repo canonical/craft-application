@@ -295,6 +295,107 @@ Services
   deprecated. Use ``update_kwargs`` instead.
 
 Testing
+=======
+
+- Add a :doc:`pytest-plugin` with a fixture that enables production mode for the
+  application if a test requires it.
+
+Breaking changes
+================
+
+- The pytest plugin includes an auto-used fixture that puts the app into debug mode
+  by default for tests.
+- Support for secrets has been removed.
+- The abstract class ``ProjectService`` has been removed. Services can no longer
+  designate that they require a project, but should instead use the
+  :py:meth:`~craft_application.services.project.ProjectService.get()` method of the
+  ``ProjectService`` to retrieve the project. It will error accordingly.
+- The ``BuildPlanner`` pydantic model has been replaced with the
+  :py:class:`~craft_application.services.services.buildplan.BuildPlanService`
+- The internal ``BuildInfo`` model is replaced with
+  :external+craft-platforms:class:`craft_platforms.BuildInfo`
+
+For a complete list of commits, check out the `5.0.0`_ release on GitHub.
+
+4.10.0 (2025-Feb-27)
+--------------------
+
+Application
+===========
+
+- Add an API for additional snaps to be installed in the managed instance by the
+  provider service.
+- Increase timeout in fetch-service queries.
+
+For a complete list of commits, check out the `4.10.0`_ release on GitHub.
+
+4.9.1 (2025-Feb-12)
+-------------------
+
+Application
+===========
+
+- Load python plugins after the emitter has been initialized so they can be logged.
+
+For a complete list of commits, check out the `4.9.1`_ release on GitHub.
+
+4.9.0 (2025-Feb-10)
+-------------------
+
+All bug fixes from the 4.8 and 4.4 series are included in 4.9.0.
+
+Application
+===========
+
+- Add a feature to allow `Python plugins
+  <https://packaging.python.org/en/latest/guides/creating-and-discovering-plugins/>`_
+  to extend or modify the behaviour of applications that use craft-application as a
+  framework. The plugin packages must be installed in the same virtual environment
+  as the application.
+
+Remote build
+============
+
+- Add hooks to further customize functionality
+- Add a ``--project`` parameter for user-defined Launchpad projects, including
+  private projects.
+- Add "pending" as a displayed status for in-progress remote builds
+
+For a complete list of commits, check out the `4.9.0`_ release on GitHub.
+
+4.4.1 (2025-Feb-05)
+-------------------
+
+Application
+===========
+
+- Fix an issue with processing fetch-service output.
+- The fetch-service integration now assumes that the fetch-service snap is
+  tracking the ``latest/candidate`` channel.
+
+Remote build
+============
+
+- Fix a bug where repositories and recipes for private Launchpad projects
+  would be public while the build was in progress.
+
+For a complete list of commits, check out the `4.4.1`_ release on GitHub.
+
+4.8.3 (2025-Jan-31)
+-------------------
+
+Remote build
+============
+
+- Fix a bug where repositories and recipes for private Launchpad projects
+  would be public while the build was in progress.
+- Fix a bug where the remote-build command would suggest running an invalid
+  command.
+- Fix a bug where a timeout would cause the remote builder to remove an
+  ongoing build.
+
+For a complete list of commits, check out the `4.8.3`_ release on GitHub.
+
 4.8.2 (2025-Jan-16)
 -------------------
 

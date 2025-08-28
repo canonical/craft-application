@@ -18,9 +18,6 @@ from datetime import datetime
 
 import craft_platforms
 import pytest
-from craft_providers import bases
-from freezegun import freeze_time
-
 from craft_application import util
 from craft_application.models.manifest import (
     CraftManifest,

@@ -30,9 +30,6 @@ from unittest import mock
 import craft_platforms
 import craft_providers
 import pytest
-from craft_cli import EmitterMode, emit
-from craft_providers import bases
-
 from craft_application import errors, fetch, services, util
 from craft_application.application import DEFAULT_CLI_LOGGERS
 from craft_application.services.fetch import (

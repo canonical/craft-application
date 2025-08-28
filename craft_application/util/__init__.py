@@ -44,7 +44,6 @@ from craft_application.util.system import get_parallel_build_count
 from craft_application.util.yaml import dump_yaml, safe_yaml_load
 from craft_application.util.cli import format_timestamp
 from craft_application.util.pro_services import ProServices, ValidatorOptions
-from craft_application.util.cli import format_timestamp
 
 __all__ = [
     "get_unique_callbacks",
@@ -75,5 +74,4 @@ __all__ = [
     "ValidatorOptions",
     "get_hostname",
     "is_managed_mode",
-    "format_timestamp",
 ]

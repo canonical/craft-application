@@ -59,13 +59,6 @@ def skip_if_build_plan_empty(build_planner: BuildPlanService):
         pytest.skip(reason="Empty build plan")
 
 
-from craft_application import errors, models, util
-from craft_application.errors import PartsLifecycleError
-import craft_platforms
-from craft_application.services import lifecycle
-from craft_application.util import repositories
-
-
 # region Local fixtures
 class FakePartsLifecycle(lifecycle.LifecycleService):
     def _init_lifecycle_manager(self) -> LifecycleManager:

@@ -21,7 +21,6 @@ import dataclasses
 from typing import TYPE_CHECKING
 
 import pytest
-
 from craft_application import errors, models
 from craft_application.services import package
 

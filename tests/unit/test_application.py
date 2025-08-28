@@ -26,6 +26,8 @@ import sys
 from textwrap import dedent
 from unittest import mock
 
+import craft_application
+import craft_application.errors
 import craft_cli
 import craft_cli.pytest_plugin
 import craft_parts
@@ -33,13 +35,7 @@ import craft_platforms
 import craft_providers
 import pytest
 import pytest_check
-from craft_cli import emit
-from craft_parts.plugins.plugins import PluginType
-from craft_providers import bases, lxd
-from overrides import override
 
-import craft_application
-import craft_application.errors
 from craft_application import (
     application,
     commands,
@@ -59,6 +55,8 @@ from craft_cli import emit
 from craft_parts.plugins.plugins import PluginType
 from craft_providers import bases, lxd
 from overrides import override
+
+from tests.conftest import FakeApplication
 
 
 EMPTY_COMMAND_GROUP = craft_cli.CommandGroup("FakeCommands", [])

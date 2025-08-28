@@ -57,20 +57,6 @@ _CAMEL_TO_PYTHON_CASE_REGEX = re.compile(r"(?<!^)(?=[A-Z])")
 T = TypeVar("T")
 _ClassName = Annotated[str, annotated_types.Predicate(lambda x: x.endswith("Class"))]
 
-_DEFAULT_SERVICES = {
-    "config": "ConfigService",
-    "fetch": "FetchService",
-    "init": "InitService",
-    "lifecycle": "LifecycleService",
-    "provider": "ProviderService",
-    "remote_build": "RemoteBuildService",
-    "request": "RequestService",
-}
-_CAMEL_TO_PYTHON_CASE_REGEX = re.compile(r"(?<!^)(?=[A-Z])")
-
-T = TypeVar("T")
-_ClassName = Annotated[str, annotated_types.Predicate(lambda x: x.endswith("Class"))]
-
 
 class ServiceFactory:
     """Factory class for lazy-loading service classes.

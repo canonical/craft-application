@@ -27,6 +27,7 @@ from importlib import metadata
 from typing import TYPE_CHECKING, Any, cast
 from unittest.mock import Mock
 
+import craft_application
 import craft_parts
 import craft_platforms
 import distro
@@ -42,10 +43,6 @@ from craft_cli import EmitterMode, emit
 from craft_parts import callbacks
 from jinja2 import FileSystemLoader
 from typing_extensions import override
-
-import craft_application
-from craft_application import application, git, launchpad, models, services, util
-from craft_application.services import service_factory
 
 if TYPE_CHECKING:  # pragma: no cover
     from collections.abc import Iterator
