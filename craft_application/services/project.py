@@ -755,9 +755,8 @@ class ProjectService(base.AppService):
         self._project_model = self._app.ProjectClass.unmarshal(new_data)
 
     @final
-    def _deep_update(
-        self, base: dict[str, Any], update: dict[str, Any]
-    ) -> dict[str, Any]:
+    @staticmethod
+    def _deep_update(base: dict[str, Any], update: dict[str, Any]) -> dict[str, Any]:
         """Recursive helper to deep update a dict.
 
         :param base: The base dict to update. This dict is modified in-place.
@@ -767,7 +766,7 @@ class ProjectService(base.AppService):
         """
         for key, new_value in update.items():
             if isinstance(new_value, dict) and isinstance(base.get(key), dict):
-                base[key] = self._deep_update(
+                base[key] = ProjectService._deep_update(
                     cast(dict[str, Any], base[key]),
                     cast(dict[str, Any], new_value),
                 )

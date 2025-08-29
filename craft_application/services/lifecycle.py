@@ -210,7 +210,7 @@ class LifecycleService(base.AppService):
         emit.debug(f"Initialising lifecycle manager in {self._work_dir}")
         emit.trace(f"Lifecycle: {repr(self)}")
 
-        project = self._services.get("project")
+        project_service = self._services.get("project")
         build_for = self._get_build_for()
 
         if self._project.package_repositories:
@@ -237,9 +237,9 @@ class LifecycleService(base.AppService):
                 work_dir=self._work_dir,
                 ignore_local_sources=source_ignore_patterns,
                 parallel_build_count=util.get_parallel_build_count(self._app.name),
-                project_vars=project.project_vars,
+                project_vars=project_service.project_vars,
                 track_stage_packages=True,
-                partitions=project.partitions,
+                partitions=project_service.partitions,
                 **self._manager_kwargs,
             )
         except PartsError as err:
