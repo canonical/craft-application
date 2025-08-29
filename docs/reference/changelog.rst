@@ -4,6 +4,14 @@
 Changelog
 *********
 
+5.8.1 (2025-08-29)
+------------------
+
+Models
+======
+
+- Updated the current development release for the ``Project`` model.
+
 5.8.0 (2025-08-28)
 ------------------
 
