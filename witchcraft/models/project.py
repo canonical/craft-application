@@ -13,24 +13,25 @@
 #
 # You should have received a copy of the GNU Lesser General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
-"""Services for witchcraft."""
+"""Witchcraft project model."""
 
-import craft_application
+from craft_application import models
 
 
-def register_services() -> None:
-    """Register Witchcraft's services.
+class Component(models.CraftBaseModel):
+    """Witchcraft component definition."""
 
-    This registers with the ServiceFactory all the services that witchcraft
-    adds or overrides.
-    """
-    craft_application.ServiceFactory.register(
-        "package",
-        "PackageService",
-        module="witchcraft.services.package",
-    )
-    craft_application.ServiceFactory.register(
-        "project",
-        "ProjectService",
-        module="witchcraft.services.project",
-    )
+    adopt_info: str | None = None
+    """The part name to adopt info from."""
+
+    summary: str | None = None
+    """A summary of the component."""
+
+    version: str | None = None
+    """The version of the component."""
+
+
+class Project(models.Project):
+    """Witchcraft project definition."""
+
+    components: dict[str, Component] | None = None

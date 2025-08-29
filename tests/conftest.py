@@ -340,6 +340,9 @@ def fake_project_service_class(fake_project_dict) -> type[services.ProjectServic
             self._project_model = value
             self._platform = next(iter(value.platforms))
             self._build_for = value.platforms[self._platform].build_for[0]  # type: ignore[reportOptionalSubscript]
+            self._project_vars = craft_parts.ProjectVarInfo.unmarshal(
+                {"a": craft_parts.ProjectVar(value="foo").marshal()}
+            )
 
         @override
         def get_partitions_for(

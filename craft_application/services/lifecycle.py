@@ -210,20 +210,13 @@ class LifecycleService(base.AppService):
         emit.debug(f"Initialising lifecycle manager in {self._work_dir}")
         emit.trace(f"Lifecycle: {repr(self)}")
 
+        project_service = self._services.get("project")
         build_for = self._get_build_for()
 
         if self._project.package_repositories:
             self._manager_kwargs["package_repositories"] = (
                 self._project.package_repositories
             )
-
-        pvars: dict[str, str] = {}
-        for var in self._app.project_variables:
-            pvars[var] = getattr(self._project, var) or ""
-        self._project_vars = pvars
-
-        emit.debug(f"Project vars: {self._project_vars}")
-        emit.debug(f"Adopting part: {self._project.adopt_info}")
 
         source_ignore_patterns = [
             ".craft",  # in case of unmanaged lifecycle run
@@ -244,10 +237,9 @@ class LifecycleService(base.AppService):
                 work_dir=self._work_dir,
                 ignore_local_sources=source_ignore_patterns,
                 parallel_build_count=util.get_parallel_build_count(self._app.name),
-                project_vars_part_name=self._project.adopt_info,
-                project_vars=self._project_vars,
+                project_vars=project_service.project_vars,
                 track_stage_packages=True,
-                partitions=self._services.get("project").partitions,
+                partitions=project_service.partitions,
                 **self._manager_kwargs,
             )
         except PartsError as err:
