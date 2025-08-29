@@ -4,7 +4,7 @@
 Changelog
 *********
 
-5.9.0 (unreleased)
+5.9.0 (2025-08-29)
 ------------------
 
 Services
@@ -13,8 +13,9 @@ Services
 - Previously, only top-level keys in a project file could be managed with ``craftctl``.
   Now, nested keys in a project file can be managed.
 
-- Previously, all project variables could only be set by a single part. Now the process
-  is more granular — each project variable can be set by a different part.
+- Previously, all project variables could only be set by a single part. Now the
+  handling is more granular — each project variable can be set by a different
+  part.
 
 - Applications can override the Project service's
   :py:meth:`~craft_application.project.ProjectService._create_project_vars`
