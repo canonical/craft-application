@@ -48,7 +48,6 @@ def parts_lifecycle(app_metadata, fake_project, fake_services, tmp_path, request
 
 
 @pytest.mark.slow
-@pytest.mark.xfail(strict=True, reason="craft-parts#1222")
 def test_run_and_clean_all_parts(
     parts_lifecycle: LifecycleService, build_plan_service, emitter, check, tmp_path
 ):
