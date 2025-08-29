@@ -93,8 +93,8 @@ For a complete list of commits, check out the `5.6.0`_ release on GitHub.
 Configuration
 =============
 
-- Add an ``idle_time`` configuration option that, if set, will delay the shutdown of
-  VMs or containers launched for building and packing.
+- Add an ``idle_time`` configuration option that sets the Provider service's idle 
+  timer duration.
 
 Services
 ========
@@ -102,8 +102,8 @@ Services
 - Add a new State service that manages a global state between manager and managed
   instances of an application.
 - Make the Project service compatible with multi-base platform definitions.
-- Add provider idle time to the ``ProviderService``, allowing the reuse of a VM or
-  container without shutting it down and starting it back up.
+- Add an idle timer to the Provider service, so app instances can reuse a dormant 
+  VM or container before it automatically shuts down.
 
 Commands
 ========
