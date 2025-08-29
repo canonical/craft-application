@@ -11,10 +11,12 @@ Services
 ========
 
 - Previously, only top-level keys in a project file could be managed with ``craftctl``.
-  Now, nested keys in a project file can be managed. Additionally, each key can now
-  be set by a different part.
+  Now, nested keys in a project file can be managed.
 
-  Applications can override the Project service's
+- Previously, all project variables could only be set by a single part. Now the process
+  is more granular — each project variable can be set by a different part.
+
+- Applications can override the Project service's
   :py:meth:`~craft_application.project.ProjectService._create_project_vars`
   method to define which keys can be managed and which parts can set them.
 
