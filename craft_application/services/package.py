@@ -102,7 +102,7 @@ class PackageService(base.AppService):
     def update_project(self) -> None:
         """Update project fields with dynamic values set during the lifecycle."""
         project_info = self._services.lifecycle.project_info
-        update_vars = project_info.project_vars.marshal_one_attribute("value")
+        update_vars = project_info.project_vars.marshal("value")
         emit.debug(f"Project variable updates: {update_vars}")
 
         project_service = self._services.get("project")

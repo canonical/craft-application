@@ -606,8 +606,8 @@ wheels = [
 
 [[package]]
 name = "craft-parts"
-version = "2.20.1.post13+gc76340c"
-source = { git = "https://github.com/canonical/craft-parts?rev=work%2FSNAPCRAFT-1052-nested-project-vars#c76340c421d68e72fa0ae0d746f8ed42f1dfd178" }
+version = "2.20.1.post14+g54f5d08"
+source = { git = "https://github.com/canonical/craft-parts?rev=work%2FSNAPCRAFT-1052-nested-project-vars#54f5d0887184f5918ba376e4740050fdf376b440" }
 dependencies = [
     { name = "lxml" },
     { name = "overrides" },

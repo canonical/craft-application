@@ -336,11 +336,7 @@ class ProjectService(base.AppService):
             category=DeprecationWarning,
             stacklevel=1,
         )
-        return (
-            self._project_vars.marshal_one_attribute("value")
-            if self._project_vars
-            else {}
-        )
+        return self._project_vars.marshal("value") if self._project_vars else {}
 
     @final
     @property
