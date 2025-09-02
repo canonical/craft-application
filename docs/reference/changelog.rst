@@ -4,13 +4,25 @@
 Changelog
 *********
 
-5.9.1 (2025-08-29)
+5.10.0 (unreleased)
 ------------------
+
+Configuration
+=============
+
+- Add an ``idle_time`` configuration option that sets the Provider service's idle
+  timer duration.
 
 Models
 ======
 
 - Update the current development release for the ``Project`` model.
+
+Services
+========
+
+- Add an idle timer to the Provider service, so app instances can reuse a dormant
+  VM or container before it automatically shuts down.
 
 5.9.0 (2025-08-29)
 ------------------
