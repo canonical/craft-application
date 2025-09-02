@@ -873,13 +873,11 @@ def test_mandatory_adoptable_fields(
     )
 
 
-@freezegun.freeze_time("2026-01-01")
+@freezegun.freeze_time("2025-06-01")
 @pytest.mark.parametrize(
     ("base", "build_base"),
     [
         pytest.param("bare", "ubuntu@24.04", id="bare-base"),
-        ("ubuntu@18.04", None),
-        ("ubuntu@20.04", None),
         ("ubuntu@22.04", None),
         ("ubuntu@24.04", None),
         ("ubuntu@25.10", None),
@@ -899,12 +897,13 @@ def test_check_base_is_supported(
     real_project_service.check_base_is_supported()
 
 
-@freezegun.freeze_time("2030-01-01")
+@freezegun.freeze_time("2027-01-01")
 @pytest.mark.parametrize(
     ("base", "build_base"),
     [
         ("ubuntu@16.04", None),
         ("ubuntu@18.04", None),
+        ("ubuntu@20.04", None),
         pytest.param("ubuntu@25.10", None, id="interim-base-eol"),
         pytest.param("ubuntu@24.04", "ubuntu@25.04", id="interim-build-base-eol"),
     ],

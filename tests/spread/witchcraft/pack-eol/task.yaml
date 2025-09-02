@@ -8,6 +8,16 @@ execute: |
   faketime '1994-04-27' witchcraft pack |& MATCH "Base '[a-z0-9.@]+' has reached"
   faketime '1994-04-27' witchcraft pack --destructive-mode |& MATCH "Base '[a-z0-9.@]+' has reached"
 
+  # Pack on Ubuntu 20.04 the day after it went EOL
+  faketime '2025-06-01' witchcraft pack |& MATCH "Base '[a-z0-9.@]+' has reached"
+  faketime '2025-06-01' witchcraft pack --destructive-mode |& MATCH "Base '[a-z0-9.@]+' has reached"
+
+  # Change to Ubuntu 24.04
+  sed -i 's/base: ubuntu@20.04/base: ubuntu@24.04/' witchcraft.yaml
+
+  #... and now we should get a different error!
+  faketime '2025-06-01' witchcraft pack --old-bases --destructive-mode |& MATCH " Ubuntu 20.04 builds cannot be performed on this"
+
   # Packing on an unsupported base is our last, best hope for peace.
   faketime '2256-03-09' witchcraft pack |& MATCH "Base '[a-z0-9.@]+' has reached"
   faketime '2256-03-09' witchcraft pack --destructive-mode |& MATCH "Base '[a-z0-9.@]+' has reached"
