@@ -49,6 +49,22 @@ backends:
     type: craft
     systems:
       - ubuntu-24.04:
+  other:
+    type: adhoc
+    systems:
+      - ubuntu-24.04:
+    prepare: |
+      echo Preparing backend
+    restore: |
+      echo Restoring backend
+    debug: |
+      echo Debugging backend
+    prepare-each: |
+      echo Preparing-each on backend
+    restore-each: |
+      echo Restoring-each on backend
+    debug-each: |
+      echo Debugging-each on backend
 
 suites:
   spread/general/:
@@ -59,6 +75,27 @@ suites:
       snap install $CRAFT_ARTIFACT --dangerous
     restore: |
       snap remove my-snap --purge
+    debug: |
+      echo Debugging suite
+    prepare-each: |
+      echo Preparing-each on suite
+    restore-each: |
+      echo Restoring-each on suite
+    debug-each: |
+      echo Debugging-each on suite
+
+prepare: |
+  echo Preparing project
+restore: |
+  echo Restoring project
+debug: |
+  echo Debugging project
+prepare-each: |
+  echo Preparing-each on project
+restore-each: |
+  echo Restoring-each on project
+debug-each: |
+  echo Debugging-each on project
 
 exclude:
   - .git
@@ -87,48 +124,65 @@ def test_spread_yaml_from_craft_spread():
         resources={"my-resource": pathlib.Path("resource")},
     )
 
-    assert spread == model.SpreadYaml(
-        project="craft-test",
-        environment={
-            "SUDO_USER": "",
-            "SUDO_UID": "",
-            "LANG": "C.UTF-8",
-            "LANGUAGE": "en",
-            "PROJECT_PATH": "/root/proj",
-            "CRAFT_ARTIFACT": "$PROJECT_PATH/artifact",
-            "CRAFT_RESOURCE_MY_RESOURCE": "$PROJECT_PATH/resource",
-        },
-        backends={
-            "craft": model.SpreadBackend(
-                type="type",
-                allocate="allocate",
-                discard="discard",
-                systems=[{"ubuntu-24.04": model.SpreadSystem(workers=1)}],
-                prepare="prepare",
-                restore="restore",
-                prepare_each="prepare_each",
-                restore_each="restore each",
-            )
-        },
-        suites={
-            "spread/general/": model.SpreadSuite(
-                summary="General integration tests",
-                systems=[],
-                environment={"FOO": "bar"},
-                prepare="snap install $CRAFT_ARTIFACT --dangerous\n",
-                restore="snap remove my-snap --purge\n",
-                prepare_each=None,
-                restore_each=None,
-            )
-        },
-        exclude=[".git"],
-        path="/root/proj",
-        kill_timeout="1h",
-        reroot="..",
-        prepare=None,
-        restore=None,
-        prepare_each=None,
-        restore_each=None,
+    assert (
+        spread.marshal()
+        == model.SpreadYaml(
+            project="craft-test",
+            environment={
+                "SUDO_USER": "",
+                "SUDO_UID": "",
+                "LANG": "C.UTF-8",
+                "LANGUAGE": "en",
+                "PROJECT_PATH": "/root/proj",
+                "CRAFT_ARTIFACT": "$PROJECT_PATH/artifact",
+                "CRAFT_RESOURCE_MY_RESOURCE": "$PROJECT_PATH/resource",
+            },
+            backends={
+                "craft": model.SpreadBackend(
+                    type="type",
+                    allocate="allocate",
+                    discard="discard",
+                    systems=[{"ubuntu-24.04": model.SpreadSystem(workers=1)}],
+                    prepare="prepare",
+                    restore="restore",
+                    prepare_each="prepare_each",
+                    restore_each="restore each",
+                ),
+                "other": model.SpreadBackend(
+                    type="adhoc",
+                    systems=[{"ubuntu-24.04": model.SpreadSystem(workers=1)}],
+                    prepare="echo Preparing backend\n",
+                    restore="echo Restoring backend\n",
+                    debug="echo Debugging backend\n",
+                    prepare_each="echo Preparing-each on backend\n",
+                    restore_each="echo Restoring-each on backend\n",
+                    debug_each="echo Debugging-each on backend\n",
+                ),
+            },
+            suites={
+                "spread/general/": model.SpreadSuite(
+                    summary="General integration tests",
+                    systems=[],
+                    environment={"FOO": "bar"},
+                    prepare="snap install $CRAFT_ARTIFACT --dangerous\n",
+                    restore="snap remove my-snap --purge\n",
+                    debug="echo Debugging suite\n",
+                    prepare_each="echo Preparing-each on suite\n",
+                    restore_each="echo Restoring-each on suite\n",
+                    debug_each="echo Debugging-each on suite\n",
+                )
+            },
+            exclude=[".git"],
+            path="/root/proj",
+            kill_timeout="1h",
+            reroot="..",
+            prepare="echo Preparing project\n",
+            restore="echo Restoring project\n",
+            debug="echo Debugging project\n",
+            prepare_each="echo Preparing-each on project\n",
+            restore_each="echo Restoring-each on project\n",
+            debug_each="echo Debugging-each on project\n",
+        ).marshal()
     )
 
 

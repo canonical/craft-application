@@ -13,6 +13,11 @@ Configuration
 - Add an ``idle_time`` configuration option that sets the Provider service's idle
   timer duration.
 
+Models
+======
+
+- Support ``debug`` and ``debug-each`` in all locations in the ``spread.yaml`` model.
+
 Services
 ========
 
