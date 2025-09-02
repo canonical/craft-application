@@ -298,6 +298,8 @@ class IncompatibleBaseError(CraftError):
         self,
         host_base: craft_platforms.DistroBase | bases.BaseName,
         build_base: craft_platforms.DistroBase | bases.BaseName,
+        *,
+        artifact_type: str = "artifact",
     ) -> None:
         if isinstance(host_base, bases.BaseName):
             host_base = craft_platforms.DistroBase(
@@ -315,8 +317,8 @@ class IncompatibleBaseError(CraftError):
         )
         details = (
             "Builds must be performed on a specific system to ensure that the "
-            "final artifact's binaries are compatible with the intended execution "
-            "environment."
+            f"final {artifact_type}'s binaries are compatible with the intended "
+            "execution environment."
         )
         resolution = "Run a managed build, or run on a compatible host."
         retcode = os.EX_CONFIG

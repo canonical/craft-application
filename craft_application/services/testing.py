@@ -98,8 +98,8 @@ class TestingService(base.AppService):
 
         if not pack_state.artifact:
             raise CraftError(
-                "No artifact files to test.",
-                resolution="Ensure that artifact files are generated before running the test.",
+                f"No {self._app.artifact_type} files to test.",
+                resolution=f"Ensure that {self._app.artifact_type} files are generated before running the test.",
             )
 
         with spread_path.open() as file:

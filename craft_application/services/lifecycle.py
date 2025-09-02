@@ -176,9 +176,13 @@ class LifecycleService(base.AppService):
             # version as that is a moving target; Just ensure the systems are the
             # same.
             if build.build_base.distribution != host_base.distribution:
-                raise errors.IncompatibleBaseError(host_base, build.build_base)
+                raise errors.IncompatibleBaseError(
+                    host_base, build.build_base, artifact_type=self._app.artifact_type
+                )
         elif build.build_base != host_base:
-            raise errors.IncompatibleBaseError(host_base, build.build_base)
+            raise errors.IncompatibleBaseError(
+                host_base, build.build_base, artifact_type=self._app.artifact_type
+            )
 
     def _get_build_for(self) -> str:
         """Get the ``build_for`` architecture for craft-parts.
