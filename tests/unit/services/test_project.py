@@ -16,6 +16,7 @@
 import copy
 import dataclasses
 import pathlib
+import re
 import textwrap
 from typing import Any, cast
 from unittest import mock
@@ -24,10 +25,11 @@ import craft_platforms
 import freezegun
 import pytest
 import pytest_mock
-from craft_application import errors
+from craft_application import errors, models
 from craft_application.application import AppMetadata
 from craft_application.services.project import ProjectService
 from craft_application.services.service_factory import ServiceFactory
+from craft_parts import ProjectVar, ProjectVarInfo
 from hypothesis import given, strategies
 
 
@@ -305,7 +307,7 @@ def test_get_platforms_bad_value(
 @pytest.mark.parametrize(
     ("data", "expected"),
     [
-        pytest.param({}, {"version": ""}, id="empty"),
+        pytest.param({}, {"version": None}, id="empty"),
         pytest.param(
             {"version": "3.14", "unrelated": "pi"},
             {"version": "3.14"},
@@ -314,7 +316,38 @@ def test_get_platforms_bad_value(
     ],
 )
 def test_get_project_vars(real_project_service: ProjectService, data, expected):
-    assert real_project_service._get_project_vars(data) == expected
+    real_project_service._project_vars = real_project_service._create_project_vars(data)
+    expected_warning = re.escape(
+        "'ProjectService._get_project_vars' is deprecated. "
+        "Use 'project_vars' property instead."
+    )
+    with pytest.warns(DeprecationWarning, match=expected_warning):
+        project_vars = real_project_service._get_project_vars(data)
+
+    assert project_vars == expected
+
+
+@pytest.mark.parametrize(
+    ("data", "expected"),
+    [
+        pytest.param(
+            {},
+            ProjectVarInfo.unmarshal({"version": {}}),
+            id="empty",
+        ),
+        pytest.param(
+            {"version": "3.14", "unrelated": "pi"},
+            ProjectVarInfo.unmarshal({"version": ProjectVar(value="3.14")}),
+            id="version-set",
+        ),
+    ],
+)
+def test_project_vars(real_project_service: ProjectService, data, expected):
+    real_project_service._project_vars = real_project_service._create_project_vars(data)
+
+    project_vars = real_project_service.project_vars
+
+    assert project_vars == expected
 
 
 @given(
@@ -890,3 +923,54 @@ def test_check_base_is_supported_error(
         match=r"(Build b|B)ase '[a-z]+@\d+\.\d+' has reached the end",
     ):
         real_project_service.check_base_is_supported()
+
+
+def test_deep_update(fake_project_file, real_project_service: ProjectService):
+    """Test the deep update of a project model."""
+    fake_project_file.write_text(
+        textwrap.dedent(
+            """
+            name: test-project
+            platforms:
+              riscv64:
+            version: "1.0"
+            parts:
+              some-part:
+                plugin: nil
+              other-part:
+                plugin: nil
+                source: other-source
+            """
+        )
+    )
+
+    real_project_service.configure(platform=None, build_for=None)
+    real_project_service.get()
+    real_project_service.deep_update(
+        {
+            "name": "updated-name",
+            "parts": {
+                "some-part": {
+                    "source": "new-source",
+                },
+            },
+        }
+    )
+
+    assert real_project_service.get() == models.Project.unmarshal(
+        {
+            "name": "updated-name",
+            "platforms": {"riscv64": None},
+            "version": "1.0",
+            "parts": {
+                "some-part": {
+                    "plugin": "nil",
+                    "source": "new-source",
+                },
+                "other-part": {
+                    "plugin": "nil",
+                    "source": "other-source",
+                },
+            },
+        }
+    )
