@@ -36,3 +36,5 @@ class ConfigModel(pydantic.BaseModel):
     max_parallel_build_count: int
     lxd_remote: str = "local"
     launchpad_instance: str = "production"
+
+    idle_mins: pydantic.NonNegativeInt | None = None
