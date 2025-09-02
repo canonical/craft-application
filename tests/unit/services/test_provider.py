@@ -629,6 +629,7 @@ def test_instance(
             allow_unstable=allow_unstable,
             prepare_instance=None,
             use_base_instance=True,
+            shutdown_delay_mins=None,
         )
     with check:
         assert instance.mount.mock_calls == [

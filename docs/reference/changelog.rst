@@ -4,6 +4,21 @@
 Changelog
 *********
 
+5.x.x (2025-xx-xx)
+------------------
+
+Configuration
+=============
+
+- Add an ``idle_time`` configuration option that sets the Provider service's idle
+  timer duration.
+
+Services
+========
+
+- Add an idle timer to the Provider service, so app instances can reuse a dormant
+  VM or container before it automatically shuts down.
+
 5.9.0 (2025-08-29)
 ------------------
 
