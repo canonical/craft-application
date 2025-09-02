@@ -10,7 +10,7 @@ Changelog
 Models
 ======
 
-- Updated the current development release for the ``Project`` model.
+- Update the current development release for the ``Project`` model.
 
 5.8.0 (2025-08-28)
 ------------------
