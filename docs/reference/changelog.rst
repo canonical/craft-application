@@ -18,6 +18,7 @@ Services
 
 - Add an idle timer to the Provider service, so app instances can reuse a dormant
   VM or container before it automatically shuts down.
+- Bases that are in extended support are now correctly classified as EOL.
 
 5.9.0 (2025-08-29)
 ------------------
