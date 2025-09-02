@@ -176,6 +176,7 @@ class ProviderService(base.AppService):
         provider = self.get_provider(name=self.__provider_name)
 
         provider.ensure_provider_is_available()
+        shutdown_delay = self._services.get("config").get("idle_mins")
 
         if clean_existing:
             self._clean_instance(provider, work_dir, build_info, project_name)
@@ -189,6 +190,7 @@ class ProviderService(base.AppService):
             allow_unstable=allow_unstable,
             use_base_instance=use_base_instance,
             prepare_instance=prepare_instance,
+            shutdown_delay_mins=shutdown_delay,
         ) as instance:
             instance.mount(
                 host_source=work_dir,
