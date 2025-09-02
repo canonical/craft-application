@@ -17,11 +17,13 @@
 
 import pathlib
 import tarfile
+from typing import cast
 
 import craft_application
 from craft_application.services import package
 
-from witchcraft.models.metadata import Metadata
+from witchcraft.models.metadata import ComponentMetadata, Metadata
+from witchcraft.models.project import Component, Project
 
 
 class PackageService(package.PackageService):
@@ -30,13 +32,17 @@ class PackageService(package.PackageService):
     @property
     def metadata(self) -> Metadata:
         """Get the metadata for this model."""
-        project = self._services.get("project").get()
+        project = cast(Project, self._services.get("project").get())
         if project.version is None:
             raise ValueError("Unknown version")
+
+        components = self._process_components(project.components)
+
         return Metadata(
             name=project.name,
             version=project.version,
             craft_application_version=craft_application.__version__,
+            components=components,
         )
 
     def pack(self, prime_dir: pathlib.Path, dest: pathlib.Path) -> list[pathlib.Path]:
@@ -47,3 +53,21 @@ class PackageService(package.PackageService):
         with tarfile.open(dest / tarball_name, mode="w:xz") as tar:
             tar.add(prime_dir, arcname=".")
         return [dest / tarball_name]
+
+    def _process_components(
+        self,
+        components: dict[str, Component] | None,
+    ) -> dict[str, ComponentMetadata] | None:
+        """Convert Components from a project to ComponentMetadata.
+
+        :param components: Component data from a project model.
+
+        :returns: A dictionary of ComponentMetadata or None if no components are defined.
+        """
+        if not components:
+            return None
+
+        return {
+            name: ComponentMetadata.from_component(data)
+            for name, data in components.items()
+        }

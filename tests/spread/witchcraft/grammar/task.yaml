@@ -1,0 +1,25 @@
+summary: test advanced grammar
+
+environment:
+  PROJECT/onto: onto
+  PROJECT/for: for
+
+execute: |
+  cd $PROJECT
+
+  witchcraft pack --destructive-mode --platform platform1
+
+  mkdir output
+  tar --extract --file grammar-1.0-platform1.witchcraft --directory output
+
+  # verify grammar was processed
+  if ! grep "I was built for platform1" "output/hello-world.txt"; then
+    echo "Grammar was not processed as expected!"
+    exit 1
+  fi
+
+restore: |
+  cd $PROJECT
+  witchcraft clean --destructive-mode
+  rm -f *.witchcraft
+  rm -rf output

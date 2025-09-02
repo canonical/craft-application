@@ -102,6 +102,9 @@ class AppMetadata:
     When False, the repositories are not migrated and base support is not checked.
     """
 
+    enable_for_grammar: bool = False
+    """Whether this application supports the 'for' variant of advanced grammar."""
+
     def __post_init__(self) -> None:
         setter = super().__setattr__
 
@@ -730,7 +733,18 @@ class Application:
         craft_cli.emit.error(error)
 
     def _get_project_vars(self, yaml_data: dict[str, Any]) -> dict[str, str]:
-        """Return a dict with project variables to be expanded."""
+        """Return a dict with project variables to be expanded.
+
+        DEPRECATED: This method is deprecated and is not called by default.
+        Use ``ProjectService.project_vars`` instead.
+        """
+        warnings.warn(
+            "'Application._get_project_vars' is deprecated. "
+            "Use 'ProjectService.project_vars' instead.",
+            category=DeprecationWarning,
+            stacklevel=1,
+        )
+
         pvars: dict[str, str] = {}
         for var in self.app.project_variables:
             pvars[var] = str(yaml_data.get(var, ""))

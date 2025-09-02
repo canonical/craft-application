@@ -115,6 +115,17 @@ def test_app_metadata_default_mandatory_adoptable_fields():
     assert app.mandatory_adoptable_fields == ["version"]
 
 
+def test_app_project_vars_deprecated(app):
+    expected = re.escape(
+        "'Application._get_project_vars' is deprecated. "
+        "Use 'ProjectService.project_vars' instead."
+    )
+    with pytest.warns(DeprecationWarning, match=expected):
+        project_vars = app._get_project_vars({"version": "test-version"})
+
+    assert project_vars == {"version": "test-version"}
+
+
 class FakePlugin(craft_parts.plugins.Plugin):
     def __init__(self, properties, part_info):
         pass

@@ -19,6 +19,59 @@ Services
 - Add an idle timer to the Provider service, so app instances can reuse a dormant
   VM or container before it automatically shuts down.
 
+5.9.0 (2025-08-29)
+------------------
+
+Services
+========
+
+- Previously, only top-level keys in a project file could be managed with ``craftctl``.
+  Now, nested keys in a project file can be managed.
+
+- Previously, all project variables could only be set by a single part. Now the
+  handling is more granular — each project variable can be set by a different
+  part.
+
+- Applications can override the Project service's
+  :py:meth:`~craft_application.project.ProjectService._create_project_vars`
+  method to define which keys can be managed and which parts can set them.
+
+For a complete list of commits, check out the `5.9.0`_ release on GitHub.
+
+5.8.0 (2025-08-28)
+------------------
+
+Application
+===========
+
+- Add the ``for`` selector to the YAML grammar. With it, crafters can set different
+  values depending on the active platform.
+
+Services
+========
+
+- Project Service: Allow using ``base: bare`` with
+  :py:attr:`~craft_application.application.AppMetadata.check_supported_base`.
+
+For a complete list of commits, check out the `5.8.0`_ release on GitHub.
+
+5.7.1 (2025-08-27)
+------------------
+
+Services
+========
+
+- Prevent the reuse of instances created before the State service was added by
+  updating the Provider service's compatibility tag.
+
+Pytest plugin
+=============
+
+- Automatically reset Craft Parts callbacks after each test run with the
+  :py:func:`~craft_application.pytest_plugin._reset_craft_parts_callbacks` fixture.
+
+For a complete list of commits, check out the `5.7.1`_ release on GitHub.
+
 5.6.5 (2025-08-20)
 ------------------
 
@@ -946,3 +999,6 @@ For a complete list of commits, check out the `2.7.0`_ release on GitHub.
 .. _5.6.3: https://github.com/canonical/craft-application/releases/tag/5.6.3
 .. _5.6.5: https://github.com/canonical/craft-application/releases/tag/5.6.5
 .. _5.7.0: https://github.com/canonical/craft-application/releases/tag/5.7.0
+.. _5.7.1: https://github.com/canonical/craft-application/releases/tag/5.7.1
+.. _5.8.0: https://github.com/canonical/craft-application/releases/tag/5.8.0
+.. _5.9.0: https://github.com/canonical/craft-application/releases/tag/5.9.0

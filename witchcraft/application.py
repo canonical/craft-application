@@ -19,6 +19,8 @@ import craft_application
 from craft_application.application import Application
 from typing_extensions import override
 
+from .models import Project
+
 WITCHCRAFT = craft_application.AppMetadata(
     name="witchcraft",
     summary="A craft for testing craft-application with weird settings",
@@ -28,6 +30,8 @@ WITCHCRAFT = craft_application.AppMetadata(
     mandatory_adoptable_fields=["version"],
     always_repack=False,
     check_supported_base=True,
+    enable_for_grammar=True,
+    ProjectClass=Project,
 )
 
 
