@@ -20,6 +20,11 @@ Configuration
 - Add an ``idle_time`` configuration option that sets the Provider service's idle
   timer duration.
 
+Models
+======
+
+- Update the current development release for the ``Project`` model.
+
 Services
 ========
 

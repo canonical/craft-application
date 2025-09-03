@@ -57,8 +57,7 @@ class DevelBaseInfo:
 # A list of DevelBaseInfo objects that define an OS's current devel base and devel base.
 DEVEL_BASE_INFOS = [
     DevelBaseInfo(
-        # current_devel_base should point to 25.04, which is not available yet
-        current_devel_base=craft_providers.bases.ubuntu.BuilddBaseAlias.DEVEL,
+        current_devel_base=craft_providers.bases.ubuntu.BuilddBaseAlias.QUESTING,
         devel_base=craft_providers.bases.ubuntu.BuilddBaseAlias.DEVEL,
     ),
 ]
