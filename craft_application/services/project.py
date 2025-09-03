@@ -664,7 +664,7 @@ class ProjectService(base.AppService):
     def _is_supported_on(
         *, base: craft_platforms.DistroBase, date: datetime.date
     ) -> bool:
-        """Check if the given base is supported or in extended support on a date."""
+        """Check if the given base is supported on a date."""
         support_range = distro_support.get_support_range(base.distribution, base.series)
         return support_range.is_supported_on(
             date
