@@ -16,6 +16,7 @@ Configuration
 Models
 ======
 
+- Support ``debug`` and ``debug-each`` in all locations in the ``spread.yaml`` model.
 - Update the current development release for the ``Project`` model.
 
 Services

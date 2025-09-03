@@ -50,8 +50,10 @@ class CraftSpreadBackend(SpreadBase):
     systems: list[str | dict[str, CraftSpreadSystem | None]]
     prepare: str | None = None
     restore: str | None = None
+    debug: str | None = None
     prepare_each: str | None = None
     restore_each: str | None = None
+    debug_each: str | None = None
 
 
 class CraftSpreadSuite(SpreadBase):
@@ -62,8 +64,10 @@ class CraftSpreadSuite(SpreadBase):
     environment: dict[str, str] | None = None
     prepare: str | None = None
     restore: str | None = None
+    debug: str | None = None
     prepare_each: str | None = None
     restore_each: str | None = None
+    debug_each: str | None = None
     kill_timeout: str | None = None
 
 
@@ -81,8 +85,10 @@ class CraftSpreadYaml(SpreadBase):
     exclude: list[str] | None = None
     prepare: str | None = None
     restore: str | None = None
+    debug: str | None = None
     prepare_each: str | None = None
     restore_each: str | None = None
+    debug_each: str | None = None
     kill_timeout: str | None = None
 
 
@@ -129,8 +135,10 @@ class SpreadBackend(SpreadBaseModel):
     )
     prepare: str | None = None
     restore: str | None = None
+    debug: str | None = None
     prepare_each: str | None = None
     restore_each: str | None = None
+    debug_each: str | None = None
 
     @classmethod
     def from_craft(cls, simple: CraftSpreadBackend) -> Self:
@@ -142,8 +150,10 @@ class SpreadBackend(SpreadBaseModel):
             systems=cls.systems_from_craft(simple.systems),
             prepare=simple.prepare,
             restore=simple.restore,
+            debug=simple.debug,
             prepare_each=simple.prepare_each,
             restore_each=simple.restore_each,
+            debug_each=simple.debug_each,
         )
 
     @staticmethod
@@ -174,6 +184,8 @@ class SpreadSuite(SpreadBaseModel):
     restore: str | None
     prepare_each: str | None
     restore_each: str | None
+    debug: str | None = None
+    debug_each: str | None = None
     kill_timeout: str | None = None
 
     @classmethod
@@ -188,6 +200,8 @@ class SpreadSuite(SpreadBaseModel):
             prepare_each=simple.prepare_each,
             restore_each=simple.restore_each,
             kill_timeout=simple.kill_timeout,
+            debug=simple.debug,
+            debug_each=simple.debug_each,
         )
 
 
@@ -204,6 +218,8 @@ class SpreadYaml(SpreadBaseModel):
     restore: str | None
     prepare_each: str | None
     restore_each: str | None
+    debug: str | None = None
+    debug_each: str | None = None
     kill_timeout: str | None = None
     reroot: str | None = None
 
@@ -242,6 +258,8 @@ class SpreadYaml(SpreadBaseModel):
             prepare_each=simple.prepare_each,
             restore_each=simple.restore_each,
             kill_timeout=simple.kill_timeout or None,
+            debug=simple.debug,
+            debug_each=simple.debug_each,
             reroot="..",
         )
 
