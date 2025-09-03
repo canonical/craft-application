@@ -28,7 +28,6 @@ import distro_support
 import pydantic
 from craft_cli import emit
 from distro_support.errors import (
-    NoESMInfoError,
     UnknownDistributionError,
     UnknownVersionError,
 )
@@ -662,19 +661,14 @@ class ProjectService(base.AppService):
             ) from None
 
     @staticmethod
-    def _is_supported_or_esm_on(
+    def _is_supported_on(
         *, base: craft_platforms.DistroBase, date: datetime.date
     ) -> bool:
-        """Check if the given base is supported or in extended support on a date."""
+        """Check if the given base is supported on a date."""
         support_range = distro_support.get_support_range(base.distribution, base.series)
-        if support_range.is_supported_on(date) or support_range.is_in_development_on(
+        return support_range.is_supported_on(
             date
-        ):
-            return True
-        try:
-            return support_range.is_esm_on(date)
-        except NoESMInfoError:
-            return False
+        ) or support_range.is_in_development_on(date)
 
     def check_base_is_supported(self) -> None:
         """Check that this project's base and build-base are supported.
@@ -702,7 +696,7 @@ class ProjectService(base.AppService):
 
         if base is not None:
             try:
-                base_is_supported = self._is_supported_or_esm_on(base=base, date=today)
+                base_is_supported = self._is_supported_on(base=base, date=today)
             except (UnknownDistributionError, UnknownVersionError) as error:
                 # If distro-support doesn't know about this base, assume it's supported.
                 emit.debug(str(error))
@@ -711,7 +705,7 @@ class ProjectService(base.AppService):
             base_is_supported = True
         if build_base is not None:
             try:
-                build_base_is_supported = self._is_supported_or_esm_on(
+                build_base_is_supported = self._is_supported_on(
                     base=build_base, date=today
                 )
             except (UnknownDistributionError, UnknownVersionError) as error:
