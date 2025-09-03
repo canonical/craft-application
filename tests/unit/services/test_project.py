@@ -880,7 +880,7 @@ def test_mandatory_adoptable_fields(
         pytest.param("bare", "ubuntu@24.04", id="bare-base"),
         ("ubuntu@22.04", None),
         ("ubuntu@24.04", None),
-        ("ubuntu@25.10", None),
+        pytest.param("ubuntu@25.10", "ubuntu@devel", id="devel-on-devel"),
         pytest.param("nonexistent@0.0", None, id="nonexistent-base"),
         pytest.param("ubuntu@22.04", "ubuntu@devel", id="build-on-devel"),
     ],

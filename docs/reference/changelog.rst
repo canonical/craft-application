@@ -4,14 +4,19 @@
 Changelog
 *********
 
-5.x.x (2025-xx-xx)
-------------------
+5.10.0 (unreleased)
+-------------------
 
 Configuration
 =============
 
 - Add an ``idle_time`` configuration option that sets the Provider service's idle
   timer duration.
+
+Models
+======
+
+- Update the current development release for the ``Project`` model.
 
 Services
 ========
