@@ -28,8 +28,9 @@ import warnings
 from dataclasses import dataclass, field
 from functools import cached_property
 from importlib import metadata
-from typing import TYPE_CHECKING, Any, Literal, cast, final
+from typing import TYPE_CHECKING, Annotated, Any, Literal, cast, final
 
+import annotated_types
 import craft_cli
 import craft_platforms
 import craft_providers
@@ -76,6 +77,16 @@ class AppMetadata:
     version: str = field(init=False)
     docs_url: str | None = None
     """The root URL for the app's documentation."""
+    artifact_type: Annotated[
+        str,
+        annotated_types.IsAscii,
+        annotated_types.LowerCase,
+    ] = "artifact"
+    """The name to refer to the output artifact for this app.
+
+    This gets used in messages and should be an all lower-case single-word value, like
+    ``snap`` or ``rock``. Defaults to ``artifact``.
+    """
     source_ignore_patterns: list[str] = field(default_factory=list[str])
     managed_instance_project_path = pathlib.PurePosixPath("/root/project")
     project_variables: list[str] = field(default_factory=lambda: ["version"])

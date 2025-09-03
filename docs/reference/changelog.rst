@@ -7,6 +7,13 @@ Changelog
 5.10.0 (unreleased)
 -------------------
 
+Application
+===========
+
+- Add :py:attr:`~craft_application.application.AppMetadata.artifact_type` to
+  ``AppMetadata`` to allow user-visible messages to refer to the app-specific output
+  artifact type.
+
 Configuration
 =============
 
