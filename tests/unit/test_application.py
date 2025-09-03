@@ -35,6 +35,7 @@ import craft_platforms
 import craft_providers
 import pytest
 import pytest_check
+
 from craft_application import (
     application,
     commands,
@@ -48,11 +49,15 @@ from craft_application.commands import (
 )
 from craft_application.util import (
     get_host_architecture,  # pyright: ignore[reportGeneralTypeIssues]
+    ValidatorOptions,
 )
 from craft_cli import emit
 from craft_parts.plugins.plugins import PluginType
+from craft_providers import bases, lxd
+from overrides import override
 
 from tests.conftest import FakeApplication
+
 
 EMPTY_COMMAND_GROUP = craft_cli.CommandGroup("FakeCommands", [])
 
@@ -308,6 +313,80 @@ def test_run_managed_failure(app, fake_project):
     assert exc_info.value.brief == "Failed to execute testcraft in instance."
 
 
+def test_run_managed_configure_pro(mocker, app, fake_project, fake_build_plan):
+    """Ensure that Pro is installed and configured in a managed instance."""
+    mock_provider = mocker.MagicMock(spec_set=services.ProviderService)
+    app.services.provider = mock_provider
+    # provide spec to pass type check for pro support
+    mock_instance = mocker.MagicMock(spec=lxd.LXDInstance)
+
+    # TODO: these methods are currently in review, https://github.com/canonical/craft-providers/pull/664/files  # noqa: FIX002
+    # Remove when craft-providers with pro support in lxd is merged to main.
+    mock_instance.install_pro_client = mocker.Mock()
+    mock_instance.attach_pro_subscription = mocker.Mock()
+    mock_instance.enable_pro_service = mocker.Mock()
+    # pretend to be a fresh instance w/o any services installed
+    mock_instance.pro_services = None
+
+    mock_provider.instance.return_value.__enter__.return_value = mock_instance
+    app.project = fake_project
+    app._build_plan = fake_build_plan
+    app._pro_services = util.ProServices(["esm-apps"])
+    arch = get_host_architecture()
+
+    app.run_managed(None, arch)
+
+    assert mock_instance.install_pro_client.call_count == 1
+    assert mock_instance.attach_pro_subscription.call_count == 1
+    assert mock_instance.enable_pro_service.call_count == 1
+
+
+def test_run_managed_pro_not_supported(mocker, app, fake_project, fake_build_plan):
+    """Ensure that providers that do not support Ubuntu Pro cause an exception
+    when pro services are requested."""
+    mock_provider = mocker.MagicMock(spec_set=services.ProviderService)
+    app.services.provider = mock_provider
+    # Provide an unsupported instance type to raise exception
+    mock_instance = mocker.MagicMock()
+
+    mock_provider.instance.return_value.__enter__.return_value = mock_instance
+    app.project = fake_project
+    app._build_plan = fake_build_plan
+    app._pro_services = util.ProServices(["esm-apps"])
+    arch = get_host_architecture()
+
+    with pytest.raises(errors.UbuntuProNotSupportedError):
+        app.run_managed(None, arch)
+
+
+def test_run_managed_skip_configure_pro(mocker, app, fake_project, fake_build_plan):
+    """Ensure that Pro is not installed and configured when it is not required."""
+    mock_provider = mocker.MagicMock(spec_set=services.ProviderService)
+    app.services.provider = mock_provider
+    # provide spec to pass type check for pro support
+    mock_instance = mocker.MagicMock(spec=lxd.LXDInstance)
+
+    # TODO: Remove when these mocks when methods are present in main. # noqa: FIX002
+    # see TODO in test_run_managed_configure_pro for details.
+    mock_instance.install_pro_client = mocker.Mock()
+    mock_instance.attach_pro_subscription = mocker.Mock()
+    mock_instance.enable_pro_service = mocker.Mock()
+    # pretend to be a fresh instance w/o any services installed
+    mock_instance.pro_services = None
+
+    mock_provider.instance.return_value.__enter__.return_value = mock_instance
+    app.project = fake_project
+    app._build_plan = fake_build_plan
+    app._pro_services = util.ProServices([])
+    arch = get_host_architecture()
+
+    app.run_managed(None, arch)
+
+    assert mock_instance.install_pro_client.call_count == 0
+    assert mock_instance.attach_pro_subscription.call_count == 0
+    assert mock_instance.enable_pro_service.call_count == 0
+
+
 def test_run_managed_multiple(app, fake_host_architecture):
     mock_provider = mock.MagicMock(spec_set=services.ProviderService)
     app.services._services["provider"] = mock_provider
@@ -473,7 +552,15 @@ def test_craft_lib_log_level(app_metadata, fake_services):
         assert logger.level == logging.DEBUG
 
 
-def test_gets_project(monkeypatch, fake_project_file, app_metadata, fake_services):
+def test_gets_project(
+    monkeypatch,
+    tmp_path,
+    app_metadata,
+    fake_services,
+    mock_pro_api_call,
+):
+    project_file = tmp_path / "testcraft.yaml"
+    project_file.write_text(BASIC_PROJECT_YAML)
     monkeypatch.setattr(sys, "argv", ["testcraft", "pull", "--destructive-mode"])
 
     app = FakeApplication(app_metadata, fake_services)
@@ -485,7 +572,13 @@ def test_gets_project(monkeypatch, fake_project_file, app_metadata, fake_service
 
 
 def test_fails_without_project(
-    monkeypatch, capsys, tmp_path, app_metadata, fake_services, app, debug_mode
+    monkeypatch,
+    capsys,
+    tmp_path,
+    app_metadata,
+    fake_services,
+    app,
+    mock_pro_api_call,  # noqa: ARG001
 ):
     # Set up a real project service - the fake one for testing gets a fake project!
     del app.services._services["project"]
@@ -573,7 +666,11 @@ def test_pre_run_project_dir_success_unmanaged(app, fs, project_dir):
 
 
 @pytest.mark.parametrize("project_dir", ["relative/file", "/absolute/file"])
-def test_pre_run_project_dir_not_a_directory(app, fs, project_dir):
+def test_pre_run_project_dir_not_a_directory(
+    app,
+    fs,
+    project_dir,
+):
     fs.create_file(project_dir)
     dispatcher = mock.Mock(spec_set=craft_cli.Dispatcher)
     dispatcher.parsed_args.return_value.project_dir = project_dir
@@ -585,7 +682,14 @@ def test_pre_run_project_dir_not_a_directory(app, fs, project_dir):
 @pytest.mark.parametrize("load_project", [True, False])
 @pytest.mark.parametrize("return_code", [None, 0, 1])
 def test_run_success_unmanaged(
-    monkeypatch, emitter, check, app, fake_project, return_code, load_project
+    monkeypatch,
+    emitter,
+    check,
+    app,
+    fake_project,
+    return_code,
+    load_project,
+    mock_pro_api_call,
 ):
     class UnmanagedCommand(commands.AppCommand):
         name = "pass"
@@ -608,9 +712,101 @@ def test_run_success_unmanaged(
         emitter.assert_debug("Running testcraft pass on host")
 
 
+def test_run_success_managed(
+    monkeypatch,
+    app,
+    fake_project,
+    mocker,
+    mock_pro_api_call,
+):
+    mocker.patch.object(app, "get_project", return_value=fake_project)
+    app.run_managed = mock.Mock()
+    monkeypatch.setattr(sys, "argv", ["testcraft", "pull"])
+
+    pytest_check.equal(app.run(), 0)
+
+    app.run_managed.assert_called_once_with(None, None)  # --build-for not used
+
+
+def test_run_success_managed_with_arch(
+    monkeypatch,
+    app,
+    fake_project,
+    mocker,
+    mock_pro_api_call,
+):
+    mocker.patch.object(app, "get_project", return_value=fake_project)
+    app.run_managed = mock.Mock()
+    arch = get_host_architecture()
+    monkeypatch.setattr(sys, "argv", ["testcraft", "pull", f"--build-for={arch}"])
+
+    pytest_check.equal(app.run(), 0)
+
+    app.run_managed.assert_called_once()
+
+
+def test_run_success_managed_with_platform(
+    monkeypatch,
+    app,
+    fake_project,
+    mocker,
+    mock_pro_api_call,
+):
+    mocker.patch.object(app, "get_project", return_value=fake_project)
+    app.run_managed = mock.Mock()
+    monkeypatch.setattr(sys, "argv", ["testcraft", "pull", "--platform=foo"])
+
+    pytest_check.equal(app.run(), 0)
+
+    app.run_managed.assert_called_once_with("foo", None)
+
+
+@pytest.mark.parametrize(
+    ("params", "expected_call"),
+    [
+        ([], mock.call(None, None)),
+        (["--platform=s390x"], mock.call("s390x", None)),
+        (
+            ["--platform", get_host_architecture()],
+            mock.call(get_host_architecture(), None),
+        ),
+        (
+            ["--build-for", get_host_architecture()],
+            mock.call(None, get_host_architecture()),
+        ),
+        (["--build-for", "s390x"], mock.call(None, "s390x")),
+        (["--platform", "s390x,riscv64"], mock.call("s390x", None)),
+        (["--build-for", "s390x,riscv64"], mock.call(None, "s390x")),
+    ],
+)
+def test_run_passes_platforms(
+    monkeypatch,
+    app,
+    fake_project,
+    mocker,
+    params,
+    expected_call,
+    mock_pro_api_call,
+):
+    mocker.patch.object(app, "get_project", return_value=fake_project)
+    app.run_managed = mock.Mock(return_value=False)
+    monkeypatch.setattr(sys, "argv", ["testcraft", "pull", *params])
+
+    pytest_check.equal(app.run(), 0)
+
+    assert app.run_managed.mock_calls == [expected_call]
+
+
 @pytest.mark.parametrize("return_code", [None, 0, 1])
 def test_run_success_managed_inside_managed(
-    monkeypatch, check, app, fake_project, mock_dispatcher, return_code, mocker
+    monkeypatch,
+    check,
+    app,
+    fake_project,
+    mock_dispatcher,
+    return_code,
+    mocker,
+    mock_pro_api_call,
 ):
     mocker.patch.object(app, "get_project", return_value=fake_project)
     mocker.patch.object(
@@ -1137,3 +1333,49 @@ def test_doc_url_in_command_help(monkeypatch, capsys, app):
     expected = "For more information, check out: www.testcraft.example/docs/3.14159/reference/commands/app-config\n\n"
     _, err = capsys.readouterr()
     assert err.endswith(expected)
+
+
+# fmt: off
+@pytest.mark.parametrize(
+    (   "run_managed",     "is_managed",   "val_env_calls",   "validator_options"),
+    [
+        (False,             False,         1,                 None),
+        (True,              True,          1,                 None),
+        (True,              False,         1,                 ValidatorOptions.AVAILABILITY),
+        (False,             True,          0,                 None),
+    ],
+)
+# fmt: on
+def test_check_pro_requirement(
+    mocker, app, run_managed, is_managed, val_env_calls, validator_options
+):
+    """Test that _check_pro_requirement validates Pro Services in the correct situations"""
+    pro_services = mocker.Mock()
+    app._check_pro_requirement(pro_services, run_managed, is_managed)
+
+    assert pro_services.validate_environment.call_count == val_env_calls
+
+    for call in pro_services.validate.call_args_list:
+        if validator_options is not None:  # skip assert if default value is passed
+            assert call.kwargs["options"] == validator_options
+
+
+# fmt: off
+@pytest.mark.parametrize(
+    (   "is_pro",   "val_prj_calls"),
+    [
+        (False,     0),
+        (True,     1),
+    ],
+)
+# fmt: on
+@pytest.mark.usefixtures("fake_project_file")
+def test_validate_project_pro_requirements(mocker, is_pro, val_prj_calls, app_metadata, fake_services):
+    """Test validate_project is called only when ProServices are available."""
+    app = application.Application(app_metadata, fake_services)
+
+    app._pro_services = mocker.MagicMock()
+
+    app._pro_services.__bool__.return_value = is_pro # type: ignore # noqa: PGH003
+    app.get_project(build_for=get_host_architecture())
+    assert app._pro_services.validate_project.call_count == val_prj_calls # type: ignore # noqa: PGH003
