@@ -4,6 +4,15 @@
 Changelog
 *********
 
+5.9.1 (2025-09-04)
+------------------
+
+Services
+========
+
+- The Lifecycle Service no longer improperly caches the project (fixes ``adopt-info``).
+
+
 5.9.0 (2025-08-29)
 ------------------
 

@@ -9,5 +9,6 @@ execute: |
 
 restore: |
   cd "${PROJECT}"
+  test -f "pack-${PROJECT}-$(date -I)-amd64.testcraft"
   rm -f *.testcraft
   testcraft clean
