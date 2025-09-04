@@ -12,5 +12,7 @@ adopt-info: my-test  # Check that adopt-info works.
 parts:
   my-test:
     plugin: nil
+    override-pull: |
+      craftctl set version=1.2.3
     override-build: |
-      craftctl set version=$(date -I)
+      craftctl get version | grep 1.2.3
