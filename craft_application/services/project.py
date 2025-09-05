@@ -527,7 +527,8 @@ class ProjectService(base.AppService):
         project = self._preprocess(
             build_for=build_for, build_on=build_on, platform=platform
         )
-        project["platforms"] = platforms
+        if project.get("platforms"):
+            project["platforms"] = platforms
         self._expand_environment(
             project,
             build_on=craft_platforms.DebianArchitecture(build_on),
