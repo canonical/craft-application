@@ -125,8 +125,6 @@ class LifecycleService(base.AppService):
         LifecycleManager on initialisation.
     """
 
-    _project: models.Project
-
     def __init__(
         self,
         app: AppMetadata,
@@ -145,10 +143,13 @@ class LifecycleService(base.AppService):
     @override
     def setup(self) -> None:
         """Initialize the LifecycleManager with previously-set arguments."""
-        self._project = self._services.get("project").get()
         self._lcm = self._init_lifecycle_manager()
         callbacks.register_post_step(self.post_prime, step_list=[Step.PRIME])
         callbacks.register_configure_overlay(repositories.enable_overlay_eol)
+
+    @property
+    def _project(self) -> models.Project:
+        return self._services.get("project").get()
 
     def _get_build(self) -> craft_platforms.BuildInfo:
         """Get the build for this run."""

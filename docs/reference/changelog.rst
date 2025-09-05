@@ -33,6 +33,16 @@ Services
   VM or container before it automatically shuts down.
 - Bases that are in extended support are now correctly classified as EOL.
 
+5.9.1 (2025-09-04)
+------------------
+
+Services
+========
+
+- The Lifecycle Service no longer improperly caches the project (fixes ``adopt-info``).
+
+For a complete list of commits, check out the `5.9.1`_ release on GitHub.
+
 5.9.0 (2025-08-29)
 ------------------
 
@@ -1016,3 +1026,4 @@ For a complete list of commits, check out the `2.7.0`_ release on GitHub.
 .. _5.7.1: https://github.com/canonical/craft-application/releases/tag/5.7.1
 .. _5.8.0: https://github.com/canonical/craft-application/releases/tag/5.8.0
 .. _5.9.0: https://github.com/canonical/craft-application/releases/tag/5.9.0
+.. _5.9.1: https://github.com/canonical/craft-application/releases/tag/5.9.1
