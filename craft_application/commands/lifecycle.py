@@ -191,7 +191,7 @@ class LifecycleCommand(_BaseLifecycleCommand):
                     permanent=True,
                 )
         else:
-            project_service.check_base_is_supported()
+            project_service.check_base_is_supported(verb=self.name)
             base = project.effective_base
             if eol_date := project_service.base_eol_soon_date():
                 emit.progress(

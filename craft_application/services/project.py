@@ -670,12 +670,13 @@ class ProjectService(base.AppService):
             date
         ) or support_range.is_in_development_on(date)
 
-    def check_base_is_supported(self) -> None:
+    def check_base_is_supported(self, verb: str = "pack") -> None:
         """Check that this project's base and build-base are supported.
 
         This method assumes a single-base project. Applications that use multi-base
         projects must override this in order to use it.
 
+        :param verb: Which lifecycle verb to use in an error message (default: "pack")
         :raises: CraftValidationError if either is unsupported.
         """
         project = self.get()
@@ -723,7 +724,7 @@ class ProjectService(base.AppService):
             else f"Build base '{build_base}' has reached end-of-life."
         )
         raise errors.CraftValidationError(
-            f"Cannot pack {self._app.artifact_type}. {message}",
+            f"Cannot {verb} {self._app.artifact_type}. {message}",
             resolution="If you know the risks and want to continue, rerun with --ignore=unmaintained.",
             retcode=os.EX_DATAERR,
             logpath_report=False,

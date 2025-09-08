@@ -40,6 +40,6 @@ def test_unsupported_base_error(
 
     assert return_code == os.EX_DATAERR
     assert re.match(
-        r"Cannot pack artifact. (Build b|B)ase '[a-z]+@\d+\.\d+' has reached end-of-life.",
+        rf"Cannot {command} artifact. (Build b|B)ase '[a-z]+@\d+\.\d+' has reached end-of-life.",
         stderr,
     )
