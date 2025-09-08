@@ -30,19 +30,18 @@ class PackageService(package.PackageService):
     @property
     def metadata(self) -> Metadata:
         """Get the metadata for this model."""
-        project = self._services.get("project").get()
-        if project.version is None:
+        if self._project.version is None:
             raise ValueError("Unknown version")
         return Metadata(
-            name=project.name,
-            version=project.version,
+            name=self._project.name,
+            version=self._project.version,
             craft_application_version=craft_application.__version__,
         )
 
     def pack(self, prime_dir: pathlib.Path, dest: pathlib.Path) -> list[pathlib.Path]:
         """Pack a testcraft artifact."""
-        project = self._services.get("project").get()
-        platform = self._services.get("build_plan").plan()[0].platform
+        project = self._project
+        platform = self._build_info.platform
         tarball_name = f"{project.name}-{project.version}-{platform}.testcraft"
         with tarfile.open(dest / tarball_name, mode="w:xz") as tar:
             tar.add(prime_dir, arcname=".")

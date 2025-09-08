@@ -165,7 +165,7 @@ class ProviderService(base.AppService):
         :returns: a context manager of the provider instance.
         """
         if not project_name:
-            project_name = self._services.get("project").get().name
+            project_name = self._project.name
         instance_name = self._get_instance_name(work_dir, build_info, project_name)
         emit.debug(f"Preparing managed instance {instance_name!r}")
         base_name = bases.BaseName(
@@ -324,10 +324,8 @@ class ProviderService(base.AppService):
             target = "environments" if len(build_plan) > 1 else "environment"
             emit.progress(f"Cleaning build {target}")
 
-        project_name = self._services.get("project").get().name
-
         for info in build_plan:
-            self._clean_instance(provider, self._work_dir, info, project_name)
+            self._clean_instance(provider, self._work_dir, info, self._project.name)
 
     def _get_instance_name(
         self,
