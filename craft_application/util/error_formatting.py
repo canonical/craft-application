@@ -17,12 +17,24 @@
 
 from __future__ import annotations
 
+import os
+import signal
+import sys
 from typing import TYPE_CHECKING, NamedTuple
+
+import craft_cli
+import craft_parts
+import craft_platforms
+import craft_providers
+
+from craft_application import errors
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
     from pydantic import error_wrappers
+
+    from craft_application.application import AppMetadata
 
 
 class FieldLocationTuple(NamedTuple):
@@ -117,3 +129,62 @@ def _format_pydantic_error_message(msg: str) -> str:
     if msg:
         msg = msg[0].lower() + msg[1:]
     return msg
+
+
+def transform_runtime_error(
+    app: AppMetadata, error: BaseException, *, debug_mode: bool = False
+) -> craft_cli.CraftError | None:
+    """Convert the many possible runtime errors into a more consistent type and appearance.
+
+    Returns none on application usage errors, as those are handled specially.
+    """
+    match error:
+        case craft_cli.ArgumentParsingError():
+            print(error, file=sys.stderr)
+            return None
+        case KeyboardInterrupt():
+            return_code = 128 + signal.SIGINT
+            transformed = craft_cli.CraftError("Interrupted.", retcode=return_code)
+        case craft_cli.CraftError():
+            return error
+        case craft_parts.PartsError():
+            transformed = errors.PartsLifecycleError.from_parts_error(error)
+            transformed.retcode = 1
+        case craft_providers.ProviderError():
+            transformed = craft_cli.CraftError(
+                error.brief, details=error.details, resolution=error.resolution
+            )
+            transformed.retcode = 1
+        case craft_platforms.CraftPlatformsError():
+            transformed = craft_cli.CraftError(
+                error.args[0],
+                details=error.details,
+                resolution=error.resolution,
+                reportable=error.reportable,
+                docs_url=error.docs_url,
+                doc_slug=error.doc_slug,
+                logpath_report=error.logpath_report,
+                retcode=error.retcode,
+            )
+        case _:
+            if isinstance(error, craft_platforms.CraftError):
+                transformed = craft_cli.CraftError(
+                    error.args[0],
+                    details=error.details,
+                    resolution=error.resolution,
+                    docs_url=getattr(error, "docs_url", None),
+                    doc_slug=getattr(error, "doc_slug", None),
+                    logpath_report=getattr(error, "logpath_report", True),
+                    reportable=getattr(error, "reportable", True),
+                    retcode=getattr(error, "retcode", 1),
+                )
+            else:
+                transformed = craft_cli.CraftError(
+                    f"{app.name} internal error: {error!r}",
+                )
+                transformed.retcode = os.EX_SOFTWARE
+            if debug_mode:
+                raise error
+
+    transformed.__cause__ = error
+    return transformed

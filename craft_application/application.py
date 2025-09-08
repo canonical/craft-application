@@ -32,13 +32,12 @@ from typing import TYPE_CHECKING, Annotated, Any, Literal, cast, final
 
 import annotated_types
 import craft_cli
-import craft_platforms
 import craft_providers
-from craft_parts.errors import PartsError
 from platformdirs import user_cache_path
 
 from craft_application import _config, commands, errors, models, util
 from craft_application.errors import PathInvalidError
+from craft_application.util.error_formatting import transform_runtime_error
 
 if TYPE_CHECKING:
     import argparse
@@ -662,68 +661,15 @@ class Application:
 
         try:
             return_code = self._run_inner()
-        except craft_cli.ArgumentParsingError as err:
-            print(err, file=sys.stderr)  # to stderr, as argparse normally does
-            craft_cli.emit.ended_ok()
-            return_code = os.EX_USAGE
-        except KeyboardInterrupt as err:
-            return_code = 128 + signal.SIGINT
-            self._emit_error(
-                craft_cli.CraftError("Interrupted.", retcode=return_code), cause=err
+        except Exception as error:  # noqa: BLE001, this is not blind due to the transforming code
+            transformed = transform_runtime_error(
+                self.app, error, debug_mode=debug_mode
             )
-        except craft_cli.CraftError as err:
-            self._emit_error(err)
-            return_code = err.retcode
-        except PartsError as err:
-            self._emit_error(
-                errors.PartsLifecycleError.from_parts_error(err),
-                cause=err,
-            )
-            return_code = 1
-        except craft_providers.ProviderError as err:
-            self._emit_error(
-                craft_cli.CraftError(
-                    err.brief, details=err.details, resolution=err.resolution
-                ),
-                cause=err,
-            )
-            return_code = 1
-        except craft_platforms.CraftPlatformsError as err:
-            self._emit_error(
-                craft_cli.CraftError(
-                    err.args[0],
-                    details=err.details,
-                    resolution=err.resolution,
-                    reportable=err.reportable,
-                    docs_url=err.docs_url,
-                    doc_slug=err.doc_slug,
-                    logpath_report=err.logpath_report,
-                    retcode=err.retcode,
-                ),
-                cause=err,
-            )
-            return_code = err.retcode
-        except Exception as err:
-            if isinstance(err, craft_platforms.CraftError):
-                transformed = craft_cli.CraftError(
-                    err.args[0],
-                    details=err.details,
-                    resolution=err.resolution,
-                    docs_url=getattr(err, "docs_url", None),
-                    doc_slug=getattr(err, "doc_slug", None),
-                    logpath_report=getattr(err, "logpath_report", True),
-                    reportable=getattr(err, "reportable", True),
-                    retcode=getattr(err, "retcode", 1),
-                )
-                return_code = transformed.retcode
+            if transformed is None:
+                return_code = os.EX_USAGE
             else:
-                transformed = craft_cli.CraftError(
-                    f"{self.app.name} internal error: {err!r}"
-                )
-                return_code = os.EX_SOFTWARE
-            self._emit_error(transformed, cause=err)
-            if debug_mode:
-                raise
+                return_code = transformed.retcode
+                self._emit_error(transformed)
         else:
             craft_cli.emit.ended_ok()
 

@@ -28,6 +28,7 @@ from typing_extensions import override
 
 from craft_application import errors, models, util
 from craft_application.commands import base
+from craft_application.util.error_formatting import transform_runtime_error
 
 _PACKED_FILE_LIST_PATH = ".craft/packed-files"
 
@@ -221,7 +222,8 @@ class LifecycleCommand(_BaseLifecycleCommand):
             self._run_lifecycle(parsed_args, step_name)
         except Exception as err:
             if debug:
-                emit.progress(str(err), permanent=True)
+                transformed = transform_runtime_error(self._app, err)
+                emit.report_error(transformed)
                 _launch_shell()
             raise
 
