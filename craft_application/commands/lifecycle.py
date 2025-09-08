@@ -161,13 +161,43 @@ class LifecycleCommand(_BaseLifecycleCommand):
                 metavar="arch",
                 help="Set architecture to build for",
             )
+        ignore_restrictions: set[str] = set()
         if self._app.check_supported_base:
+            ignore_restrictions.add("unmaintained")
+        if ignore_restrictions:
             parser.add_argument(
-                "--old-bases",
-                action="store_true",
-                dest="allow_unsupported_base",
-                help="Allow this run to work on an unsupported base.",
+                "--ignore",
+                nargs="*",
+                default=[],
+                choices=sorted(ignore_restrictions),
+                help="Bypass a restriction to use an unsupported feature.",
             )
+
+    def _check_supported_base(self, parsed_args: argparse.Namespace) -> None:
+        """Check whether the base is supported.
+
+        :raises: CraftValidationError if building on an unsupported base without
+            explicitly acknowledging that fact.
+        """
+        if not self._app.check_supported_base:
+            return
+        project_service = self._services.get("project")
+        project = project_service.get()
+        ignore_items = getattr(parsed_args, "ignore", [])
+        if "unmaintained" in ignore_items:
+            if project_service.is_effective_base_eol():
+                emit.progress(
+                    f"Using end-of-life base {project.effective_base!r}.",
+                    permanent=True,
+                )
+        else:
+            project_service.check_base_is_supported()
+            base = project.effective_base
+            if eol_date := project_service.base_eol_soon_date():
+                emit.progress(
+                    f"Using base {base!r}, which will enter end-of-life on {eol_date.isoformat()}.",
+                    permanent=True,
+                )
 
     @override
     def _run(
@@ -182,10 +212,7 @@ class LifecycleCommand(_BaseLifecycleCommand):
         build_planner = self.services.get("build_plan")
 
         # If we check for supported bases, fail early for all unsupported bases.
-        if self._app.check_supported_base and not getattr(
-            parsed_args, "allow_unsupported_base", None
-        ):
-            self.services.get("project").check_base_is_supported()
+        self._check_supported_base(parsed_args)
 
         config = self.services.get("config")
         platform = getattr(parsed_args, "platform", None) or config.get("platform")
