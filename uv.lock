@@ -497,7 +497,7 @@ types = [
 requires-dist = [
     { name = "annotated-types", specifier = ">=0.6.0" },
     { name = "craft-archives", specifier = ">=2.2.0" },
-    { name = "craft-cli", git = "https://github.com/canonical/craft-cli?rev=work%2Fbroaden-error-printing%2FCRAFT-4703" },
+    { name = "craft-cli", git = "https://github.com/canonical/craft-cli?rev=ec5640af1e168aaa669fd9ad467bee73fd681319" },
     { name = "craft-grammar", specifier = ">=2.2.0" },
     { name = "craft-parts", specifier = ">=2.21.0" },
     { name = "craft-platforms", specifier = ">=0.6.0" },
@@ -578,7 +578,7 @@ wheels = [
 [[package]]
 name = "craft-cli"
 version = "3.1.2.post11+gec5640a"
-source = { git = "https://github.com/canonical/craft-cli?rev=work%2Fbroaden-error-printing%2FCRAFT-4703#ec5640af1e168aaa669fd9ad467bee73fd681319" }
+source = { git = "https://github.com/canonical/craft-cli?rev=ec5640af1e168aaa669fd9ad467bee73fd681319#ec5640af1e168aaa669fd9ad467bee73fd681319" }
 dependencies = [
     { name = "jinja2" },
     { name = "overrides" },
