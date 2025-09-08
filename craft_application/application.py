@@ -37,7 +37,7 @@ from platformdirs import user_cache_path
 
 from craft_application import _config, commands, errors, models, util
 from craft_application.errors import PathInvalidError
-from craft_application.util.error_formatting import transform_runtime_error
+from craft_application.util.logging import handle_runtime_error
 
 if TYPE_CHECKING:
     import argparse
@@ -661,15 +661,10 @@ class Application:
 
         try:
             return_code = self._run_inner()
-        except Exception as error:  # noqa: BLE001, this is not blind due to the transforming code
-            transformed = transform_runtime_error(
-                self.app, error, debug_mode=debug_mode
+        except BaseException as error:  # noqa: BLE001, this is not blind due to the handler code
+            return_code = handle_runtime_error(
+                self.app, error, print_error=self._emit_error, debug_mode=debug_mode
             )
-            if transformed is None:
-                return_code = os.EX_USAGE
-            else:
-                return_code = transformed.retcode
-                self._emit_error(transformed)
         else:
             craft_cli.emit.ended_ok()
 
