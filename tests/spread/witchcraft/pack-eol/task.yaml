@@ -13,7 +13,7 @@ execute: |
   faketime '2025-06-01' witchcraft pack --destructive-mode |& MATCH "Cannot pack cauldron. Base '[a-z0-9.@]+' has reached end-of-life."
 
   #... but before it's EOL we should get a different error in destructive mode!
-  faketime '2025-05-30' witchcraft pack --old-bases --destructive-mode |& MATCH "Ubuntu 20.04 builds cannot be performed on this"
+  faketime '2025-05-30' witchcraft pack --ignore=unmaintained --destructive-mode |& MATCH "Ubuntu 20.04 builds cannot be performed on this"
 
   # Change to Ubuntu 24.04
   sed -i 's/base: ubuntu@20.04/base: ubuntu@24.04/' witchcraft.yaml
