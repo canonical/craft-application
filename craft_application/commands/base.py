@@ -29,6 +29,7 @@ from craft_application import application, util
 if TYPE_CHECKING:
     import argparse
 
+    from craft_application.models.project import Project
     from craft_application.services import service_factory
 
 
@@ -56,7 +57,7 @@ class AppCommand(BaseCommand):
     """Command for use with craft-application."""
 
     always_load_project: bool = False
-    """The project is also loaded in non-managed mode."""
+    """Whether to configure and load the project before starting the command."""
 
     def __init__(self, config: dict[str, Any] | None) -> None:
         if config is None:
@@ -79,11 +80,11 @@ class AppCommand(BaseCommand):
     ) -> bool:
         """Property to determine if the command needs a project loaded.
 
-        Defaults to `self.always_load_project`. Subclasses can override this property
+        Defaults to ``self.always_load_project``. Subclasses can override this method.
 
         :param parsed_args: Parsed arguments for the command.
 
-        :returns: True if the command needs a project loaded, False otherwise.
+        :returns: ``True`` if the command needs a project loaded, ``False`` otherwise.
         """
         return self.always_load_project
 
@@ -93,8 +94,8 @@ class AppCommand(BaseCommand):
     ) -> bool:
         """Whether this command should run in managed mode.
 
-        By default returns `False`. Subclasses can override this method to change this,
-        including by inspecting the arguments in `parsed_args`.
+        By default returns ``False``. Subclasses can override this method to change this,
+        including by inspecting the arguments in ``parsed_args``.
         """
         return False
 
@@ -104,8 +105,8 @@ class AppCommand(BaseCommand):
     ) -> str | None:
         """Name of the provider where the command should be run inside of.
 
-        By default returns None. Subclasses can override this method to change this,
-        including by inspecting the arguments in `parsed_args`.
+        By default returns ``None``. Subclasses can override this method to change this,
+        including by inspecting the arguments in ``parsed_args``.
         """
         return None
 
@@ -117,7 +118,7 @@ class AppCommand(BaseCommand):
 
         :param parsed_args: The parsed arguments used.
         :returns: A list of strings ready to be passed into a craft-providers executor.
-        :raises: RuntimeError if this command is not supposed to run managed.
+        :raises: ``RuntimeError`` if this command is not supposed to run managed.
 
         Commands that have additional parameters to pass in managed mode should
         override this method to include those parameters.
@@ -127,6 +128,11 @@ class AppCommand(BaseCommand):
         cmd_name = self._app.name
         verbosity = emit.get_mode().name.lower()
         return [cmd_name, f"--verbosity={verbosity}", self.name]
+
+    @property
+    def _project(self) -> Project:
+        """Convenience property for getting the rendered project."""
+        return self._services.get("project").get()
 
 
 class ExtensibleCommand(AppCommand):
