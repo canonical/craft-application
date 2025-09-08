@@ -34,11 +34,13 @@ import annotated_types
 import craft_cli
 import craft_platforms
 import craft_providers
+import craft_providers.lxd
 from craft_parts.errors import PartsError
 from platformdirs import user_cache_path
 
 from craft_application import _config, commands, errors, models, util
-from craft_application.errors import PathInvalidError
+from craft_application.errors import InvalidUbuntuProStatusError, PathInvalidError
+from craft_application.util import ProServices, ValidatorOptions
 
 if TYPE_CHECKING:
     import argparse
@@ -176,6 +178,10 @@ class Application:
         # Set a globally usable project directory for the application.
         # This may be overridden by specific application implementations.
         self.project_dir = pathlib.Path.cwd()
+        # Ubuntu ProServices instance containing relevant pro services specified by the user.
+        # Storage of this instance may change in the future as we migrate Pro operations towards
+        # an application service.
+        self._pro_services: ProServices | None = None
 
         if self.is_managed():
             self._work_dir = pathlib.Path("/root")
@@ -358,6 +364,7 @@ class Application:
             "lifecycle",
             cache_dir=self.cache_dir,
             work_dir=self._work_dir,
+            use_host_sources=bool(self._pro_services),
         )
         self.services.update_kwargs(
             "provider",
@@ -400,6 +407,41 @@ class Application:
     def is_managed(self) -> bool:
         """Shortcut to tell whether we're running in managed mode."""
         return self.services.get_class("provider").is_managed()
+
+    def _configure_instance_with_pro(self, instance: craft_providers.Executor) -> None:
+        """Configure an instance with Ubuntu Pro. Currently we only support LXD instances."""
+        # TODO: Remove craft_provider typing ignores after feature/pro-sources # noqa: FIX002
+        # has been merged into main.
+
+        # Check if the instance has pro services enabled and if they match the requested services.
+        # If not, raise an Exception and bail out.
+        if (
+            isinstance(instance, craft_providers.lxd.LXDInstance)
+            and instance.pro_services is not None  # type: ignore  # noqa: PGH003
+            and instance.pro_services != self._pro_services  # type: ignore  # noqa: PGH003
+        ):
+            raise InvalidUbuntuProStatusError(self._pro_services, instance.pro_services)  # type: ignore  # noqa: PGH003
+
+        # if pro services are required, ensure the pro client is
+        # installed, attached and the correct services are enabled
+        if self._pro_services:
+            # Suggestion: create a Pro abstract class used to ensure minimum support by instances.
+            # we can then check for pro support by inheritance.
+            if not isinstance(instance, craft_providers.lxd.LXDInstance):
+                raise errors.UbuntuProNotSupportedError(
+                    "Ubuntu Pro builds are only supported with LXC backend."
+                )
+
+            craft_cli.emit.debug(
+                f"Enabling Ubuntu Pro Services {self._pro_services}, {set(self._pro_services)}"
+            )
+            instance.install_pro_client()  # type: ignore  # noqa: PGH003
+            instance.attach_pro_subscription()  # type: ignore  # noqa: PGH003
+            instance.enable_pro_service(self._pro_services)  # type: ignore  # noqa: PGH003
+
+        # Cache the current pro services, for prior checks in reentrant calls.
+        if self._pro_services is not None:
+            instance.pro_services = self._pro_services  # type: ignore  # noqa: PGH003
 
     def run_managed(self, platform: str | None, build_for: str | None) -> None:
         """Run the application in a managed instance."""
@@ -585,6 +627,37 @@ class Application:
                     resolution="Ensure the path entered is correct.",
                 )
 
+    @staticmethod
+    def _check_pro_requirement(
+        pro_services: ProServices | None,
+        run_managed: bool,  # noqa: FBT001
+        is_managed: bool,  # noqa: FBT001
+    ) -> None:
+        craft_cli.emit.debug(
+            f"pro_services: {pro_services}, run_managed: {run_managed}, is_managed: {is_managed}"
+        )
+        if pro_services is not None:  # should not be None for all lifecycle commands.
+            # Validate requested pro services on the host if we are running in destructive mode.
+            if not run_managed and not is_managed:
+                craft_cli.emit.debug(
+                    f"Validating requested Ubuntu Pro status on host: {pro_services}"
+                )
+                pro_services.validate_environment()
+            # Validate requested pro services running in managed mode inside a managed instance.
+            elif run_managed and is_managed:
+                craft_cli.emit.debug(
+                    f"Validating requested Ubuntu Pro status in managed instance: {pro_services}"
+                )
+                pro_services.validate_environment()
+            # Validate pro attachment and service names on the host before starting a managed instance.
+            elif run_managed and not is_managed:
+                craft_cli.emit.debug(
+                    f"Validating requested Ubuntu Pro attachment on host: {pro_services}"
+                )
+                pro_services.validate_environment(
+                    options=ValidatorOptions.AVAILABILITY,
+                )
+
         fetch_service_policy: str | None = getattr(args, "fetch_service_policy", None)
         if fetch_service_policy:
             self._enable_fetch_service = True
@@ -605,63 +678,63 @@ class Application:
     def _run_inner(self) -> int:
         """Actual run implementation."""
         dispatcher = self._get_dispatcher()
-        command = cast(
-            commands.AppCommand,
-            dispatcher.load_command(self.app_config),
-        )
-        parsed_args = dispatcher.parsed_args()
-        platform = self.get_arg_or_config(parsed_args, "platform")
-        build_for = self.get_arg_or_config(parsed_args, "build_for")
-
-        # Some commands (e.g. remote build) can allow multiple platforms
-        # or build-fors, comma-separated. In these cases, we create the
-        # project using the first defined platform.
-        if platform and "," in platform:
-            platform = platform.split(",", maxsplit=1)[0]
-        if build_for and "," in build_for:
-            build_for = build_for.split(",", maxsplit=1)[0]
-        craft_cli.emit.debug(f"Build plan: platform={platform}, build_for={build_for}")
-
-        self._pre_run(dispatcher)
-
-        if command.needs_project(parsed_args):
-            project_service = self.services.get("project")
-            # This branch always runs, except during testing.
-            if not project_service.is_configured:
-                project_service.configure(platform=platform, build_for=build_for)
-
-        managed_mode = command.run_managed(parsed_args)
-        provider_name = command.provider_name(parsed_args)
-        self._configure_services(provider_name)
-
-        return_code = 1  # General error
-        if not managed_mode:
-            # command runs in the outer instance
-            craft_cli.emit.debug(f"Running {self.app.name} {command.name} on host")
-            return_code = dispatcher.run() or os.EX_OK
-        elif not self.is_managed():
-            # command runs in inner instance, but this is the outer instance
-            self.run_managed(platform, build_for)
-            return_code = os.EX_OK
-        else:
-            # command runs in inner instance
-            return_code = dispatcher.run() or 0
-
-        return return_code
-
-    def run(self) -> int:
-        """Bootstrap and run the application."""
-        self._setup_logging()
-        self._configure_early_services()
-        self._initialize_craft_parts()
-        self._load_plugins()
-
         craft_cli.emit.debug("Preparing application...")
 
-        debug_mode = self.services.get("config").get("debug")
-
+        return_code = 1  # General error
         try:
-            return_code = self._run_inner()
+            command = cast(
+                commands.AppCommand,
+                dispatcher.load_command(self.app_config),
+            )
+
+            platform = getattr(dispatcher.parsed_args(), "platform", None)
+            build_for = getattr(dispatcher.parsed_args(), "build_for", None)
+
+            run_managed = command.run_managed(dispatcher.parsed_args())
+            is_managed = self.is_managed()
+
+            # Some commands (e.g. remote build) can allow multiple platforms
+            # or build-fors, comma-separated. In these cases, we create the
+            # project using the first defined platform.
+            if platform and "," in platform:
+                platform = platform.split(",", maxsplit=1)[0]
+            if build_for and "," in build_for:
+                build_for = build_for.split(",", maxsplit=1)[0]
+            craft_cli.emit.debug(
+                f"Build plan: platform={platform}, build_for={build_for}"
+            )
+
+            # A ProServices instance will only be available for lifecycle commands,
+            # which may consume pro packages,
+            self._pro_services = getattr(dispatcher.parsed_args(), "pro", None)
+            # Check that pro services are correctly configured if available
+            self._check_pro_requirement(
+                self._pro_services, run_managed, self.is_managed()
+            )
+
+            if run_managed or command.needs_project(dispatcher.parsed_args()):
+                self.services.project = self.get_project(
+                    platform=platform, build_for=build_for
+                )
+
+            craft_cli.emit.debug(
+                f"Build plan: platform={platform}, build_for={build_for}"
+            )
+            self._pre_run(dispatcher)
+
+            self._configure_services(provider_name)
+
+            if not run_managed:
+                # command runs in the outer instance
+                craft_cli.emit.debug(f"Running {self.app.name} {command.name} on host")
+                return_code = dispatcher.run() or os.EX_OK
+            elif not is_managed:
+                # command runs in inner instance, but this is the outer instance
+                self.run_managed(platform, build_for)
+                return_code = os.EX_OK
+            else:
+                # command runs in inner instance
+                return_code = dispatcher.run() or 0
         except craft_cli.ArgumentParsingError as err:
             print(err, file=sys.stderr)  # to stderr, as argparse normally does
             craft_cli.emit.ended_ok()

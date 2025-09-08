@@ -28,6 +28,7 @@ from typing_extensions import override
 
 from craft_application import errors, models, util
 from craft_application.commands import base
+from craft_application.util import ProServices
 
 _PACKED_FILE_LIST_PATH = ".craft/packed-files"
 
@@ -140,6 +141,23 @@ class LifecycleCommand(_BaseLifecycleCommand):
                 action="store_true",
                 help="Shell into the environment after the step has run.",
             )
+
+        supported_pro_services = ", ".join(
+            [f"'{name}'" for name in ProServices.supported_services]
+        )
+
+        parser.add_argument(
+            "--pro",
+            type=ProServices.from_csv,
+            metavar="<pro-services>",
+            help=(
+                "Enable Ubuntu Pro services for this command. "
+                f"Supported values include: {supported_pro_services}. "
+                "Multiple values can be passed separated by commas. "
+                "Note: This feature requires an Ubuntu Pro compatible host and build base."
+            ),
+            default=ProServices(),
+        )
 
         parser.add_argument(
             "--debug",
