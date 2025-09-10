@@ -15,6 +15,8 @@ Application
   artifact type.
 - Improved UX for end-of-life and near end-of-life bases with
   :py:attr:`~craft_application.application.AppMetadata.check_supported_base`.
+- When packing with ``--debug``, the offending error message will now be displayed
+  twice - once just before entering the shell, and again after the shell is closed.
 
 Configuration
 =============
