@@ -4,7 +4,7 @@
 Changelog
 *********
 
-5.10.0 (unreleased)
+5.10.0 (2025-09-10)
 -------------------
 
 Application
