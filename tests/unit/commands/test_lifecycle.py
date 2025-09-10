@@ -482,7 +482,7 @@ def test_pack_fill_parser(
         "output": pathlib.Path(output_arg),
         "fetch_service_policy": None,
         # This is here because app_metadata turns on checking unsupported bases.
-        "allow_unsupported_base": False,
+        "ignore": [],
         **shell_dict,
         **debug_dict,
         **build_env_dict,

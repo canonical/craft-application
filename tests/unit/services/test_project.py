@@ -919,7 +919,7 @@ def test_check_base_is_supported_error(
 
     with pytest.raises(
         errors.CraftValidationError,
-        match=r"(Build b|B)ase '[a-z]+@\d+\.\d+' has reached the end",
+        match=r"(Build b|B)ase '[a-z]+@\d+\.\d+' has reached end-of-life.",
     ):
         real_project_service.check_base_is_supported()
 

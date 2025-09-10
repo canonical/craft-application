@@ -670,12 +670,13 @@ class ProjectService(base.AppService):
             date
         ) or support_range.is_in_development_on(date)
 
-    def check_base_is_supported(self) -> None:
+    def check_base_is_supported(self, verb: str = "pack") -> None:
         """Check that this project's base and build-base are supported.
 
         This method assumes a single-base project. Applications that use multi-base
         projects must override this in order to use it.
 
+        :param verb: Which lifecycle verb to use in an error message (default: "pack")
         :raises: CraftValidationError if either is unsupported.
         """
         project = self.get()
@@ -718,15 +719,33 @@ class ProjectService(base.AppService):
         if base_is_supported and build_base_is_supported:
             return
         message = (
-            f"Base '{base}' has reached the end of its lifespan."
+            f"Base '{base}' has reached end-of-life."
             if not base_is_supported
-            else f"Build base '{build_base}' has reached the end of its lifespan."
+            else f"Build base '{build_base}' has reached end-of-life."
         )
         raise errors.CraftValidationError(
-            message,
-            resolution="If you know the risks and want to continue, rerun with --old-bases.",
+            f"Cannot {verb} {self._app.artifact_type}. {message}",
+            resolution="If you know the risks and want to continue, rerun with --ignore=unmaintained.",
             retcode=os.EX_DATAERR,
+            logpath_report=False,
         )
+
+    def is_effective_base_eol(self) -> bool:
+        """Determine whether the base on which to build is end-of-life."""
+        base = craft_platforms.DistroBase.from_str(self.get().effective_base)
+        return not self._is_supported_on(base=base, date=datetime.date.today())
+
+    def base_eol_soon_date(self) -> datetime.date | None:
+        """Return the date of the base's EOL if it happens soon.
+
+        :returns: The EOL date if it happens in the next 90 days, or None otherwise.
+        """
+        ninety_days_out = datetime.date.today() + datetime.timedelta(days=90)
+        base = craft_platforms.DistroBase.from_str(self.get().effective_base)
+        if self._is_supported_on(base=base, date=ninety_days_out):
+            return None
+        support_range = distro_support.get_support_range(base.distribution, base.series)
+        return support_range.end_support
 
     @final
     def deep_update(self, update: dict[str, Any]) -> None:

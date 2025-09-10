@@ -24,6 +24,7 @@ from .models import Project
 WITCHCRAFT = craft_application.AppMetadata(
     name="witchcraft",
     summary="A craft for testing craft-application with weird settings",
+    artifact_type="cauldron",
     docs_url="https://canonical-craft-application.readthedocs-hosted.com",
     source_ignore_patterns=["*.witchcraft", "witchcraft.yaml"],
     project_variables=["version"],
