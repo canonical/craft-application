@@ -14,7 +14,7 @@ Application
   ``AppMetadata`` to allow user-visible messages to refer to the app-specific output
   artifact type.
 - When packing with ``--debug``, the offending error message will now be displayed
-  at the beginning of the shell session.
+  twice - once just before entering the shell, and again after the shell is closed.
 
 Configuration
 =============
