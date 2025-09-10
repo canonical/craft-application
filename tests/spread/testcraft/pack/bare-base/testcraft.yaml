@@ -1,5 +1,4 @@
 name: pack-bare-base
-version: "0.1"
 summary: Test packing with a bare base.
 
 base: bare
@@ -8,6 +7,12 @@ platforms:
   amd64:
     build-on: [amd64, arm64, ppc64el, s390x, riscv64]
 
+adopt-info: my-test  # Check that adopt-info works.
+
 parts:
   my-test:
     plugin: nil
+    override-pull: |
+      craftctl set version=1.2.3
+    override-build: |
+      craftctl get version | grep 1.2.3

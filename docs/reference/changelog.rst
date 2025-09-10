@@ -13,6 +13,8 @@ Application
 - Add :py:attr:`~craft_application.application.AppMetadata.artifact_type` to
   ``AppMetadata`` to allow user-visible messages to refer to the app-specific output
   artifact type.
+- Improved UX for end-of-life and near end-of-life bases with
+  :py:attr:`~craft_application.application.AppMetadata.check_supported_base`.
 - When packing with ``--debug``, the offending error message will now be displayed
   twice - once just before entering the shell, and again after the shell is closed.
 
@@ -34,6 +36,16 @@ Services
 - Add an idle timer to the Provider service, so app instances can reuse a dormant
   VM or container before it automatically shuts down.
 - Bases that are in extended support are now correctly classified as EOL.
+
+5.9.1 (2025-09-04)
+------------------
+
+Services
+========
+
+- The Lifecycle Service no longer improperly caches the project (fixes ``adopt-info``).
+
+For a complete list of commits, check out the `5.9.1`_ release on GitHub.
 
 5.9.0 (2025-08-29)
 ------------------
@@ -1018,3 +1030,4 @@ For a complete list of commits, check out the `2.7.0`_ release on GitHub.
 .. _5.7.1: https://github.com/canonical/craft-application/releases/tag/5.7.1
 .. _5.8.0: https://github.com/canonical/craft-application/releases/tag/5.8.0
 .. _5.9.0: https://github.com/canonical/craft-application/releases/tag/5.9.0
+.. _5.9.1: https://github.com/canonical/craft-application/releases/tag/5.9.1
