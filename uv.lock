@@ -497,7 +497,7 @@ types = [
 requires-dist = [
     { name = "annotated-types", specifier = ">=0.6.0" },
     { name = "craft-archives", specifier = ">=2.2.0" },
-    { name = "craft-cli", git = "https://github.com/canonical/craft-cli?rev=ec5640af1e168aaa669fd9ad467bee73fd681319" },
+    { name = "craft-cli", specifier = ">=3.2.0" },
     { name = "craft-grammar", specifier = ">=2.2.0" },
     { name = "craft-parts", specifier = ">=2.21.0" },
     { name = "craft-platforms", specifier = ">=0.6.0" },
@@ -577,14 +577,18 @@ wheels = [
 
 [[package]]
 name = "craft-cli"
-version = "3.1.2.post11+gec5640a"
-source = { git = "https://github.com/canonical/craft-cli?rev=ec5640af1e168aaa669fd9ad467bee73fd681319#ec5640af1e168aaa669fd9ad467bee73fd681319" }
+version = "3.2.0"
+source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "jinja2" },
     { name = "overrides" },
     { name = "platformdirs" },
     { name = "pywin32", marker = "sys_platform == 'win32' or (extra == 'group-17-craft-application-dev-jammy' and extra == 'group-17-craft-application-dev-noble') or (extra == 'group-17-craft-application-dev-jammy' and extra == 'group-17-craft-application-dev-plucky') or (extra == 'group-17-craft-application-dev-jammy' and extra == 'group-17-craft-application-dev-questing') or (extra == 'group-17-craft-application-dev-noble' and extra == 'group-17-craft-application-dev-plucky') or (extra == 'group-17-craft-application-dev-noble' and extra == 'group-17-craft-application-dev-questing') or (extra == 'group-17-craft-application-dev-plucky' and extra == 'group-17-craft-application-dev-questing')" },
     { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/35/0a/f1612fe57295b6a69ff256dbd0826b90f70b27dda90988f972fa6f8968cc/craft_cli-3.2.0.tar.gz", hash = "sha256:557345bf1d82e93d6525f35837ddd2b216de4152f5572306ec59d805231d348b", size = 198962, upload-time = "2025-09-09T20:13:02.372Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/f0/b4/a1ced3b96007d84792a4b031d71f1007e274794747f2597f79e3071853f0/craft_cli-3.2.0-py3-none-any.whl", hash = "sha256:4889c0f4a8275703e86b7fa7ce6fbdb65f6fb47158d4f8d24b0fcbb63fa25afa", size = 46959, upload-time = "2025-09-09T20:13:00.659Z" },
 ]
 
 [[package]]

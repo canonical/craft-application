@@ -5,7 +5,7 @@ dynamic = ["version"]
 dependencies = [
     "annotated-types>=0.6.0",
     "craft-archives>=2.2.0",
-    "craft-cli @ git+https://github.com/canonical/craft-cli@ec5640af1e168aaa669fd9ad467bee73fd681319",
+    "craft-cli>=3.2.0",
     "craft-grammar>=2.2.0",
     "craft-parts>=2.21.0",
     "craft-platforms>=0.6.0",
