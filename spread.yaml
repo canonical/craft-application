@@ -128,6 +128,7 @@ prepare: |
 
 
   # Initialize LXD; some tests need it ready *before* testcraft is called
+  sudo snap install --channel=5.0/stable lxd
   lxd init --auto
 
 restore-each: |
