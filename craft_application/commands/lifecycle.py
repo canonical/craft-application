@@ -682,7 +682,7 @@ class TestCommand(PackCommand):
         provider = self._services.get("provider")
 
         fetch_service_policy = cast(
-            Literal["strict", "permissive", None],
+            Literal["strict", "permissive"] | None,
             getattr(parsed_args, "fetch_service_policy", None),
         )
         if fetch_service_policy:
