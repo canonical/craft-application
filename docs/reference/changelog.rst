@@ -4,6 +4,13 @@
 Changelog
 *********
 
+5.10.1 (unreleased)
+-------------------
+
+- The :py:class:`~craft_application.application.Application` no longer catches all
+  ``BaseException`` instances, reverting back to the previous behaviour of catching
+  ``Exception`` and ``KeyboardInterrupt`` exceptions.
+
 5.10.0 (2025-09-10)
 -------------------
 

@@ -661,7 +661,8 @@ class Application:
 
         try:
             return_code = self._run_inner()
-        except BaseException as error:  # noqa: BLE001, this is not blind due to the handler code
+        # Other BaseException classes should be passed through, not caught.
+        except (Exception, KeyboardInterrupt) as error:  # noqa: BLE001, this is not blind due to the handler code
             return_code = handle_runtime_error(
                 self.app, error, print_error=self._emit_error, debug_mode=debug_mode
             )
