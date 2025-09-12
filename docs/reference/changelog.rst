@@ -4,7 +4,7 @@
 Changelog
 *********
 
-5.10.1 (unreleased)
+5.10.1 (2025-09-12)
 -------------------
 
 - The :py:class:`~craft_application.application.Application` class no longer catches
