@@ -123,18 +123,11 @@ def process_parts(
 
     :returns: The processed parts data.
     """
-
-    def self_check(value: Any) -> bool:  # noqa: ANN401
-        return bool(
-            value == value  # pylint: disable=comparison-with-itself  # noqa: PLR0124
-        )
-
-    # TODO: make checker optional in craft-grammar.  # noqa: FIX002
     processor = GrammarProcessor(
         arch=arch,
         target_arch=target_arch,
         platforms=platform_ids,
-        checker=self_check,
+        checker=lambda _: True,
     )
 
     for part_name, part_data in parts_yaml_data.items():
