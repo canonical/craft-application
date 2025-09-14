@@ -20,6 +20,7 @@ from typing import TYPE_CHECKING
 from craft_cli import CommandGroup, emit
 
 from . import InitCommand, base
+from .lint import LintCommand
 
 if TYPE_CHECKING:  # pragma: no cover
     import argparse
@@ -29,6 +30,7 @@ def get_other_command_group() -> CommandGroup:
     """Return the lifecycle related command group."""
     commands: list[type[base.AppCommand]] = [
         InitCommand,
+        LintCommand,
         VersionCommand,
     ]
 
