@@ -23,6 +23,7 @@ from textwrap import dedent
 
 import craft_platforms
 import craft_providers.bases
+import pydantic
 import pytest
 from craft_application import util
 from craft_application.errors import CraftValidationError
@@ -374,18 +375,35 @@ def test_effective_base_unknown():
     assert exc_info.match("Could not determine effective base")
 
 
-def test_devel_base_devel_build_base(emitter):
-    """Base can be 'devel' when the build-base is 'devel'."""
+@pytest.mark.parametrize("devel_info", DEVEL_BASE_INFOS)
+def test_devel_base_devel_build_base(emitter, devel_info):
+    """Base can be a development base when the build-base is 'devel'."""
     _ = FakeBuildBaseProject(
         name="project-name",
         version="1.0",
         parts={},
         platforms={"arm64": None},  # pyright: ignore[reportArgumentType]
         base=f"ubuntu@{DEVEL_BASE_INFOS[0].current_devel_base.value}",
-        build_base=f"ubuntu@{DEVEL_BASE_INFOS[0].current_devel_base.value}",
+        build_base=f"ubuntu@{DEVEL_BASE_INFOS[0].devel_base.value}",
     )
 
     emitter.assert_message(DEVEL_BASE_WARNING)
+
+
+@pytest.mark.parametrize("devel_info", DEVEL_BASE_INFOS)
+def test_devel_base_wrong_build_base(devel_info):
+    """Must set a build-base if the base is still in development."""
+    with pytest.raises(
+        ValueError, match="A development build-base must be used when base is"
+    ):
+        FakeBuildBaseProject(
+            name="project-name",
+            version="1.0",
+            parts={},
+            platforms={"arm64": None},  # pyright: ignore[reportArgumentType]
+            base=f"ubuntu@{DEVEL_BASE_INFOS[0].current_devel_base.value}",
+            build_base=f"ubuntu@{DEVEL_BASE_INFOS[0].current_devel_base.value}",
+        )
 
 
 def test_devel_base_no_base():
@@ -413,15 +431,19 @@ def test_devel_base_no_base_alias(mocker):
     )
 
 
-def test_devel_base_no_build_base():
-    """Base can be 'devel' if the build-base is not set."""
-    _ = FakeBuildBaseProject(
-        name="project-name",
-        version="1.0",
-        parts={},
-        base=f"ubuntu@{DEVEL_BASE_INFOS[0].current_devel_base.value}",
-        platforms={"arm64": None},  # pyright: ignore[reportArgumentType]
-    )
+@pytest.mark.parametrize("devel_info", DEVEL_BASE_INFOS)
+def test_devel_base_no_build_base(devel_info):
+    with pytest.raises(
+        ValueError, match="A development build-base must be used when base is"
+    ):
+        FakeBuildBaseProject(
+            name="project-name",
+            version="1.0",
+            parts={},
+            platforms={"arm64": None},  # pyright: ignore[reportArgumentType]
+            base=f"ubuntu@{DEVEL_BASE_INFOS[0].current_devel_base.value}",
+            build_base=None,
+        )
 
 
 def test_devel_base_error():
@@ -600,3 +622,33 @@ def test_invalid_part_error(basic_project_dict):
     )
     with pytest.raises(CraftValidationError, match=re.escape(expected)):
         Project.from_yaml_data(basic_project_dict, filepath=pathlib.Path("bla.yaml"))
+
+
+@pytest.mark.parametrize(
+    "updates",
+    [
+        pytest.param({}, id="unchanged"),
+        pytest.param({"base": "bare", "build-base": "ubuntu@24.04"}, id="bare-base"),
+    ],
+)
+def test_project_variants_validate_success(basic_project_dict, updates):
+    basic_project_dict.update(updates)
+
+    Project.model_validate(basic_project_dict)
+
+
+@pytest.mark.parametrize(
+    ("updates", "match"),
+    [
+        pytest.param(
+            {"base": "bare"},
+            "A build-base is required if base is 'bare'",
+            id="bare-base",
+        )
+    ],
+)
+def test_project_variants_validate_error(basic_project_dict, updates, match):
+    basic_project_dict.update(updates)
+
+    with pytest.raises(pydantic.ValidationError, match=match):
+        Project.model_validate(basic_project_dict)

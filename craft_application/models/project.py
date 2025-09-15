@@ -27,6 +27,7 @@ import craft_providers.bases
 import pydantic
 from craft_cli import emit
 from craft_providers.errors import BaseConfigurationError
+from typing_extensions import Self
 
 from craft_application.models import base
 from craft_application.models.constraints import (
@@ -56,8 +57,7 @@ class DevelBaseInfo:
 # A list of DevelBaseInfo objects that define an OS's current devel base and devel base.
 DEVEL_BASE_INFOS = [
     DevelBaseInfo(
-        # current_devel_base should point to 25.04, which is not available yet
-        current_devel_base=craft_providers.bases.ubuntu.BuilddBaseAlias.DEVEL,
+        current_devel_base=craft_providers.bases.ubuntu.BuilddBaseAlias.QUESTING,
         devel_base=craft_providers.bases.ubuntu.BuilddBaseAlias.DEVEL,
     ),
 ]
@@ -276,8 +276,8 @@ class Project(base.CraftBaseModel):
     ) -> str:
         """Validate the build-base is 'devel' for the current devel base."""
         base = info.data.get("base")
-        # if there is no base, do not validate the build-base
-        if not base:
+        # if there is no base or it's bare, do not validate the build-base
+        if not base or base == "bare":
             return build_base
 
         base_alias = cls._providers_base(base)
@@ -300,3 +300,14 @@ class Project(base.CraftBaseModel):
                     )
 
         return build_base
+
+    @pydantic.model_validator(mode="after")
+    def _validate_bare_base_requires_build_base(self) -> Self:
+        """Validate that a build-base must be provided if base is bare."""
+        if self.base != "bare":
+            return self
+
+        if not self.build_base:
+            raise ValueError(f"A build-base is required if base is {self.base!r}")
+
+        return self

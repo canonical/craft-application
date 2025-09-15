@@ -4,6 +4,120 @@
 Changelog
 *********
 
+5.10.1 (2025-09-12)
+-------------------
+
+- The :py:class:`~craft_application.application.Application` class no longer catches
+  all ``BaseException`` instances, reverting back to the previous behaviour of
+  catching ``Exception`` and ``KeyboardInterrupt`` exceptions.
+
+5.10.0 (2025-09-10)
+-------------------
+
+Application
+===========
+
+- Add :py:attr:`~craft_application.application.AppMetadata.artifact_type` to
+  ``AppMetadata`` to allow user-visible messages to refer to the app-specific output
+  artifact type.
+- Improved UX for end-of-life and near end-of-life bases with
+  :py:attr:`~craft_application.application.AppMetadata.check_supported_base`.
+- When packing with ``--debug``, the offending error message will now be displayed
+  twice - once just before entering the shell, and again after the shell is closed.
+
+Configuration
+=============
+
+- Add an ``idle_time`` configuration option that sets the Provider service's idle
+  timer duration.
+
+Models
+======
+
+- Support ``debug`` and ``debug-each`` in all locations in the ``spread.yaml`` model.
+- Update the current development release for the ``Project`` model.
+
+Services
+========
+
+- Add an idle timer to the Provider service, so app instances can reuse a dormant
+  VM or container before it automatically shuts down.
+- Bases that are in extended support are now correctly classified as EOL.
+
+5.9.1 (2025-09-04)
+------------------
+
+Services
+========
+
+- The Lifecycle Service no longer improperly caches the project (fixes ``adopt-info``).
+
+For a complete list of commits, check out the `5.9.1`_ release on GitHub.
+
+5.9.0 (2025-08-29)
+------------------
+
+Services
+========
+
+- Previously, only top-level keys in a project file could be managed with ``craftctl``.
+  Now, nested keys in a project file can be managed.
+
+- Previously, all project variables could only be set by a single part. Now the
+  handling is more granular — each project variable can be set by a different
+  part.
+
+- Applications can override the Project service's
+  :py:meth:`~craft_application.project.ProjectService._create_project_vars`
+  method to define which keys can be managed and which parts can set them.
+
+For a complete list of commits, check out the `5.9.0`_ release on GitHub.
+
+5.8.0 (2025-08-28)
+------------------
+
+Application
+===========
+
+- Add the ``for`` selector to the YAML grammar. With it, crafters can set different
+  values depending on the active platform.
+
+Services
+========
+
+- Project Service: Allow using ``base: bare`` with
+  :py:attr:`~craft_application.application.AppMetadata.check_supported_base`.
+
+For a complete list of commits, check out the `5.8.0`_ release on GitHub.
+
+5.7.1 (2025-08-27)
+------------------
+
+Services
+========
+
+- Prevent the reuse of instances created before the State service was added by
+  updating the Provider service's compatibility tag.
+
+Pytest plugin
+=============
+
+- Automatically reset Craft Parts callbacks after each test run with the
+  :py:func:`~craft_application.pytest_plugin._reset_craft_parts_callbacks` fixture.
+
+For a complete list of commits, check out the `5.7.1`_ release on GitHub.
+
+5.6.5 (2025-08-20)
+------------------
+
+Services
+========
+
+- Prevent the reuse of instances created before the State service by
+  updating the Provider service's compatibility tag.
+
+For a complete list of commits, check out the `5.6.5`_ release on GitHub.
+
 5.7.0 (2025-08-15)
 ------------------
 
@@ -918,4 +1032,9 @@ For a complete list of commits, check out the `2.7.0`_ release on GitHub.
 .. _5.6.1: https://github.com/canonical/craft-application/releases/tag/5.6.1
 .. _5.6.2: https://github.com/canonical/craft-application/releases/tag/5.6.2
 .. _5.6.3: https://github.com/canonical/craft-application/releases/tag/5.6.3
+.. _5.6.5: https://github.com/canonical/craft-application/releases/tag/5.6.5
 .. _5.7.0: https://github.com/canonical/craft-application/releases/tag/5.7.0
+.. _5.7.1: https://github.com/canonical/craft-application/releases/tag/5.7.1
+.. _5.8.0: https://github.com/canonical/craft-application/releases/tag/5.8.0
+.. _5.9.0: https://github.com/canonical/craft-application/releases/tag/5.9.0
+.. _5.9.1: https://github.com/canonical/craft-application/releases/tag/5.9.1

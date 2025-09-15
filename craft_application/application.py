@@ -28,16 +28,16 @@ import warnings
 from dataclasses import dataclass, field
 from functools import cached_property
 from importlib import metadata
-from typing import TYPE_CHECKING, Any, Literal, cast, final
+from typing import TYPE_CHECKING, Annotated, Any, Literal, cast, final
 
+import annotated_types
 import craft_cli
-import craft_platforms
 import craft_providers
-from craft_parts.errors import PartsError
 from platformdirs import user_cache_path
 
 from craft_application import _config, commands, errors, models, util
 from craft_application.errors import PathInvalidError
+from craft_application.util.logging import handle_runtime_error
 
 if TYPE_CHECKING:
     import argparse
@@ -76,6 +76,16 @@ class AppMetadata:
     version: str = field(init=False)
     docs_url: str | None = None
     """The root URL for the app's documentation."""
+    artifact_type: Annotated[
+        str,
+        annotated_types.IsAscii,
+        annotated_types.LowerCase,
+    ] = "artifact"
+    """The name to refer to the output artifact for this app.
+
+    This gets used in messages and should be an all lower-case single-word value, like
+    ``snap`` or ``rock``. Defaults to ``artifact``.
+    """
     source_ignore_patterns: list[str] = field(default_factory=list[str])
     managed_instance_project_path = pathlib.PurePosixPath("/root/project")
     project_variables: list[str] = field(default_factory=lambda: ["version"])
@@ -101,6 +111,9 @@ class AppMetadata:
 
     When False, the repositories are not migrated and base support is not checked.
     """
+
+    enable_for_grammar: bool = False
+    """Whether this application supports the 'for' variant of advanced grammar."""
 
     def __post_init__(self) -> None:
         setter = super().__setattr__
@@ -648,68 +661,11 @@ class Application:
 
         try:
             return_code = self._run_inner()
-        except craft_cli.ArgumentParsingError as err:
-            print(err, file=sys.stderr)  # to stderr, as argparse normally does
-            craft_cli.emit.ended_ok()
-            return_code = os.EX_USAGE
-        except KeyboardInterrupt as err:
-            return_code = 128 + signal.SIGINT
-            self._emit_error(
-                craft_cli.CraftError("Interrupted.", retcode=return_code), cause=err
+        # Other BaseException classes should be passed through, not caught.
+        except (Exception, KeyboardInterrupt) as error:  # noqa: BLE001, this is not blind due to the handler code
+            return_code = handle_runtime_error(
+                self.app, error, print_error=self._emit_error, debug_mode=debug_mode
             )
-        except craft_cli.CraftError as err:
-            self._emit_error(err)
-            return_code = err.retcode
-        except PartsError as err:
-            self._emit_error(
-                errors.PartsLifecycleError.from_parts_error(err),
-                cause=err,
-            )
-            return_code = 1
-        except craft_providers.ProviderError as err:
-            self._emit_error(
-                craft_cli.CraftError(
-                    err.brief, details=err.details, resolution=err.resolution
-                ),
-                cause=err,
-            )
-            return_code = 1
-        except craft_platforms.CraftPlatformsError as err:
-            self._emit_error(
-                craft_cli.CraftError(
-                    err.args[0],
-                    details=err.details,
-                    resolution=err.resolution,
-                    reportable=err.reportable,
-                    docs_url=err.docs_url,
-                    doc_slug=err.doc_slug,
-                    logpath_report=err.logpath_report,
-                    retcode=err.retcode,
-                ),
-                cause=err,
-            )
-            return_code = err.retcode
-        except Exception as err:
-            if isinstance(err, craft_platforms.CraftError):
-                transformed = craft_cli.CraftError(
-                    err.args[0],
-                    details=err.details,
-                    resolution=err.resolution,
-                    docs_url=getattr(err, "docs_url", None),
-                    doc_slug=getattr(err, "doc_slug", None),
-                    logpath_report=getattr(err, "logpath_report", True),
-                    reportable=getattr(err, "reportable", True),
-                    retcode=getattr(err, "retcode", 1),
-                )
-                return_code = transformed.retcode
-            else:
-                transformed = craft_cli.CraftError(
-                    f"{self.app.name} internal error: {err!r}"
-                )
-                return_code = os.EX_SOFTWARE
-            self._emit_error(transformed, cause=err)
-            if debug_mode:
-                raise
         else:
             craft_cli.emit.ended_ok()
 
@@ -730,7 +686,18 @@ class Application:
         craft_cli.emit.error(error)
 
     def _get_project_vars(self, yaml_data: dict[str, Any]) -> dict[str, str]:
-        """Return a dict with project variables to be expanded."""
+        """Return a dict with project variables to be expanded.
+
+        DEPRECATED: This method is deprecated and is not called by default.
+        Use ``ProjectService.project_vars`` instead.
+        """
+        warnings.warn(
+            "'Application._get_project_vars' is deprecated. "
+            "Use 'ProjectService.project_vars' instead.",
+            category=DeprecationWarning,
+            stacklevel=1,
+        )
+
         pvars: dict[str, str] = {}
         for var in self.app.project_variables:
             pvars[var] = str(yaml_data.get(var, ""))

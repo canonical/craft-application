@@ -13,8 +13,10 @@
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Unit tests for the ProjectService."""
 
+import copy
 import dataclasses
 import pathlib
+import re
 import textwrap
 from typing import Any, cast
 from unittest import mock
@@ -23,10 +25,11 @@ import craft_platforms
 import freezegun
 import pytest
 import pytest_mock
-from craft_application import errors
+from craft_application import errors, models
 from craft_application.application import AppMetadata
 from craft_application.services.project import ProjectService
 from craft_application.services.service_factory import ServiceFactory
+from craft_parts import ProjectVar, ProjectVarInfo
 from hypothesis import given, strategies
 
 
@@ -304,7 +307,7 @@ def test_get_platforms_bad_value(
 @pytest.mark.parametrize(
     ("data", "expected"),
     [
-        pytest.param({}, {"version": ""}, id="empty"),
+        pytest.param({}, {"version": None}, id="empty"),
         pytest.param(
             {"version": "3.14", "unrelated": "pi"},
             {"version": "3.14"},
@@ -313,7 +316,38 @@ def test_get_platforms_bad_value(
     ],
 )
 def test_get_project_vars(real_project_service: ProjectService, data, expected):
-    assert real_project_service._get_project_vars(data) == expected
+    real_project_service._project_vars = real_project_service._create_project_vars(data)
+    expected_warning = re.escape(
+        "'ProjectService._get_project_vars' is deprecated. "
+        "Use 'project_vars' property instead."
+    )
+    with pytest.warns(DeprecationWarning, match=expected_warning):
+        project_vars = real_project_service._get_project_vars(data)
+
+    assert project_vars == expected
+
+
+@pytest.mark.parametrize(
+    ("data", "expected"),
+    [
+        pytest.param(
+            {},
+            ProjectVarInfo.unmarshal({"version": {}}),
+            id="empty",
+        ),
+        pytest.param(
+            {"version": "3.14", "unrelated": "pi"},
+            ProjectVarInfo.unmarshal({"version": ProjectVar(value="3.14")}),
+            id="version-set",
+        ),
+    ],
+)
+def test_project_vars(real_project_service: ProjectService, data, expected):
+    real_project_service._project_vars = real_project_service._create_project_vars(data)
+
+    project_vars = real_project_service.project_vars
+
+    assert project_vars == expected
 
 
 @given(
@@ -645,6 +679,46 @@ def test_render_for_invalid_platform(
 
 
 @pytest.mark.parametrize(
+    ("app_metadata", "expected"),
+    [
+        ({"enable_for_grammar": False}, None),
+        ({"enable_for_grammar": True}, "source-1"),
+    ],
+    indirect=["app_metadata"],
+)
+@pytest.mark.usefixtures("fake_project_file")
+def test_render_for_grammar(
+    real_project_service: ProjectService,
+    fake_project_dict,
+    mocker,
+    app_metadata,
+    expected,
+):
+    """For statements only evaluate when 'enable_for_grammar' is set.
+
+    Note that 'for' is still accepted when 'enable_for_grammar' is false,
+    but it won't do anything because it won't match any platforms in craft-grammar.
+    """
+    project_data = copy.deepcopy(fake_project_dict)
+    project_data["parts"] = {
+        "part1": {
+            "plugin": "nil",
+            "source": [
+                {"for risky": "source-1"},
+                {"for s390x": "source-2"},
+            ],
+        },
+    }
+    mocker.patch.object(real_project_service, "_preprocess", return_value=project_data)
+
+    result = real_project_service.render_for(
+        build_for="arm64", build_on="riscv64", platform="risky"
+    )
+
+    assert result.parts["part1"]["source"] == expected
+
+
+@pytest.mark.parametrize(
     "build_for", [*(arch.value for arch in craft_platforms.DebianArchitecture), "all"]
 )
 @pytest.mark.usefixtures("fake_project_file")
@@ -799,15 +873,14 @@ def test_mandatory_adoptable_fields(
     )
 
 
-@freezegun.freeze_time("2026-01-01")
+@freezegun.freeze_time("2025-06-01")
 @pytest.mark.parametrize(
     ("base", "build_base"),
     [
-        ("ubuntu@18.04", None),
-        ("ubuntu@20.04", None),
+        pytest.param("bare", "ubuntu@24.04", id="bare-base"),
         ("ubuntu@22.04", None),
         ("ubuntu@24.04", None),
-        ("ubuntu@25.10", None),
+        pytest.param("ubuntu@25.10", "ubuntu@devel", id="devel-on-devel"),
         pytest.param("nonexistent@0.0", None, id="nonexistent-base"),
         pytest.param("ubuntu@22.04", "ubuntu@devel", id="build-on-devel"),
     ],
@@ -817,19 +890,20 @@ def test_check_base_is_supported(
     real_project_service: ProjectService, base: str, build_base: str | None
 ):
     real_project_service.configure(platform=None, build_for=None)
-    real_project_service.get().base = base
     if build_base:
         real_project_service.get().build_base = build_base
+    real_project_service.get().base = base
 
     real_project_service.check_base_is_supported()
 
 
-@freezegun.freeze_time("2030-01-01")
+@freezegun.freeze_time("2027-01-01")
 @pytest.mark.parametrize(
     ("base", "build_base"),
     [
         ("ubuntu@16.04", None),
         ("ubuntu@18.04", None),
+        ("ubuntu@20.04", None),
         pytest.param("ubuntu@25.10", None, id="interim-base-eol"),
         pytest.param("ubuntu@24.04", "ubuntu@25.04", id="interim-build-base-eol"),
     ],
@@ -845,6 +919,57 @@ def test_check_base_is_supported_error(
 
     with pytest.raises(
         errors.CraftValidationError,
-        match=r"(Build b|B)ase '[a-z]+@\d+\.\d+' has reached the end",
+        match=r"(Build b|B)ase '[a-z]+@\d+\.\d+' has reached end-of-life.",
     ):
         real_project_service.check_base_is_supported()
+
+
+def test_deep_update(fake_project_file, real_project_service: ProjectService):
+    """Test the deep update of a project model."""
+    fake_project_file.write_text(
+        textwrap.dedent(
+            """
+            name: test-project
+            platforms:
+              riscv64:
+            version: "1.0"
+            parts:
+              some-part:
+                plugin: nil
+              other-part:
+                plugin: nil
+                source: other-source
+            """
+        )
+    )
+
+    real_project_service.configure(platform=None, build_for=None)
+    real_project_service.get()
+    real_project_service.deep_update(
+        {
+            "name": "updated-name",
+            "parts": {
+                "some-part": {
+                    "source": "new-source",
+                },
+            },
+        }
+    )
+
+    assert real_project_service.get() == models.Project.unmarshal(
+        {
+            "name": "updated-name",
+            "platforms": {"riscv64": None},
+            "version": "1.0",
+            "parts": {
+                "some-part": {
+                    "plugin": "nil",
+                    "source": "new-source",
+                },
+                "other-part": {
+                    "plugin": "nil",
+                    "source": "other-source",
+                },
+            },
+        }
+    )

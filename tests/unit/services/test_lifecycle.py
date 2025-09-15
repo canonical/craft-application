@@ -720,7 +720,7 @@ def test_lifecycle_project_variables(
         cache_dir=tmp_path / "cache",
         platform=None,
     )
-    service._project = fake_project
+    fake_services.get("project")._project_model = fake_project
     service._lcm = mock.MagicMock(spec=LifecycleManager)
     service._lcm.project_info = mock.MagicMock(spec=ProjectInfo)
     service._lcm.project_info.get_project_var = lambda _: "foo"

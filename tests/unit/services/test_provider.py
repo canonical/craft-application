@@ -580,7 +580,10 @@ def test_get_base_buildd(
 
     check.is_instance(base, base_class)
     check.equal(base.alias, alias)
-    check.equal(base.compatibility_tag, f"testcraft-{base_class.compatibility_tag}")
+    check.equal(
+        base.compatibility_tag,
+        f"testcraft-{base_class.compatibility_tag}{provider_service.compatibility_tag}",
+    )
     check.equal(base._environment, environment)
 
     # Verify that the two packages we care about in order to support Craft Archives
@@ -626,6 +629,7 @@ def test_instance(
             allow_unstable=allow_unstable,
             prepare_instance=None,
             use_base_instance=True,
+            shutdown_delay_mins=None,
         )
     with check:
         assert instance.mount.mock_calls == [

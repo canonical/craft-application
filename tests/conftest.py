@@ -40,7 +40,6 @@ from craft_application.services.fetch import FetchService
 from craft_application.services.project import ProjectService
 from craft_application.util import yaml
 from craft_cli import EmitterMode, emit
-from craft_parts import callbacks
 from jinja2 import FileSystemLoader
 from typing_extensions import override
 
@@ -173,12 +172,6 @@ def reset_services():
     service_factory.ServiceFactory.reset()
 
 
-@pytest.fixture(autouse=True)
-def reset_craft_parts_callbacks():
-    yield
-    callbacks.unregister_all()
-
-
 @pytest.fixture
 def in_project_dir(project_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Put us in the project directory made by project_path."""
@@ -216,18 +209,27 @@ def default_app_metadata(fake_config_model) -> craft_application.AppMetadata:
 
 
 @pytest.fixture
-def app_metadata(fake_config_model) -> craft_application.AppMetadata:
+def app_metadata(request, fake_config_model) -> craft_application.AppMetadata:
+    """Default app metadata.
+
+    :param request: kwargs to override metadata
+    """
+    kwargs = {
+        "source_ignore_patterns": ["*.snap", "*.charm", "*.starcraft"],
+        "docs_url": "www.testcraft.example/docs/{version}",
+        "ConfigModel": fake_config_model,
+        "supports_multi_base": True,
+        "always_repack": False,
+        "check_supported_base": True,
+        **getattr(request, "param", {}),
+    }
+
     with pytest.MonkeyPatch.context() as m:
         m.setattr(metadata, "version", lambda _: "3.14159")
         return craft_application.AppMetadata(
             "testcraft",
             "A fake app for testing craft-application",
-            source_ignore_patterns=["*.snap", "*.charm", "*.starcraft"],
-            docs_url="www.testcraft.example/docs/{version}",
-            ConfigModel=fake_config_model,
-            supports_multi_base=True,
-            always_repack=False,
-            check_supported_base=True,
+            **kwargs,
         )
 
 
@@ -338,6 +340,9 @@ def fake_project_service_class(fake_project_dict) -> type[services.ProjectServic
             self._project_model = value
             self._platform = next(iter(value.platforms))
             self._build_for = value.platforms[self._platform].build_for[0]  # type: ignore[reportOptionalSubscript]
+            self._project_vars = craft_parts.ProjectVarInfo.unmarshal(
+                {"a": craft_parts.ProjectVar(value="foo").marshal()}
+            )
 
         @override
         def get_partitions_for(

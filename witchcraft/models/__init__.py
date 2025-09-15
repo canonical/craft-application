@@ -14,3 +14,10 @@
 # You should have received a copy of the GNU Lesser General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Models for witchcraft."""
+
+from .project import Component, Project
+
+__all__ = [
+    "Component",
+    "Project",
+]

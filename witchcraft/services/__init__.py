@@ -25,5 +25,12 @@ def register_services() -> None:
     adds or overrides.
     """
     craft_application.ServiceFactory.register(
-        "package", "PackageService", module="witchcraft.services.package"
+        "package",
+        "PackageService",
+        module="witchcraft.services.package",
+    )
+    craft_application.ServiceFactory.register(
+        "project",
+        "ProjectService",
+        module="witchcraft.services.project",
     )

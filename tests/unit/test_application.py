@@ -35,6 +35,7 @@ import craft_platforms
 import craft_providers
 import pytest
 import pytest_check
+import pytest_mock
 from craft_application import (
     application,
     commands,
@@ -49,7 +50,7 @@ from craft_application.commands import (
 from craft_application.util import (
     get_host_architecture,  # pyright: ignore[reportGeneralTypeIssues]
 )
-from craft_cli import emit
+from craft_cli import CraftError, emit
 from craft_parts.plugins.plugins import PluginType
 
 from tests.conftest import FakeApplication
@@ -113,6 +114,17 @@ def test_app_metadata_default_mandatory_adoptable_fields():
         summary="dummy craft",
     )
     assert app.mandatory_adoptable_fields == ["version"]
+
+
+def test_app_project_vars_deprecated(app):
+    expected = re.escape(
+        "'Application._get_project_vars' is deprecated. "
+        "Use 'ProjectService.project_vars' instead."
+    )
+    with pytest.warns(DeprecationWarning, match=expected):
+        project_vars = app._get_project_vars({"version": "test-version"})
+
+    assert project_vars == {"version": "test-version"}
 
 
 class FakePlugin(craft_parts.plugins.Plugin):
@@ -734,6 +746,33 @@ def test_run_exception_transforms(
     assert app.run() == transformed.retcode
 
     mock_error.assert_called_once_with(transformed)
+
+
+@pytest.mark.usefixtures("production_mode")
+@pytest.mark.parametrize(
+    "exception_cls", [Exception, KeyboardInterrupt, CraftError, ValueError]
+)
+def test_run_catches_exception(
+    mocker: pytest_mock.MockerFixture,
+    app: application.Application,
+    exception_cls: type[BaseException],
+):
+    mocker.patch.object(app, "_run_inner", side_effect=exception_cls("Boo hoo"))
+
+    # Check that it doesn't exit with success to know we caught an exception.
+    assert app.run() != 0
+
+
+@pytest.mark.parametrize("exception_cls", [BaseException, GeneratorExit, SystemExit])
+def test_run_doesnt_catch_baseexception(
+    mocker: pytest_mock.MockerFixture,
+    app: application.Application,
+    exception_cls: type[BaseException],
+):
+    mocker.patch.object(app, "_run_inner", side_effect=exception_cls("Boo hoo"))
+
+    with pytest.raises(exception_cls):
+        app.run()
 
 
 @pytest.mark.parametrize(

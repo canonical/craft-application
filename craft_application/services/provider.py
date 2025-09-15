@@ -88,6 +88,11 @@ class ProviderService(base.AppService):
             artifact=None, resources=None
         )
 
+    @property
+    def compatibility_tag(self) -> str:
+        """Get craft-application's suffix for the compatibility tag."""
+        return ".1"
+
     @classmethod
     def is_managed(cls) -> bool:
         """Determine whether we're running in managed mode."""
@@ -171,6 +176,7 @@ class ProviderService(base.AppService):
         provider = self.get_provider(name=self.__provider_name)
 
         provider.ensure_provider_is_available()
+        shutdown_delay = self._services.get("config").get("idle_mins")
 
         if clean_existing:
             self._clean_instance(provider, work_dir, build_info, project_name)
@@ -184,6 +190,7 @@ class ProviderService(base.AppService):
             allow_unstable=allow_unstable,
             use_base_instance=use_base_instance,
             prepare_instance=prepare_instance,
+            shutdown_delay_mins=shutdown_delay,
         ) as instance:
             instance.mount(
                 host_source=work_dir,
@@ -225,7 +232,7 @@ class ProviderService(base.AppService):
             self.packages.extend(["gpg", "dirmngr"])
         return base_class(
             alias=alias,  # type: ignore[arg-type]
-            compatibility_tag=f"{self._app.name}-{base_class.compatibility_tag}",
+            compatibility_tag=f"{self._app.name}-{base_class.compatibility_tag}{self.compatibility_tag}",
             hostname=instance_name,
             snaps=self.snaps,
             environment=self.environment,
