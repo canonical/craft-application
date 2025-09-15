@@ -8,10 +8,10 @@ Fetch Service sessions
     subject to change.
 
 
-|app| integrates Fetch Service, which validates all dependencies that
-it downloads when it begins building |artifact-indefinite|. These dependencies are
-either software included in the |artifact| itself, or software that the build tool or
-build system needs.
+|app| integrates Fetch Service, which validates all dependencies that are downloaded
+during the build of |artifact-indefinite|. These dependencies are either software
+included in the |artifact| itself, or software that the build tool or build system
+needs.
 
 There are two modes of integration between |app| builds and Fetch Service
 sessions: managed, and external.
@@ -51,7 +51,7 @@ configure the following environment variables before invoking the ``pack`` comma
     * - Variable
       - Description
     * - ``http_proxy``, ``https_proxy``
-      - Must point to the full session url, including server and port.
+      - Must point to the full session url, including scheme, server and port.
     * - ``CRAFT_PROXY_CERT``
       - Must point to the Fetch Service's CA certificate. This file must be locally
         accessible by |app|.
