@@ -1,6 +1,6 @@
 
-.. |star| replace:: package
-.. |app-command| replace:: <craft-app>
-.. |Starcraft| replace:: Craft Application
+.. |app| replace:: Craft Application
+.. |artifact| replace:: artifact
+.. |artifact-indefinite| replace:: an artifact
 
 .. include:: ../common/craft-application/reference/fetch-service.rst
