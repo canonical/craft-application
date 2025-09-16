@@ -13,7 +13,7 @@ during |artifact-indefinite| build. These dependencies are either software
 included in the |artifact| itself, or software that the build tool or build system
 needs.
 
-Fetch Service operates in *sessions*. |app| opens these sessions in one of two modes,
+Fetch Service operates in *sessions*, which can be employed in one of two modes:
 managed or external.
 
 Managed sessions
