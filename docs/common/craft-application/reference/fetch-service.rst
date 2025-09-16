@@ -8,13 +8,13 @@ Fetch Service sessions
     subject to change.
 
 
-|app| integrates Fetch Service, which validates all dependencies that are downloaded
-during the build of |artifact-indefinite|. These dependencies are either software
+|app| uses Fetch Service to validate all dependencies that are downloaded
+during |artifact-indefinite| build. These dependencies are either software
 included in the |artifact| itself, or software that the build tool or build system
 needs.
 
-There are two modes of integration between |app| builds and Fetch Service
-sessions: managed, and external.
+Fetch Service operates in *sessions*. |app| opens these sessions in one of two modes,
+managed or external.
 
 Managed sessions
 ----------------
