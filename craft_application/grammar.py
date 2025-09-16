@@ -92,13 +92,18 @@ def process_part(
                 f"Invalid grammar syntax while processing '{key}' in '{part_yaml_data}': {e}"
             ) from e
 
-        part_yaml_data[key] = post_process_grammar(processor, key, processed_grammar)
+        part_yaml_data[key] = post_process_grammar(
+            processor, key, processed_grammar, part_yaml_data
+        )
 
     return part_yaml_data
 
 
 def post_process_grammar(
-    processor: GrammarProcessor, key: str, processed_grammar: list[Any]
+    processor: GrammarProcessor,
+    key: str,
+    processed_grammar: list[Any],
+    part_yaml_data: dict[str, Any],
 ) -> list[Any]:
     """Post-process primitives returnes by the grammar processor.
 
@@ -110,7 +115,7 @@ def post_process_grammar(
     """
     if processor.variant == Variant.FOR_VARIANT:
         if key in _DICT_ONLY_VALUES:
-            return merge_processed_dict(processed_grammar)  # type: ignore[assignment]
+            return merge_processed_dict(processed_grammar, part_yaml_data)  # type: ignore[assignment]
         if key not in _NON_SCALAR_VALUES:
             return processed_grammar[0] if processed_grammar else None  # type: ignore[assignment]
     elif key not in _NON_SCALAR_VALUES or key in _DICT_ONLY_VALUES:
