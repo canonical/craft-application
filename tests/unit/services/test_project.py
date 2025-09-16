@@ -719,6 +719,51 @@ def test_render_for_grammar(
 
 
 @pytest.mark.parametrize(
+    ("app_metadata"),
+    [{"enable_for_grammar": False}],
+    indirect=["app_metadata"],
+)
+@pytest.mark.usefixtures("fake_project_file")
+def test_render_for_grammar_dict(
+    real_project_service: ProjectService,
+    fake_project_dict,
+    mocker,
+    app_metadata,
+):
+    project_data = copy.deepcopy(fake_project_dict)
+    project_data["parts"] = {
+        "part1": {
+            "plugin": "nil",
+            "organize": [
+                {
+                    "for risky": {
+                        "a": "b",
+                        "c": "d",
+                    }
+                },
+                {
+                    "for s390x": {
+                        "a": "e",
+                    }
+                },
+                {
+                    "for any": {
+                        "f": "g",
+                    }
+                },
+            ],
+        },
+    }
+    mocker.patch.object(real_project_service, "_preprocess", return_value=project_data)
+
+    result = real_project_service.render_for(
+        build_for="arm64", build_on="riscv64", platform="risky"
+    )
+
+    assert result.parts["part1"]["organize"] == {"a": "b", "c": "d", "f": "g"}
+
+
+@pytest.mark.parametrize(
     "build_for", [*(arch.value for arch in craft_platforms.DebianArchitecture), "all"]
 )
 @pytest.mark.usefixtures("fake_project_file")
