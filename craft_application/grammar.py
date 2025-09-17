@@ -104,8 +104,8 @@ def post_process_grammar(
     key: str,
     processed_grammar: list[Any],
     part_yaml_data: dict[str, Any],
-) -> list[Any]:
-    """Post-process primitives returnes by the grammar processor.
+) -> list[Any] | dict[str, str] | None:
+    """Post-process primitives returns by the grammar processor.
 
     Special cases:
     - scalar values should return as a single object, not in a list.
@@ -115,11 +115,11 @@ def post_process_grammar(
     """
     if processor.variant == Variant.FOR_VARIANT:
         if key in _DICT_ONLY_VALUES:
-            return merge_processed_dict(processed_grammar, part_yaml_data)  # type: ignore[assignment]
+            return merge_processed_dict(processed_grammar, part_yaml_data)
         if key not in _NON_SCALAR_VALUES:
-            return processed_grammar[0] if processed_grammar else None  # type: ignore[assignment]
+            return processed_grammar[0] if processed_grammar else None
     elif key not in _NON_SCALAR_VALUES or key in _DICT_ONLY_VALUES:
-        return processed_grammar[0] if processed_grammar else None  # type: ignore[assignment]
+        return processed_grammar[0] if processed_grammar else None
     return processed_grammar
 
 
