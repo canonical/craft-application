@@ -720,11 +720,11 @@ def test_render_for_grammar(
 
 @pytest.mark.parametrize(
     ("app_metadata"),
-    [{"enable_for_grammar": False}],
+    [{"enable_for_grammar": True}],
     indirect=["app_metadata"],
 )
 @pytest.mark.usefixtures("fake_project_file")
-def test_render_for_grammar_dict(
+def test_render_for_grammar_dict_duplicate_keys(
     real_project_service: ProjectService,
     fake_project_dict,
     mocker,
@@ -743,12 +743,13 @@ def test_render_for_grammar_dict(
                 },
                 {
                     "for s390x": {
-                        "a": "e",
+                        "e": "f",
                     }
                 },
                 {
                     "for any": {
-                        "f": "g",
+                        # This conflicts with key from the the first section
+                        "a": "g",
                     }
                 },
             ],
@@ -756,11 +757,14 @@ def test_render_for_grammar_dict(
     }
     mocker.patch.object(real_project_service, "_preprocess", return_value=project_data)
 
-    result = real_project_service.render_for(
-        build_for="arm64", build_on="riscv64", platform="risky"
-    )
-
-    assert result.parts["part1"]["organize"] == {"a": "b", "c": "d", "f": "g"}
+    with pytest.raises(
+        errors.CraftValidationError, match="Duplicate keys in processed dict 'a' in"
+    ):
+        real_project_service.render_for(
+            build_for="arm64",
+            build_on="riscv64",
+            platform="risky",
+        )
 
 
 @pytest.mark.parametrize(
