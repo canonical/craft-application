@@ -268,7 +268,7 @@ class FetchService(base.AppService):
     ) -> None:
         name = self._project.name
         version = self._project.version
-        platform = self._services.get("build_plan").plan()[0].platform
+        platform = self._build_info.platform
 
         manifest_path = pathlib.Path(f"{name}_{version}_{platform}.json")
         emit.debug(f"Generating craft manifest at {manifest_path}")

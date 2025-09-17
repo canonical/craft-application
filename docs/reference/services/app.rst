@@ -14,7 +14,7 @@ this should be done using a ``configure()`` method. This is not implemented in
 
 Convenience properties :py:attr:`~AppService._build_info` and
 :py:attr:`~AppService._project` allow convenient retrieval of the rendered project and
-the info for the current build from their relevant projects.
+the info for the current build.
 
 API documentation
 -----------------
