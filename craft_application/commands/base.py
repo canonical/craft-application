@@ -57,7 +57,10 @@ class AppCommand(BaseCommand):
     """Command for use with craft-application."""
 
     always_load_project: bool = False
-    """Whether to configure and load the project before starting the command."""
+    """Whether to configure and load the project before starting the command.
+
+    :deprecated: override :meth:`needs_project` instead.
+    """
 
     def __init__(self, config: dict[str, Any] | None) -> None:
         if config is None:
@@ -80,7 +83,7 @@ class AppCommand(BaseCommand):
     ) -> bool:
         """Property to determine if the command needs a project loaded.
 
-        Defaults to ``self.always_load_project``. Subclasses can override this method.
+        Defaults to :attr:`always_load_project`. Subclasses can override this method.
 
         :param parsed_args: Parsed arguments for the command.
 
@@ -122,6 +125,8 @@ class AppCommand(BaseCommand):
 
         Commands that have additional parameters to pass in managed mode should
         override this method to include those parameters.
+
+        :deprecated: and unused.
         """
         if not self.run_managed(parsed_args):
             raise RuntimeError("Unmanaged commands should not be run in managed mode.")
@@ -131,12 +136,23 @@ class AppCommand(BaseCommand):
 
     @property
     def _project(self) -> Project:
-        """Convenience property for getting the rendered project."""
+        """Access to the project.
+
+        :raises: Any exception related to rendering the project if the project has
+            not yet been created.
+        """
         return self._services.get("project").get()
 
 
 class ExtensibleCommand(AppCommand):
-    """A command that allows applications to register modifications."""
+    """Extensible application command.
+
+    An ``ExtensibleCommand`` is a special type of :py:class:`AppCommand` that can be
+    extended with the use of callback functions. It has all of the same attributes and
+    methods of the ``AppCommand``, except that ``fill_parser`` and ``run`` are marked
+    as final. When implementing or inheriting from an ``ExtensibleCommand``, the
+    equivalent protected methods are available.
+    """
 
     _parse_callback: ParserCallback | None
     _prologue: RunCallback | None

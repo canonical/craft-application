@@ -1,6 +1,6 @@
 .. _reference-models-project:
 
-.. py:currentmodule:: craft_application.models.project
+.. py:module:: craft_application.models.project
 
 Project
 =======
