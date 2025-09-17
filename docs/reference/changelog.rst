@@ -4,6 +4,11 @@
 Changelog
 *********
 
+5.10.2 (2025-09-17)
+-------------------
+
+- Launchpad requests no longer ignore proxy settings.
+
 5.10.1 (2025-09-12)
 -------------------
 
