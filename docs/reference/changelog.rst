@@ -4,6 +4,16 @@
 Changelog
 *********
 
+5.10.2 (2025-MM-DD)
+-------------------
+
+Application
+===========
+
+- Fail on duplicated keys in dictionnaries in the project file after the grammar
+  resolution.
+
+
 5.10.1 (2025-09-12)
 -------------------
 
@@ -1038,3 +1048,5 @@ For a complete list of commits, check out the `2.7.0`_ release on GitHub.
 .. _5.8.0: https://github.com/canonical/craft-application/releases/tag/5.8.0
 .. _5.9.0: https://github.com/canonical/craft-application/releases/tag/5.9.0
 .. _5.9.1: https://github.com/canonical/craft-application/releases/tag/5.9.1
+.. _5.10.0: https://github.com/canonical/craft-application/releases/tag/5.10.0
+.. _5.10.1: https://github.com/canonical/craft-application/releases/tag/5.10.1
