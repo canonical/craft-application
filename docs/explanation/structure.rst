@@ -11,9 +11,9 @@ is primarily responsible for setup and teardown.
 ---------------
 
 The :py:class:`~craft_application.application.Application` is the glue that holds a
-Craft app together.  The ``Application`` is primarily responsible for starting up the app, loading
-the relevant services, and calling the relevant Command. It also handles exceptions
-and turns them into error messages.
+Craft app together.  The ``Application`` is primarily responsible for starting up the
+app, loading the relevant services and calling the relevant Command. It also handles
+exceptions and turns them into error messages.
 
 In an ideal world, ``Application`` would never need to have child
 classes. Each thing the ``Application`` currently does that requires an override in a
