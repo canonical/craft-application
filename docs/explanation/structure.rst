@@ -28,7 +28,8 @@ gets registered with the ``Application`` by using its
 :py:meth:`~craft_application.application.Application.add_command_group` method.
 A Command is primarily responsible for user interaction. It should:
 
-1. Take parameters that let the caller (be it a user or a script) configure every
+1. Take parameters for every option, which can be set interactively (i.e. from
+   the CLI) or non-interactively (i.e. from a script)
    option the command may need.
 2. If an option is not provided, ask the user or provide a reasonable default.
 3. Return final information to the user.
@@ -39,10 +40,10 @@ the application's metadata, and the
 is accessible at ``self._services``, while the app's metadata is accessible at
 ``self._app``.
 
-A Command is the primary place where interactivity is provided. One such example
-is the ``remote-build`` command, which asks the user to confirm that they are
-okay uploading the project to a public git repository. In addition to that interactive
-item, it provides a way to do this non-interactively via
+Interactive functionality should generally be implemented within a Command.
+One such example is the ``remote-build`` command, which asks the user to confirm
+that they are okay uploading the project to a public git repository. In addition to
+that interactive item, it provides a way to do this non-interactively via
 ``--launchpad-accept-public-upload``. It is supported by a remote build service that
 provides the actual business logic, but the user interface is primarily driven
 by the Command.
@@ -56,7 +57,9 @@ business logic. They are responsible for:
 1. Implementing logic related to a specific workflow or piece of data.
 2. Maintaining relevant internal state for that (assisted by the
    :py:class:`~craft_application.services.state.StateService` if the state needs to
-   be passed between a manager instance and a managed instance of the application).
+   be passed between application instances running inside and outside of an 
+   isolated build environment, respectively referred to as managed and manager
+   instances).
 3. Acting as wrappers for any external libraries that get used (with a few exceptions).
 
 .. caution::
