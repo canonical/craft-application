@@ -89,7 +89,7 @@ Services may interact with each other, but it is strongly recommended that they 
 so at a high level in order to avoid too much complexity. This includes the fact that
 services should default to using protected (underscore-prefixed) methods unless it is
 specifically known that a method must be externally available. Likewise, when possible
-a Command should only interact with a service on a high level.
+a command should only interact with a service on a high level.
 
 Models
 ------
