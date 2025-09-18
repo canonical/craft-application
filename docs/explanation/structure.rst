@@ -59,6 +59,13 @@ business logic. They are responsible for:
    be passed between a manager instance and a managed instance of the application).
 3. Acting as wrappers for any external libraries that get used (with a few exceptions).
 
+.. caution::
+
+    Avoid storing data from one service in another. Services may update data by
+    replacing an existing object rather than mutating it. Unless stated otherwise, each
+    call to a service should be treated as invalidating any cached items retrieved
+    from that service.
+
 A prime example of this is the :doc:`/reference/services/project`, which is the sole
 provider of information about the loaded project. The contract of the ``ProjectService``
 is such that an instance of a project model may be disposed and replaced, so a command
