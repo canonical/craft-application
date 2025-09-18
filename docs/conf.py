@@ -49,7 +49,7 @@ exclude_patterns = [
     "common/README.md",
     "common/craft-application/how-to-guides/build-remotely.rst",
     "common/craft-application/reference/remote-builds.rst",
-
+    "common/craft-application/reference/fetch-service.rst",
     # There's no tutorials right now, so just hide the scaffolding
     "tutorials",
 ]
