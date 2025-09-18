@@ -87,7 +87,7 @@ a Command should only interact with a service on a high level.
 Models
 ------
 
-Data for read and written files is maintained through `Pydantic`_ models. A
+`Pydantic`_ models validate data when reading and writing files. A
 :py:class:`~craft_application.models.base.CraftBaseModel` is available to create a
 model that has convenience methods that are commonly used by Craft apps. The only
 logic in a model should ideally be its validation and serialization logic.
