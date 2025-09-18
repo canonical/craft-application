@@ -15,6 +15,7 @@
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Grammar processor."""
 
+import itertools
 from typing import Any, cast
 
 import craft_cli
@@ -133,15 +134,27 @@ def merge_processed_dict(
     :returns: Merged dict.
     """
     processed_grammar_dict: dict[str, str] = {}
-    for d in processed_grammar:
-        for k, v in d.items():
-            if k in processed_grammar_dict:
-                raise CraftValidationError(
-                    f"Duplicate keys in processed dict '{k}' in '{part_yaml_data}'"
-                )
-            processed_grammar_dict.update({k: v})  # type: ignore[assignment]
+    processed_grammar_sets: list[set[str]] = []
+    all_duplicates: list[str] = []
+
     if not processed_grammar:
-        return None  # type: ignore[assignment]
+        return None
+
+    for d in processed_grammar:
+        processed_grammar_sets.append(d.keys())
+        processed_grammar_dict.update(d)
+
+    # Look for duplicates
+    for a, b in itertools.combinations(processed_grammar_sets, 2):
+        duplicates = a & b
+        if duplicates:
+            all_duplicates.extend(duplicates)
+
+    if all_duplicates:
+        raise CraftValidationError(
+            f"Duplicate keys in processed dict {all_duplicates} in '{part_yaml_data}'"
+        )
+
     return processed_grammar_dict
 
 

@@ -739,17 +739,20 @@ def test_render_for_grammar_dict_duplicate_keys(
                     "for risky": {
                         "a": "b",
                         "c": "d",
-                    }
-                },
-                {
-                    "for s390x": {
                         "e": "f",
                     }
                 },
                 {
+                    "for s390x": {
+                        "g": "h",
+                    }
+                },
+                {
                     "for any": {
-                        # This conflicts with key from the the first section
+                        "foo": "bar",
+                        # The following keys conflicts with keys from the the first section
                         "a": "g",
+                        "c": "i",
                     }
                 },
             ],
@@ -758,7 +761,8 @@ def test_render_for_grammar_dict_duplicate_keys(
     mocker.patch.object(real_project_service, "_preprocess", return_value=project_data)
 
     with pytest.raises(
-        errors.CraftValidationError, match="Duplicate keys in processed dict 'a' in"
+        errors.CraftValidationError,
+        match=r"Duplicate keys in processed dict \[(?:'c', 'a'|'a', 'c')\] in",
     ):
         real_project_service.render_for(
             build_for="arm64",

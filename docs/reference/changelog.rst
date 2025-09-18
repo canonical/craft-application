@@ -10,7 +10,7 @@ Changelog
 Application
 ===========
 
-- Fail on duplicated keys in dictionnaries in the project file after the grammar
+- Fail on duplicated keys in dictionaries in the project file after the grammar
   resolution.
 
 
