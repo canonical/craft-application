@@ -56,7 +56,7 @@ business logic. They are responsible for:
 1. Implementing logic related to a specific workflow or piece of data.
 2. Maintaining relevant internal state for that (assisted by the
    :py:class:`~craft_application.services.state.StateService` if the state needs to
-   be passed between application instances running inside and outside of an 
+   be passed between application instances running inside and outside of an
    isolated build environment, respectively referred to as managed and manager
    instances).
 3. Acting as wrappers for any external libraries that get used (with a few exceptions).
