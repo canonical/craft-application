@@ -4,7 +4,7 @@
 Changelog
 *********
 
-5.10.2 (2025-MM-DD)
+5.10.3 (2025-09-22)
 -------------------
 
 Application
@@ -13,6 +13,10 @@ Application
 - If keys are duplicated in a project file's dictionaries after the grammar is
   resolved, an error will be raised.
 
+5.10.2 (2025-09-19)
+-------------------
+
+- Launchpad requests no longer ignore proxy settings.
 
 5.10.1 (2025-09-12)
 -------------------
