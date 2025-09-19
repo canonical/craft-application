@@ -50,6 +50,9 @@ craft_application = "craft_application.pytest_plugin"
 remote = [
     # Support for remote-build is optional.
     "launchpadlib>=1.10.16",
+    # Due to a change in httplib2, launchpadlib skips proxies without pysocks.
+    # See: https://bugs.launchpad.net/launchpadlib/+bug/2124937
+    "pysocks>=1.7.1",
 ]
 apt = [
     "python-apt>=2.4.0;sys_platform=='linux'",
