@@ -498,7 +498,7 @@ requires-dist = [
     { name = "annotated-types", specifier = ">=0.6.0" },
     { name = "craft-archives", specifier = ">=2.2.0" },
     { name = "craft-cli", specifier = ">=3.2.0" },
-    { name = "craft-grammar", git = "https://github.com/canonical/craft-grammar.git?rev=main" },
+    { name = "craft-grammar", specifier = ">=2.3.0" },
     { name = "craft-parts", specifier = ">=2.21.0" },
     { name = "craft-platforms", specifier = ">=0.6.0" },
     { name = "craft-providers", specifier = ">=3.0.0" },
@@ -593,11 +593,15 @@ wheels = [
 
 [[package]]
 name = "craft-grammar"
-version = "2.2.0.post8+g9b70aa6"
-source = { git = "https://github.com/canonical/craft-grammar.git?rev=main#9b70aa6360d7ec92f0334f711eae073291ace7f9" }
+version = "2.3.0"
+source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "overrides" },
     { name = "pydantic" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/c7/35/584fc928bffd1346c4b9c55170cbe4c09f89ec185d0d9d7e2626f876e80d/craft_grammar-2.3.0.tar.gz", hash = "sha256:0b7ae3aa595f0f3d1f82ed2e696c99b35283c18a60c7a68840bc185bd123e4d8", size = 147552, upload-time = "2025-09-19T15:51:16.29Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/6d/ce/0edcd8a0b0ab73f43bb5197e7f61d2be0c0fd129451936659353553f5037/craft_grammar-2.3.0-py3-none-any.whl", hash = "sha256:4a709037a7a2bdbc8362ef97645dfb86d4c67eac31058482704cba074f49507b", size = 27772, upload-time = "2025-09-19T15:51:14.794Z" },
 ]
 
 [[package]]
