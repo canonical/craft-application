@@ -29,8 +29,7 @@ gets registered with the ``Application`` by using its
 A Command is primarily responsible for user interaction. It should:
 
 1. Take parameters for every option, which can be set interactively (i.e. from
-   the CLI) or non-interactively (i.e. from a script)
-   option the command may need.
+   the CLI) or non-interactively (i.e. from a script).
 2. If an option is not provided, ask the user or provide a reasonable default.
 3. Return final information to the user.
 
