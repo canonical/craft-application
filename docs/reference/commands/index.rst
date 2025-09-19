@@ -5,17 +5,18 @@ Commands
 
 .. py:module:: craft_application.commands.base
 
-Craft Application provides several commands, all inheriting from :py:class:`AppCommand`.
+:py:class:`AppCommand` defines the baseline functionality for all of
+Craft Application's commands.
 
 .. py:class:: AppCommand
 
-    The ``AppCommand`` is a special form of Craft CLI
-    :external+craft-cli:class:`~craft_cli.BaseCommand` that adds Craft Application
-    specific attributes. The full form is documented here.
+    The ``AppCommand`` is a subclass of Craft CLI's
+    :external+craft-cli:class:`~craft_cli.BaseCommand` that adds attributes
+    specific to Craft Application.
 
     **Metadata**
-    Several attributes provide metadata that is used when finding a command or when
-    showing the help about the application or this command.
+    The following attributes provide descriptors that are used when finding a
+    command or showing it in help output.
 
     .. autoattribute:: AppCommand.name
 
@@ -47,7 +48,7 @@ Craft Application provides several commands, all inheriting from :py:class:`AppC
 
     **Object access**
 
-    Each ``AppCommand`` instance has can access the app's metadata, its services,
+    Each ``AppCommand`` instance can access the app's metadata, its services,
     and the project.
 
     .. py:attribute:: _app
@@ -58,7 +59,7 @@ Craft Application provides several commands, all inheriting from :py:class:`AppC
     .. py:attribute:: _services
         :type: ServiceFactory
 
-        Provides access to all of the services.
+        The access point for the application's services.
 
     .. autoproperty:: AppCommand._project
 
@@ -68,14 +69,14 @@ Craft Application provides several commands, all inheriting from :py:class:`AppC
 
     .. automethod:: ExtensibleCommand._run
 
-    This allows for the addition of reusable parser fillers, prologues and epilogues. Each
-    entry in an ``ExtensibleCommand``'s inheritance tree can have  exactly one of each.
+    This allows for the addition of reusable parser fillers, prologues, and epilogues. Each
+    entry in an ``ExtensibleCommand``'s inheritance tree can have exactly one of each.
 
     A parser filler can be added to any command using:
 
     .. automethod:: ExtensibleCommand.register_parser_filler
 
-        The registered function must take the ``ExtensibleCommand`` instance as its
+        The registered function must be passed the ``ExtensibleCommand`` instance as its
         first argument and the ``ArgumentParser`` as its second.
 
     .. automethod:: ExtensibleCommand.register_prologue
