@@ -136,7 +136,7 @@ class AppCommand(BaseCommand):
 
     @property
     def _project(self) -> Project:
-        """Access to the project.
+        """Get the current project.
 
         :raises: Any exception related to rendering the project if the project has
             not yet been created.
