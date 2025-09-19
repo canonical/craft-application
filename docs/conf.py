@@ -101,6 +101,10 @@ github_username = "canonical"
 github_repository = "craft-application"
 
 intersphinx_mapping = {
+    "craft-cli": (
+        "https://canonical-craft-cli.readthedocs-hosted.com/en/latest",
+        None,
+    ),
     "craft-grammar": ("https://craft-grammar.readthedocs.io/en/latest", None),
     "craft-parts": (
         "https://canonical-craft-parts.readthedocs-hosted.com/en/latest",

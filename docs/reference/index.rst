@@ -8,6 +8,7 @@ Reference
 
    changelog
    application
+   commands/index
    environment-variables
    models/index
    pytest-plugin
