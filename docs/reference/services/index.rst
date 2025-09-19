@@ -7,3 +7,4 @@ Services
    :maxdepth: 1
 
    project
+   linter
