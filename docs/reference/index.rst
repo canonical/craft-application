@@ -13,3 +13,4 @@ Reference
    pytest-plugin
    remote-builds
    services/index
+   fetch-service
