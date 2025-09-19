@@ -15,6 +15,7 @@ Craft Application's commands.
     specific to Craft Application.
 
     **Metadata**
+
     The following attributes provide descriptors that are used when finding a
     command or showing it in help output.
 
@@ -72,7 +73,8 @@ Craft Application's commands.
     This allows for the addition of reusable parser fillers, prologues, and epilogues. Each
     entry in an ``ExtensibleCommand``'s inheritance tree can have exactly one of each.
 
-    A parser filler can be added to any command using:
+  The following methods can be used to add a parser filler, prologue, and epilogue to
+  a command:
 
     .. automethod:: ExtensibleCommand.register_parser_filler
 

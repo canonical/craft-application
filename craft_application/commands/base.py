@@ -97,7 +97,7 @@ class AppCommand(BaseCommand):
     ) -> bool:
         """Whether this command should run in managed mode.
 
-        By default returns ``False``. Subclasses can override this method to change this,
+        Returns ``False`` by default. Subclasses can override this method to change this,
         including by inspecting the arguments in ``parsed_args``.
         """
         return False
@@ -108,7 +108,7 @@ class AppCommand(BaseCommand):
     ) -> str | None:
         """Name of the provider where the command should be run inside of.
 
-        By default returns ``None``. Subclasses can override this method to change this,
+        Returns ``None`` by default. Subclasses can override this method to change this,
         including by inspecting the arguments in ``parsed_args``.
         """
         return None
