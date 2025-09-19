@@ -106,11 +106,11 @@ def post_process_grammar(
     processed_grammar: list[Any],
     part_yaml_data: dict[str, Any],
 ) -> list[Any] | dict[str, str] | None:
-    """Post-process primitives returns by the grammar processor.
+    """Post-process primitives returned by the grammar processor.
 
     Special cases:
-    - scalar values should return as a single object, not in a list.
-    - dict values should return as a dict, not in a list.
+    - Scalar values should be returned as a single object instead of a list.
+    - Dict values should be returned as a dict instead of a list.
 
     :returns: the post-processed primitives
     """

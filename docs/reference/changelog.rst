@@ -10,8 +10,8 @@ Changelog
 Application
 ===========
 
-- Fail on duplicated keys in dictionaries in the project file after the grammar
-  resolution.
+- If keys are duplicated in a project file's dictionaries after the grammar is
+  resolved, an error will be raised.
 
 
 5.10.1 (2025-09-12)
