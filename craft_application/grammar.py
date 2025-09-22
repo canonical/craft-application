@@ -15,10 +15,11 @@
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Grammar processor."""
 
+import itertools
 from typing import Any, cast
 
 import craft_cli
-from craft_grammar import GrammarProcessor  # type: ignore[import-untyped]
+from craft_grammar import GrammarProcessor, Variant  # type: ignore[import-untyped]
 from craft_grammar.errors import GrammarSyntaxError  # type: ignore[import-untyped]
 
 from craft_application.errors import CraftValidationError
@@ -92,15 +93,69 @@ def process_part(
                 f"Invalid grammar syntax while processing '{key}' in '{part_yaml_data}': {e}"
             ) from e
 
-        # special cases:
-        # - scalar values should return as a single object, not in a list.
-        # - dict values should return as a dict, not in a list.
-        if key not in _NON_SCALAR_VALUES or key in _DICT_ONLY_VALUES:
-            processed_grammar = processed_grammar[0] if processed_grammar else None  # type: ignore[assignment]
-
-        part_yaml_data[key] = processed_grammar
+        part_yaml_data[key] = post_process_grammar(
+            processor, key, processed_grammar, part_yaml_data
+        )
 
     return part_yaml_data
+
+
+def post_process_grammar(
+    processor: GrammarProcessor,
+    key: str,
+    processed_grammar: list[Any],
+    part_yaml_data: dict[str, Any],
+) -> list[Any] | dict[str, str] | None:
+    """Post-process primitives returned by the grammar processor.
+
+    Special cases:
+    - Scalar values should be returned as a single object instead of a list.
+    - Dict values should be returned as a dict instead of a list.
+
+    :returns: the post-processed primitives
+    """
+    if processor.variant == Variant.FOR_VARIANT:
+        if key in _DICT_ONLY_VALUES:
+            return merge_processed_dict(processed_grammar, part_yaml_data)
+        if key not in _NON_SCALAR_VALUES:
+            return processed_grammar[0] if processed_grammar else None
+    elif key not in _NON_SCALAR_VALUES or key in _DICT_ONLY_VALUES:
+        return processed_grammar[0] if processed_grammar else None
+    return processed_grammar
+
+
+def merge_processed_dict(
+    processed_grammar: list[Any],
+    part_yaml_data: dict[str, Any],
+) -> dict[str, str] | None:
+    """Merge list of dicts in a single dict.
+
+    :raises: CraftValidationError if duplicate keys are found.
+    :returns: Merged dict.
+    """
+    processed_grammar_dict: dict[str, str] = {}
+    processed_grammar_sets: list[set[str]] = []
+    all_duplicates: list[str] = []
+
+    if not processed_grammar:
+        return None
+
+    for d in processed_grammar:
+        processed_grammar_sets.append(d.keys())
+        processed_grammar_dict.update(d)
+
+    # Look for duplicates
+    for a, b in itertools.combinations(processed_grammar_sets, 2):
+        duplicates = a & b
+        if duplicates:
+            all_duplicates.extend(duplicates)
+
+    if all_duplicates:
+        raise CraftValidationError(
+            f"Duplicate keys in processed dict {all_duplicates} in '{part_yaml_data}'"
+        )
+
+    return processed_grammar_dict
 
 
 def process_parts(
