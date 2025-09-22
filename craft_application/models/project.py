@@ -113,7 +113,7 @@ Part = Annotated[dict[str, Any], pydantic.BeforeValidator(_validate_part)]
 
 
 class Project(base.CraftBaseModel):
-    """Craft Application project definition."""
+    """The class that defines the project model."""
 
     name: ProjectName
     title: ProjectTitle | None = None
