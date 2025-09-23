@@ -64,6 +64,7 @@ extensions = [
     "canonical_sphinx",
     "sphinx.ext.autodoc",
     "sphinx.ext.intersphinx",
+    "sphinx_substitution_extensions",
     "sphinxext.rediraffe",
     "pydantic_kitbash",
 ]
