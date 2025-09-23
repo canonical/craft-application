@@ -24,7 +24,7 @@ from __future__ import annotations
 
 # ruff: noqa: A005  # module name shadows stdlib 'types'
 from dataclasses import dataclass
-from enum import Enum
+from enum import Enum, IntEnum
 from fnmatch import fnmatch
 from typing import TYPE_CHECKING
 
@@ -39,15 +39,15 @@ class Stage(str, Enum):
     POST = "post"
 
 
-class Severity(str, Enum):
+class Severity(IntEnum):
     """Severity level for linter issues."""
 
-    INFO = "INFO"
-    WARNING = "WARNING"
-    ERROR = "ERROR"
+    INFO = 1
+    WARNING = 2
+    ERROR = 3
 
 
-class ExitCode(int, Enum):
+class ExitCode(IntEnum):
     """Exit codes summarising lint results."""
 
     OK = 0

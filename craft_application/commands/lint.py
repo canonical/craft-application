@@ -86,16 +86,16 @@ class LintCommand(base.AppCommand):
             cli_ignores=list(parsed_args.lint_ignores or []),
             cli_ignore_files=list(parsed_args.lint_ignore_files or []),
         )
-        # Consume the generator to populate the issues for summary
         for _ in linter.run(Stage(parsed_args.stage), ctx):
             pass
 
-        code = int(linter.summary())
-
-        if code == 0:
+        highest = linter.get_highest_severity()
+        if highest is None:
             emit.message("lint: OK")
-        elif code == 1:
-            emit.message("lint: WARN")
-        else:
+            return 0
+        if highest.name == "ERROR":
             emit.message("lint: ERROR")
-        return code
+            return 2
+
+        emit.message("lint: WARN")
+        return 0

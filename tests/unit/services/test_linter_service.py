@@ -50,7 +50,8 @@ def test_register_and_run_warning(tmp_path: Path) -> None:
     issues = list(svc.run(Stage.PRE, ctx))
     assert len(issues) == 1
     assert issues[0].id == "D001"
-    assert int(svc.summary()) == 1  # WARN
+    assert svc.get_highest_severity() == Severity.WARNING
+    assert int(svc.summary()) == 0  # warnings do not cause non-zero exit
 
 
 def test_ignore_by_id_cli(tmp_path: Path) -> None:
