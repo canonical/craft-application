@@ -17,8 +17,11 @@
 
 from __future__ import annotations
 
+import inspect as _inspect
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
+
+from .types import Stage as _Stage
 
 if TYPE_CHECKING:  # pragma: no cover
     from collections.abc import Iterable
@@ -36,6 +39,18 @@ class AbstractLinter(ABC):
 
     name: str
     stage: Stage
+
+    def __init_subclass__(cls) -> None:
+        """Validate subclass has required attributes."""
+        super().__init_subclass__()
+
+        if _inspect.isabstract(cls):
+            return
+
+        if not isinstance(getattr(cls, "name", None), str) or not cls.name:
+            raise TypeError("Linter subclass must define a non-empty 'name' string.")
+        if not isinstance(getattr(cls, "stage", None), _Stage):
+            raise TypeError("Linter subclass must define 'stage' as a Stage enum.")
 
     @abstractmethod
     def run(self, ctx: LintContext) -> Iterable[LinterIssue]:

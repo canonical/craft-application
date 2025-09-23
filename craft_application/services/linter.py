@@ -61,15 +61,12 @@ class LinterService(base.AppService):
     def register(cls, linter_cls: type[AbstractLinter]) -> None:
         """Register a linter class for use by the service."""
         if inspect.isabstract(linter_cls):
-            return
-        stage = getattr(linter_cls, "stage", None)
-        name = getattr(linter_cls, "name", None)
-        if not isinstance(stage, Stage) or not isinstance(name, str) or not name:
-            raise ValueError(
-                f"Invalid linter class {linter_cls!r}: missing/invalid name or stage"
-            )
-        emit.debug(f"Registering linter {name!r} for stage {stage.value}")
-        cls._class_registry[stage].append(linter_cls)
+            raise TypeError("Cannot register abstract linter class.")
+
+        emit.debug(
+            f"Registering linter {linter_cls.name!r} for stage {linter_cls.stage.value}"
+        )
+        cls._class_registry.setdefault(linter_cls.stage, []).append(linter_cls)
 
     @classmethod
     def build_ignore_config(
@@ -254,12 +251,17 @@ class LinterService(base.AppService):
                 self._issues.append(issue)
                 yield issue
 
+    def get_highest_severity(self) -> Severity | None:
+        """Return the highest severity present among collected issues."""
+        if not self._issues:
+            return None
+        return max((i.severity for i in self._issues), default=None)
+
     def summary(self) -> ExitCode:
-        """Summarize results as an ExitCode based on highest severity."""
-        if any(i.severity == Severity.ERROR for i in self._issues):
+        """Return an exit code (non-zero only for errors)."""
+        highest = self.get_highest_severity()
+        if highest == Severity.ERROR:
             return ExitCode.ERROR
-        if any(i.severity == Severity.WARNING for i in self._issues):
-            return ExitCode.WARN
         return ExitCode.OK
 
     @property
