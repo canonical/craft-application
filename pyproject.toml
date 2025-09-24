@@ -27,6 +27,7 @@ dependencies = [
     "requests",
     "typing_extensions>=4.4.0",
     "distro-support>=2025.8.13",
+    "ijson~=3.4",
 ]
 classifiers = [
     "Development Status :: 5 - Production/Stable",

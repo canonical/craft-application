@@ -48,7 +48,7 @@ if TYPE_CHECKING:  # pragma: no cover
     from craft_application.services import ServiceFactory
 
 
-DEFAULT_FORWARD_ENVIRONMENT_VARIABLES: Iterable[str] = ()
+DEFAULT_FORWARD_ENVIRONMENT_VARIABLES: Iterable[str] = ("CRAFT_WORKSPACE_ID")
 IGNORE_CONFIG_ITEMS: Iterable[str] = ("build_for", "platform", "verbosity_level")
 
 _REQUESTED_SNAPS: dict[str, Snap] = {}
