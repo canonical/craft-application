@@ -73,8 +73,8 @@ Craft Application's commands.
     This allows for the addition of reusable parser fillers, prologues, and epilogues. Each
     entry in an ``ExtensibleCommand``'s inheritance tree can have exactly one of each.
 
-  The following methods can be used to add a parser filler, prologue, and epilogue to
-  a command:
+    The following methods can be used to add a parser filler, prologue, and epilogue to
+    a command:
 
     .. automethod:: ExtensibleCommand.register_parser_filler
 
