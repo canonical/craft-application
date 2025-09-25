@@ -24,7 +24,7 @@ Commands
 --------
 
 A Command is a child class of :py:class:`craft_application.commands.AppCommand` that
-gets registered with the ``Application`` by using its
+gets registered with the ``Application`` class by using its
 :py:meth:`~craft_application.application.Application.add_command_group` method.
 A Command is primarily responsible for user interaction. It should:
 
@@ -35,11 +35,11 @@ A Command is primarily responsible for user interaction. It should:
 
 To do all of this, it is supported by :external+craft-cli:doc:`Craft CLI <index>`,
 the application's metadata, and the
-:py:class:`~craft_application.ServiceFactory`. The ``ServiceFactory``
+:py:class:`~craft_application.ServiceFactory` class. The ``ServiceFactory`` instance
 is accessible at ``self._services``, while the app's metadata is accessible at
 ``self._app``.
 
-Interactive functionality should generally be implemented within a Command.
+Interactive functionality should generally be implemented within a Command class.
 One such example is the ``remote-build`` command, which asks the user to confirm
 that they are okay uploading the project to a public git repository. In addition to
 that interactive item, it provides a way to do this non-interactively via
