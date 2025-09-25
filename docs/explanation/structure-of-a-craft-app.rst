@@ -3,9 +3,25 @@
 Structure of a craft app
 ========================
 
-A Craft application has several sections that represent its structure, all glued
-together by the :py:class:`~craft_application.application.Application` class, which
-is primarily responsible for setup and teardown.
+A Craft application has several pieces that represent its structure, this document
+outlines.
+
+At a high level, the pieces are related by this diagram:
+
+.. figure:: https://assets.ubuntu.com/v1/f49662cc-app_structure.svg
+
+    Relationship between pieces of an app.
+
+The app is invoked by an external process that runs the app with some command.
+This instantiates an ``Application`` class and runs its run method, which configures the
+``ServiceFactory`` instance before the Command instance's ``run()`` method. A
+``Command`` may get any necessary services from the ``ServiceFactory`` using its
+``get`` method, and it may make any service-specific calls to any service it gets.
+Likewise, a service may interact with another service's public API by using
+``ServiceFactory.get()`` to get another service. Services may store data in ``Model``
+instances. When a service uses a ``Model`` to store data, that service is responsible
+for maintaining that model and providing access either to the model or its underlying
+features.
 
 ``Application``
 ---------------
