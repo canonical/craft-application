@@ -39,10 +39,10 @@ however, this is not always feasible.
 Commands
 --------
 
-A Command is a child class of :py:class:`craft_application.commands.AppCommand` that
-gets registered with the ``Application`` class by using its
+A ``Command`` class is what's responsible for user interaction. It is a child class of
+:py:class:`craft_application.commands.AppCommand` that gets registered with the ``Application`` class by using its
 :py:meth:`~craft_application.application.Application.add_command_group` method.
-A Command is primarily responsible for user interaction. It should:
+It should:
 
 1. Take parameters for every option, which can be set interactively (i.e. from
    the CLI) or non-interactively (i.e. from a script).
