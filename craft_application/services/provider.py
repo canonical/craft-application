@@ -48,11 +48,13 @@ if TYPE_CHECKING:  # pragma: no cover
     from craft_application.services import ServiceFactory
 
 
-DEFAULT_FORWARD_ENVIRONMENT_VARIABLES: Iterable[str] = ("CRAFT_WORKSPACE_ID",)
+DEFAULT_FORWARD_ENVIRONMENT_VARIABLES: Iterable[str] = ()
 IGNORE_CONFIG_ITEMS: Iterable[str] = ("build_for", "platform", "verbosity_level")
 
 _REQUESTED_SNAPS: dict[str, Snap] = {}
 """Additional snaps to be installed using provider."""
+
+_FORWARD_ENVIRONMENT_VARIABLES: list[str] = []
 
 
 class ProviderService(base.AppService):
@@ -101,7 +103,7 @@ class ProviderService(base.AppService):
     def setup(self) -> None:
         """Application-specific service setup."""
         super().setup()
-        for name in DEFAULT_FORWARD_ENVIRONMENT_VARIABLES:
+        for name in (*DEFAULT_FORWARD_ENVIRONMENT_VARIABLES, *_FORWARD_ENVIRONMENT_VARIABLES):
             if name in os.environ:
                 self.environment[name] = os.getenv(name)
 
@@ -419,6 +421,14 @@ class ProviderService(base.AppService):
             del _REQUESTED_SNAPS[name]
         except KeyError:
             raise ValueError(f"Snap not registered: {name!r}")
+
+    @classmethod
+    def forward_environment_variables(cls, variables: Iterable[str]) -> None:
+        """Add entries to the list of variables to pass to the inner instance.
+
+        :param variables: The variables to add.
+        """
+        _FORWARD_ENVIRONMENT_VARIABLES.extend(variables)
 
     def run_managed(
         self,
