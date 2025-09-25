@@ -1,7 +1,7 @@
-.. _explanation_structure:
+.. _explanation-structure-of-a-craft-app:
 
-Structure of an application
-===========================
+Structure of a craft app
+========================
 
 A Craft application has several sections that represent its structure, all glued
 together by the :py:class:`~craft_application.application.Application` class, which
@@ -10,14 +10,14 @@ is primarily responsible for setup and teardown.
 ``Application``
 ---------------
 
-The :py:class:`~craft_application.application.Application` is the glue that holds a
-Craft app together.  The ``Application`` is primarily responsible for starting up the
-app, loading the relevant services and calling the relevant Command. It also handles
-exceptions and turns them into error messages.
+The :py:class:`~craft_application.application.Application` class is the glue that
+holds a craft app together.  The ``Application`` is primarily responsible for starting
+up the app, loading the relevant services and calling the relevant Command class.
+It also handles exceptions and turns them into error messages.
 
-In an ideal world, ``Application`` would never need to have child
-classes. Each thing the ``Application`` currently does that requires an override in a
-craft can be considered a shortcoming to be fixed at a later date. In practice,
+In an ideal world, the ``Application`` class would never need to have child
+classes. Each thing the ``Application`` class currently does that requires an override
+in a craft can be considered a shortcoming to be fixed at a later date. In practice,
 however, this is not always feasible.
 
 Commands
@@ -50,8 +50,8 @@ by the Command.
 Services
 --------
 
-:doc:`/reference/services/index` are the primary location for a Craft application's
-business logic. They are responsible for:
+:doc:`/reference/services/index` are where an app's business logic lives.
+They are responsible for:
 
 1. Implementing logic related to a specific workflow or piece of data.
 2. Maintaining relevant internal state for that (assisted by the

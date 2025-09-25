@@ -8,4 +8,4 @@ Explanation
 
    build-plans
    Cryptographic technology <cryptography>
-   structure
+   structure-of-a-craft-app
