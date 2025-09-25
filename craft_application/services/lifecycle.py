@@ -39,7 +39,7 @@ from craft_parts import (
 from craft_parts.errors import CallbackRegistrationError
 from typing_extensions import override
 
-from craft_application import errors, models, util
+from craft_application import errors, util
 from craft_application.services import base
 from craft_application.util import repositories
 
@@ -147,10 +147,6 @@ class LifecycleService(base.AppService):
         callbacks.register_post_step(self.post_prime, step_list=[Step.PRIME])
         callbacks.register_configure_overlay(repositories.enable_overlay_eol)
 
-    @property
-    def _project(self) -> models.Project:
-        return self._services.get("project").get()
-
     def _get_build(self) -> craft_platforms.BuildInfo:
         """Get the build for this run."""
         plan = self._services.get("build_plan").plan()
@@ -160,15 +156,7 @@ class LifecycleService(base.AppService):
 
     def _validate_build_plan(self) -> None:
         """Validate that the build plan is usable for a lifecycle run."""
-        plan = self._services.get("build_plan").plan()
-        match len(plan):
-            case 0:
-                raise errors.EmptyBuildPlanError
-            case 1:
-                build = plan[0]
-            case _:
-                raise errors.MultipleBuildsError(plan)
-
+        build = self._build_info
         host_base = craft_platforms.DistroBase.from_linux_distribution(
             distro.LinuxDistribution()
         )
