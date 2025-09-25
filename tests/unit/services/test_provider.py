@@ -352,6 +352,11 @@ def test_forward_environment_variables(monkeypatch, provider_service, fake_servi
     for var in provider.DEFAULT_FORWARD_ENVIRONMENT_VARIABLES:
         monkeypatch.setenv(var, f"{var}__{var_contents}")
 
+    added_forward_vars=("ADDED_FORWARD_VAR",)
+    provider_service.forward_environment_variables(added_forward_vars)
+    for var in added_forward_vars:
+        monkeypatch.setenv(var, f"{var}__{var_contents}")
+
     provider_service.setup()
 
     # Exclude forwarded proxy variables from the host in this check.
@@ -368,6 +373,7 @@ def test_forward_environment_variables(monkeypatch, provider_service, fake_servi
             var: f"{var}__{var_contents}"
             for var in provider.DEFAULT_FORWARD_ENVIRONMENT_VARIABLES
         },
+        **{var: f"{var}__{var_contents}" for var in added_forward_vars},
         **{
             f"TESTCRAFT_{config.upper()}": (
                 value.name if isinstance(value, enum.Enum) else str(value)
