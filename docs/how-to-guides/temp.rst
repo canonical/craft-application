@@ -6,4 +6,4 @@
 
 .. _test:
 
-.. include:: ../common/craft-application/how-to-guides/store-and-reuse-apt-packages.rst
+.. include:: ../common/craft-application/how-to-guides/reuse-packages-between-builds.rst

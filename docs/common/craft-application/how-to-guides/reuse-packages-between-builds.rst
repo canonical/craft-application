@@ -1,14 +1,14 @@
 Reuse packages between builds
 =============================
 
-When |app| downloads packages as it builds |an-artifact|, it doesn't store the them
-persistently. On subsequent builds that rely on those same packages, for any |artifact|,
-|app| will redownload them, costing time and bandwidth.
+When |app| downloads packages while it builds |an-artifact|, it doesn't store them
+persistently. On subsequent builds that rely on those same packages, on any project,
+|app| will download them again, costing time and bandwidth.
 
 .. Link the Snapcraft page in your app: https://documentation.ubuntu.com/snapcraft/stable/how-to/integrations/craft-an-ros-2-app/
 
 By setting up a cache, your packages will be reused across all |artifact| builds.
-For an example of the performance gain that a cache achieves, the ROS2 Talker/Listener
+For an example of the performance gain that a cache provides, the ROS2 Talker/Listener
 snap packs 52% faster with a cache than without.
 
 
@@ -25,8 +25,8 @@ network and storage needs. What follows is a cache for all HTTP traffic that req
 Set up the proxy
 ----------------
 
-If you're on a fresh host that has never run |app| before, start by packing
-|an-artifact| to create the LXD image:
+If you're on a host that has never run |app| before, start by packing |an-artifact| to
+create the LXD image:
 
 .. code-block:: bash
     :substitutions:
@@ -104,7 +104,7 @@ the output.
 
     tail -f /var/log/squid/access.log
 
-Exit the container with :kbd:`Ctrl` + :kbd:`D`.
+Exit the container by pressing :kbd:`Ctrl` + :kbd:`D`.
 
 
 .. Uncomment and customise this block for your app
@@ -142,7 +142,7 @@ Then, when launching |app|, pass the IP address to ``http_proxy``:
 Monitor the cache
 -----------------
 
-While a build is running, in a separate terminal you can monitor the cache's activity.
+While a build is running, you can monitor the cache's activity in a separate terminal.
 Run ``tail`` to continuously print the Squid log to the output.
 
 .. code-block:: bash
