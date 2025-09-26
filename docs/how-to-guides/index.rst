@@ -9,4 +9,3 @@ How-to guides
    build-remotely
    partitions
    platforms
-   temp
