@@ -3,10 +3,11 @@
 Structure of a craft app
 ========================
 
-A Craft application has several pieces that represent its structure, this document
-outlines.
+A craft app is made up of several components and objects. This page explains the
+relationships and communication between these components.
 
-At a high level, the pieces are related by this diagram:
+Here's a view of the structure of a craft app, starting from when a user calls
+it:
 
 .. figure:: https://assets.ubuntu.com/v1/f49662cc-app_structure.svg
 
