@@ -109,34 +109,34 @@ Exit the container by pressing :kbd:`Ctrl` + :kbd:`D`.
 
 .. Uncomment and customise this block for your app
 
-Integrate with |app|
---------------------
+.. Integrate with |app|
+    --------------------
 
-With the container for the proxy server configured and running in the background, you
-can begin accessing the APT cache with |app|.
+    With the container for the proxy server configured and running in the background, you
+    can begin accessing the APT cache with |app|.
 
-When you launch |app|, pass the proxy server to |app| with the ``http_proxy``
-environment variable.
+    When you launch |app|, pass the proxy server to |app| with the ``http_proxy``
+    environment variable.
 
-.. code-block:: bash
-    :substitutions:
+    .. code-block:: bash
+        :substitutions:
 
-    http_proxy="http://package-cache.lxd:3128/" |app-command| pack
+        http_proxy="http://package-cache.lxd:3128/" |app-command| pack
 
-Alternatively, you can pass the IP address of the proxy server. Copy the IP address from
-LXC:
+    Alternatively, you can pass the IP address of the proxy server. Copy the IP address from
+    LXC:
 
-.. code-block:: bash
-    :substitutions:
+    .. code-block:: bash
+        :substitutions:
 
-    lxc list --project |app-command| | grep package-cache
+        lxc list --project |app-command| | grep package-cache
 
-Then, when launching |app|, pass the IP address to ``http_proxy``:
+    Then, when launching |app|, pass the IP address to ``http_proxy``:
 
-.. code-block:: bash
-    :substitutions:
+    .. code-block:: bash
+        :substitutions:
 
-    http_proxy="http://<package-cache-ip>:3128/" |app-command| pack
+        http_proxy="http://<package-cache-ip>:3128/" |app-command| pack
 
 
 Monitor the cache
