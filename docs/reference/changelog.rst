@@ -4,6 +4,19 @@
 Changelog
 *********
 
+6.0.0 (unreleased)
+------------------
+
+Breaking changes
+================
+
+Models
+~~~~~~
+
+- ``any`` is now a reserved platform name.
+
+For a complete list of commits, check out the `6.0.0`_ release on GitHub.
+
 5.10.3 (2025-09-22)
 -------------------
 
@@ -1054,3 +1067,4 @@ For a complete list of commits, check out the `2.7.0`_ release on GitHub.
 .. _5.9.1: https://github.com/canonical/craft-application/releases/tag/5.9.1
 .. _5.10.0: https://github.com/canonical/craft-application/releases/tag/5.10.0
 .. _5.10.1: https://github.com/canonical/craft-application/releases/tag/5.10.1
+.. _6.0.0: https://github.com/canonical/craft-application/releases/tag/6.0.0

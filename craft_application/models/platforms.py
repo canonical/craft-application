@@ -18,7 +18,7 @@
 import enum
 import re
 from collections.abc import Iterable, Mapping
-from typing import ClassVar, get_args
+from typing import Annotated, ClassVar, get_args
 
 import craft_platforms
 import pydantic
@@ -28,6 +28,28 @@ from typing_extensions import Any, Self, TypeVar
 from craft_application import errors
 from craft_application.models import base
 from craft_application.models.constraints import SingleEntryList, UniqueList
+
+
+class ReservedPlatformName(enum.Enum):
+    """Reserved words that are invalid as the names of platforms."""
+
+    ANY = "any"
+    """The name 'any' is reserved for use with grammar."""
+
+
+def _is_allowed_value(value: str) -> str:
+    if value in ReservedPlatformName:
+        raise ValueError(f"Platform name {value!r} is reserved.")
+    return value
+
+
+PlatformName = Annotated[
+    str,
+    pydantic.BeforeValidator(_is_allowed_value),
+    pydantic.Field(
+        json_schema_extra={"not": {"enum": [r.value for r in ReservedPlatformName]}}
+    ),
+]
 
 
 class Platform(base.CraftBaseModel):
@@ -124,7 +146,7 @@ class Platform(base.CraftBaseModel):
 PT = TypeVar("PT", bound=Platform)
 
 
-class GenericPlatformsDict(dict[str, PT]):
+class GenericPlatformsDict(dict[PlatformName, PT]):
     """A generic dictionary describing the contents of the platforms key.
 
     This class exists to generate Pydantic and JSON schemas for the platforms key on
@@ -178,7 +200,10 @@ class GenericPlatformsDict(dict[str, PT]):
                 "Cannot get value type. This likely means the application is using "
                 "GenericPlatformsDict directly rather than creating a child class."
             )
-        return cs.dict_schema(cs.str_schema(), value_type.__pydantic_core_schema__)
+        return cs.dict_schema(
+            keys_schema=pydantic.TypeAdapter(PlatformName).core_schema,
+            values_schema=value_type.__pydantic_core_schema__,
+        )
 
     @classmethod
     def __get_pydantic_json_schema__(
