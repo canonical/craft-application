@@ -251,6 +251,7 @@ class FetchService(base.AppService):
 
         Only supports a single generated artifact, and only in managed runs.
         """
+        # This can be called with a multi-item build plan, so just get the first.
         build = self._services.get("build_plan").plan()[0]
         # mypy doesn't accept accept ignore[union-attr] for unknown reasons.
         if not self._services.ProviderClass.is_managed():  # type: ignore  # noqa: PGH003
@@ -258,18 +259,17 @@ class FetchService(base.AppService):
             return
 
         emit.debug(f"Generating project manifest at {_PROJECT_MANIFEST_MANAGED_PATH}")
-        project = self._services.get("project").get()
         project_manifest = ProjectManifest.from_packed_artifact(
-            project, build, artifacts[0]
+            self._project, build, artifacts[0]
         )
         project_manifest.to_yaml_file(_PROJECT_MANIFEST_MANAGED_PATH)
 
     def _create_craft_manifest(
         self, project_manifest: pathlib.Path, session_report: dict[str, typing.Any]
     ) -> None:
-        project = self._services.get("project").get()
-        name = project.name
-        version = project.version
+        name = self._project.name
+        version = self._project.version
+        # This can be called with a multi-item build plan, so just get the first.
         platform = self._services.get("build_plan").plan()[0].platform
 
         manifest_path = pathlib.Path(f"{name}_{version}_{platform}.json")
