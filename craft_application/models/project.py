@@ -118,10 +118,9 @@ class Project(base.CraftBaseModel):
     name: ProjectName
     title: ProjectTitle | None = None
     version: VersionStr | None = None
-    summary: SummaryStr | None = None
+    summary: SummaryStr
 
-    description: str | None = pydantic.Field(
-        default=None,
+    description: str = pydantic.Field(
         description="The full description of the project.",
     )
     """The full description of the project.

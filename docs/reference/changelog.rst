@@ -4,6 +4,17 @@
 Changelog
 *********
 
+6.0.0 (unreleased)
+------------------
+
+Breaking changes
+================
+
+Models
+~~~~~~
+
+- The ``summary`` and ``description`` fields on the ``Project`` model are now mandatory.
+
 5.10.3 (2025-09-22)
 -------------------
 
