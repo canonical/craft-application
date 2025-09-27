@@ -1,4 +1,4 @@
-# This file is part of craft_application.
+# This file is part of craft-application.
 #
 # Copyright 2025 Canonical Ltd.
 #
@@ -13,20 +13,30 @@
 #
 # You should have received a copy of the GNU Lesser General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
-"""Services for testcraft."""
+"""Linter framework public API surface."""
 
-import craft_application
+from __future__ import annotations
 
+from .types import (
+    ExitCode,
+    IgnoreConfig,
+    IgnoreSpec,
+    LintContext,
+    LinterIssue,
+    Severity,
+    Stage,
+    should_ignore,
+)
+from .base import AbstractLinter
 
-def register_services() -> None:
-    """Register Testcraft's services.
-
-    This registers with the ServiceFactory all the services that testcraft
-    adds or overrides.
-    """
-    craft_application.ServiceFactory.register(
-        "package", "PackageService", module="testcraft.services.package"
-    )
-    craft_application.ServiceFactory.register(
-        "linter", "TestcraftLinterService", module="testcraft.services.linter"
-    )
+__all__ = [
+    "ExitCode",
+    "IgnoreConfig",
+    "IgnoreSpec",
+    "LintContext",
+    "LinterIssue",
+    "Severity",
+    "Stage",
+    "should_ignore",
+    "AbstractLinter",
+]
