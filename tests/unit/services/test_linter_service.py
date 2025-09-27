@@ -50,6 +50,7 @@ def test_register_and_run_warning(tmp_path: Path) -> None:
     issues = list(svc.run(Stage.PRE, ctx))
     assert len(issues) == 1
     assert issues[0].id == "D001"
+    assert svc.issues_by_linter == {"dummy.pre": issues}
     assert svc.get_highest_severity() == Severity.WARNING
     assert int(svc.summary()) == 0  # warnings do not cause non-zero exit
 
@@ -63,6 +64,7 @@ def test_ignore_by_id_cli(tmp_path: Path) -> None:
     svc.load_ignore_config(project_dir=tmp_path, cli_ignores=["dummy.pre:D001"])
     issues = list(svc.run(Stage.PRE, ctx))
     assert issues == []
+    assert svc.issues_by_linter == {}
     assert int(svc.summary()) == 0  # OK
 
 
@@ -84,6 +86,7 @@ dummy.pre:
     svc.load_ignore_config(project_dir=tmp_path)
     issues = list(svc.run(Stage.PRE, ctx))
     assert issues == []
+    assert svc.issues_by_linter == {}
     assert int(svc.summary()) == 0
 
 
@@ -99,4 +102,5 @@ def test_post_filter_hook_drops_issue(tmp_path: Path) -> None:
 
     issues = list(svc.run(Stage.PRE, ctx))
     assert issues == []
+    assert svc.issues_by_linter == {}
     assert int(svc.summary()) == 0

@@ -56,6 +56,7 @@ class LinterService(base.AppService):
         super().__init__(app, services)
         self._ignore_cfg: IgnoreConfig = {}
         self._issues: list[LinterIssue] = []
+        self._issues_by_linter: dict[str, list[LinterIssue]] = {}
 
     @classmethod
     def register(cls, linter_cls: type[AbstractLinter]) -> None:
@@ -235,6 +236,7 @@ class LinterService(base.AppService):
     ) -> Iterator[LinterIssue]:
         """Run linters for a stage, streaming non-suppressed issues."""
         self._issues.clear()
+        self._issues_by_linter.clear()
         registry = type(self)._class_registry  # noqa: SLF001
         selected = self.pre_filter_linters(stage, ctx, registry.get(stage, []))
         for cls in selected:
@@ -249,6 +251,7 @@ class LinterService(base.AppService):
             filtered = self.post_filter_issues(linter, user_filtered, ctx)
             for issue in filtered:
                 self._issues.append(issue)
+                self._issues_by_linter.setdefault(linter.name, []).append(issue)
                 yield issue
 
     def get_highest_severity(self) -> Severity | None:
@@ -268,3 +271,8 @@ class LinterService(base.AppService):
     def issues(self) -> list[LinterIssue]:
         """Return a copy of issues collected during the last run."""
         return list(self._issues)
+
+    @property
+    def issues_by_linter(self) -> dict[str, list[LinterIssue]]:
+        """Return collected issues grouped by linter name."""
+        return {name: list(issues) for name, issues in self._issues_by_linter.items()}

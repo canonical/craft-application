@@ -86,8 +86,17 @@ class LintCommand(base.AppCommand):
             cli_ignores=list(parsed_args.lint_ignores or []),
             cli_ignore_files=list(parsed_args.lint_ignore_files or []),
         )
-        for _ in linter.run(Stage(parsed_args.stage), ctx):
-            pass
+        issues = list(linter.run(Stage(parsed_args.stage), ctx))
+
+        if issues:
+            emit.message("lint results:")
+            for linter_name, linter_issues in linter.issues_by_linter.items():
+                emit.message(f"{linter_name}:")
+                for issue in linter_issues:
+                    location = f" ({issue.filename})" if issue.filename else ""
+                    emit.message(
+                        f"  - [{issue.severity.name}] {issue.id}: {issue.message}{location}"
+                    )
 
         highest = linter.get_highest_severity()
         if highest is None:
