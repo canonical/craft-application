@@ -22,6 +22,7 @@ import craft_cli
 from craft_application.commands.lifecycle import (
     TestCommand,
 )
+from craft_application.commands.lint import LintCommand
 from craft_providers.actions.snap_installer import Snap
 
 from testcraft.application import TESTCRAFT
@@ -32,6 +33,7 @@ from testcraft.services import register_services
 def register_commands(app: craft_application.Application) -> None:
     """Register extra commands for testcraft."""
     app.add_command_group("Lifecycle", [TestCommand], ordered=True)
+    app.add_command_group("Other", [LintCommand])
     app.add_command_group("State", [StateCommand])
 
 

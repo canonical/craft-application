@@ -1,0 +1,24 @@
+summary: Verify lint output for Testcraft-specific linters
+
+environment:
+  CI: "1"
+
+execute: |
+  cp tests/spread/testcraft/lint/project-missing-version.yaml testcraft.yaml
+  testcraft lint 2>&1 | tee lint_pre.log
+  grep -q "lint results:" lint_pre.log
+  grep -q "testcraft.missing_version:" lint_pre.log
+  grep -q "\[WARNING\] TC001: project is missing the recommended 'version' field" lint_pre.log
+  grep -q "lint: WARN" lint_pre.log
+
+  cp tests/spread/testcraft/lint/project-with-version.yaml testcraft.yaml
+  testcraft pack 2>&1 | tee pack.log
+  testcraft lint --stage post 2>&1 | tee lint_post.log
+  grep -q "testcraft.empty_artifact:" lint_post.log
+  grep -q "\[ERROR\] TC100: artifact is empty other than metadata.yaml" lint_post.log
+  grep -q "lint: ERROR" lint_post.log
+
+restore: |
+  rm -f *.testcraft
+  rm -f testcraft.yaml lint_pre.log lint_post.log pack.log
+  testcraft clean

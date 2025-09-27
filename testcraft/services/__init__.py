@@ -27,3 +27,6 @@ def register_services() -> None:
     craft_application.ServiceFactory.register(
         "package", "PackageService", module="testcraft.services.package"
     )
+    craft_application.ServiceFactory.register(
+        "linter", "TestcraftLinterService", module="testcraft.services.linter"
+    )
