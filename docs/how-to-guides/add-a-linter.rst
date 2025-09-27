@@ -62,7 +62,7 @@ Use the service to stream issues for the desired stage:
 
 Users can suppress issues via a ``craft-lint.yaml`` file or CLI rules
 (when available in your application). The underlying format is
-``IgnoreConfig `` mapping linter names to ``IgnoreSpec`` objects.
+``IgnoreConfig`` mapping linter names to ``IgnoreSpec`` objects.
 
 .. code-block:: yaml
 

@@ -80,6 +80,7 @@ def test_issue_then_ignore(
     linter_service.load_ignore_config(project_dir=project_dir)
     issues = list(linter_service.run(Stage.PRE, ctx))
     assert [i.id for i in issues] == ["INT001"]
+    assert linter_service.issues_by_linter == {_FailingPreLinter.name: issues}
     assert linter_service.summary() == ExitCode.ERROR
 
     ignore_file = project_dir / "craft-lint.yaml"
@@ -88,4 +89,5 @@ def test_issue_then_ignore(
     linter_service.load_ignore_config(project_dir=project_dir)
     rerun = list(linter_service.run(Stage.PRE, ctx))
     assert rerun == []
+    assert linter_service.issues_by_linter == {}
     assert linter_service.summary() == ExitCode.OK

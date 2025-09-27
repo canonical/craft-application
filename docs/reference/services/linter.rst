@@ -37,7 +37,7 @@ Types
 - ``LintContext(project_dir: Path, artifact_dirs: list[Path])``
 - ``LinterIssue(id, message, severity, filename, url="")``
 - ``IgnoreSpec(ids: "*"|set[str], by_filename: dict[str, set[str]])``
-- ``IgnoreConfig`` – ``dict[str, IgnoreSpec]`` (maps linter name → spec)
+- ``IgnoreConfig`` – ``dict[str, IgnoreSpec]`` (maps linter name to rules)
 - ``should_ignore(linter_name, issue, cfg)`` – helper that applies id and
   filename glob rules
 
@@ -48,16 +48,17 @@ Service
 
 - ``@classmethod register(linter_cls)``
 - ``@classmethod build_ignore_config(project_dir, cli_ignores=None, cli_ignore_files=None)``
-  – merge defaults → files → CLI (CLI takes precedence); intended to be
+  â€“ merge defaults â†’ files â†’ CLI (CLI takes precedence); intended to be
   overridden by apps like Snapcraft.
 - ``load_ignore_config(project_dir, cli_ignores=None, cli_ignore_files=None)``
-  – store ignore config on the instance.
-- ``pre_filter_linters(stage, ctx, candidates)`` – hook to filter classes
+  â€“ store ignore config on the instance.
+- ``pre_filter_linters(stage, ctx, candidates)`` â€“ hook to filter classes
   (no-op by default).
-- ``post_filter_issues(linter, issues, ctx)`` – hook to filter issues after
+- ``post_filter_issues(linter, issues, ctx)`` â€“ hook to filter issues after
   central ignore (no-op by default).
-- ``run(stage, ctx) -> Iterator[LinterIssue]`` – stream non-suppressed issues.
-- ``summary() -> ExitCode`` – highest-severity result.
+- ``issues`` – flat list of issues collected in the last run.
+- ``issues_by_linter`` – mapping of linter name → list of issues from the last run.
+- ``summary() -> ExitCode`` â€“ highest-severity result.
 
 How to add a new linter
 -----------------------
