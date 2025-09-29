@@ -15,6 +15,14 @@ Models
 
 - The ``summary`` and ``description`` fields on the ``Project`` model are now mandatory.
 
+5.11.0 (2025-09-XX)
+-------------------
+
+Documentation
+=============
+
+- Add common page *Reuse packages between builds* for use in apps' documentation.
+
 5.10.3 (2025-09-22)
 -------------------
 
