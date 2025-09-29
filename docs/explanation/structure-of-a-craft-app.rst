@@ -9,7 +9,7 @@ relationships and communication between these components.
 Here's a view of the structure of a craft app, starting from when a user calls
 it:
 
-.. figure:: https://assets.ubuntu.com/v1/f49662cc-app_structure.svg
+.. figure:: assets/app_structure.svg
 
     Relationship between pieces of an app.
 
