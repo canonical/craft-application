@@ -1,3 +1,4 @@
+.. _`Pydantic`: https://docs.pydantic.dev/
 .. _`YAML`: https://yaml.org/
 
 

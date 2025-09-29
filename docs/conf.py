@@ -116,6 +116,9 @@ intersphinx_mapping = {
         "https://canonical-craft-platforms.readthedocs-hosted.com/en/latest",
         None,
     ),
+    "craft-providers": (
+        "https://canonical-craft-providers.readthedocs-hosted.com/en/latest", None
+    ),
 }
 
 # Client-side page redirects.
