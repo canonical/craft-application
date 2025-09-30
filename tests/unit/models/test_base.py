@@ -30,12 +30,12 @@ class MyBaseModel(models.CraftBaseModel):
 
     @pydantic.field_validator("value1", mode="after")
     @classmethod
-    def _validate_value1(cls, _v):
+    def _validate_value1(cls, value):
         raise ValueError("Bad value1 value")
 
     @pydantic.field_validator("value2", mode="after")
     @classmethod
-    def _validate_value2(cls, _v):
+    def _validate_value2(cls, value):
         raise ValueError("Bad value2 value")
 
     @classmethod
@@ -54,8 +54,8 @@ def test_model_reference_slug_errors():
 
     expected = (
         "Bad testcraft.yaml content:\n"
-        "- bad value1 value (in field 'value1')\n"
-        "- bad value2 value (in field 'value2')"
+        "- bad value1 value (in field 'value1', input: 1)\n"
+        "- bad value2 value (in field 'value2', input: 'hi')"
     )
     assert str(err.value) == expected
     assert err.value.doc_slug == "/mymodel.html"

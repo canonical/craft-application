@@ -4,6 +4,14 @@
 Changelog
 *********
 
+6.0.0 (unreleased)
+------------------
+
+Models
+======
+
+- Pydantic error messages now include the input value when relevant.
+
 5.11.0 (2025-09-XX)
 -------------------
 

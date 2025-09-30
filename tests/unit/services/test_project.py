@@ -256,13 +256,13 @@ def test_get_platforms(
         ),
         pytest.param(
             {"mine": {"build-on": ["all"], "build-for": ["all"]}},
-            r"'all' cannot be used for 'build-on' \(in field 'platforms.mine.build-on'\)",
+            r"'all' cannot be used for 'build-on' \(in field 'platforms.mine.build-on', input: \['all'\]\)",
             id="build-on-all",
         ),
         pytest.param(
             {"mine": {"build-on": ["amd64"], "build-for": ["any"]}},
             r"'any' is not a valid Debian architecture\.",
-            id="build-on-all",
+            id="build-for-any",
         ),
         pytest.param(
             {"my-platform": {"build-on": ["ppc64el"]}},
