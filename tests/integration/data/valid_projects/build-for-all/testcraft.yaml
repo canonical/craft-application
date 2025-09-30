@@ -1,6 +1,9 @@
 name: build-for-all
 title: Build one artefact for all architectures
 version: 1.0
+summary: A test project.
+description: |
+  A project for testcraft.
 base: "ubuntu@22.04"
 platforms:
   platform1:

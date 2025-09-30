@@ -88,8 +88,14 @@ class AppMetadata:
     """
     source_ignore_patterns: list[str] = field(default_factory=list[str])
     managed_instance_project_path = pathlib.PurePosixPath("/root/project")
-    project_variables: list[str] = field(default_factory=lambda: ["version"])
-    mandatory_adoptable_fields: list[str] = field(default_factory=lambda: ["version"])
+    project_variables: list[str] = field(
+        default_factory=lambda: ["version", "summary", "description"]
+    )
+    """Fields that are adoptable using craftctl set."""
+    mandatory_adoptable_fields: list[str] = field(
+        default_factory=lambda: ["version", "summary", "description"]
+    )
+    """Fields that must either be in the YAML file or adopted with craftctl set."""
     ConfigModel: type[_config.ConfigModel] = _config.ConfigModel
 
     ProjectClass: type[models.Project] = models.Project
