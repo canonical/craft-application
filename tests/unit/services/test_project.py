@@ -324,7 +324,10 @@ def test_get_project_vars(real_project_service: ProjectService, data, expected):
     with pytest.warns(DeprecationWarning, match=expected_warning):
         project_vars = real_project_service._get_project_vars(data)
 
-    assert project_vars == expected
+    assert project_vars == expected | {
+        "summary": None,
+        "description": None,
+    }
 
 
 @pytest.mark.parametrize(
@@ -332,12 +335,14 @@ def test_get_project_vars(real_project_service: ProjectService, data, expected):
     [
         pytest.param(
             {},
-            ProjectVarInfo.unmarshal({"version": {}}),
+            ProjectVarInfo.unmarshal({"version": {}, "summary": {}, "description": {}}),
             id="empty",
         ),
         pytest.param(
             {"version": "3.14", "unrelated": "pi"},
-            ProjectVarInfo.unmarshal({"version": ProjectVar(value="3.14")}),
+            ProjectVarInfo.unmarshal(
+                {"version": ProjectVar(value="3.14"), "summary": {}, "description": {}}
+            ),
             id="version-set",
         ),
     ],
@@ -986,6 +991,8 @@ def test_deep_update(fake_project_file, real_project_service: ProjectService):
             platforms:
               riscv64:
             version: "1.0"
+            summary: fake project
+            description: A fake project for testing deep_update
             parts:
               some-part:
                 plugin: nil
@@ -1014,6 +1021,8 @@ def test_deep_update(fake_project_file, real_project_service: ProjectService):
             "name": "updated-name",
             "platforms": {"riscv64": None},
             "version": "1.0",
+            "summary": "fake project",
+            "description": "A fake project for testing deep_update",
             "parts": {
                 "some-part": {
                     "plugin": "nil",
