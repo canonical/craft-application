@@ -21,7 +21,7 @@ Models
   fields of :py:attr:`~craft_application.AppMetadata` must consider
   how these fields should behave in their apps.
 
-5.11.0 (2025-09-XX)
+5.11.0 (2025-10-01)
 -------------------
 
 Documentation

@@ -13,4 +13,3 @@ The top-level ``Project`` model is nested with several other models.
 
 
 .. _JSON schemas: https://json-schema.org/
-.. _Pydantic: https://docs.pydantic.dev/latest/
