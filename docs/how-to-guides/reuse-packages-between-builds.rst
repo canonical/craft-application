@@ -14,8 +14,6 @@ Reuse packages between builds
 .. |app| replace:: <your-app>
 .. |app-command| replace:: <craft-app>
 .. |artifact| replace:: artifact
-.. |star| replace:: package
-.. |Starcraft| replace:: Craft Application
 
 .. include:: /common/craft-application/how-to-guides/reuse-packages-between-builds.rst
     :start-after: =====
