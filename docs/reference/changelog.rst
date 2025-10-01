@@ -4,13 +4,13 @@
 Changelog
 *********
 
-5.11.0 (2025-09-XX)
+5.11.0 (2025-10-01)
 -------------------
 
 Documentation
 =============
 
-- Add common page *Reuse packages between builds* for use in apps' documentation.
+- Add common page :doc:`/how-to-guides/reuse-packages-between-builds` for use in apps' documentation.
 
 5.10.3 (2025-09-22)
 -------------------

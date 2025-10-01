@@ -1,0 +1,16 @@
+.. tip::
+
+    This is a preview of the reusable *Reuse packages between builds* documentation.
+    It can be included in your documentation by inserting a file that looks as follows,
+    with the appropriate changes
+
+    .. literalinclude:: reuse-packages-between-builds.rst
+        :start-after: .. :docs-include:
+.. |an-artifact| replace:: an artifact
+.. |app| replace:: <your-app>
+.. |app-command| replace:: <craft-app>
+.. |artifact| replace:: artifact
+.. |star| replace:: package
+.. |Starcraft| replace:: Craft Application
+
+.. include:: /common/craft-application/how-to-guides/reuse-packages-between-builds.rst
