@@ -30,12 +30,12 @@ class MyBaseModel(models.CraftBaseModel):
 
     @pydantic.field_validator("value1", mode="after")
     @classmethod
-    def _validate_value1(cls, value):
+    def _validate_value1(cls, _v):
         raise ValueError("Bad value1 value")
 
     @pydantic.field_validator("value2", mode="after")
     @classmethod
-    def _validate_value2(cls, value):
+    def _validate_value2(cls, _v):
         raise ValueError("Bad value2 value")
 
     @classmethod
