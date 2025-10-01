@@ -50,10 +50,8 @@ class FieldLocationTuple(NamedTuple):
 def format_pydantic_error(error: ErrorDetails) -> str:
     """Format a single pydantic ErrorDetails as a string.
 
-    :param loc: An iterable of strings and integers determining the error location.
-        Can be pulled from the "loc" field of a pydantic ErrorDetails.
-    :param message: A string of the error message.
-        Can be pulled from the "msg" field of a pydantic ErrorDetails.
+    :param error: A ``pydantic_core.ErrorDetails`` object to format as a friendly error
+        message.
     :returns: A formatted error.
     """
     field_path = _format_pydantic_error_location(error["loc"])
