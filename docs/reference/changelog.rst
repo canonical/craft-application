@@ -12,7 +12,7 @@ Models
 
 - Pydantic error messages now include the input value when relevant.
 
-5.11.0 (2025-09-XX)
+5.11.0 (2025-10-01)
 -------------------
 
 Documentation
