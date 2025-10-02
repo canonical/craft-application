@@ -47,10 +47,8 @@ exclude_patterns = [
     "base",
     "sphinx-resources",
     "common/README.md",
-    "common/craft-application/how-to-guides/build-remotely.rst",
-    "common/craft-application/how-to-guides/reuse-packages-between-builds.rst",
-    "common/craft-application/reference/remote-builds.rst",
-    "common/craft-application/reference/fetch-service.rst",
+    # Exclude all of our common docs as they'll be included explicitly.
+    "common/craft-application/**",
     # There's no tutorials right now, so just hide the scaffolding
     "tutorials",
 ]

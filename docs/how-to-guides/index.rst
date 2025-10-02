@@ -9,3 +9,4 @@ How-to guides
    build-remotely
    partitions
    platforms
+   reuse-packages-between-builds
