@@ -54,8 +54,8 @@ def test_model_reference_slug_errors():
 
     expected = (
         "Bad testcraft.yaml content:\n"
-        "- bad value1 value (in field 'value1')\n"
-        "- bad value2 value (in field 'value2')"
+        "- bad value1 value (in field 'value1', input: 1)\n"
+        "- bad value2 value (in field 'value2', input: 'hi')"
     )
     assert str(err.value) == expected
     assert err.value.doc_slug == "/mymodel.html"
