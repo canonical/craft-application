@@ -4,6 +4,17 @@
 Changelog
 *********
 
+.. Release template for easy copying:
+    1.2.3 (unreleased)
+    ------------------
+
+    Section
+    =======
+
+    - Item
+
+    For a complete list of commits, check out the `1.2.3`_ release on GitHub.
+
 6.0.0 (unreleased)
 ------------------
 
@@ -42,6 +53,8 @@ Documentation
 
 - Add common page *Reuse packages between builds* for use in apps' documentation.
 
+For a complete list of commits, check out the `5.11.0`_ release on GitHub.
+
 5.10.3 (2025-09-22)
 -------------------
 
@@ -51,10 +64,14 @@ Application
 - If keys are duplicated in a project file's dictionaries after the grammar is
   resolved, an error will be raised.
 
+For a complete list of commits, check out the `5.10.3`_ release on GitHub.
+
 5.10.2 (2025-09-19)
 -------------------
 
 - Launchpad requests no longer ignore proxy settings.
+
+For a complete list of commits, check out the `5.10.2`_ release on GitHub.
 
 5.10.1 (2025-09-12)
 -------------------
@@ -62,6 +79,8 @@ Application
 - The :py:class:`~craft_application.Application` class no longer catches
   all ``BaseException`` instances, reverting back to the previous behaviour of
   catching ``Exception`` and ``KeyboardInterrupt`` exceptions.
+
+For a complete list of commits, check out the `5.10.1`_ release on GitHub.
 
 5.10.0 (2025-09-10)
 -------------------
@@ -95,6 +114,8 @@ Services
 - Add an idle timer to the Provider service, so app instances can reuse a dormant
   VM or container before it automatically shuts down.
 - Bases that are in extended support are now correctly classified as EOL.
+
+For a complete list of commits, check out the `5.10.0`_ release on GitHub.
 
 5.9.1 (2025-09-04)
 ------------------
@@ -198,6 +219,8 @@ Fixes
 
 - The ``--project-dir`` command option works again.
 
+For a complete list of commits, check out the `5.6.4`_ release on GitHub.
+
 5.6.3 (2025-08-05)
 ------------------
 
@@ -207,7 +230,7 @@ Fixes
 - Check the craft backend type before testing. The type must be ``craft`` to
   allow the backend to be dynamically processed.
 
-For a complete list of commits, check out the `5.6.2`_ release on GitHub.
+For a complete list of commits, check out the `5.6.3`_ release on GitHub.
 
 5.6.2 (2025-08-01)
 ------------------
@@ -1084,6 +1107,7 @@ For a complete list of commits, check out the `2.7.0`_ release on GitHub.
 .. _5.6.1: https://github.com/canonical/craft-application/releases/tag/5.6.1
 .. _5.6.2: https://github.com/canonical/craft-application/releases/tag/5.6.2
 .. _5.6.3: https://github.com/canonical/craft-application/releases/tag/5.6.3
+.. _5.6.4: https://github.com/canonical/craft-application/releases/tag/5.6.4
 .. _5.6.5: https://github.com/canonical/craft-application/releases/tag/5.6.5
 .. _5.7.0: https://github.com/canonical/craft-application/releases/tag/5.7.0
 .. _5.7.1: https://github.com/canonical/craft-application/releases/tag/5.7.1
@@ -1092,3 +1116,6 @@ For a complete list of commits, check out the `2.7.0`_ release on GitHub.
 .. _5.9.1: https://github.com/canonical/craft-application/releases/tag/5.9.1
 .. _5.10.0: https://github.com/canonical/craft-application/releases/tag/5.10.0
 .. _5.10.1: https://github.com/canonical/craft-application/releases/tag/5.10.1
+.. _5.10.2: https://github.com/canonical/craft-application/releases/tag/5.10.2
+.. _5.10.3: https://github.com/canonical/craft-application/releases/tag/5.10.3
+.. _5.11.0: https://github.com/canonical/craft-application/releases/tag/5.11.0
