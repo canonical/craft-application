@@ -4,6 +4,23 @@
 Changelog
 *********
 
+6.0.0 (unreleased)
+------------------
+
+Breaking changes
+================
+
+Models
+~~~~~~
+
+- The ``summary`` and ``description`` fields on the
+  :py:class:`~craft_application.models.Project` model are now mandatory, but are
+  adoptable fields by default. Apps that override the
+  :py:attr:`~craft_application.AppMetadata.project_variables` or
+  :py:attr:`~craft_application.AppMetadata.mandatory_adoptable_fields`
+  fields of :py:attr:`~craft_application.AppMetadata` must consider
+  how these fields should behave in their apps.
+
 5.11.0 (2025-10-01)
 -------------------
 
@@ -29,7 +46,7 @@ Application
 5.10.1 (2025-09-12)
 -------------------
 
-- The :py:class:`~craft_application.application.Application` class no longer catches
+- The :py:class:`~craft_application.Application` class no longer catches
   all ``BaseException`` instances, reverting back to the previous behaviour of
   catching ``Exception`` and ``KeyboardInterrupt`` exceptions.
 
@@ -39,11 +56,11 @@ Application
 Application
 ===========
 
-- Add :py:attr:`~craft_application.application.AppMetadata.artifact_type` to
+- Add :py:attr:`~craft_application.AppMetadata.artifact_type` to
   ``AppMetadata`` to allow user-visible messages to refer to the app-specific output
   artifact type.
 - Improved UX for end-of-life and near end-of-life bases with
-  :py:attr:`~craft_application.application.AppMetadata.check_supported_base`.
+  :py:attr:`~craft_application.AppMetadata.check_supported_base`.
 - When packing with ``--debug``, the offending error message will now be displayed
   twice - once just before entering the shell, and again after the shell is closed.
 
@@ -108,7 +125,7 @@ Services
 ========
 
 - Project Service: Allow using ``base: bare`` with
-  :py:attr:`~craft_application.application.AppMetadata.check_supported_base`.
+  :py:attr:`~craft_application.AppMetadata.check_supported_base`.
 
 For a complete list of commits, check out the `5.8.0`_ release on GitHub.
 
@@ -146,7 +163,7 @@ For a complete list of commits, check out the `5.6.5`_ release on GitHub.
 Application
 ===========
 
-- Add a :py:attr:`~craft_application.application.AppMetadata.check_supported_base`
+- Add a :py:attr:`~craft_application.AppMetadata.check_supported_base`
   option to ``AppMetadata``, allowing the application to opt into checking that the
   base is supported.
 
