@@ -12,6 +12,20 @@ Models
 
 - Pydantic error messages now include the input value when relevant.
 
+Breaking changes
+================
+
+Models
+~~~~~~
+
+- The ``summary`` and ``description`` fields on the
+  :py:class:`~craft_application.models.Project` model are now mandatory, but are
+  adoptable fields by default. Apps that override the
+  :py:attr:`~craft_application.AppMetadata.project_variables` or
+  :py:attr:`~craft_application.AppMetadata.mandatory_adoptable_fields`
+  fields of :py:attr:`~craft_application.AppMetadata` must consider
+  how these fields should behave in their apps.
+
 5.11.0 (2025-10-01)
 -------------------
 
@@ -37,7 +51,7 @@ Application
 5.10.1 (2025-09-12)
 -------------------
 
-- The :py:class:`~craft_application.application.Application` class no longer catches
+- The :py:class:`~craft_application.Application` class no longer catches
   all ``BaseException`` instances, reverting back to the previous behaviour of
   catching ``Exception`` and ``KeyboardInterrupt`` exceptions.
 
@@ -47,11 +61,11 @@ Application
 Application
 ===========
 
-- Add :py:attr:`~craft_application.application.AppMetadata.artifact_type` to
+- Add :py:attr:`~craft_application.AppMetadata.artifact_type` to
   ``AppMetadata`` to allow user-visible messages to refer to the app-specific output
   artifact type.
 - Improved UX for end-of-life and near end-of-life bases with
-  :py:attr:`~craft_application.application.AppMetadata.check_supported_base`.
+  :py:attr:`~craft_application.AppMetadata.check_supported_base`.
 - When packing with ``--debug``, the offending error message will now be displayed
   twice - once just before entering the shell, and again after the shell is closed.
 
@@ -116,7 +130,7 @@ Services
 ========
 
 - Project Service: Allow using ``base: bare`` with
-  :py:attr:`~craft_application.application.AppMetadata.check_supported_base`.
+  :py:attr:`~craft_application.AppMetadata.check_supported_base`.
 
 For a complete list of commits, check out the `5.8.0`_ release on GitHub.
 
@@ -154,7 +168,7 @@ For a complete list of commits, check out the `5.6.5`_ release on GitHub.
 Application
 ===========
 
-- Add a :py:attr:`~craft_application.application.AppMetadata.check_supported_base`
+- Add a :py:attr:`~craft_application.AppMetadata.check_supported_base`
   option to ``AppMetadata``, allowing the application to opt into checking that the
   base is supported.
 
@@ -450,8 +464,8 @@ Breaking changes
 
 For a complete list of commits, check out the `5.0.0`_ release on GitHub.
 
-4.10.0 (2025-Feb-27)
---------------------
+4.10.0 (2025-02-27)
+-------------------
 
 Application
 ===========
@@ -462,8 +476,8 @@ Application
 
 For a complete list of commits, check out the `4.10.0`_ release on GitHub.
 
-4.9.1 (2025-Feb-12)
--------------------
+4.9.1 (2025-02-12)
+------------------
 
 Application
 ===========
@@ -472,8 +486,8 @@ Application
 
 For a complete list of commits, check out the `4.9.1`_ release on GitHub.
 
-4.9.0 (2025-Feb-10)
--------------------
+4.9.0 (2025-02-10)
+------------------
 
 All bug fixes from the 4.8 and 4.4 series are included in 4.9.0.
 
@@ -496,8 +510,8 @@ Remote build
 
 For a complete list of commits, check out the `4.9.0`_ release on GitHub.
 
-4.4.1 (2025-Feb-05)
--------------------
+4.4.1 (2025-02-05)
+------------------
 
 Application
 ===========
@@ -514,8 +528,8 @@ Remote build
 
 For a complete list of commits, check out the `4.4.1`_ release on GitHub.
 
-4.8.3 (2025-Jan-31)
--------------------
+4.8.3 (2025-01-31)
+------------------
 
 Remote build
 ============
@@ -529,8 +543,8 @@ Remote build
 
 For a complete list of commits, check out the `4.8.3`_ release on GitHub.
 
-4.8.2 (2025-Jan-16)
--------------------
+4.8.2 (2025-01-16)
+------------------
 
 Application
 ===========
@@ -539,8 +553,8 @@ Application
 
 For a complete list of commits, check out the `4.8.2`_ release on GitHub.
 
-4.8.1 (2025-Jan-13)
--------------------
+4.8.1 (2025-01-13)
+------------------
 
 Application
 ===========
@@ -555,8 +569,8 @@ Documentation
 
 For a complete list of commits, check out the `4.8.1`_ release on GitHub.
 
-4.8.0 (2025-Jan-13)
--------------------
+4.8.0 (2025-01-13)
+------------------
 
 Services
 ========
@@ -574,8 +588,8 @@ Utils
 
 For a complete list of commits, check out the `4.8.0`_ release on GitHub.
 
-4.7.0 (2024-Dec-19)
--------------------
+4.7.0 (2024-12-19)
+------------------
 
 Application
 ===========
@@ -584,8 +598,8 @@ Application
 
 For a complete list of commits, check out the `4.7.0`_ release on GitHub.
 
-4.6.0 (2024-Dec-13)
--------------------
+4.6.0 (2024-12-13)
+------------------
 
 Application
 ===========
@@ -626,8 +640,8 @@ Git
 
 For a complete list of commits, check out the `4.6.0`_ release on GitHub.
 
-4.5.0 (2024-Nov-28)
--------------------
+4.5.0 (2024-11-28)
+------------------
 
 Application
 ===========
@@ -657,8 +671,8 @@ Services
 
 For a complete list of commits, check out the `4.5.0`_ release on GitHub.
 
-4.4.0 (2024-Nov-08)
--------------------
+4.4.0 (2024-11-08)
+------------------
 
 Application
 ===========
@@ -686,8 +700,8 @@ Services
 
 For a complete list of commits, check out the `4.4.0`_ release on GitHub.
 
-4.3.0 (2024-Oct-11)
--------------------
+4.3.0 (2024-10-11)
+------------------
 
 Application
 ===========
@@ -708,23 +722,23 @@ Services
 
 For a complete list of commits, check out the `4.3.0`_ release on GitHub.
 
-4.2.7 (2024-Oct-08)
--------------------
+4.2.7 (2024-10-08)
+------------------
 
 - Don't depend on requests >= 2.32.0.
 - Fix: set CRAFT_PARALLEL_BUILD_COUNT correctly in ``override-`` scripts.
 
 For a complete list of commits, check out the `4.2.7`_ release on GitHub.
 
-4.2.6 (2024-Oct-04)
--------------------
+4.2.6 (2024-10-04)
+------------------
 
 - Remove the ``requests<2.32.0`` constraint to resolve CVE-2024-35195.
 
 For a complete list of commits, check out the `4.2.6`_ release on GitHub.
 
-4.2.5 (2024-Oct-04)
--------------------
+4.2.5 (2024-10-04)
+------------------
 
 Services
 ========
@@ -733,8 +747,8 @@ Services
 
 For a complete list of commits, check out the `4.2.5`_ release on GitHub.
 
-4.2.4 (2024-Sep-19)
--------------------
+4.2.4 (2024-09-19)
+------------------
 
 Remote build
 ============
@@ -743,8 +757,8 @@ Remote build
 
 For a complete list of commits, check out the `4.2.4`_ release on GitHub.
 
-4.2.3 (2024-Sep-18)
--------------------
+4.2.3 (2024-09-18)
+------------------
 
 Application
 ===========
@@ -754,8 +768,8 @@ Application
 
 For a complete list of commits, check out the `4.2.3`_ release on GitHub.
 
-4.2.2 (2024-Sep-13)
--------------------
+4.2.2 (2024-09-13)
+------------------
 
 Application
 ===========
@@ -764,8 +778,8 @@ Application
 
 For a complete list of commits, check out the `4.2.2`_ release on GitHub.
 
-4.2.1 (2024-Sep-13)
--------------------
+4.2.1 (2024-09-13)
+------------------
 
 Models
 ======
@@ -774,8 +788,8 @@ Models
 
 For a complete list of commits, check out the `4.2.1`_ release on GitHub.
 
-4.1.3 (2024-Sep-12)
--------------------
+4.1.3 (2024-09-12)
+------------------
 
 Models
 ======
@@ -784,8 +798,8 @@ Models
 
 For a complete list of commits, check out the `4.1.3`_ release on GitHub.
 
-4.2.0 (2024-Sep-12)
--------------------
+4.2.0 (2024-09-12)
+------------------
 
 Application
 ===========
@@ -802,8 +816,8 @@ Commands
 
 For a complete list of commits, check out the `4.2.0`_ release on GitHub.
 
-4.1.2 (2024-Sep-05)
--------------------
+4.1.2 (2024-09-05)
+------------------
 
 Application
 ===========
@@ -818,8 +832,8 @@ Models
 
 For a complete list of commits, check out the `4.1.2`_ release on GitHub.
 
-4.1.1 (2024-Aug-27)
--------------------
+4.1.1 (2024-08-27)
+------------------
 
 Application
 ===========
@@ -830,8 +844,8 @@ Application
 
 For a complete list of commits, check out the `4.1.1`_ release on GitHub.
 
-4.1.0 (2024-Aug-14)
--------------------
+4.1.0 (2024-08-14)
+------------------
 
 Application
 ===========
@@ -848,8 +862,8 @@ apps to override if necessary.
 
 For a complete list of commits, check out the `4.1.0`_ release on GitHub.
 
-4.0.0 (2024-Aug-09)
--------------------
+4.0.0 (2024-08-09)
+------------------
 
 Breaking changes
 ================
@@ -879,8 +893,8 @@ repositories and add remotes.
 For a complete list of commits, check out the `4.0.0`_ release on GitHub.
 
 
-3.2.0 (2024-Jul-07)
--------------------
+3.2.0 (2024-07-07)
+------------------
 
 Application
 ===========
@@ -895,8 +909,8 @@ Add a how-to guide for using partitions.
 
 For a complete list of commits, check out the `3.2.0`_ release on GitHub.
 
-3.1.0 (2024-Jul-05)
--------------------
+3.1.0 (2024-07-05)
+------------------
 
 .. note::
 
@@ -910,8 +924,8 @@ applications can point to a different Launchpad credentials file.
 
 For a complete list of commits, check out the `3.1.0`_ release on GitHub.
 
-2.9.0 (2024-Jul-03)
--------------------
+2.9.0 (2024-07-03)
+------------------
 
 Application
 ===========
@@ -931,8 +945,8 @@ Models
 * Add a way to provide doc slugs for models. These are shown when a project
   fails validation, provided the base docs url is set on the AppMetadata.
 
-3.0.0 (2024-Jun-28)
--------------------
+3.0.0 (2024-06-28)
+------------------
 
 Craft Application 3.0.0 implements the ``BuildPlanner`` class and can create
 a build plan. This is a breaking change because it requires more fields to
@@ -965,8 +979,8 @@ Models
 
 For a complete list of commits, check out the `3.0.0`_ release on GitHub.
 
-2.8.0 (2024-Jun-03)
--------------------
+2.8.0 (2024-06-03)
+------------------
 
 Commands
 ========
@@ -987,8 +1001,8 @@ Remote build
 
 For a complete list of commits, check out the `2.8.0`_ release on GitHub.
 
-2.7.0 (2024-May-08)
--------------------
+2.7.0 (2024-05-08)
+------------------
 
 Base naming convention
 ======================

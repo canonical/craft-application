@@ -1,6 +1,6 @@
 .. _reference-models-project:
 
-.. py:module:: craft_application.models.project
+.. py:module:: craft_application.models
 
 Project
 =======
@@ -58,3 +58,17 @@ This key determines the project's build environment.
 
 .. kitbash-field:: Project package_repositories
     :override-type: list[dict[str, Any]]
+
+
+Class documentation
+-------------------
+
+This class documentation shows the additional members of the class that are responsible
+for validation or provide extra utility outside of the pydantic model.
+
+.. autoclass:: Project
+    :members:
+    :private-members:
+    :show-inheritance:
+    :exclude-members: name,title,version,summary,description,base,build_base,platforms,
+        license,package_repositories,parts

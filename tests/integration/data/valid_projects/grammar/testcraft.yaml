@@ -1,6 +1,8 @@
 name: empty
 title: A most basic project
 version: 1.0
+summary: A grammar project
+description: A testcraft project that tests grammar rendering.
 base: "ubuntu@22.04"
 platforms:
   amd64:
