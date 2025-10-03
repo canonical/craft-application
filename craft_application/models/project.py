@@ -251,7 +251,7 @@ class Project(base.CraftBaseModel):
     def _providers_base(cls, base: str) -> craft_providers.bases.BaseAlias | None:
         """Get a BaseAlias from the Project base.
 
-        The default naming convention for a base is 'name@channel'. This method
+        The default naming convention for a base is ``name@channel``. This method
         should be overridden for applications with a different naming convention.
 
         :param base: The base name.

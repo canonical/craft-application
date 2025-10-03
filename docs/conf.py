@@ -121,6 +121,8 @@ intersphinx_mapping = {
     ),
 }
 
+autodoc_class_signature = "separated"
+
 # Client-side page redirects.
 rediraffe_redirects = "redirects.txt"
 

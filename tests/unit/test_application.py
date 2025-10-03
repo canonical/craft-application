@@ -105,7 +105,7 @@ def test_app_metadata_default_project_variables():
         name="dummycraft_dev",
         summary="dummy craft",
     )
-    assert app.project_variables == ["version"]
+    assert app.project_variables == ["version", "summary", "description"]
 
 
 def test_app_metadata_default_mandatory_adoptable_fields():
@@ -113,7 +113,7 @@ def test_app_metadata_default_mandatory_adoptable_fields():
         name="dummycraft_dev",
         summary="dummy craft",
     )
-    assert app.mandatory_adoptable_fields == ["version"]
+    assert app.mandatory_adoptable_fields == ["version", "summary", "description"]
 
 
 def test_app_project_vars_deprecated(app):
@@ -124,7 +124,11 @@ def test_app_project_vars_deprecated(app):
     with pytest.warns(DeprecationWarning, match=expected):
         project_vars = app._get_project_vars({"version": "test-version"})
 
-    assert project_vars == {"version": "test-version"}
+    assert project_vars == {
+        "description": "",
+        "summary": "",
+        "version": "test-version",
+    }
 
 
 class FakePlugin(craft_parts.plugins.Plugin):
