@@ -499,7 +499,7 @@ def test_invalid_field_message(
     full_expected_message = textwrap.dedent(
         f"""
         Bad myproject.yaml content:
-        - {expected_message} (in field '{field_name}')
+        - {expected_message} (in field '{field_name}', input: {invalid_value!r})
         """
     ).strip()
 
@@ -544,7 +544,7 @@ def test_unmarshal_undefined_repositories(full_project_dict):
         (
             [[]],
             [
-                "- input should be a valid dictionary (in field 'package-repositories[0]')"
+                "- input should be a valid dictionary (in field 'package-repositories[0]', input: [])"
             ],
         ),
         (
@@ -583,8 +583,8 @@ def test_platform_invalid_arch(model, platform_label, basic_project_dict):
 
     assert error.value.args[0] == (
         "Bad myproject.yaml content:\n"
-        f"- 'unknown' is not a valid Debian architecture. (in field 'platforms.{platform_label}.build-on')\n"
-        f"- 'unknown' is not a valid Debian architecture. (in field 'platforms.{platform_label}.build-for')"
+        f"- 'unknown' is not a valid Debian architecture. (in field 'platforms.{platform_label}.build-on', input: {[platform_label]})\n"
+        f"- 'unknown' is not a valid Debian architecture. (in field 'platforms.{platform_label}.build-for', input: {[platform_label]})"
     )
 
 
@@ -603,7 +603,7 @@ def test_platform_invalid_build_arch(model, arch, field_name, basic_project_dict
 
     error_lines = [
         "Bad myproject.yaml content:",
-        f"- 'unknown' is not a valid Debian architecture. (in field 'platforms.mine.{field_name}')",
+        f"- 'unknown' is not a valid Debian architecture. (in field 'platforms.mine.{field_name}', input: {[arch]!r})",
     ]
     assert error.value.args[0] == "\n".join(error_lines)
 
@@ -617,8 +617,8 @@ def test_invalid_part_error(basic_project_dict):
     expected = textwrap.dedent(
         """\
     Bad bla.yaml content:
-    - plugin not registered: 'badplugin' (in field 'parts.p1')
-    - extra inputs are not permitted (in field 'parts.p2.bad-key')"""
+    - plugin not registered: 'badplugin' (in field 'parts.p1', input: {'plugin': 'badplugin'})
+    - extra inputs are not permitted (in field 'parts.p2.bad-key', input: 1)"""
     )
     with pytest.raises(CraftValidationError, match=re.escape(expected)):
         Project.from_yaml_data(basic_project_dict, filepath=pathlib.Path("bla.yaml"))

@@ -19,10 +19,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, NamedTuple
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no-cover
     from collections.abc import Iterable
 
-    from pydantic import error_wrappers
+    from pydantic_core import ErrorDetails
 
 
 class FieldLocationTuple(NamedTuple):
@@ -47,18 +47,17 @@ class FieldLocationTuple(NamedTuple):
         return cls(field, location)
 
 
-def format_pydantic_error(loc: Iterable[str | int], message: str) -> str:
-    """Format a single pydantic ErrorDict as a string.
+def format_pydantic_error(error: ErrorDetails) -> str:
+    """Format a single pydantic ErrorDetails as a string.
 
-    :param loc: An iterable of strings and integers determining the error location.
-        Can be pulled from the "loc" field of a pydantic ErrorDict.
-    :param message: A string of the error message.
-        Can be pulled from the "msg" field of a pydantic ErrorDict.
+    :param error: A ``pydantic_core.ErrorDetails`` object to format as a friendly error
+        message.
     :returns: A formatted error.
     """
-    field_path = _format_pydantic_error_location(loc)
-    message = _format_pydantic_error_message(message)
+    field_path = _format_pydantic_error_location(error["loc"])
+    message = _format_pydantic_error_message(error["msg"])
     field_name, location = FieldLocationTuple.from_str(field_path)
+    value = error["input"]
     if location != "top-level":
         location = repr(location)
 
@@ -70,11 +69,11 @@ def format_pydantic_error(loc: Iterable[str | int], message: str) -> str:
         return f"- duplicate {field_name!r} entry not permitted in {location} configuration"
     if field_path in ("__root__", ""):
         return f"- {message}"
-    return f"- {message} (in field {field_path!r})"
+    return f"- {message} (in field {field_path!r}, input: {value!r})"
 
 
 def format_pydantic_errors(
-    errors: Iterable[error_wrappers.ErrorDict], *, file_name: str = "yaml file"
+    errors: Iterable[ErrorDetails], *, file_name: str = "yaml file"
 ) -> str:
     """Format errors.
 
@@ -89,7 +88,7 @@ def format_pydantic_errors(
     - field: <some field 2>
       reason: <some reason 2>.
     """
-    messages = (format_pydantic_error(error["loc"], error["msg"]) for error in errors)
+    messages = (format_pydantic_error(error) for error in errors)
     return "\n".join((f"Bad {file_name} content:", *messages))
 
 

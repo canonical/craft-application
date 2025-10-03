@@ -18,6 +18,11 @@ Changelog
 6.0.0 (unreleased)
 ------------------
 
+Models
+======
+
+- Pydantic error messages now include the input value when relevant.
+
 Breaking changes
 ================
 
@@ -31,6 +36,14 @@ Models
   :py:attr:`~craft_application.AppMetadata.mandatory_adoptable_fields`
   fields of :py:attr:`~craft_application.AppMetadata` must consider
   how these fields should behave in their apps.
+
+Utilities
+~~~~~~~~~
+
+- ``format_pydantic_error`` now takes a pydantic ``ErrorDetails`` rather than a
+  location and message.
+- ``format_pydantic_errors`` now takes ``ErrorDetails`` instead of ``ErrorDict``
+  objects. In most cases, apps will already be passing ``ErrorDetails`` objects.
 
 5.11.0 (2025-10-01)
 -------------------
