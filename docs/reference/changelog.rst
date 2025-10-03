@@ -19,6 +19,7 @@ Changelog
 ------------------
 
 Breaking changes
+================
 
 Models
 ~~~~~~
