@@ -3,7 +3,11 @@
 # Remember, the last match takes precedence.
 
 # Documentation owners
-/docs/  @medubelko @canonical/starcraft
+/docs/reference/changelog.rst  @canonical/starcraft-reviewers
+/docs/  @canonical/starcraft-authors
 
 # Finally, all CODEOWNERS changes need to be approved by The Man, Himself.
-/.github/CODEOWNERS     @sergiusens
+/.github/CODEOWNERS     @steinbro
+
+# Fallback owner
+*    @canonical/starcraft-reviewers
