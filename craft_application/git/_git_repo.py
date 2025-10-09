@@ -222,17 +222,10 @@ class GitRepo:
         """Get the last Commit on the current head."""
         try:
             last_commit = self._repo[self._repo.head.target]
-        except pygit2.GitError as error:
+            assert isinstance(last_commit, pygit2.Commit)  # noqa: S101 (type narrowing)
+        except (pygit2.GitError, AssertionError) as error:
             raise GitError("could not retrieve last commit") from error
-        else:
-            commit_message = cast(
-                str,
-                last_commit.message,  # pyright: ignore[reportAttributeAccessIssue,reportUnknownMemberType]
-            )
-            return Commit(
-                sha=str(last_commit.id),
-                message=commit_message,
-            )
+        return Commit(sha=str(last_commit.id), message=last_commit.message)
 
     def get_last_commit_on_branch_or_tag(
         self,
@@ -266,19 +259,16 @@ class GitRepo:
         commit_sha = rev_parse_output.strip()
         try:
             commit_obj = self._repo.get(commit_sha)
+            assert isinstance(commit_obj, pygit2.Commit)  # noqa: S101 (type narrowing)
         except (pygit2.GitError, ValueError) as error:
             raise GitError(
                 f"cannot find commit: {short_commit_sha(commit_sha)!r}"
             ) from error
-        else:
-            commit_message = cast(
-                str,
-                commit_obj.message,  # pyright: ignore[reportOptionalMemberAccess,reportAttributeAccessIssue,reportUnknownMemberType]
-            )
-            return Commit(
-                sha=commit_sha,
-                message=commit_message,
-            )
+        except AssertionError as error:  # pragma: no-cover
+            raise GitError(
+                f"object is not a commit: {short_commit_sha(commit_sha)!r}"
+            ) from error
+        return Commit(sha=commit_sha, message=commit_obj.message)
 
     def is_clean(self) -> bool:
         """Check if the repo is clean.
@@ -715,7 +705,7 @@ class GitRepo:
     def get_config_value(self, key: str) -> str | None:
         """Get value for the configuration key if available else return None."""
         try:
-            return cast(str, self._repo.config[key])  # pyright: ignore[reportUnnecessaryCast]
+            return self._repo.config[key]
         except (KeyError, ValueError):
             logger.debug("Config key %r not found in the repository", key)
             return None

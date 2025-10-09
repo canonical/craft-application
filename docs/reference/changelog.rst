@@ -26,6 +26,12 @@ Models
 Breaking changes
 ================
 
+Dependencies
+~~~~~~~~~~~~
+
+- The ``pygit2`` dependency is more broadly defined. Applications may need to
+  constrain this dependency further if they are packaged as snaps.
+
 Models
 ~~~~~~
 

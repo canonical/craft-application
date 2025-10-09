@@ -217,15 +217,15 @@ def test_add_all(empty_working_directory):
 
     status = pygit2.Repository(empty_working_directory).status()
 
-    if pygit2.__version__.startswith("1.13."):
+    if pygit2.__version__.startswith("1.13."):  # pyright: ignore[reportPrivateImportUsage]
         expected = {
-            "foo": pygit2.GIT_STATUS_INDEX_NEW,  # pyright: ignore[reportAttributeAccessIssue]
-            "bar": pygit2.GIT_STATUS_INDEX_NEW,  # pyright: ignore[reportAttributeAccessIssue]
+            "foo": pygit2.GIT_STATUS_INDEX_NEW,
+            "bar": pygit2.GIT_STATUS_INDEX_NEW,
         }
     else:
         expected = {
-            "foo": pygit2.enums.FileStatus.INDEX_NEW,  # pyright: ignore[reportAttributeAccessIssue]
-            "bar": pygit2.enums.FileStatus.INDEX_NEW,  # pyright: ignore[reportAttributeAccessIssue]
+            "foo": pygit2.enums.FileStatus.INDEX_NEW,
+            "bar": pygit2.enums.FileStatus.INDEX_NEW,
         }
 
     assert status == expected
