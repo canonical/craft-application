@@ -19,6 +19,7 @@ import copy
 import datetime
 import os
 import pathlib
+import warnings
 from typing import TYPE_CHECKING, Any, Literal, cast, final
 
 import craft_parts
@@ -27,7 +28,6 @@ import distro_support
 import pydantic
 from craft_cli import emit
 from distro_support.errors import (
-    NoESMInfoError,
     UnknownDistributionError,
     UnknownVersionError,
 )
@@ -67,6 +67,7 @@ class ProjectService(base.AppService):
         self._build_on: craft_platforms.DebianArchitecture | None = None
         self._build_for: str | None = None
         self._platform: str | None = None
+        self._project_vars: craft_parts.ProjectVarInfo | None = None
 
     @final
     def configure(self, *, platform: str | None, build_for: str | None) -> None:
@@ -319,9 +320,55 @@ class ProjectService(base.AppService):
             )
 
     @final
-    def _get_project_vars(self, yaml_data: dict[str, Any]) -> dict[str, str]:
-        """Return a dict with project variables to be expanded."""
-        return {var: str(yaml_data.get(var, "")) for var in self._app.project_variables}
+    def _get_project_vars(
+        self,
+        yaml_data: dict[str, Any],  # noqa: ARG002 (unused-method-argument)
+    ) -> dict[str, Any]:
+        """Return a dict with project variables to be expanded.
+
+        DEPRECATED: This method is deprecated and is not called by default.
+        Use ``ProjectService.project_vars`` instead.
+        """
+        warnings.warn(
+            "'ProjectService._get_project_vars' is deprecated. "
+            "Use 'project_vars' property instead.",
+            category=DeprecationWarning,
+            stacklevel=1,
+        )
+        return self._project_vars.marshal("value") if self._project_vars else {}
+
+    @final
+    @property
+    def project_vars(self) -> craft_parts.ProjectVarInfo | None:
+        """Get the project vars."""
+        return self._project_vars
+
+    def _create_project_vars(
+        self, project: dict[str, Any]
+    ) -> craft_parts.ProjectVarInfo:
+        """Create the project variables.
+
+        By default, the project variables are created from
+        ``AppMetadata.project_variables`` and the project's ``adopt-info`` key.
+
+        Applications should override this method if they need to create project
+        variables dynamically from on project data.
+
+        :param project: The project data.
+
+        :returns: The project variables.
+        """
+        project_vars = craft_parts.ProjectVarInfo.unmarshal(
+            {
+                var: craft_parts.ProjectVar(
+                    value=project.get(var),
+                    part_name=project.get("adopt-info"),
+                ).marshal()
+                for var in self._app.project_variables
+            }
+        )
+        emit.trace(f"Created project variables {project_vars}.")
+        return project_vars
 
     def get_partitions_for(
         self,
@@ -406,7 +453,7 @@ class ProjectService(base.AppService):
                 "specified."
             )
 
-        environment_vars = self._get_project_vars(project_data)
+        self._project_vars = self._create_project_vars(project_data)
         partitions = self.get_partitions_for(
             platform=platform, build_for=build_for, build_on=build_on
         )
@@ -419,7 +466,7 @@ class ProjectService(base.AppService):
             parallel_build_count=util.get_parallel_build_count(self._app.name),
             project_name=project_data.get("name", ""),
             project_dirs=project_dirs,
-            project_vars=environment_vars,
+            project_vars=self.project_vars,
             partitions=partitions,
         )
 
@@ -488,6 +535,12 @@ class ProjectService(base.AppService):
             platform=platform,
         )
 
+        # only provide platform ids when the 'for' variant is enabled
+        if self._app.enable_for_grammar:
+            platform_ids: set[str] = self.get_platform_identfiers(platform)
+        else:
+            platform_ids = set()
+
         # Process grammar.
         if "parts" in project:
             emit.debug(f"Processing grammar (on {build_on} for {build_for})")
@@ -495,6 +548,7 @@ class ProjectService(base.AppService):
                 parts_yaml_data=project["parts"],
                 arch=build_on,
                 target_arch=build_for,
+                platform_ids=platform_ids,
             )
         project_model = self._app.ProjectClass.from_yaml_data(
             project, self.resolve_project_file_path()
@@ -512,6 +566,25 @@ class ProjectService(base.AppService):
                 )
 
         return project_model
+
+    def get_platform_identfiers(self, platform: str) -> set[str]:
+        """Get a list of identifiers for the current platform to build.
+
+        These identifiers are used as selectors in advanced grammar. By default,
+        the current platform is the only identifier.
+
+        Applications should override this method to generate custom identifiers.
+        For example, an application may take the platform ``ubuntu@26.04:riscv64``
+        and generate the following identifiers:
+
+          - ``ubuntu``
+          - ``ubuntu@26.04``
+          - ``riscv64``
+          - ``ubuntu@26.04:riscv64``
+
+        :returns: A set of identifiers for the current platform to build.
+        """
+        return {platform}
 
     def update_project_environment(self, info: craft_parts.ProjectInfo) -> None:
         """Update a ProjectInfo's global environment."""
@@ -588,32 +661,31 @@ class ProjectService(base.AppService):
             ) from None
 
     @staticmethod
-    def _is_supported_or_esm_on(
+    def _is_supported_on(
         *, base: craft_platforms.DistroBase, date: datetime.date
     ) -> bool:
-        """Check if the given base is supported or in extended support on a date."""
+        """Check if the given base is supported on a date."""
         support_range = distro_support.get_support_range(base.distribution, base.series)
-        if support_range.is_supported_on(date) or support_range.is_in_development_on(
+        return support_range.is_supported_on(
             date
-        ):
-            return True
-        try:
-            return support_range.is_esm_on(date)
-        except NoESMInfoError:
-            return False
+        ) or support_range.is_in_development_on(date)
 
-    def check_base_is_supported(self) -> None:
+    def check_base_is_supported(self, verb: str = "pack") -> None:
         """Check that this project's base and build-base are supported.
 
         This method assumes a single-base project. Applications that use multi-base
         projects must override this in order to use it.
 
+        :param verb: Which lifecycle verb to use in an error message (default: "pack")
         :raises: CraftValidationError if either is unsupported.
         """
         project = self.get()
         if project.base is None:
             raise RuntimeError("No base detected when getting support range.")
-        base = craft_platforms.DistroBase.from_str(project.base)
+        if project.base == "bare":
+            base = None
+        else:
+            base = craft_platforms.DistroBase.from_str(project.base)
         build_base: craft_platforms.DistroBase | None = None
         if project.build_base:
             build_base = craft_platforms.DistroBase.from_str(project.build_base)
@@ -623,15 +695,18 @@ class ProjectService(base.AppService):
 
         today = datetime.date.today()
 
-        try:
-            base_is_supported = self._is_supported_or_esm_on(base=base, date=today)
-        except (UnknownDistributionError, UnknownVersionError) as error:
-            # If distro-support doesn't know about this base, assume it's supported.
-            emit.debug(str(error))
+        if base is not None:
+            try:
+                base_is_supported = self._is_supported_on(base=base, date=today)
+            except (UnknownDistributionError, UnknownVersionError) as error:
+                # If distro-support doesn't know about this base, assume it's supported.
+                emit.debug(str(error))
+                base_is_supported = True
+        else:
             base_is_supported = True
         if build_base is not None:
             try:
-                build_base_is_supported = self._is_supported_or_esm_on(
+                build_base_is_supported = self._is_supported_on(
                     base=build_base, date=today
                 )
             except (UnknownDistributionError, UnknownVersionError) as error:
@@ -644,12 +719,70 @@ class ProjectService(base.AppService):
         if base_is_supported and build_base_is_supported:
             return
         message = (
-            f"Base '{base}' has reached the end of its lifespan."
+            f"Base '{base}' has reached end-of-life."
             if not base_is_supported
-            else f"Build base '{build_base}' has reached the end of its lifespan."
+            else f"Build base '{build_base}' has reached end-of-life."
         )
         raise errors.CraftValidationError(
-            message,
-            resolution="If you know the risks and want to continue, rerun with --old-bases.",
+            f"Cannot {verb} {self._app.artifact_type}. {message}",
+            resolution="If you know the risks and want to continue, rerun with --ignore=unmaintained.",
             retcode=os.EX_DATAERR,
+            logpath_report=False,
         )
+
+    def is_effective_base_eol(self) -> bool:
+        """Determine whether the base on which to build is end-of-life."""
+        base = craft_platforms.DistroBase.from_str(self.get().effective_base)
+        return not self._is_supported_on(base=base, date=datetime.date.today())
+
+    def base_eol_soon_date(self) -> datetime.date | None:
+        """Return the date of the base's EOL if it happens soon.
+
+        :returns: The EOL date if it happens in the next 90 days, or None otherwise.
+        """
+        ninety_days_out = datetime.date.today() + datetime.timedelta(days=90)
+        base = craft_platforms.DistroBase.from_str(self.get().effective_base)
+        if self._is_supported_on(base=base, date=ninety_days_out):
+            return None
+        support_range = distro_support.get_support_range(base.distribution, base.series)
+        return support_range.end_support
+
+    @final
+    def deep_update(self, update: dict[str, Any]) -> None:
+        """Perform a deep update of data in the project.
+
+        This method marshals the project and performs a recursive update on the
+        project dict, then unmarshals the project.
+
+        :param update: The dict to merge into the project model.
+
+        :raises RuntimeError: If the project doesn't exist.
+        """
+        emit.trace(f"Updating project model with {update}.")
+
+        if not self._project_model:
+            raise RuntimeError("Project doesn't exist.")
+
+        project_dict = self._project_model.marshal()
+        new_data = self._deep_update(project_dict, update)
+        self._project_model = self._app.ProjectClass.unmarshal(new_data)
+
+    @final
+    @staticmethod
+    def _deep_update(base: dict[str, Any], update: dict[str, Any]) -> dict[str, Any]:
+        """Recursive helper to deep update a dict.
+
+        :param base: The base dict to update. This dict is modified in-place.
+        :param update: The dict to merge into the base dict.
+
+        :returns: The updated dict.
+        """
+        for key, new_value in update.items():
+            if isinstance(new_value, dict) and isinstance(base.get(key), dict):
+                base[key] = ProjectService._deep_update(
+                    cast(dict[str, Any], base[key]),
+                    cast(dict[str, Any], new_value),
+                )
+            else:
+                base[key] = new_value
+        return base

@@ -17,15 +17,18 @@
 
 import argparse
 import pathlib
+import re
 import subprocess
 from unittest import mock
 
+import craft_cli
 import craft_parts
 import craft_platforms
 import pytest
 import pytest_mock
 from craft_application import errors, models
 from craft_application.application import AppMetadata
+from craft_application.commands.base import AppCommand
 from craft_application.commands.lifecycle import (
     BuildCommand,
     CleanCommand,
@@ -482,7 +485,7 @@ def test_pack_fill_parser(
         "output": pathlib.Path(output_arg),
         "fetch_service_policy": None,
         # This is here because app_metadata turns on checking unsupported bases.
-        "allow_unsupported_base": False,
+        "ignore": [],
         **shell_dict,
         **debug_dict,
         **build_env_dict,
@@ -719,15 +722,39 @@ def test_shell_after_pack(
     mock_subprocess_run.assert_called_once_with(["bash"], check=False)
 
 
+class FakeError(craft_platforms.CraftPlatformsError):
+    """A fake error to test that unrecognized craft-like errors are handled specially"""
+
+
+@pytest.mark.parametrize(
+    ("error", "expected"),
+    [
+        pytest.param(
+            RuntimeError("Lifecycle run failed!"),
+            "RuntimeError: Lifecycle run failed!",
+            id="other",
+        ),
+        pytest.param(
+            FakeError("Lifecycle run failed!", resolution="Try harder."),
+            r"Lifecycle run failed!\n.*Recommended resolution: Try harder.",
+            id="craft-like",
+        ),
+    ],
+)
 @pytest.mark.parametrize("command_cls", [*MANAGED_LIFECYCLE_COMMANDS, PackCommand])
-def test_debug(app_metadata, fake_services, mocker, mock_subprocess_run, command_cls):
+def test_debug(
+    app_metadata: AppMetadata,
+    fake_services: ServiceFactory,
+    mocker: pytest_mock.MockFixture,
+    mock_subprocess_run: mock.MagicMock,
+    error: BaseException,
+    expected: str,
+    command_cls: type[AppCommand],
+) -> None:
     parsed_args = argparse.Namespace(destructive_mode=True, parts=None, debug=True)
-    error_message = "Lifecycle run failed!"
 
     # Make lifecycle.run() raise an error.
-    mocker.patch.object(
-        fake_services.lifecycle, "run", side_effect=RuntimeError(error_message)
-    )
+    mocker.patch.object(fake_services.lifecycle, "run", side_effect=error)
     command = command_cls(
         {
             "app": app_metadata,
@@ -735,10 +762,13 @@ def test_debug(app_metadata, fake_services, mocker, mock_subprocess_run, command
         }
     )
 
-    with pytest.raises(RuntimeError, match=error_message):
+    with pytest.raises(type(error)):
         command.run(parsed_args)
 
     mock_subprocess_run.assert_called_once_with(["bash"], check=False)
+
+    logs = craft_cli.emit.log_filepath.read_text()
+    assert re.search(expected, logs)
 
 
 def test_debug_pack(

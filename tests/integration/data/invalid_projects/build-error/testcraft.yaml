@@ -1,6 +1,9 @@
 name: build-error
 title: A project that fails to build
 version: git
+summary: This project fails to build because override-build fails.
+description: |
+  An elegantly-achieved build failure that occurs because of in-depth knowledge of bash.
 base: "ubuntu@22.04"
 platforms:
   amd64:

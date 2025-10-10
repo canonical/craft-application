@@ -1,0 +1,8 @@
+summary: Pack arbitrary witchcraft files
+
+environment:
+  PROJECT/bare_base: bare-base
+
+execute: |
+  cd "${PROJECT}"
+  witchcraft pack --destructive-mode

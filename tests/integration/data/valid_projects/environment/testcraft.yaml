@@ -1,6 +1,8 @@
 name: environment-project
 summary: A project with environment variables
 version: 1.0
+description: |
+  A project for testcraft that tests a variety of environment variables.
 base: "ubuntu@22.04"
 platforms:
   my-platform:

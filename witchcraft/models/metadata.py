@@ -13,9 +13,28 @@
 #
 # You should have received a copy of the GNU Lesser General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
-"""Witchcraft metadata model."""
+"""Witchcraft metadata models."""
+
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 
 from craft_application.models import metadata
+
+if TYPE_CHECKING:
+    from .project import Component
+
+
+class ComponentMetadata(metadata.BaseMetadata):
+    """Component metadata."""
+
+    summary: str | None = None
+    version: str | None = None
+
+    @classmethod
+    def from_component(cls, component: Component) -> ComponentMetadata:
+        """Create a ComponentMetadata model from a Component model."""
+        return cls.unmarshal(component.marshal())
 
 
 class Metadata(metadata.BaseMetadata):
@@ -24,3 +43,4 @@ class Metadata(metadata.BaseMetadata):
     name: str
     version: str
     craft_application_version: str
+    components: dict[str, ComponentMetadata] | None = None

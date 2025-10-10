@@ -60,7 +60,7 @@ class PackageService(base.AppService):
         self, artifact: pathlib.Path | None, resources: dict[str, pathlib.Path] | None
     ) -> None:
         """Write the packaging state."""
-        platform = self._services.get("build_plan").plan()[0].platform
+        platform = self._build_info.platform
         state_service = self._services.get("state")
 
         state_service.set(
@@ -80,7 +80,7 @@ class PackageService(base.AppService):
         :returns: A PackState object containing the artifact and resources.
         """
         if platform is None:
-            platform = self._services.get("build_plan").plan()[0].platform
+            platform = self._build_info.platform
         state_service = self._services.get("state")
 
         artifact = cast(str | None, state_service.get("artifact", platform))
@@ -101,14 +101,13 @@ class PackageService(base.AppService):
 
     def update_project(self) -> None:
         """Update project fields with dynamic values set during the lifecycle."""
-        update_vars: dict[str, str] = {}
-        project_info = self._services.lifecycle.project_info
-        for var in self._app.project_variables:
-            update_vars[var] = project_info.get_project_var(var)
+        project_info = self._services.get("lifecycle").project_info
+        update_vars = project_info.project_vars.marshal("value")
+        emit.debug(f"Project variable updates: {update_vars}")
 
-        emit.debug(f"Update project variables: {update_vars}")
-        project = self._services.get("project").get()
-        project.__dict__.update(update_vars)
+        project_service = self._services.get("project")
+        project_service.deep_update(update_vars)
+        project = project_service.get()
 
         # Give subclasses a chance to update the project with their own logic
         self._extra_project_updates()

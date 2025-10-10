@@ -1,6 +1,9 @@
 name: myproject
 version: "1.0"
 base: ubuntu@24.04
+summary: A test project.
+description: |
+  A project that includes a broadly-defined testcraft file.
 platforms:
   unlikely:  # A platform we probably won't run tests on.
     build-on: [i386]

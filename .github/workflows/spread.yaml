@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - main
+      - hotfix/*
 
 jobs:
   snap-build:
