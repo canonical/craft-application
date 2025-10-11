@@ -1,5 +1,8 @@
 name: myproject
 version: 1.0
+summary: A test project.
+description: |
+  A project with overlays.
 base: ubuntu@24.04
 platforms:
   arm64:

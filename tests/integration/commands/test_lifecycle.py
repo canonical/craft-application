@@ -24,7 +24,7 @@ from craft_application.application import Application
 
 
 @pytest.mark.usefixtures("fake_process")  # Ensure we don't spin up a container.
-@freezegun.freeze_time("1829-10-1")  # No computers yet, no supported OS's.
+@freezegun.freeze_time("2305-07-13")  # None of our current bases will be supported.
 @pytest.mark.parametrize("command", ["pull", "build", "stage", "pack"])
 def test_unsupported_base_error(
     app: Application,
@@ -39,4 +39,7 @@ def test_unsupported_base_error(
     _, stderr = capsys.readouterr()
 
     assert return_code == os.EX_DATAERR
-    assert re.match(r"(Build b|B)ase '[a-z]+@\d+\.\d+' has reached the end", stderr)
+    assert re.match(
+        rf"Cannot {command} artifact. (Build b|B)ase '[a-z]+@\d+\.\d+' has reached end-of-life.",
+        stderr,
+    )

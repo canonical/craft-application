@@ -6,5 +6,6 @@ Services
 .. toctree::
    :maxdepth: 1
 
+   app
    project
    linter

@@ -48,8 +48,9 @@ exclude_patterns = [
     "sphinx-resources",
     "common/README.md",
     "common/craft-application/how-to-guides/build-remotely.rst",
+    "common/craft-application/how-to-guides/reuse-packages-between-builds.rst",
     "common/craft-application/reference/remote-builds.rst",
-
+    "common/craft-application/reference/fetch-service.rst",
     # There's no tutorials right now, so just hide the scaffolding
     "tutorials",
 ]
@@ -64,6 +65,7 @@ extensions = [
     "canonical_sphinx",
     "sphinx.ext.autodoc",
     "sphinx.ext.intersphinx",
+    "sphinx_substitution_extensions",
     "sphinxext.rediraffe",
     "pydantic_kitbash",
 ]
@@ -101,6 +103,10 @@ github_username = "canonical"
 github_repository = "craft-application"
 
 intersphinx_mapping = {
+    "craft-cli": (
+        "https://canonical-craft-cli.readthedocs-hosted.com/en/latest",
+        None,
+    ),
     "craft-grammar": ("https://craft-grammar.readthedocs.io/en/latest", None),
     "craft-parts": (
         "https://canonical-craft-parts.readthedocs-hosted.com/en/latest",
@@ -110,7 +116,12 @@ intersphinx_mapping = {
         "https://canonical-craft-platforms.readthedocs-hosted.com/en/latest",
         None,
     ),
+    "craft-providers": (
+        "https://canonical-craft-providers.readthedocs-hosted.com/en/latest", None
+    ),
 }
+
+autodoc_class_signature = "separated"
 
 # Client-side page redirects.
 rediraffe_redirects = "redirects.txt"

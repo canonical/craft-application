@@ -139,7 +139,6 @@ class RemoteBuild(ExtensibleCommand):
         build_args = self._get_build_args(parsed_args)
 
         builder = self._services.remote_build
-        project = self._services.get("project").get()
         config = cast(dict[str, Any], self.config)
         project_dir = (
             pathlib.Path(config.get("global_args", {}).get("project_dir") or ".")
@@ -152,7 +151,7 @@ class RemoteBuild(ExtensibleCommand):
             emit.debug(f"Setting timeout to {parsed_args.launchpad_timeout} seconds")
             builder.set_timeout(parsed_args.launchpad_timeout)
 
-        build_id = get_build_id(self._app.name, project.name, project_dir)
+        build_id = get_build_id(self._app.name, self._project.name, project_dir)
         if parsed_args.recover:
             emit.progress(f"Recovering build {build_id}")
             builds = builder.resume_builds(build_id)

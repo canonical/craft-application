@@ -39,7 +39,7 @@ from craft_parts import (
 from craft_parts.errors import CallbackRegistrationError
 from typing_extensions import override
 
-from craft_application import errors, models, util
+from craft_application import errors, util
 from craft_application.services import base
 from craft_application.util import repositories
 
@@ -125,8 +125,6 @@ class LifecycleService(base.AppService):
         LifecycleManager on initialisation.
     """
 
-    _project: models.Project
-
     def __init__(
         self,
         app: AppMetadata,
@@ -145,7 +143,6 @@ class LifecycleService(base.AppService):
     @override
     def setup(self) -> None:
         """Initialize the LifecycleManager with previously-set arguments."""
-        self._project = self._services.get("project").get()
         self._lcm = self._init_lifecycle_manager()
         callbacks.register_post_step(self.post_prime, step_list=[Step.PRIME])
         callbacks.register_configure_overlay(repositories.enable_overlay_eol)
@@ -159,15 +156,7 @@ class LifecycleService(base.AppService):
 
     def _validate_build_plan(self) -> None:
         """Validate that the build plan is usable for a lifecycle run."""
-        plan = self._services.get("build_plan").plan()
-        match len(plan):
-            case 0:
-                raise errors.EmptyBuildPlanError
-            case 1:
-                build = plan[0]
-            case _:
-                raise errors.MultipleBuildsError(plan)
-
+        build = self._build_info
         host_base = craft_platforms.DistroBase.from_linux_distribution(
             distro.LinuxDistribution()
         )
@@ -176,9 +165,13 @@ class LifecycleService(base.AppService):
             # version as that is a moving target; Just ensure the systems are the
             # same.
             if build.build_base.distribution != host_base.distribution:
-                raise errors.IncompatibleBaseError(host_base, build.build_base)
+                raise errors.IncompatibleBaseError(
+                    host_base, build.build_base, artifact_type=self._app.artifact_type
+                )
         elif build.build_base != host_base:
-            raise errors.IncompatibleBaseError(host_base, build.build_base)
+            raise errors.IncompatibleBaseError(
+                host_base, build.build_base, artifact_type=self._app.artifact_type
+            )
 
     def _get_build_for(self) -> str:
         """Get the ``build_for`` architecture for craft-parts.
@@ -210,20 +203,13 @@ class LifecycleService(base.AppService):
         emit.debug(f"Initialising lifecycle manager in {self._work_dir}")
         emit.trace(f"Lifecycle: {repr(self)}")
 
+        project_service = self._services.get("project")
         build_for = self._get_build_for()
 
         if self._project.package_repositories:
             self._manager_kwargs["package_repositories"] = (
                 self._project.package_repositories
             )
-
-        pvars: dict[str, str] = {}
-        for var in self._app.project_variables:
-            pvars[var] = getattr(self._project, var) or ""
-        self._project_vars = pvars
-
-        emit.debug(f"Project vars: {self._project_vars}")
-        emit.debug(f"Adopting part: {self._project.adopt_info}")
 
         source_ignore_patterns = [
             ".craft",  # in case of unmanaged lifecycle run
@@ -244,10 +230,9 @@ class LifecycleService(base.AppService):
                 work_dir=self._work_dir,
                 ignore_local_sources=source_ignore_patterns,
                 parallel_build_count=util.get_parallel_build_count(self._app.name),
-                project_vars_part_name=self._project.adopt_info,
-                project_vars=self._project_vars,
+                project_vars=project_service.project_vars,
                 track_stage_packages=True,
-                partitions=self._services.get("project").partitions,
+                partitions=project_service.partitions,
                 **self._manager_kwargs,
             )
         except PartsError as err:

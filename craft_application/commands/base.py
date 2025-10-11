@@ -29,6 +29,7 @@ from craft_application import application, util
 if TYPE_CHECKING:
     import argparse
 
+    from craft_application.models.project import Project
     from craft_application.services import service_factory
 
 
@@ -56,7 +57,10 @@ class AppCommand(BaseCommand):
     """Command for use with craft-application."""
 
     always_load_project: bool = False
-    """The project is also loaded in non-managed mode."""
+    """Whether to configure and load the project before starting the command.
+
+    :deprecated: override :meth:`needs_project` instead.
+    """
 
     def __init__(self, config: dict[str, Any] | None) -> None:
         if config is None:
@@ -79,11 +83,11 @@ class AppCommand(BaseCommand):
     ) -> bool:
         """Property to determine if the command needs a project loaded.
 
-        Defaults to `self.always_load_project`. Subclasses can override this property
+        Defaults to :attr:`always_load_project`. Subclasses can override this method.
 
         :param parsed_args: Parsed arguments for the command.
 
-        :returns: True if the command needs a project loaded, False otherwise.
+        :returns: ``True`` if the command needs a project loaded, ``False`` otherwise.
         """
         return self.always_load_project
 
@@ -93,8 +97,8 @@ class AppCommand(BaseCommand):
     ) -> bool:
         """Whether this command should run in managed mode.
 
-        By default returns `False`. Subclasses can override this method to change this,
-        including by inspecting the arguments in `parsed_args`.
+        Returns ``False`` by default. Subclasses can override this method to change this,
+        including by inspecting the arguments in ``parsed_args``.
         """
         return False
 
@@ -104,8 +108,8 @@ class AppCommand(BaseCommand):
     ) -> str | None:
         """Name of the provider where the command should be run inside of.
 
-        By default returns None. Subclasses can override this method to change this,
-        including by inspecting the arguments in `parsed_args`.
+        Returns ``None`` by default. Subclasses can override this method to change this,
+        including by inspecting the arguments in ``parsed_args``.
         """
         return None
 
@@ -117,10 +121,12 @@ class AppCommand(BaseCommand):
 
         :param parsed_args: The parsed arguments used.
         :returns: A list of strings ready to be passed into a craft-providers executor.
-        :raises: RuntimeError if this command is not supposed to run managed.
+        :raises: ``RuntimeError`` if this command is not supposed to run managed.
 
         Commands that have additional parameters to pass in managed mode should
         override this method to include those parameters.
+
+        :deprecated: and unused.
         """
         if not self.run_managed(parsed_args):
             raise RuntimeError("Unmanaged commands should not be run in managed mode.")
@@ -128,9 +134,25 @@ class AppCommand(BaseCommand):
         verbosity = emit.get_mode().name.lower()
         return [cmd_name, f"--verbosity={verbosity}", self.name]
 
+    @property
+    def _project(self) -> Project:
+        """Get the current project.
+
+        :raises: Any exception related to rendering the project if the project has
+            not yet been created.
+        """
+        return self._services.get("project").get()
+
 
 class ExtensibleCommand(AppCommand):
-    """A command that allows applications to register modifications."""
+    """Extensible application command.
+
+    An ``ExtensibleCommand`` is a special type of :py:class:`AppCommand` that can be
+    extended with the use of callback functions. It has all of the same attributes and
+    methods of the ``AppCommand``, except that ``fill_parser`` and ``run`` are marked
+    as final. When implementing or inheriting from an ``ExtensibleCommand``, the
+    equivalent protected methods are available.
+    """
 
     _parse_callback: ParserCallback | None
     _prologue: RunCallback | None

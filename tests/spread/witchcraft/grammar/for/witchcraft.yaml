@@ -1,0 +1,46 @@
+name: grammar
+base: ubuntu@24.04
+version: "1.0"
+summary: test
+description: |
+  Exercise witchcraft's advanced grammar statement `for`.
+
+platforms:
+  platform1:
+    build-on: amd64
+    build-for: riscv64
+  platform2:
+    build-on: amd64
+    build-for: s390x
+
+parts:
+  hello-world:
+    plugin: dump
+
+    # grammar-only string
+    source:
+      - for platform1: for-platform1
+      - for platform2: for-platform2
+
+    # grammar dictionary
+    organize:
+      - for platform1:
+          hello-world-platform1.txt: hello-world.txt
+      - for platform2:
+          hello-world-platform2.txt: hello-world.txt
+
+
+    # grammar list (including non-grammar elements)
+    build-environment:
+      - HELLO: hello
+      - for platform1:
+        - ARCH: riscv64
+      - for platform2:
+        - ARCH: s390x
+
+    override-build: |
+      # test the grammar in 'build-environment'
+      if [[ "$HELLO" != "hello" || "$ARCH" != "riscv64" ]]; then
+        exit 1
+      fi
+      craftctl default

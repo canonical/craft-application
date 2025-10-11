@@ -23,7 +23,7 @@ try:
     # Since testcraft is never packaged, a "_version" module is never generated
     # by setuptools_scm. Thus, the import is ignored here. Normal Craft applications
     # should not have to do this.
-    from ._version import __version__  # type: ignore[reportMissingImports, import-untyped]
+    from ._version import __version__  # type: ignore[reportMissingImports, import-untyped, import-not-found]
 except ImportError:  # pragma: no cover
     from importlib.metadata import PackageNotFoundError, version
 

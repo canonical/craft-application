@@ -145,7 +145,7 @@ SummaryStr = Annotated[
     pydantic.Field(
         max_length=78,
         title="Summary",
-        description="A short description of the project.",
+        description="A short description of the project. Maximum length 78 characters.",
         examples=[
             "Linux for Human Beings",
             "The cross-platform desktop application for JupyterLab",

@@ -38,7 +38,7 @@ from typing import TYPE_CHECKING
 
 from craft_application.launchpad.models.base import InformationType, LaunchpadObject
 from craft_application.launchpad import errors
-from craft_application.util import retry
+from craft_application.util.retry import retry
 
 if TYPE_CHECKING:
     from collections.abc import Iterable

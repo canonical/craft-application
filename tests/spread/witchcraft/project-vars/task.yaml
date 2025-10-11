@@ -1,0 +1,22 @@
+summary: test setting project variables
+
+execute: |
+  # witchcraft fails to inject into a build environment
+  witchcraft pack --destructive-mode
+
+  mkdir output
+  tar --extract --file project-vars-0.4-platform-independent.witchcraft --directory output
+
+  # drop the version to simplify the diff
+  sed -i '/^craft-application-version:/d' output/metadata.yaml
+
+  if ! diff output/metadata.yaml expected-metadata.yaml; then
+      echo "Unexpected metadata."
+      exit 1
+  fi
+
+restore: |
+  witchcraft clean --destructive-mode
+
+  rm -f *.witchcraft
+  rm -rf output

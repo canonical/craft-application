@@ -133,12 +133,11 @@ def test_validation_error_from_pydantic():
         pytest.fail("Model failed to fail to validate!")
 
     expected = textwrap.dedent(
-        """
+        """\
         Bad myfile.yaml content:
-        - input should be greater than 42 (in field 'gt_int')
-        - input should be a valid number, unable to parse string as a number (in field 'a_float')
-        """
-    ).strip()
+        - input should be greater than 42 (in field 'gt_int', input: 21)
+        - input should be a valid number, unable to parse string as a number (in field 'a_float', input: 'not a float')"""
+    )
 
     message = str(err)
     assert message == expected

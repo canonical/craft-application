@@ -22,6 +22,7 @@ from typing import TYPE_CHECKING
 
 import craft_platforms
 import pytest
+from craft_parts import callbacks
 
 from craft_application import util
 from craft_application.util import platforms
@@ -145,3 +146,23 @@ def in_project_path(
     """
     monkeypatch.chdir(project_path)
     return project_path
+
+
+@pytest.fixture(autouse=True)
+def _reset_craft_parts_callbacks(request: pytest.FixtureRequest) -> Iterator[None]:  # pyright: ignore[reportUnusedFunction]
+    """Reset craft-parts callbacks after running tests.
+
+    This fixture resets the
+    :external+craft-parts:doc:`craft-parts callbacks <reference/gen/craft_parts>`
+    after running each test. Craft-application registers callbacks in several places
+    and if we try to re-register them, the test will fail even though the reason is
+    unrelated to the test.
+
+    Double-registering the same callback during (or in the setup of) the same test will
+    still correctly error.
+
+    This fixture can be disabled by using the ``no_reset_craft_parts_callbacks`` mark.
+    """
+    yield
+    if "no_reset_craft_parts_callbacks" not in request.keywords:
+        callbacks.unregister_all()

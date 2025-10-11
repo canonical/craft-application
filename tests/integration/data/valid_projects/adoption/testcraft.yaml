@@ -18,3 +18,5 @@ parts:
     override-build: |
       craftctl default
       craftctl set version=1.0
+      craftctl set summary='We are adopting the summary!'
+      craftctl set description='We have also adopted the description.'
