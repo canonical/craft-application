@@ -27,7 +27,8 @@ from craft_application.util import yaml as yaml_util
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
-PROJECT_FILE = "testcraft.yaml"
+from testcraft.application import TESTCRAFT
+PROJECT_FILE = f"{TESTCRAFT.name}.yaml"
 
 
 class MissingVersionLinter(AbstractLinter):

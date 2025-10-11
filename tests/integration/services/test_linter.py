@@ -37,21 +37,18 @@ from craft_application.services.linter import LinterService
 @pytest.fixture
 def restore_linter_registry() -> Iterator[None]:
     """Snapshot and restore the linter registry around a test."""
-    saved = {
-        stage: list(classes) for stage, classes in LinterService._class_registry.items()
-    }
+    saved = LinterService._class_registry
     try:
         yield
     finally:
-        for stage, classes in saved.items():
-            LinterService._class_registry[stage] = list(classes)
+        LinterService._class_registry = saved
 
 
+@pytest.usefixtures("restore_linter_registry")
 def test_issue_then_ignore(
     fake_services,
     project_path,
     fake_project,
-    restore_linter_registry,
 ) -> None:
     class _FailingPreLinter(AbstractLinter):
         name = "integration.failing_pre"

@@ -68,13 +68,17 @@ class LintCommand(base.AppCommand):
     def run(self, parsed_args: argparse.Namespace) -> int | None:
         """Execute lint for the requested stage and return the exit code."""
         services = self._services
+        stage = Stage(parsed_args.stage)
 
         # Resolve project dir
         project_service = services.get("project")
         project_dir: Path = project_service.resolve_project_file_path().parent
+        if stage == Stage.POST:
+            project_service.configure(platform=None, build_for=None)
+            project_service.get()
 
         artifact_dirs: list[Path] = []
-        if parsed_args.stage == Stage.POST.value:
+        if stage == Stage.POST:
             lifecycle = services.get("lifecycle")
             artifact_dirs = [lifecycle.prime_dir]
 
@@ -86,7 +90,7 @@ class LintCommand(base.AppCommand):
             cli_ignores=list(parsed_args.lint_ignores or []),
             cli_ignore_files=list(parsed_args.lint_ignore_files or []),
         )
-        issues = list(linter.run(Stage(parsed_args.stage), ctx))
+        issues = list(linter.run(stage, ctx))
 
         if issues:
             emit.message("lint results:")
