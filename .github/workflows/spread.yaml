@@ -6,6 +6,10 @@ on:
     branches:
       - main
       - hotfix/*
+# Cancel existing jobs for this branch/PR
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref_name }}
+  cancel-in-progress: true
 
 jobs:
   snap-build:
@@ -24,14 +28,28 @@ jobs:
           name: snap
           path: ${{ steps.snap.outputs.snap }}
 
+  spread-select:
+    runs-on: spread-installed
+    outputs:
+      systems: ${{ steps.select.outputs.systems }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 1
+          submodules: true
+      - name: Find spread systems
+        id: select
+        run: |
+          echo systems=$(spread -list google: | cut -d: -f2 | sort | uniq | jq --raw-input . | jq --slurp --compact-output) | tee -a "${GITHUB_OUTPUT}"
+
   snap-tests:
     runs-on: spread-installed
-    needs: [snap-build]
+    needs: [snap-build, spread-select]
     strategy:
       fail-fast: false
       matrix:
-        spread:
-          - "google:"
+        system: ${{ fromJSON(needs.spread-select.outputs.systems) }}
 
     steps:
       - name: Cleanup job workspace
@@ -53,7 +71,7 @@ jobs:
       - name: Run spread
         run: |
           mv *.snap tests/spread/
-          spread ${{ matrix.spread }}
+          spread ${{ matrix.system }}
 
       - name: Discard spread workers
         if: always()

@@ -18,8 +18,23 @@ backends:
     location: snapd-spread/us-east1-b
     halt-timeout: 3h
     systems:
+      - ubuntu-20.04-64:
+          image: ubuntu-2004-64
+          workers: 4
+          memory: 4G
+          storage: 20G
+      - ubuntu-22.04-64:
+          image: ubuntu-2204-64
+          workers: 4
+          memory: 4G
+          storage: 20G
       - ubuntu-24.04-64:
           image: ubuntu-2404-64
+          workers: 4
+          memory: 4G
+          storage: 20G
+      - ubuntu-25.10-64:
+          image: ubuntu-2510-64
           workers: 4
           memory: 4G
           storage: 20G
@@ -108,7 +123,13 @@ backends:
       instance_name=$(multipass list --format csv | grep $SPREAD_SYSTEM_ADDRESS | cut -f1 -d\,)
       multipass delete --purge "${instance_name}"
     systems:
+      - ubuntu-20.04-64:
+          workers: 8
+      - ubuntu-22.04-64:
+          workers: 4
       - ubuntu-24.04-64:
+          workers: 4
+      - ubuntu-25.10-64:
           workers: 4
   craft:
     type: adhoc
@@ -126,9 +147,10 @@ prepare: |
 
   sudo snap install --dangerous --classic tests/spread/*.snap
 
-
   # Initialize LXD; some tests need it ready *before* testcraft is called
   lxd init --auto
+
+  sudo apt-get --yes install jq
 
 restore-each: |
   testcraft clean || true

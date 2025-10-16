@@ -22,6 +22,7 @@ import craft_cli
 from craft_application.commands.lifecycle import (
     TestCommand,
 )
+from craft_providers.actions.snap_installer import Snap
 
 from witchcraft.application import WITCHCRAFT, Witchcraft
 from witchcraft.services import register_services
@@ -40,6 +41,11 @@ def create_app() -> craft_application.Application:
     """
     register_services()
     services = craft_application.ServiceFactory(app=WITCHCRAFT)
+
+    services.get_class("provider").register_snap(
+        "python-runtime-core24-312",
+        Snap(name="python-runtime-core24-312", channel=None),
+    )
 
     app = Witchcraft(WITCHCRAFT, services=services)
     register_commands(app)

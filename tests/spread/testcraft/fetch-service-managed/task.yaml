@@ -20,5 +20,5 @@ execute: |
 restore: |
   testcraft clean
   snap remove --purge fetch-service
-  rm fetch-service*.json
-  rm fetch-service*.testcraft
+  rm -f fetch-service*.json
+  rm -f fetch-service*.testcraft

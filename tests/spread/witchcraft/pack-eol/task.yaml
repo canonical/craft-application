@@ -3,23 +3,23 @@ summary: test witchcraft packing on an EOL base.
 prepare: |
   sudo apt-get --yes install faketime
 
+  # Change to the current base
+  . /etc/os-release
+  sed -i "s/base: REPLACE_THIS/base: ubuntu@${VERSION_ID}/" witchcraft.yaml
+
 execute: |
   # We didn't support any bases this far in the past.
   faketime '1994-04-27' witchcraft pack |& MATCH "Cannot pack cauldron. Base '[a-z0-9.@]+' has reached end-of-life."
   faketime '1994-04-27' witchcraft pack --destructive-mode |& MATCH "Cannot pack cauldron. Base '[a-z0-9.@]+' has reached end-of-life."
 
-  # Pack on Ubuntu 20.04 the day after it went EOL
-  faketime '2025-06-01' witchcraft pack |& MATCH "Cannot pack cauldron. Base '[a-z0-9.@]+' has reached end-of-life."
-  faketime '2025-06-01' witchcraft pack --destructive-mode |& MATCH "Cannot pack cauldron. Base '[a-z0-9.@]+' has reached end-of-life."
+  # Pack the day after the base goes EOL
+  . /etc/os-release
+  EOL_DATE=$(cat /usr/share/distro-info/ubuntu.csv | awk -F, '$3=="'$VERSION_CODENAME'" {print $6}')
+  faketime "$(date -d "${EOL_DATE} + 1 day" -I -u)" witchcraft pack |& MATCH "Cannot pack cauldron. Base '[a-z0-9.@]+' has reached end-of-life."
+  faketime "$(date -d "${EOL_DATE} + 1 day" -I -u)" witchcraft pack --destructive-mode |& MATCH "Cannot pack cauldron. Base '[a-z0-9.@]+' has reached end-of-life."
 
-  #... but before it's EOL we should get a different error in destructive mode!
-  faketime '2025-05-30' witchcraft pack --ignore=unmaintained --destructive-mode |& MATCH "Ubuntu 20.04 builds cannot be performed on this"
-
-  # Change to Ubuntu 24.04
-  sed -i 's/base: ubuntu@20.04/base: ubuntu@24.04/' witchcraft.yaml
-
-  # Try packing the day before it EOLs:
-  faketime '2029-05-31' witchcraft pack --destructive-mode |& MATCH "Using base '[a-z0-9.@]+', which will enter end-of-life on 2029-05-31."
+  # Try packing the day it EOLs:
+  faketime "${EOL_DATE}" witchcraft pack --destructive-mode |& MATCH "Using base '[a-z0-9.@]+', which will enter end-of-life on ${EOL_DATE}."
 
   # Packing on an unsupported base is our last, best hope for peace.
   faketime '2256-03-09' witchcraft pack |& MATCH "Base '[a-z0-9.@]+' has reached"
