@@ -97,8 +97,6 @@ parts:
       cp -r partitioncraft "${CRAFT_PART_INSTALL}/lib/python3.12/site-packages/"
       cp -r witchcraft "${CRAFT_PART_INSTALL}/lib/python3.12/site-packages/"
 
-      # rm "${CRAFT_PART_INSTALL}/bin/python"
-      # ln -s ../usr/bin/python3.12 "${CRAFT_PART_INSTALL}/bin/python"
       ln -sf "${UV_PYTHON}" "${CRAFT_PART_INSTALL}/bin/python3"
 
       sed -i 's|#!/root/parts/testcraft/install/|#!/snap/testcraft/current/|' "${CRAFT_PART_INSTALL}/bin/craftctl"
