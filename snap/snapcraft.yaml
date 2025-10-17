@@ -9,7 +9,7 @@ grade: devel
 confinement: classic
 
 environment:
-  PATH: "$SNAP/bin:/snap/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+  PATH: "$SNAP/libexec/testcraft/bin:$SNAP/bin:/snap/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
   LD_LIBRARY_PATH: "$SNAP/none"
 
 base: core24
@@ -43,6 +43,21 @@ parts:
       - apt
     build-attributes:
       - enable-patchelf
+  # Build our own version of fuse-overlayfs due to https://github.com/containers/fuse-overlayfs/issues/429
+  # The apt and Launchpad repositories as of 23/07/25 do not have a sufficiently new version to get this patch
+  fuse-overlayfs:
+    source: https://github.com/containers/fuse-overlayfs.git
+    source-tag: v1.15
+    plugin: autotools
+    build-attributes:
+      - enable-patchelf
+    build-packages:
+      - libfuse3-dev
+      - pkgconf
+    stage-packages:
+      - libfuse3-3
+    organize:
+      "usr/local/bin/fuse-overlayfs": "libexec/testcraft/bin/fuse-overlayfs"
   python-apt:
     plugin: nil
     stage-packages:
