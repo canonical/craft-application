@@ -33,11 +33,6 @@ backends:
           workers: 4
           memory: 4G
           storage: 20G
-      - ubuntu-25.10-64:
-          image: ubuntu-2510-64
-          workers: 4
-          memory: 4G
-          storage: 20G
   # lxd:  # Disabled due to https://github.com/canonical/spread/issues/215
   #   systems:
   #     - ubuntu-24.04
@@ -135,7 +130,10 @@ backends:
     type: adhoc
     allocate: "false"
     systems:
+      - ubuntu-20.04-64:
+      - ubuntu-22.04-64:
       - ubuntu-24.04-64:
+      - ubuntu-25.10-64:
 
 prepare: |
   sudo snap wait system seed.loaded
