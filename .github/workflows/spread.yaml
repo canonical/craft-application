@@ -30,12 +30,12 @@ jobs:
 
   snap-tests:
     runs-on: spread-installed
-    needs: [snap-build, spread-select]
+    needs: [snap-build]
     strategy:
       fail-fast: false
       matrix:
-        system:
-          - google
+        spread:
+          - "google:"
 
     steps:
       - name: Cleanup job workspace
@@ -57,7 +57,7 @@ jobs:
       - name: Run spread
         run: |
           mv *.snap tests/spread/
-          spread ${{ matrix.system }}
+          spread ${{ matrix.spread }}
 
       - name: Discard spread workers
         if: always()
