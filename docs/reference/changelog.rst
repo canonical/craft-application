@@ -43,6 +43,13 @@ Models
   fields of :py:attr:`~craft_application.AppMetadata` must consider
   how these fields should behave in their apps.
 
+Fetch Service
+~~~~~~~~~~~~~
+
+- When using the fetch service, the environment variable
+  ``CRAFT_PROVIDERS_EXPERIMENTAL_SUPPRESS_UPGRADE_UNSUPPORTED`` gets set, suppressing
+  running dist-upgrades on instance creation.
+
 Utilities
 ~~~~~~~~~
 
