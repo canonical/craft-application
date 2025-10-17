@@ -25,6 +25,7 @@ execute: |
   # Try packing the day it EOLs:
   faketime "${EOL_DATE}" witchcraft pack --destructive-mode |& tee pack.log
   MATCH "Using base '[a-z0-9.@]+', which will enter end-of-life on ${EOL_DATE}." pack.log
+  set +o pipefail
 
   # Packing on an unsupported base is our last, best hope for peace.
   faketime '2256-03-09' witchcraft pack |& MATCH "Base '[a-z0-9.@]+' has reached"
