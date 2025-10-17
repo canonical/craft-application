@@ -2,6 +2,9 @@ summary: Testcraft can use an external fetch service session
 
 priority: 100
 
+systems:
+  - -ubuntu-20.04-64 # Fetch service is neither supported nor needed this far back.
+
 prepare: |
   snap install --candidate fetch-service
 
