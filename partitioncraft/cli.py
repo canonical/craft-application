@@ -38,6 +38,7 @@ def create_app() -> craft_application.Application:
     services.get_class("provider").register_snap(
         "core24",
         Snap(name="core24", channel=None),
+    )
     services.get_class("provider").register_snap(
         "python-runtime-core24-312",
         Snap(name="python-runtime-core24-312", channel=None),
