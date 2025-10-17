@@ -50,7 +50,7 @@ EXTERNAL_FETCH_SERVICE_ENV_VAR = "CRAFT_USE_EXTERNAL_FETCH_SERVICE"
 PROXY_CERT_ENV_VAR = "CRAFT_PROXY_CERT"
 # Environment variable that craft-providers uses to suppress dist-upgrades
 # on creation of an instance.
-PROVIDERS_SUPPPRESS_UPGRADE_VAR = (
+PROVIDERS_SUPPRESS_UPGRADE_VAR = (
     "CRAFT_PROVIDERS_EXPERIMENTAL_SUPPRESS_UPGRADE_UNSUPPORTED"
 )
 
@@ -125,7 +125,7 @@ class FetchService(base.AppService):
             # the fetch service. This speeds up instance creation at the
             # cost of not having the latest packages.
             # This should no longer be necessary once CRAFT-4850 is complete.
-            os.environ[PROVIDERS_SUPPPRESS_UPGRADE_VAR] = "1"
+            os.environ[PROVIDERS_SUPPRESS_UPGRADE_VAR] = "1"
         elif not util.is_managed_mode():
             # Early fail if the fetch-service is not installed.
             fetch.verify_installed()
@@ -210,7 +210,7 @@ class FetchService(base.AppService):
         # the fetch service. This speeds up instance creation at the
         # cost of not having the latest packages.
         # This should no longer be necessary once CRAFT-4850 is complete.
-        os.environ[PROVIDERS_SUPPPRESS_UPGRADE_VAR] = "1"
+        os.environ[PROVIDERS_SUPPRESS_UPGRADE_VAR] = "1"
 
         strict_session = self._session_policy == "strict"
         self._session_data = fetch.create_session(strict=strict_session)
