@@ -38,19 +38,21 @@ RESERVED_PLATFORM_NAMES = frozenset(
 )
 
 
-def _validate_platform_name_not_reserved(name: str) -> str:
+def _validate_platform_name(name: str) -> str:
     """Validate that the given platform name is not reserved."""
     if name in RESERVED_PLATFORM_NAMES:
         raise ValueError(f"Reserved platform name: {name!r}")
+    if "/" in name:
+        raise ValueError("Platform names may not contain the '/' character.")
     return name
 
 
 PlatformName = Annotated[
     str,
-    pydantic.BeforeValidator(_validate_platform_name_not_reserved),
+    pydantic.BeforeValidator(_validate_platform_name),
     pydantic.Field(
         title="Platform name",
-        description="The name of this platform.",
+        description="The name of this platform. May not contain '/'",
         examples=["riscv64", "my-special-platform"],
         json_schema_extra={"not": {"enum": list(RESERVED_PLATFORM_NAMES)}},
     ),

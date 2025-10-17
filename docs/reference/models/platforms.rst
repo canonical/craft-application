@@ -39,7 +39,8 @@ Default ``PlatformsDict``
 -------------------------
 
 The ``platforms`` dictionary is implemented as a non-generic child class of
-:class:`~craft_application.models.GenericPlatformsDict`.
+:class:`~craft_application.models.GenericPlatformsDict`. Each key must be a string that
+does not contain the '/' character and is not a reserved name.
 
 .. autoclass:: craft_application.models.PlatformsDict
    :show-inheritance:
