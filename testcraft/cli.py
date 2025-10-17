@@ -22,6 +22,7 @@ import craft_cli
 from craft_application.commands.lifecycle import (
     TestCommand,
 )
+from craft_providers.actions.snap_installer import Snap
 
 from testcraft.application import TESTCRAFT
 from testcraft.commands import StateCommand
@@ -42,6 +43,11 @@ def create_app() -> craft_application.Application:
     """
     register_services()
     services = craft_application.ServiceFactory(app=TESTCRAFT)
+
+    services.get_class("provider").register_snap(
+        "python-runtime-core24-312",
+        Snap(name="python-runtime-core24-312", channel=None),
+    )
 
     app = craft_application.Application(TESTCRAFT, services=services)
     register_commands(app)
