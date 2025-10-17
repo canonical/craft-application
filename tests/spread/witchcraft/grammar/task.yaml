@@ -7,7 +7,11 @@ environment:
 execute: |
   cd $PROJECT
 
-  witchcraft pack --destructive-mode --platform platform1
+  # Adjust the base to match where we're running.
+  . /etc/os-release
+  sed -i  "s/base: ubuntu@24.04/base: ubuntu@${VERSION_ID}/" witchcraft.yaml
+
+  witchcraft pack --ignore=unmaintained --destructive-mode --platform platform1
 
   mkdir output
   tar --extract --file grammar-1.0-platform1.witchcraft --directory output

@@ -10,6 +10,8 @@ confinement: classic
 
 environment:
   PATH: "$SNAP/bin:/snap/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+  # https://github.com/snapcore/snapcraft/issues/4187
+  LD_LIBRARY_PATH: "$SNAP/none"
 
 base: core24
 platforms:
@@ -28,26 +30,20 @@ apps:
   witchcraft:
     command: bin/python -m witchcraft
 
+plugs:
+  python-runtime:
+    content: python-runtime
+    interface: content
+    target: "$SNAP/python-runtime"
+    default-provider: python-runtime-core24-312
+
 parts:
-  python:
-    plugin: nil
-    build-attributes:
-      - enable-patchelf
-    stage-packages:
-      - libpython3-stdlib
-      - libpython3.12-stdlib
-      - libpython3.12-minimal
-      - python3.12-minimal
-      - python3-minimal
   apt:
     plugin: nil
-    build-attributes:
-      - enable-patchelf
     stage-packages:
       - apt
-      - apt-transport-https
-      - apt-utils
-      - binutils
+    build-attributes:
+      - enable-patchelf
   python-apt:
     plugin: nil
     stage-packages:
@@ -62,10 +58,19 @@ parts:
       - libgit2-1.7
     build-attributes:
       - enable-patchelf
+  fake-python:
+    plugin: nil
+    override-build: |
+      # Fake there being a Python interpreter here to trick the python plugin.
+      mkdir -p "${CRAFT_PART_INSTALL}/usr/bin"
+      cp -af /snap/python-runtime-core24-312/current/usr/bin/python3.12 "${CRAFT_PART_INSTALL}/usr/bin/python3.12"
+    prime:
+      - -usr/bin/python3.12 # Don't actually include that Python interpreter.
+
   testcraft:
     source: .
-    after: [python-apt, libs]
-    plugin: nil # Real crafts should just use the uv plugin.
+    after: [python-apt, libs, fake-python]
+    plugin: uv
     build-snaps:
       - astral-uv
     build-packages:
@@ -73,26 +78,29 @@ parts:
       - cargo # for building maturin and other rust-based packages
       - libffi-dev # for building cffi
       - libgit2-dev # for pygit2
+      - libxml2-dev
+      - libxslt-dev
+      - python3.12-dev
     build-environment:
       # - UV_NO_BINARY: "1"  # Uncomment this for any real, released craft.
       - UV_FROZEN: "true"
       - UV_COMPILE_BYTECODE: "1"
-      - UV_PYTHON: /usr/bin/python3.12
+      - UV_PYTHON: /snap/python-runtime-core24-312/current/usr/bin/python3.12
       - UV_PROJECT_ENVIRONMENT: "${CRAFT_PART_INSTALL}"
       - MAKEOPTS: -j$(nproc --all)
     build-attributes:
       - enable-patchelf
     override-build: |
-      uv venv --relocatable --allow-existing "${CRAFT_PART_INSTALL}"
-      uv sync --no-dev --no-editable --reinstall
+      /snap/snapcraft/current/libexec/snapcraft/craftctl default
 
       # Include the actual fake apps
       cp -r testcraft "${CRAFT_PART_INSTALL}/lib/python3.12/site-packages/"
       cp -r partitioncraft "${CRAFT_PART_INSTALL}/lib/python3.12/site-packages/"
       cp -r witchcraft "${CRAFT_PART_INSTALL}/lib/python3.12/site-packages/"
 
-      rm "${CRAFT_PART_INSTALL}/bin/python"
-      ln -s ../usr/bin/python3.12 "${CRAFT_PART_INSTALL}/bin/python"
+      ln -sf "${UV_PYTHON}" "${CRAFT_PART_INSTALL}/bin/python3"
+
+      sed -i 's|#!/root/parts/testcraft/install/|#!/snap/testcraft/current/|' "${CRAFT_PART_INSTALL}/bin/craftctl"
 
   spread:
     plugin: go
