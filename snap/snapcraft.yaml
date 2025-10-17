@@ -10,6 +10,7 @@ confinement: classic
 
 environment:
   PATH: "$SNAP/bin:/snap/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+  # https://github.com/snapcore/snapcraft/issues/4187
   LD_LIBRARY_PATH: "$SNAP/none"
 
 base: core24
