@@ -1,5 +1,8 @@
 summary: test witchcraft packing on an EOL base.
 
+systems:
+  - -ubuntu-20.04-64 # Overlay step freezes forever.
+
 prepare: |
   sudo apt-get --yes install faketime
 
@@ -18,8 +21,10 @@ execute: |
   faketime "$(date -d "${EOL_DATE} + 1 day" -I -u)" witchcraft pack |& MATCH "Cannot pack cauldron. Base '[a-z0-9.@]+' has reached end-of-life."
   faketime "$(date -d "${EOL_DATE} + 1 day" -I -u)" witchcraft pack --destructive-mode |& MATCH "Cannot pack cauldron. Base '[a-z0-9.@]+' has reached end-of-life."
 
+  set -o pipefail
   # Try packing the day it EOLs:
-  faketime "${EOL_DATE}" witchcraft pack --destructive-mode |& MATCH "Using base '[a-z0-9.@]+', which will enter end-of-life on ${EOL_DATE}."
+  faketime "${EOL_DATE}" witchcraft pack --destructive-mode |& tee pack.log
+  MATCH pack.log "Using base '[a-z0-9.@]+', which will enter end-of-life on ${EOL_DATE}."
 
   # Packing on an unsupported base is our last, best hope for peace.
   faketime '2256-03-09' witchcraft pack |& MATCH "Base '[a-z0-9.@]+' has reached"

@@ -1,5 +1,8 @@
 summary: test the test command as though running in CI.
 
+systems:
+  - -ubuntu-20.04-64 # Test command is neither supported nor needed this far back.
+
 environment:
   CI: "1"
 
