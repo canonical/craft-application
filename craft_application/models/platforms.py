@@ -43,7 +43,7 @@ def _validate_platform_name(name: str) -> str:
     if name in RESERVED_PLATFORM_NAMES:
         raise ValueError(f"Reserved platform name: {name!r}")
     if "/" in name:
-        raise ValueError("Platform names may not contain the '/' character.")
+        raise ValueError("Platform names cannot contain the '/' character.")
     return name
 
 
