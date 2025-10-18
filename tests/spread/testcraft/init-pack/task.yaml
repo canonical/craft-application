@@ -9,6 +9,8 @@ execute: |
   cd init-test
 
   testcraft init
+  . /etc/os-release
+  sed -i  "s/base: ubuntu@24.04/base: ubuntu@${VERSION_ID}/" testcraft.yaml
 
   # Speed up the tests by not shutting down the instance.
   export CRAFT_IDLE_MINS=2

@@ -9,6 +9,8 @@ execute: |
   cd repack-test
 
   testcraft init
+  . /etc/os-release
+  sed -i  "s/base: ubuntu@24.04/base: ubuntu@${VERSION_ID}/" testcraft.yaml
 
   # Run initial pack
   testcraft pack

@@ -9,6 +9,8 @@ execute: |
   cd init-test
 
   partitioncraft init
+  . /etc/os-release
+  sed -i  "s/base: ubuntu@24.04/base: ubuntu@${VERSION_ID}/" partitioncraft.yaml
   partitioncraft pack
   partitioncraft clean
 

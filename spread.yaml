@@ -18,6 +18,16 @@ backends:
     location: snapd-spread/us-east1-b
     halt-timeout: 3h
     systems:
+      - ubuntu-20.04-64:
+          image: ubuntu-2004-64
+          workers: 4
+          memory: 4G
+          storage: 20G
+      - ubuntu-22.04-64:
+          image: ubuntu-2204-64
+          workers: 4
+          memory: 4G
+          storage: 20G
       - ubuntu-24.04-64:
           image: ubuntu-2404-64
           workers: 4
@@ -108,13 +118,22 @@ backends:
       instance_name=$(multipass list --format csv | grep $SPREAD_SYSTEM_ADDRESS | cut -f1 -d\,)
       multipass delete --purge "${instance_name}"
     systems:
+      - ubuntu-20.04-64:
+          workers: 4
+      - ubuntu-22.04-64:
+          workers: 4
       - ubuntu-24.04-64:
+          workers: 4
+      - ubuntu-25.10-64:
           workers: 4
   craft:
     type: adhoc
     allocate: "false"
     systems:
+      - ubuntu-20.04-64:
+      - ubuntu-22.04-64:
       - ubuntu-24.04-64:
+      - ubuntu-25.10-64:
 
 prepare: |
   sudo snap wait system seed.loaded
@@ -126,9 +145,39 @@ prepare: |
 
   sudo snap install --dangerous --classic tests/spread/*.snap
 
+  # Select older LXD channels for older bases.
+  . /etc/os-release
+  case "${VERSION_ID}" in
+    [0-9][24680].10 | [0-9][13579].*)  # Use the latest track for interim releases.
+      lxd_channel="latest/beta"
+      ;;
+    20.04)
+      lxd_channel="4.0/beta"
+      ;;
+    22.04)
+      lxd_channel="5.0/beta"
+      ;;
+    24.04)
+      lxd_channel="5.21/beta"
+      ;;
+    26.04)
+      lxd_channel="6/beta"
+      ;;
+    *)
+      echo "Please select an LXD channel for this LTS release!" >> /dev/stderr
+      # exit 1
+      ;;
+  esac
+  if snap list lxd; then
+    snap refresh --channel=${lxd_channel} lxd
+  else
+    snap install --channel=${lxd_channel} lxd
+  fi
 
   # Initialize LXD; some tests need it ready *before* testcraft is called
   lxd init --auto
+
+  sudo apt-get --yes install jq
 
 restore-each: |
   testcraft clean || true

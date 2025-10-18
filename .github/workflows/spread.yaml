@@ -6,10 +6,14 @@ on:
     branches:
       - main
       - hotfix/*
+# Cancel existing jobs for this branch/PR
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref_name }}
+  cancel-in-progress: true
 
 jobs:
   snap-build:
-    runs-on: [self-hosted, amd64]
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
@@ -60,5 +64,7 @@ jobs:
         run: |
           shopt -s nullglob
           for r in .spread-reuse.*.yaml; do
-            spread -discard -reuse-pid="$(echo "$r" | grep -o -E '[0-9]+')"
+            pid="$(echo "$r" | grep -o -E '[0-9]+')"
+            kill -9 $pid
+            spread -discard -reuse-pid=$pid
           done
