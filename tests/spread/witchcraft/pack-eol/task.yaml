@@ -4,9 +4,6 @@ prepare: |
   timedatectl set-ntp false
   date +%s > .real-time-now
 
-  # Change to the current base
-  . /etc/os-release
-  sed -i "s/base: REPLACE_THIS/base: ubuntu@${VERSION_ID}/" witchcraft.yaml
 
   # Change to the current base
   . /etc/os-release
