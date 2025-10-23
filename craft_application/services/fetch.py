@@ -48,6 +48,11 @@ _PROJECT_MANIFEST_MANAGED_PATH = pathlib.Path(
 EXTERNAL_FETCH_SERVICE_ENV_VAR = "CRAFT_USE_EXTERNAL_FETCH_SERVICE"
 # The location of the certificate of the externally-managed fetch-service
 PROXY_CERT_ENV_VAR = "CRAFT_PROXY_CERT"
+# Environment variable that craft-providers uses to suppress dist-upgrades
+# on creation of an instance.
+PROVIDERS_SUPPRESS_UPGRADE_VAR = (
+    "CRAFT_PROVIDERS_EXPERIMENTAL_SUPPRESS_UPGRADE_UNSUPPORTED"
+)
 
 
 def _use_external_session() -> bool:
@@ -115,6 +120,12 @@ class FetchService(base.AppService):
                 raise errors.CraftError(brief)
 
             self._proxy_cert = cert_path
+
+            # Experimental: Suppress the initial dist-upgrade when using
+            # the fetch service. This speeds up instance creation at the
+            # cost of not having the latest packages.
+            # This should no longer be necessary once CRAFT-4850 is complete.
+            os.environ[PROVIDERS_SUPPRESS_UPGRADE_VAR] = "1"
         elif not util.is_managed_mode():
             # Early fail if the fetch-service is not installed.
             fetch.verify_installed()
@@ -194,6 +205,12 @@ class FetchService(base.AppService):
             raise ValueError(
                 "create_session() was called before setting up the fetch service."
             )
+
+        # Experimental: Suppress the initial dist-upgrade when using
+        # the fetch service. This speeds up instance creation at the
+        # cost of not having the latest packages.
+        # This should no longer be necessary once CRAFT-4850 is complete.
+        os.environ[PROVIDERS_SUPPRESS_UPGRADE_VAR] = "1"
 
         strict_session = self._session_policy == "strict"
         self._session_data = fetch.create_session(strict=strict_session)

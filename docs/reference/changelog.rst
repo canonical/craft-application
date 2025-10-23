@@ -45,6 +45,13 @@ Models
 - ``any`` and ``*`` are now reserved names for platforms.
 - Platform names may not contain '/' characters.
 
+Fetch Service
+~~~~~~~~~~~~~
+
+- When using the fetch service, the environment variable
+  ``CRAFT_PROVIDERS_EXPERIMENTAL_SUPPRESS_UPGRADE_UNSUPPORTED`` gets set, suppressing
+  running dist-upgrades on instance creation.
+
 Utilities
 ~~~~~~~~~
 
