@@ -41,7 +41,7 @@ def test_platform_name_reserved(name):
 def test_platform_name_invalid_character(name):
     adapter = pydantic.TypeAdapter(PlatformsDict)
     with pytest.raises(
-        ValueError, match="Platform names may not contain the '.' character"
+        ValueError, match="Platform names cannot contain the '.' character"
     ):
         adapter.validate_python(
             {name: {"build-on": ["riscv64"], "build-for": ["s390x"]}}
