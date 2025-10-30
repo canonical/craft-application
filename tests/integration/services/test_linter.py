@@ -44,11 +44,11 @@ def restore_linter_registry() -> Iterator[None]:
         LinterService._class_registry = saved
 
 
+@pytest.usefixtures("restore_linter_registry")
 def test_issue_then_ignore(
     fake_services,
     project_path,
     fake_project,
-    restore_linter_registry,
 ) -> None:
     class _FailingPreLinter(AbstractLinter):
         name = "integration.failing_pre"
