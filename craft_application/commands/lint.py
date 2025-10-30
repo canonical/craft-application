@@ -17,16 +17,61 @@
 
 from __future__ import annotations
 
+import argparse
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 from craft_cli import emit
 
 from craft_application.commands import base
-from craft_application.lint.types import LintContext, Stage
+from craft_application.lint import IgnoreConfig, IgnoreSpec, LintContext, Stage
 
-if TYPE_CHECKING:
-    import argparse
+
+def _parse_ignore_rule(value: str) -> tuple[str, str, str | None]:
+    """Parse and validate a CLI ignore rule."""
+    if ":" not in value:
+        raise argparse.ArgumentTypeError(
+            "Lint ignore rules must be in the form 'linter:id' or 'linter:id=glob'."
+        )
+    linter, remainder = value.split(":", 1)
+    if not linter or not remainder:
+        raise argparse.ArgumentTypeError(
+            "Lint ignore rules must provide a linter name and issue id."
+        )
+
+    if "=" in remainder:
+        issue, glob = remainder.split("=", 1)
+        if not issue or not glob:
+            raise argparse.ArgumentTypeError(
+                "Lint ignore glob rules must be in the form 'linter:id=glob'."
+            )
+        return linter, issue, glob
+
+    issue = remainder
+    if not issue:
+        raise argparse.ArgumentTypeError(
+            "Lint ignore rules must provide an issue id or '*'."
+        )
+    return linter, issue, None
+
+
+def _build_cli_ignore_config(rules: list[tuple[str, str, str | None]]) -> IgnoreConfig:
+    """Convert parsed CLI ignore tuples into an IgnoreConfig."""
+    config: IgnoreConfig = {}
+    for linter, issue, glob in rules:
+        spec = config.setdefault(linter, IgnoreSpec(ids=set(), by_filename={}))
+        if issue == "*":
+            spec.ids = "*"
+            spec.by_filename.clear()
+            continue
+        if spec.ids == "*":
+            continue
+        if glob is None:
+            if not isinstance(spec.ids, set):
+                spec.ids = set()
+            spec.ids.add(issue)
+        else:
+            spec.by_filename.setdefault(issue, set()).add(glob)
+    return config
 
 
 class LintCommand(base.AppCommand):
@@ -48,6 +93,7 @@ class LintCommand(base.AppCommand):
             "--lint-ignore",
             action="append",
             dest="lint_ignores",
+            type=_parse_ignore_rule,
             default=[],
             metavar="RULE",
             help=(
@@ -73,7 +119,7 @@ class LintCommand(base.AppCommand):
         # Resolve project dir
         project_service = services.get("project")
         project_dir: Path = project_service.resolve_project_file_path().parent
-        if stage == Stage.POST:
+        if stage == Stage.POST and not project_service.is_configured:
             project_service.configure(platform=None, build_for=None)
             project_service.get()
 
@@ -85,9 +131,11 @@ class LintCommand(base.AppCommand):
         ctx = LintContext(project_dir=project_dir, artifact_dirs=artifact_dirs)
 
         linter = services.get("linter")
+        cli_ignore_rules = list(parsed_args.lint_ignores or [])
+        cli_ignore_config = _build_cli_ignore_config(cli_ignore_rules)
         linter.load_ignore_config(
             project_dir=project_dir,
-            cli_ignores=list(parsed_args.lint_ignores or []),
+            cli_ignores=cli_ignore_config if cli_ignore_config else None,
             cli_ignore_files=list(parsed_args.lint_ignore_files or []),
         )
         issues = list(linter.run(stage, ctx))

@@ -12,7 +12,7 @@ Create a class that extends ``AbstractLinter`` and yields issues from ``run``.
 .. code-block:: python
 
    from craft_application.lint.base import AbstractLinter
-   from craft_application.lint.types import LintContext, LinterIssue, Severity, Stage
+   from craft_application.lint import LintContext, LinterIssue, Severity, Stage
 
    class MyPreLinter(AbstractLinter):
        name = "example.pre"
@@ -48,7 +48,7 @@ Use the service to stream issues for the desired stage:
 .. code-block:: python
 
    from pathlib import Path
-   from craft_application.lint.types import LintContext, Stage
+   from craft_application.lint import LintContext, Stage
    from craft_application.services.linter import LinterService
 
    svc = LinterService(app, services)

@@ -19,8 +19,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from craft_application.lint import LintContext, LinterIssue, Severity, Stage
 from craft_application.lint.base import AbstractLinter
-from craft_application.lint.types import LintContext, LinterIssue, Severity, Stage
 from craft_application.services.linter import LinterService
 from craft_application.util import yaml as yaml_util
 
@@ -28,6 +28,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterable
 
 from testcraft.application import TESTCRAFT
+
 PROJECT_FILE = f"{TESTCRAFT.name}.yaml"
 
 

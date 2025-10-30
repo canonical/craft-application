@@ -24,7 +24,7 @@ from typing import TYPE_CHECKING, Any, cast
 from craft_cli import emit
 
 from craft_application import util
-from craft_application.lint.types import (
+from craft_application.lint import (
     ExitCode,
     IgnoreConfig,
     IgnoreSpec,
@@ -73,34 +73,35 @@ class LinterService(base.AppService):
     def build_ignore_config(
         cls,
         project_dir: Path,
-        cli_ignores: list[str] | None = None,
+        cli_ignores: IgnoreConfig | None = None,
         cli_ignore_files: list[Path] | None = None,
     ) -> IgnoreConfig:
-        """Merge ignore config from standard file(s) and CLI rules."""
+        """Merge ignore config from standard file(s) and optional CLI rules."""
         config: IgnoreConfig = {}
         file_cfg = cls._load_ignore_file(project_dir)
         if file_cfg:
             cls._merge_into(config, file_cfg)
         if cli_ignore_files:
             for extra in cli_ignore_files:
-                if extra and extra.exists():
-                    data = util.safe_yaml_load(extra.read_text())
-                    if isinstance(data, dict):
-                        cls._merge_into(
-                            config,
-                            cls._normalize_ignore_config(cast(dict[str, Any], data)),
-                        )
+                if not extra.exists():
+                    raise FileNotFoundError(f"Lint ignore file {extra} does not exist.")
+                data = util.safe_yaml_load(extra.read_text())
+                if isinstance(data, dict):
+                    cls._merge_into(
+                        config,
+                        cls._normalize_ignore_config(cast(dict[str, Any], data)),
+                    )
         if cli_ignores:
-            cls._merge_into(config, cls._parse_cli_ignores(cli_ignores))
+            cls._merge_into(config, cli_ignores)
         return config
 
     def load_ignore_config(
         self,
         project_dir: Path,
-        cli_ignores: list[str] | None = None,
+        cli_ignores: IgnoreConfig | None = None,
         cli_ignore_files: list[Path] | None = None,
     ) -> IgnoreConfig:
-        """Load and cache ignore config, merging CLI rules if any."""
+        """Load ignore configuration, merging CLI rules if any."""
         self._ignore_cfg = self.__class__.build_ignore_config(
             project_dir, cli_ignores, cli_ignore_files
         )
@@ -151,37 +152,6 @@ class LinterService(base.AppService):
                 norm_by_fname[str(issue_id)] = set(cast(Iterable[str], globs or []))
             cfg[str(linter_name)] = IgnoreSpec(ids=norm_ids, by_filename=norm_by_fname)
         return cfg
-
-    @staticmethod
-    def _parse_cli_ignores(rules: list[str]) -> IgnoreConfig:
-        """Parse CLI rules like 'linter:id' or 'linter:id=glob' into IgnoreConfig."""
-        result: IgnoreConfig = {}
-        for rule in rules:
-            if not rule:
-                continue
-
-            try:
-                linter_name, remainder = rule.split(":", 1)
-            except ValueError:
-                continue
-
-            if "=" in remainder:
-                issue_id, glob = remainder.split("=", 1)
-                spec = result.setdefault(
-                    linter_name, IgnoreSpec(ids=set(), by_filename={})
-                )
-
-                spec.by_filename.setdefault(issue_id, set()).add(glob)
-            else:
-                issue_id = remainder
-                spec = result.setdefault(
-                    linter_name, IgnoreSpec(ids=set(), by_filename={})
-                )
-                if isinstance(spec.ids, set):
-                    spec.ids.add(issue_id)
-                else:
-                    pass
-        return result
 
     @staticmethod
     def _merge_into(base_cfg: IgnoreConfig, overlay: IgnoreConfig) -> None:
