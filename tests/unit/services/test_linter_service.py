@@ -33,11 +33,8 @@ def _make_ctx(tmp_path: Path) -> LintContext:
 @pytest.fixture(autouse=True)
 def _reset_linter_registry() -> None:
     """Clear class-level linter registry before each test to avoid leakage."""
-    try:
-        LinterService._class_registry[Stage.PRE].clear()  # type: ignore[attr-defined]
-        LinterService._class_registry[Stage.POST].clear()  # type: ignore[attr-defined]
-    except Exception:  # noqa: S110, BLE001
-        pass
+    for registry in LinterService._class_registry.values():
+        registry.clear()
 
 
 def test_register_and_run_warning(tmp_path: Path) -> None:
