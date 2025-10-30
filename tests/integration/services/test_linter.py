@@ -23,14 +23,14 @@ if TYPE_CHECKING:
     from collections.abc import Iterator
 
 import pytest
-from craft_application.lint.base import AbstractLinter
-from craft_application.lint.types import (
+from craft_application.lint import (
     ExitCode,
     LintContext,
     LinterIssue,
     Severity,
     Stage,
 )
+from craft_application.lint.base import AbstractLinter
 from craft_application.services.linter import LinterService
 
 
@@ -44,7 +44,7 @@ def restore_linter_registry() -> Iterator[None]:
         LinterService._class_registry = saved
 
 
-@pytest.usefixtures("restore_linter_registry")
+@pytest.mark.usefixtures("restore_linter_registry")
 def test_issue_then_ignore(
     fake_services,
     project_path,

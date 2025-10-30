@@ -19,46 +19,45 @@ with central ignore handling.
 API
 ---
 
-AbstractLinter
-^^^^^^^^^^^^^^
+Abstract linter
+^^^^^^^^^^^^^^^
 
-``craft_application.lint.base.AbstractLinter``
-
-- ``name: str`` – stable identifier (e.g. ``"snapcraft.desktop"``)
-- ``stage: Stage`` – ``Stage.PRE`` or ``Stage.POST``
-- ``run(self, ctx: LintContext) -> Iterable[LinterIssue]`` – generator of issues
+.. autoclass:: craft_application.lint.base.AbstractLinter
+   :members:
+   :show-inheritance:
 
 Types
 ^^^^^
 
-``craft_application.lint.types``
+.. autoclass:: craft_application.lint.Stage
+   :members:
 
-- ``Stage`` (``PRE``/``POST``), ``Severity`` (``INFO``, ``WARNING``, ``ERROR``)
-- ``LintContext(project_dir: Path, artifact_dirs: list[Path])``
-- ``LinterIssue(id, message, severity, filename, url="")``
-- ``IgnoreSpec(ids: "*"|set[str], by_filename: dict[str, set[str]])``
-- ``IgnoreConfig`` – ``dict[str, IgnoreSpec]`` (maps linter name to rules)
-- ``should_ignore(linter_name, issue, cfg)`` – helper that applies id and
-  filename glob rules
+.. autoclass:: craft_application.lint.Severity
+   :members:
+
+.. autoclass:: craft_application.lint.ExitCode
+   :members:
+
+.. autoclass:: craft_application.lint.LintContext
+   :members:
+
+.. autoclass:: craft_application.lint.LinterIssue
+   :members:
+
+.. autoclass:: craft_application.lint.IgnoreSpec
+   :members:
+
+``IgnoreConfig`` is a ``dict[str, IgnoreSpec]`` mapping linter names to their ignore rules.
+
+.. autofunction:: craft_application.lint.should_ignore
 
 Service
 ^^^^^^^
 
-``craft_application.services.linter.LinterService``
-
-- ``@classmethod register(linter_cls)``
-- ``@classmethod build_ignore_config(project_dir, cli_ignores=None, cli_ignore_files=None)``
-  â€“ merge defaults â†’ files â†’ CLI (CLI takes precedence); intended to be
-  overridden by apps like Snapcraft.
-- ``load_ignore_config(project_dir, cli_ignores=None, cli_ignore_files=None)``
-  â€“ store ignore config on the instance.
-- ``pre_filter_linters(stage, ctx, candidates)`` â€“ hook to filter classes
-  (no-op by default).
-- ``post_filter_issues(linter, issues, ctx)`` â€“ hook to filter issues after
-  central ignore (no-op by default).
-- ``issues`` – flat list of issues collected in the last run.
-- ``issues_by_linter`` – mapping of linter name → list of issues from the last run.
-- ``summary() -> ExitCode`` â€“ highest-severity result.
+.. autoclass:: craft_application.services.linter.LinterService
+   :members:
+   :undoc-members:
+   :show-inheritance:
 
 How to add a new linter
 -----------------------
@@ -68,7 +67,7 @@ How to add a new linter
    .. code-block:: python
 
       from craft_application.lint.base import AbstractLinter
-      from craft_application.lint.types import LintContext, LinterIssue, Severity, Stage
+      from craft_application.lint import LintContext, LinterIssue, Severity, Stage
       from craft_application.services.linter import LinterService
 
       class DesktopLinter(AbstractLinter):
@@ -94,7 +93,7 @@ How to add a new linter
    .. code-block:: python
 
       from pathlib import Path
-      from craft_application.lint.types import LintContext, Stage
+      from craft_application.lint import LintContext, Stage
       from craft_application.services.linter import LinterService
 
       svc = LinterService(app, services)

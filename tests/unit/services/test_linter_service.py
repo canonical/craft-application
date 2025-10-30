@@ -4,8 +4,15 @@ from typing import TYPE_CHECKING
 
 import pytest
 from craft_application.application import AppMetadata
+from craft_application.lint import (
+    IgnoreConfig,
+    IgnoreSpec,
+    LintContext,
+    LinterIssue,
+    Severity,
+    Stage,
+)
 from craft_application.lint.base import AbstractLinter
-from craft_application.lint.types import LintContext, LinterIssue, Severity, Stage
 from craft_application.services.linter import LinterService
 from craft_application.services.service_factory import ServiceFactory
 
@@ -58,7 +65,10 @@ def test_ignore_by_id_cli(tmp_path: Path) -> None:
     svc = LinterService(app=app, services=factory)
     ctx = _make_ctx(tmp_path)
 
-    svc.load_ignore_config(project_dir=tmp_path, cli_ignores=["dummy.pre:D001"])
+    cli_cfg: IgnoreConfig = {
+        "dummy.pre": IgnoreSpec(ids={"D001"}, by_filename={}),
+    }
+    svc.load_ignore_config(project_dir=tmp_path, cli_ignores=cli_cfg)
     issues = list(svc.run(Stage.PRE, ctx))
     assert issues == []
     assert svc.issues_by_linter == {}

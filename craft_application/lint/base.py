@@ -21,12 +21,12 @@ import inspect as _inspect
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
-from .types import Stage as _Stage
+from ._types import Stage as _Stage
 
 if TYPE_CHECKING:  # pragma: no cover
     from collections.abc import Iterable
 
-    from .types import LintContext, LinterIssue, Stage
+    from ._types import LintContext, LinterIssue, Stage
 
 
 class AbstractLinter(ABC):

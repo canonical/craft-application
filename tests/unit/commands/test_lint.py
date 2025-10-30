@@ -21,9 +21,13 @@ import argparse
 from typing import TYPE_CHECKING
 
 import pytest
-from craft_application.commands.lint import LintCommand
+from craft_application.commands.lint import (
+    LintCommand,
+    _build_cli_ignore_config,
+    _parse_ignore_rule,
+)
+from craft_application.lint import LintContext, LinterIssue, Severity, Stage
 from craft_application.lint.base import AbstractLinter
-from craft_application.lint.types import LintContext, LinterIssue, Severity, Stage
 from craft_application.services.linter import LinterService
 
 if TYPE_CHECKING:
@@ -32,14 +36,11 @@ if TYPE_CHECKING:
 
 @pytest.fixture
 def restore_linter_registry() -> Iterator[None]:
-    saved = {
-        stage: list(classes) for stage, classes in LinterService._class_registry.items()
-    }
+    saved = LinterService._class_registry
     try:
         yield
     finally:
-        for stage, classes in saved.items():
-            LinterService._class_registry[stage] = list(classes)
+        LinterService._class_registry = saved
 
 
 class _ErroringLinter(AbstractLinter):
@@ -57,12 +58,12 @@ class _ErroringLinter(AbstractLinter):
         )
 
 
+@pytest.mark.usefixtures("restore_linter_registry")
 def test_lint_command_outputs_issues(
     app_metadata,
     fake_services,
     fake_project,
     emitter,
-    restore_linter_registry,
 ):
     LinterService.register(_ErroringLinter)
     command = LintCommand({"app": app_metadata, "services": fake_services})
@@ -88,3 +89,21 @@ def test_lint_command_outputs_issues(
         if interaction.args and interaction.args[0] == "message"
     )
     assert emitter.assert_message("lint: ERROR")
+
+
+def test_build_cli_ignore_config() -> None:
+    rules = [
+        _parse_ignore_rule("dummy.pre:D001"),
+        _parse_ignore_rule("dummy.pre:D002=*.foo"),
+        _parse_ignore_rule("other:*"),
+    ]
+    config = _build_cli_ignore_config(rules)
+
+    dummy_spec = config["dummy.pre"]
+    assert isinstance(dummy_spec.ids, set)
+    assert dummy_spec.ids == {"D001"}
+    assert dummy_spec.by_filename == {"D002": {"*.foo"}}
+
+    other_spec = config["other"]
+    assert other_spec.ids == "*"
+    assert other_spec.by_filename == {}

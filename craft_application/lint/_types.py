@@ -13,16 +13,10 @@
 #
 # You should have received a copy of the GNU Lesser General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
-"""Types and helpers for the linter service.
-
-Note: this module name intentionally overlaps with the stdlib ``types`` module.
-We only import it within the package; to avoid confusion with external imports,
-downstream users should prefer explicit imports from ``craft_application.lint``.
-"""
+"""Types and helpers for the linter service."""
 
 from __future__ import annotations
 
-# ruff: noqa: A005  # module name shadows stdlib 'types'
 from dataclasses import dataclass
 from enum import Enum, IntEnum
 from fnmatch import fnmatch
