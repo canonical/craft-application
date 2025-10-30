@@ -48,7 +48,7 @@ def handle_runtime_error(
     app: AppMetadata,
     error: BaseException,
     *,
-    print_error: Callable[[craft_cli.CraftError], None] = craft_cli.emit.report_error,
+    print_error: Callable[[craft_cli.CraftError], None] = craft_cli.emit.error,
     debug_mode: bool = False,
 ) -> int:
     """Handle a runtime error by transforming and printing it, then return the appropriate retcode.
