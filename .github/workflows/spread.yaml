@@ -23,7 +23,7 @@ jobs:
         uses: snapcore/action-build@v1
         id: snap
       - name: Upload snap artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: snap
           path: ${{ steps.snap.outputs.snap }}
@@ -50,7 +50,7 @@ jobs:
           submodules: true
 
       - name: Download snap artifact
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v6
         with:
           name: snap
 
