@@ -67,17 +67,19 @@ def get_snap_base(app_name: str) -> str | None:
         return None
 
     try:
-        with open(snap_yaml_path, "r") as f:
+        with snap_yaml_path.open() as f:
             snap_data = yaml.safe_load(f)
-        base = snap_data.get("base")
-        if base:
-            emit.debug(f"Found base snap: {base}")
-        else:
-            emit.debug("No base defined in snap.yaml")
-        return base
     except (OSError, yaml.YAMLError) as error:
         emit.debug(f"Failed to read or parse snap.yaml: {error!r}")
         return None
+
+    base = snap_data.get("base")
+    if base:
+        emit.debug(f"Found base snap: {base}")
+        return base
+
+    emit.debug("No base defined in snap.yaml")
+    return None
 
 
 class SnapConfig(pydantic.BaseModel, extra="forbid"):
