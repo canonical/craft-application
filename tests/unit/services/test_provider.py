@@ -338,7 +338,7 @@ def test_install_snap_without_base(
     fake_services,
 ):
     """Test that only app snap is injected when snap.yaml has no base.
-    
+
     This happens in practice for base snaps themselves (e.g., core24, core22)
     which use 'type: base' instead of having a 'base' field.
     """
