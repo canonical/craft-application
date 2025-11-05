@@ -20,7 +20,12 @@ from unittest.mock import MagicMock
 
 import pytest
 from craft_application.errors import CraftValidationError
-from craft_application.util import SnapConfig, get_snap_config, is_running_from_snap
+from craft_application.util import (
+    SnapConfig,
+    get_snap_base,
+    get_snap_config,
+    is_running_from_snap,
+)
 from snaphelpers import SnapCtlError
 
 
@@ -151,3 +156,70 @@ def test_get_snap_config_handle_fetch_error(error, mock_config):
     mock_config.return_value.fetch.side_effect = error
 
     assert get_snap_config(app_name="testcraft") is None
+
+
+def test_get_snap_base_success(tmp_path, monkeypatch):
+    """Test get_snap_base returns the base when snap.yaml exists."""
+    # Set up environment
+    monkeypatch.setenv("SNAP_NAME", "testcraft")
+    monkeypatch.setenv("SNAP", str(tmp_path))
+
+    # Create snap.yaml with base
+    meta_dir = tmp_path / "meta"
+    meta_dir.mkdir()
+    snap_yaml = meta_dir / "snap.yaml"
+    snap_yaml.write_text("name: testcraft\nbase: core24\nversion: 1.0\n")
+
+    assert get_snap_base("testcraft") == "core24"
+
+
+def test_get_snap_base_not_from_snap(monkeypatch):
+    """Test get_snap_base returns None when not running from snap."""
+    monkeypatch.delenv("SNAP_NAME", raising=False)
+    monkeypatch.delenv("SNAP", raising=False)
+
+    assert get_snap_base("testcraft") is None
+
+
+def test_get_snap_base_no_snap_env(monkeypatch):
+    """Test get_snap_base returns None when SNAP env var is not set."""
+    monkeypatch.setenv("SNAP_NAME", "testcraft")
+    monkeypatch.delenv("SNAP", raising=False)
+
+    assert get_snap_base("testcraft") is None
+
+
+def test_get_snap_base_no_yaml(tmp_path, monkeypatch):
+    """Test get_snap_base returns None when snap.yaml doesn't exist."""
+    monkeypatch.setenv("SNAP_NAME", "testcraft")
+    monkeypatch.setenv("SNAP", str(tmp_path))
+
+    assert get_snap_base("testcraft") is None
+
+
+def test_get_snap_base_no_base_in_yaml(tmp_path, monkeypatch):
+    """Test get_snap_base returns None when snap.yaml has no base."""
+    monkeypatch.setenv("SNAP_NAME", "testcraft")
+    monkeypatch.setenv("SNAP", str(tmp_path))
+
+    # Create snap.yaml without base
+    meta_dir = tmp_path / "meta"
+    meta_dir.mkdir()
+    snap_yaml = meta_dir / "snap.yaml"
+    snap_yaml.write_text("name: testcraft\nversion: 1.0\n")
+
+    assert get_snap_base("testcraft") is None
+
+
+def test_get_snap_base_invalid_yaml(tmp_path, monkeypatch):
+    """Test get_snap_base returns None when snap.yaml is invalid."""
+    monkeypatch.setenv("SNAP_NAME", "testcraft")
+    monkeypatch.setenv("SNAP", str(tmp_path))
+
+    # Create invalid snap.yaml
+    meta_dir = tmp_path / "meta"
+    meta_dir.mkdir()
+    snap_yaml = meta_dir / "snap.yaml"
+    snap_yaml.write_text("invalid: yaml: content: [")
+
+    assert get_snap_base("testcraft") is None

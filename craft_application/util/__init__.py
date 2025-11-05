@@ -38,6 +38,7 @@ from craft_application.util.snap_config import (
     SnapConfig,
     get_snap_config,
     is_running_from_snap,
+    get_snap_base,
 )
 from craft_application.util.string import humanize_list, strtobool
 from craft_application.util.system import get_parallel_build_count
@@ -57,6 +58,7 @@ __all__ = [
     "convert_architecture_deb_to_platform",
     "get_snap_config",
     "is_running_from_snap",
+    "get_snap_base",
     "is_valid_architecture",
     "SnapConfig",
     "humanize_list",
