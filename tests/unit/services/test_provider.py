@@ -248,6 +248,42 @@ def test_install_snap(
         assert service.snaps == []
 
 
+@pytest.mark.parametrize(
+    ("base_snap", "expected_snaps"),
+    [
+        pytest.param(
+            "core24",
+            [
+                Snap(name="core24", channel=None, classic=False),
+                Snap(name="testcraft_1", channel=None, classic=True),
+            ],
+            id="with-core24-base",
+        ),
+        pytest.param(
+            "core22",
+            [
+                Snap(name="core22", channel=None, classic=False),
+                Snap(name="testcraft_1", channel=None, classic=True),
+            ],
+            id="with-core22-base",
+        ),
+        pytest.param(
+            "core20",
+            [
+                Snap(name="core20", channel=None, classic=False),
+                Snap(name="testcraft_1", channel=None, classic=True),
+            ],
+            id="with-core20-base",
+        ),
+        pytest.param(
+            None,
+            [
+                Snap(name="testcraft_1", channel=None, classic=True),
+            ],
+            id="without-base",
+        ),
+    ],
+)
 def test_install_snap_with_base(
     tmp_path,
     monkeypatch,
@@ -255,25 +291,31 @@ def test_install_snap_with_base(
     fake_project,
     fake_process: pytest_subprocess.FakeProcess,
     fake_services,
+    base_snap,
+    expected_snaps,
 ):
     """Test that the base snap is injected when running from a snap."""
     monkeypatch.setattr("snaphelpers._ctl.Popen", subprocess.Popen)
     fake_process.register(
         ["/usr/bin/snapctl", "get", "-d", fake_process.any()],
         stdout="{}",
-        occurrences=1000,
+        occurrences=50,
     )
     # Set up snap environment
     monkeypatch.setenv("SNAP_NAME", "testcraft")
-    monkeypatch.setenv("SNAP_INSTANCE_NAME", "testcraft")
+    monkeypatch.setenv("SNAP_INSTANCE_NAME", "testcraft_1")
     monkeypatch.setenv("SNAP", str(tmp_path))
     monkeypatch.delenv("CRAFT_SNAP_CHANNEL", raising=False)
 
-    # Create snap.yaml with base
+    # Create snap.yaml with or without base
     meta_dir = tmp_path / "meta"
     meta_dir.mkdir()
     snap_yaml = meta_dir / "snap.yaml"
-    snap_yaml.write_text("name: testcraft\nbase: core24\nversion: 1.0\n")
+    if base_snap:
+        snap_yaml.write_text(f"name: testcraft\nbase: {base_snap}\nversion: 1.0\n")
+    else:
+        # Base snaps themselves (like core24) don't have a base field
+        snap_yaml.write_text("name: testcraft\ntype: base\nversion: 1.0\n")
 
     service = provider.ProviderService(
         app_metadata,
@@ -283,11 +325,8 @@ def test_install_snap_with_base(
     )
     service.setup()
 
-    # Verify both the app snap and base snap are injected
-    assert service.snaps == [
-        Snap(name="core24", channel=None, classic=False),
-        Snap(name="testcraft", channel=None, classic=True),
-    ]
+    # Verify the expected snaps are injected
+    assert service.snaps == expected_snaps
 
 
 def test_install_snap_without_base(
@@ -298,12 +337,16 @@ def test_install_snap_without_base(
     fake_process: pytest_subprocess.FakeProcess,
     fake_services,
 ):
-    """Test that only app snap is injected when snap.yaml has no base."""
+    """Test that only app snap is injected when snap.yaml has no base.
+    
+    This happens in practice for base snaps themselves (e.g., core24, core22)
+    which use 'type: base' instead of having a 'base' field.
+    """
     monkeypatch.setattr("snaphelpers._ctl.Popen", subprocess.Popen)
     fake_process.register(
         ["/usr/bin/snapctl", "get", "-d", fake_process.any()],
         stdout="{}",
-        occurrences=1000,
+        occurrences=50,
     )
     # Set up snap environment
     monkeypatch.setenv("SNAP_NAME", "testcraft")
@@ -311,11 +354,11 @@ def test_install_snap_without_base(
     monkeypatch.setenv("SNAP", str(tmp_path))
     monkeypatch.delenv("CRAFT_SNAP_CHANNEL", raising=False)
 
-    # Create snap.yaml without base
+    # Create snap.yaml without base (simulates a base snap)
     meta_dir = tmp_path / "meta"
     meta_dir.mkdir()
     snap_yaml = meta_dir / "snap.yaml"
-    snap_yaml.write_text("name: testcraft\nversion: 1.0\n")
+    snap_yaml.write_text("name: testcraft\ntype: base\nversion: 1.0\n")
 
     service = provider.ProviderService(
         app_metadata,

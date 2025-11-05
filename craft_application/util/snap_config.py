@@ -63,7 +63,7 @@ def get_snap_base(app_name: str) -> str | None:
             emit.debug("snap.yaml not found")
             return None
 
-        base = snap_yaml.get("base")
+        base: str | None = snap_yaml.get("base")
     except (OSError, KeyError, yaml.YAMLError) as error:
         emit.debug(f"Failed to read snap metadata: {error!r}")
         return None
