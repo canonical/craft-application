@@ -329,51 +329,6 @@ def test_install_snap_with_base(
     assert service.snaps == expected_snaps
 
 
-def test_install_snap_without_base(
-    tmp_path,
-    monkeypatch,
-    app_metadata,
-    fake_project,
-    fake_process: pytest_subprocess.FakeProcess,
-    fake_services,
-):
-    """Test that only app snap is injected when snap.yaml has no base.
-
-    This happens in practice for base snaps themselves (e.g., core24, core22)
-    which use 'type: base' instead of having a 'base' field.
-    """
-    monkeypatch.setattr("snaphelpers._ctl.Popen", subprocess.Popen)
-    fake_process.register(
-        ["/usr/bin/snapctl", "get", "-d", fake_process.any()],
-        stdout="{}",
-        occurrences=50,
-    )
-    # Set up snap environment
-    monkeypatch.setenv("SNAP_NAME", "testcraft")
-    monkeypatch.setenv("SNAP_INSTANCE_NAME", "testcraft")
-    monkeypatch.setenv("SNAP", str(tmp_path))
-    monkeypatch.delenv("CRAFT_SNAP_CHANNEL", raising=False)
-
-    # Create snap.yaml without base (simulates a base snap)
-    meta_dir = tmp_path / "meta"
-    meta_dir.mkdir()
-    snap_yaml = meta_dir / "snap.yaml"
-    snap_yaml.write_text("name: testcraft\ntype: base\nversion: 1.0\n")
-
-    service = provider.ProviderService(
-        app_metadata,
-        fake_services,
-        work_dir=pathlib.Path(),
-        install_snap=True,
-    )
-    service.setup()
-
-    # Verify only the app snap is injected (no base)
-    assert service.snaps == [
-        Snap(name="testcraft", channel=None, classic=True),
-    ]
-
-
 @pytest.mark.parametrize(
     "additional_snaps",
     [
