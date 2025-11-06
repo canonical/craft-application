@@ -14,6 +14,14 @@ This guide helps AI coding agents and automation tools work effectively with the
 
 ## Development Workflow
 
+### Prerequisites
+
+Before starting development, ensure you have:
+
+- Python 3.10 or later
+- Git
+- `uv` package manager (will be automatically installed by `make setup` if not present, or install manually via `sudo snap install --classic astral-uv`)
+
 ### Initial Setup
 
 1. **Clone the repository** (see [CONTRIBUTING.md](CONTRIBUTING.md) for details):
@@ -32,10 +40,13 @@ This guide helps AI coding agents and automation tools work effectively with the
     This installs all dependencies, sets up the virtual environment, and configures pre-commit hooks.
 
 3. **Verify the setup**:
+
     ```bash
     make lint
     make test
     ```
+
+    Note: If `make test` fails due to network issues (common in restricted environments), focus on running specific tests relevant to your changes using `uv run pytest`.
 
 ### Common Development Tasks
 
@@ -59,7 +70,7 @@ make lint                  # Run all linters
 make test                  # Run all tests
 ```
 
-To run specific tests directly (useful when only modifying tests):
+To run specific tests directly (requires `make setup` to be run first):
 
 ```bash
 # Run tests in a specific file
@@ -97,7 +108,7 @@ Follow [Conventional Commits](https://www.conventionalcommits.org/) style with a
 [optional footer]
 ```
 
-The scope should indicate the component or area affected (e.g., `TestService`, `commands`, `launchpad`, `models`). Use of a scope is strongly encouraged.
+The scope should indicate the component or area affected (e.g., `TestService`, `commands`, `launchpad`, `models`). Use of a scope is strongly encouraged. Choose a scope that represents the primary component or module being changed. If multiple components are affected significantly, consider breaking into multiple commits.
 
 Examples:
 
@@ -137,7 +148,7 @@ See the repository's directory structure for details. Key directories:
 - **Unit tests**: In `tests/unit/` - mirror the structure of `craft_application/`
 - **Integration tests**: In `tests/integration/` - test component interactions
 - **Spread tests**: In `tests/spread/` - system-level tests using the [Spread framework](https://github.com/canonical/spread)
-    - Install spread: `snap install spread`
+    - Install spread: `sudo snap install spread` (optional - typically run in CI, not required for regular development)
     - Run spread tests: `spread` (from repository root)
     - Spread tests are defined in `task.yaml` files within test directories
     - Each test has `prepare`, `execute`, and optionally `restore` sections
@@ -156,7 +167,7 @@ See the repository's directory structure for details. Key directories:
 
 ### Type Checking and Linting
 
-All configuration is in `pyproject.toml`. See that file for details on:
+All configuration is in `pyproject.toml`. See `[tool.mypy]`, `[tool.pyright]`, `[tool.ruff]`, and `[tool.codespell]` sections for details on:
 
 - Type checking (mypy, pyright)
 - Linting (ruff, codespell)
@@ -187,7 +198,7 @@ uv add --group dev <package-name>
 uv add --group lint <package-name>
 ```
 
-After adding dependencies, test that everything works: `make test`
+Note: `uv add` automatically updates `uv.lock` and syncs the environment. After adding dependencies, test that everything works: `make test`
 
 ### Dependency Groups
 
@@ -263,10 +274,11 @@ make docs          # Build static documentation
 
 1. **Always run setup first**: `make setup` ensures a clean development environment
 2. **Test incrementally**: Run `make test` to validate changes
-3. **Run spread tests locally**: Before committing, run spread tests using the LXD backend (if available). The default Google backend requires cloud credentials. To use LXD:
-    - Ensure LXD is installed: `snap install lxd`
+3. **Run spread tests locally**: Before committing, run spread tests using the LXD backend (if available and if making system-level changes). The default Google backend requires cloud credentials. To use LXD:
+    - Ensure LXD is installed: `sudo snap install lxd`
     - Initialize LXD if needed: `sudo lxd init --minimal`
-    - Run spread with LXD: `spread lxd:` (note the trailing colon)
+    - Run spread with LXD: `spread lxd:` (the trailing colon runs all LXD-configured systems from spread.yaml)
+    - Note: LXD setup requires root/sudo access and may not work in all environments. Spread tests are optional for most development and will run in CI.
 4. **Format before committing**: `make format` or rely on pre-commit hooks
 5. **Check types early**: Run `make lint` to catch type errors and other issues
 6. **Reference existing code**: Look at similar implementations for patterns and style
