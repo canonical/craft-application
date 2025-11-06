@@ -148,7 +148,7 @@ See the repository's directory structure for details. Key directories:
 - **Unit tests**: In `tests/unit/` - mirror the structure of `craft_application/`
 - **Integration tests**: In `tests/integration/` - test component interactions
 - **Spread tests**: In `tests/spread/` - system-level tests using the [Spread framework](https://github.com/canonical/spread)
-    - Install spread: `sudo snap install spread` (optional - typically run in CI, not required for regular development)
+    - Install spread: `go install github.com/canonical/spread/cmd/spread@latest` (optional - typically run in CI, not required for regular development)
     - Run spread tests: `spread` (from repository root)
     - Spread tests are defined in `task.yaml` files within test directories
     - Each test has `prepare`, `execute`, and optionally `restore` sections
