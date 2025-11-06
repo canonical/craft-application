@@ -87,15 +87,23 @@ This project uses pre-commit hooks that run automatically on `git commit`. The `
 
 ### Commit Message Format
 
-Follow [Conventional Commits](https://www.conventionalcommits.org/) style:
+Follow [Conventional Commits](https://www.conventionalcommits.org/) style with a scope:
 
 ```
-<type>: <description>
+<type>(<scope>): <description>
 
 [optional body]
 
 [optional footer]
 ```
+
+The scope should indicate the component or area affected (e.g., `TestService`, `commands`, `launchpad`, `models`). Use of a scope is strongly encouraged.
+
+Examples:
+
+- `feat(TestService): add new validation method`
+- `feat(commands): add --verbose flag to pack command`
+- `fix(launchpad): resolve authentication timeout issue`
 
 Common types (in priority order):
 
@@ -166,10 +174,20 @@ All configuration is in `pyproject.toml`. See that file for details on:
 
 ### Adding Dependencies
 
-1. Add the dependency to `pyproject.toml` under `[project.dependencies]`
-2. For development-only dependencies, add to `[dependency-groups]`
-3. Run: `uv lock && uv sync`
-4. Test that it works: `make test`
+Use the `uv add` command to add dependencies:
+
+```bash
+# Add a runtime dependency
+uv add <package-name>
+
+# Add a development dependency
+uv add --group dev <package-name>
+
+# Add to a specific group
+uv add --group lint <package-name>
+```
+
+After adding dependencies, test that everything works: `make test`
 
 ### Dependency Groups
 
@@ -198,6 +216,10 @@ Services in `craft_application/services/` follow a consistent pattern:
 Pydantic models in `craft_application/models/`:
 
 - Use Pydantic v2 syntax
+- Prefer declarative validation where possible
+- If declarative validation would result in a bad error message, include a `@field_validator` with mode `before` that provides a better error message
+- When using validator functions/methods, also include the validation in extra JSON schema structures where possible
+- Document validation rules in plain English in docstrings
 - Include validators where appropriate
 - Provide clear docstrings
 - Support serialization/deserialization
@@ -241,7 +263,10 @@ make docs          # Build static documentation
 
 1. **Always run setup first**: `make setup` ensures a clean development environment
 2. **Test incrementally**: Run `make test` to validate changes
-3. **Run spread tests locally**: Run `spread` before committing to catch system-level issues
+3. **Run spread tests locally**: Before committing, run spread tests using the LXD backend (if available). The default Google backend requires cloud credentials. To use LXD:
+    - Ensure LXD is installed: `snap install lxd`
+    - Initialize LXD if needed: `sudo lxd init --minimal`
+    - Run spread with LXD: `spread lxd:` (note the trailing colon)
 4. **Format before committing**: `make format` or rely on pre-commit hooks
 5. **Check types early**: Run `make lint` to catch type errors and other issues
 6. **Reference existing code**: Look at similar implementations for patterns and style
@@ -265,12 +290,47 @@ make docs          # Build static documentation
 
 ## Future Considerations
 
-_Note: The maintainer (@lengau) requested to tackle specific pain points and constraints later. This section is a placeholder for that future documentation._
+### Breaking Change Patterns to Avoid
 
-Areas to document:
+Based on the project's history (see `docs/reference/changelog.rst` for details), avoid these common breaking change patterns:
+
+**Dependencies**
+
+- Changing dependency version constraints too broadly (e.g., pygit2 constraints affecting snap packages)
+- Making optional dependencies mandatory
+
+**Models**
+
+- Making optional fields mandatory without proper adoption fields support
+- Reserving platform names without migration path (e.g., `any`, `*`)
+- Adding character restrictions to existing string fields (e.g., `/` in platform names)
+- Changing error message formats or structures for Pydantic models
+
+**APIs**
+
+- Changing function signatures (especially parameter types like `ErrorDetails` vs `ErrorDict`)
+- Modifying exception handling behavior (e.g., catching `BaseException` vs `Exception`)
+- Changing default behaviors that affect downstream apps
+
+**Services**
+
+- Modifying environment variables set by services
+- Changing compatibility tags that affect instance reuse
+- Altering how project variables are managed
+
+When making changes:
+
+1. Check if the change breaks existing APIs or behaviors
+2. Consider adding deprecation warnings before removal
+3. Provide migration paths in documentation
+4. Update the changelog with clear "Breaking changes" sections
+5. Consider semantic versioning implications
+
+_Note: The maintainer (@lengau) requested to document specific pain points and constraints. This section will be expanded with more operational details._
+
+Areas still to document:
 
 - Common pitfalls when working with craft-application
-- Breaking change patterns to avoid
 - Complex dependency constraints
 - Platform-specific considerations
 - Performance optimization guidelines
