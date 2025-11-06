@@ -112,7 +112,7 @@ The scope should indicate the component or area affected (e.g., `TestService`, `
 
 Examples:
 
-- `feat(TestService): add new validation method`
+- `feat(models): add new validation method`
 - `feat(commands): add --verbose flag to pack command`
 - `fix(launchpad): resolve authentication timeout issue`
 
@@ -246,13 +246,7 @@ Custom exceptions in `craft_application/errors.py`:
 
 ## Continuous Integration
 
-GitHub Actions workflows are in `.github/workflows/`:
-
-- `qa.yaml`: Main quality assurance (lint, type check, test)
-- `spread.yaml`: Spread integration tests
-- `tics.yaml`: TICS quality analysis
-- `policy.yaml`: Security and policy checks
-- `release-publish.yaml`: Release automation
+When you push changes, all GitHub Actions workflows in `.github/workflows/` should pass. These include quality assurance checks, spread integration tests, TICS analysis, security policy checks, and release automation.
 
 ## Documentation
 
@@ -274,11 +268,10 @@ make docs          # Build static documentation
 
 1. **Always run setup first**: `make setup` ensures a clean development environment
 2. **Test incrementally**: Run `make test` to validate changes
-3. **Run spread tests locally**: Before committing, run spread tests using the LXD backend (if available and if making system-level changes). The default Google backend requires cloud credentials. To use LXD:
-    - Ensure LXD is installed: `sudo snap install lxd`
-    - Initialize LXD if needed: `sudo lxd init --minimal`
-    - Run spread with LXD: `spread lxd:` (the trailing colon runs all LXD-configured systems from spread.yaml)
-    - Note: LXD setup requires root/sudo access and may not work in all environments. Spread tests are optional for most development and will run in CI.
+3. **Run spread tests locally**: Before committing, run spread tests using the multipass backend (if making system-level changes). To use multipass:
+    - Ensure multipass is installed: `sudo snap install multipass`
+    - Run spread with multipass: `spread multipass:` (the trailing colon runs all multipass-configured systems from spread.yaml)
+    - Note: Multipass setup requires snap and may not work in all environments. Spread tests are optional for most development and will run in CI.
 4. **Format before committing**: `make format` or rely on pre-commit hooks
 5. **Check types early**: Run `make lint` to catch type errors and other issues
 6. **Reference existing code**: Look at similar implementations for patterns and style
