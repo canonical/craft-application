@@ -45,38 +45,43 @@ Use these `make` targets for everyday development. Run `make help` to see all av
 
 ```bash
 make format                # Run all automatic formatters
-make format-ruff           # Format with ruff only
-make format-codespell      # Fix spelling issues
-make format-prettier       # Format YAML/JSON/Markdown files
 ```
 
 #### Linting Code
 
 ```bash
 make lint                  # Run all linters
-make lint-ruff             # Lint with ruff
-make lint-mypy             # Type check with mypy
-make lint-pyright          # Type check with pyright
-make lint-codespell        # Check spelling
-make lint-docs             # Lint documentation
-make lint-prettier         # Check YAML/JSON/Markdown formatting
-make lint-shellcheck       # Lint shell scripts
 ```
 
 #### Running Tests
 
 ```bash
 make test                  # Run all tests
-make test-fast             # Run fast tests only (excludes tests marked as 'slow')
-make test-slow             # Run slow tests only
-make test-coverage         # Generate coverage report
+```
+
+To run tests directly within the uv-created virtual environment (useful when only modifying tests):
+
+```bash
+# Activate the virtual environment (if not already activated)
+source .venv/bin/activate
+
+# Run tests in a specific file
+pytest tests/unit/test_application.py
+
+# Run tests matching a pattern
+pytest -k "test_pattern"
+
+# Run with verbose output
+pytest -v
+
+# Run in parallel (if pytest-xdist is available)
+pytest -n auto
 ```
 
 #### Building Documentation
 
 ```bash
 make docs                  # Build documentation
-make docs-auto             # Build and auto-reload docs at localhost:8080
 ```
 
 #### Cleaning Up
@@ -266,14 +271,12 @@ GitHub Actions workflows are in `.github/workflows/`:
 
 ```bash
 make docs          # Build static documentation
-make docs-auto     # Build with live reload
-make lint-docs     # Check documentation quality
 ```
 
 ### Documentation Structure
 
 - Source: `docs/` directory
-- Common docs: `docs/common/` (shared with downstream apps)
+- Common docs: `docs/common/` - Contains app-agnostic documentation that can be integrated into downstream craft tools (snapcraft, charmcraft, etc.). Write documentation here when documenting features inherited by downstream applications.
 - Built docs: `docs/_build/` (gitignored)
 - Uses Sphinx with canonical-sphinx theme
 - Follows Diátaxis framework (tutorials, how-to, reference, explanation)
@@ -281,9 +284,9 @@ make lint-docs     # Check documentation quality
 ## Tips for Agents
 
 1. **Always run setup first**: `make setup` ensures a clean development environment
-2. **Test incrementally**: Run `make test-fast` during development, `make test` before committing
+2. **Test incrementally**: Run `make test` to validate changes
 3. **Format before committing**: `make format` or rely on pre-commit hooks
-4. **Check types early**: Run `make lint-mypy lint-pyright` to catch type errors
+4. **Check types early**: Run `make lint` to catch type errors and other issues
 5. **Reference existing code**: Look at similar implementations for patterns and style
 6. **Read CONTRIBUTING.md**: Contains detailed guidelines for contributors
 7. **Use uv commands directly**: For fine-grained control, use `uv run <command>`
@@ -302,8 +305,6 @@ make lint-docs     # Check documentation quality
 
 - **Documentation**: https://canonical-craft-application.readthedocs-hosted.com/
 - **Issues**: https://github.com/canonical/craft-application/issues
-- **Matrix Chat**: #starcraft-development:ubuntu.com
-- **Code of Conduct**: https://ubuntu.com/community/ethos/code-of-conduct
 
 ## Future Considerations
 
