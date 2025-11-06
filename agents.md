@@ -59,23 +59,14 @@ make lint                  # Run all linters
 make test                  # Run all tests
 ```
 
-To run tests directly within the uv-created virtual environment (useful when only modifying tests):
+To run specific tests directly (useful when only modifying tests):
 
 ```bash
-# Activate the virtual environment (if not already activated)
-source .venv/bin/activate
-
 # Run tests in a specific file
-pytest tests/unit/test_application.py
+uv run pytest tests/unit/test_application.py
 
 # Run tests matching a pattern
-pytest -k "test_pattern"
-
-# Run with verbose output
-pytest -v
-
-# Run in parallel (if pytest-xdist is available)
-pytest -n auto
+uv run pytest -k "test_pattern"
 ```
 
 #### Building Documentation
@@ -92,15 +83,7 @@ make clean                 # Remove build artifacts and temporary files
 
 ### Pre-commit Hooks
 
-This project uses pre-commit hooks that run automatically on `git commit`. They include:
-
-- Ruff linting and formatting
-- Prettier formatting for YAML/JSON/Markdown
-- Trailing whitespace removal
-- End-of-file fixer
-- Various file checks
-
-See [.pre-commit-config.yaml](.pre-commit-config.yaml) for the full configuration.
+This project uses pre-commit hooks that run automatically on `git commit`. The `make setup` command installs these hooks. Always ensure the pre-commit hooks are installed and run before committing. See [.pre-commit-config.yaml](.pre-commit-config.yaml) for the full configuration.
 
 ### Commit Message Format
 
@@ -131,26 +114,13 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for more details on commit conventions.
 
 ## Project Structure
 
-```
-craft_application/
-├── commands/          # CLI command implementations
-├── git/              # Git integration utilities
-├── launchpad/        # Launchpad integration for remote builds
-├── misc/             # Miscellaneous utilities
-├── models/           # Pydantic data models
-├── remote/           # Remote build support
-├── services/         # Application services (lifecycle, package, etc.)
-├── util/             # General utility functions
-├── application.py    # Main Application class
-├── errors.py         # Custom exceptions
-└── fetch.py          # File fetching utilities
+See the repository's directory structure for details. Key directories:
 
-tests/
-├── unit/             # Unit tests (mirror craft_application structure)
-├── integration/      # Integration tests
-├── spread/           # Spread system tests
-└── data/             # Test data and fixtures
-```
+- `craft_application/` - Main library code
+- `tests/unit/` - Unit tests (mirror `craft_application/` structure)
+- `tests/integration/` - Integration tests
+- `tests/spread/` - Spread system tests
+- `docs/` - Documentation source
 
 ## Testing Guidelines
 
@@ -158,7 +128,12 @@ tests/
 
 - **Unit tests**: In `tests/unit/` - mirror the structure of `craft_application/`
 - **Integration tests**: In `tests/integration/` - test component interactions
-- **Spread tests**: In `tests/spread/` - system-level tests using the Spread framework
+- **Spread tests**: In `tests/spread/` - system-level tests using the [Spread framework](https://github.com/canonical/spread)
+    - Install spread: `snap install spread`
+    - Run spread tests: `spread` (from repository root)
+    - Spread tests are defined in `task.yaml` files within test directories
+    - Each test has `prepare`, `execute`, and optionally `restore` sections
+    - Configuration in `spread.yaml` at repository root
 
 ### Writing Tests
 
@@ -167,39 +142,17 @@ tests/
 - Add tests for all non-trivial code changes
 - Mark slow tests with `@pytest.mark.slow` decorator
 - Use fixtures and mocks appropriately
-
-### Running Specific Tests
-
-```bash
-# Run tests in a specific file
-uv run pytest tests/unit/test_application.py
-
-# Run tests matching a pattern
-uv run pytest -k "test_pattern"
-
-# Run with verbose output
-uv run pytest -v
-
-# Run in parallel (if pytest-xdist is available)
-uv run pytest -n auto
-```
+- Aim for complete line and branch coverage where feasible
 
 ## Code Quality Standards
 
-### Type Checking
+### Type Checking and Linting
 
-- All code in `craft_application/` must be fully type-annotated
-- Uses both mypy and pyright for type checking
-- Configuration in `pyproject.toml` under `[tool.mypy]` and `[tool.pyright]`
+All configuration is in `pyproject.toml`. See that file for details on:
 
-### Linting
-
-- **Ruff**: Primary linter and formatter (replaces flake8, black, isort)
-    - Line length: 88 characters
-    - Target: Python 3.10+
-    - Configuration in `pyproject.toml` under `[tool.ruff]`
-- **Codespell**: Spell checking
-- **Prettier**: For YAML, JSON, and Markdown files
+- Type checking (mypy, pyright)
+- Linting (ruff, codespell)
+- Code formatting standards
 
 ### Code Style
 
@@ -215,17 +168,19 @@ uv run pytest -n auto
 
 1. Add the dependency to `pyproject.toml` under `[project.dependencies]`
 2. For development-only dependencies, add to `[dependency-groups]`
-3. Update the lock file: `uv lock`
-4. Test that it works: `make setup && make test`
+3. Run: `uv lock && uv sync`
+4. Test that it works: `make test`
 
 ### Dependency Groups
+
+See `pyproject.toml` under `[dependency-groups]` for the complete list. Key groups include:
 
 - `dev`: Core development dependencies (pytest, coverage, etc.)
 - `lint`: Linting tools
 - `types`: Type checking tools (mypy, type stubs)
 - `docs`: Documentation tools (Sphinx, etc.)
 - `remote`: Optional remote-build support (launchpadlib)
-- `apt`: Optional python-apt support
+- `apt`: Optional python-apt support (required on Linux but not included in dev group due to platform-specific versioning; use appropriate `dev-{codename}` group)
 
 ## Common Patterns
 
@@ -252,8 +207,9 @@ Pydantic models in `craft_application/models/`:
 Custom exceptions in `craft_application/errors.py`:
 
 - Inherit from `CraftError` or appropriate subclass
-- Include clear error messages
-- Provide context for debugging
+- Include error message templates in the class definition
+- Store specific values as instance attributes
+- Only require callers to pass specific values, not full messages
 
 ## Continuous Integration
 
@@ -276,7 +232,7 @@ make docs          # Build static documentation
 ### Documentation Structure
 
 - Source: `docs/` directory
-- Common docs: `docs/common/` - Contains app-agnostic documentation that can be integrated into downstream craft tools (snapcraft, charmcraft, etc.). Write documentation here when documenting features inherited by downstream applications.
+- Common docs: `docs/common/` - Contains app-agnostic documentation that can be integrated into downstream craft tools (snapcraft, charmcraft, etc.). Write documentation here when documenting features inherited by downstream applications. Documentation from `docs/common/` should be included from the main `docs/` directory either by linking in a table of contents or using the Sphinx include directive.
 - Built docs: `docs/_build/` (gitignored)
 - Uses Sphinx with canonical-sphinx theme
 - Follows Diátaxis framework (tutorials, how-to, reference, explanation)
@@ -285,12 +241,13 @@ make docs          # Build static documentation
 
 1. **Always run setup first**: `make setup` ensures a clean development environment
 2. **Test incrementally**: Run `make test` to validate changes
-3. **Format before committing**: `make format` or rely on pre-commit hooks
-4. **Check types early**: Run `make lint` to catch type errors and other issues
-5. **Reference existing code**: Look at similar implementations for patterns and style
-6. **Read CONTRIBUTING.md**: Contains detailed guidelines for contributors
-7. **Use uv commands directly**: For fine-grained control, use `uv run <command>`
-8. **Clean when stuck**: `make clean && rm -rf .venv && make setup` for a fresh start
+3. **Run spread tests locally**: Run `spread` before committing to catch system-level issues
+4. **Format before committing**: `make format` or rely on pre-commit hooks
+5. **Check types early**: Run `make lint` to catch type errors and other issues
+6. **Reference existing code**: Look at similar implementations for patterns and style
+7. **Read CONTRIBUTING.md**: Contains detailed guidelines for contributors
+8. **Use uv commands directly**: For fine-grained control, use `uv run <command>`
+9. **Clean when stuck**: `make clean && rm -rf .venv && make setup` for a fresh start
 
 ## Important Notes
 
