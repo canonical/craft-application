@@ -7,10 +7,15 @@ systems:
   - ubuntu-24.04-64
 
 prepare: |
-  # Install testcraft snap (we need to be running from snap for injection)
-  snap install testcraft --edge --classic || snap install testcraft --beta --classic || snap install testcraft --candidate --classic
+  # Build the testcraft snap from the repository
+  cd "$PROJECT_PATH"
+  snap install snapcraft --classic
+  snapcraft pack
   
-  # Get the base snap name and revision from the testcraft snap
+  # Install the locally built testcraft snap
+  snap install --dangerous --classic testcraft_*.snap
+  
+  # Get the base snap name from the testcraft snap
   HOST_BASE=$(snap info testcraft --verbose | grep '^base:' | awk '{print $2}')
   if [ -z "$HOST_BASE" ]; then
     echo "Could not determine base snap from testcraft snap"
@@ -92,5 +97,8 @@ restore: |
   rm -rf inject-test
   rm -f /tmp/base_snap_name /tmp/base_snap_revision
   
-  # Clean up testcraft snap
+  # Clean up testcraft snap and built snap file
   snap remove --purge testcraft || true
+  cd "$PROJECT_PATH"
+  rm -f testcraft_*.snap
+  snap remove --purge snapcraft || true
