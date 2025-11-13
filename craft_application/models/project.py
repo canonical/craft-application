@@ -20,6 +20,7 @@ This defines the structure of the input file (e.g. snapcraft.yaml)
 
 import dataclasses
 import textwrap
+from collections.abc import Iterable
 from typing import Annotated, Any
 
 import craft_parts
@@ -290,7 +291,7 @@ class Project(base.CraftBaseModel):
 
         # warn if a devel build-base is being used, error if a devel build-base is not
         # used for a devel base
-        for devel_base_info in DEVEL_BASE_INFOS:
+        for devel_base_info in cls._get_devel_bases():
             if base_alias == devel_base_info.current_devel_base:
                 if build_base_alias == devel_base_info.devel_base:
                     emit.message(DEVEL_BASE_WARNING)
@@ -311,3 +312,12 @@ class Project(base.CraftBaseModel):
             raise ValueError(f"A build-base is required if base is {self.base!r}")
 
         return self
+
+    @classmethod
+    def _get_devel_bases(cls) -> Iterable[DevelBaseInfo]:
+        """Get the bases that should be considered devel bases.
+
+        Defaults to the bases in DEVEL_BASE_INFOS. Subclasses can override this to fine-
+        tune which bases are considered 'development' for their application.
+        """
+        return DEVEL_BASE_INFOS
