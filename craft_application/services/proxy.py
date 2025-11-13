@@ -163,8 +163,8 @@ class ProxyService(base.AppService):
     def _execute_run(
         self, instance: craft_providers.Executor, cmd: list[str]
     ) -> subprocess.CompletedProcess[str]:
-        return instance.execute_run(  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]
-            cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+        return instance.execute_run(
+            cmd, check=True, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE
         )
 
     def _install_certificate(self, instance: craft_providers.Executor) -> None:
