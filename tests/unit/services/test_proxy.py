@@ -53,7 +53,12 @@ def test_configure_build_instance(mocker, proxy_service, new_dir):
     proxy_service.finalize_instance_configuration(mock_instance)
 
     # Execution calls on the instance
-    default_args = {"check": True, "stdout": subprocess.PIPE, "stderr": subprocess.PIPE}
+    default_args = {
+        "check": True,
+        "stdout": subprocess.PIPE,
+        "stderr": subprocess.PIPE,
+        "text": True,
+    }
     assert mock_instance.execute_run.mock_calls == [
         call(
             ["mkdir", "-p", "/usr/local/share/ca-certificates"],
@@ -138,7 +143,12 @@ def test_configure_skip_apt(mocker, proxy_service, new_dir, emitter):
         "Not configuring the proxy for apt because apt isn't available in the instance."
     )
     # Execution calls on the instance
-    default_args = {"check": True, "stdout": subprocess.PIPE, "stderr": subprocess.PIPE}
+    default_args = {
+        "check": True,
+        "stdout": subprocess.PIPE,
+        "stderr": subprocess.PIPE,
+        "text": True,
+    }
     assert mock_instance.execute_run.mock_calls == [
         call(
             ["mkdir", "-p", "/usr/local/share/ca-certificates"],
