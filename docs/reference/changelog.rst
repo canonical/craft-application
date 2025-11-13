@@ -44,6 +44,7 @@ Models
   how these fields should behave in their apps.
 - ``any`` and ``*`` are now reserved names for platforms.
 - Platform names may not contain '/' characters.
+- Ubuntu Questing is now a 'stable' base, and Resolute is added as the new 'devel' one.
 
 Fetch Service
 ~~~~~~~~~~~~~

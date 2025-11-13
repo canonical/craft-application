@@ -57,7 +57,7 @@ class DevelBaseInfo:
 # A list of DevelBaseInfo objects that define an OS's current devel base and devel base.
 DEVEL_BASE_INFOS = [
     DevelBaseInfo(
-        current_devel_base=craft_providers.bases.ubuntu.BuilddBaseAlias.QUESTING,
+        current_devel_base=craft_providers.bases.ubuntu.BuilddBaseAlias.RESOLUTE,
         devel_base=craft_providers.bases.ubuntu.BuilddBaseAlias.DEVEL,
     ),
 ]
