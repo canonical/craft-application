@@ -32,6 +32,12 @@ Dependencies
 - The ``pygit2`` dependency is more broadly defined. Applications may need to
   constrain this dependency further if they are packaged as snaps.
 
+Application
+~~~~~~~~~~~
+
+- The deprecated ``run_managed`` method on the
+  :py:class:`~craft_application.Application` has been removed.
+
 Models
 ~~~~~~
 
