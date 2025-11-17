@@ -737,7 +737,7 @@ Application
 Commands
 ========
 
-- Adds an ``init`` command for initialising new projects.
+- Adds an ``init`` command for initializing new projects.
 - Lifecycle commands are ordered in the sequence they run rather than
   alphabetically in help messages.
 - Preserves order of ``CommandGroups`` defined by the application.
@@ -747,7 +747,7 @@ Commands
 Services
 ========
 
-- Adds an ``InitService`` for initialising new projects.
+- Adds an ``InitService`` for initializing new projects.
 
 For a complete list of commits, check out the `4.4.0`_ release on GitHub.
 
