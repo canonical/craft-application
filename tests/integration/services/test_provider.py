@@ -52,8 +52,9 @@ import pytest
 @pytest.mark.flaky(reruns=3, reruns_delay=2)
 @pytest.mark.slow
 def test_provider_lifecycle(
-    snap_safe_tmp_path, app_metadata, provider_service, name, base_name
+    snap_safe_tmp_path, app_metadata, provider_service, state_service, name, base_name
 ):
+    """Set up an instance and allow write access to the project and state directories."""
     if name == "multipass" and base_name.distribution != "ubuntu":
         pytest.skip("multipass only provides ubuntu images")
     provider_service.get_provider(name)
@@ -64,8 +65,14 @@ def test_provider_lifecycle(
     executor = None
     try:
         with instance as executor:
+            # the provider service must allow writes in the state service directory
             executor.execute_run(
-                ["touch", str(app_metadata.managed_instance_project_path / "test")]
+                ["touch", f"{state_service._managed_state_dir}/test.txt"],
+                check=True,
+            )
+            executor.execute_run(
+                ["touch", str(app_metadata.managed_instance_project_path / "test")],
+                check=True,
             )
             proc_result = executor.execute_run(
                 ["cat", "/root/.bashrc"],

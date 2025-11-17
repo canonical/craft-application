@@ -17,8 +17,6 @@
 
 from __future__ import annotations
 
-import pathlib
-from collections.abc import Iterator, Mapping
 from typing import TYPE_CHECKING
 
 import craft_cli
@@ -28,6 +26,9 @@ from craft_application import util
 from craft_application.services import base
 
 if TYPE_CHECKING:
+    import pathlib
+    from collections.abc import Iterator, Mapping
+
     from craft_application.application import AppMetadata
     from craft_application.services import service_factory
 

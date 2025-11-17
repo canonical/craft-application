@@ -21,8 +21,6 @@ from typing import cast
 
 import pydantic.errors
 import pytest
-from hypothesis import given, strategies
-
 from craft_application.models import constraints
 from craft_application.models.constraints import (
     LicenseStr,
@@ -31,6 +29,7 @@ from craft_application.models.constraints import (
     SpdxLicenseStr,
     VersionStr,
 )
+from hypothesis import given, strategies
 
 ALPHA_NUMERIC = [*ascii_letters, *digits]
 LOWER_ALPHA_NUMERIC = [*ascii_lowercase, *digits]
@@ -252,7 +251,9 @@ def test_spdx_license_str_invalid(license_str):
 
 
 def test_spdx_parser_with_none():
-    from craft_application.models.constraints import _validate_spdx_license
+    from craft_application.models.constraints import (  # noqa: PLC0415
+        _validate_spdx_license,
+    )
 
     val = None
     with pytest.raises(

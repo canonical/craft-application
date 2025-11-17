@@ -24,12 +24,11 @@ import craft_platforms
 import pytest
 import pytest_check
 import pytest_mock
-from craft_cli.pytest_plugin import RecordingEmitter
-from craft_platforms import BuildInfo, DebianArchitecture, DistroBase
-
 from craft_application.errors import EmptyBuildPlanError
 from craft_application.services.buildplan import BuildPlanService
 from craft_application.services.service_factory import ServiceFactory
+from craft_cli.pytest_plugin import RecordingEmitter
+from craft_platforms import BuildInfo, DebianArchitecture, DistroBase
 
 
 def test__gen_exhaustive_build_plan(
@@ -651,4 +650,34 @@ def test_create_build_plan_filters_to_empty(build_plan_service: BuildPlanService
             build_on=None,
         )
         == []
+    )
+
+
+def test_set_platforms_resets_cached_plan(mocker, build_plan_service: BuildPlanService):
+    build_plan_service.plan()
+    mock_creator = mocker.patch.object(build_plan_service, "create_build_plan")
+    build_plan_service.set_platforms("zero", "mind the gap")
+    mock_creator.assert_not_called()
+    build_plan_service.plan()
+    build_plan_service.plan()  # This time it should keep the cache.
+    mock_creator.assert_called_once_with(
+        platforms=["zero", "mind the gap"],
+        build_for=None,
+        build_on=[craft_platforms.DebianArchitecture.from_host()],
+    )
+
+
+def test_set_build_fors_resets_cached_plan(
+    mocker, build_plan_service: BuildPlanService
+):
+    build_plan_service.plan()
+    mock_creator = mocker.patch.object(build_plan_service, "create_build_plan")
+    build_plan_service.set_build_fors("riscv64")
+    mock_creator.assert_not_called()
+    build_plan_service.plan()
+    build_plan_service.plan()  # This time it should keep the cache.
+    mock_creator.assert_called_once_with(
+        platforms=None,
+        build_for=["riscv64"],
+        build_on=[craft_platforms.DebianArchitecture.from_host()],
     )

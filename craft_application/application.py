@@ -17,7 +17,6 @@
 
 from __future__ import annotations
 
-import argparse
 import importlib
 import os
 import pathlib
@@ -25,23 +24,27 @@ import signal
 import sys
 import traceback
 import warnings
-from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
 from functools import cached_property
 from importlib import metadata
-from typing import TYPE_CHECKING, Any, Literal, cast, final
+from typing import TYPE_CHECKING, Annotated, Any, Literal, cast, final
 
+import annotated_types
 import craft_cli
-import craft_parts
-import craft_platforms
 import craft_providers
-from craft_parts.plugins.plugins import PluginType
 from platformdirs import user_cache_path
 
 from craft_application import _config, commands, errors, models, util
 from craft_application.errors import PathInvalidError
+from craft_application.util.logging import handle_runtime_error
 
 if TYPE_CHECKING:
+    import argparse
+    from collections.abc import Iterable, Sequence
+
+    from craft_parts.infos import ProjectInfo
+    from craft_parts.plugins.plugins import PluginType
+
     from craft_application.services import service_factory
 
 GLOBAL_VERSION = craft_cli.GlobalArgument(
@@ -55,6 +58,7 @@ DEFAULT_CLI_LOGGERS = frozenset(
         "craft_providers",
         "craft_store",
         "craft_application",
+        "httpx",  # Used by craft-store
     }
 )
 
@@ -62,19 +66,59 @@ DEFAULT_CLI_LOGGERS = frozenset(
 @final
 @dataclass(frozen=True)
 class AppMetadata:
-    """Metadata about a *craft application."""
+    """Metadata about a craft application."""
 
     name: str
+    """The name of the application."""
     summary: str | None = None
+    """A short summary of the application."""
     version: str = field(init=False)
     docs_url: str | None = None
-    source_ignore_patterns: list[str] = field(default_factory=list)
+    """The root URL for the app's documentation."""
+    artifact_type: Annotated[
+        str,
+        annotated_types.IsAscii,
+        annotated_types.LowerCase,
+    ] = "artifact"
+    """The name to refer to the output artifact for this app.
+
+    This gets used in messages and should be an all lower-case single-word value, like
+    ``snap`` or ``rock``. Defaults to ``artifact``.
+    """
+    source_ignore_patterns: list[str] = field(default_factory=list[str])
     managed_instance_project_path = pathlib.PurePosixPath("/root/project")
-    project_variables: list[str] = field(default_factory=lambda: ["version"])
-    mandatory_adoptable_fields: list[str] = field(default_factory=lambda: ["version"])
+    project_variables: list[str] = field(
+        default_factory=lambda: ["version", "summary", "description"]
+    )
+    """Fields that are adoptable using craftctl set."""
+    mandatory_adoptable_fields: list[str] = field(
+        default_factory=lambda: ["version", "summary", "description"]
+    )
+    """Fields that must either be in the YAML file or adopted with craftctl set."""
     ConfigModel: type[_config.ConfigModel] = _config.ConfigModel
 
     ProjectClass: type[models.Project] = models.Project
+    """The project model to use for this app.
+
+    Most applications will need to override this, but a very basic application could use
+    the default model without modification.
+    """
+    supports_multi_base: bool = False
+    always_repack: bool = (
+        True  # Gating for https://github.com/canonical/craft-application/pull/810
+    )
+    check_supported_base: bool = False
+    """Whether this application allows building on unsupported bases.
+
+    When True, the app can build on a base even if it is end-of-life. Relevant apt
+    repositories will be migrated to ``old-releases.ubuntu.com``. Currently only
+    supports EOL Ubuntu releases.
+
+    When False, the repositories are not migrated and base support is not checked.
+    """
+
+    enable_for_grammar: bool = False
+    """Whether this application supports the 'for' variant of advanced grammar."""
 
     def __post_init__(self) -> None:
         setter = super().__setattr__
@@ -444,10 +488,11 @@ class Application:
         """Register plugins for this application."""
         if not plugins:
             return
+        from craft_parts.plugins import register  # noqa: PLC0415
 
         craft_cli.emit.trace("Registering plugins...")
         craft_cli.emit.trace(f"Plugins: {', '.join(plugins.keys())}")
-        craft_parts.plugins.register(plugins)
+        register(plugins)
 
     def _register_default_plugins(self) -> None:
         """Register per application plugins when initializing."""
@@ -510,17 +555,18 @@ class Application:
             platform = platform.split(",", maxsplit=1)[0]
         if build_for and "," in build_for:
             build_for = build_for.split(",", maxsplit=1)[0]
-        if command.needs_project(dispatcher.parsed_args()):
+        craft_cli.emit.debug(f"Build plan: platform={platform}, build_for={build_for}")
+
+        self._pre_run(dispatcher)
+
+        if command.needs_project(parsed_args):
             project_service = self.services.get("project")
             # This branch always runs, except during testing.
             if not project_service.is_configured:
                 project_service.configure(platform=platform, build_for=build_for)
 
-        craft_cli.emit.debug(f"Build plan: platform={platform}, build_for={build_for}")
-        self._pre_run(dispatcher)
-
-        managed_mode = command.run_managed(dispatcher.parsed_args())
-        provider_name = command.provider_name(dispatcher.parsed_args())
+        managed_mode = command.run_managed(parsed_args)
+        provider_name = command.provider_name(parsed_args)
         self._configure_services(provider_name)
 
         return_code = 1  # General error
@@ -547,70 +593,15 @@ class Application:
 
         craft_cli.emit.debug("Preparing application...")
 
+        debug_mode = self.services.get("config").get("debug")
+
         try:
             return_code = self._run_inner()
-        except craft_cli.ArgumentParsingError as err:
-            print(err, file=sys.stderr)  # to stderr, as argparse normally does
-            craft_cli.emit.ended_ok()
-            return_code = os.EX_USAGE
-        except KeyboardInterrupt as err:
-            return_code = 128 + signal.SIGINT
-            self._emit_error(
-                craft_cli.CraftError("Interrupted.", retcode=return_code), cause=err
+        # Other BaseException classes should be passed through, not caught.
+        except (Exception, KeyboardInterrupt) as error:  # noqa: BLE001, this is not blind due to the handler code
+            return_code = handle_runtime_error(
+                self.app, error, print_error=self._emit_error, debug_mode=debug_mode
             )
-        except craft_cli.CraftError as err:
-            self._emit_error(err)
-            return_code = err.retcode
-        except craft_parts.PartsError as err:
-            self._emit_error(
-                errors.PartsLifecycleError.from_parts_error(err),
-                cause=err,
-            )
-            return_code = 1
-        except craft_providers.ProviderError as err:
-            self._emit_error(
-                craft_cli.CraftError(
-                    err.brief, details=err.details, resolution=err.resolution
-                ),
-                cause=err,
-            )
-            return_code = 1
-        except craft_platforms.CraftPlatformsError as err:
-            self._emit_error(
-                craft_cli.CraftError(
-                    err.args[0],
-                    details=err.details,
-                    resolution=err.resolution,
-                    reportable=err.reportable,
-                    docs_url=err.docs_url,
-                    doc_slug=err.doc_slug,
-                    logpath_report=err.logpath_report,
-                    retcode=err.retcode,
-                ),
-                cause=err,
-            )
-            return_code = err.retcode
-        except Exception as err:
-            if isinstance(err, craft_platforms.CraftError):
-                transformed = craft_cli.CraftError(
-                    err.args[0],
-                    details=err.details,
-                    resolution=err.resolution,
-                    docs_url=getattr(err, "docs_url", None),
-                    doc_slug=getattr(err, "doc_slug", None),
-                    logpath_report=getattr(err, "logpath_report", True),
-                    reportable=getattr(err, "reportable", True),
-                    retcode=getattr(err, "retcode", 1),
-                )
-                return_code = transformed.retcode
-            else:
-                transformed = craft_cli.CraftError(
-                    f"{self.app.name} internal error: {err!r}"
-                )
-                return_code = os.EX_SOFTWARE
-            self._emit_error(transformed, cause=err)
-            if self.services.get("config").get("debug"):
-                raise
         else:
             craft_cli.emit.ended_ok()
 
@@ -631,14 +622,35 @@ class Application:
         craft_cli.emit.error(error)
 
     def _get_project_vars(self, yaml_data: dict[str, Any]) -> dict[str, str]:
-        """Return a dict with project variables to be expanded."""
+        """Return a dict with project variables to be expanded.
+
+        DEPRECATED: This method is deprecated and is not called by default.
+        Use ``ProjectService.project_vars`` instead.
+        """
+        warnings.warn(
+            "'Application._get_project_vars' is deprecated. "
+            "Use 'ProjectService.project_vars' instead.",
+            category=DeprecationWarning,
+            stacklevel=1,
+        )
+
         pvars: dict[str, str] = {}
         for var in self.app.project_variables:
             pvars[var] = str(yaml_data.get(var, ""))
         return pvars
 
-    def _set_global_environment(self, info: craft_parts.ProjectInfo) -> None:
-        """Populate the ProjectInfo's global environment."""
+    def _set_global_environment(self, info: ProjectInfo) -> None:
+        """Populate the ProjectInfo's global environment.
+
+        DEPRECATED: This method is deprecated and is not called by default.
+        Use ``ProjectService.update_project_environment`` instead.
+        """
+        warnings.warn(
+            "Application._set_global_environment is deprecated and not called by "
+            "default. Use ProjectService.update_project_environment instead.",
+            category=DeprecationWarning,
+            stacklevel=1,
+        )
         info.global_environment.update(
             {
                 "CRAFT_PROJECT_VERSION": info.get_project_var("version", raw_read=True),

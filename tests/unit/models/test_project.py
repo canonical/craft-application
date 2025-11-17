@@ -19,12 +19,13 @@ import copy
 import pathlib
 import re
 import textwrap
+from collections.abc import Iterable
 from textwrap import dedent
 
 import craft_platforms
 import craft_providers.bases
+import pydantic
 import pytest
-
 from craft_application import util
 from craft_application.errors import CraftValidationError
 from craft_application.models import (
@@ -34,6 +35,8 @@ from craft_application.models import (
     Project,
     constraints,
 )
+from craft_application.models.project import DevelBaseInfo
+from overrides import override
 
 PROJECTS_DIR = pathlib.Path(__file__).parent / "project_models"
 PARTS_DICT = {"my-part": {"plugin": "nil"}}
@@ -135,8 +138,8 @@ def full_project_dict():
         ),
         *(
             pytest.param(
-                {"build-on": arch},
-                Platform(build_on=[arch]),
+                {"build-on": arch, "build-for": "all"},
+                Platform(build_on=[arch], build_for=["all"]),
                 id=f"build-on-only-{arch}",
             )
             for arch in craft_platforms.DebianArchitecture
@@ -192,6 +195,35 @@ def test_platform_from_platform_dict(incoming, expected):
 )
 def test_platform_from_platforms(incoming, expected):
     assert Platform.from_platforms(incoming) == expected
+
+
+@pytest.mark.parametrize(
+    ("value", "match"),
+    [
+        pytest.param({}, "build-on\n  Field required", id="empty"),
+        pytest.param(
+            {"build-on": [], "build-for": ["all"]},
+            "build-on\n  Value should have at least 1 item",
+            id="empty-build-on",
+        ),
+        pytest.param(
+            {"build-on": ["all"], "build-for": ["all"]},
+            "'all' cannot be used for 'build-on'",
+            id="build-on-all",
+        ),
+        pytest.param(
+            {"build-on": ["s390x"]}, r"build-for\n\s+Field required", id="no-build-for"
+        ),
+        pytest.param(
+            {"build-on": ["s390x"], "build-for": ["amd64", "riscv64"]},
+            r"List should have at most 1 item",
+            id="build-for-many",
+        ),
+    ],
+)
+def test_platform_validation_errors(value, match):
+    with pytest.raises(ValueError, match=match):
+        Platform.model_validate(value)
 
 
 @pytest.mark.parametrize(
@@ -346,18 +378,35 @@ def test_effective_base_unknown():
     assert exc_info.match("Could not determine effective base")
 
 
-def test_devel_base_devel_build_base(emitter):
-    """Base can be 'devel' when the build-base is 'devel'."""
+@pytest.mark.parametrize("devel_info", DEVEL_BASE_INFOS)
+def test_devel_base_devel_build_base(emitter, devel_info):
+    """Base can be a development base when the build-base is 'devel'."""
     _ = FakeBuildBaseProject(
         name="project-name",
         version="1.0",
         parts={},
         platforms={"arm64": None},  # pyright: ignore[reportArgumentType]
         base=f"ubuntu@{DEVEL_BASE_INFOS[0].current_devel_base.value}",
-        build_base=f"ubuntu@{DEVEL_BASE_INFOS[0].current_devel_base.value}",
+        build_base=f"ubuntu@{DEVEL_BASE_INFOS[0].devel_base.value}",
     )
 
     emitter.assert_message(DEVEL_BASE_WARNING)
+
+
+@pytest.mark.parametrize("devel_info", DEVEL_BASE_INFOS)
+def test_devel_base_wrong_build_base(devel_info):
+    """Must set a build-base if the base is still in development."""
+    with pytest.raises(
+        ValueError, match="A development build-base must be used when base is"
+    ):
+        FakeBuildBaseProject(
+            name="project-name",
+            version="1.0",
+            parts={},
+            platforms={"arm64": None},  # pyright: ignore[reportArgumentType]
+            base=f"ubuntu@{DEVEL_BASE_INFOS[0].current_devel_base.value}",
+            build_base=f"ubuntu@{DEVEL_BASE_INFOS[0].current_devel_base.value}",
+        )
 
 
 def test_devel_base_no_base():
@@ -385,15 +434,19 @@ def test_devel_base_no_base_alias(mocker):
     )
 
 
-def test_devel_base_no_build_base():
-    """Base can be 'devel' if the build-base is not set."""
-    _ = FakeBuildBaseProject(
-        name="project-name",
-        version="1.0",
-        parts={},
-        base=f"ubuntu@{DEVEL_BASE_INFOS[0].current_devel_base.value}",
-        platforms={"arm64": None},  # pyright: ignore[reportArgumentType]
-    )
+@pytest.mark.parametrize("devel_info", DEVEL_BASE_INFOS)
+def test_devel_base_no_build_base(devel_info):
+    with pytest.raises(
+        ValueError, match="A development build-base must be used when base is"
+    ):
+        FakeBuildBaseProject(
+            name="project-name",
+            version="1.0",
+            parts={},
+            platforms={"arm64": None},  # pyright: ignore[reportArgumentType]
+            base=f"ubuntu@{DEVEL_BASE_INFOS[0].current_devel_base.value}",
+            build_base=None,
+        )
 
 
 def test_devel_base_error():
@@ -420,6 +473,48 @@ def test_devel_base_error():
     """
         ).strip()
     )
+
+
+class ProjectWithDevelNoble(Project):
+    """A project where Noble is a devel base."""
+
+    @classmethod
+    @override
+    def _get_devel_bases(cls) -> Iterable[DevelBaseInfo]:
+        return [
+            DevelBaseInfo(
+                current_devel_base=craft_providers.bases.ubuntu.BuilddBaseAlias.NOBLE,
+                devel_base=craft_providers.bases.ubuntu.BuilddBaseAlias.DEVEL,
+            )
+        ]
+
+
+def test_get_devel_bases_override():
+    yaml_data = {
+        "name": "project-name",
+        "version": "1.0",
+        "parts": {},
+        "platforms": {"arm64": None},
+        "base": "ubuntu@24.04",
+        "build_base": "ubuntu@24.04",
+    }
+
+    # Sanity check that this is good data for the default Project
+    _ = FakeBuildBaseProject.from_yaml_data(
+        yaml_data,
+        pathlib.Path("testcraft.yaml"),
+    )
+
+    expected = re.escape(
+        "a development build-base must be used when base is 'ubuntu@24.04'"
+    )
+
+    # Fails for ProjectWithDevelNoble as it overrides _get_devel_bases()
+    with pytest.raises(CraftValidationError, match=expected):
+        _ = ProjectWithDevelNoble.from_yaml_data(
+            yaml_data,
+            pathlib.Path("testcraft.yaml"),
+        )
 
 
 @pytest.mark.parametrize(
@@ -449,7 +544,7 @@ def test_invalid_field_message(
     full_expected_message = textwrap.dedent(
         f"""
         Bad myproject.yaml content:
-        - {expected_message} (in field '{field_name}')
+        - {expected_message} (in field '{field_name}', input: {invalid_value!r})
         """
     ).strip()
 
@@ -494,7 +589,7 @@ def test_unmarshal_undefined_repositories(full_project_dict):
         (
             [[]],
             [
-                "- input should be a valid dictionary (in field 'package-repositories[0]')"
+                "- input should be a valid dictionary (in field 'package-repositories[0]', input: [])"
             ],
         ),
         (
@@ -533,8 +628,8 @@ def test_platform_invalid_arch(model, platform_label, basic_project_dict):
 
     assert error.value.args[0] == (
         "Bad myproject.yaml content:\n"
-        f"- 'unknown' is not a valid Debian architecture. (in field 'platforms.{platform_label}.build-on')\n"
-        f"- 'unknown' is not a valid Debian architecture. (in field 'platforms.{platform_label}.build-for')"
+        f"- 'unknown' is not a valid Debian architecture. (in field 'platforms.{platform_label}.build-on', input: {[platform_label]})\n"
+        f"- 'unknown' is not a valid Debian architecture. (in field 'platforms.{platform_label}.build-for', input: {[platform_label]})"
     )
 
 
@@ -542,7 +637,10 @@ def test_platform_invalid_arch(model, platform_label, basic_project_dict):
 @pytest.mark.parametrize("arch", ["unknown", "ubuntu@24.04:unknown"])
 @pytest.mark.parametrize("field_name", ["build-on", "build-for"])
 def test_platform_invalid_build_arch(model, arch, field_name, basic_project_dict):
-    basic_project_dict["platforms"] = {"amd64": {field_name: [arch]}}
+    other_field = next(iter({"build-on", "build-for"} - {field_name}))
+    basic_project_dict["platforms"] = {
+        "mine": {field_name: [arch], other_field: ["amd64"]}
+    }
     project_path = pathlib.Path("myproject.yaml")
 
     with pytest.raises(CraftValidationError) as error:
@@ -550,11 +648,8 @@ def test_platform_invalid_build_arch(model, arch, field_name, basic_project_dict
 
     error_lines = [
         "Bad myproject.yaml content:",
-        "- field 'build-on' required in 'platforms.amd64' configuration",
-        f"- 'unknown' is not a valid Debian architecture. (in field 'platforms.amd64.{field_name}')",
+        f"- 'unknown' is not a valid Debian architecture. (in field 'platforms.mine.{field_name}', input: {[arch]!r})",
     ]
-    if field_name == "build-on":
-        error_lines.pop(1)
     assert error.value.args[0] == "\n".join(error_lines)
 
 
@@ -567,8 +662,38 @@ def test_invalid_part_error(basic_project_dict):
     expected = textwrap.dedent(
         """\
     Bad bla.yaml content:
-    - plugin not registered: 'badplugin' (in field 'parts.p1')
-    - extra inputs are not permitted (in field 'parts.p2.bad-key')"""
+    - plugin not registered: 'badplugin' (in field 'parts.p1', input: {'plugin': 'badplugin'})
+    - extra inputs are not permitted (in field 'parts.p2.bad-key', input: 1)"""
     )
     with pytest.raises(CraftValidationError, match=re.escape(expected)):
         Project.from_yaml_data(basic_project_dict, filepath=pathlib.Path("bla.yaml"))
+
+
+@pytest.mark.parametrize(
+    "updates",
+    [
+        pytest.param({}, id="unchanged"),
+        pytest.param({"base": "bare", "build-base": "ubuntu@24.04"}, id="bare-base"),
+    ],
+)
+def test_project_variants_validate_success(basic_project_dict, updates):
+    basic_project_dict.update(updates)
+
+    Project.model_validate(basic_project_dict)
+
+
+@pytest.mark.parametrize(
+    ("updates", "match"),
+    [
+        pytest.param(
+            {"base": "bare"},
+            "A build-base is required if base is 'bare'",
+            id="bare-base",
+        )
+    ],
+)
+def test_project_variants_validate_error(basic_project_dict, updates, match):
+    basic_project_dict.update(updates)
+
+    with pytest.raises(pydantic.ValidationError, match=match):
+        Project.model_validate(basic_project_dict)

@@ -1,0 +1,53 @@
+summary: test witchcraft packing on an EOL base.
+
+prepare: |
+  timedatectl set-ntp false
+  date +%s > .real-time-now
+
+
+  # Change to the current base
+  . /etc/os-release
+  sed -i "s/base: REPLACE_THIS/base: ubuntu@${VERSION_ID}/" witchcraft.yaml
+
+execute: |
+  # We didn't support any bases this far in the past.
+  timedatectl set-time '1994-04-27'
+  witchcraft pack |& MATCH "Cannot pack cauldron. Base '[a-z0-9.@]+' has reached end-of-life."
+  witchcraft pack --destructive-mode |& MATCH "Cannot pack cauldron. Base '[a-z0-9.@]+' has reached end-of-life."
+
+  . /etc/os-release
+  EOL_DATE=$(cat /usr/share/distro-info/ubuntu.csv | awk -F, '$3=="'$VERSION_CODENAME'" {print $6}')
+
+  set -o pipefail
+  # Try packing the day of EOL:
+  timedatectl set-time "${EOL_DATE}"
+  # Ensure no files are newer than the "present"
+  find . -type f -exec touch {} ';'
+  witchcraft pack --destructive-mode |& tee pack.log
+  MATCH "Using base '[a-z0-9.@]+', which will enter end-of-life on ${EOL_DATE}." pack.log
+  set +o pipefail
+
+  # Pack the day after the base goes EOL
+  timedatectl set-time @"$(date -d "${EOL_DATE} + 1 day" +%s)"
+  witchcraft pack |& MATCH "Cannot pack cauldron. Base '[a-z0-9.@]+' has reached end-of-life."
+  witchcraft pack --destructive-mode |& MATCH "Cannot pack cauldron. Base '[a-z0-9.@]+' has reached end-of-life."
+  witchcraft pack --destructive-mode --ignore=unmaintained
+
+  # Pack in the distant future.
+  timedatectl set-time '2182-11-25'  # Gazpacho Soup Day
+  witchcraft pack |& MATCH "Base '[a-z0-9.@]+' has reached"
+  witchcraft pack --destructive-mode |& MATCH "Base '[a-z0-9.@]+' has reached"
+
+  witchcraft pack --ignore=unmaintained --destructive-mode
+
+  if [[ $(find . -maxdepth 1 -name '*.witchcraft') == "" ]]; then
+    echo "No witchcraft file created" >> /dev/stderr
+    exit 1
+  fi
+
+restore: |
+  # Set the time back and re-enable NTP
+  timedatectl set-time @$(cat .real-time-now)
+  timedatectl set-ntp true
+
+  rm -f *.witchcraft

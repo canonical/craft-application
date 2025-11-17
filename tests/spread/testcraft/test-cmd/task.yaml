@@ -1,0 +1,21 @@
+summary: test the test command as though running in CI.
+
+systems:
+  - -ubuntu-20.04-64 # Test command is neither supported nor needed this far back.
+
+environment:
+  CI: "1"
+
+execute: |
+  CRAFT_VERBOSITY_LEVEL=TRACE testcraft test 2>&1 | tee test_out.log
+  grep -q "platform 'a'" test_out.log
+  grep -q "platform 'b'" test_out.log
+  CRAFT_VERBOSITY_LEVEL=verbose testcraft test tests/spread/my-suite/my-task 2>&1 | tee retest_out.log
+  grep -q 'Already packed: test-test-0.1-a.testcraft' retest_out.log
+  grep -q 'Already packed: test-test-0.1-b.testcraft' retest_out.log
+  testcraft test other:...:tests/spread/my-suite/my-task 2>&1 | MATCH "No matches"
+
+restore: |
+  rm -f *.testcraft
+  testcraft clean
+  rm -f test_out.log retest_out.log

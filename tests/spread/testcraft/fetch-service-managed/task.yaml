@@ -1,0 +1,29 @@
+summary: Testcraft should create and manage an instance of the fetch service
+
+priority: 100
+
+systems:
+  - -ubuntu-20.04-64 # Fetch service is neither supported nor needed this far back.
+
+prepare: |
+  snap install fetch-service --candidate
+
+execute: |
+  testcraft pack --enable-fetch-service permissive
+
+  test -f fetch-service*.testcraft
+
+  # Check that the session-report was generated
+  test -f fetch-service*.json
+
+  # Smoke-checks to verify that the 'hello' deb went through the fetch service
+  MATCH '"component-name": "hello"' fetch-service*.json
+
+  # Also check if packages installed during base setup went through the fetch service
+  MATCH '"component-name": "snapd"' fetch-service*.json
+
+restore: |
+  testcraft clean
+  snap remove --purge fetch-service
+  rm -f fetch-service*.json
+  rm -f fetch-service*.testcraft

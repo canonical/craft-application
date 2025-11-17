@@ -1,0 +1,25 @@
+project: test-cmd
+
+backends:
+  craft:
+    type: craft
+    allocate: "false"
+    systems:
+      - ubuntu-25.10:
+      - ubuntu-24.04:
+      - ubuntu-22.04:
+      - ubuntu-20.04:
+      - ubuntu-18.04:
+
+  other:
+    type: adhoc
+    allocate: "false"
+    systems:
+      - ubuntu-24.04:
+
+prepare: |
+  true
+
+suites:
+  tests/spread/my-suite/:
+    summary: A basic suite of spread tests.

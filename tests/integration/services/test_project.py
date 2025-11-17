@@ -18,7 +18,6 @@ import shutil
 
 import craft_platforms
 import pytest
-
 from craft_application.services.project import ProjectService
 from craft_application.util import yaml
 

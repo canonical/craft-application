@@ -33,5 +33,7 @@ behaviour of Craft Application during testing.
 
 .. autofunction:: debug_mode
 
+.. autofunction:: _reset_craft_parts_callbacks
+
 
 .. _pytest: https://docs.pytest.org

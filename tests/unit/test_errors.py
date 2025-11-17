@@ -22,14 +22,13 @@ import pydantic
 import pytest
 import pytest_check
 import yaml
-from pydantic import BaseModel
-from typing_extensions import Self
-
 from craft_application.errors import (
     CraftValidationError,
     PartsLifecycleError,
     YamlError,
 )
+from pydantic import BaseModel
+from typing_extensions import Self
 
 
 @pytest.mark.parametrize(
@@ -134,12 +133,11 @@ def test_validation_error_from_pydantic():
         pytest.fail("Model failed to fail to validate!")
 
     expected = textwrap.dedent(
-        """
+        """\
         Bad myfile.yaml content:
-        - input should be greater than 42 (in field 'gt_int')
-        - input should be a valid number, unable to parse string as a number (in field 'a_float')
-        """
-    ).strip()
+        - input should be greater than 42 (in field 'gt_int', input: 21)
+        - input should be a valid number, unable to parse string as a number (in field 'a_float', input: 'not a float')"""
+    )
 
     message = str(err)
     assert message == expected

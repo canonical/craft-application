@@ -18,14 +18,13 @@ from datetime import datetime
 
 import craft_platforms
 import pytest
-from freezegun import freeze_time
-
 from craft_application import util
 from craft_application.models.manifest import (
     CraftManifest,
     ProjectManifest,
     SessionArtifactManifest,
 )
+from freezegun import freeze_time
 
 
 @pytest.fixture

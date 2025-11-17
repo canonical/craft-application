@@ -17,7 +17,7 @@
 
 from __future__ import annotations
 
-import io
+import copy
 import os
 import pathlib
 import shutil
@@ -27,21 +27,21 @@ from importlib import metadata
 from typing import TYPE_CHECKING, Any, cast
 from unittest.mock import Mock
 
+import craft_application
 import craft_parts
 import craft_platforms
 import distro
 import jinja2
 import pydantic
 import pytest
+from craft_application import application, errors, git, launchpad, models, services
+from craft_application.services import service_factory
+from craft_application.services.fetch import FetchService
+from craft_application.services.project import ProjectService
+from craft_application.util import yaml
 from craft_cli import EmitterMode, emit
 from jinja2 import FileSystemLoader
 from typing_extensions import override
-
-import craft_application
-from craft_application import application, git, launchpad, models, services
-from craft_application.services import service_factory
-from craft_application.services.fetch import FetchService
-from craft_application.util import yaml
 
 if TYPE_CHECKING:  # pragma: no cover
     from collections.abc import Iterator
@@ -70,9 +70,8 @@ platforms:
   risky:
     build-on: [amd64, arm64, ppc64el, riscv64, s390x]
     build-for: [riscv64]
-  s390x:
+  s390x:  # Test with build-on only
     build-on: [amd64, arm64, armhf, i386, ppc64el, riscv64, s390x]
-    build-for: [s390x]
 
 contact: author@project.org
 issues: https://github.com/canonical/craft-application/issues
@@ -94,28 +93,32 @@ parts:
         "ppc64el",
         "risky",
         "s390x",
-    ]
+    ],
+    scope="session",
 )
 def fake_platform(request: pytest.FixtureRequest) -> str:
     return request.param
 
 
 @pytest.fixture
-def platform_independent_project(fake_project_file, fake_project):
+def platform_independent_project(fake_project_file, fake_project_dict):
     """Turn the fake project into a platform-independent project.
 
     This is needed because `build-for: [all]` implies a single platform. So
     """
-    fake_project.platforms = {
+    old_platforms = fake_project_dict["platforms"]
+    fake_project_dict["platforms"] = {
         "platform-independent": {
             "build-on": [str(arch) for arch in craft_platforms.DebianArchitecture],
             "build-for": ["all"],
         }
     }
-    fake_project_file.write_text(fake_project.to_yaml_string())
+    fake_project_file.write_text(yaml.dump_yaml(fake_project_dict))
+    yield
+    fake_project_dict["platforms"] = old_platforms
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def fake_project_yaml():
     current_base = craft_platforms.DistroBase.from_linux_distribution(
         distro.LinuxDistribution(
@@ -135,10 +138,16 @@ def fake_project_file(in_project_path, fake_project_yaml):
     return project_file
 
 
+@pytest.fixture(scope="module")
+def fake_project_dict(fake_project_yaml: str):
+    return yaml.safe_yaml_load(fake_project_yaml)
+
+
 @pytest.fixture
-def fake_project(fake_project_yaml) -> models.Project:
-    with io.StringIO(fake_project_yaml) as project_io:
-        return models.Project.unmarshal(yaml.safe_yaml_load(project_io))
+def fake_project(fake_project_dict) -> models.Project:
+    project = copy.deepcopy(fake_project_dict)
+    ProjectService._preprocess_platforms(project["platforms"])
+    return models.Project.unmarshal(project)
 
 
 @pytest.fixture(
@@ -200,15 +209,27 @@ def default_app_metadata(fake_config_model) -> craft_application.AppMetadata:
 
 
 @pytest.fixture
-def app_metadata(fake_config_model) -> craft_application.AppMetadata:
+def app_metadata(request, fake_config_model) -> craft_application.AppMetadata:
+    """Default app metadata.
+
+    :param request: kwargs to override metadata
+    """
+    kwargs = {
+        "source_ignore_patterns": ["*.snap", "*.charm", "*.starcraft"],
+        "docs_url": "www.testcraft.example/docs/{version}",
+        "ConfigModel": fake_config_model,
+        "supports_multi_base": True,
+        "always_repack": False,
+        "check_supported_base": True,
+        **getattr(request, "param", {}),
+    }
+
     with pytest.MonkeyPatch.context() as m:
         m.setattr(metadata, "version", lambda _: "3.14159")
         return craft_application.AppMetadata(
             "testcraft",
             "A fake app for testing craft-application",
-            source_ignore_patterns=["*.snap", "*.charm", "*.starcraft"],
-            docs_url="www.testcraft.example/docs/{version}",
-            ConfigModel=fake_config_model,
+            **kwargs,
         )
 
 
@@ -249,6 +270,11 @@ def enable_overlay() -> Iterator[craft_parts.Features]:
 @pytest.fixture
 def build_plan_service(fake_services):
     return fake_services.get("build_plan")
+
+
+@pytest.fixture
+def state_service(fake_services):
+    return fake_services.get("state")
 
 
 @pytest.fixture
@@ -295,13 +321,13 @@ def emitter_verbosity(request):
 
 
 @pytest.fixture
-def fake_project_service_class(fake_project) -> type[services.ProjectService]:
+def fake_project_service_class(fake_project_dict) -> type[services.ProjectService]:
     class FakeProjectService(services.ProjectService):
         # This is a final method, but we're overriding it here for convenience when
         # doing internal testing.
         @override
         def _load_raw_project(self):  # type: ignore[reportIncompatibleMethodOverride]
-            return fake_project.marshal()
+            return fake_project_dict
 
         # Don't care if the project file exists during this testing.
         # Silencing B019 because we're replicating an inherited method.
@@ -314,6 +340,9 @@ def fake_project_service_class(fake_project) -> type[services.ProjectService]:
             self._project_model = value
             self._platform = next(iter(value.platforms))
             self._build_for = value.platforms[self._platform].build_for[0]  # type: ignore[reportOptionalSubscript]
+            self._project_vars = craft_parts.ProjectVarInfo.unmarshal(
+                {"a": craft_parts.ProjectVar(value="foo").marshal()}
+            )
 
         @override
         def get_partitions_for(
@@ -422,7 +451,6 @@ def fake_services(
     request: pytest.FixtureRequest,
     tmp_path,
     app_metadata,
-    fake_project,
     fake_lifecycle_service_class,
     fake_package_service_class,
     fake_project_service_class,
@@ -454,7 +482,7 @@ def fake_services(
 
     try:
         factory.get("project").configure(platform=platform, build_for=build_for)
-    except RuntimeError as exc:
+    except errors.ProjectGenerationError as exc:
         pytest.skip(str(exc))
     yield factory
 

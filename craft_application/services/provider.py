@@ -18,6 +18,7 @@
 from __future__ import annotations
 
 import contextlib
+import enum
 import io
 import os
 import pathlib
@@ -25,7 +26,6 @@ import pkgutil
 import subprocess
 import sys
 import urllib.request
-from collections.abc import Generator, Iterable, Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -37,16 +37,19 @@ from craft_providers.actions.snap_installer import Snap
 from craft_providers.lxd import LXDProvider
 from craft_providers.multipass import MultipassProvider
 
-from craft_application import util
+from craft_application import models, util
 from craft_application.services import base
 from craft_application.util import platforms, snap_config
 
 if TYPE_CHECKING:  # pragma: no cover
+    from collections.abc import Callable, Generator, Iterable, Sequence
+
     from craft_application.application import AppMetadata
     from craft_application.services import ServiceFactory
 
 
 DEFAULT_FORWARD_ENVIRONMENT_VARIABLES: Iterable[str] = ()
+IGNORE_CONFIG_ITEMS: Iterable[str] = ("build_for", "platform", "verbosity_level")
 
 _REQUESTED_SNAPS: dict[str, Snap] = {}
 """Additional snaps to be installed using provider."""
@@ -81,6 +84,14 @@ class ProviderService(base.AppService):
         # this is a private attribute because it may not reflect the actual
         # provider name. Instead, self._provider.name should be used.
         self.__provider_name: str | None = provider_name
+        self._pack_state: models.PackState = models.PackState(
+            artifact=None, resources=None
+        )
+
+    @property
+    def compatibility_tag(self) -> str:
+        """Get craft-application's suffix for the compatibility tag."""
+        return ".1"
 
     @classmethod
     def is_managed(cls) -> bool:
@@ -93,6 +104,13 @@ class ProviderService(base.AppService):
         for name in DEFAULT_FORWARD_ENVIRONMENT_VARIABLES:
             if name in os.environ:
                 self.environment[name] = os.getenv(name)
+
+        app_upper = self._app.name.upper()
+        for config_item, value in self._services.get("config").get_all().items():
+            if config_item in IGNORE_CONFIG_ITEMS or value is None:
+                continue
+            value_out = value.name if isinstance(value, enum.Enum) else str(value)
+            self.environment[f"{app_upper}_{config_item.upper()}"] = value_out
 
         for scheme, value in urllib.request.getproxies().items():
             self.environment[f"{scheme.lower()}_proxy"] = value
@@ -130,7 +148,9 @@ class ProviderService(base.AppService):
         work_dir: pathlib.Path,
         allow_unstable: bool = True,
         clean_existing: bool = False,
+        use_base_instance: bool = True,
         project_name: str | None = None,
+        prepare_instance: Callable[[craft_providers.Executor], None] | None = None,
         **kwargs: bool | str | None,
     ) -> Generator[craft_providers.Executor, None, None]:
         """Context manager for getting a provider instance.
@@ -140,10 +160,12 @@ class ProviderService(base.AppService):
         :param allow_unstable: Whether to allow the use of unstable images.
         :param clean_existing: Whether pre-existing instances should be wiped
           and re-created.
+        :param use_base_instance: Whether we should copy the instance from a
+          base instance, if the provider offers that possibility.
         :returns: a context manager of the provider instance.
         """
         if not project_name:
-            project_name = self._services.get("project").get().name
+            project_name = self._project.name
         instance_name = self._get_instance_name(work_dir, build_info, project_name)
         emit.debug(f"Preparing managed instance {instance_name!r}")
         base_name = bases.BaseName(
@@ -154,6 +176,7 @@ class ProviderService(base.AppService):
         provider = self.get_provider(name=self.__provider_name)
 
         provider.ensure_provider_is_available()
+        shutdown_delay = self._services.get("config").get("idle_mins")
 
         if clean_existing:
             self._clean_instance(provider, work_dir, build_info, project_name)
@@ -165,6 +188,9 @@ class ProviderService(base.AppService):
             instance_name=instance_name,
             base_configuration=base,
             allow_unstable=allow_unstable,
+            use_base_instance=use_base_instance,
+            prepare_instance=prepare_instance,
+            shutdown_delay_mins=shutdown_delay,
         ) as instance:
             instance.mount(
                 host_source=work_dir,
@@ -172,6 +198,7 @@ class ProviderService(base.AppService):
                 # https://github.com/canonical/craft-providers/issues/315
                 target=self._app.managed_instance_project_path,  # type: ignore[arg-type]
             )
+            self._services.get("state").configure_instance(instance)
             emit.debug("Instance launched and working directory mounted")
             self._setup_instance_bashrc(instance)
             try:
@@ -185,7 +212,7 @@ class ProviderService(base.AppService):
         *,
         instance_name: str,
         **kwargs: bool | str | pathlib.Path | None,
-    ) -> craft_providers.Base:
+    ) -> craft_providers.Base[enum.Enum]:
         """Get the base configuration from a base name.
 
         :param base_name: The base to lookup.
@@ -205,13 +232,17 @@ class ProviderService(base.AppService):
             self.packages.extend(["gpg", "dirmngr"])
         return base_class(
             alias=alias,  # type: ignore[arg-type]
-            compatibility_tag=f"{self._app.name}-{base_class.compatibility_tag}",
+            compatibility_tag=f"{self._app.name}-{base_class.compatibility_tag}{self.compatibility_tag}",
             hostname=instance_name,
             snaps=self.snaps,
             environment=self.environment,
             packages=self.packages,
             **kwargs,  # type: ignore[arg-type]
         )
+
+    def get_pack_state(self) -> models.PackState:
+        """Get packaging state information."""
+        return self._pack_state
 
     def get_provider(self, name: str | None = None) -> craft_providers.Provider:
         """Get the provider to use.
@@ -293,10 +324,8 @@ class ProviderService(base.AppService):
             target = "environments" if len(build_plan) > 1 else "environment"
             emit.progress(f"Cleaning build {target}")
 
-        project_name = self._services.get("project").get().name
-
         for info in build_plan:
-            self._clean_instance(provider, self._work_dir, info, project_name)
+            self._clean_instance(provider, self._work_dir, info, self._project.name)
 
     def _get_instance_name(
         self,
@@ -411,16 +440,29 @@ class ProviderService(base.AppService):
             f"Running managed {self._app.name} in managed {build_info.build_base} instance for platform {build_info.platform!r}"
         )
 
+        active_fetch_service = self._services.get_class("fetch").is_active(
+            enable_command_line=enable_fetch_service
+        )
+        emit.debug(f"active_fetch_service={active_fetch_service}")
+
+        def prepare_instance(instance: craft_providers.Executor) -> None:
+            emit.debug("Preparing instance")
+            if active_fetch_service:
+                fetch_env = self._services.get("fetch").configure_instance(instance)
+                env.update(fetch_env)
+
+            session_env = self._services.get("proxy").configure_instance(instance)
+            env.update(session_env)
+
         with self.instance(
             build_info=build_info,
             work_dir=self._work_dir,
-            clean_existing=enable_fetch_service,
+            clean_existing=active_fetch_service,
+            prepare_instance=prepare_instance,
+            use_base_instance=not active_fetch_service,
         ) as instance:
-            if enable_fetch_service:
-                session_env = self._services.get("fetch").create_session(instance)
-                env.update(session_env)
-
             emit.debug(f"Running in instance: {command}")
+            self._services.get("proxy").finalize_instance_configuration(instance)
             try:
                 with emit.pause():
                     # Pyright doesn't fully understand craft_providers's CompletedProcess.
@@ -435,5 +477,5 @@ class ProviderService(base.AppService):
                     f"Failed to run {self._app.name} in instance"
                 ) from exc
             finally:
-                if enable_fetch_service:
-                    self._services.get("fetch").teardown_session()
+                if active_fetch_service:
+                    self._services.get("fetch").teardown_instance()

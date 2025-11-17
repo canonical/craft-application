@@ -15,6 +15,9 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Models representing spread projects."""
 
+import pathlib
+import re
+
 import pydantic
 from typing_extensions import Any, Self
 
@@ -28,7 +31,7 @@ class SpreadBase(CraftBaseModel):
 
     model_config = pydantic.ConfigDict(
         CraftBaseModel.model_config,  # type: ignore[misc]
-        extra="ignore",
+        extra="allow",
     )
 
 
@@ -44,11 +47,13 @@ class CraftSpreadBackend(SpreadBase):
     type: str | None = None
     allocate: str | None = None
     discard: str | None = None
-    systems: list[dict[str, CraftSpreadSystem | None]]
+    systems: list[str | dict[str, CraftSpreadSystem | None]]
     prepare: str | None = None
     restore: str | None = None
+    debug: str | None = None
     prepare_each: str | None = None
     restore_each: str | None = None
+    debug_each: str | None = None
 
 
 class CraftSpreadSuite(SpreadBase):
@@ -59,21 +64,31 @@ class CraftSpreadSuite(SpreadBase):
     environment: dict[str, str] | None = None
     prepare: str | None = None
     restore: str | None = None
+    debug: str | None = None
     prepare_each: str | None = None
     restore_each: str | None = None
+    debug_each: str | None = None
     kill_timeout: str | None = None
 
 
 class CraftSpreadYaml(SpreadBase):
     """Simplified spread project configuration."""
 
+    model_config = pydantic.ConfigDict(
+        SpreadBase.model_config,  # type: ignore[misc]
+        extra="forbid",
+    )
+
+    project: str | None = None
     backends: dict[str, CraftSpreadBackend]
     suites: dict[str, CraftSpreadSuite]
     exclude: list[str] | None = None
     prepare: str | None = None
     restore: str | None = None
+    debug: str | None = None
     prepare_each: str | None = None
     restore_each: str | None = None
+    debug_each: str | None = None
     kill_timeout: str | None = None
 
 
@@ -98,19 +113,15 @@ class SpreadBaseModel(SpreadBase):
 class SpreadSystem(SpreadBaseModel):
     """Processed spread system configuration."""
 
-    username: str
-    password: str
+    username: str | None = None
+    password: str | None = None
     workers: int | None = None
 
     @classmethod
     def from_craft(cls, simple: CraftSpreadSystem | None) -> Self:
         """Create a spread system configuration from the simplified version."""
         workers = simple.workers if simple else 1
-        return cls(
-            workers=workers,
-            username="spread",
-            password="spread",  # noqa: S106 (possible hardcoded password)
-        )
+        return cls(workers=workers)
 
 
 class SpreadBackend(SpreadBaseModel):
@@ -119,11 +130,15 @@ class SpreadBackend(SpreadBaseModel):
     type: str | None = None
     allocate: str | None = None
     discard: str | None = None
-    systems: list[dict[str, SpreadSystem]] = pydantic.Field(default_factory=list)
+    systems: list[str | dict[str, SpreadSystem]] = pydantic.Field(
+        default_factory=list[str | dict[str, SpreadSystem]]
+    )
     prepare: str | None = None
     restore: str | None = None
+    debug: str | None = None
     prepare_each: str | None = None
     restore_each: str | None = None
+    debug_each: str | None = None
 
     @classmethod
     def from_craft(cls, simple: CraftSpreadBackend) -> Self:
@@ -135,17 +150,22 @@ class SpreadBackend(SpreadBaseModel):
             systems=cls.systems_from_craft(simple.systems),
             prepare=simple.prepare,
             restore=simple.restore,
+            debug=simple.debug,
             prepare_each=simple.prepare_each,
             restore_each=simple.restore_each,
+            debug_each=simple.debug_each,
         )
 
     @staticmethod
     def systems_from_craft(
-        simple: list[dict[str, CraftSpreadSystem | None]],
-    ) -> list[dict[str, SpreadSystem]]:
+        simple: list[str | dict[str, CraftSpreadSystem | None]],
+    ) -> list[str | dict[str, SpreadSystem]]:
         """Create spread systems from the simplified version."""
-        systems: list[dict[str, SpreadSystem]] = []
+        systems: list[str | dict[str, SpreadSystem]] = []
         for item in simple:
+            if isinstance(item, str):
+                systems.append(item)
+                continue
             entry: dict[str, SpreadSystem] = {}
             for name, ssys in item.items():
                 entry[name] = SpreadSystem.from_craft(ssys)
@@ -158,12 +178,14 @@ class SpreadSuite(SpreadBaseModel):
     """Processed spread suite configuration."""
 
     summary: str
-    systems: list[str]
+    systems: list[str] | None
     environment: dict[str, str] | None
     prepare: str | None
     restore: str | None
     prepare_each: str | None
     restore_each: str | None
+    debug: str | None = None
+    debug_each: str | None = None
     kill_timeout: str | None = None
 
     @classmethod
@@ -178,6 +200,8 @@ class SpreadSuite(SpreadBaseModel):
             prepare_each=simple.prepare_each,
             restore_each=simple.restore_each,
             kill_timeout=simple.kill_timeout,
+            debug=simple.debug,
+            debug_each=simple.debug_each,
         )
 
 
@@ -194,7 +218,10 @@ class SpreadYaml(SpreadBaseModel):
     restore: str | None
     prepare_each: str | None
     restore_each: str | None
+    debug: str | None = None
+    debug_each: str | None = None
     kill_timeout: str | None = None
+    reroot: str | None = None
 
     @classmethod
     def from_craft(
@@ -202,27 +229,43 @@ class SpreadYaml(SpreadBaseModel):
         simple: CraftSpreadYaml,
         *,
         craft_backend: SpreadBackend,
+        artifact: pathlib.Path,
+        resources: dict[str, pathlib.Path],
     ) -> Self:
         """Create the spread configuration from the simplified version."""
+        environment = {
+            "SUDO_USER": "",
+            "SUDO_UID": "",
+            "LANG": "C.UTF-8",
+            "LANGUAGE": "en",
+            "PROJECT_PATH": "/root/proj",
+            "CRAFT_ARTIFACT": f"$PROJECT_PATH/{artifact}",
+        }
+
+        for name, path in resources.items():
+            var_name = cls._translate_resource_name(name)
+            environment[f"CRAFT_RESOURCE_{var_name}"] = f"$PROJECT_PATH/{path}"
+
         return cls(
             project="craft-test",
-            environment={
-                "SUDO_USER": "",
-                "SUDO_UID": "",
-                "LANG": "C.UTF-8",
-                "LANGUAGE": "en",
-                "PROJECT_PATH": "/home/spread/proj",
-            },
+            environment=environment,
             backends=cls._backends_from_craft(simple.backends, craft_backend),
             suites=cls._suites_from_craft(simple.suites),
             exclude=simple.exclude or [".git", ".tox"],
-            path="/home/spread/proj",
+            path="/root/proj",
             prepare=simple.prepare,
             restore=simple.restore,
             prepare_each=simple.prepare_each,
             restore_each=simple.restore_each,
             kill_timeout=simple.kill_timeout or None,
+            debug=simple.debug,
+            debug_each=simple.debug_each,
+            reroot="..",
         )
+
+    @staticmethod
+    def _translate_resource_name(name: str) -> str:
+        return re.sub(r"[^A-Za-z0-9_]", "_", name).upper()
 
     @staticmethod
     def _backends_from_craft(
@@ -230,7 +273,8 @@ class SpreadYaml(SpreadBaseModel):
     ) -> dict[str, SpreadBackend]:
         backends: dict[str, SpreadBackend] = {}
         for name, backend in simple.items():
-            if name == "craft":
+            # Spread assumes the backend name as the type when it's not explicitly declared.
+            if name == "craft" and (not backend.type or backend.type == "craft"):
                 craft_backend.systems = SpreadBackend.systems_from_craft(
                     backend.systems
                 )

@@ -20,6 +20,7 @@ from __future__ import annotations
 import dataclasses
 import re
 from pathlib import Path
+from typing import TYPE_CHECKING
 from unittest import mock
 
 import craft_parts
@@ -28,6 +29,11 @@ import craft_platforms
 import distro
 import pytest
 import pytest_check
+from craft_application import errors, models, util
+from craft_application.errors import EmptyBuildPlanError, PartsLifecycleError
+from craft_application.services import lifecycle
+from craft_application.util import repositories
+from craft_cli import CraftError
 from craft_parts import (
     Action,
     ActionType,
@@ -42,11 +48,8 @@ from craft_parts.executor import (
     ExecutionContext,  # pyright: ignore[reportPrivateImportUsage]
 )
 
-from craft_application import errors, models, util
-from craft_application.errors import EmptyBuildPlanError, PartsLifecycleError
-from craft_application.services import lifecycle
-from craft_application.services.buildplan import BuildPlanService
-from craft_application.util import repositories
+if TYPE_CHECKING:
+    from craft_application.services.buildplan import BuildPlanService
 
 
 def skip_if_build_plan_empty(build_planner: BuildPlanService):
@@ -268,7 +271,7 @@ def test_init_parts_error(
     app_metadata,
     fake_project,
     fake_services,
-    tmp_path,
+    new_dir,
     error,
     expected,
 ):
@@ -279,8 +282,8 @@ def test_init_parts_error(
         app_metadata,
         fake_services,
         project=fake_project,
-        work_dir=tmp_path,
-        cache_dir=tmp_path,
+        work_dir=new_dir,
+        cache_dir=new_dir,
         platform=None,
     )
 
@@ -288,6 +291,41 @@ def test_init_parts_error(
         service.setup()
 
     assert exc_info.value.args == expected.args
+    assert mock_lifecycle.mock_calls[0].kwargs["ignore_local_sources"] == [
+        ".craft",
+        "*.snap",
+        "*.charm",
+        "*.starcraft",
+    ]
+
+
+def test_init_parts_ignore_spread(
+    app_metadata, fake_project, fake_services, monkeypatch, new_dir
+):
+    mock_lifecycle = mock.Mock()
+    monkeypatch.setattr(lifecycle, "LifecycleManager", mock_lifecycle)
+
+    service = lifecycle.LifecycleService(
+        app_metadata,
+        fake_services,
+        work_dir=new_dir,
+        cache_dir=new_dir,
+    )
+
+    extension_path = Path("spread/.extension")
+    extension_path.parent.mkdir()
+    extension_path.touch()
+
+    service.setup()
+
+    assert mock_lifecycle.mock_calls[0].kwargs["ignore_local_sources"] == [
+        ".craft",
+        "*.snap",
+        "*.charm",
+        "*.starcraft",
+        "spread.yaml",
+        "spread",
+    ]
 
 
 def test_init_with_feature_package_repositories(
@@ -477,6 +515,7 @@ def test_run_no_step(
         (OSError(0, "Hi"), PartsLifecycleError, "^Hi$"),
         (Exception("u wot m8"), PartsLifecycleError, "^Unknown error: u wot m8$"),
         (craft_parts.PartsError("parts error"), PartsLifecycleError, "^parts error$"),
+        (CraftError("parts error"), CraftError, "^parts error$"),
     ],
 )
 def test_run_failure(
@@ -681,7 +720,7 @@ def test_lifecycle_project_variables(
         cache_dir=tmp_path / "cache",
         platform=None,
     )
-    service._project = fake_project
+    fake_services.get("project")._project_model = fake_project
     service._lcm = mock.MagicMock(spec=LifecycleManager)
     service._lcm.project_info = mock.MagicMock(spec=ProjectInfo)
     service._lcm.project_info.get_project_var = lambda _: "foo"
@@ -771,3 +810,36 @@ def test_devel_base_no_error(fake_parts_lifecycle, build_plan_service, mocker):
 
     # Pass None as the step to ensure validation but skip the actual lifecycle run
     _ = fake_parts_lifecycle.run(None)
+
+
+class FooError(CraftError):
+    """Error to test CraftError pass through."""
+
+
+def test_override_exec(
+    tmp_path, app_metadata, fake_project, fake_services, fake_platform, mocker
+):
+    """Override LifecycleService _exec method."""
+
+    fake_services.get("build_plan").set_platforms(fake_platform)
+    skip_if_build_plan_empty(fake_services.get("build_plan"))
+
+    class LifecycleOverridingExec(lifecycle.LifecycleService):
+        def _exec(self, actions: list[Action]) -> None:
+            super()._exec(actions)
+            raise FooError("foo")
+
+    work_dir = tmp_path / "work"
+    cache_dir = tmp_path / "cache"
+    fake_lifecycle_service = LifecycleOverridingExec(
+        app_metadata,
+        fake_services,
+        work_dir=work_dir,
+        cache_dir=cache_dir,
+    )
+
+    fake_lifecycle_service.setup()
+
+    # Pass None as the step to ensure validation but skip the actual lifecycle run
+    with pytest.raises(FooError):
+        fake_lifecycle_service.run("prime")

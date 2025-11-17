@@ -1,0 +1,10 @@
+name: minimal-valid-project
+version: "0.0"
+adopt-info: my-part
+platforms:
+  amd64:
+    build-on: [amd64]
+    build-for: [amd64]
+parts:
+  my-part:
+    plugin: nil

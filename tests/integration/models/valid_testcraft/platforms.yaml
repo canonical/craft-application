@@ -1,0 +1,19 @@
+name: platforms
+summary: Tests many possible platforms layouts.
+parts:
+  my-part:
+    plugin: nil
+adopt-info: my-part
+
+platforms:
+  amd64:  # Architecture-only shorthand
+  raspi:
+    build-on: [amd64, arm64]
+    build-for: [arm64]
+  riscv64:
+    build-on: [amd64, arm64, riscv64]
+  s390x:
+    build-on: amd64
+  phone:
+    build-on: [amd64, arm64, riscv64]
+    build-for: riscv64

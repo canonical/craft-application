@@ -25,6 +25,7 @@ share/python-wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+*.snap
 MANIFEST
 *.snap
 *.testcraft
@@ -52,6 +53,7 @@ coverage.xml
 *.py,cover
 .hypothesis/
 .pytest_cache/
+.results.*.xml
 /.spread-*.yaml
 
 # Translations
@@ -73,6 +75,7 @@ instance/
 
 # Sphinx documentation
 docs/_build/
+docs/spelling/
 
 # PyBuilder
 target/
@@ -105,6 +108,7 @@ celerybeat.pid
 *.sage.py
 
 # Environments
+.direnv
 .env
 .venv
 env/
@@ -148,3 +152,9 @@ dmypy.json
 
 # Visual Studio Code
 .vscode/
+
+# JetBrains IDEs
+/.idea/
+
+# Ignore testcraft and similar files in the main directory.
+/*craft.yaml

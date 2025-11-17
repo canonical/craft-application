@@ -15,24 +15,26 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Unit tests for provider service"""
 
+import enum
 import pathlib
 import pkgutil
+import subprocess
 import uuid
 from typing import NamedTuple
 from unittest import mock
 
+import craft_application
 import craft_platforms
 import craft_providers
 import pytest
-from craft_cli import emit
-from craft_providers import bases, lxd, multipass
-from craft_providers.actions.snap_installer import Snap
-
-import craft_application
+import pytest_subprocess
 from craft_application import errors
 from craft_application.services import provider
 from craft_application.services.service_factory import ServiceFactory
 from craft_application.util import snap_config
+from craft_cli import emit
+from craft_providers import bases, lxd, multipass
+from craft_providers.actions.snap_installer import Snap
 
 
 @pytest.fixture
@@ -101,7 +103,37 @@ def test_setup_proxy_environment(
     for var, value in given_environment.items():
         monkeypatch.setenv(var, value)
 
-    expected_environment |= {"CRAFT_MANAGED_MODE": "1"}
+    service = provider.ProviderService(
+        app_metadata,
+        fake_services,
+        work_dir=pathlib.Path(),
+    )
+    service.setup()
+
+    for key, value in expected_environment.items():
+        assert service.environment[key] == value
+
+
+@pytest.mark.parametrize(
+    ("given_environment", "expected_environment"),
+    [
+        ({"CRAFT_DEBUG": "1"}, {"TESTCRAFT_DEBUG": "True"}),
+        (
+            {"TESTCRAFT_PARALLEL_BUILD_COUNT": "13"},
+            {"TESTCRAFT_PARALLEL_BUILD_COUNT": "13"},
+        ),
+    ],
+)
+def test_setup_config_values(
+    monkeypatch: pytest.MonkeyPatch,
+    app_metadata,
+    fake_services,
+    fake_project,
+    given_environment: dict[str, str],
+    expected_environment: dict[str, str],
+):
+    for var, value in given_environment.items():
+        monkeypatch.setenv(var, value)
 
     service = provider.ProviderService(
         app_metadata,
@@ -110,7 +142,8 @@ def test_setup_proxy_environment(
     )
     service.setup()
 
-    assert service.environment == expected_environment
+    for key, value in expected_environment.items():
+        assert service.environment[key] == value
 
 
 @pytest.mark.parametrize(
@@ -182,11 +215,18 @@ def test_install_snap(
     monkeypatch,
     app_metadata,
     fake_project,
+    fake_process: pytest_subprocess.FakeProcess,
     fake_services,
     install_snap,
     environment,
     snaps,
 ):
+    monkeypatch.setattr("snaphelpers._ctl.Popen", subprocess.Popen)
+    fake_process.register(
+        ["/usr/bin/snapctl", "get", "-d", fake_process.any()],
+        stdout="{}",
+        occurrences=1000,
+    )
     monkeypatch.delenv("SNAP", raising=False)
     monkeypatch.delenv("CRAFT_SNAP_CHANNEL", raising=False)
     monkeypatch.delenv("SNAP_INSTANCE_NAME", raising=False)
@@ -307,18 +347,33 @@ def test_is_managed(managed_value, expected, monkeypatch):
     assert provider.ProviderService.is_managed() == expected
 
 
-def test_forward_environment_variables(monkeypatch, provider_service):
+def test_forward_environment_variables(monkeypatch, provider_service, fake_services):
     var_contents = uuid.uuid4().hex
     for var in provider.DEFAULT_FORWARD_ENVIRONMENT_VARIABLES:
         monkeypatch.setenv(var, f"{var}__{var_contents}")
 
     provider_service.setup()
 
+    # Exclude forwarded proxy variables from the host in this check.
+    del_vars = set()
+    for variable in provider_service.environment:
+        if variable.lower().endswith("proxy"):
+            del_vars.add(variable)
+    for variable in del_vars:
+        del provider_service.environment[variable]
+
     assert provider_service.environment == {
         provider_service.managed_mode_env_var: "1",
         **{
             var: f"{var}__{var_contents}"
             for var in provider.DEFAULT_FORWARD_ENVIRONMENT_VARIABLES
+        },
+        **{
+            f"TESTCRAFT_{config.upper()}": (
+                value.name if isinstance(value, enum.Enum) else str(value)
+            )
+            for config, value in fake_services.get("config").get_all().items()
+            if config not in provider.IGNORE_CONFIG_ITEMS and value is not None
         },
     }
 
@@ -525,7 +580,10 @@ def test_get_base_buildd(
 
     check.is_instance(base, base_class)
     check.equal(base.alias, alias)
-    check.equal(base.compatibility_tag, f"testcraft-{base_class.compatibility_tag}")
+    check.equal(
+        base.compatibility_tag,
+        f"testcraft-{base_class.compatibility_tag}{provider_service.compatibility_tag}",
+    )
     check.equal(base._environment, environment)
 
     # Verify that the two packages we care about in order to support Craft Archives
@@ -552,6 +610,7 @@ def test_instance(
     app_metadata,
     fake_project,
     provider_service,
+    state_service,
     fake_build_info,
     allow_unstable,
     mock_provider,
@@ -568,11 +627,20 @@ def test_instance(
             instance_name=mock.ANY,
             base_configuration=mock.ANY,
             allow_unstable=allow_unstable,
+            prepare_instance=None,
+            use_base_instance=True,
+            shutdown_delay_mins=None,
         )
     with check:
-        instance.mount.assert_called_once_with(
-            host_source=tmp_path, target=app_metadata.managed_instance_project_path
-        )
+        assert instance.mount.mock_calls == [
+            mock.call(
+                host_source=tmp_path, target=app_metadata.managed_instance_project_path
+            ),
+            mock.call(
+                host_source=state_service._state_dir,
+                target=state_service._managed_state_dir,
+            ),
+        ]
         instance.push_file_io.assert_called_once_with(
             destination=pathlib.Path("/root/.bashrc"),
             content=mock.ANY,
@@ -649,7 +717,7 @@ def test_load_bashrc_missing(
 
 
 @pytest.fixture
-def setup_fetch_logs_provider(monkeypatch, provider_service, tmp_path):
+def setup_fetch_logs_provider(monkeypatch, provider_service, mocker, tmp_path):
     """Return a function that, when called, mocks the provider_service's instance()."""
 
     def _setup(*, should_have_logfile: bool):
@@ -698,7 +766,6 @@ def test_instance_fetch_logs(
     tmp_path,
 ):
     """Test that logs from the build instance are fetched in case of success."""
-
     # Setup the build instance and pretend the command inside it finished successfully.
     provider_service = setup_fetch_logs_provider(should_have_logfile=True)
     mock_append = mocker.patch.object(emit, "append_to_log")
@@ -828,23 +895,27 @@ def test_run_managed(
 ):
     mock_fetch = mock.MagicMock()
     fake_services.register("fetch", mock.Mock(return_value=mock_fetch))
+    fake_services.get_class(
+        "fetch"
+    ).is_active.return_value = fetch  # # pyright: ignore[reportFunctionMemberAccess]
     monkeypatch.setattr("sys.argv", ["[unused]", "pack", "--verbose"])
     instance_context = (
         mock_provider.launched_environment.return_value.__enter__.return_value
     )
 
     provider_service.run_managed(fake_build_info, enable_fetch_service=fetch)
+    instance_context.prepare_instance(instance_context)
+
+    expected_env = {
+        "CRAFT_VERBOSITY_LEVEL": mock.ANY,
+        "CRAFT_PLATFORM": fake_build_info.platform,
+    }
 
     instance_context.execute_run.assert_called_once_with(
         ["testcraft", "pack", "--verbose"],
         cwd=default_app_metadata.managed_instance_project_path,
         check=True,
-        env={
-            "CRAFT_VERBOSITY_LEVEL": mock.ANY,
-            "CRAFT_PLATFORM": fake_build_info.platform,
-        },
+        env=expected_env,
     )
 
-    if fetch:
-        mock_fetch.create_session.assert_called_once_with(instance_context)
-        mock_fetch.teardown_session.assert_called_once_with()
+    instance_context.prepare_instance.assert_called_once_with(mock.ANY)

@@ -21,13 +21,12 @@ probably will not require its own ProviderService.
 
 import contextlib
 import pathlib
-from collections.abc import Generator
+from collections.abc import Callable, Generator
 
 import craft_platforms
 import craft_providers
-from craft_providers.actions.snap_installer import Snap
-
 from craft_application.services import provider
+from craft_providers.actions.snap_installer import Snap
 
 
 class PartitioncraftProviderService(provider.ProviderService):
@@ -47,6 +46,8 @@ class PartitioncraftProviderService(provider.ProviderService):
         allow_unstable: bool = True,
         clean_existing: bool = False,
         project_name: str | None = None,
+        prepare_instance: Callable[[craft_providers.Executor], None] | None = None,
+        use_base_instance: bool = True,
         **kwargs: bool | str | None,
     ) -> Generator[craft_providers.Executor, None, None]:
         """Get a partitioncraft-specific provider instance."""
@@ -57,6 +58,8 @@ class PartitioncraftProviderService(provider.ProviderService):
             allow_unstable=allow_unstable,
             clean_existing=clean_existing,
             project_name=project_name,
+            prepare_instance=prepare_instance,
+            use_base_instance=use_base_instance,
             **kwargs,
         ) as instance:
             instance.execute_run(

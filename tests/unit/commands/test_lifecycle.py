@@ -17,16 +17,18 @@
 
 import argparse
 import pathlib
+import re
 import subprocess
 from unittest import mock
 
+import craft_cli
 import craft_parts
 import craft_platforms
 import pytest
 import pytest_mock
-from craft_parts import Features
-
+from craft_application import errors, models
 from craft_application.application import AppMetadata
+from craft_application.commands.base import AppCommand
 from craft_application.commands.lifecycle import (
     BuildCommand,
     CleanCommand,
@@ -37,9 +39,14 @@ from craft_application.commands.lifecycle import (
     PrimeCommand,
     PullCommand,
     StageCommand,
+    TestCommand,
     get_lifecycle_command_group,
 )
+from craft_application.services import LifecycleService
 from craft_application.services.service_factory import ServiceFactory
+from craft_parts import Features
+
+pytestmark = [pytest.mark.usefixtures("fake_project_file")]
 
 PARTS_LISTS = [[], ["my-part"], ["my-part", "your-part"]]
 SHELL_PARAMS = [
@@ -117,7 +124,7 @@ def test_get_lifecycle_command_group(enable_overlay, commands):
 @pytest.mark.parametrize(("debug_dict", "debug_args"), DEBUG_PARAMS)
 @pytest.mark.parametrize(("shell_dict", "shell_args"), SHELL_PARAMS)
 def test_lifecycle_command_fill_parser(
-    app_metadata,
+    default_app_metadata,
     fake_services,
     build_env_dict,
     build_env_args,
@@ -128,7 +135,7 @@ def test_lifecycle_command_fill_parser(
 ):
     cls = get_fake_command_class(LifecycleCommand, managed=True)
     parser = argparse.ArgumentParser("parts_command")
-    command = cls({"app": app_metadata, "services": fake_services})
+    command = cls({"app": default_app_metadata, "services": fake_services})
     expected = {
         "platform": None,
         "build_for": None,
@@ -292,7 +299,7 @@ def test_run_manager_for_build_plan(
 @pytest.mark.parametrize(("shell_dict", "shell_args"), SHELL_PARAMS)
 @pytest.mark.parametrize("parts_args", PARTS_LISTS)
 def test_step_command_fill_parser(
-    app_metadata,
+    default_app_metadata,
     fake_services,
     parts_args,
     build_env_dict,
@@ -312,7 +319,7 @@ def test_step_command_fill_parser(
         **debug_dict,
         **build_env_dict,
     }
-    command = cls({"app": app_metadata, "services": fake_services})
+    command = cls({"app": default_app_metadata, "services": fake_services})
 
     command.fill_parser(parser)
 
@@ -327,6 +334,7 @@ def test_step_command_fill_parser(
 @pytest.mark.usefixtures("managed_mode")
 def test_step_command_run_explicit_step(app_metadata, mock_services, parts, step_name):
     cls = get_fake_command_class(LifecyclePartsCommand, managed=True)
+    mock_services.get("project").configure(platform=None, build_for=None)
 
     parsed_args = argparse.Namespace(destructive_mode=False, parts=parts)
     command = cls({"app": app_metadata, "services": mock_services})
@@ -340,6 +348,7 @@ def test_step_command_run_explicit_step(app_metadata, mock_services, parts, step
 
 @pytest.mark.parametrize("command_cls", MANAGED_LIFECYCLE_COMMANDS)
 def test_step_command_failure(app_metadata, mock_services, command_cls):
+    mock_services.get("project").configure(platform=None, build_for=None)
     parsed_args = argparse.Namespace(destructive_mode=True, parts=None)
     error_message = "Lifecycle run failed!"
 
@@ -366,6 +375,7 @@ def test_step_command_failure(app_metadata, mock_services, command_cls):
 @pytest.mark.usefixtures("managed_mode")
 def test_managed_concrete_commands_run(app_metadata, mock_services, command_cls, parts):
     parsed_args = argparse.Namespace(destructive_mode=False, parts=parts)
+    mock_services.get("project").configure(platform=None, build_for=None)
     command = command_cls({"app": app_metadata, "services": mock_services})
 
     command.run(parsed_args)
@@ -474,6 +484,8 @@ def test_pack_fill_parser(
         "build_for": None,
         "output": pathlib.Path(output_arg),
         "fetch_service_policy": None,
+        # This is here because app_metadata turns on checking unsupported bases.
+        "ignore": [],
         **shell_dict,
         **debug_dict,
         **build_env_dict,
@@ -503,18 +515,22 @@ def test_pack_fill_parser(
 )
 @pytest.mark.parametrize("parts", PARTS_LISTS)
 def test_pack_run(
-    emitter, mock_services, app_metadata, parts, tmp_path, packages, message
+    mocker, emitter, mock_services, app_metadata, parts, tmp_path, packages, message
 ):
     mock_services.package.pack.return_value = packages
+    mock_services.get("project").configure(platform=None, build_for=None)
     parsed_args = argparse.Namespace(
         destructive_mode=True, parts=parts, output=tmp_path, fetch_service_policy=None
     )
+
     command = PackCommand(
         {
             "app": app_metadata,
             "services": mock_services,
         }
     )
+    mocker.patch.object(command._services.lifecycle.project_info, "work_dir", tmp_path)
+    command._services.package.resource_map = {p.stem: p for p in packages[1:]} or None  # pyright: ignore[reportAttributeAccessIssue]
 
     command.run(parsed_args)
 
@@ -531,10 +547,16 @@ def test_pack_run(
     [("strict", True), ("permissive", True), (None, False)],
 )
 def test_pack_fetch_manifest(
-    mock_services, app_metadata, tmp_path, fetch_service_policy, expect_create_called
+    mocker,
+    mock_services,
+    app_metadata,
+    tmp_path,
+    fetch_service_policy,
+    expect_create_called,
 ):
     packages = [pathlib.Path("package.zip")]
     mock_services.package.pack.return_value = packages
+    mock_services.get("project").configure(platform=None, build_for=None)
     parsed_args = argparse.Namespace(
         destructive_mode=True,
         output=tmp_path,
@@ -546,6 +568,7 @@ def test_pack_fetch_manifest(
             "services": mock_services,
         }
     )
+    mocker.patch.object(command._services.lifecycle.project_info, "work_dir", tmp_path)
 
     command.run(parsed_args)
 
@@ -680,6 +703,7 @@ def test_shell_after_pack(
     )
     mock_lifecycle_run = mocker.patch.object(fake_services.lifecycle, "run")
     mock_pack = mocker.patch.object(fake_services.package, "pack")
+    mocker.patch("craft_application.services.package.PackageService.write_state")
     mocker.patch.object(
         fake_services.lifecycle.project_info, "execution_finished", return_value=True
     )
@@ -698,15 +722,39 @@ def test_shell_after_pack(
     mock_subprocess_run.assert_called_once_with(["bash"], check=False)
 
 
+class FakeError(craft_platforms.CraftPlatformsError):
+    """A fake error to test that unrecognized craft-like errors are handled specially"""
+
+
+@pytest.mark.parametrize(
+    ("error", "expected"),
+    [
+        pytest.param(
+            RuntimeError("Lifecycle run failed!"),
+            "RuntimeError: Lifecycle run failed!",
+            id="other",
+        ),
+        pytest.param(
+            FakeError("Lifecycle run failed!", resolution="Try harder."),
+            r"Lifecycle run failed!\n.*Recommended resolution: Try harder.",
+            id="craft-like",
+        ),
+    ],
+)
 @pytest.mark.parametrize("command_cls", [*MANAGED_LIFECYCLE_COMMANDS, PackCommand])
-def test_debug(app_metadata, fake_services, mocker, mock_subprocess_run, command_cls):
+def test_debug(
+    app_metadata: AppMetadata,
+    fake_services: ServiceFactory,
+    mocker: pytest_mock.MockFixture,
+    mock_subprocess_run: mock.MagicMock,
+    error: BaseException,
+    expected: str,
+    command_cls: type[AppCommand],
+) -> None:
     parsed_args = argparse.Namespace(destructive_mode=True, parts=None, debug=True)
-    error_message = "Lifecycle run failed!"
 
     # Make lifecycle.run() raise an error.
-    mocker.patch.object(
-        fake_services.lifecycle, "run", side_effect=RuntimeError(error_message)
-    )
+    mocker.patch.object(fake_services.lifecycle, "run", side_effect=error)
     command = command_cls(
         {
             "app": app_metadata,
@@ -714,10 +762,13 @@ def test_debug(app_metadata, fake_services, mocker, mock_subprocess_run, command
         }
     )
 
-    with pytest.raises(RuntimeError, match=error_message):
+    with pytest.raises(type(error)):
         command.run(parsed_args)
 
     mock_subprocess_run.assert_called_once_with(["bash"], check=False)
+
+    logs = craft_cli.emit.log_filepath.read_text()
+    assert re.search(expected, logs)
 
 
 def test_debug_pack(
@@ -750,3 +801,300 @@ def test_debug_pack(
         command.run(parsed_args)
 
     mock_subprocess_run.assert_called_once_with(["bash"], check=False)
+
+
+def test_run_post_prime(app_metadata, mock_services, mocker, fake_project_file):
+    mock_services.get("project").configure(platform=None, build_for=None)
+    command = PrimeCommand(
+        {
+            "app": app_metadata,
+            "services": mock_services,
+        }
+    )
+    mocked_run_post_prime_steps = mocker.patch.object(command, "_run_post_prime_steps")
+
+    parsed_args = argparse.Namespace(
+        destructive_mode=False,
+        parts=[],
+    )
+
+    command.run(parsed_args)
+
+    mocked_run_post_prime_steps.assert_not_called()
+
+
+def test_run_post_prime_destructive_mode(
+    app_metadata, mock_services, mocker, fake_project_file
+):
+    mock_services.get("project").configure(platform=None, build_for=None)
+    command = PrimeCommand(
+        {
+            "app": app_metadata,
+            "services": mock_services,
+        }
+    )
+    mocked_run_post_prime_steps = mocker.patch.object(command, "_run_post_prime_steps")
+
+    parsed_args = argparse.Namespace(
+        destructive_mode=True,
+        parts=[],
+    )
+
+    command.run(parsed_args)
+
+    mocked_run_post_prime_steps.assert_called_once()
+
+
+@pytest.mark.usefixtures("managed_mode")
+def test_run_post_prime_managed_mode(
+    app_metadata, mock_services, mocker, fake_project_file
+):
+    mock_services.get("project").configure(platform=None, build_for=None)
+    command = PrimeCommand(
+        {
+            "app": app_metadata,
+            "services": mock_services,
+        }
+    )
+    mocked_run_post_prime_steps = mocker.patch.object(command, "_run_post_prime_steps")
+
+    parsed_args = argparse.Namespace(
+        destructive_mode=False,
+        parts=[],
+    )
+
+    command.run(parsed_args)
+
+    mocked_run_post_prime_steps.assert_called_once()
+
+
+@pytest.mark.parametrize(
+    ("root", "paths", "result"),
+    [
+        ("/", ["/foo"], ["foo"]),
+        ("/foo", ["/foo/bar", "/foo/baz"], ["bar", "baz"]),
+    ],
+)
+def test_relativize_paths_valid(root, paths, result):
+    normalized_path = PackCommand._relativize_paths(
+        [pathlib.Path(p) for p in paths], root=pathlib.Path(root)
+    )
+    assert normalized_path == [pathlib.Path(p) for p in result]
+
+
+def test_relativize_paths_valid_relative(new_dir):
+    normalized_path = PackCommand._relativize_paths(
+        [pathlib.Path("relative")], root=new_dir
+    )
+    assert normalized_path == [pathlib.Path("relative")]
+
+
+@pytest.mark.parametrize(
+    ("root", "paths"),
+    [
+        ("/foo", ["relative"]),
+        ("/foo", ["/not/inside/foo"]),
+        ("/foo", ["/foo/bar", "/not/inside/foo"]),
+    ],
+)
+def test_relativize_paths_invalid(root, paths):
+    with pytest.raises(errors.ArtifactCreationError) as raised:
+        PackCommand._relativize_paths(
+            [pathlib.Path(p) for p in paths], root=pathlib.Path(root)
+        )
+    assert str(raised.value) == "Cannot create packages outside of the project tree."
+
+
+@pytest.mark.parametrize(
+    ("debug", "shell", "shell_after", "tests"),
+    [
+        (False, False, False, None),
+        (True, True, True, "something"),
+    ],
+)
+@pytest.mark.parametrize("fetch_service_policy", [None, "strict", "permissive"])
+def test_test_run(
+    mocker,
+    emitter,
+    mock_services,
+    app_metadata,
+    debug,
+    shell,
+    shell_after,
+    tests,
+    fake_project_file,
+    fake_platform,
+    fetch_service_policy,
+):
+    mock_services.get("build_plan").set_platforms(fake_platform)
+    try:
+        mock_services.get("build_plan").plan()
+    except errors.EmptyBuildPlanError:
+        pytest.skip(f"Can't build for {fake_platform}")
+    mock_services.package.pack.return_value = [pathlib.Path("package.zip")]
+    parsed_args = argparse.Namespace(
+        parts=["my-part"],
+        debug=debug,
+        shell=shell,
+        shell_after=shell_after,
+        test_expressions=tests,
+        platform=fake_platform,
+        build_for=None,
+        fetch_service_policy=fetch_service_policy,
+    )
+    command = TestCommand(
+        {
+            "app": app_metadata,
+            "services": mock_services,
+        }
+    )
+
+    command.run(parsed_args)
+
+    mock_services.get("provider").run_managed.assert_called_once_with(
+        mock_services.get("build_plan").plan()[0],
+        enable_fetch_service=bool(fetch_service_policy),
+    )
+    mock_services.get("testing").test.assert_called_once_with(
+        pathlib.Path.cwd(),
+        pack_state=mock.ANY,
+        shell=shell,
+        shell_after=shell_after,
+        debug=debug,
+        test_expressions=tests,
+    )
+
+
+def test_get_packed_file_list_timestamp(mocker, new_dir, app_metadata, fake_services):
+    command = PackCommand({"app": app_metadata, "services": fake_services})
+    mocker.patch.object(command._services.lifecycle.project_info, "work_dir", new_dir)
+
+    path = pathlib.Path(".craft/packed-files")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.touch()
+    expected_time = path.stat().st_mtime_ns
+    actual_time = command._get_packed_file_list_timestamp()
+
+    assert actual_time == expected_time
+
+
+def test_get_packed_file_list_timestamp_no_file(
+    mocker, new_dir, app_metadata, fake_services
+):
+    command = PackCommand({"app": app_metadata, "services": fake_services})
+    mocker.patch.object(command._services.lifecycle.project_info, "work_dir", new_dir)
+    assert command._get_packed_file_list_timestamp() is None
+
+
+@pytest.mark.parametrize(
+    ("artifact", "resources"),
+    [
+        (None, None),
+        (pathlib.Path("foo"), None),
+        (pathlib.Path("foo"), {"bar": pathlib.Path("bar.tar.gz")}),
+    ],
+)
+def test_save_packed_file_list(
+    mocker, tmp_path, app_metadata, fake_services, artifact, resources
+):
+    command = PackCommand({"app": app_metadata, "services": fake_services})
+    mocker.patch.object(command._services.lifecycle.project_info, "work_dir", tmp_path)
+
+    command._save_packed_file_list(artifact, resources)
+
+    data = models.PackState.from_yaml_file(tmp_path / ".craft" / "packed-files")
+    assert data.artifact == artifact
+    assert data.resources == resources
+
+
+@pytest.mark.parametrize(
+    ("artifact", "resources"),
+    [
+        (None, None),
+        (pathlib.Path("foo"), None),
+        (pathlib.Path("foo"), {"bar": pathlib.Path("bar.gz")}),
+    ],
+)
+def test_load_packed_file_list(
+    mocker, tmp_path, app_metadata, fake_services, artifact, resources
+):
+    command = PackCommand({"app": app_metadata, "services": fake_services})
+    mocker.patch.object(command._services.lifecycle.project_info, "work_dir", tmp_path)
+
+    data = models.PackState(artifact=artifact, resources=resources)
+    (tmp_path / ".craft").mkdir()
+    data.to_yaml_file(tmp_path / ".craft" / "packed-files")
+
+    artifact, resources = command._load_packed_file_list()
+
+    assert artifact == data.artifact
+    assert resources == data.resources
+
+
+def test_load_packed_file_list_no_file(mocker, tmp_path, app_metadata, fake_services):
+    command = PackCommand({"app": app_metadata, "services": fake_services})
+    mocker.patch.object(command._services.lifecycle.project_info, "work_dir", tmp_path)
+
+    artifact, resources = command._load_packed_file_list()
+
+    assert artifact is None
+    assert resources is None
+
+
+@pytest.mark.parametrize(
+    ("artifact", "resources", "files", "result"),
+    [
+        (None, None, [], False),
+        (pathlib.Path("foo"), None, [], True),
+        (pathlib.Path("foo"), None, [pathlib.Path("foo")], False),
+        (
+            pathlib.Path("foo"),
+            {"bar": pathlib.Path("bar.gz")},
+            [pathlib.Path("foo")],
+            True,
+        ),
+        (
+            pathlib.Path("foo"),
+            {"bar": pathlib.Path("bar.gz")},
+            [pathlib.Path("foo"), pathlib.Path("bar.gz")],
+            False,
+        ),
+    ],
+)
+def test_is_missing_packed_files(
+    new_dir, app_metadata, fake_services, artifact, resources, files, result
+):
+    command = PackCommand({"app": app_metadata, "services": fake_services})
+
+    for f in files:
+        f.touch()
+
+    assert command._is_missing_packed_files(artifact, resources) == result
+
+
+@pytest.mark.parametrize(
+    ("pack_time", "prime_time", "is_missing", "result"),
+    [
+        (None, None, False, False),  # No times available
+        (None, 1000, False, False),  # Primed but pack time not available
+        (1500, 1000, False, True),  # Pack is more recent and files exist
+        (1500, 1000, True, False),  # No packed artifacts
+        (1500, None, False, False),  # No prime time (should never happen)
+        (1000, 1500, False, False),  # Prime time is more recent than pack
+    ],
+)
+def test_is_already_packed(
+    mocker, app_metadata, fake_services, pack_time, prime_time, is_missing, result
+):
+    command = PackCommand({"app": app_metadata, "services": fake_services})
+    mocker.patch(
+        "craft_application.commands.lifecycle.PackCommand._get_packed_file_list_timestamp",
+        return_value=pack_time,
+    )
+    mocker.patch.object(LifecycleService, "prime_state_timestamp", prime_time)
+    mocker.patch(
+        "craft_application.commands.lifecycle.PackCommand._is_missing_packed_files",
+        return_value=is_missing,
+    )
+
+    assert command._is_already_packed() == result

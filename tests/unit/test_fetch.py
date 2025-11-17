@@ -17,16 +17,16 @@
 
 import re
 import subprocess
+import textwrap
 from pathlib import Path
 from unittest import mock
 from unittest.mock import call
 
 import pytest
 import responses
+from craft_application import errors, fetch
 from craft_providers.lxd import LXDInstance
 from responses import matchers
-
-from craft_application import errors, fetch
 
 CONTROL = fetch._DEFAULT_CONFIG.control
 PROXY = fetch._DEFAULT_CONFIG.proxy
@@ -98,8 +98,9 @@ def test_start_service(mocker, tmp_path):
     mock_process = mock_popen.return_value
     mock_process.poll.return_value = None
 
-    process = fetch.start_service()
+    process, proxy_cert = fetch.start_service()
     assert process is mock_process
+    assert proxy_cert == tmp_path / "cert.crt"
 
     assert mock_is_online.called
     assert mock_base_dir.called
@@ -129,12 +130,16 @@ def test_start_service(mocker, tmp_path):
     )
 
 
-def test_start_service_already_up(mocker):
+def test_start_service_already_up(mocker, tmp_path):
     """If the fetch-service is already up then a new process is *not* created."""
+    mocker.patch.object(fetch, "_get_service_base_dir", return_value=tmp_path)
     mock_is_online = mocker.patch.object(fetch, "is_service_online", return_value=True)
     mock_popen = mocker.patch.object(subprocess, "Popen")
 
-    assert fetch.start_service() is None
+    process, proxy_cert = fetch.start_service()
+
+    assert process is None
+    assert proxy_cert == tmp_path / "craft/fetch-certificate/local-ca.pem"
 
     assert mock_is_online.called
     assert not mock_popen.called
@@ -169,12 +174,12 @@ def test_create_session(strict, expected_policy):
     session_data = fetch.create_session(strict=strict)
 
     assert session_data.session_id == "my-session-id"
-    assert session_data.token == "my-session-token"
+    assert session_data.token == "my-session-token"  # noqa: S105
 
 
 @assert_requests
 def test_teardown_session():
-    session_data = fetch.SessionData(id="my-session-id", token="my-session-token")
+    session_data = fetch.SessionData(id="my-session-id", token="my-session-token")  # noqa: S106
     default_timeout = 10.0
 
     # Call to delete token
@@ -212,94 +217,6 @@ def test_teardown_session():
     fetch.teardown_session(session_data)
 
 
-def test_configure_build_instance(mocker):
-    mocker.patch.object(fetch, "_get_gateway", return_value="127.0.0.1")
-    mocker.patch.object(
-        fetch, "_obtain_certificate", return_value=("fake-cert.crt", "key.pem")
-    )
-
-    session_data = fetch.SessionData(id="my-session-id", token="my-session-token")
-    instance = mock.MagicMock(spec_set=LXDInstance)
-    assert isinstance(instance, LXDInstance)
-
-    expected_proxy = f"http://my-session-id:my-session-token@127.0.0.1:{PROXY}/"
-    expected_env = {
-        "http_proxy": expected_proxy,
-        "https_proxy": expected_proxy,
-        "REQUESTS_CA_BUNDLE": "/usr/local/share/ca-certificates/local-ca.crt",
-        "CARGO_HTTP_CAINFO": "/usr/local/share/ca-certificates/local-ca.crt",
-        "GOPROXY": "direct",
-    }
-
-    env = fetch.configure_instance(instance, session_data)
-    assert env == expected_env
-
-    default_args = {"check": True, "stdout": subprocess.PIPE, "stderr": subprocess.PIPE}
-
-    # Execution calls on the instance
-    assert instance.execute_run.mock_calls == [
-        call(
-            ["/bin/sh", "-c", "/usr/sbin/update-ca-certificates > /dev/null"],
-            **default_args,
-        ),
-        call(
-            ["mkdir", "-p", "/root/.pip"],
-            **default_args,
-        ),
-        call(
-            ["systemctl", "restart", "snapd"],
-            **default_args,
-        ),
-        call(
-            [
-                "snap",
-                "set",
-                "system",
-                f"proxy.http={expected_proxy}",
-            ],
-            **default_args,
-        ),
-        call(
-            [
-                "snap",
-                "set",
-                "system",
-                f"proxy.https={expected_proxy}",
-            ],
-            **default_args,
-        ),
-        call(
-            ["/bin/rm", "-Rf", "/var/lib/apt/lists"],
-            **default_args,
-        ),
-        call(
-            ["apt", "update"],
-            **default_args,
-        ),
-    ]
-
-    # Files pushed to the instance
-    assert instance.push_file.mock_calls == [
-        call(
-            source="fake-cert.crt",
-            destination=Path("/usr/local/share/ca-certificates/local-ca.crt"),
-        )
-    ]
-
-    assert instance.push_file_io.mock_calls == [
-        call(
-            destination=Path("/root/.pip/pip.conf"),
-            content=mocker.ANY,
-            file_mode="0644",
-        ),
-        call(
-            destination=Path("/etc/apt/apt.conf.d/99proxy"),
-            content=mocker.ANY,
-            file_mode="0644",
-        ),
-    ]
-
-
 def test_get_certificate_dir(mocker):
     mocker.patch.object(
         fetch,
@@ -310,3 +227,88 @@ def test_get_certificate_dir(mocker):
 
     expected = Path("/home/user/snap/fetch-service/common/craft/fetch-certificate")
     assert cert_dir == expected
+
+
+@pytest.mark.parametrize(
+    "config",
+    [
+        pytest.param(
+            textwrap.dedent(
+                """
+                devices:
+                  eth0:
+                    name: eth0
+                    network: lxdbr0
+                    type: nic
+                """
+            ),
+            id="default-device",
+        ),
+        pytest.param(
+            textwrap.dedent(
+                """
+                devices:
+                  eth0:
+                    name: eth0
+                    nictype: bridged
+                    parent: lxdbr0
+                    type: nic
+                """
+            ),
+            id="old-default-device",
+        ),
+    ],
+)
+def test_get_gateway(mocker, config):
+    gateway = "10.207.202.1"
+    ip_route = f"10.207.202.0/24 proto kernel scope link src {gateway}"
+    mocker.patch.object(
+        subprocess,
+        "run",
+        side_effect=[mock.Mock(stdout=text) for text in [config, ip_route]],
+    )
+
+    actual_gateway = fetch._get_gateway(LXDInstance(name="test-instance"))
+
+    assert gateway == actual_gateway
+
+
+@pytest.mark.parametrize(
+    ("config", "expected_error"),
+    [
+        pytest.param(
+            "name: test-name",
+            "Couldn't find a network device named 'eth0'.",
+            id="no-devices",
+        ),
+        pytest.param(
+            textwrap.dedent(
+                """
+                name: test-name
+                devices:
+                  custom:
+                    name: wrong-device
+                """
+            ),
+            "Couldn't find a network device named 'eth0'.",
+            id="missing-eth0",
+        ),
+        pytest.param(
+            textwrap.dedent(
+                """
+                name: test-name
+                devices:
+                  eth0:
+                    name: test-device
+                """
+            ),
+            "Couldn't find the network name of the default network device.",
+            id="missing-network-name",
+        ),
+    ],
+)
+def test_get_gateway_errors(config, expected_error, mocker):
+    mocker.patch.object(subprocess, "run", side_effect=[mock.Mock(stdout=config)])
+
+    with pytest.raises(errors.FetchServiceError, match=expected_error):
+        fetch._get_gateway(LXDInstance(name="test-instance"))

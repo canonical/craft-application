@@ -21,8 +21,6 @@ All errors inherit from craft_cli.CraftError.
 from __future__ import annotations
 
 import os
-import pathlib
-from collections.abc import Collection, Sequence
 from typing import TYPE_CHECKING, Literal
 
 import craft_platforms
@@ -34,6 +32,9 @@ from craft_application.util.error_formatting import format_pydantic_errors
 from craft_application.util.string import humanize_list
 
 if TYPE_CHECKING:  # pragma: no cover
+    import pathlib
+    from collections.abc import Collection, Sequence
+
     import craft_parts
     import pydantic
     from typing_extensions import Self
@@ -45,6 +46,10 @@ class PathInvalidError(CraftError, OSError):
 
 class ProjectFileError(CraftError):
     """Errors to do with the project file or directory."""
+
+
+class ProjectGenerationError(CraftError):
+    """Errors to do with prime project generation."""
 
 
 class ProjectFileMissingError(ProjectFileError, FileNotFoundError):
@@ -293,6 +298,8 @@ class IncompatibleBaseError(CraftError):
         self,
         host_base: craft_platforms.DistroBase | bases.BaseName,
         build_base: craft_platforms.DistroBase | bases.BaseName,
+        *,
+        artifact_type: str = "artifact",
     ) -> None:
         if isinstance(host_base, bases.BaseName):
             host_base = craft_platforms.DistroBase(
@@ -310,8 +317,8 @@ class IncompatibleBaseError(CraftError):
         )
         details = (
             "Builds must be performed on a specific system to ensure that the "
-            "final artifact's binaries are compatible with the intended execution "
-            "environment."
+            f"final {artifact_type}'s binaries are compatible with the intended "
+            "execution environment."
         )
         resolution = "Run a managed build, or run on a compatible host."
         retcode = os.EX_CONFIG
@@ -371,3 +378,11 @@ class FetchServiceError(CraftError):
 
 class InitError(CraftError):
     """Errors related to initialising a project."""
+
+
+class ArtifactCreationError(CraftError):
+    """Errors to do with artifact file generation."""
+
+
+class StateServiceError(CraftError):
+    """Errors related to the state service."""

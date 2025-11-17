@@ -46,8 +46,10 @@ _DEFAULT_SERVICES = {
     "lifecycle": "LifecycleService",
     "project": "ProjectService",
     "provider": "ProviderService",
+    "proxy": "ProxyService",
     "remote_build": "RemoteBuildService",
     "request": "RequestService",
+    "state": "StateService",
     "testing": "TestingService",
 }
 _CAMEL_TO_PYTHON_CASE_REGEX = re.compile(r"(?<!^)(?=[A-Z])")
@@ -74,14 +76,16 @@ class ServiceFactory:
         # Cheeky hack that lets static type checkers report the correct types.
         # This does not need any new types added as the ``__getattr__`` method is
         # deprecated and we should encourage using ``get()`` instead.
-        package: services.PackageService
-        lifecycle: services.LifecycleService
-        provider: services.ProviderService
-        remote_build: services.RemoteBuildService
-        request: services.RequestService
         config: services.ConfigService
         fetch: services.FetchService
         init: services.InitService
+        lifecycle: services.LifecycleService
+        package: services.PackageService
+        provider: services.ProviderService
+        proxy: services.ProxyService
+        remote_build: services.RemoteBuildService
+        request: services.RequestService
+        state: services.StateService
         testing: services.TestingService
 
     def __init__(
@@ -222,6 +226,11 @@ class ServiceFactory:
     @overload
     @classmethod
     def get_class(
+        cls, name: Literal["proxy", "ProxyService", "ProxyClass"]
+    ) -> type[services.ProxyService]: ...
+    @overload
+    @classmethod
+    def get_class(
         cls, name: Literal["remote_build", "RemoteBuildService", "RemoteBuildClass"]
     ) -> type[services.RemoteBuildService]: ...
     @overload
@@ -229,6 +238,11 @@ class ServiceFactory:
     def get_class(
         cls, name: Literal["request", "RequestService", "RequestClass"]
     ) -> type[services.RequestService]: ...
+    @overload
+    @classmethod
+    def get_class(
+        cls, name: Literal["state", "StateService", "StateClass"]
+    ) -> type[services.StateService]: ...
     @overload
     @classmethod
     def get_class(
@@ -276,9 +290,13 @@ class ServiceFactory:
     @overload
     def get(self, service: Literal["provider"]) -> services.ProviderService: ...
     @overload
+    def get(self, service: Literal["proxy"]) -> services.ProxyService: ...
+    @overload
     def get(self, service: Literal["remote_build"]) -> services.RemoteBuildService: ...
     @overload
     def get(self, service: Literal["request"]) -> services.RequestService: ...
+    @overload
+    def get(self, service: Literal["state"]) -> services.StateService: ...
     @overload
     def get(self, service: Literal["testing"]) -> services.TestingService: ...
     @overload

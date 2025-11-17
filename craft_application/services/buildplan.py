@@ -17,8 +17,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Collection, Iterable, Sequence
-from typing import Any, Literal, final
+from typing import TYPE_CHECKING, Any, Literal, final
 
 import craft_platforms
 from craft_cli import emit
@@ -26,6 +25,9 @@ from craft_cli import emit
 from craft_application.errors import EmptyBuildPlanError
 
 from . import base
+
+if TYPE_CHECKING:
+    from collections.abc import Collection, Iterable, Sequence
 
 
 class BuildPlanService(base.AppService):
@@ -41,6 +43,8 @@ class BuildPlanService(base.AppService):
     def set_platforms(self, *platform: str) -> None:
         """Set the platforms for the build plan."""
         self.__platforms = list(platform)
+        # Reset cached plan
+        self.__plan = None
 
     def set_build_fors(
         self, *build_for: craft_platforms.DebianArchitecture | str
@@ -50,6 +54,8 @@ class BuildPlanService(base.AppService):
             "all" if target == "all" else craft_platforms.DebianArchitecture(target)
             for target in build_for
         ]
+        # Reset cached plan
+        self.__plan = None
 
     @final
     def plan(self) -> Sequence[craft_platforms.BuildInfo]:

@@ -17,13 +17,27 @@
 
 from __future__ import annotations
 
-import dataclasses
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pytest
-
-from craft_application import errors, models
+from craft_application import errors, models, util
 from craft_application.services import package
+
+if TYPE_CHECKING:
+    from pathlib import Path
+
+
+@pytest.fixture
+def fake_project_dict(request, fake_project_yaml: str):
+    """Drop fields and add adopt-info to the project file."""
+    data = util.safe_yaml_load(fake_project_yaml)
+    data["adopt-info"] = "part1"
+
+    # delete fields from project
+    for field in getattr(request, "param", []):
+        data.pop(field, None)
+
+    return data
 
 
 class FakePackageService(package.PackageService):
@@ -49,31 +63,39 @@ def test_write_metadata(tmp_path, app_metadata, fake_project, fake_services):
 
 
 @pytest.mark.parametrize(
-    ("fields", "result"),
+    ("app_metadata", "fake_project_dict", "result"),
     [
-        (["color"], "Project field 'color' was not set."),
-        (["color", "size"], "Project fields 'color' and 'size' were not set."),
+        (
+            {
+                "project_variables": ["version", "contact"],
+                "mandatory_adoptable_fields": ["version", "contact"],
+            },
+            ["contact"],
+            "Project field 'contact' was not set.",
+        ),
+        (
+            {
+                "project_variables": ["version", "contact", "title"],
+                "mandatory_adoptable_fields": ["version", "contact", "title"],
+            },
+            ["contact", "title"],
+            "Project fields 'contact' and 'title' were not set.",
+        ),
     ],
+    indirect=["app_metadata", "fake_project_dict"],
 )
 def test_update_project_variable_unset(
-    app_metadata, fake_project, fake_services, fields, result
+    app_metadata, fake_project, fake_project_dict, fake_services, result
 ):
     """Test project variables that must be set after the lifecycle runs."""
-    app_metadata = dataclasses.replace(
-        app_metadata,
-        project_variables=["version", *fields],
-        mandatory_adoptable_fields=["version", *fields],
-    )
-
     service = FakePackageService(
         app_metadata,
         fake_services,
     )
 
-    def _get_project_var(name: str, *, raw_read: bool = False) -> str:
-        return "foo" if name == "version" else ""
-
-    service._services.lifecycle.project_info.get_project_var = _get_project_var
+    service._services.lifecycle.project_info.set_project_var(
+        "version", "foo", raw_write=True
+    )
 
     with pytest.raises(errors.PartsLifecycleError) as exc_info:
         service.update_project()
@@ -81,27 +103,41 @@ def test_update_project_variable_unset(
     assert str(exc_info.value) == result
 
 
+@pytest.mark.parametrize(
+    ("app_metadata", "fake_project_dict"),
+    [
+        (
+            {
+                "project_variables": ["version", "contact"],
+                "mandatory_adoptable_fields": ["version"],
+            },
+            ["contact"],
+        ),
+        (
+            {
+                "project_variables": ["version", "contact", "title"],
+                "mandatory_adoptable_fields": ["version"],
+            },
+            ["contact", "title"],
+        ),
+    ],
+    indirect=["app_metadata", "fake_project_dict"],
+)
 def test_update_project_variable_optional(
     app_metadata,
+    fake_project_dict,
     fake_project,
     fake_services,
 ):
     """Test project variables that can be optionally set."""
-    app_metadata = dataclasses.replace(
-        app_metadata,
-        project_variables=["version", "color"],
-        mandatory_adoptable_fields=["version"],
-    )
-
     service = FakePackageService(
         app_metadata,
         fake_services,
     )
 
-    def _get_project_var(name: str, *, raw_read: bool = False) -> str:
-        return "foo" if name == "version" else ""
-
-    service._services.lifecycle.project_info.get_project_var = _get_project_var
+    service._services.lifecycle.project_info.set_project_var(
+        "version", "foo", raw_write=True
+    )
 
     service.update_project()
 

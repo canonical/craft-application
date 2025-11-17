@@ -17,7 +17,11 @@
 
 from __future__ import annotations
 
-import enum
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    import enum
+
 import pathlib
 from unittest import mock
 
@@ -25,10 +29,9 @@ import launchpadlib.launchpad
 import launchpadlib.uris
 import lazr.restfulclient.errors
 import pytest
-from lazr.restfulclient.resource import Entry
-
 from craft_application import launchpad
 from craft_application.launchpad import models
+from lazr.restfulclient.resource import Entry
 
 
 def flatten_enum(e: type[enum.Enum]) -> list:

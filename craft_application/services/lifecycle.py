@@ -19,11 +19,12 @@ from __future__ import annotations
 
 import contextlib
 import types
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import craft_platforms
 import distro
-from craft_cli import emit
+from craft_cli import CraftError, emit
 from craft_parts import (
     Action,
     ActionType,
@@ -38,13 +39,11 @@ from craft_parts import (
 from craft_parts.errors import CallbackRegistrationError
 from typing_extensions import override
 
-from craft_application import errors, models, util
+from craft_application import errors, util
 from craft_application.services import base
 from craft_application.util import repositories
 
 if TYPE_CHECKING:  # pragma: no cover
-    from pathlib import Path
-
     from craft_application.application import AppMetadata
     from craft_application.services import ServiceFactory
 
@@ -126,8 +125,6 @@ class LifecycleService(base.AppService):
         LifecycleManager on initialisation.
     """
 
-    _project: models.Project
-
     def __init__(
         self,
         app: AppMetadata,
@@ -146,9 +143,9 @@ class LifecycleService(base.AppService):
     @override
     def setup(self) -> None:
         """Initialize the LifecycleManager with previously-set arguments."""
-        self._project = self._services.get("project").get()
         self._lcm = self._init_lifecycle_manager()
         callbacks.register_post_step(self.post_prime, step_list=[Step.PRIME])
+        callbacks.register_configure_overlay(repositories.enable_overlay_eol)
 
     def _get_build(self) -> craft_platforms.BuildInfo:
         """Get the build for this run."""
@@ -159,15 +156,7 @@ class LifecycleService(base.AppService):
 
     def _validate_build_plan(self) -> None:
         """Validate that the build plan is usable for a lifecycle run."""
-        plan = self._services.get("build_plan").plan()
-        match len(plan):
-            case 0:
-                raise errors.EmptyBuildPlanError
-            case 1:
-                build = plan[0]
-            case _:
-                raise errors.MultipleBuildsError(plan)
-
+        build = self._build_info
         host_base = craft_platforms.DistroBase.from_linux_distribution(
             distro.LinuxDistribution()
         )
@@ -176,9 +165,13 @@ class LifecycleService(base.AppService):
             # version as that is a moving target; Just ensure the systems are the
             # same.
             if build.build_base.distribution != host_base.distribution:
-                raise errors.IncompatibleBaseError(host_base, build.build_base)
+                raise errors.IncompatibleBaseError(
+                    host_base, build.build_base, artifact_type=self._app.artifact_type
+                )
         elif build.build_base != host_base:
-            raise errors.IncompatibleBaseError(host_base, build.build_base)
+            raise errors.IncompatibleBaseError(
+                host_base, build.build_base, artifact_type=self._app.artifact_type
+            )
 
     def _get_build_for(self) -> str:
         """Get the ``build_for`` architecture for craft-parts.
@@ -210,6 +203,7 @@ class LifecycleService(base.AppService):
         emit.debug(f"Initialising lifecycle manager in {self._work_dir}")
         emit.trace(f"Lifecycle: {repr(self)}")
 
+        project_service = self._services.get("project")
         build_for = self._get_build_for()
 
         if self._project.package_repositories:
@@ -217,13 +211,15 @@ class LifecycleService(base.AppService):
                 self._project.package_repositories
             )
 
-        pvars: dict[str, str] = {}
-        for var in self._app.project_variables:
-            pvars[var] = getattr(self._project, var) or ""
-        self._project_vars = pvars
+        source_ignore_patterns = [
+            ".craft",  # in case of unmanaged lifecycle run
+            *self._app.source_ignore_patterns,
+        ]
 
-        emit.debug(f"Project vars: {self._project_vars}")
-        emit.debug(f"Adopting part: {self._project.adopt_info}")
+        if Path("spread/.extension").exists():
+            # Ignore spread.yaml and spread to prevent repulling sources
+            # when test files are changed.
+            source_ignore_patterns.extend(["spread.yaml", "spread"])
 
         try:
             return LifecycleManager(
@@ -232,16 +228,20 @@ class LifecycleService(base.AppService):
                 arch=build_for,
                 cache_dir=self._cache_dir,
                 work_dir=self._work_dir,
-                ignore_local_sources=self._app.source_ignore_patterns,
+                ignore_local_sources=source_ignore_patterns,
                 parallel_build_count=util.get_parallel_build_count(self._app.name),
-                project_vars_part_name=self._project.adopt_info,
-                project_vars=self._project_vars,
+                project_vars=project_service.project_vars,
                 track_stage_packages=True,
-                partitions=self._services.get("project").partitions,
+                partitions=project_service.partitions,
                 **self._manager_kwargs,
             )
         except PartsError as err:
             raise errors.PartsLifecycleError.from_parts_error(err) from err
+
+    @property
+    def prime_state_timestamp(self) -> float | None:
+        """The timestamp of the most recently primed part's prime state file."""
+        return self._lcm.get_prime_state_timestamp()
 
     @property
     def prime_dir(self) -> Path:
@@ -269,8 +269,17 @@ class LifecycleService(base.AppService):
         """
         return self._lcm.get_primed_stage_packages(part_name=part_name)
 
-    def run(self, step_name: str | None, part_names: list[str] | None = None) -> None:
-        """Run the lifecycle manager for the parts."""
+    def run(
+        self,
+        step_name: str | None,
+        part_names: list[str] | None = None,
+    ) -> None:
+        """Run the lifecycle manager for the parts.
+
+        :param step_name: The name of the target step (defaults to running the
+            entire lifecycle)
+        :param part_names: Which parts to build (defaults to all parts)
+        """
         target_step = _get_step(step_name) if step_name else None
 
         self._validate_build_plan()
@@ -294,21 +303,31 @@ class LifecycleService(base.AppService):
                 actions = []
 
             emit.progress("Initialising lifecycle")
-            with self._lcm.action_executor() as aex:
-                for action in actions:
-                    message = _get_parts_action_message(action)
-                    emit.progress(message)
-                    with emit.open_stream() as stream:
-                        aex.execute(action, stdout=stream, stderr=stream)
+            self._exec(actions)
 
         except PartsError as err:
             raise errors.PartsLifecycleError.from_parts_error(err) from err
+        except CraftError:
+            # CraftError passthrough to be handled by the application.
+            raise
         except RuntimeError as err:
             raise RuntimeError(f"Parts processing internal error: {err}") from err
         except OSError as err:
             raise errors.PartsLifecycleError.from_os_error(err) from err
         except Exception as err:
             raise errors.PartsLifecycleError(f"Unknown error: {str(err)}") from err
+
+    def _exec(self, actions: list[Action]) -> None:
+        """Execute actions of the lifecycle.
+
+        Applications must override this method to handle errors before craft-application.
+        """
+        with self._lcm.action_executor() as aex:
+            for action in actions:
+                message = _get_parts_action_message(action)
+                emit.progress(message)
+                with emit.open_stream() as stream:
+                    aex.execute(action, stdout=stream, stderr=stream)
 
     def post_prime(self, step_info: StepInfo) -> bool:
         """Perform any necessary post-lifecycle modifications to the prime directory.

@@ -19,10 +19,8 @@
 from __future__ import annotations
 
 import os
-import pathlib
 import shutil
 import typing
-from re import Pattern
 from typing import Any
 
 import jinja2
@@ -38,6 +36,9 @@ from craft_application.models.constraints import (
 from . import base
 
 if typing.TYPE_CHECKING:  # pragma: no cover
+    import pathlib
+    from re import Pattern
+
     from craft_application.application import AppMetadata
     from craft_application.services import ServiceFactory
 
@@ -193,8 +194,7 @@ class InitService(base.AppService):
                 emit.trace(f"Skipping file {template_name} as it is already present")
                 continue
             path.parent.mkdir(parents=True, exist_ok=True)
-            with path.open("wt", encoding="utf8") as file:
-                file.write(template.render(context))
+            path.write_text(template.render(context), encoding="utf8")
             shutil.copystat((template_dir / template_name), path)
         emit.progress("Rendered project.")
 

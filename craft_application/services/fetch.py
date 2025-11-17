@@ -19,20 +19,23 @@ from __future__ import annotations
 
 import atexit
 import json
+import os
 import pathlib
-import subprocess
 import typing
 from functools import partial
 
-import craft_providers
 from craft_cli import emit
 from typing_extensions import override
 
-from craft_application import fetch, util
+from craft_application import errors, fetch, util
 from craft_application.models.manifest import CraftManifest, ProjectManifest
 from craft_application.services import base
 
 if typing.TYPE_CHECKING:
+    import subprocess
+
+    import craft_providers
+
     from craft_application.application import AppMetadata
     from craft_application.services import service_factory
 
@@ -40,6 +43,20 @@ if typing.TYPE_CHECKING:
 _PROJECT_MANIFEST_MANAGED_PATH = pathlib.Path(
     "/tmp/craft-project-manifest.yaml"  # noqa: S108 (possibly insecure)
 )
+
+# Whether we should use an existing fetch-service session, managed by someone else
+EXTERNAL_FETCH_SERVICE_ENV_VAR = "CRAFT_USE_EXTERNAL_FETCH_SERVICE"
+# The location of the certificate of the externally-managed fetch-service
+PROXY_CERT_ENV_VAR = "CRAFT_PROXY_CERT"
+# Environment variable that craft-providers uses to suppress dist-upgrades
+# on creation of an instance.
+PROVIDERS_SUPPRESS_UPGRADE_VAR = (
+    "CRAFT_PROVIDERS_EXPERIMENTAL_SUPPRESS_UPGRADE_UNSUPPORTED"
+)
+
+
+def _use_external_session() -> bool:
+    return os.getenv(EXTERNAL_FETCH_SERVICE_ENV_VAR) == "1"
 
 
 class FetchService(base.AppService):
@@ -60,6 +77,7 @@ class FetchService(base.AppService):
     _fetch_process: subprocess.Popen[str] | None
     _session_data: fetch.SessionData | None
     _instance: craft_providers.Executor | None
+    _proxy_cert: pathlib.Path | None
 
     def __init__(
         self,
@@ -76,13 +94,39 @@ class FetchService(base.AppService):
         self._session_data = None
         self._session_policy: str = "strict"  # Default to strict policy.
         self._instance = None
+        self._proxy_cert = None
+        self._external_session = False
 
     @override
     def setup(self) -> None:
         """Start the fetch-service process with proper arguments."""
         super().setup()
 
-        if not util.is_managed_mode():
+        self._external_session = _use_external_session()
+
+        if self._external_session:
+            cert_str = os.getenv(PROXY_CERT_ENV_VAR)
+            if cert_str is None:
+                brief = f"Environment variable {PROXY_CERT_ENV_VAR!r} is not set"
+                details = (
+                    "An external fetch-service session cannot be used without"
+                    " the certificate file."
+                )
+                raise errors.CraftError(brief, details=details)
+
+            cert_path = pathlib.Path(cert_str)
+            if not cert_path.is_file():
+                brief = f"{cert_path} is not a valid certificate file."
+                raise errors.CraftError(brief)
+
+            self._proxy_cert = cert_path
+
+            # Experimental: Suppress the initial dist-upgrade when using
+            # the fetch service. This speeds up instance creation at the
+            # cost of not having the latest packages.
+            # This should no longer be necessary once CRAFT-4850 is complete.
+            os.environ[PROVIDERS_SUPPRESS_UPGRADE_VAR] = "1"
+        elif not util.is_managed_mode():
             # Early fail if the fetch-service is not installed.
             fetch.verify_installed()
 
@@ -93,7 +137,7 @@ class FetchService(base.AppService):
                 f"Logging output to {str(logpath)!r}."
             )
 
-            self._fetch_process = fetch.start_service()
+            self._fetch_process, self._proxy_cert = fetch.start_service()
 
             # When we exit the application, we'll shut down the fetch service.
             atexit.register(self.shutdown, force=True)
@@ -101,6 +145,51 @@ class FetchService(base.AppService):
     def set_policy(self, policy: typing.Literal["strict", "permissive"]) -> None:
         """Set the policy for the fetch service."""
         self._session_policy = policy
+
+    @staticmethod
+    def is_active(*, enable_command_line: bool) -> bool:
+        """Whether the FetchService will be used in managed runs.
+
+        This can happen if:
+
+        - ``enable_command_line`` is True, in which case the service will create and
+            teardown fetch-service sessions;
+        -  CRAFT_USE_EXTERNAL_FETCH_SERVICE is True, in which case the service will use
+            a *pre-existing* fetch-service session.
+        """
+        use_external_session = _use_external_session()
+        if use_external_session and enable_command_line:
+            brief = (
+                "Conflicting request for both external and managed fetch-service use."
+            )
+            raise errors.CraftError(brief)
+        return enable_command_line or _use_external_session()
+
+    def configure_instance(self, instance: craft_providers.Executor) -> dict[str, str]:
+        """Configure an instance for use with the fetch-service.
+
+        This method is a "superset" of ``create_session()`` and handles both cases:
+
+        - Cases where "--enable-fetch-service" is passed on the command line and the
+          application will handle the fetch-service and its session;
+        - Cases where "CRAFT_USE_EXTERNAL_FETCH_SERVICE" is set and the application
+          has to configure the instance to use the existing, externally-created session.
+
+        :return: The environment variables that must be used by any process
+          that will use the new session.
+        """
+        if self._external_session:
+            proxy_url = os.getenv("http_proxy")
+            if proxy_url is None:
+                raise errors.CraftError(
+                    "External fetch-service session requested but 'http_proxy' is not set."
+                )
+            if self._proxy_cert is None:
+                raise ValueError("configure_instance() was called before setup().")
+            self._services.get("proxy").configure(self._proxy_cert, proxy_url)
+            return fetch.NetInfo.env()
+
+        return self.create_session(instance)
 
     def create_session(self, instance: craft_providers.Executor) -> dict[str, str]:
         """Create a new session.
@@ -112,11 +201,33 @@ class FetchService(base.AppService):
             raise ValueError(
                 "create_session() called but there's already a live fetch-service session."
             )
+        if self._proxy_cert is None:
+            raise ValueError(
+                "create_session() was called before setting up the fetch service."
+            )
+
+        # Experimental: Suppress the initial dist-upgrade when using
+        # the fetch service. This speeds up instance creation at the
+        # cost of not having the latest packages.
+        # This should no longer be necessary once CRAFT-4850 is complete.
+        os.environ[PROVIDERS_SUPPRESS_UPGRADE_VAR] = "1"
+
         strict_session = self._session_policy == "strict"
         self._session_data = fetch.create_session(strict=strict_session)
         self._instance = instance
-        emit.progress("Configuring fetch-service integration")
-        return fetch.configure_instance(instance, self._session_data)
+        net_info = fetch.NetInfo(instance, self._session_data)
+        self._services.get("proxy").configure(self._proxy_cert, net_info.http_proxy)
+        return net_info.env()
+
+    def teardown_instance(self) -> dict[str, typing.Any]:
+        """Teardown whatever configuration was done on a managed instance.
+
+        This method is a superset of ``teardown_session()`` and should be used instead.
+        """
+        if self._external_session:
+            return {}  # Nothing to do
+
+        return self.teardown_session()
 
     def teardown_session(self) -> dict[str, typing.Any]:
         """Teardown and cleanup a previously-created session."""
@@ -157,6 +268,7 @@ class FetchService(base.AppService):
 
         Only supports a single generated artifact, and only in managed runs.
         """
+        # This can be called with a multi-item build plan, so just get the first.
         build = self._services.get("build_plan").plan()[0]
         # mypy doesn't accept accept ignore[union-attr] for unknown reasons.
         if not self._services.ProviderClass.is_managed():  # type: ignore  # noqa: PGH003
@@ -164,18 +276,17 @@ class FetchService(base.AppService):
             return
 
         emit.debug(f"Generating project manifest at {_PROJECT_MANIFEST_MANAGED_PATH}")
-        project = self._services.get("project").get()
         project_manifest = ProjectManifest.from_packed_artifact(
-            project, build, artifacts[0]
+            self._project, build, artifacts[0]
         )
         project_manifest.to_yaml_file(_PROJECT_MANIFEST_MANAGED_PATH)
 
     def _create_craft_manifest(
         self, project_manifest: pathlib.Path, session_report: dict[str, typing.Any]
     ) -> None:
-        project = self._services.get("project").get()
-        name = project.name
-        version = project.version
+        name = self._project.name
+        version = self._project.version
+        # This can be called with a multi-item build plan, so just get the first.
         platform = self._services.get("build_plan").plan()[0].platform
 
         manifest_path = pathlib.Path(f"{name}_{version}_{platform}.json")

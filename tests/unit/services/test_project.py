@@ -13,22 +13,24 @@
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Unit tests for the ProjectService."""
 
+import copy
 import dataclasses
 import pathlib
+import re
 import textwrap
-from typing import cast
+from typing import Any, cast
 from unittest import mock
 
 import craft_platforms
-import pydantic
+import freezegun
 import pytest
 import pytest_mock
-from hypothesis import given, strategies
-
-from craft_application import errors
+from craft_application import errors, models
 from craft_application.application import AppMetadata
 from craft_application.services.project import ProjectService
 from craft_application.services.service_factory import ServiceFactory
+from craft_parts import ProjectVar, ProjectVarInfo
+from hypothesis import given, strategies
 
 
 @pytest.fixture
@@ -38,6 +40,56 @@ def real_project_service(fake_services: ServiceFactory):
     svc = fake_services.get("project")
     assert type(svc) is ProjectService
     return svc
+
+
+@pytest.mark.parametrize(
+    ("platforms_dict", "platform"),
+    [
+        *(
+            pytest.param({arch: None}, None, id=arch)
+            for arch in craft_platforms.DebianArchitecture
+        ),
+        pytest.param(
+            {"platform-independent": {"build-on": ["s390x"], "build-for": ["all"]}},
+            None,
+            id="platform-independent",
+        ),
+        *(
+            pytest.param(
+                {
+                    "noble": {
+                        "build-on": ["ubuntu@24.04:riscv64"],
+                        "build-for": ["ubuntu@24.04:riscv64"],
+                    },
+                    "jammy": {
+                        "build-on": ["ubuntu@22.04:amd64"],
+                        "build-for": ["ubuntu@22.04:amd64"],
+                    },
+                },
+                platform,
+                id=f"multi-base-{platform}",
+            )
+            for platform in [None, "noble", "jammy"]
+        ),
+        *(
+            pytest.param(
+                {"amd64": {"build-on": ["amd64", "arm64", "riscv64", "s390x"]}},
+                "amd64",
+                id=f"implicit-build-for-{platform}",
+            )
+            for platform in [None, "amd64"]
+        ),
+    ],
+)
+def test_configure_success_self_select(
+    real_project_service: ProjectService,
+    fake_host_architecture: craft_platforms.DebianArchitecture,
+    platforms_dict: dict[str, Any],
+    platform: str | None,
+):
+    real_project_service._load_raw_project = lambda: {"platforms": platforms_dict}  # type: ignore  # noqa: PGH003
+
+    real_project_service.configure(platform=platform, build_for=None)
 
 
 def test_resolve_file_path_success(
@@ -125,9 +177,14 @@ def test_load_raw_project_invalid(
             for arch in craft_platforms.DebianArchitecture
         ),
         pytest.param(
-            {"my-platform": {"build-on": ["ppc64el"]}},
-            {"my-platform": {"build-on": ["ppc64el"]}},
-            id="only-build-on-bad-name",
+            {"s390x": {"build-on": ["amd64", "arm64", "riscv64", "s390x"]}},
+            {
+                "s390x": {
+                    "build-on": ["amd64", "arm64", "riscv64", "s390x"],
+                    "build-for": ["s390x"],
+                }
+            },
+            id="implicit-build-for",
         ),
         pytest.param(
             {"ppc64el": {"build-on": ["amd64", "riscv64"]}},
@@ -144,6 +201,26 @@ def test_load_raw_project_invalid(
             {"s390x": {"build-on": ["ppc64el"], "build-for": ["s390x"]}},
             id="null-build-for-valid-name",
         ),
+        pytest.param(
+            {
+                "jammy": {
+                    "build-on": ["ubuntu@22.04:amd64"],
+                    "build-for": ["ubuntu@22.04:amd64"],
+                },
+                "ubuntu@24.04:riscv64": None,
+            },
+            {
+                "jammy": {
+                    "build-on": ["ubuntu@22.04:amd64"],
+                    "build-for": ["ubuntu@22.04:amd64"],
+                },
+                "ubuntu@24.04:riscv64": {
+                    "build-on": ["ubuntu@24.04:riscv64"],
+                    "build-for": ["ubuntu@24.04:riscv64"],
+                },
+            },
+            id="multi-platform",
+        ),
     ],
 )
 def test_get_platforms(
@@ -153,17 +230,64 @@ def test_get_platforms(
 ):
     real_project_service._load_raw_project = lambda: {"platforms": platforms}  # type: ignore  # noqa: PGH003
 
-    assert real_project_service.get_platforms() == expected
+    first_platforms = real_project_service.get_platforms()
+
+    assert first_platforms == expected
+
+    # Mutating this should not affect future calls.
+    assert "foo" not in first_platforms
+    first_platforms["foo"] = {"build-on": [], "build-for": []}
+    assert "foo" not in real_project_service.get_platforms()
 
 
 @pytest.mark.parametrize(
     ("platforms", "match"),
     [
-        (None, "should be a valid dictionary"),
-        ({"invalid": None}, r"platforms\.invalid\n.+should be a valid dictionary"),
-        (
-            {"my-pf": {"build-on": ["amd66"]}},
+        pytest.param(None, "should be a valid dictionary", id="platforms-null"),
+        pytest.param(
+            {"invalid": None},
+            r"should be a valid dictionary.+'platforms.invalid'",
+            id="invalid-shorthand",
+        ),
+        pytest.param(
+            {"my-pf": {"build-on": ["amd66"], "build-for": ["all"]}},
             "'amd66' is not a valid Debian architecture",
+            id="invalid-build-on",
+        ),
+        pytest.param(
+            {"mine": {"build-on": ["all"], "build-for": ["all"]}},
+            r"'all' cannot be used for 'build-on' \(in field 'platforms.mine.build-on', input: \['all'\]\)",
+            id="build-on-all",
+        ),
+        pytest.param(
+            {"mine": {"build-on": ["amd64"], "build-for": ["any"]}},
+            r"'any' is not a valid Debian architecture\.",
+            id="build-for-any",
+        ),
+        pytest.param(
+            {"my-platform": {"build-on": ["ppc64el"]}},
+            r"'build-for' required in 'platforms.my-platform'",
+            id="only-build-on-bad-name",
+        ),
+        pytest.param(
+            {"all": None},
+            r"input should be a valid dictionary.+'platforms.all'",
+            id="invalid-short-name",
+        ),
+        pytest.param(
+            {"ubuntu@26.04:riscv64": None},
+            r"^Testcraft does not support multi-base platforms$",
+            id="implicit-multi-base",
+        ),
+        pytest.param(
+            {
+                "something": {
+                    "build-on": ["ubuntu@26.04:riscv64"],
+                    "build-for": ["ubuntu@26.04:riscv64"],
+                }
+            },
+            r"^Testcraft does not support multi-base platforms$",
+            id="explicit-multi-base",
         ),
     ],
 )
@@ -171,15 +295,19 @@ def test_get_platforms_bad_value(
     real_project_service: ProjectService, platforms, match
 ):
     real_project_service._load_raw_project = lambda: {"platforms": platforms}  # type: ignore  # noqa: PGH003
+    # We have extra checks if we don't support multi-base.
+    real_project_service._app = dataclasses.replace(
+        real_project_service._app, supports_multi_base=False
+    )
 
-    with pytest.raises(pydantic.ValidationError, match=match):
+    with pytest.raises(errors.CraftValidationError, match=match):
         real_project_service.get_platforms()
 
 
 @pytest.mark.parametrize(
     ("data", "expected"),
     [
-        pytest.param({}, {"version": ""}, id="empty"),
+        pytest.param({}, {"version": None}, id="empty"),
         pytest.param(
             {"version": "3.14", "unrelated": "pi"},
             {"version": "3.14"},
@@ -188,7 +316,43 @@ def test_get_platforms_bad_value(
     ],
 )
 def test_get_project_vars(real_project_service: ProjectService, data, expected):
-    assert real_project_service._get_project_vars(data) == expected
+    real_project_service._project_vars = real_project_service._create_project_vars(data)
+    expected_warning = re.escape(
+        "'ProjectService._get_project_vars' is deprecated. "
+        "Use 'project_vars' property instead."
+    )
+    with pytest.warns(DeprecationWarning, match=expected_warning):
+        project_vars = real_project_service._get_project_vars(data)
+
+    assert project_vars == expected | {
+        "summary": None,
+        "description": None,
+    }
+
+
+@pytest.mark.parametrize(
+    ("data", "expected"),
+    [
+        pytest.param(
+            {},
+            ProjectVarInfo.unmarshal({"version": {}, "summary": {}, "description": {}}),
+            id="empty",
+        ),
+        pytest.param(
+            {"version": "3.14", "unrelated": "pi"},
+            ProjectVarInfo.unmarshal(
+                {"version": ProjectVar(value="3.14"), "summary": {}, "description": {}}
+            ),
+            id="version-set",
+        ),
+    ],
+)
+def test_project_vars(real_project_service: ProjectService, data, expected):
+    real_project_service._project_vars = real_project_service._create_project_vars(data)
+
+    project_vars = real_project_service.project_vars
+
+    assert project_vars == expected
 
 
 @given(
@@ -520,6 +684,99 @@ def test_render_for_invalid_platform(
 
 
 @pytest.mark.parametrize(
+    ("app_metadata", "expected"),
+    [
+        ({"enable_for_grammar": False}, None),
+        ({"enable_for_grammar": True}, "source-1"),
+    ],
+    indirect=["app_metadata"],
+)
+@pytest.mark.usefixtures("fake_project_file")
+def test_render_for_grammar(
+    real_project_service: ProjectService,
+    fake_project_dict,
+    mocker,
+    app_metadata,
+    expected,
+):
+    """For statements only evaluate when 'enable_for_grammar' is set.
+
+    Note that 'for' is still accepted when 'enable_for_grammar' is false,
+    but it won't do anything because it won't match any platforms in craft-grammar.
+    """
+    project_data = copy.deepcopy(fake_project_dict)
+    project_data["parts"] = {
+        "part1": {
+            "plugin": "nil",
+            "source": [
+                {"for risky": "source-1"},
+                {"for s390x": "source-2"},
+            ],
+        },
+    }
+    mocker.patch.object(real_project_service, "_preprocess", return_value=project_data)
+
+    result = real_project_service.render_for(
+        build_for="arm64", build_on="riscv64", platform="risky"
+    )
+
+    assert result.parts["part1"]["source"] == expected
+
+
+@pytest.mark.parametrize(
+    ("app_metadata"),
+    [{"enable_for_grammar": True}],
+    indirect=["app_metadata"],
+)
+@pytest.mark.usefixtures("fake_project_file")
+def test_render_for_grammar_dict_duplicate_keys(
+    real_project_service: ProjectService,
+    fake_project_dict,
+    mocker,
+    app_metadata,
+):
+    project_data = copy.deepcopy(fake_project_dict)
+    project_data["parts"] = {
+        "part1": {
+            "plugin": "nil",
+            "organize": [
+                {
+                    "for risky": {
+                        "a": "b",
+                        "c": "d",
+                        "e": "f",
+                    }
+                },
+                {
+                    "for s390x": {
+                        "g": "h",
+                    }
+                },
+                {
+                    "for any": {
+                        "foo": "bar",
+                        # The following keys conflicts with keys from the the first section
+                        "a": "g",
+                        "c": "i",
+                    }
+                },
+            ],
+        },
+    }
+    mocker.patch.object(real_project_service, "_preprocess", return_value=project_data)
+
+    with pytest.raises(
+        errors.CraftValidationError,
+        match=r"Duplicate keys in processed dict \[(?:'c', 'a'|'a', 'c')\] in",
+    ):
+        real_project_service.render_for(
+            build_for="arm64",
+            build_on="riscv64",
+            platform="risky",
+        )
+
+
+@pytest.mark.parametrize(
     "build_for", [*(arch.value for arch in craft_platforms.DebianArchitecture), "all"]
 )
 @pytest.mark.usefixtures("fake_project_file")
@@ -591,14 +848,14 @@ def test_get_by_build_for(
 ):
     try:
         real_project_service.configure(build_for=build_for, platform=None)
-    except RuntimeError as exc:
+    except errors.ProjectGenerationError as exc:
         pytest.skip(f"Not a valid build on/for combo: {exc}")
     # This test takes two paths because not all build-on/build-for combinations are
     # valid. If the combination is valid, we check that we got the expected output.
     # If the combination is invalid, we check that the error was correct.
     try:
         result = real_project_service.get()
-    except RuntimeError as exc:
+    except errors.ProjectGenerationError as exc:
         assert (  # noqa: PT017
             exc.args[0]
             == f"Cannot generate a project that builds on {fake_host_architecture} and builds for {build_for}"
@@ -671,4 +928,110 @@ def test_mandatory_adoptable_fields(
     assert (
         str(exc_info.value)
         == "'adopt-info' not set and required fields are missing: 'license'"
+    )
+
+
+@freezegun.freeze_time("2025-06-01")
+@pytest.mark.parametrize(
+    ("base", "build_base"),
+    [
+        pytest.param("bare", "ubuntu@24.04", id="bare-base"),
+        ("ubuntu@22.04", None),
+        ("ubuntu@24.04", None),
+        pytest.param("ubuntu@25.10", "ubuntu@devel", id="devel-on-devel"),
+        pytest.param("nonexistent@0.0", None, id="nonexistent-base"),
+        pytest.param("ubuntu@22.04", "ubuntu@devel", id="build-on-devel"),
+    ],
+)
+@pytest.mark.usefixtures("fake_project_file")
+def test_check_base_is_supported(
+    real_project_service: ProjectService, base: str, build_base: str | None
+):
+    real_project_service.configure(platform=None, build_for=None)
+    if build_base:
+        real_project_service.get().build_base = build_base
+    real_project_service.get().base = base
+
+    real_project_service.check_base_is_supported()
+
+
+@freezegun.freeze_time("2027-01-01")
+@pytest.mark.parametrize(
+    ("base", "build_base"),
+    [
+        ("ubuntu@16.04", None),
+        ("ubuntu@18.04", None),
+        ("ubuntu@20.04", None),
+        pytest.param("ubuntu@25.10", None, id="interim-base-eol"),
+        pytest.param("ubuntu@24.04", "ubuntu@25.04", id="interim-build-base-eol"),
+    ],
+)
+@pytest.mark.usefixtures("fake_project_file")
+def test_check_base_is_supported_error(
+    real_project_service: ProjectService, base: str, build_base: str | None
+):
+    real_project_service.configure(platform=None, build_for=None)
+    real_project_service.get().base = base
+    if build_base:
+        real_project_service.get().build_base = build_base
+
+    with pytest.raises(
+        errors.CraftValidationError,
+        match=r"(Build b|B)ase '[a-z]+@\d+\.\d+' has reached end-of-life.",
+    ):
+        real_project_service.check_base_is_supported()
+
+
+def test_deep_update(fake_project_file, real_project_service: ProjectService):
+    """Test the deep update of a project model."""
+    fake_project_file.write_text(
+        textwrap.dedent(
+            """
+            name: test-project
+            platforms:
+              riscv64:
+            version: "1.0"
+            summary: fake project
+            description: A fake project for testing deep_update
+            parts:
+              some-part:
+                plugin: nil
+              other-part:
+                plugin: nil
+                source: other-source
+            """
+        )
+    )
+
+    real_project_service.configure(platform=None, build_for=None)
+    real_project_service.get()
+    real_project_service.deep_update(
+        {
+            "name": "updated-name",
+            "parts": {
+                "some-part": {
+                    "source": "new-source",
+                },
+            },
+        }
+    )
+
+    assert real_project_service.get() == models.Project.unmarshal(
+        {
+            "name": "updated-name",
+            "platforms": {"riscv64": None},
+            "version": "1.0",
+            "summary": "fake project",
+            "description": "A fake project for testing deep_update",
+            "parts": {
+                "some-part": {
+                    "plugin": "nil",
+                    "source": "new-source",
+                },
+                "other-part": {
+                    "plugin": "nil",
+                    "source": "other-source",
+                },
+            },
+        }
     )

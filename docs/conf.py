@@ -18,9 +18,42 @@
 import datetime
 
 project = "Craft Application"
-author = "Canonical Group Ltd"
+author = "Canonical"
 
-copyright = f"2023-{datetime.date.today().year}, {author}"  # noqa: A001
+copyright = "2023-%s, %s" % (datetime.date.today().year, author)
+
+# region Configuration for canonical-sphinx
+ogp_site_url = "https://canonical-craft-application.readthedocs-hosted.com/"
+ogp_site_name = project
+ogp_image = "https://assets.ubuntu.com/v1/253da317-image-document-ubuntudocs.svg"
+
+html_context = {
+    "product_page": "github.com/canonical/craft-application",
+    "github_url": "https://github.com/canonical/craft-application",
+}
+
+# Target repository for the edit button on pages
+html_theme_options = {
+    "source_edit_link": "https://github.com/canonical/craft-application",
+}
+
+# endregion
+
+exclude_patterns = [
+    "_build",
+    "Thumbs.db",
+    ".DS_Store",
+    "**venv",
+    "base",
+    "sphinx-resources",
+    "common/README.md",
+    "common/craft-application/how-to-guides/build-remotely.rst",
+    "common/craft-application/how-to-guides/reuse-packages-between-builds.rst",
+    "common/craft-application/reference/remote-builds.rst",
+    "common/craft-application/reference/fetch-service.rst",
+    # There's no tutorials right now, so just hide the scaffolding
+    "tutorials",
+]
 
 # links to ignore when checking links
 linkcheck_ignore = [
@@ -28,27 +61,52 @@ linkcheck_ignore = [
     "https://github.com/canonical/[a-z]*craft[a-z-]*/releases/.*",
 ]
 
-extensions = ["canonical_sphinx", "sphinx.ext.autodoc", "sphinx.ext.intersphinx"]
+extensions = [
+    "canonical_sphinx",
+    "sphinx.ext.autodoc",
+    "sphinx.ext.intersphinx",
+    "sphinx_substitution_extensions",
+    "sphinxext.rediraffe",
+    "pydantic_kitbash",
+]
 
-rst_epilog = """
-.. include:: /reuse/links.txt
-"""
+templates_path = ["_templates"]
 
+show_authors = False
 
-# Canonical-sphinx
-ogp_site_url = "https://canonical-craft-application.readthedocs-hosted.com/"
-ogp_site_name = project
+# endregion
+# region Options for HTML output
+# https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
-html_context = {
-    "product_page": "github.com/canonical/craft-application",
-    "github_url": "https://github.com/canonical/craft-application",
+html_theme = "furo"
+html_static_path = ["_static"]
+html_css_files = [
+    "css/custom.css",
+]
+
+# endregion
+# region Options for extensions
+# Intersphinx extension
+# https://www.sphinx-doc.org/en/master/usage/extensions/intersphinx.html#configuration
+
+intersphinx_mapping = {
+    "python": ("https://docs.python.org/3", None),
 }
+
+# Type hints configuration
+set_type_checking_flag = True
+typehints_fully_qualified = False
+always_document_param_types = True
 
 # Github config
 github_username = "canonical"
 github_repository = "craft-application"
 
 intersphinx_mapping = {
+    "craft-cli": (
+        "https://canonical-craft-cli.readthedocs-hosted.com/en/latest",
+        None,
+    ),
     "craft-grammar": ("https://craft-grammar.readthedocs.io/en/latest", None),
     "craft-parts": (
         "https://canonical-craft-parts.readthedocs-hosted.com/en/latest",
@@ -58,4 +116,17 @@ intersphinx_mapping = {
         "https://canonical-craft-platforms.readthedocs-hosted.com/en/latest",
         None,
     ),
+    "craft-providers": (
+        "https://canonical-craft-providers.readthedocs-hosted.com/en/latest", None
+    ),
 }
+
+autodoc_class_signature = "separated"
+
+# Client-side page redirects.
+rediraffe_redirects = "redirects.txt"
+
+# Reuse epilog
+rst_epilog = """
+.. include:: /reuse/links.txt
+"""

@@ -1,6 +1,9 @@
 name: empty
 title: A most basic project
 version: 1.0
+summary: A test project.
+description: |
+  A project for testcraft.
 base: "ubuntu@22.04"
 platforms:
   amd64:

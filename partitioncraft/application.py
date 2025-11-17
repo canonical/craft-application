@@ -15,11 +15,10 @@
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Application implementation for partitioncraft."""
 
+import craft_application
 import craft_cli
 import craft_parts
 from typing_extensions import override
-
-import craft_application
 
 PARTITIONCRAFT = craft_application.AppMetadata(
     name="partitioncraft",
