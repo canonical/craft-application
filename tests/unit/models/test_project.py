@@ -19,6 +19,7 @@ import copy
 import pathlib
 import re
 import textwrap
+from collections.abc import Iterable
 from textwrap import dedent
 
 import craft_platforms
@@ -34,6 +35,8 @@ from craft_application.models import (
     Project,
     constraints,
 )
+from craft_application.models.project import DevelBaseInfo
+from overrides import override
 
 PROJECTS_DIR = pathlib.Path(__file__).parent / "project_models"
 PARTS_DICT = {"my-part": {"plugin": "nil"}}
@@ -470,6 +473,48 @@ def test_devel_base_error():
     """
         ).strip()
     )
+
+
+class ProjectWithDevelNoble(Project):
+    """A project where Noble is a devel base."""
+
+    @classmethod
+    @override
+    def _get_devel_bases(cls) -> Iterable[DevelBaseInfo]:
+        return [
+            DevelBaseInfo(
+                current_devel_base=craft_providers.bases.ubuntu.BuilddBaseAlias.NOBLE,
+                devel_base=craft_providers.bases.ubuntu.BuilddBaseAlias.DEVEL,
+            )
+        ]
+
+
+def test_get_devel_bases_override():
+    yaml_data = {
+        "name": "project-name",
+        "version": "1.0",
+        "parts": {},
+        "platforms": {"arm64": None},
+        "base": "ubuntu@24.04",
+        "build_base": "ubuntu@24.04",
+    }
+
+    # Sanity check that this is good data for the default Project
+    _ = FakeBuildBaseProject.from_yaml_data(
+        yaml_data,
+        pathlib.Path("testcraft.yaml"),
+    )
+
+    expected = re.escape(
+        "a development build-base must be used when base is 'ubuntu@24.04'"
+    )
+
+    # Fails for ProjectWithDevelNoble as it overrides _get_devel_bases()
+    with pytest.raises(CraftValidationError, match=expected):
+        _ = ProjectWithDevelNoble.from_yaml_data(
+            yaml_data,
+            pathlib.Path("testcraft.yaml"),
+        )
 
 
 @pytest.mark.parametrize(
