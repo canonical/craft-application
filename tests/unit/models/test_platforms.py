@@ -37,8 +37,21 @@ def test_platform_name_reserved(name):
         )
 
 
+@pytest.mark.parametrize("name", ["/"])
+def test_platform_name_invalid_character(name):
+    adapter = pydantic.TypeAdapter(PlatformsDict)
+    with pytest.raises(
+        ValueError, match="Platform names cannot contain the '.' character"
+    ):
+        adapter.validate_python(
+            {name: {"build-on": ["riscv64"], "build-for": ["s390x"]}}
+        )
+
+
 @given(
-    strategies.text(min_size=1).filter(lambda s: s not in RESERVED_PLATFORM_NAMES),
+    strategies.text(min_size=1).filter(
+        lambda s: s not in RESERVED_PLATFORM_NAMES and "/" not in s
+    ),
 )
 def test_fuzz_platform_name(name):
     adapter = pydantic.TypeAdapter(PlatformsDict)

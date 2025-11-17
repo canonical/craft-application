@@ -15,7 +15,7 @@ Changelog
 
     For a complete list of commits, check out the `1.2.3`_ release on GitHub.
 
-6.0.0 (unreleased)
+6.0.0 (2025-11-17)
 ------------------
 
 Models
@@ -43,6 +43,17 @@ Models
   fields of :py:attr:`~craft_application.AppMetadata` must consider
   how these fields should behave in their apps.
 - ``any`` and ``*`` are now reserved names for platforms.
+- Platform names may not contain '/' characters.
+- Ubuntu Questing is now a 'stable' base, and Resolute is added as the new 'devel' one.
+- Add a classmethod on the :py:class:`~craft_application.models.Project` class to let
+  applications fine-tune which bases are considered 'devel'.
+
+Fetch Service
+~~~~~~~~~~~~~
+
+- When using the fetch service, the environment variable
+  ``CRAFT_PROVIDERS_EXPERIMENTAL_SUPPRESS_UPGRADE_UNSUPPORTED`` gets set, suppressing
+  running dist-upgrades on instance creation.
 
 Utilities
 ~~~~~~~~~
@@ -51,6 +62,8 @@ Utilities
   location and message.
 - ``format_pydantic_errors`` now takes ``ErrorDetails`` instead of ``ErrorDict``
   objects. In most cases, apps will already be passing ``ErrorDetails`` objects.
+
+For a complete list of commits, check out the `6.0.0`_ release on GitHub.
 
 5.11.0 (2025-10-01)
 -------------------
@@ -1126,3 +1139,4 @@ For a complete list of commits, check out the `2.7.0`_ release on GitHub.
 .. _5.10.2: https://github.com/canonical/craft-application/releases/tag/5.10.2
 .. _5.10.3: https://github.com/canonical/craft-application/releases/tag/5.10.3
 .. _5.11.0: https://github.com/canonical/craft-application/releases/tag/5.11.0
+.. _6.0.0: https://github.com/canonical/craft-application/releases/tag/6.0.0

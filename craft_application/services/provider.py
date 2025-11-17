@@ -212,7 +212,7 @@ class ProviderService(base.AppService):
         *,
         instance_name: str,
         **kwargs: bool | str | pathlib.Path | None,
-    ) -> craft_providers.Base:
+    ) -> craft_providers.Base[enum.Enum]:
         """Get the base configuration from a base name.
 
         :param base_name: The base to lookup.

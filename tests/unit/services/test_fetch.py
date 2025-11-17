@@ -25,6 +25,7 @@ the FetchService class.
 
 import contextlib
 import json
+import os
 import pathlib
 import re
 import textwrap
@@ -34,12 +35,16 @@ from unittest.mock import MagicMock, call
 
 import craft_providers
 import pytest
+import pytest_subprocess
 from craft_application import errors, fetch, services
 from craft_application.services import fetch as service_module
 from craft_application.services.fetch import (
     EXTERNAL_FETCH_SERVICE_ENV_VAR,
+    PROVIDERS_SUPPRESS_UPGRADE_VAR,
     PROXY_CERT_ENV_VAR,
+    FetchService,
 )
+from craft_providers.lxd import LXDInstance
 from freezegun import freeze_time
 
 
@@ -278,3 +283,50 @@ def test_configure_session_external(
 
     assert env == fetch.NetInfo.env()
     spied_configure.assert_called_once_with(fake_cert, "www.example.com")
+
+
+def test_setup_sets_suppress_upgrade(
+    fetch_service: FetchService, monkeypatch: pytest.MonkeyPatch
+):
+    fake_environ = {
+        EXTERNAL_FETCH_SERVICE_ENV_VAR: "1",
+        PROXY_CERT_ENV_VAR: "/etc/ssl/certs/ca-certificates.crt",
+    }
+    monkeypatch.setattr(os, "environ", fake_environ)
+
+    fetch_service.setup()
+
+    assert fake_environ[PROVIDERS_SUPPRESS_UPGRADE_VAR] == "1"
+
+
+def test_create_sets_suppress_upgrade(
+    fetch_service: FetchService,
+    monkeypatch: pytest.MonkeyPatch,
+    fp: pytest_subprocess.FakeProcess,
+):
+    fake_environ = {}
+    monkeypatch.setattr(os, "environ", fake_environ)
+    mock_instance = mock.MagicMock(
+        spec=LXDInstance,
+        instance_name="Fluffball",
+        project="testcraft",
+    )
+    fp.allow_unregistered(allow=True)
+    fp.register(
+        ["lxc", "--project", "testcraft", "config", "show", "Fluffball", "--expanded"],
+        stdout=textwrap.dedent(
+            """\
+            ephemeral: true
+            devices:
+              eth0:
+                name: eth0
+                network: lxdbr0
+                type: nic
+            """
+        ),
+    )
+
+    fetch_service.setup()
+    fetch_service.create_session(mock_instance)
+
+    assert fake_environ[PROVIDERS_SUPPRESS_UPGRADE_VAR] == "1"
