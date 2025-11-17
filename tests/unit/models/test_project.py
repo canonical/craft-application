@@ -505,21 +505,16 @@ def test_get_devel_bases_override():
         pathlib.Path("testcraft.yaml"),
     )
 
+    expected = re.escape(
+        "a development build-base must be used when base is 'ubuntu@24.04'"
+    )
+
     # Fails for ProjectWithDevelNoble as it overrides _get_devel_bases()
-    with pytest.raises(CraftValidationError) as exc_info:
+    with pytest.raises(CraftValidationError, match=expected):
         _ = ProjectWithDevelNoble.from_yaml_data(
             yaml_data,
             pathlib.Path("testcraft.yaml"),
         )
-
-    assert exc_info.match(
-        dedent(
-            """
-    Bad testcraft.yaml content:
-    - a development build-base must be used when base is 'ubuntu@24.04'
-    """
-        ).strip()
-    )
 
 
 @pytest.mark.parametrize(
