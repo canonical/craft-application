@@ -31,9 +31,8 @@ pytestmark = pytest.mark.usefixtures("new_dir")
 def init_command(app_metadata, mock_services, mocker, tmp_path):
     mocker.patch.object(
         InitCommand,
-        "parent_template_dir",
-        pathlib.Path(tmp_path) / "templates",
-    )
+        "template_dir_parent",
+    ).return_value.__enter__.return_value = pathlib.Path(tmp_path) / "templates"
     return InitCommand({"app": app_metadata, "services": mock_services})
 
 
@@ -65,12 +64,13 @@ def test_init_in_cwd(init_command, name, new_dir, mock_services, emitter):
 
     init_command.run(parsed_args)
 
-    mock_services.init.initialise_project.assert_called_once_with(
-        project_dir=new_dir,
-        project_name=expected_name,
-        template_dir=init_command.parent_template_dir / "test-profile",
-    )
-    emitter.assert_message("Successfully initialised project.")
+    with init_command.template_dir_parent() as template_dir_parent:
+        mock_services.init.initialise_project.assert_called_once_with(
+            project_dir=new_dir,
+            project_name=expected_name,
+            template_dir=template_dir_parent / "test-profile",
+        )
+        emitter.assert_message("Successfully initialised project.")
 
 
 @pytest.mark.parametrize("name", [None, "my-project"])
@@ -87,12 +87,13 @@ def test_init_run_project_dir(init_command, name, mock_services, emitter):
 
     init_command.run(parsed_args)
 
-    mock_services.init.initialise_project.assert_called_once_with(
-        project_dir=project_dir.expanduser().resolve(),
-        project_name=expected_name,
-        template_dir=init_command.parent_template_dir / "test-profile",
-    )
-    emitter.assert_message("Successfully initialised project.")
+    with init_command.template_dir_parent() as template_dir_parent:
+        mock_services.init.initialise_project.assert_called_once_with(
+            project_dir=project_dir.expanduser().resolve(),
+            project_name=expected_name,
+            template_dir=template_dir_parent / "test-profile",
+        )
+        emitter.assert_message("Successfully initialised project.")
 
 
 @pytest.mark.usefixtures("fake_template_dirs")
@@ -143,8 +144,9 @@ def test_invalid_name_directory(init_command, mock_services):
 
     init_command.run(parsed_args)
 
-    mock_services.init.initialise_project.assert_called_once_with(
-        project_dir=project_dir.expanduser().resolve(),
-        project_name="my-project",
-        template_dir=init_command.parent_template_dir / "simple",
-    )
+    with init_command.template_dir_parent() as template_dir_parent:
+        mock_services.init.initialise_project.assert_called_once_with(
+            project_dir=project_dir.expanduser().resolve(),
+            project_name="my-project",
+            template_dir=template_dir_parent / "simple",
+        )

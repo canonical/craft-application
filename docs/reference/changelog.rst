@@ -140,6 +140,12 @@ For a complete list of commits, check out the `5.10.0`_ release on GitHub.
 5.9.1 (2025-09-04)
 ------------------
 
+Commands
+========
+
+- ``InitCommand`` now keeps the parent template directory context alive while it's in
+  use.
+
 Services
 ========
 

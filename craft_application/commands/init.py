@@ -15,8 +15,11 @@
 
 from __future__ import annotations
 
+import argparse
+import contextlib
 import importlib.resources
 import pathlib
+import warnings
 from textwrap import dedent
 from typing import TYPE_CHECKING, cast
 
@@ -28,6 +31,7 @@ from . import base
 
 if TYPE_CHECKING:
     import argparse
+    from collections.abc import Generator
 
 
 class InitCommand(base.AppCommand):
@@ -87,19 +91,44 @@ class InitCommand(base.AppCommand):
 
     @property
     def parent_template_dir(self) -> pathlib.Path:
-        """Return the path to the directory that contains all templates."""
+        """Return the path to the directory that contains all templates.
+
+        DEPRECATED: This method is deprecated and is not called by default.
+        Use ``template_dir_parent`` instead.
+        """
+        warnings.warn(
+            "parent_template_dir is deprecated in favor of template_dir_parent.",
+            category=DeprecationWarning,
+            stacklevel=1,
+        )
         with importlib.resources.path(
             self._app.name, "templates"
         ) as _parent_template_dir:
             return _parent_template_dir
 
+    @classmethod
+    def _parent_template_dir_override(cls) -> bool:
+        return cls.parent_template_dir is not InitCommand.parent_template_dir
+
+    @contextlib.contextmanager
+    def template_dir_parent(self) -> Generator[pathlib.Path]:
+        """Return the path to the directory that contains all templates."""
+        if self._parent_template_dir_override():
+            yield self.parent_template_dir
+            return
+        with importlib.resources.path(
+            self._app.name, "templates"
+        ) as template_dir_parent:
+            yield template_dir_parent
+
     @property
     def profiles(self) -> list[str]:
         """A list of profile names generated from template directories."""
-        template_dirs = [
-            path for path in self.parent_template_dir.iterdir() if path.is_dir()
-        ]
-        return sorted([template.name for template in template_dirs])
+        with self.template_dir_parent() as template_dir_parent:
+            template_names = [
+                path.name for path in template_dir_parent.iterdir() if path.is_dir()
+            ]
+            return sorted(template_names)
 
     def run(self, parsed_args: argparse.Namespace) -> None:
         """Run the command."""
@@ -115,20 +144,21 @@ class InitCommand(base.AppCommand):
         )
 
         project_dir = self._get_project_dir(parsed_args)
-        template_dir = pathlib.Path(self.parent_template_dir / parsed_args.profile)
+        with self.template_dir_parent() as template_dir_parent:
+            template_dir = pathlib.Path(template_dir_parent / parsed_args.profile)
 
-        craft_cli.emit.progress("Checking project directory.")
-        self._services.init.check_for_existing_files(
-            project_dir=project_dir, template_dir=template_dir
-        )
+            craft_cli.emit.progress("Checking project directory.")
+            self._services.init.check_for_existing_files(
+                project_dir=project_dir, template_dir=template_dir
+            )
 
-        craft_cli.emit.progress("Initialising project.")
-        self._services.init.initialise_project(
-            project_dir=project_dir,
-            project_name=project_name,
-            template_dir=template_dir,
-        )
-        craft_cli.emit.message("Successfully initialised project.")
+            craft_cli.emit.progress("Initialising project.")
+            self._services.init.initialise_project(
+                project_dir=project_dir,
+                project_name=project_name,
+                template_dir=template_dir,
+            )
+            craft_cli.emit.message("Successfully initialised project.")
 
     def _get_name(self, parsed_args: argparse.Namespace) -> str:
         """Get name of the package that is about to be initialised.
