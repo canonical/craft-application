@@ -17,6 +17,7 @@ from craft_application.services.linter import LinterService
 from craft_application.services.service_factory import ServiceFactory
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator
     from pathlib import Path
 
 
@@ -38,14 +39,23 @@ def _make_ctx(tmp_path: Path) -> LintContext:
 
 
 @pytest.fixture(autouse=True)
-def _reset_linter_registry() -> None:
-    """Clear class-level linter registry before each test to avoid leakage."""
+def _seed_linter_registry() -> Iterator[None]:
+    """Reset class-level linter registry and seed the dummy linter per test."""
+    snapshot = {
+        stage: list(classes) for stage, classes in LinterService._class_registry.items()
+    }
     for registry in LinterService._class_registry.values():
         registry.clear()
-
-
-def test_register_and_run_warning(tmp_path: Path) -> None:
     LinterService.register(_DummyPreLinter)
+    try:
+        yield
+    finally:
+        LinterService._class_registry = {
+            stage: list(classes) for stage, classes in snapshot.items()
+        }
+
+
+def test_run_warning(tmp_path: Path) -> None:
     app = AppMetadata(name="craft_application")
     factory = ServiceFactory(app)
     svc = LinterService(app=app, services=factory)
