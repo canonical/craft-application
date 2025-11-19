@@ -15,6 +15,16 @@ Changelog
 
     For a complete list of commits, check out the `1.2.3`_ release on GitHub.
 
+6.0.1 (2025-11-19)
+------------------
+
+Models
+======
+
+- The list of invalid platform names for the JSON schema is now sorted.
+
+For a complete list of commits, check out the `6.0.1`_ release on GitHub.
+
 6.0.0 (2025-11-17)
 ------------------
 
@@ -1140,3 +1150,4 @@ For a complete list of commits, check out the `2.7.0`_ release on GitHub.
 .. _5.10.3: https://github.com/canonical/craft-application/releases/tag/5.10.3
 .. _5.11.0: https://github.com/canonical/craft-application/releases/tag/5.11.0
 .. _6.0.0: https://github.com/canonical/craft-application/releases/tag/6.0.0
+.. _6.0.1: https://github.com/canonical/craft-application/releases/tag/6.0.1
