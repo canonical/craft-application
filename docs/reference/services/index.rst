@@ -8,3 +8,4 @@ Services
 
    app
    project
+   linter
