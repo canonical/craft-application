@@ -135,7 +135,7 @@ class LintCommand(base.AppCommand):
         cli_ignore_config = _build_cli_ignore_config(cli_ignore_rules)
         linter.load_ignore_config(
             project_dir=project_dir,
-            cli_ignores=cli_ignore_config if cli_ignore_config else None,
+            cli_ignores=cli_ignore_config or None,
             cli_ignore_files=list(parsed_args.lint_ignore_files or []),
         )
         issues = list(linter.run(stage, ctx))

@@ -17,17 +17,22 @@
 
 from __future__ import annotations
 
+import contextlib
+import tarfile
+import tempfile
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from craft_application.lint import LintContext, LinterIssue, Severity, Stage
 from craft_application.lint.base import AbstractLinter
 from craft_application.services.linter import LinterService
 from craft_application.util import yaml as yaml_util
-
-if TYPE_CHECKING:
-    from collections.abc import Iterable
+from craft_cli import emit
 
 from testcraft.application import TESTCRAFT
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable, Iterator
 
 PROJECT_FILE = f"{TESTCRAFT.name}.yaml"
 
@@ -108,3 +113,55 @@ class TestcraftLinterService(LinterService):
             if extra not in selected:
                 selected.append(extra)
         return selected
+
+    def run(  # type: ignore[override]
+        self,
+        stage: Stage,
+        ctx: LintContext,
+    ) -> Iterator[LinterIssue]:
+        """Run linters, unpacking artifacts for post-stage checks when needed."""
+        if stage == Stage.POST and not ctx.artifact_dirs:
+            with contextlib.ExitStack() as stack:
+                artifact_dirs = self._prepare_artifact_dirs(stack)
+                if artifact_dirs:
+                    ctx = LintContext(
+                        project_dir=ctx.project_dir,
+                        artifact_dirs=artifact_dirs,
+                    )
+                    yield from super().run(stage, ctx)
+                    return
+        yield from super().run(stage, ctx)
+
+    def _prepare_artifact_dirs(
+        self,
+        stack: contextlib.ExitStack,
+    ) -> list[Path]:
+        """Extract the most recent packed artifacts for post-stage linting."""
+        package = self._services.get("package")
+        pack_state = package.read_state()
+
+        artifacts: list[Path] = []
+        if pack_state.artifact:
+            artifacts.append(pack_state.artifact)
+        if pack_state.resources:
+            artifacts.extend(pack_state.resources.values())
+
+        prepared: list[Path] = []
+        for artifact in artifacts:
+            if not artifact.exists():
+                emit.debug(f"Skipping missing artifact {artifact}")
+                continue
+            if not tarfile.is_tarfile(artifact):
+                emit.debug(f"Artifact {artifact} is not a tarball; skipping unpack")
+                continue
+
+            tmp_path = Path(
+                stack.enter_context(
+                    tempfile.TemporaryDirectory(prefix="testcraft-lint-")
+                )
+            )
+            emit.debug(f"Extracting artifact {artifact} to {tmp_path}")
+            with tarfile.open(artifact) as tar:
+                tar.extractall(path=tmp_path)
+            prepared.append(tmp_path)
+        return prepared

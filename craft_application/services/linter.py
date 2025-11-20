@@ -83,8 +83,10 @@ class LinterService(base.AppService):
             cls._merge_into(config, file_cfg)
         if cli_ignore_files:
             for extra in cli_ignore_files:
-                if not extra.exists():
-                    raise FileNotFoundError(f"Lint ignore file {extra} does not exist.")
+                if not extra.exists() or not extra.is_file():
+                    raise FileNotFoundError(
+                        f"Lint ignore file {extra} does not exist or cannot be read."
+                    )
                 data = util.safe_yaml_load(extra.read_text())
                 if isinstance(data, dict):
                     cls._merge_into(
