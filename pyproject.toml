@@ -62,7 +62,7 @@ dev = [
     "pyfakefs~=5.3",
     "pytest==8.4.1",
     "pytest-check==2.5.3",
-    "pytest-cov==6.2.1",
+    "pytest-cov==6.3.0",
     "pytest-freezer==0.4.9",
     "pytest-mock~=3.14",
     "pytest-rerunfailures==15.1",
