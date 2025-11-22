@@ -68,7 +68,7 @@ dev = [
     "pytest-cov==6.2.1",
     "pytest-freezer==0.4.9",
     "pytest-mock~=3.14",
-    "pytest-rerunfailures==15.1",
+    "pytest-rerunfailures==16.1",
     "pytest-subprocess~=1.5.2",
     "pytest-time>=0.3.1",
     "responses~=0.25.0",
