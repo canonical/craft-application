@@ -88,7 +88,7 @@ docs = [
     "canonical-sphinx[full]~=0.5.1",
     "pydantic-kitbash~=0.0.7",
     "sphinx-autobuild==2024.10.3",
-    "sphinx-lint==1.0.1",
+    "sphinx-lint==1.0.2",
     "sphinx-substitution-extensions>=2025.1.2",
     "sphinxext-rediraffe>=0.2.7",
 ]
