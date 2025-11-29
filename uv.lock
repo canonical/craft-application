@@ -437,7 +437,7 @@ apt = [
     { name = "python-apt", version = "2.4.0+ubuntu4", source = { registry = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels/" }, marker = "(sys_platform == 'linux' and extra == 'group-17-craft-application-dev-jammy') or (extra == 'group-17-craft-application-dev-jammy' and extra == 'group-17-craft-application-dev-noble') or (extra == 'group-17-craft-application-dev-jammy' and extra == 'group-17-craft-application-dev-plucky') or (extra == 'group-17-craft-application-dev-jammy' and extra == 'group-17-craft-application-dev-questing') or (extra == 'group-17-craft-application-dev-noble' and extra == 'group-17-craft-application-dev-plucky') or (extra == 'group-17-craft-application-dev-noble' and extra == 'group-17-craft-application-dev-questing') or (extra == 'group-17-craft-application-dev-plucky' and extra == 'group-17-craft-application-dev-questing')" },
     { name = "python-apt", version = "2.7.7+ubuntu3", source = { registry = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels/" }, marker = "(sys_platform == 'linux' and extra == 'group-17-craft-application-dev-noble') or (extra == 'group-17-craft-application-dev-noble' and extra == 'group-17-craft-application-dev-plucky') or (extra == 'group-17-craft-application-dev-noble' and extra == 'group-17-craft-application-dev-questing') or (extra == 'group-17-craft-application-dev-jammy' and extra == 'group-17-craft-application-dev-noble') or (extra == 'group-17-craft-application-dev-jammy' and extra == 'group-17-craft-application-dev-plucky') or (extra == 'group-17-craft-application-dev-jammy' and extra == 'group-17-craft-application-dev-questing') or (extra == 'group-17-craft-application-dev-plucky' and extra == 'group-17-craft-application-dev-questing')" },
     { name = "python-apt", version = "2.9.9", source = { registry = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels/" }, marker = "(sys_platform == 'linux' and extra == 'group-17-craft-application-dev-plucky') or (extra == 'group-17-craft-application-dev-plucky' and extra == 'group-17-craft-application-dev-questing') or (extra == 'group-17-craft-application-dev-jammy' and extra == 'group-17-craft-application-dev-noble') or (extra == 'group-17-craft-application-dev-jammy' and extra == 'group-17-craft-application-dev-plucky') or (extra == 'group-17-craft-application-dev-jammy' and extra == 'group-17-craft-application-dev-questing') or (extra == 'group-17-craft-application-dev-noble' and extra == 'group-17-craft-application-dev-plucky') or (extra == 'group-17-craft-application-dev-noble' and extra == 'group-17-craft-application-dev-questing')" },
-    { name = "python-apt", version = "3.0.0", source = { registry = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels/" }, marker = "(sys_platform == 'linux' and extra != 'group-17-craft-application-dev-jammy' and extra != 'group-17-craft-application-dev-noble' and extra != 'group-17-craft-application-dev-plucky') or (extra == 'group-17-craft-application-dev-jammy' and extra == 'group-17-craft-application-dev-noble') or (extra == 'group-17-craft-application-dev-jammy' and extra == 'group-17-craft-application-dev-plucky') or (extra == 'group-17-craft-application-dev-jammy' and extra == 'group-17-craft-application-dev-questing') or (extra == 'group-17-craft-application-dev-noble' and extra == 'group-17-craft-application-dev-plucky') or (extra == 'group-17-craft-application-dev-noble' and extra == 'group-17-craft-application-dev-questing') or (extra == 'group-17-craft-application-dev-plucky' and extra == 'group-17-craft-application-dev-questing')" },
+    { name = "python-apt", version = "3.0.0+ubuntu1", source = { registry = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels/" }, marker = "(sys_platform == 'linux' and extra != 'group-17-craft-application-dev-jammy' and extra != 'group-17-craft-application-dev-noble' and extra != 'group-17-craft-application-dev-plucky') or (extra == 'group-17-craft-application-dev-jammy' and extra == 'group-17-craft-application-dev-noble') or (extra == 'group-17-craft-application-dev-jammy' and extra == 'group-17-craft-application-dev-plucky') or (extra == 'group-17-craft-application-dev-jammy' and extra == 'group-17-craft-application-dev-questing') or (extra == 'group-17-craft-application-dev-noble' and extra == 'group-17-craft-application-dev-plucky') or (extra == 'group-17-craft-application-dev-noble' and extra == 'group-17-craft-application-dev-questing') or (extra == 'group-17-craft-application-dev-plucky' and extra == 'group-17-craft-application-dev-questing')" },
 ]
 remote = [
     { name = "launchpadlib" },
@@ -470,7 +470,7 @@ dev-plucky = [
     { name = "python-apt", version = "2.9.9", source = { registry = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels/" }, marker = "sys_platform == 'linux'" },
 ]
 dev-questing = [
-    { name = "python-apt", version = "3.0.0", source = { registry = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels/" }, marker = "sys_platform == 'linux'" },
+    { name = "python-apt", version = "3.0.0+ubuntu1", source = { registry = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels/" }, marker = "sys_platform == 'linux'" },
 ]
 docs = [
     { name = "canonical-sphinx", extra = ["full"] },
@@ -524,7 +524,7 @@ dev = [
     { name = "hypothesis", specifier = ">=6.0" },
     { name = "jsonschema", specifier = ">=4.23.0" },
     { name = "pyfakefs", specifier = "~=5.3" },
-    { name = "pytest", specifier = "==8.4.1" },
+    { name = "pytest", specifier = "==8.4.2" },
     { name = "pytest-check", specifier = "==2.5.3" },
     { name = "pytest-cov", specifier = "==6.2.1" },
     { name = "pytest-freezer", specifier = "==0.4.9" },
@@ -542,7 +542,7 @@ docs = [
     { name = "canonical-sphinx", extras = ["full"], specifier = "~=0.5.1" },
     { name = "pydantic-kitbash", specifier = "~=0.0.7" },
     { name = "sphinx-autobuild", specifier = "==2024.10.3" },
-    { name = "sphinx-lint", specifier = "==1.0.0" },
+    { name = "sphinx-lint", specifier = "==1.0.2" },
     { name = "sphinxext-rediraffe", specifier = ">=0.2.7" },
 ]
 lint = [{ name = "codespell", extras = ["toml"], specifier = "==2.4.1" }]
@@ -1530,7 +1530,7 @@ wheels = [
 
 [[package]]
 name = "pytest"
-version = "8.4.1"
+version = "8.4.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "colorama", marker = "sys_platform == 'win32' or (extra == 'group-17-craft-application-dev-jammy' and extra == 'group-17-craft-application-dev-noble') or (extra == 'group-17-craft-application-dev-jammy' and extra == 'group-17-craft-application-dev-plucky') or (extra == 'group-17-craft-application-dev-jammy' and extra == 'group-17-craft-application-dev-questing') or (extra == 'group-17-craft-application-dev-noble' and extra == 'group-17-craft-application-dev-plucky') or (extra == 'group-17-craft-application-dev-noble' and extra == 'group-17-craft-application-dev-questing') or (extra == 'group-17-craft-application-dev-plucky' and extra == 'group-17-craft-application-dev-questing')" },
@@ -1541,9 +1541,9 @@ dependencies = [
     { name = "pygments" },
     { name = "tomli", marker = "python_full_version < '3.11' or (extra == 'group-17-craft-application-dev-jammy' and extra == 'group-17-craft-application-dev-noble') or (extra == 'group-17-craft-application-dev-jammy' and extra == 'group-17-craft-application-dev-plucky') or (extra == 'group-17-craft-application-dev-jammy' and extra == 'group-17-craft-application-dev-questing') or (extra == 'group-17-craft-application-dev-noble' and extra == 'group-17-craft-application-dev-plucky') or (extra == 'group-17-craft-application-dev-noble' and extra == 'group-17-craft-application-dev-questing') or (extra == 'group-17-craft-application-dev-plucky' and extra == 'group-17-craft-application-dev-questing')" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/08/ba/45911d754e8eba3d5a841a5ce61a65a685ff1798421ac054f85aa8747dfb/pytest-8.4.1.tar.gz", hash = "sha256:7c67fd69174877359ed9371ec3af8a3d2b04741818c51e5e99cc1742251fa93c", size = 1517714, upload-time = "2025-06-18T05:48:06.109Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/a3/5c/00a0e072241553e1a7496d638deababa67c5058571567b92a7eaa258397c/pytest-8.4.2.tar.gz", hash = "sha256:86c0d0b93306b961d58d62a4db4879f27fe25513d4b969df351abdddb3c30e01", size = 1519618, upload-time = "2025-09-04T14:34:22.711Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/29/16/c8a903f4c4dffe7a12843191437d7cd8e32751d5de349d45d3fe69544e87/pytest-8.4.1-py3-none-any.whl", hash = "sha256:539c70ba6fcead8e78eebbf1115e8b589e7565830d7d006a8723f19ac8a0afb7", size = 365474, upload-time = "2025-06-18T05:48:03.955Z" },
+    { url = "https://files.pythonhosted.org/packages/a8/a4/20da314d277121d6534b3a980b29035dcd51e6744bd79075a6ce8fa4eb8d/pytest-8.4.2-py3-none-any.whl", hash = "sha256:872f880de3fc3a5bdc88a11b39c9710c3497a547cfa9320bc3c5e62fbf272e79", size = 365750, upload-time = "2025-09-04T14:34:20.226Z" },
 ]
 
 [[package]]
@@ -1646,22 +1646,36 @@ resolution-markers = [
 ]
 wheels = [
     { url = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels/python-apt/python_apt-2.4.0+ubuntu4-cp310-cp310-manylinux_2_35_aarch64.whl" },
+    { url = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels/python-apt/python_apt-2.4.0+ubuntu4-cp310-cp310-manylinux_2_35_armv7l.whl" },
     { url = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels/python-apt/python_apt-2.4.0+ubuntu4-cp310-cp310-manylinux_2_35_ppc64le.whl" },
     { url = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels/python-apt/python_apt-2.4.0+ubuntu4-cp310-cp310-manylinux_2_35_riscv64.whl" },
     { url = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels/python-apt/python_apt-2.4.0+ubuntu4-cp310-cp310-manylinux_2_35_s390x.whl" },
     { url = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels/python-apt/python_apt-2.4.0+ubuntu4-cp310-cp310-manylinux_2_35_x86_64.whl" },
     { url = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels/python-apt/python_apt-2.4.0+ubuntu4-cp311-cp311-manylinux_2_35_aarch64.whl" },
+    { url = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels/python-apt/python_apt-2.4.0+ubuntu4-cp311-cp311-manylinux_2_35_armv7l.whl" },
     { url = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels/python-apt/python_apt-2.4.0+ubuntu4-cp311-cp311-manylinux_2_35_ppc64le.whl" },
     { url = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels/python-apt/python_apt-2.4.0+ubuntu4-cp311-cp311-manylinux_2_35_s390x.whl" },
     { url = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels/python-apt/python_apt-2.4.0+ubuntu4-cp311-cp311-manylinux_2_35_x86_64.whl" },
     { url = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels/python-apt/python_apt-2.4.0+ubuntu4-cp312-cp312-manylinux_2_35_aarch64.whl" },
+    { url = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels/python-apt/python_apt-2.4.0+ubuntu4-cp312-cp312-manylinux_2_35_armv7l.whl" },
     { url = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels/python-apt/python_apt-2.4.0+ubuntu4-cp312-cp312-manylinux_2_35_ppc64le.whl" },
     { url = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels/python-apt/python_apt-2.4.0+ubuntu4-cp312-cp312-manylinux_2_35_s390x.whl" },
     { url = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels/python-apt/python_apt-2.4.0+ubuntu4-cp312-cp312-manylinux_2_35_x86_64.whl" },
     { url = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels/python-apt/python_apt-2.4.0+ubuntu4-cp313-cp313-manylinux_2_35_aarch64.whl" },
+    { url = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels/python-apt/python_apt-2.4.0+ubuntu4-cp313-cp313-manylinux_2_35_armv7l.whl" },
     { url = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels/python-apt/python_apt-2.4.0+ubuntu4-cp313-cp313-manylinux_2_35_ppc64le.whl" },
     { url = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels/python-apt/python_apt-2.4.0+ubuntu4-cp313-cp313-manylinux_2_35_s390x.whl" },
     { url = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels/python-apt/python_apt-2.4.0+ubuntu4-cp313-cp313-manylinux_2_35_x86_64.whl" },
+    { url = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels/python-apt/python_apt-2.4.0+ubuntu4-cp314-cp314-manylinux_2_35_aarch64.whl" },
+    { url = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels/python-apt/python_apt-2.4.0+ubuntu4-cp314-cp314-manylinux_2_35_armv7l.whl" },
+    { url = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels/python-apt/python_apt-2.4.0+ubuntu4-cp314-cp314-manylinux_2_35_ppc64le.whl" },
+    { url = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels/python-apt/python_apt-2.4.0+ubuntu4-cp314-cp314-manylinux_2_35_s390x.whl" },
+    { url = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels/python-apt/python_apt-2.4.0+ubuntu4-cp314-cp314-manylinux_2_35_x86_64.whl" },
+    { url = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels/python-apt/python_apt-2.4.0+ubuntu4-cp314-cp314t-manylinux_2_35_aarch64.whl" },
+    { url = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels/python-apt/python_apt-2.4.0+ubuntu4-cp314-cp314t-manylinux_2_35_armv7l.whl" },
+    { url = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels/python-apt/python_apt-2.4.0+ubuntu4-cp314-cp314t-manylinux_2_35_ppc64le.whl" },
+    { url = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels/python-apt/python_apt-2.4.0+ubuntu4-cp314-cp314t-manylinux_2_35_s390x.whl" },
+    { url = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels/python-apt/python_apt-2.4.0+ubuntu4-cp314-cp314t-manylinux_2_35_x86_64.whl" },
 ]
 
 [[package]]
@@ -1711,7 +1725,7 @@ wheels = [
 
 [[package]]
 name = "python-apt"
-version = "3.0.0"
+version = "3.0.0+ubuntu1"
 source = { registry = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels/" }
 resolution-markers = [
     "python_full_version >= '3.12'",
@@ -1719,11 +1733,30 @@ resolution-markers = [
     "python_full_version < '3.11'",
 ]
 wheels = [
-    { url = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels/python-apt/python_apt-3.0.0-cp310-cp310-manylinux_2_41_x86_64.whl" },
-    { url = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels/python-apt/python_apt-3.0.0-cp311-cp311-manylinux_2_41_x86_64.whl" },
-    { url = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels/python-apt/python_apt-3.0.0-cp312-cp312-manylinux_2_41_x86_64.whl" },
-    { url = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels/python-apt/python_apt-3.0.0-cp313-cp313-manylinux_2_41_x86_64.whl" },
-    { url = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels/python-apt/python_apt-3.0.0-cp314-cp314-manylinux_2_41_x86_64.whl" },
+    { url = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels/python-apt/python_apt-3.0.0+ubuntu1-cp310-cp310-manylinux_2_42_aarch64.whl" },
+    { url = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels/python-apt/python_apt-3.0.0+ubuntu1-cp310-cp310-manylinux_2_42_ppc64le.whl" },
+    { url = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels/python-apt/python_apt-3.0.0+ubuntu1-cp310-cp310-manylinux_2_42_s390x.whl" },
+    { url = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels/python-apt/python_apt-3.0.0+ubuntu1-cp310-cp310-manylinux_2_42_x86_64.whl" },
+    { url = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels/python-apt/python_apt-3.0.0+ubuntu1-cp311-cp311-manylinux_2_42_aarch64.whl" },
+    { url = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels/python-apt/python_apt-3.0.0+ubuntu1-cp311-cp311-manylinux_2_42_ppc64le.whl" },
+    { url = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels/python-apt/python_apt-3.0.0+ubuntu1-cp311-cp311-manylinux_2_42_s390x.whl" },
+    { url = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels/python-apt/python_apt-3.0.0+ubuntu1-cp311-cp311-manylinux_2_42_x86_64.whl" },
+    { url = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels/python-apt/python_apt-3.0.0+ubuntu1-cp312-cp312-manylinux_2_42_aarch64.whl" },
+    { url = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels/python-apt/python_apt-3.0.0+ubuntu1-cp312-cp312-manylinux_2_42_ppc64le.whl" },
+    { url = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels/python-apt/python_apt-3.0.0+ubuntu1-cp312-cp312-manylinux_2_42_s390x.whl" },
+    { url = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels/python-apt/python_apt-3.0.0+ubuntu1-cp312-cp312-manylinux_2_42_x86_64.whl" },
+    { url = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels/python-apt/python_apt-3.0.0+ubuntu1-cp313-cp313-manylinux_2_42_aarch64.whl" },
+    { url = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels/python-apt/python_apt-3.0.0+ubuntu1-cp313-cp313-manylinux_2_42_ppc64le.whl" },
+    { url = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels/python-apt/python_apt-3.0.0+ubuntu1-cp313-cp313-manylinux_2_42_s390x.whl" },
+    { url = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels/python-apt/python_apt-3.0.0+ubuntu1-cp313-cp313-manylinux_2_42_x86_64.whl" },
+    { url = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels/python-apt/python_apt-3.0.0+ubuntu1-cp314-cp314-manylinux_2_42_aarch64.whl" },
+    { url = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels/python-apt/python_apt-3.0.0+ubuntu1-cp314-cp314-manylinux_2_42_ppc64le.whl" },
+    { url = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels/python-apt/python_apt-3.0.0+ubuntu1-cp314-cp314-manylinux_2_42_s390x.whl" },
+    { url = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels/python-apt/python_apt-3.0.0+ubuntu1-cp314-cp314-manylinux_2_42_x86_64.whl" },
+    { url = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels/python-apt/python_apt-3.0.0+ubuntu1-cp314-cp314t-manylinux_2_42_aarch64.whl" },
+    { url = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels/python-apt/python_apt-3.0.0+ubuntu1-cp314-cp314t-manylinux_2_42_ppc64le.whl" },
+    { url = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels/python-apt/python_apt-3.0.0+ubuntu1-cp314-cp314t-manylinux_2_42_s390x.whl" },
+    { url = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels/python-apt/python_apt-3.0.0+ubuntu1-cp314-cp314t-manylinux_2_42_x86_64.whl" },
 ]
 
 [[package]]
@@ -2213,15 +2246,15 @@ wheels = [
 
 [[package]]
 name = "sphinx-lint"
-version = "1.0.0"
+version = "1.0.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "polib" },
     { name = "regex" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/cf/46/f2dad36a4076e9ce88498b25b3f0de82eb7d341ea0ef715cd6c48005bcef/sphinx_lint-1.0.0.tar.gz", hash = "sha256:6eafdb44172ce526f405bf36c713eb246f1340ec2d667e7298e2487ed76decd2", size = 33574, upload-time = "2024-09-11T15:32:54.203Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/8a/19/9258497fee6e2a0bdb93e8ecea6ef6864afb5d83e996a1606a853f96c658/sphinx_lint-1.0.2.tar.gz", hash = "sha256:4e7fc12f44f750b0006eaad237d7db9b1d8aba92adda9c838af891654b371d35", size = 36870, upload-time = "2025-11-19T08:28:12.269Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/31/d2/a130ffba531af7cbbb0e7ad24c7d577d3de0b797437f61d3a7234ed6d836/sphinx_lint-1.0.0-py3-none-any.whl", hash = "sha256:6117a0f340b2dc73eadfc57db7531d4477e0929f92a0c1a2f61e6edbc272f0bc", size = 20163, upload-time = "2024-09-11T15:32:53.201Z" },
+    { url = "https://files.pythonhosted.org/packages/c0/62/f29a2988ff706ac01d3c63d0b4cc4ed62d2c83b447916e0317790ca156cf/sphinx_lint-1.0.2-py3-none-any.whl", hash = "sha256:edcd0fa4d916386c5a3ef7ef0f5136f0bb4a15feefc83c1068ba15bc16eec652", size = 20670, upload-time = "2025-11-19T08:28:10.656Z" },
 ]
 
 [[package]]

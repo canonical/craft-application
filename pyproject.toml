@@ -60,7 +60,7 @@ dev = [
     "coverage[toml]~=7.9",
     "hypothesis>=6.0",
     "pyfakefs~=5.3",
-    "pytest==8.4.1",
+    "pytest==8.4.2",
     "pytest-check==2.5.3",
     "pytest-cov==6.2.1",
     "pytest-freezer==0.4.9",
@@ -85,7 +85,7 @@ docs = [
     "canonical-sphinx[full]~=0.5.1",
     "pydantic-kitbash~=0.0.7",
     "sphinx-autobuild==2024.10.3",
-    "sphinx-lint==1.0.0",
+    "sphinx-lint==1.0.2",
     "sphinxext-rediraffe>=0.2.7",
 ]
 dev-jammy = [
