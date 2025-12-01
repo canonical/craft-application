@@ -5,8 +5,10 @@ environment:
   CRAFT_BUILD_ENVIRONMENT/destructive: host
   CRAFT_IDLE_MINS/managed: 2 # Speed up test by not restarting the container.
 
-execute: |
+prepare: |
   mkdir repack-test
+
+execute: |
   cd repack-test
 
   testcraft init
