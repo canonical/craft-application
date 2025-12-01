@@ -130,8 +130,7 @@ class ProviderService(base.AppService):
                 )
 
                 # Inject the base snap from the host if available
-                base_snap = util.get_snap_base(self._app.name)
-                if base_snap:
+                if base_snap := util.get_snap_base(self._app.name):
                     emit.debug(
                         f"Setting {base_snap} to be injected from the "
                         "host into the build environment."

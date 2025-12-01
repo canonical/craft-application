@@ -17,13 +17,13 @@
 """Snap config file definitions and helpers."""
 
 import os
+import pathlib
 from typing import Any, Literal
 
 import pydantic
 import yaml
 from craft_cli import emit
 from snaphelpers import SnapConfigOptions, SnapCtlError
-from snaphelpers._meta import SnapMetadataFiles
 
 from craft_application.errors import CraftValidationError
 
@@ -56,18 +56,24 @@ def get_snap_base(app_name: str) -> str | None:
         )
         return None
 
-    try:
-        metadata_files = SnapMetadataFiles()
-        snap_yaml = metadata_files.snap
-        if not snap_yaml.exists():
-            emit.debug("snap.yaml not found")
-            return None
+    snap_dir = os.getenv("SNAP")
+    if not snap_dir:
+        emit.debug("SNAP environment variable not set.")
+        return None
 
-        base: str | None = snap_yaml.get("base")
-    except (OSError, KeyError, yaml.YAMLError) as error:
+    snap_yaml_path = pathlib.Path(snap_dir) / "meta" / "snap.yaml"
+    if not snap_yaml_path.exists():
+        emit.debug(f"snap.yaml not found at {snap_yaml_path}")
+        return None
+
+    try:
+        with snap_yaml_path.open() as f:
+            snap_data = yaml.safe_load(f)
+    except (OSError, yaml.YAMLError) as error:
         emit.debug(f"Failed to read snap metadata: {error!r}")
         return None
 
+    base: str | None = snap_data.get("base")
     if base:
         emit.debug(f"Found base snap: {base}")
         return base
