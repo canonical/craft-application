@@ -39,6 +39,7 @@ class CraftSpreadSystem(SpreadBase):
     """Simplified spread system configuration."""
 
     workers: int | None = None
+    image: str | None = None
 
 
 class CraftSpreadBackend(SpreadBase):
@@ -116,12 +117,15 @@ class SpreadSystem(SpreadBaseModel):
     username: str | None = None
     password: str | None = None
     workers: int | None = None
+    image: str | None = None
 
     @classmethod
-    def from_craft(cls, simple: CraftSpreadSystem | None) -> Self:
+    def from_craft(
+        cls, simple: CraftSpreadSystem | None, image: str | None = None
+    ) -> Self:
         """Create a spread system configuration from the simplified version."""
         workers = simple.workers if simple else 1
-        return cls(workers=workers)
+        return cls(workers=workers, image=image)
 
 
 class SpreadBackend(SpreadBaseModel):
@@ -140,14 +144,22 @@ class SpreadBackend(SpreadBaseModel):
     restore_each: str | None = None
     debug_each: str | None = None
 
+    # For the openstack backend
+    endpoint: str | None = None
+    account: str | None = None
+    key: str | None = None
+    location: str | None = None
+    plan: str | None = None
+    halt_timeout: str | None = None
+
     @classmethod
-    def from_craft(cls, simple: CraftSpreadBackend) -> Self:
+    def from_craft(cls, simple: CraftSpreadBackend, images: dict[str, str]) -> Self:
         """Create a spread backend configuration from the simplified version."""
         return cls(
             type=simple.type,
             allocate=simple.allocate,
             discard=simple.discard,
-            systems=cls.systems_from_craft(simple.systems),
+            systems=cls.systems_from_craft(simple.systems, images=images),
             prepare=simple.prepare,
             restore=simple.restore,
             debug=simple.debug,
@@ -158,17 +170,27 @@ class SpreadBackend(SpreadBaseModel):
 
     @staticmethod
     def systems_from_craft(
-        simple: list[str | dict[str, CraftSpreadSystem | None]],
+        simple: list[str | dict[str, CraftSpreadSystem | None]], images: dict[str, str]
     ) -> list[str | dict[str, SpreadSystem]]:
         """Create spread systems from the simplified version."""
         systems: list[str | dict[str, SpreadSystem]] = []
         for item in simple:
-            if isinstance(item, str):
-                systems.append(item)
-                continue
             entry: dict[str, SpreadSystem] = {}
+            if isinstance(item, str):
+                image = images.get(item)
+                if image:
+                    entry[item] = SpreadSystem(workers=1, image=image)
+                    systems.append(entry)
+                else:
+                    systems.append(item)
+                continue
+
             for name, ssys in item.items():
-                entry[name] = SpreadSystem.from_craft(ssys)
+                if ssys:
+                    image = ssys.image if ssys.image else images.get(name)
+                else:
+                    image = images.get(name)
+                entry[name] = SpreadSystem.from_craft(ssys, image=image)
             systems.append(entry)
 
         return systems
@@ -231,6 +253,7 @@ class SpreadYaml(SpreadBaseModel):
         craft_backend: SpreadBackend,
         artifact: pathlib.Path,
         resources: dict[str, pathlib.Path],
+        images: dict[str, str],
     ) -> Self:
         """Create the spread configuration from the simplified version."""
         environment = {
@@ -249,7 +272,7 @@ class SpreadYaml(SpreadBaseModel):
         return cls(
             project="craft-test",
             environment=environment,
-            backends=cls._backends_from_craft(simple.backends, craft_backend),
+            backends=cls._backends_from_craft(simple.backends, craft_backend, images),
             suites=cls._suites_from_craft(simple.suites),
             exclude=simple.exclude or [".git", ".tox"],
             path="/root/proj",
@@ -269,18 +292,20 @@ class SpreadYaml(SpreadBaseModel):
 
     @staticmethod
     def _backends_from_craft(
-        simple: dict[str, CraftSpreadBackend], craft_backend: SpreadBackend
+        simple: dict[str, CraftSpreadBackend],
+        craft_backend: SpreadBackend,
+        images: dict[str, str],
     ) -> dict[str, SpreadBackend]:
         backends: dict[str, SpreadBackend] = {}
         for name, backend in simple.items():
             # Spread assumes the backend name as the type when it's not explicitly declared.
             if name == "craft" and (not backend.type or backend.type == "craft"):
                 craft_backend.systems = SpreadBackend.systems_from_craft(
-                    backend.systems
+                    backend.systems, images=images
                 )
                 backends[name] = craft_backend
             else:
-                backends[name] = SpreadBackend.from_craft(backend)
+                backends[name] = SpreadBackend.from_craft(backend, images={})
 
         return backends
 
