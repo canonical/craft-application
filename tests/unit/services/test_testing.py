@@ -17,6 +17,7 @@
 
 import pathlib
 import stat
+import textwrap
 from collections.abc import Iterable
 from typing import Any
 from unittest import mock
@@ -206,6 +207,138 @@ def test_process_without_spread_file(new_dir, testing_service):
     state = models.PackState(artifact=None, resources=None)
     with pytest.raises(CraftError, match="Could not find 'spread.yaml'"):
         testing_service.process_spread_yaml(new_dir / "wherever", state)
+
+
+def test_process_spread_file(new_dir, monkeypatch, testing_service):
+    monkeypatch.delenv("LP_TEST_ACCOUNT", raising=False)
+    monkeypatch.delenv("CI", raising=False)
+
+    pathlib.Path("spread.yaml").write_text(
+        textwrap.dedent(
+            """
+            project: fetch-service
+            backends:
+              craft:
+                type: craft
+                systems:
+                  - ubuntu-24.04:
+                  - ubuntu-22.04
+                  - ubuntu-20.04
+            suites:
+              tests/general/:
+                summary: Just a test
+            """
+        )
+    )
+    state = models.PackState(artifact=pathlib.Path("foo"), resources=None)
+    testing_service.process_spread_yaml(new_dir / "processed", state)
+
+    processed = pathlib.Path("processed").read_text()
+    assert processed == textwrap.dedent(
+        """\
+        project: craft-test
+        environment:
+          SUDO_USER: ''
+          SUDO_UID: ''
+          LANG: C.UTF-8
+          LANGUAGE: en
+          PROJECT_PATH: /root/proj
+          CRAFT_ARTIFACT: $PROJECT_PATH/foo
+        backends:
+          craft:
+            type: adhoc
+            allocate: ADDRESS $(./spread/.extension allocate lxd-vm)
+            discard: ./spread/.extension discard lxd-vm
+            systems:
+            - ubuntu-24.04:
+                workers: 1
+            - ubuntu-22.04
+            - ubuntu-20.04
+            prepare: '"$PROJECT_PATH"/spread/.extension backend-prepare lxd-vm'
+            restore: '"$PROJECT_PATH"/spread/.extension backend-restore lxd-vm'
+            prepare-each: '"$PROJECT_PATH"/spread/.extension backend-prepare-each lxd-vm'
+            restore-each: '"$PROJECT_PATH"/spread/.extension backend-restore-each lxd-vm'
+        suites:
+          tests/general/:
+            summary: Just a test
+            systems: []
+        exclude:
+        - .git
+        - .tox
+        path: /root/proj
+        reroot: ..
+        """
+    )
+
+
+def test_process_lp_test_spread_file(new_dir, monkeypatch, testing_service):
+    monkeypatch.setenv("LP_TEST_ACCOUNT", "lp-test-account")
+    monkeypatch.setenv("LP_TEST_KEY", "lp-test-key")
+    pathlib.Path("spread.yaml").write_text(
+        textwrap.dedent(
+            """
+            project: fetch-service
+            backends:
+              craft:
+                type: craft
+                systems:
+                  - ubuntu-24.04:
+                  - ubuntu-22.04
+                  - ubuntu-20.04
+            suites:
+              tests/general/:
+                summary: Just a test
+            """
+        )
+    )
+    state = models.PackState(artifact=pathlib.Path("foo"), resources=None)
+    testing_service.process_spread_yaml(new_dir / "processed", state)
+
+    processed = pathlib.Path("processed").read_text()
+    assert processed == textwrap.dedent(
+        """\
+        project: craft-test
+        environment:
+          SUDO_USER: ''
+          SUDO_UID: ''
+          LANG: C.UTF-8
+          LANGUAGE: en
+          PROJECT_PATH: /root/proj
+          CRAFT_ARTIFACT: $PROJECT_PATH/foo
+        backends:
+          craft:
+            type: openstack
+            systems:
+            - ubuntu-24.04:
+                workers: 1
+                image: ubuntu-noble-daily-amd64
+            - ubuntu-22.04:
+                workers: 1
+                image: ubuntu-jammy-daily-amd64
+            - ubuntu-20.04:
+                workers: 1
+                image: ubuntu-focal-daily-amd64
+            prepare: '"$PROJECT_PATH"/spread/.extension backend-prepare lp-test'
+            restore: '"$PROJECT_PATH"/spread/.extension backend-restore lp-test'
+            prepare-each: '"$PROJECT_PATH"/spread/.extension backend-prepare-each lp-test'
+            restore-each: '"$PROJECT_PATH"/spread/.extension backend-restore-each lp-test'
+            endpoint: https://lp-test-endpoint:5000/v3
+            account: lp-test-account
+            key: lp-test-key
+            location: lp-test-project/lp-test-region
+            plan: cpu4-ram8-disk10
+            halt-timeout: 4h
+        suites:
+          tests/general/:
+            summary: Just a test
+            systems: []
+        exclude:
+        - .git
+        - .tox
+        path: /root/proj
+        reroot: ..
+        """
+    )
 
 
 @pytest.mark.parametrize(

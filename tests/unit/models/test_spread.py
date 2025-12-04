@@ -38,7 +38,7 @@ from craft_application.models import spread as model
     ],
 )
 def test_systems_from_craft(systems, expected):
-    assert model.SpreadBackend.systems_from_craft(systems) == expected
+    assert model.SpreadBackend.systems_from_craft(systems, {}) == expected
 
 
 _CRAFT_SPREAD = """
@@ -122,6 +122,7 @@ def test_spread_yaml_from_craft_spread():
         craft_backend=backend,
         artifact=pathlib.Path("artifact"),
         resources={"my-resource": pathlib.Path("resource")},
+        images={},
     )
 
     assert (
@@ -147,6 +148,107 @@ def test_spread_yaml_from_craft_spread():
                     restore="restore",
                     prepare_each="prepare_each",
                     restore_each="restore each",
+                ),
+                "other": model.SpreadBackend(
+                    type="adhoc",
+                    systems=[{"ubuntu-24.04": model.SpreadSystem(workers=1)}],
+                    prepare="echo Preparing backend\n",
+                    restore="echo Restoring backend\n",
+                    debug="echo Debugging backend\n",
+                    prepare_each="echo Preparing-each on backend\n",
+                    restore_each="echo Restoring-each on backend\n",
+                    debug_each="echo Debugging-each on backend\n",
+                ),
+            },
+            suites={
+                "spread/general/": model.SpreadSuite(
+                    summary="General integration tests",
+                    systems=[],
+                    environment={"FOO": "bar"},
+                    prepare="snap install $CRAFT_ARTIFACT --dangerous\n",
+                    restore="snap remove my-snap --purge\n",
+                    debug="echo Debugging suite\n",
+                    prepare_each="echo Preparing-each on suite\n",
+                    restore_each="echo Restoring-each on suite\n",
+                    debug_each="echo Debugging-each on suite\n",
+                )
+            },
+            exclude=[".git"],
+            path="/root/proj",
+            kill_timeout="1h",
+            reroot="..",
+            prepare="echo Preparing project\n",
+            restore="echo Restoring project\n",
+            debug="echo Debugging project\n",
+            prepare_each="echo Preparing-each on project\n",
+            restore_each="echo Restoring-each on project\n",
+            debug_each="echo Debugging-each on project\n",
+        ).marshal()
+    )
+
+
+def test_spread_yaml_from_lp_test_craft_spread():
+    backend = model.SpreadBackend(
+        type="openstack",
+        allocate="allocate",
+        discard="discard",
+        prepare="prepare",
+        restore="restore",
+        prepare_each="prepare_each",
+        restore_each="restore each",
+        endpoint="https://lp-test-endpoint:5000/v3",
+        account="lp-test-account",
+        key="lp-test-key",
+        location="lp-test-project/lp-test-region",
+        plan="cpu2-ram4-disk10",
+        halt_timeout="1h",
+    )
+    data = util.safe_yaml_load(io.StringIO(_CRAFT_SPREAD))
+    craft_spread = model.CraftSpreadYaml.unmarshal(data)
+
+    spread = model.SpreadYaml.from_craft(
+        craft_spread,
+        craft_backend=backend,
+        artifact=pathlib.Path("artifact"),
+        resources={"my-resource": pathlib.Path("resource")},
+        images={"ubuntu-24.04": "jammy-image"},
+    )
+
+    assert (
+        spread.marshal()
+        == model.SpreadYaml(
+            project="craft-test",
+            environment={
+                "SUDO_USER": "",
+                "SUDO_UID": "",
+                "LANG": "C.UTF-8",
+                "LANGUAGE": "en",
+                "PROJECT_PATH": "/root/proj",
+                "CRAFT_ARTIFACT": "$PROJECT_PATH/artifact",
+                "CRAFT_RESOURCE_MY_RESOURCE": "$PROJECT_PATH/resource",
+            },
+            backends={
+                "craft": model.SpreadBackend(
+                    type="openstack",
+                    allocate="allocate",
+                    discard="discard",
+                    systems=[
+                        {
+                            "ubuntu-24.04": model.SpreadSystem(
+                                workers=1, image="jammy-image"
+                            )
+                        }
+                    ],
+                    prepare="prepare",
+                    restore="restore",
+                    prepare_each="prepare_each",
+                    restore_each="restore each",
+                    endpoint="https://lp-test-endpoint:5000/v3",
+                    account="lp-test-account",
+                    key="lp-test-key",
+                    location="lp-test-project/lp-test-region",
+                    plan="cpu2-ram4-disk10",
+                    halt_timeout="1h",
                 ),
                 "other": model.SpreadBackend(
                     type="adhoc",
