@@ -35,6 +35,14 @@ from craft_application.util.error_formatting import format_pydantic_errors
 
 from . import base
 
+_SYSTEM_IMAGES = {
+    "lp-test": {
+        "ubuntu-20.04": "ubuntu-focal-daily-amd64",
+        "ubuntu-22.04": "ubuntu-jammy-daily-amd64",
+        "ubuntu-24.04": "ubuntu-noble-daily-amd64",
+    },
+}
+
 
 class TestingService(base.AppService):
     """Service class for testing a project."""
@@ -200,7 +208,9 @@ class TestingService(base.AppService):
 
         simple = self.parse_test_config()
 
-        craft_backend = self._get_backend()
+        backend_type = self._get_backend_type()
+        craft_backend = self._get_backend(backend_type)
+        images = _SYSTEM_IMAGES.get(backend_type) or {}
 
         if not pack_state.artifacts:
             raise CraftError(
@@ -212,6 +222,7 @@ class TestingService(base.AppService):
             simple,
             craft_backend=craft_backend,
             artifacts=pack_state.artifacts,
+            images=images,
         )
 
         emit.trace(f"Writing processed spread file to {dest}")
@@ -308,8 +319,8 @@ class TestingService(base.AppService):
         is_interactive = shell or shell_after or debug
 
         try:
+            # Don't pipe output into stream if spread runs in interactive
             if is_interactive:
-                # Don't pipe output into stream if spread runs in interactive
                 # mode. This allows spread to run with proper terminal management
                 # until we implement a protocol to pause the emitter and handle
                 # terminal input and output inside an open_stream context. See
@@ -334,7 +345,13 @@ class TestingService(base.AppService):
             )
 
     def _get_backend_type(self) -> str:
-        return "ci" if os.environ.get("CI") else "lxd-vm"
+        if os.environ.get("LP_TEST_ACCOUNT"):
+            return "lp-test"
+
+        if os.environ.get("CI"):
+            return "ci"
+
+        return "lxd-vm"
 
     def _running_on_ci(self) -> bool:
         return self._get_backend_type() == "ci"
@@ -353,20 +370,29 @@ class TestingService(base.AppService):
 
         return system
 
-    def _get_backend(self) -> models.SpreadBackend:
-        name = self._get_backend_type()
-
-        return models.SpreadBackend(
+    def _get_backend(self, name: str) -> models.SpreadBackend:
+        backend = models.SpreadBackend(
             type="adhoc",
-            # Allocate and discard occur on the host.
-            allocate=f"ADDRESS $(./spread/.extension allocate {name})",
-            discard=f"./spread/.extension discard {name}",
-            # Each of these occur within the spread runner.
             prepare=f'"$PROJECT_PATH"/spread/.extension backend-prepare {name}',
             restore=f'"$PROJECT_PATH"/spread/.extension backend-restore {name}',
             prepare_each=f'"$PROJECT_PATH"/spread/.extension backend-prepare-each {name}',
             restore_each=f'"$PROJECT_PATH"/spread/.extension backend-restore-each {name}',
         )
+
+        if name == "lp-test":
+            backend.type = "openstack"
+            backend.endpoint = "https://lp-test-endpoint:5000/v3"
+            backend.account = os.getenv("LP_TEST_ACCOUNT")
+            backend.key = os.getenv("LP_TEST_KEY")
+            backend.location = "lp-test-project/lp-test-region"
+            backend.plan = "cpu4-ram8-disk10"
+            backend.halt_timeout = "4h"
+        else:
+            backend.type = "adhoc"
+            backend.allocate = f"ADDRESS $(./spread/.extension allocate {name})"
+            backend.discard = f"./spread/.extension discard {name}"
+
+        return backend
 
     def _get_spread_executable(self) -> str:
         """Get the executable to run for spread.
