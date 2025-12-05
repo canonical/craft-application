@@ -18,7 +18,7 @@
 import enum
 import re
 from collections.abc import Iterable, Mapping
-from typing import Annotated, ClassVar, get_args
+from typing import Annotated, ClassVar, cast, get_args
 
 import craft_platforms
 import pydantic
@@ -54,7 +54,9 @@ PlatformName = Annotated[
         title="Platform name",
         description="The name of this platform. May not contain '/'",
         examples=["riscv64", "my-special-platform"],
-        json_schema_extra={"not": {"enum": list(RESERVED_PLATFORM_NAMES)}},
+        json_schema_extra={
+            "not": {"enum": cast(pydantic.JsonValue, sorted(RESERVED_PLATFORM_NAMES))}
+        },
     ),
 ]
 PlatformNameAdapter = pydantic.TypeAdapter[str](PlatformName)

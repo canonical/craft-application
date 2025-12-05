@@ -200,7 +200,7 @@ class LifecycleService(base.AppService):
         An application may override this method if needed if the lifecycle
         manager needs to be called differently.
         """
-        emit.debug(f"Initialising lifecycle manager in {self._work_dir}")
+        emit.debug(f"Initializing lifecycle manager in {self._work_dir}")
         emit.trace(f"Lifecycle: {repr(self)}")
 
         project_service = self._services.get("project")
@@ -302,7 +302,7 @@ class LifecycleService(base.AppService):
             else:
                 actions = []
 
-            emit.progress("Initialising lifecycle")
+            emit.progress("Initializing lifecycle")
             self._exec(actions)
 
         except PartsError as err:

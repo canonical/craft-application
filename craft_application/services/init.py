@@ -86,7 +86,7 @@ class InitService(base.AppService):
         """Initialise a new project from a template.
 
         If a file already exists in the project directory, it is not overwritten.
-        Use `check_for_existing_files()` to see if this will occur before initialising
+        Use `check_for_existing_files()` to see if this will occur before initializing
         the project.
 
         :param project_dir: The directory to initialise the project in.
@@ -94,7 +94,7 @@ class InitService(base.AppService):
         :param template_dir: The directory containing the templates.
         """
         emit.debug(
-            f"Initialising project {project_name!r} in {str(project_dir)!r} from "
+            f"Initializing project {project_name!r} in {str(project_dir)!r} from "
             f"template in {str(template_dir)!r}."
         )
         environment = self._get_templates_environment(template_dir)
