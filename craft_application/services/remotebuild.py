@@ -202,7 +202,10 @@ class RemoteBuildService(base.AppService):
             )
         artifact_downloads: dict[str, pathlib.Path] = {}
         for url in self._get_artifact_urls():
-            filename = pathlib.PurePosixPath(urllib.parse.urlparse(url).path).name
+            # Decode URL-encoded characters (e.g., %40 -> @) in the filename
+            filename = urllib.parse.unquote(
+                pathlib.PurePosixPath(urllib.parse.urlparse(url).path).name
+            )
             artifact_downloads[url] = output_dir / filename
         return self.request.download_files_with_progress(artifact_downloads).values()
 

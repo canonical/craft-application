@@ -433,6 +433,37 @@ def test_fetch_logs(tmp_path, remote_build_service, logs, mocker):
     )
 
 
+def test_fetch_artifacts_url_decode(tmp_path, remote_build_service, mocker):
+    """Test that artifact filenames are URL-decoded (e.g., %40 -> @)."""
+    remote_build_service._name = "appname-project-checksum"
+    # Simulate artifact URLs with URL-encoded characters
+    mock_builds = [
+        mock.Mock(
+            get_artifact_urls=mock.Mock(
+                return_value=[
+                    "https://example.com/files/test_ubuntu%4020.04-amd64.charm",
+                    "https://example.com/files/test_ubuntu%4022.04-arm64.charm",
+                ]
+            )
+        )
+    ]
+    remote_build_service._builds = mock_builds
+    remote_build_service._is_setup = True
+    remote_build_service.request = mock.Mock()
+
+    remote_build_service.fetch_artifacts(tmp_path)
+
+    # Verify that the filenames are URL-decoded (@ instead of %40)
+    remote_build_service.request.download_files_with_progress.assert_called_once_with(
+        {
+            "https://example.com/files/test_ubuntu%4020.04-amd64.charm": tmp_path
+            / "test_ubuntu@20.04-amd64.charm",
+            "https://example.com/files/test_ubuntu%4022.04-arm64.charm": tmp_path
+            / "test_ubuntu@22.04-arm64.charm",
+        }
+    )
+
+
 @pytest.mark.parametrize("architectures", [["amd64"], None])
 @pytest.mark.usefixtures("mock_push_url")
 def test_new_build(
