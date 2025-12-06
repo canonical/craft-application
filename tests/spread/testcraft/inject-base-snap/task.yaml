@@ -10,8 +10,8 @@ prepare: |
   # Determine the base snap for the test (use core24 for testing)
   HOST_BASE="core24"
   
-  # Ensure the base snap is installed on the host
-  snap install "$HOST_BASE" || true
+  # Install from edge channel to ensure different revision from container preinstall
+  snap install "$HOST_BASE" --channel=edge || true
   
   # Get the revision of the base snap on the host
   HOST_BASE_REVISION=$(snap list "$HOST_BASE" | tail -n 1 | awk '{print $3}')
@@ -45,24 +45,24 @@ execute: |
   ARCH=$(dpkg --print-architecture)
   
   # Find the LXD instance (testcraft uses LXD on Linux)
-  INSTANCE=$(lxc list --format csv -c n | grep "^testcraft-" | head -n 1)
+  INSTANCE=$(lxc list --project=testcraft --format csv -c n | grep "^testcraft-" | head -n 1)
   
   if [ -z "$INSTANCE" ]; then
     echo "Could not find managed instance"
     echo "Available instances:"
-    lxc list
+    lxc list --project=testcraft
     exit 1
   fi
   
   echo "Found instance: $INSTANCE"
   
   # Check if the base snap is installed in the instance
-  INSTANCE_BASE_REVISION=$(lxc exec "$INSTANCE" -- snap list "$HOST_BASE" 2>/dev/null | tail -n 1 | awk '{print $3}' || echo "")
+  INSTANCE_BASE_REVISION=$(lxc exec --project=testcraft "$INSTANCE" -- snap list "$HOST_BASE" 2>/dev/null | tail -n 1 | awk '{print $3}' || echo "")
   
   if [ -z "$INSTANCE_BASE_REVISION" ]; then
     echo "ERROR: Base snap '$HOST_BASE' is not installed in the managed instance"
     echo "Installed snaps in instance:"
-    lxc exec "$INSTANCE" -- snap list
+    lxc exec --project=testcraft "$INSTANCE" -- snap list
     exit 1
   fi
   
@@ -84,3 +84,6 @@ restore: |
   cd ..
   rm -rf inject-test
   rm -f /tmp/base_snap_name /tmp/base_snap_revision
+  
+  # Restore core24 to stable channel
+  snap refresh core24 --channel=stable || true
