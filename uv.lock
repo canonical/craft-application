@@ -638,7 +638,7 @@ dev = [
     { name = "jsonschema", specifier = ">=4.23.0" },
     { name = "pyfakefs", specifier = "~=5.3" },
     { name = "pytest", specifier = "==9.0.1" },
-    { name = "pytest-check", specifier = "==2.6.0" },
+    { name = "pytest-check", specifier = "==2.6.2" },
     { name = "pytest-cov", specifier = "==7.0.0" },
     { name = "pytest-freezer", specifier = "==0.4.9" },
     { name = "pytest-mock", specifier = "~=3.14" },
@@ -1869,15 +1869,15 @@ wheels = [
 
 [[package]]
 name = "pytest-check"
-version = "2.6.0"
+version = "2.6.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "pytest" },
     { name = "typing-extensions", marker = "python_full_version < '3.11' or (extra == 'group-17-craft-application-dev-jammy' and extra == 'group-17-craft-application-dev-noble') or (extra == 'group-17-craft-application-dev-jammy' and extra == 'group-17-craft-application-dev-plucky') or (extra == 'group-17-craft-application-dev-jammy' and extra == 'group-17-craft-application-dev-questing') or (extra == 'group-17-craft-application-dev-noble' and extra == 'group-17-craft-application-dev-plucky') or (extra == 'group-17-craft-application-dev-noble' and extra == 'group-17-craft-application-dev-questing') or (extra == 'group-17-craft-application-dev-plucky' and extra == 'group-17-craft-application-dev-questing')" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/12/76/735a11f0119eb1f8855a95c38fdc6899f7bac3b681a2a71125fd3f806cfc/pytest_check-2.6.0.tar.gz", hash = "sha256:9be4c59a09827129109148c85d7b5964b57f0a5ced1b619459ca30e6f463ca42", size = 27882, upload-time = "2025-10-07T03:48:01.166Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/0b/b9/9b1636f27a75fbc613037020a148f6410c6f973170fa2189ee0059ae6e5b/pytest_check-2.6.2.tar.gz", hash = "sha256:5e2128405b14978ad74f21f3225fcc52bbb1cc7c41a55d5eaad9f1e3cd27e42e", size = 27988, upload-time = "2025-11-29T02:51:15.908Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/a1/b8/5ff76c282ad70d4910664a03e789d358539fba3aaec523ec31cba3c85c6a/pytest_check-2.6.0-py3-none-any.whl", hash = "sha256:a9735020dc0f0219b8a5298d7f90cf6d1f6fe34b709b9ecbb9e0f49393ebab38", size = 16059, upload-time = "2025-10-07T03:47:59.864Z" },
+    { url = "https://files.pythonhosted.org/packages/ad/e2/26113dc55d59b2364e01afa25270eec29470dd52bf117ad857a3e64e688b/pytest_check-2.6.2-py3-none-any.whl", hash = "sha256:71762eb58f6b8a2d75afb9e6c8b800af7f634f67359d899a65ee48aaee087215", size = 16060, upload-time = "2025-11-29T02:51:14.521Z" },
 ]
 
 [[package]]
