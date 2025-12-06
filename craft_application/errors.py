@@ -377,7 +377,7 @@ class FetchServiceError(CraftError):
 
 
 class InitError(CraftError):
-    """Errors related to initialising a project."""
+    """Errors related to initializing a project."""
 
 
 class ArtifactCreationError(CraftError):
