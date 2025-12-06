@@ -40,7 +40,7 @@ execute: |
   # Initialize a project
   testcraft init
   . /etc/os-release
-  sed -i  "s/base: ubuntu@24.04/base: ubuntu@${VERSION_ID}/" testcraft.yaml
+  sed -i "s/base: ubuntu@24.04/base: ubuntu@${VERSION_ID}/" testcraft.yaml
   
   # Set a short idle time for faster test
   export CRAFT_IDLE_MINS=1
