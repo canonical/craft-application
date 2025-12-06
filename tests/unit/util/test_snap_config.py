@@ -20,7 +20,12 @@ from unittest.mock import MagicMock
 
 import pytest
 from craft_application.errors import CraftValidationError
-from craft_application.util import SnapConfig, get_snap_config, is_running_from_snap
+from craft_application.util import (
+    SnapConfig,
+    get_snap_base,
+    get_snap_config,
+    is_running_from_snap,
+)
 from snaphelpers import SnapCtlError
 
 
@@ -151,3 +156,123 @@ def test_get_snap_config_handle_fetch_error(error, mock_config):
     mock_config.return_value.fetch.side_effect = error
 
     assert get_snap_config(app_name="testcraft") is None
+
+
+@pytest.mark.parametrize(
+    ("snap_yaml_content", "expected_base"),
+    [
+        pytest.param(
+            # Simple snap with core24
+            "name: testcraft\nbase: core24\nversion: 1.0\n",
+            "core24",
+            id="core24",
+        ),
+        pytest.param(
+            # Snap with core22 (common in 22.04 snaps)
+            "name: my-snap\nbase: core22\nversion: 2.0\nsummary: A test snap\n",
+            "core22",
+            id="core22",
+        ),
+        pytest.param(
+            # Snap with core20
+            "name: hello-world\nversion: 6.4\nsummary: Hello world example\nbase: core20\n",
+            "core20",
+            id="core20",
+        ),
+        pytest.param(
+            # More complex snap.yaml similar to real snaps like snapcraft
+            """name: test-app
+version: '8.0'
+summary: Test application
+description: |
+  A test application for craft-application
+base: core24
+grade: stable
+confinement: classic
+""",
+            "core24",
+            id="complex-snap",
+        ),
+    ],
+)
+def test_get_snap_base_success(tmp_path, monkeypatch, snap_yaml_content, expected_base):
+    """Test get_snap_base returns the correct base from various snap.yaml formats."""
+    # Set up environment
+    monkeypatch.setenv("SNAP_NAME", "testcraft")
+    monkeypatch.setenv("SNAP", str(tmp_path))
+
+    # Create snap.yaml with base
+    meta_dir = tmp_path / "meta"
+    meta_dir.mkdir()
+    snap_yaml = meta_dir / "snap.yaml"
+    snap_yaml.write_text(snap_yaml_content)
+
+    assert get_snap_base("testcraft") == expected_base
+
+
+def test_get_snap_base_not_from_snap(monkeypatch):
+    """Test get_snap_base returns None when not running from snap."""
+    monkeypatch.delenv("SNAP_NAME", raising=False)
+    monkeypatch.delenv("SNAP", raising=False)
+
+    assert get_snap_base("testcraft") is None
+
+
+@pytest.mark.parametrize(
+    ("setup_snap_env", "create_yaml", "yaml_content", "reason"),
+    [
+        pytest.param(
+            False,
+            False,
+            None,
+            "SNAP env var not set",
+            id="no-snap-env",
+        ),
+        pytest.param(
+            True,
+            False,
+            None,
+            "snap.yaml doesn't exist",
+            id="no-yaml",
+        ),
+        pytest.param(
+            True,
+            True,
+            "name: testcraft\nversion: 1.0\n",
+            "no base in snap.yaml",
+            id="no-base",
+        ),
+    ],
+)
+def test_get_snap_base_returns_none(
+    tmp_path, monkeypatch, setup_snap_env, create_yaml, yaml_content, reason
+):
+    """Test get_snap_base returns None in various scenarios."""
+    monkeypatch.setenv("SNAP_NAME", "testcraft")
+
+    if setup_snap_env:
+        monkeypatch.setenv("SNAP", str(tmp_path))
+    else:
+        monkeypatch.delenv("SNAP", raising=False)
+
+    if create_yaml:
+        meta_dir = tmp_path / "meta"
+        meta_dir.mkdir()
+        snap_yaml = meta_dir / "snap.yaml"
+        snap_yaml.write_text(yaml_content)
+
+    assert get_snap_base("testcraft") is None, f"Should return None when {reason}"
+
+
+def test_get_snap_base_invalid_yaml(tmp_path, monkeypatch):
+    """Test get_snap_base returns None when snap.yaml is invalid."""
+    monkeypatch.setenv("SNAP_NAME", "testcraft")
+    monkeypatch.setenv("SNAP", str(tmp_path))
+
+    # Create invalid snap.yaml
+    meta_dir = tmp_path / "meta"
+    meta_dir.mkdir()
+    snap_yaml = meta_dir / "snap.yaml"
+    snap_yaml.write_text("invalid: yaml: content: [")
+
+    assert get_snap_base("testcraft") is None

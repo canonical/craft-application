@@ -15,6 +15,17 @@ Changelog
 
     For a complete list of commits, check out the `1.2.3`_ release on GitHub.
 
+Unreleased
+----------
+
+Services
+========
+
+- When running from a snap, the application's base snap is now injected into
+  managed instances alongside the application snap. This prevents the managed
+  instance from downloading the base snap from the network when it's already
+  available on the host.
+
 6.0.1 (2025-11-19)
 ------------------
 
