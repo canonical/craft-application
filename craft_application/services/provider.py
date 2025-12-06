@@ -128,7 +128,7 @@ class ProviderService(base.AppService):
                     )
                     self.snaps.append(Snap(name=base_snap, channel=None, classic=False))
 
-                # use the aliased name of the snap when injecting
+                # Inject the app snap (use the aliased name when injecting from host)
                 name = os.getenv("SNAP_INSTANCE_NAME", self._app.name)
                 channel = None
                 emit.debug(

@@ -7,20 +7,8 @@ systems:
   - ubuntu-24.04-64
 
 prepare: |
-  # Build the testcraft snap from the repository
-  cd "$PROJECT_PATH"
-  snap install snapcraft --classic
-  snapcraft pack
-  
-  # Install the locally built testcraft snap
-  snap install --dangerous --classic testcraft_*.snap
-  
-  # Get the base snap name from the testcraft snap
-  HOST_BASE=$(snap info testcraft --verbose | grep '^base:' | awk '{print $2}')
-  if [ -z "$HOST_BASE" ]; then
-    echo "Could not determine base snap from testcraft snap"
-    exit 1
-  fi
+  # Determine the base snap for the test (use core24 for testing)
+  HOST_BASE="core24"
   
   # Ensure the base snap is installed on the host
   snap install "$HOST_BASE" || true
@@ -40,7 +28,7 @@ execute: |
   # Initialize a project
   testcraft init
   . /etc/os-release
-  sed -i "s/base: ubuntu@24.04/base: ubuntu@${VERSION_ID}/" testcraft.yaml
+  sed -i "s/base: ubuntu@[0-9.]\\+/base: ubuntu@${VERSION_ID}/" testcraft.yaml
   
   # Set a short idle time for faster test
   export CRAFT_IDLE_MINS=1
@@ -96,9 +84,3 @@ restore: |
   cd ..
   rm -rf inject-test
   rm -f /tmp/base_snap_name /tmp/base_snap_revision
-  
-  # Clean up testcraft snap and built snap file
-  snap remove --purge testcraft || true
-  cd "$PROJECT_PATH"
-  rm -f testcraft_*.snap
-  snap remove --purge snapcraft || true
