@@ -21,7 +21,7 @@ Changelog
 Application
 ===========
 
-- If a lifecycle command is run with `--destructive-mode`, but without root, a warning
+- If a lifecycle command is run with ``--destructive-mode``, but without root, a warning
   will be emitted about potentially unexpected behavior.
 
 For a complete list of commits, check out the `6.0.2`_ release on GitHub.
