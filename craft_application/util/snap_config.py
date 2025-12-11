@@ -17,9 +17,11 @@
 """Snap config file definitions and helpers."""
 
 import os
+import pathlib
 from typing import Any, Literal
 
 import pydantic
+import yaml
 from craft_cli import emit
 from snaphelpers import SnapConfigOptions, SnapCtlError
 
@@ -38,6 +40,46 @@ def is_running_from_snap(app_name: str) -> bool:
     :returns: True if the app is running from the snap.
     """
     return os.getenv("SNAP_NAME") == app_name and os.getenv("SNAP") is not None
+
+
+def get_snap_base(app_name: str) -> str | None:
+    """Get the base snap name from snap.yaml.
+
+    :param app_name: The name of the application.
+
+    :returns: The base snap name (e.g., 'core24') or None if not running from a snap
+        or if the snap.yaml doesn't have a base defined.
+    """
+    if not is_running_from_snap(app_name):
+        emit.debug(
+            f"Not reading snap base because {app_name} is not running as a snap."
+        )
+        return None
+
+    snap_dir = os.getenv("SNAP")
+    if not snap_dir:
+        emit.debug("SNAP environment variable not set.")
+        return None
+
+    snap_yaml_path = pathlib.Path(snap_dir) / "meta" / "snap.yaml"
+    if not snap_yaml_path.exists():
+        emit.debug(f"snap.yaml not found at {snap_yaml_path}")
+        return None
+
+    try:
+        with snap_yaml_path.open() as f:
+            snap_data = yaml.safe_load(f)
+    except (OSError, yaml.YAMLError) as error:
+        emit.debug(f"Failed to read snap metadata: {error!r}")
+        return None
+
+    base: str | None = snap_data.get("base")
+    if base:
+        emit.debug(f"Found base snap: {base}")
+        return base
+
+    emit.debug("No base defined in snap.yaml")
+    return None
 
 
 class SnapConfig(pydantic.BaseModel, extra="forbid"):

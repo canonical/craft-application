@@ -120,7 +120,15 @@ class ProviderService(base.AppService):
             self.snaps.extend(_REQUESTED_SNAPS.values())
 
             if util.is_running_from_snap(self._app.name):
-                # use the aliased name of the snap when injecting
+                # Inject the base snap from the host if available
+                if base_snap := util.get_snap_base(self._app.name):
+                    emit.debug(
+                        f"Setting {base_snap} to be injected from the "
+                        "host into the build environment."
+                    )
+                    self.snaps.append(Snap(name=base_snap, channel=None, classic=False))
+
+                # Inject the app snap (use the aliased name when injecting from host)
                 name = os.getenv("SNAP_INSTANCE_NAME", self._app.name)
                 channel = None
                 emit.debug(

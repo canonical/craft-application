@@ -1,0 +1,89 @@
+summary: Verify base snap is injected with correct revision in managed mode
+
+priority: 100
+
+systems:
+  - ubuntu-22.04-64  # Test on 22.04 with a core24 snap
+  - ubuntu-24.04-64
+
+prepare: |
+  # Determine the base snap for the test (use core24 for testing)
+  HOST_BASE="core24"
+  
+  # Install from edge channel to ensure different revision from container preinstall
+  snap install "$HOST_BASE" --channel=edge || true
+  
+  # Get the revision of the base snap on the host
+  HOST_BASE_REVISION=$(snap list "$HOST_BASE" | tail -n 1 | awk '{print $3}')
+  echo "Host base snap: $HOST_BASE (revision $HOST_BASE_REVISION)"
+  
+  # Save for later use
+  echo "$HOST_BASE" > /tmp/base_snap_name
+  echo "$HOST_BASE_REVISION" > /tmp/base_snap_revision
+
+execute: |
+  mkdir inject-test
+  cd inject-test
+  
+  # Initialize a project
+  testcraft init
+  . /etc/os-release
+  sed -i "s/base: ubuntu@[0-9.]\\+/base: ubuntu@${VERSION_ID}/" testcraft.yaml
+  
+  # Set a short idle time for faster test
+  export CRAFT_IDLE_MINS=1
+  
+  # Run testcraft pack in managed mode - this should inject the base snap
+  testcraft pack --verbose --debug
+  
+  # Get the base snap info
+  HOST_BASE=$(cat /tmp/base_snap_name)
+  HOST_BASE_REVISION=$(cat /tmp/base_snap_revision)
+  
+  # Connect to the managed instance and check if the base snap is present
+  # The instance name follows the pattern: testcraft-inject-test-<arch>-<build_base>
+  ARCH=$(dpkg --print-architecture)
+  
+  # Find the LXD instance (testcraft uses LXD on Linux)
+  INSTANCE=$(lxc list --project=testcraft --format csv -c n | grep "^testcraft-" | head -n 1)
+  
+  if [ -z "$INSTANCE" ]; then
+    echo "Could not find managed instance"
+    echo "Available instances:"
+    lxc list --project=testcraft
+    exit 1
+  fi
+  
+  echo "Found instance: $INSTANCE"
+  
+  # Check if the base snap is installed in the instance
+  INSTANCE_BASE_REVISION=$(lxc exec --project=testcraft "$INSTANCE" -- snap list "$HOST_BASE" 2>/dev/null | tail -n 1 | awk '{print $3}' || echo "")
+  
+  if [ -z "$INSTANCE_BASE_REVISION" ]; then
+    echo "ERROR: Base snap '$HOST_BASE' is not installed in the managed instance"
+    echo "Installed snaps in instance:"
+    lxc exec --project=testcraft "$INSTANCE" -- snap list
+    exit 1
+  fi
+  
+  echo "Instance base snap: $HOST_BASE (revision $INSTANCE_BASE_REVISION)"
+  
+  # Verify the revisions match
+  if [ "$HOST_BASE_REVISION" != "$INSTANCE_BASE_REVISION" ]; then
+    echo "ERROR: Base snap revision mismatch!"
+    echo "  Host revision: $HOST_BASE_REVISION"
+    echo "  Instance revision: $INSTANCE_BASE_REVISION"
+    exit 1
+  fi
+  
+  echo "SUCCESS: Base snap '$HOST_BASE' revision $HOST_BASE_REVISION matches on host and instance"
+
+restore: |
+  cd inject-test 2>/dev/null || true
+  testcraft clean || true
+  cd ..
+  rm -rf inject-test
+  rm -f /tmp/base_snap_name /tmp/base_snap_revision
+  
+  # Restore core24 to stable channel
+  snap refresh core24 --channel=stable || true
