@@ -104,6 +104,9 @@ dev-plucky = [
 dev-questing = [
     "python-apt~=3.0.0;sys_platform=='linux'",
 ]
+dev-resolute = [
+    "python-apt~=3.0.0;sys_platform=='linux'",
+]
 tics = ["flake8", "pylint"]
 
 [tool.uv]
@@ -137,6 +140,7 @@ conflicts = [
         { group = "dev-noble" },
         { group = "dev-plucky" },
         { group = "dev-questing" },
+        { group = "dev-resolute" },
     ]
 ]
 
