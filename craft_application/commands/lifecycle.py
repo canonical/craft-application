@@ -650,6 +650,9 @@ class TestCommand(PackCommand):
     _show_lxd_arg = False
     _allow_build_for = False
 
+    # Stop pytest from thinking this is an actual test to run
+    __test__ = False
+
     @override
     def _fill_parser(self, parser: argparse.ArgumentParser) -> None:
         # Skip the parser additions that `pack` adds.
