@@ -37,6 +37,7 @@ from craft_parts import (
     callbacks,
 )
 from craft_parts.errors import CallbackRegistrationError
+from craft_parts.plugins.plugins import set_plugin_group
 from typing_extensions import override
 
 from craft_application import errors, util
@@ -44,6 +45,8 @@ from craft_application.services import base
 from craft_application.util import repositories
 
 if TYPE_CHECKING:  # pragma: no cover
+    from craft_parts.plugins import Plugin
+
     from craft_application.application import AppMetadata
     from craft_application.services import ServiceFactory
 
@@ -143,9 +146,34 @@ class LifecycleService(base.AppService):
     @override
     def setup(self) -> None:
         """Initialize the LifecycleManager with previously-set arguments."""
+        plugin_group = self.get_plugin_group(self._get_build())
+        if plugin_group is not None:
+            emit.debug(
+                "A plugin group has been specified for the current build. "
+                "This overrides any previous plugin configurations.\n"
+                f"Build: {self._get_build()}\n"
+                f"Plugins: {plugin_group}"
+            )
+            set_plugin_group(plugin_group)
         self._lcm = self._init_lifecycle_manager()
         callbacks.register_post_step(self.post_prime, step_list=[Step.PRIME])
         callbacks.register_configure_overlay(repositories.enable_overlay_eol)
+
+    @staticmethod
+    def get_plugin_group(
+        build_info: craft_platforms.BuildInfo,  # noqa: ARG004 (used by overrides)
+    ) -> dict[str, type[Plugin]] | None:
+        """Get the plugin group for a given build.
+
+        If this returns a non-None value, the LifecycleService sets the plugin group to
+        that group when running the given build. If ``None`` is returned, the plugin
+        groups feature is not used and an application must manually handle its plugin
+        groups.
+
+        :param build_info: The BuildInfo for the build.
+        :returns: A dictionary that is an appropriate plugin group or None.
+        """
+        return None
 
     def _get_build(self) -> craft_platforms.BuildInfo:
         """Get the build for this run."""

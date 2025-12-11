@@ -17,11 +17,15 @@
 
 import os
 import textwrap
+from unittest import mock
 
 import craft_cli
+import craft_parts
 import pytest
 import pytest_check
 from craft_application.services.lifecycle import LifecycleService
+from craft_parts.plugins import plugins
+from craft_parts.plugins.nil_plugin import NilPlugin
 
 
 @pytest.fixture(
@@ -45,6 +49,32 @@ def parts_lifecycle(app_metadata, fake_project, fake_services, tmp_path, request
     )
     service.setup()
     return service
+
+
+@pytest.mark.parametrize(
+    "plugin_group",
+    [
+        *(pytest.param(group.value, id=group.name) for group in plugins.PluginGroup),
+        pytest.param({"nil": NilPlugin}, id="nil-only"),
+    ],
+)
+def test_setup_with_different_plugin_group(
+    tmp_path, app_metadata, fake_project, fake_services, plugin_group
+):
+    plugin_group = {"nil": NilPlugin}
+
+    lifecycle_service = LifecycleService(
+        app=app_metadata,
+        services=fake_services,
+        work_dir=tmp_path,
+        cache_dir=tmp_path / "cache",
+    )
+
+    lifecycle_service.get_plugin_group = mock.Mock(return_value=plugin_group)
+
+    lifecycle_service.setup()
+
+    assert craft_parts.plugins.get_registered_plugins() == plugin_group
 
 
 @pytest.mark.slow

@@ -1,0 +1,17 @@
+name: merlin-build
+summary: A witchcraft cauldron that packs on Ubuntu 22.04 with the python plugin.
+base: ubuntu@22.04
+platforms:
+  platform-independent:
+    build-on: [amd64, arm64, ppc64el, s390x, riscv64]
+    build-for: [all]
+
+version: "0.1"
+
+parts:
+  part1:
+    # The Python plugin is only available for 22.04 and below in witchcraft.
+    plugin: python
+    source: .
+    override-build: |
+      true
