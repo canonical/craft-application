@@ -67,6 +67,14 @@ class _BaseLifecycleCommand(base.ExtensibleCommand):
     @override
     def _run(self, parsed_args: argparse.Namespace, **kwargs: Any) -> None:
         emit.trace(f"lifecycle command: {self.name!r}, arguments: {parsed_args!r}")
+        if (
+            not self._use_provider(parsed_args)
+            and not util.is_managed_mode()
+            and os.geteuid() != 0
+        ):
+            emit.warning(
+                "Running in destructive mode as a non-super user is not recommended and may cause unexpected behavior."
+            )
 
     @override
     def _fill_parser(self, parser: argparse.ArgumentParser) -> None:
