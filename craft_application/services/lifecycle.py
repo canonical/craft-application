@@ -165,13 +165,13 @@ class LifecycleService(base.AppService):
     ) -> dict[str, type[Plugin]] | None:
         """Get the plugin group for a given build.
 
-        If this returns a non-None value, the LifecycleService sets the plugin group to
-        that group when running the given build. If ``None`` is returned, the plugin
-        groups feature is not used and an application must manually handle its plugin
-        groups.
+        If this returns a non-``None`` value, the LifecycleService sets the plugin
+        group to that group when running the given build. If ``None`` is returned, the
+        plugin groups feature is not used and an application must manually handle its
+        plugin groups.
 
         :param build_info: The BuildInfo for the build.
-        :returns: A dictionary that is an appropriate plugin group or None.
+        :returns: A dictionary that is an appropriate plugin group or ``None``.
         """
         return None
 

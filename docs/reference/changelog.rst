@@ -15,6 +15,14 @@ Changelog
 
     For a complete list of commits, check out the `1.2.3`_ release on GitHub.
 
+6.1.0 (unreleased)
+------------------
+
+Services
+========
+
+- The Lifecycle service now has a ``get_plugin_group()`` method
+
 6.0.1 (2025-11-19)
 ------------------
 
