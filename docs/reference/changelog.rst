@@ -23,6 +23,16 @@ Services
 
 - The Lifecycle service now has a ``get_plugin_group()`` method
 
+Application
+===========
+
+- If a lifecycle command is run with ``--destructive-mode``, but without root, a warning
+  will be emitted about potentially unexpected behavior.
+- Registering plugins directly in the Application is deprecated, as it is mutually
+  exclusive with registering plugin groups.
+
+For a complete list of commits, check out the `6.1.0`_ release on GitHub.
+
 6.0.1 (2025-11-19)
 ------------------
 
@@ -510,8 +520,8 @@ Services
 - Setting the arguments for a service using the service factory's ``set_kwargs`` is
   deprecated. Use ``update_kwargs`` instead.
 
-Testing
-=======
+Testing with pytest
+===================
 
 - Add a :doc:`pytest-plugin` with a fixture that enables production mode for the
   application if a test requires it.
@@ -1159,3 +1169,4 @@ For a complete list of commits, check out the `2.7.0`_ release on GitHub.
 .. _5.11.0: https://github.com/canonical/craft-application/releases/tag/5.11.0
 .. _6.0.0: https://github.com/canonical/craft-application/releases/tag/6.0.0
 .. _6.0.1: https://github.com/canonical/craft-application/releases/tag/6.0.1
+.. _6.1.0: https://github.com/canonical/craft-application/releases/tag/6.1.0

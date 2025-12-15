@@ -40,10 +40,12 @@ from craft_application.commands.lifecycle import (
     PullCommand,
     StageCommand,
     TestCommand,
+    _BaseLifecycleCommand,
     get_lifecycle_command_group,
 )
 from craft_application.services import LifecycleService
 from craft_application.services.service_factory import ServiceFactory
+from craft_cli.pytest_plugin import RecordingEmitter
 from craft_parts import Features
 
 pytestmark = [pytest.mark.usefixtures("fake_project_file")]
@@ -1098,3 +1100,27 @@ def test_is_already_packed(
     )
 
     assert command._is_already_packed() == result
+
+
+@pytest.mark.parametrize(("as_root"), [True, False])
+def test_warning_no_root_destructive(
+    mocker: pytest_mock.MockFixture,
+    app_metadata: AppMetadata,
+    fake_services: ServiceFactory,
+    emitter: RecordingEmitter,
+    as_root: bool,
+) -> None:
+    class FakeLifecycleCommand(_BaseLifecycleCommand):
+        name = "fake_command"
+        help_msg = "I'm not real!"
+        overview = "Doubly so!"
+
+    command = FakeLifecycleCommand({"app": app_metadata, "services": fake_services})
+    parsed_args = argparse.Namespace(destructive_mode=True)
+    mocker.patch("os.geteuid", return_value=int(not as_root))
+    warning_str = "Running in destructive mode as a non-super user is not recommended and may cause unexpected behavior."
+
+    command._run(parsed_args)
+
+    # Assert that the warning shows up if we didn't run as root, but is absent if we did run as root
+    assert as_root == (mock.call("warning", warning_str) not in emitter.interactions)
