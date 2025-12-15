@@ -17,5 +17,5 @@ API documentation
 .. autoclass:: LifecycleService
     :member-order: bysource
     :members:
-    :private-members: _app_preprocess_project,_app_render_legacy_platforms,_preprocess
+    :private-members: _get_build,_validate_build_plan,_get_build_for,_init_lifecycle_manager
     :undoc-members:

@@ -170,6 +170,9 @@ class LifecycleService(base.AppService):
         plugin groups feature is not used and an application must manually handle its
         plugin groups.
 
+        The default implementation simply returns ``None``, as this is designed for an
+        application to override in order to get the relevant plugin groups.
+
         :param build_info: The BuildInfo for the build.
         :returns: A dictionary that is an appropriate plugin group or ``None``.
         """
