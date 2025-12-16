@@ -61,20 +61,21 @@ def parts_lifecycle(app_metadata, fake_project, fake_services, tmp_path, request
 def test_setup_with_different_plugin_group(
     tmp_path, app_metadata, fake_project, fake_services, plugin_group
 ):
-    plugin_group = {"nil": NilPlugin}
+    try:
+        lifecycle_service = LifecycleService(
+            app=app_metadata,
+            services=fake_services,
+            work_dir=tmp_path,
+            cache_dir=tmp_path / "cache",
+        )
 
-    lifecycle_service = LifecycleService(
-        app=app_metadata,
-        services=fake_services,
-        work_dir=tmp_path,
-        cache_dir=tmp_path / "cache",
-    )
+        lifecycle_service.get_plugin_group = mock.Mock(return_value=plugin_group)
 
-    lifecycle_service.get_plugin_group = mock.Mock(return_value=plugin_group)
+        lifecycle_service.setup()
 
-    lifecycle_service.setup()
-
-    assert craft_parts.plugins.get_registered_plugins() == plugin_group
+        assert craft_parts.plugins.get_registered_plugins() == plugin_group
+    finally:
+        craft_parts.plugins.plugins.unregister_all()
 
 
 @pytest.mark.slow
