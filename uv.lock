@@ -854,14 +854,14 @@ wheels = [
 
 [[package]]
 name = "distro-support"
-version = "2025.8.13"
+version = "2025.12.16"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/90/c8/40cf2bdb5647c0ccad40a02edde6966d03a3258c550d92a2030427867029/distro_support-2025.8.13.tar.gz", hash = "sha256:12a73039db0a04e4b987789598f05c554adb3b2ec8e97bc28f40a125dc82d982", size = 36195, upload-time = "2025-08-13T03:15:53.792Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/91/9f/530d03c3d7172f787949af55768d088a341e52974c03ce26142693375de1/distro_support-2025.12.16.tar.gz", hash = "sha256:95d93375983a68cd749e7ae9d434a22ab7d5b6f515fbed52541ecc9457296946", size = 37088, upload-time = "2025-12-16T15:54:34.721Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/36/74/32abc08f3b003920ca57aadffe339339a4dab20dabdda78190fd819d3838/distro_support-2025.8.13-py3-none-any.whl", hash = "sha256:639672b5d51c587d9f18d515ef09733d322dba1cdfd0f9563def784556b25a48", size = 6590, upload-time = "2025-08-13T03:15:53.011Z" },
+    { url = "https://files.pythonhosted.org/packages/88/02/6cec6f872455e935f933d9eae08e581650b55eb96b096d2f4aa7a0d70c60/distro_support-2025.12.16-py3-none-any.whl", hash = "sha256:1e883f0b967a799a26f1329f7c527ba262d53385ad377bc1f7bee06671645684", size = 6634, upload-time = "2025-12-16T15:54:36.686Z" },
 ]
 
 [[package]]
