@@ -50,7 +50,7 @@ def reset_craft_environment() -> Iterator[None]:
         for var in os.environ:
             if var in keep_vars:
                 continue
-            if var.startswith(("CRAFT_", "SNAP_")):
+            if var.startswith(("CRAFT_", "SNAP_")) or var == "SNAP":
                 monkeypatch.delenv(var, raising=False)
         yield
 
