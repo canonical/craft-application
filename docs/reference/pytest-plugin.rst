@@ -31,6 +31,8 @@ Some fixtures are automatically enabled for tests, changing the default behaviou
 applications during the testing process. Each auto-use fixture changes the default
 behaviour of Craft Application during testing.
 
+.. autofunction:: reset_craft_environment
+
 .. autofunction:: debug_mode
 
 .. autofunction:: _reset_craft_parts_callbacks

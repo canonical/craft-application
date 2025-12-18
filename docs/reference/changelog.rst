@@ -24,6 +24,13 @@ Application
 - If a lifecycle command is run with ``--destructive-mode``, but without root, a warning
   will be emitted about potentially unexpected behavior.
 
+Pytest plugin
+=============
+
+- The pytest plugin now includes an auto-used
+  :py:func:`~craft_application.pytest_plugin.reset_craft_environment` fixture to prevent
+  relevant externally-set environment variables from causing test failures.
+
 For a complete list of commits, check out the `6.1.0`_ release on GitHub.
 
 6.0.1 (2025-11-19)
