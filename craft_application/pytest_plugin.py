@@ -43,7 +43,7 @@ def reset_craft_environment() -> Iterator[None]:
     debugging purposes, put its name in the environment variable
     ``CRAFT_DEBUG_KEEP_ENV_VARS``, which is a comma-separated list of variables.
     """
-    keep_vars = set(os.environ.get("CRAFT_DEBUG_KEEP_ENV_VARS", "").split())
+    keep_vars = set(os.environ.get("CRAFT_DEBUG_KEEP_ENV_VARS", "").split(","))
     keep_vars.add(CRAFT_DEBUG_ENV)  # We separately set CRAFT_DEBUG.
 
     with pytest.MonkeyPatch.context() as monkeypatch:
