@@ -21,15 +21,15 @@ Changelog
 Services
 ========
 
-- The Lifecycle service now has a ``get_plugin_group()`` method
+- The Lifecycle service now has a ``get_plugin_group()`` method.
 
 Application
 ===========
 
 - If a lifecycle command is run with ``--destructive-mode``, but without root, a warning
   will be emitted about potentially unexpected behavior.
-- Registering plugins directly in the Application is deprecated, as it is mutually
-  exclusive with registering plugin groups.
+- Direct registration of plugins in the Application is deprecated, as it's mutually
+  incompatible with the registration of plugin groups.
 
 For a complete list of commits, check out the `6.1.0`_ release on GitHub.
 
