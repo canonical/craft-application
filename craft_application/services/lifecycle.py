@@ -41,6 +41,7 @@ from craft_parts.plugins.plugins import set_plugin_group
 from typing_extensions import override
 
 from craft_application import errors, util
+from craft_application.errors import EmptyBuildPlanError
 from craft_application.services import base
 from craft_application.util import repositories
 
@@ -146,7 +147,22 @@ class LifecycleService(base.AppService):
     @override
     def setup(self) -> None:
         """Initialize the LifecycleManager with previously-set arguments."""
-        plugin_group = self.get_plugin_group(self._get_build())
+        # By default we can get the regular build. However, if there is no possible
+        # build on the current machine, we get any build we can possibly do.
+        # If the exhaustive build plan is still empty, error out.
+        try:
+            build = self._get_build()
+        except EmptyBuildPlanError:
+            build_plan = self._services.get("build_plan").create_build_plan(
+                platforms=None,
+                build_for=None,
+                build_on=None,
+            )
+            if not build_plan:
+                raise EmptyBuildPlanError
+            build = build_plan[0]
+
+        plugin_group = self.get_plugin_group(build)
         if plugin_group is not None:
             emit.debug(
                 "A plugin group has been specified for the current build. "
