@@ -560,8 +560,8 @@ class Application:
             return
 
         warnings.warn(
-            "Registering plugins through the Application is deprecated. Get the "
-            "plugins by getting a plugin group in the Lifecycle service instead.",
+            "Registering plugins through the Application is deprecated. Override "
+            "the Lifecycle service's get_plugin_group instead.",
             DeprecationWarning,
             stacklevel=0,
         )
