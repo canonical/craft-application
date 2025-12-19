@@ -558,6 +558,13 @@ class Application:
         """Register plugins for this application."""
         if not plugins:
             return
+
+        warnings.warn(
+            "Registering plugins through the Application is deprecated. Override "
+            "the Lifecycle service's get_plugin_group instead.",
+            DeprecationWarning,
+            stacklevel=0,
+        )
         from craft_parts.plugins import register  # noqa: PLC0415
 
         craft_cli.emit.trace("Registering plugins...")

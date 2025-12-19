@@ -1,0 +1,28 @@
+summary: test setting of plugin groups based on BuildInfo.
+
+systems:
+  - ubuntu-22.04-64
+  - ubuntu-24.04-64
+
+execute: |
+  . /etc/os-release
+
+  export DISTRO="${ID}@${VERSION_ID}"
+
+  # Check that the valid package for this system packs.
+  cd "${DISTRO}"
+  witchcraft pack --destructive-mode
+  cd -
+
+  # Check that the package referencing a plugin not used on this system does not pack.
+  cd "invalid-${DISTRO}"
+  witchcraft pack --destructive-mode |& MATCH "Plugin '[a-z]+' in part 'part1' is not registered."
+
+
+restore: |
+  for path in $(find ./* -maxdepth 0 -type d); do
+    cd "${path}"
+    witchcraft clean --destructive-mode || true
+    rm -f *.witchcraft
+    cd ..
+  done
