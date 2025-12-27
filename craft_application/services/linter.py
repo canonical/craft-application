@@ -19,7 +19,7 @@ from __future__ import annotations
 
 import inspect
 from collections.abc import Iterable, Iterator
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, cast
 
 from craft_cli import emit
 
@@ -38,6 +38,7 @@ from craft_application.services import base
 
 if TYPE_CHECKING:
     from pathlib import Path
+    from typing import Any
 
     from craft_application.application import AppMetadata
     from craft_application.lint.base import AbstractLinter
@@ -91,7 +92,7 @@ class LinterService(base.AppService):
                 if isinstance(data, dict):
                     cls._merge_into(
                         config,
-                        cls._normalize_ignore_config(cast(dict[str, Any], data)),
+                        cls._normalize_ignore_config(cast("dict[str, Any]", data)),
                     )
         if cli_ignores:
             cls._merge_into(config, cli_ignores)
@@ -127,7 +128,7 @@ class LinterService(base.AppService):
                     )
                     return {}
                 return LinterService._normalize_ignore_config(
-                    cast(dict[str, Any], data)
+                    cast("dict[str, Any]", data)
                 )
         return {}
 
@@ -138,7 +139,7 @@ class LinterService(base.AppService):
         for linter_name, spec in raw.items():
             if not isinstance(spec, dict):
                 continue
-            spec_dict = cast(dict[str, Any], spec)
+            spec_dict = cast("dict[str, Any]", spec)
             ids_raw = cast(str | list[str] | set[str] | None, spec_dict.get("ids"))
             by_filename_raw = cast(
                 dict[str, list[str] | set[str]] | None, spec_dict.get("by_filename")

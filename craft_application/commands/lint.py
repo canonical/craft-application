@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import argparse
 from pathlib import Path
+from typing import cast
 
 from craft_cli import emit
 
@@ -46,12 +47,7 @@ def _parse_ignore_rule(value: str) -> tuple[str, str, str | None]:
             )
         return linter, issue, glob
 
-    issue = remainder
-    if not issue:
-        raise argparse.ArgumentTypeError(
-            "Lint ignore rules must provide an issue id or '*'."
-        )
-    return linter, issue, None
+    return linter, remainder, None
 
 
 def _build_cli_ignore_config(rules: list[tuple[str, str, str | None]]) -> IgnoreConfig:
@@ -85,8 +81,9 @@ class LintCommand(base.AppCommand):
         """Add command-line arguments for lint configuration."""
         parser.add_argument(
             "--stage",
-            choices=[Stage.PRE.value, Stage.POST.value],
-            default=Stage.PRE.value,
+            choices=list(Stage),
+            default=Stage.PRE,
+            type=Stage,
             help="When to lint: 'pre' = source tree, 'post' = built artifacts.",
         )
         parser.add_argument(
@@ -114,11 +111,13 @@ class LintCommand(base.AppCommand):
     def run(self, parsed_args: argparse.Namespace) -> int | None:
         """Execute lint for the requested stage and return the exit code."""
         services = self._services
-        stage = Stage(parsed_args.stage)
+        stage: Stage = parsed_args.stage
 
         # Resolve project dir
         project_service = services.get("project")
-        project_dir: Path = project_service.resolve_project_file_path().parent
+        project_file = project_service.resolve_project_file_path()
+        project_dir: Path = project_file.parent
+        filename = project_file.name
         if stage == Stage.POST and not project_service.is_configured:
             project_service.configure(platform=None, build_for=None)
             project_service.get()
@@ -131,12 +130,14 @@ class LintCommand(base.AppCommand):
         ctx = LintContext(project_dir=project_dir, artifact_dirs=artifact_dirs)
 
         linter = services.get("linter")
-        cli_ignore_rules = list(parsed_args.lint_ignores or [])
+        cli_ignore_rules = cast(
+            list[tuple[str, str, str | None]], parsed_args.lint_ignores
+        )
         cli_ignore_config = _build_cli_ignore_config(cli_ignore_rules)
         linter.load_ignore_config(
             project_dir=project_dir,
             cli_ignores=cli_ignore_config or None,
-            cli_ignore_files=list(parsed_args.lint_ignore_files or []),
+            cli_ignore_files=cast(list[Path], parsed_args.lint_ignore_files),
         )
         issues = list(linter.run(stage, ctx))
 
@@ -152,11 +153,11 @@ class LintCommand(base.AppCommand):
 
         highest = linter.get_highest_severity()
         if highest is None:
-            emit.message("lint: OK")
+            emit.message(f"Linted {filename} successfully.")
             return 0
         if highest.name == "ERROR":
-            emit.message("lint: ERROR")
+            emit.message(f"Errors found in {filename}")
             return 2
 
-        emit.message("lint: WARN")
+        emit.message(f"Possible issues found in {filename}")
         return 0
