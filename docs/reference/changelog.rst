@@ -15,6 +15,17 @@ Changelog
 
     For a complete list of commits, check out the `1.2.3`_ release on GitHub.
 
+6.1.0 (YYYY-MM-DD)
+------------------
+
+Application
+===========
+
+- If a lifecycle command is run with ``--destructive-mode``, but without root, a warning
+  will be emitted about potentially unexpected behavior.
+
+For a complete list of commits, check out the `6.1.0`_ release on GitHub.
+
 6.0.1 (2025-11-19)
 ------------------
 
@@ -1151,3 +1162,4 @@ For a complete list of commits, check out the `2.7.0`_ release on GitHub.
 .. _5.11.0: https://github.com/canonical/craft-application/releases/tag/5.11.0
 .. _6.0.0: https://github.com/canonical/craft-application/releases/tag/6.0.0
 .. _6.0.1: https://github.com/canonical/craft-application/releases/tag/6.0.1
+.. _6.1.0: https://github.com/canonical/craft-application/releases/tag/6.1.0
