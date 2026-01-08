@@ -618,7 +618,7 @@ requires-dist = [
     { name = "craft-parts", specifier = ">=2.26.0" },
     { name = "craft-platforms", specifier = ">=0.6.0" },
     { name = "craft-providers", specifier = ">=3.2.0" },
-    { name = "distro-support", specifier = ">=2025.8.13" },
+    { name = "distro-support", specifier = ">=2025.12.16" },
     { name = "jinja2", specifier = ">=3.1.6,<4.0.0" },
     { name = "launchpadlib", marker = "extra == 'remote'", specifier = ">=1.10.16" },
     { name = "license-expression", specifier = ">=30.0.0" },
