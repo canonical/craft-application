@@ -1,9 +1,9 @@
-.. _reference-LifecycleService:
-
 .. meta::
     :description: API reference for the LifecycleService. In a craft application, the LifecycleService handles interactions with Craft Parts.
 
 .. py:currentmodule:: craft_application.services.lifecycle
+
+.. _reference-LifecycleService:
 
 ``LifecycleService``
 ====================
