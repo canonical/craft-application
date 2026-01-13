@@ -25,6 +25,7 @@ import pytest
 from craft_parts import callbacks
 
 from craft_application import util
+from craft_application._const import CRAFT_DEBUG_ENV
 from craft_application.util import platforms
 
 if TYPE_CHECKING:
@@ -34,13 +35,34 @@ if TYPE_CHECKING:
 
 
 @pytest.fixture(autouse=True, scope="session")
+def reset_craft_environment() -> Iterator[None]:
+    """Reset any relevant environment variables during testing.
+
+    This clears any ``CRAFT_*`` or ``SNAP_*`` environment variables that are set
+    in the environment. To keep an environment variable while running tests for
+    debugging purposes, put its name in the environment variable
+    ``CRAFT_DEBUG_KEEP_ENV_VARS``, which is a comma-separated list of variables.
+    """
+    keep_vars = set(os.environ.get("CRAFT_DEBUG_KEEP_ENV_VARS", "").split(","))
+    keep_vars.add(CRAFT_DEBUG_ENV)  # We separately set CRAFT_DEBUG.
+
+    with pytest.MonkeyPatch.context() as monkeypatch:
+        for var in os.environ:
+            if var in keep_vars:
+                continue
+            if var.startswith(("CRAFT_", "SNAP_")) or var == "SNAP":
+                monkeypatch.delenv(var, raising=False)
+        yield
+
+
+@pytest.fixture(autouse=True, scope="session")
 def debug_mode() -> None:
     """Ensure that the application is in debug mode, raising exceptions from run().
 
     This fixture is automatically used. To disable debug mode for specific tests,
     use the :py:func:`production_mode` fixture.
     """
-    os.environ["CRAFT_DEBUG"] = "1"
+    os.environ[CRAFT_DEBUG_ENV] = "1"
 
 
 @pytest.fixture
@@ -51,7 +73,7 @@ def production_mode(monkeypatch: pytest.MonkeyPatch) -> None:
     It should only be used if the application needs to test behaviour that differs
     between debug mode and production mode.
     """
-    monkeypatch.setenv("CRAFT_DEBUG", "0")
+    monkeypatch.setenv(CRAFT_DEBUG_ENV, "0")
 
 
 @pytest.fixture
