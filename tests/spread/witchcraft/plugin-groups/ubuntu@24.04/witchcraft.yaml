@@ -1,0 +1,17 @@
+name: morgana-build
+summary: A witchcraft cauldron that packs on Ubuntu 22.04 with the rust plugin.
+base: ubuntu@24.04
+platforms:
+  platform-independent:
+    build-on: [amd64, arm64, ppc64el, s390x, riscv64]
+    build-for: [all]
+
+version: "0.1"
+
+parts:
+  part1:
+    # The rust plugin is only available for 24.04+
+    plugin: rust
+    source: .
+    override-build: |
+      true
