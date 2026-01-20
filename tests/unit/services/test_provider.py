@@ -605,6 +605,7 @@ def test_get_base_packages(provider_service):
 @pytest.mark.parametrize("allow_unstable", [True, False])
 def test_instance(
     check,
+    monkeypatch: pytest.MonkeyPatch,
     emitter,
     tmp_path,
     app_metadata,
@@ -615,6 +616,8 @@ def test_instance(
     allow_unstable,
     mock_provider,
 ):
+    # In case the user's system has this set.
+    monkeypatch.delenv("CRAFT_IDLE_MINS", raising=False)
     with provider_service.instance(
         fake_build_info, work_dir=tmp_path, allow_unstable=allow_unstable
     ) as instance:
