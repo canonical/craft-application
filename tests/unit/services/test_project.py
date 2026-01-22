@@ -948,9 +948,10 @@ def test_check_base_is_supported(
     real_project_service: ProjectService, base: str, build_base: str | None
 ):
     real_project_service.configure(platform=None, build_for=None)
+    raw_project = real_project_service._load_raw_project()
     if build_base:
-        real_project_service.get().build_base = build_base
-    real_project_service.get().base = base
+        raw_project["build-base"] = build_base
+    raw_project["base"] = base
 
     real_project_service.check_base_is_supported()
 
