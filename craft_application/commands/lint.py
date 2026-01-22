@@ -18,13 +18,15 @@
 from __future__ import annotations
 
 import argparse
-from pathlib import Path
-from typing import cast
+from typing import TYPE_CHECKING, cast
 
 from craft_cli import emit
 
 from craft_application.commands import base
 from craft_application.lint import IgnoreConfig, IgnoreSpec, LintContext, Stage
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 def _parse_ignore_rule(value: str) -> tuple[str, str, str | None]:
@@ -98,15 +100,6 @@ class LintCommand(base.AppCommand):
                 "'linter:id=glob' (ignore id when filename matches glob). May repeat."
             ),
         )
-        parser.add_argument(
-            "--lint-ignore-file",
-            action="append",
-            type=Path,
-            dest="lint_ignore_files",
-            default=[],
-            metavar="PATH",
-            help=("Path to YAML ignore file. May repeat. CLI rules take precedence."),
-        )
 
     def run(self, parsed_args: argparse.Namespace) -> int | None:
         """Execute lint for the requested stage and return the exit code."""
@@ -137,7 +130,6 @@ class LintCommand(base.AppCommand):
         linter.load_ignore_config(
             project_dir=project_dir,
             cli_ignores=cli_ignore_config or None,
-            cli_ignore_files=cast(list[Path], parsed_args.lint_ignore_files),
         )
         issues = list(linter.run(stage, ctx))
 

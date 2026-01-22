@@ -75,9 +75,8 @@ def test_lint_command_outputs_issues(
     project_dir.mkdir(parents=True, exist_ok=True)
 
     parsed_args = argparse.Namespace(
-        stage=Stage.PRE.value,
+        stage=Stage.PRE,
         lint_ignores=[],
-        lint_ignore_files=[],
     )
 
     command.run(parsed_args)

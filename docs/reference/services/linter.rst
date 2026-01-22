@@ -59,48 +59,7 @@ Service
    :undoc-members:
    :show-inheritance:
 
-How to add a new linter
------------------------
-
-1. Implement a linter class:
-
-   .. code-block:: python
-
-      from craft_application.lint.base import AbstractLinter
-      from craft_application.lint import LintContext, LinterIssue, Severity, Stage
-      from craft_application.services.linter import LinterService
-
-      class DesktopLinter(AbstractLinter):
-          name = "snapcraft.desktop"
-          stage = Stage.PRE
-
-          def run(self, ctx: LintContext):
-              # inspect ctx.project_dir and/or ctx.artifact_dirs
-              yield LinterIssue(
-                  id="MISSING_ICON",
-                  message="Missing icon in .desktop file",
-                  severity=Severity.WARNING,
-                  filename=str(ctx.project_dir / "snap/gui/app.desktop"),
-              )
-
-      LinterService.register(DesktopLinter)
-
-2. Ensure the module containing your linter is imported by your application
-   (for example in your app plugin, or at startup), so registration runs.
-
-3. Run the service:
-
-   .. code-block:: python
-
-      from pathlib import Path
-      from craft_application.lint import LintContext, Stage
-      from craft_application.services.linter import LinterService
-
-      svc = LinterService(app, services)
-      svc.load_ignore_config(project_dir=Path.cwd())
-      for issue in svc.run(Stage.PRE, LintContext(Path.cwd(), [])):
-          print(issue)
-      print("Exit:", int(svc.summary()))
+For a step-by-step guide on adding linters, see :doc:`/how-to-guides/add-a-linter`.
 
 Ignore configuration
 --------------------

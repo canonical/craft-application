@@ -18,7 +18,7 @@
 from __future__ import annotations
 
 import tarfile
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import pytest
 from craft_application import models
@@ -29,6 +29,8 @@ from testcraft.services.linter import TestcraftLinterService
 if TYPE_CHECKING:
     from collections.abc import Iterator
     from pathlib import Path
+
+    from craft_application.services.service_factory import ServiceFactory
 
 
 @pytest.fixture(autouse=True)
@@ -75,7 +77,8 @@ def test_post_stage_uses_packed_artifact(tmp_path, app_metadata):
             raise KeyError(name)
 
     artifact = _make_artifact(tmp_path)
-    service = TestcraftLinterService(app_metadata, StubServices(StubPackage(artifact)))
+    services = cast("ServiceFactory", StubServices(StubPackage(artifact)))
+    service = TestcraftLinterService(app_metadata, services)
     context = LintContext(project_dir=tmp_path, artifact_dirs=[])
 
     issues = list(service.run(Stage.POST, context))
