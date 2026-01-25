@@ -69,7 +69,7 @@ class RequestService(base.AppService):
         content_length_yielded = False
 
         for attempt in range(self._max_retries):
-            downloaded_chunk_sizes = 0
+            downloaded_bytes = 0
             try:
                 with self.get(url, stream=True) as download:
                     with dest.open("wb") as file:
@@ -83,7 +83,7 @@ class RequestService(base.AppService):
                         # Download and track chunks
                         for chunk in download.iter_content(None):
                             file.write(chunk)
-                            downloaded_chunk_sizes += len(chunk)
+                            downloaded_bytes += len(chunk)
                             yield len(chunk)
                 break
             except requests.exceptions.ChunkedEncodingError:
@@ -92,7 +92,7 @@ class RequestService(base.AppService):
                         f"Download interrupted, retrying... (attempt {attempt + 1}/{self._max_retries})"
                     )
                     # Yield negative sum of chunk sizes to indicate rollback
-                    yield -downloaded_chunk_sizes
+                    yield -downloaded_bytes
                 else:
                     raise
 

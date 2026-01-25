@@ -117,6 +117,16 @@ def test_download_files_with_progress(tmp_path, emitter, request_service, downlo
         assert path.read_bytes() == downloads[url]
 
 
+def failing_iter_content(chunk_size=None):  # pylint: disable=unused-argument
+    """Simulate a ChunkedEncodingError during iter_content()."""
+    # Yield some data first to simulate partial download
+    yield b"partial"
+    # Then raise the error
+    raise requests.exceptions.ChunkedEncodingError(
+        "Connection broken: Invalid chunk encoding"
+    )
+
+
 @responses.activate
 def test_download_chunks_with_chunked_encoding_error_retry(
     tmp_path, emitter, request_service
@@ -148,15 +158,6 @@ def test_download_chunks_with_chunked_encoding_error_retry(
 
         # Make iter_content raise ChunkedEncodingError on first two attempts
         if call_count["count"] <= 2:
-
-            def failing_iter_content(chunk_size):
-                # Yield some data first to simulate partial download
-                yield b"partial"
-                # Then raise the error
-                raise requests.exceptions.ChunkedEncodingError(
-                    "Connection broken: Invalid chunk encoding"
-                )
-
             response.iter_content = failing_iter_content
 
         return response
@@ -210,14 +211,6 @@ def test_download_chunks_chunked_encoding_error_exhausted(tmp_path, request_serv
 
     def patched_get(*args, **kwargs):
         response = original_get(*args, **kwargs)
-
-        def failing_iter_content(chunk_size):
-            # Yield some data first
-            yield b"partial"
-            # Then raise the error
-            raise requests.exceptions.ChunkedEncodingError(
-                "Connection broken: Invalid chunk encoding"
-            )
 
         response.iter_content = failing_iter_content
         return response
