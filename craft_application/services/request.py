@@ -42,6 +42,7 @@ class RequestService(base.AppService):
         super().__init__(app, services)
         self._session = requests.Session()
         self._session.headers["User-Agent"] = f"{self._app.name}/{self._app.version}"
+        self._max_retries = 3
 
         # Passthroughs for requests methods so other services can use the session.
         self.request = self._session.request
@@ -65,12 +66,35 @@ class RequestService(base.AppService):
             filename = util.get_filename_from_url_path(url)
             dest = dest / filename
 
-        with self.get(url, stream=True) as download:
-            with dest.open("wb") as file:
-                yield int(download.headers.get("Content-Length", -1))
-                for chunk in download.iter_content(None):
-                    file.write(chunk)
-                    yield len(chunk)
+        content_length_yielded = False
+
+        for attempt in range(self._max_retries):
+            downloaded_chunk_sizes = 0
+            try:
+                with self.get(url, stream=True) as download:
+                    with dest.open("wb") as file:
+                        if not content_length_yielded:
+                            content_length = int(
+                                download.headers.get("Content-Length", -1)
+                            )
+                            yield content_length
+                            content_length_yielded = True
+
+                        # Download and track chunks
+                        for chunk in download.iter_content(None):
+                            file.write(chunk)
+                            downloaded_chunk_sizes += len(chunk)
+                            yield len(chunk)
+                break
+            except requests.exceptions.ChunkedEncodingError:
+                if attempt < self._max_retries - 1:
+                    craft_cli.emit.progress(
+                        f"Download interrupted, retrying... (attempt {attempt + 1}/{self._max_retries})"
+                    )
+                    # Yield negative sum of chunk sizes to indicate rollback
+                    yield -downloaded_chunk_sizes
+                else:
+                    raise
 
     def download_with_progress(self, url: str, dest: pathlib.Path) -> pathlib.Path:
         """Download a single file with a progress bar."""
