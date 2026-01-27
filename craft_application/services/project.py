@@ -742,7 +742,11 @@ class ProjectService(base.AppService):
         """
         ninety_days_out = datetime.date.today() + datetime.timedelta(days=90)
         base = craft_platforms.DistroBase.from_str(self.get().effective_base)
-        if self._is_supported_on(base=base, date=ninety_days_out):
+        try:
+            if self._is_supported_on(base=base, date=ninety_days_out):
+                return None
+        except (UnknownDistributionError, UnknownVersionError):
+            # If distro-support doesn't know about this base, assume it's supported.
             return None
         support_range = distro_support.get_support_range(base.distribution, base.series)
         return support_range.end_support

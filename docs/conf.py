@@ -109,7 +109,7 @@ intersphinx_mapping = {
     ),
     "craft-grammar": ("https://craft-grammar.readthedocs.io/en/latest", None),
     "craft-parts": (
-        "https://canonical-craft-parts.readthedocs-hosted.com/en/latest",
+        "https://canonical-craft-parts.readthedocs-hosted.com/latest",
         None,
     ),
     "craft-platforms": (

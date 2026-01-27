@@ -15,13 +15,26 @@ Changelog
 
     For a complete list of commits, check out the `1.2.3`_ release on GitHub.
 
+6.1.1 (2026-01-27)
+------------------
+
+Bug fixes
+=========
+
+- The project service's
+  :py:class:`~craft_application.services.project.ProjectService.base_eol_soon_date()`
+  no longer raises an exception on an unknown base.
+
+For a complete list of commits, check out the `6.1.1`_ release on GitHub.
+
 6.1.0 (2026-01-20)
 ------------------
 
 Services
 ========
 
-- The Lifecycle service now has a ``get_plugin_group()`` method.
+- The Lifecycle service now has a
+  :py:class:`~craft_application.services.lifecycle.LifecycleService.get_plugin_group()` method.
 
 Application
 ===========
@@ -1177,3 +1190,4 @@ For a complete list of commits, check out the `2.7.0`_ release on GitHub.
 .. _6.0.0: https://github.com/canonical/craft-application/releases/tag/6.0.0
 .. _6.0.1: https://github.com/canonical/craft-application/releases/tag/6.0.1
 .. _6.1.0: https://github.com/canonical/craft-application/releases/tag/6.1.0
+.. _6.1.1: https://github.com/canonical/craft-application/releases/tag/6.1.1
