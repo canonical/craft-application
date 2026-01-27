@@ -23,7 +23,7 @@ Bug fixes
 
 - The project service's
   :py:class:`~craft_application.services.project.ProjectService.base_eol_soon_date()`
-  no longer raises an exception on an unknown base.
+  method no longer raises an exception on unknown bases.
 
 For a complete list of commits, check out the `6.1.1`_ release on GitHub.
 
