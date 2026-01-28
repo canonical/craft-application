@@ -15,6 +15,7 @@
 
 import copy
 import dataclasses
+import datetime
 import pathlib
 import re
 import textwrap
@@ -981,6 +982,37 @@ def test_check_base_is_supported_error(
         match=r"(Build b|B)ase '[a-z]+@\d+\.\d+' has reached end-of-life.",
     ):
         real_project_service.check_base_is_supported()
+
+
+@freezegun.freeze_time("2026-06-01")
+@pytest.mark.parametrize(
+    ("base", "build_base", "expected_date"),
+    [
+        pytest.param("bare", "ubuntu@24.04", None, id="bare-base"),
+        ("ubuntu@22.04", None, None),
+        ("ubuntu@24.04", None, None),
+        pytest.param("ubuntu@25.10", "ubuntu@devel", None, id="build-on-devel"),
+        pytest.param("ubuntu@25.10", None, datetime.date(2026, 7, 9), id="eol-soon"),
+        pytest.param(
+            "bare", "ubuntu@25.10", datetime.date(2026, 7, 9), id="bare-eol-soon"
+        ),
+        pytest.param("nonexistent@0.0", None, None, id="nonexistent-base"),
+    ],
+)
+@pytest.mark.usefixtures("fake_project_file")
+def test_check_base_eol_soon_date(
+    real_project_service: ProjectService,
+    base: str,
+    build_base: str | None,
+    expected_date: datetime.date | None,
+):
+    real_project_service.configure(platform=None, build_for=None)
+    raw_project = real_project_service._load_raw_project()
+    if build_base:
+        raw_project["build-base"] = build_base
+    raw_project["base"] = base
+
+    assert real_project_service.base_eol_soon_date() == expected_date
 
 
 def test_deep_update(fake_project_file, real_project_service: ProjectService):
