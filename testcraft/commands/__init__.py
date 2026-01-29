@@ -15,9 +15,10 @@
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Command for exercising the state service."""
 
-
+from .lint import LintCommand
 from .state import StateCommand
 
 __all__ = [
+    "LintCommand",
     "StateCommand",
 ]

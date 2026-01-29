@@ -62,9 +62,9 @@ Use the service to stream issues for the desired stage:
 4) Ignore configuration
 -----------------------
 
-Users can suppress issues via a ``craft-lint.yaml`` file or CLI rules
-(when available in your application). The underlying format is
-``IgnoreConfig`` mapping linter names to ``IgnoreSpec`` objects.
+Users can suppress issues via rules stored in the application’s project file
+(if supported) and/or CLI rules when exposed by the application. The underlying
+format is ``IgnoreConfig`` mapping linter names to ``IgnoreSpec`` objects.
 
 .. code-block:: yaml
 
@@ -77,4 +77,5 @@ Users can suppress issues via a ``craft-lint.yaml`` file or CLI rules
        E001: ["*/examples/*"]
 
 Applications can override ``build_ignore_config`` in a subclass of
-``LinterService`` to merge app-specific rules into the generic format.
+``LinterService`` to parse app-specific rules from the project file and merge
+them into the generic format.

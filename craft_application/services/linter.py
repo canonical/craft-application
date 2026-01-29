@@ -23,7 +23,6 @@ from typing import TYPE_CHECKING, cast
 
 from craft_cli import emit
 
-from craft_application import util
 from craft_application.lint import (
     ExitCode,
     IgnoreConfig,
@@ -73,27 +72,11 @@ class LinterService(base.AppService):
     @classmethod
     def build_ignore_config(
         cls,
-        project_dir: Path,
+        project_dir: Path,  # noqa: ARG003 (used by application overrides)
         cli_ignores: IgnoreConfig | None = None,
-        cli_ignore_files: list[Path] | None = None,
     ) -> IgnoreConfig:
-        """Merge ignore config from standard file(s) and optional CLI rules."""
+        """Merge ignore config from app-specific project rules and CLI overrides."""
         config: IgnoreConfig = {}
-        file_cfg = cls._load_ignore_file(project_dir)
-        if file_cfg:
-            cls._merge_into(config, file_cfg)
-        if cli_ignore_files:
-            for extra in cli_ignore_files:
-                if not extra.exists() or not extra.is_file():
-                    raise FileNotFoundError(
-                        f"Lint ignore file {extra} does not exist or cannot be read."
-                    )
-                data = util.safe_yaml_load(extra.read_text())
-                if isinstance(data, dict):
-                    cls._merge_into(
-                        config,
-                        cls._normalize_ignore_config(cast("dict[str, Any]", data)),
-                    )
         if cli_ignores:
             cls._merge_into(config, cli_ignores)
         return config
@@ -102,35 +85,10 @@ class LinterService(base.AppService):
         self,
         project_dir: Path,
         cli_ignores: IgnoreConfig | None = None,
-        cli_ignore_files: list[Path] | None = None,
     ) -> IgnoreConfig:
-        """Load ignore configuration, merging CLI rules if any."""
-        self._ignore_cfg = self.__class__.build_ignore_config(
-            project_dir, cli_ignores, cli_ignore_files
-        )
+        """Load ignore configuration using the class-level builder."""
+        self._ignore_cfg = self.__class__.build_ignore_config(project_dir, cli_ignores)
         return self._ignore_cfg
-
-    @staticmethod
-    def _load_ignore_file(project_dir: Path) -> IgnoreConfig:
-        """Load ignore config from a standard location in the project dir, if any."""
-        candidates = [
-            project_dir / "craft-lint.yaml",
-            project_dir / ".craft-lint.yaml",
-            project_dir / ".craft" / "lintignore.yaml",
-        ]
-        for p in candidates:
-            if p.exists():
-                emit.debug(f"Loading linter ignore config from {p}")
-                data = util.safe_yaml_load(p.read_text())
-                if not isinstance(data, dict):
-                    emit.debug(
-                        "Lint ignore config is not a mapping; ignoring this file."
-                    )
-                    return {}
-                return LinterService._normalize_ignore_config(
-                    cast("dict[str, Any]", data)
-                )
-        return {}
 
     @staticmethod
     def _normalize_ignore_config(raw: dict[str, Any]) -> IgnoreConfig:

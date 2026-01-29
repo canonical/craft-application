@@ -13,10 +13,11 @@ execute: |
 
   cp project-with-version.yaml testcraft.yaml
   testcraft pack 2>&1 | tee pack.log
-  testcraft lint --stage post 2>&1 | tee lint_post.log
+  artifact="$(ls *.testcraft | head -n1)"
+  testcraft lint --post "${artifact}" 2>&1 | tee lint_post.log
   grep -q "testcraft.empty_artifact:" lint_post.log
   grep -q "\[ERROR\] TC100: artifact is empty other than metadata.yaml" lint_post.log
-  grep -q "Errors found in testcraft.yaml" lint_post.log
+  grep -q "Errors found in artifacts" lint_post.log
 
 restore: |
   rm -f *.testcraft

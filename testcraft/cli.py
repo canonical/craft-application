@@ -22,11 +22,10 @@ import craft_cli
 from craft_application.commands.lifecycle import (
     TestCommand,
 )
-from craft_application.commands.lint import LintCommand
 from craft_providers.actions.snap_installer import Snap
 
 from testcraft.application import TESTCRAFT
-from testcraft.commands import StateCommand
+from testcraft.commands import LintCommand, StateCommand
 from testcraft.services import register_services
 
 

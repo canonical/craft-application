@@ -64,8 +64,9 @@ For a step-by-step guide on adding linters, see :doc:`/how-to-guides/add-a-linte
 Ignore configuration
 --------------------
 
-Users can suppress issues by creating a ``craft-lint.yaml`` at the project root
-or passing CLI rules (see the default ``build_ignore_config`` implementation):
+Users can suppress issues through app-specific rules stored in the project file
+(if supported) and/or CLI rules (if exposed by the application). The examples
+below show the ``IgnoreConfig`` shape that applications should map to:
 
 .. code-block:: yaml
 

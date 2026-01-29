@@ -85,22 +85,16 @@ def test_ignore_by_id_cli(tmp_path: Path) -> None:
     assert int(svc.summary()) == 0  # OK
 
 
-def test_ignore_by_glob_yaml(tmp_path: Path) -> None:
-    yaml = tmp_path / "craft-lint.yaml"
-    yaml.write_text(
-        """
-dummy.pre:
-  by_filename:
-    D001: ["*/README.*"]
-"""
-    )
-
+def test_ignore_by_glob_cli(tmp_path: Path) -> None:
     app = AppMetadata(name="craft_application")
     factory = ServiceFactory(app)
     svc = LinterService(app=app, services=factory)
     ctx = _make_ctx(tmp_path)
 
-    svc.load_ignore_config(project_dir=tmp_path)
+    cli_cfg: IgnoreConfig = {
+        "dummy.pre": IgnoreSpec(ids=set(), by_filename={"D001": {"*/README.*"}}),
+    }
+    svc.load_ignore_config(project_dir=tmp_path, cli_ignores=cli_cfg)
     issues = list(svc.run(Stage.PRE, ctx))
     assert issues == []
     assert svc.issues_by_linter == {}

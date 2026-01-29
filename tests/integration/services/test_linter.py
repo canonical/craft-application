@@ -25,6 +25,8 @@ if TYPE_CHECKING:
 import pytest
 from craft_application.lint import (
     ExitCode,
+    IgnoreConfig,
+    IgnoreSpec,
     LintContext,
     LinterIssue,
     Severity,
@@ -37,11 +39,17 @@ from craft_application.services.linter import LinterService
 @pytest.fixture
 def restore_linter_registry() -> Iterator[None]:
     """Snapshot and restore the linter registry around a test."""
-    saved = LinterService._class_registry
+    snapshot = {
+        stage: list(classes) for stage, classes in LinterService._class_registry.items()
+    }
+    for registry in LinterService._class_registry.values():
+        registry.clear()
     try:
         yield
     finally:
-        LinterService._class_registry = saved
+        LinterService._class_registry = {
+            stage: list(classes) for stage, classes in snapshot.items()
+        }
 
 
 @pytest.mark.usefixtures("restore_linter_registry")
@@ -80,10 +88,13 @@ def test_issue_then_ignore(
     assert linter_service.issues_by_linter == {_FailingPreLinter.name: issues}
     assert linter_service.summary() == ExitCode.ERROR
 
-    ignore_file = project_dir / "craft-lint.yaml"
-    ignore_file.write_text(f"{_FailingPreLinter.name}:\n  ids: ['INT001']\n")
-
-    linter_service.load_ignore_config(project_dir=project_dir)
+    ignore_cfg: IgnoreConfig = {
+        _FailingPreLinter.name: IgnoreSpec(ids={"INT001"}, by_filename={}),
+    }
+    linter_service.load_ignore_config(
+        project_dir=project_dir,
+        cli_ignores=ignore_cfg,
+    )
     rerun = list(linter_service.run(Stage.PRE, ctx))
     assert rerun == []
     assert linter_service.issues_by_linter == {}

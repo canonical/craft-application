@@ -21,14 +21,14 @@ import argparse
 from typing import TYPE_CHECKING
 
 import pytest
-from craft_application.commands.lint import (
+from craft_application.lint import LintContext, LinterIssue, Severity, Stage
+from craft_application.lint.base import AbstractLinter
+from craft_application.services.linter import LinterService
+from testcraft.commands.lint import (
     LintCommand,
     _build_cli_ignore_config,
     _parse_ignore_rule,
 )
-from craft_application.lint import LintContext, LinterIssue, Severity, Stage
-from craft_application.lint.base import AbstractLinter
-from craft_application.services.linter import LinterService
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -36,11 +36,17 @@ if TYPE_CHECKING:
 
 @pytest.fixture
 def restore_linter_registry() -> Iterator[None]:
-    saved = LinterService._class_registry
+    snapshot = {
+        stage: list(classes) for stage, classes in LinterService._class_registry.items()
+    }
+    for registry in LinterService._class_registry.values():
+        registry.clear()
     try:
         yield
     finally:
-        LinterService._class_registry = saved
+        LinterService._class_registry = {
+            stage: list(classes) for stage, classes in snapshot.items()
+        }
 
 
 class _ErroringLinter(AbstractLinter):
@@ -75,7 +81,7 @@ def test_lint_command_outputs_issues(
     project_dir.mkdir(parents=True, exist_ok=True)
 
     parsed_args = argparse.Namespace(
-        stage=Stage.PRE,
+        post_artifact=None,
         lint_ignores=[],
     )
 
