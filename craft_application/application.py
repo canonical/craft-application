@@ -32,7 +32,6 @@ from typing import TYPE_CHECKING, Annotated, Any, Literal, cast, final
 
 import annotated_types
 import craft_cli
-import craft_parts
 import craft_platforms
 import craft_providers
 from platformdirs import user_cache_path
@@ -793,8 +792,12 @@ class Application:
             craft_cli.emit.debug("No plugin group registered due to error.")
             return
         group = self.services.get_class("lifecycle").get_plugin_group(build_plan[0])
+
+        # We don't need to import this unless we have a group to set.
+        from craft_parts.plugins import set_plugin_group  # noqa: PLC0415
+
         if group:
-            craft_parts.plugins.set_plugin_group(group)
+            set_plugin_group(group)
 
     def _initialize_craft_parts(self) -> None:
         """Perform craft-parts-specific initialization, like features and plugins."""
