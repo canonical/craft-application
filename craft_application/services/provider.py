@@ -31,7 +31,7 @@ from typing import TYPE_CHECKING, Any, cast
 
 import craft_platforms
 import craft_providers
-import snap_http
+import snap_http  # type: ignore[import-untyped]
 from craft_cli import CraftError, emit
 from craft_providers import bases
 from craft_providers.actions.snap_installer import Snap
@@ -120,6 +120,7 @@ class ProviderService(base.AppService):
         if self._install_snap:
             self.snaps.extend(_REQUESTED_SNAPS.values())
 
+            snap_injected = False
             if is_snappy := util.is_running_from_snap(self._app.name):
                 # use the aliased name of the snap when injecting
                 snap_injected = self.try_inject_snap(
