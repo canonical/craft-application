@@ -1,3 +1,6 @@
+.. meta::
+    :description: API reference for services. In a craft application, the services perform categories of tasks.
+
 .. _reference-services:
 
 Services
