@@ -35,6 +35,7 @@ from craft_application.util import snap_config
 from craft_cli import emit
 from craft_providers import bases, lxd, multipass
 from craft_providers.actions.snap_installer import Snap
+from snap_http.types import SnapdResponse
 
 
 @pytest.fixture
@@ -162,11 +163,26 @@ def test_setup_config_values(
         pytest.param(
             {
                 "SNAP_NAME": "testcraft",
+                "SNAP_INSTANCE_NAME": "testcraft",
+                "SNAP": "/snap/testcraft/x1",
+            },
+            [
+                Snap(name="testcraft", channel=None, classic=True),
+                Snap(name="core24", channel=None),
+            ],
+            id="inject-from-host",
+        ),
+        pytest.param(
+            {
+                "SNAP_NAME": "testcraft",
                 "SNAP_INSTANCE_NAME": "testcraft_1",
                 "SNAP": "/snap/testcraft/x1",
             },
-            [Snap(name="testcraft_1", channel=None, classic=True)],
-            id="inject-from-host",
+            [
+                Snap(name="testcraft_1", channel=None, classic=True),
+                Snap(name="core24", channel=None),
+            ],
+            id="inject-from-host-aliased",
         ),
         pytest.param(
             {
@@ -175,7 +191,10 @@ def test_setup_config_values(
                 "SNAP": "/snap/testcraft/x1",
                 "CRAFT_SNAP_CHANNEL": "something",
             },
-            [Snap(name="testcraft_1", channel=None, classic=True)],
+            [
+                Snap(name="testcraft_1", channel=None, classic=True),
+                Snap(name="core24", channel=None),
+            ],
             id="inject-from-host-ignore-channel",
         ),
         pytest.param(
@@ -184,7 +203,10 @@ def test_setup_config_values(
                 "SNAP_NAME": "testcraft",
                 "SNAP": "/snap/testcraft/x1",
             },
-            [Snap(name="testcraft", channel=None, classic=True)],
+            [
+                Snap(name="testcraft", channel=None, classic=True),
+                Snap(name="core24", channel=None),
+            ],
             id="missing-snap-instance-name",
         ),
         pytest.param(
@@ -195,7 +217,10 @@ def test_setup_config_values(
                 # CRAFT_SNAP_CHANNEL should be ignored
                 "CRAFT_SNAP_CHANNEL": "something",
             },
-            [Snap(name="testcraft", channel=None, classic=True)],
+            [
+                Snap(name="testcraft", channel=None, classic=True),
+                Snap(name="core24", channel=None),
+            ],
             id="missing-snap-instance-name-ignore-snap-channel",
         ),
         pytest.param(
@@ -222,6 +247,28 @@ def test_install_snap(
     snaps,
 ):
     monkeypatch.setattr("snaphelpers._ctl.Popen", subprocess.Popen)
+    monkeypatch.setattr(
+        "snap_http.http.get",
+        mock.Mock(
+            return_value=SnapdResponse(
+                type="fake",
+                status_code=200,
+                status="OK",
+                result=[
+                    {
+                        "name": environment.get("SNAP_INSTANCE_NAME")
+                        or environment.get("SNAP_NAME"),
+                        "confinement": "classic",
+                        "base": "core24",
+                    },
+                    {
+                        "name": "core24",
+                        "confinement": "strict",
+                    },
+                ],
+            )
+        ),
+    )
     fake_process.register(
         ["/usr/bin/snapctl", "get", "-d", fake_process.any()],
         stdout="{}",
