@@ -8,4 +8,5 @@ Services
 
    app
    lifecycle
+   package
    project
