@@ -89,10 +89,6 @@ html_css_files = [
 # Intersphinx extension
 # https://www.sphinx-doc.org/en/master/usage/extensions/intersphinx.html#configuration
 
-intersphinx_mapping = {
-    "python": ("https://docs.python.org/3", None),
-}
-
 # Type hints configuration
 set_type_checking_flag = True
 typehints_fully_qualified = False
@@ -103,6 +99,7 @@ github_username = "canonical"
 github_repository = "craft-application"
 
 intersphinx_mapping = {
+    "python": ("https://docs.python.org/3", None),
     "craft-cli": (
         "https://canonical-craft-cli.readthedocs-hosted.com/en/latest",
         None,
