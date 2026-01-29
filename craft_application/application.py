@@ -32,6 +32,8 @@ from typing import TYPE_CHECKING, Annotated, Any, Literal, cast, final
 
 import annotated_types
 import craft_cli
+import craft_parts
+import craft_platforms
 import craft_providers
 from platformdirs import user_cache_path
 
@@ -573,7 +575,8 @@ class Application:
 
     def _register_default_plugins(self) -> None:
         """Register per application plugins when initializing."""
-        self.register_plugins(self._get_app_plugins())
+        with warnings.catch_warnings():
+            self.register_plugins(self._get_app_plugins())
 
     def _pre_run(self, dispatcher: craft_cli.Dispatcher) -> None:
         """Do any final setup before running the command.
@@ -775,7 +778,26 @@ class Application:
     def _enable_craft_parts_features(self) -> None:
         """Enable any specific craft-parts Feature that the application will need."""
 
+    @final
+    def _set_plugin_group(self) -> None:
+        """Set the plugin group from the lifecycle service.
+
+        If no plugin group is provided or an error occurs while determining
+        the build info, no plugin group is registered.
+        """
+        try:
+            build_plan = self.services.get("build_plan").plan()
+        except (craft_cli.CraftError, craft_platforms.CraftPlatformsError):
+            # We can do this here because when we start the lifecycle
+            # we actually exit the app if there's an error.
+            craft_cli.emit.debug("No plugin group registered due to error.")
+            return
+        group = self.services.get_class("lifecycle").get_plugin_group(build_plan[0])
+        if group:
+            craft_parts.plugins.set_plugin_group(group)
+
     def _initialize_craft_parts(self) -> None:
         """Perform craft-parts-specific initialization, like features and plugins."""
         self._enable_craft_parts_features()
         self._register_default_plugins()
+        self._set_plugin_group()
