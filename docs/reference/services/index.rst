@@ -9,3 +9,4 @@ Services
    app
    lifecycle
    project
+   remotebuild
