@@ -17,43 +17,38 @@ Remote build workflow
 
 The typical workflow for using the ``RemoteBuildService`` is:
 
-1. Set up the service by calling :py:meth:`~RemoteBuildService.setup`.
-2. Either:
+1. Either:
 
    a. Start new builds using :py:meth:`~RemoteBuildService.start_builds`, or
    b. Resume existing builds using :py:meth:`~RemoteBuildService.resume_builds`.
 
-3. Monitor build progress using :py:meth:`~RemoteBuildService.monitor_builds`.
-4. Fetch build logs using :py:meth:`~RemoteBuildService.fetch_logs`.
-5. Fetch build artifacts using :py:meth:`~RemoteBuildService.fetch_artifacts`.
-6. Optionally cancel builds using :py:meth:`~RemoteBuildService.cancel_builds`.
-7. Clean up resources using :py:meth:`~RemoteBuildService.cleanup`.
+2. Monitor build progress using :py:meth:`~RemoteBuildService.monitor_builds`.
+3. Fetch build logs using :py:meth:`~RemoteBuildService.fetch_logs`.
+4. Fetch build artifacts using :py:meth:`~RemoteBuildService.fetch_artifacts`.
+5. Clean up resources using :py:meth:`~RemoteBuildService.cleanup`.
 
 Project selection
 -----------------
 
-By default, the ``RemoteBuildService`` creates a remote build project on Launchpad with the naming
-pattern ``{username}-craft-remote-build``. However, applications can use a custom project by calling
-:py:meth:`~RemoteBuildService.set_project` before starting or resuming builds.
-
-Custom projects must be:
-
-* Accessible to the authenticated user
-* Either public or private (the service automatically detects the project's privacy settings)
+By default, the ``RemoteBuildService`` creates a remote build project on Launchpad with
+the naming pattern ``{username}-craft-remote-build``. However, applications can use a
+custom project by calling :py:meth:`~RemoteBuildService.set_project` before starting or
+resuming builds. Custom projects may be private, but the authenticated user must be
+able to create recipes attached to that project.
 
 Data privacy
 ~~~~~~~~~~~~
 
-When using a public project or no custom project, all code uploaded to Launchpad for building
-will be publicly accessible. Users should be explicitly informed of this in the application's
-remote-build command.
+When using a public project or no custom project, all code uploaded to Launchpad for
+building will be publicly accessible. Users should be explicitly informed of this in the
+application's ``remote-build`` command.
 
 Build timeouts
 --------------
 
-The service can enforce a timeout for builds using :py:meth:`~RemoteBuildService.set_timeout`.
-If a build does not complete before the deadline, a :py:exc:`TimeoutError` will be raised when
-monitoring builds.
+The service can enforce a timeout for builds using
+:py:meth:`~RemoteBuildService.set_timeout`. If a build does not complete before the
+deadline, a :py:exc:`TimeoutError` will be raised when monitoring builds.
 
 The timeout is calculated from the time it is set, not from when builds start. This means it
 includes the time for:
@@ -67,8 +62,8 @@ Build interruption and recovery
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 If a build times out or is interrupted by the user, it can be resumed later using
-:py:meth:`~RemoteBuildService.resume_builds` with the build ID. The build ID can be obtained
-using the :external+craft-application:func:`craft_application.remote.utils.get_build_id` function.
+:py:meth:`~RemoteBuildService.resume_builds` with the build ID. The build ID can be
+obtained using the :func:`craft_application.remote.utils.get_build_id` function.
 
 Build architectures
 -------------------
@@ -77,7 +72,7 @@ The ``RemoteBuildService`` supports building for multiple architectures simultan
 Architectures can be specified when calling :py:meth:`~RemoteBuildService.start_builds`:
 
 * If no architectures are specified, the service uses the application's default set.
-* The special architecture value ``"all"`` is automatically converted to ``"amd64"`` for
+* The special architecture value ``all`` is automatically converted to ``amd64`` for
   performance reasons, as amd64 runners are typically faster.
 * Each architecture is built as a separate Launchpad build.
 
@@ -100,7 +95,7 @@ Build state monitoring
 ----------------------
 
 When monitoring builds using :py:meth:`~RemoteBuildService.monitor_builds`, the service yields
-a mapping of architecture names to their current :external+craft-parts:class:`BuildState` values.
+a mapping of architecture names to their current :class:`BuildState` values.
 Possible states include:
 
 * ``PENDING`` - Build is waiting to start
