@@ -56,17 +56,15 @@ class RemoteBuildService(base.AppService):
     lp: launchpad.Launchpad
     _deadline: int | None = None
     """The deadline for the builds. Raises a TimeoutError if we surpass this."""
+    _lp_project: launchpad.models.Project
+    _repository: launchpad.models.GitRepository
+    _recipe: launchpad.models.recipe.BaseRecipe
 
     def __init__(self, app: AppMetadata, services: ServiceFactory) -> None:
         super().__init__(app=app, services=services)
         self._name = ""
         self.request = self._services.request
         self._is_setup = False
-        # Assigning these as None so they exist. They won't be accessed until they're
-        # assigned the correct types though.
-        self._lp_project: launchpad.models.Project = None  # type: ignore[assignment]
-        self._repository: launchpad.models.GitRepository = None  # type: ignore[assignment]
-        self._recipe: launchpad.models.recipe.BaseRecipe = None  # type: ignore[assignment]
         self._builds: Collection[launchpad.models.Build] = []
         self._project_name: str | None = None
 
