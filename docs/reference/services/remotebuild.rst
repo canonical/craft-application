@@ -9,100 +9,75 @@
 ======================
 
 The ``RemoteBuildService`` provides an interface for performing remote builds using Launchpad.
-This service manages the entire lifecycle of remote builds, including Git repository setup,
-recipe creation, build monitoring, and artifact retrieval.
 
-Remote build workflow
----------------------
+Workflow
+--------
 
-The typical workflow for using the ``RemoteBuildService`` is:
-
-1. Either start new builds using :py:meth:`~RemoteBuildService.start_builds` or resume
-   existing builds using :py:meth:`~RemoteBuildService.resume_builds`.
-2. Monitor build progress using :py:meth:`~RemoteBuildService.monitor_builds`.
-3. Fetch build logs using :py:meth:`~RemoteBuildService.fetch_logs` and artifacts using
+1. Start builds with :py:meth:`~RemoteBuildService.start_builds` or resume with
+   :py:meth:`~RemoteBuildService.resume_builds`.
+2. Monitor progress using :py:meth:`~RemoteBuildService.monitor_builds`.
+3. Fetch logs and artifacts using :py:meth:`~RemoteBuildService.fetch_logs` and
    :py:meth:`~RemoteBuildService.fetch_artifacts`.
-4. Clean up resources using :py:meth:`~RemoteBuildService.cleanup`.
+4. Clean up with :py:meth:`~RemoteBuildService.cleanup`.
+
+Configuration
+--------------
 
 Project selection
------------------
+~~~~~~~~~~~~~~~~~
 
-By default, the ``RemoteBuildService`` creates a project named ``{username}-craft-remote-build``.
-A custom project can be specified using :py:meth:`~RemoteBuildService.set_project` before
-starting or resuming builds. Custom projects may be private, but the authenticated user must
-have permission to create recipes on that project.
+By default, a project named ``{username}-craft-remote-build`` is created. Use
+:py:meth:`~RemoteBuildService.set_project` to specify a custom project. All code
+uploaded to public projects is publicly accessible.
 
-When using a public project, all uploaded code will be publicly accessible on Launchpad.
-Users must be explicitly informed of this in the application's ``remote-build`` command.
+Timeouts
+~~~~~~~~
 
-Build timeouts
---------------
-
-A timeout can be set using :py:meth:`~RemoteBuildService.set_timeout`. The timeout is
-measured from when it is set and includes the time for uploading, waiting for builds to start,
-building on all architectures, and uploading results. If a timeout is exceeded, a
-:py:exc:`TimeoutError` is raised. Interrupted builds can be resumed later using
+Set a timeout with :py:meth:`~RemoteBuildService.set_timeout`. If exceeded, a
+:py:exc:`TimeoutError` is raised. Interrupted builds can be resumed using
 :py:meth:`~RemoteBuildService.resume_builds` with the build ID from
-:func:`craft_application.remote.utils.get_build_id`.
+:func:`~craft_application.remote.utils.get_build_id`.
 
-Build architectures
--------------------
+Architectures
+~~~~~~~~~~~~~
 
-The ``RemoteBuildService`` supports building for multiple architectures. If no architectures
-are specified, the service uses the application's default set. The special value ``all`` is
-automatically converted to ``amd64`` for performance. Each architecture is built separately.
+Specify architectures in :py:meth:`~RemoteBuildService.start_builds`. The value
+``all`` is automatically converted to ``amd64``. Each architecture builds separately.
 
-Launchpad interaction
----------------------
+Launchpad management
+--------------------
 
-The ``RemoteBuildService`` automatically manages:
+The service automatically manages:
 
-* **Authentication**: Using Launchpad credentials stored in the platform-specific data directory.
-  Users are prompted to log in on first use if credentials do not exist.
-* **Project and repository management**: Creating temporary Launchpad resources that are
-  automatically cleaned up after the build completes.
-* **Access tokens**: For public repositories, temporary HTTPS tokens (5-minute expiry) are
-  generated. For private repositories, SSH authentication is used.
+* **Authentication**: Launchpad credentials stored in the platform data directory.
+* **Resources**: Temporary repositories and recipes deleted after builds complete.
+* **Access**: HTTPS tokens (5-minute expiry) for public repos; SSH for private repos.
 
-Build state monitoring
-----------------------
+Build monitoring
+----------------
 
-:py:meth:`~RemoteBuildService.monitor_builds` yields a mapping of architecture names to their
-current state. Possible states are: ``PENDING``, ``BUILDING``, ``UPLOADING``, ``SUCCESS``,
-``FAILURE``, and ``CANCELLED``. The monitor exits automatically once all builds have stopped.
+:py:meth:`~RemoteBuildService.monitor_builds` yields architecture → state mappings.
+States: ``PENDING``, ``BUILDING``, ``UPLOADING``, ``SUCCESS``, ``FAILURE``, ``CANCELLED``.
+The monitor exits when all builds stop.
 
-Build artifacts and logs
-------------------------
+Customization
+-------------
 
-:py:meth:`~RemoteBuildService.fetch_artifacts` retrieves build output, while
-:py:meth:`~RemoteBuildService.fetch_logs` retrieves build logs. Log filenames follow the
-pattern ``{build_id}_{architecture}_{timestamp}.txt``.
-
-Application-specific customization
-----------------------------------
-
-Applications can customize the ``RemoteBuildService`` by:
-
-* Setting the :py:attr:`~RemoteBuildService.RecipeClass` class attribute to specify the
-  recipe type to use.
-* Overriding :py:meth:`~RemoteBuildService._new_recipe` and :py:meth:`~RemoteBuildService._get_recipe`
-  for recipes requiring additional configuration.
-* Providing additional options through the ``architectures`` keyword argument to
+* Set :py:attr:`~RemoteBuildService.RecipeClass` for the recipe type.
+* Override :py:meth:`~RemoteBuildService._new_recipe` and
+  :py:meth:`~RemoteBuildService._get_recipe` for custom configuration.
+* Pass extra options via ``architectures`` keyword argument to
   :py:meth:`~RemoteBuildService.start_builds`.
 
-Error handling
---------------
+Errors
+------
 
-* :py:exc:`RuntimeError` - If the service is not properly set up before use.
-* :py:exc:`TimeoutError` - If the deadline set by :py:meth:`~RemoteBuildService.set_timeout`
-  is exceeded.
-* :py:exc:`ValueError` - If :py:meth:`~RemoteBuildService.start_builds` is called with
-  builds already running.
-* :py:class:`~craft_application.errors.CraftError` - If a specified project is not found
-  on Launchpad.
-* :py:class:`~craft_application.errors.CancelFailedError` - If builds cannot be cancelled.
-* :py:class:`~craft_application.remote.RemoteBuildGitError` - If the source cannot be pushed
-  to the Launchpad repository.
+* :py:exc:`RuntimeError` — Service not set up before use.
+* :py:exc:`TimeoutError` — Deadline exceeded.
+* :py:exc:`ValueError` — :py:meth:`~RemoteBuildService.start_builds` called with active builds.
+* :py:class:`~craft_application.errors.CraftError` — Project not found on Launchpad.
+* :py:class:`~craft_application.errors.CancelFailedError` — Build cancellation failed.
+* :py:class:`~craft_application.remote.RemoteBuildGitError` — Source push failed.
 
 API documentation
 -----------------
