@@ -21,14 +21,22 @@ import argparse
 import tarfile
 import tempfile
 from pathlib import Path
-from typing import cast
+from typing import NamedTuple, cast
 
 from craft_application.commands import base
 from craft_application.lint import IgnoreConfig, IgnoreSpec, LintContext, Stage
 from craft_cli import emit
 
 
-def _parse_ignore_rule(value: str) -> tuple[str, str, str | None]:
+class IgnoreRule(NamedTuple):
+    """A lint ignore rule (linter name, issue id, optional glob)."""
+
+    linter: str
+    issue: str
+    glob: str | None
+
+
+def _parse_ignore_rule(value: str) -> IgnoreRule:
     """Parse and validate a CLI ignore rule."""
     if ":" not in value:
         raise argparse.ArgumentTypeError(
@@ -51,7 +59,7 @@ def _parse_ignore_rule(value: str) -> tuple[str, str, str | None]:
     return linter, remainder, None
 
 
-def _build_cli_ignore_config(rules: list[tuple[str, str, str | None]]) -> IgnoreConfig:
+def _build_cli_ignore_config(rules: list[IgnoreRule]) -> IgnoreConfig:
     """Convert parsed CLI ignore tuples into an IgnoreConfig."""
     config: IgnoreConfig = {}
     for linter, issue, glob in rules:
@@ -123,7 +131,10 @@ class LintCommand(base.AppCommand):
             with tempfile.TemporaryDirectory(prefix="testcraft-lint-") as tmp_dir:
                 tmp_path = Path(tmp_dir)
                 with tarfile.open(artifact) as tar:
-                    tar.extractall(path=tmp_path)
+                    try:
+                        tar.extractall(path=tmp_path, filter="data")
+                    except TypeError:
+                        tar.extractall(path=tmp_path)
                 artifact_dirs = [tmp_path]
                 artifact_label = "artifacts"
                 return self._run_stage(
@@ -131,7 +142,7 @@ class LintCommand(base.AppCommand):
                     project_dir,
                     artifact_dirs,
                     artifact_label,
-                    cast(list[tuple[str, str, str | None]], parsed_args.lint_ignores),
+                    cast(list[IgnoreRule], parsed_args.lint_ignores),
                 )
 
         return self._run_stage(
@@ -139,7 +150,7 @@ class LintCommand(base.AppCommand):
             project_dir,
             artifact_dirs,
             artifact_label,
-            cast(list[tuple[str, str, str | None]], parsed_args.lint_ignores),
+            cast(list[IgnoreRule], parsed_args.lint_ignores),
         )
 
     def _run_stage(
@@ -148,8 +159,9 @@ class LintCommand(base.AppCommand):
         project_dir: Path,
         artifact_dirs: list[Path],
         summary_label: str,
-        cli_ignore_rules: list[tuple[str, str, str | None]],
+        cli_ignore_rules: list[IgnoreRule],
     ) -> int:
+        """Run linters for a stage and emit a summary line."""
         ctx = LintContext(project_dir=project_dir, artifact_dirs=artifact_dirs)
         linter = self._services.get("linter")
 

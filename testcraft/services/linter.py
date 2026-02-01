@@ -162,6 +162,9 @@ class TestcraftLinterService(LinterService):
             )
             emit.debug(f"Extracting artifact {artifact} to {tmp_path}")
             with tarfile.open(artifact) as tar:
-                tar.extractall(path=tmp_path)
+                try:
+                    tar.extractall(path=tmp_path, filter="data")
+                except TypeError:
+                    tar.extractall(path=tmp_path)
             prepared.append(tmp_path)
         return prepared
