@@ -155,7 +155,7 @@ python-apt = { index = "python-apt-wheels" }
 
 [build-system]
 requires = [
-    "setuptools==80.9.0",
+    "setuptools==80.10.2",
     "setuptools_scm[toml]>=8.1"
 ]
 build-backend = "setuptools.build_meta"
