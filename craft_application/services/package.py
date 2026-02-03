@@ -42,7 +42,10 @@ class PackageService(base.AppService):
     def pack(self, prime_dir: pathlib.Path, dest: pathlib.Path) -> list[pathlib.Path]:
         """Create one or more packages as appropriate.
 
-        :param prime_dir: Directory path to the prime directory.
+        :param prime_dir: Directory path to the default prime directory.
+            **DEPRECATED** in favour of retrieving this information from the
+            :attr:`LifecycleService
+            <craft_application.services.lifecycle.LifecycleService.project_info>`.
         :param dest: Directory into which to write the package(s).
         :returns: A list of paths to created packages.
         """
