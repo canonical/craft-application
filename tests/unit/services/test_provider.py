@@ -167,8 +167,8 @@ def test_setup_config_values(
                 "SNAP": "/snap/testcraft/x1",
             },
             [
-                Snap(name="testcraft", channel=None, classic=True),
                 Snap(name="core24", channel=None),
+                Snap(name="testcraft", channel=None, classic=True),
             ],
             id="inject-from-host",
         ),
@@ -179,8 +179,8 @@ def test_setup_config_values(
                 "SNAP": "/snap/testcraft/x1",
             },
             [
-                Snap(name="testcraft_1", channel=None, classic=True),
                 Snap(name="core24", channel=None),
+                Snap(name="testcraft_1", channel=None, classic=True),
             ],
             id="inject-from-host-aliased",
         ),
@@ -192,8 +192,8 @@ def test_setup_config_values(
                 "CRAFT_SNAP_CHANNEL": "something",
             },
             [
-                Snap(name="testcraft_1", channel=None, classic=True),
                 Snap(name="core24", channel=None),
+                Snap(name="testcraft_1", channel=None, classic=True),
             ],
             id="inject-from-host-ignore-channel",
         ),
@@ -204,8 +204,8 @@ def test_setup_config_values(
                 "SNAP": "/snap/testcraft/x1",
             },
             [
-                Snap(name="testcraft", channel=None, classic=True),
                 Snap(name="core24", channel=None),
+                Snap(name="testcraft", channel=None, classic=True),
             ],
             id="missing-snap-instance-name",
         ),
@@ -218,8 +218,8 @@ def test_setup_config_values(
                 "CRAFT_SNAP_CHANNEL": "something",
             },
             [
-                Snap(name="testcraft", channel=None, classic=True),
                 Snap(name="core24", channel=None),
+                Snap(name="testcraft", channel=None, classic=True),
             ],
             id="missing-snap-instance-name-ignore-snap-channel",
         ),
