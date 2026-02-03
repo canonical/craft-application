@@ -7,5 +7,6 @@ Services
    :maxdepth: 1
 
    app
+   config
    lifecycle
    project
