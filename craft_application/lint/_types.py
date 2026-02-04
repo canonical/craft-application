@@ -25,6 +25,8 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:  # pragma: no cover
     from pathlib import Path
 
+    from craft_application.models import Project
+
 
 class Stage(str, Enum):
     """Lifecycle stage for linting."""
@@ -54,11 +56,13 @@ class LintContext:
     """Stage-agnostic environment for linters.
 
     - project_dir: the source tree on disk
+    - project: the parsed project model (available for pre-lint)
     - artifact_dirs: list of directories with built artifacts (may be empty in pre-stage)
     """
 
     project_dir: Path
     artifact_dirs: list[Path]
+    project: Project | None = None
 
 
 @dataclass(frozen=True, slots=True)

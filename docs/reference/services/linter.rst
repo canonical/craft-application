@@ -10,7 +10,8 @@ The linter service provides a shared framework to run pre- and post-linters
 with central ignore handling.
 
 - Abstract linter API: name, stage, and a ``run(ctx)`` generator that yields
-  ``LinterIssue`` objects.
+  ``LinterIssue`` objects. For pre-lint, the parsed project model is available
+  as ``ctx.project``.
 - Class-level registration: linters call
   ``LinterService.register(MyLinter)`` at import time to self-register.
 - Central ignore rules: the service owns ``IgnoreConfig`` and enforces user

@@ -166,6 +166,15 @@ class LinterService(base.AppService):
         ctx: LintContext,
     ) -> Iterator[LinterIssue]:
         """Run linters for a stage, streaming non-suppressed issues."""
+        if stage == Stage.PRE and ctx.project is None:  # type: ignore[union-attr]
+            project_service = self._services.get("project")
+            if not project_service.is_configured:
+                project_service.configure(platform=None, build_for=None)
+            ctx = LintContext(
+                project_dir=ctx.project_dir,
+                project=project_service.get(),
+                artifact_dirs=ctx.artifact_dirs,
+            )
         self._issues.clear()
         self._issues_by_linter.clear()
         registry = type(self)._class_registry  # noqa: SLF001

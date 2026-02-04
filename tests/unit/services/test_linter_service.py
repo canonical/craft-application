@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import pytest
-from craft_application.application import AppMetadata
 from craft_application.lint import (
     IgnoreConfig,
     IgnoreSpec,
@@ -14,7 +13,6 @@ from craft_application.lint import (
 )
 from craft_application.lint.base import AbstractLinter
 from craft_application.services.linter import LinterService
-from craft_application.services.service_factory import ServiceFactory
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -34,8 +32,8 @@ class _DummyPreLinter(AbstractLinter):
         )
 
 
-def _make_ctx(tmp_path: Path) -> LintContext:
-    return LintContext(project_dir=tmp_path, artifact_dirs=[])
+def _make_ctx(tmp_path: Path, project) -> LintContext:
+    return LintContext(project_dir=tmp_path, project=project, artifact_dirs=[])
 
 
 @pytest.fixture(autouse=True)
@@ -55,11 +53,11 @@ def _seed_linter_registry() -> Iterator[None]:
         }
 
 
-def test_run_warning(tmp_path: Path) -> None:
-    app = AppMetadata(name="craft_application")
-    factory = ServiceFactory(app)
-    svc = LinterService(app=app, services=factory)
-    ctx = _make_ctx(tmp_path)
+def test_run_warning(fake_services, fake_project, tmp_path: Path) -> None:
+    project_service = fake_services.get("project")
+    project_service.set(fake_project)  # type: ignore[reportAttributeAccessIssue]
+    svc = fake_services.get("linter")
+    ctx = _make_ctx(tmp_path, fake_project)
 
     issues = list(svc.run(Stage.PRE, ctx))
     assert len(issues) == 1
@@ -69,11 +67,11 @@ def test_run_warning(tmp_path: Path) -> None:
     assert svc.summary() == 0  # warnings do not cause non-zero exit
 
 
-def test_ignore_by_id_cli(tmp_path: Path) -> None:
-    app = AppMetadata(name="craft_application")
-    factory = ServiceFactory(app)
-    svc = LinterService(app=app, services=factory)
-    ctx = _make_ctx(tmp_path)
+def test_ignore_by_id_cli(fake_services, fake_project, tmp_path: Path) -> None:
+    project_service = fake_services.get("project")
+    project_service.set(fake_project)  # type: ignore[reportAttributeAccessIssue]
+    svc = fake_services.get("linter")
+    ctx = _make_ctx(tmp_path, fake_project)
 
     cli_cfg: IgnoreConfig = {
         "dummy.pre": IgnoreSpec(ids={"D001"}, by_filename={}),
@@ -85,11 +83,11 @@ def test_ignore_by_id_cli(tmp_path: Path) -> None:
     assert int(svc.summary()) == 0  # OK
 
 
-def test_ignore_by_glob_cli(tmp_path: Path) -> None:
-    app = AppMetadata(name="craft_application")
-    factory = ServiceFactory(app)
-    svc = LinterService(app=app, services=factory)
-    ctx = _make_ctx(tmp_path)
+def test_ignore_by_glob_cli(fake_services, fake_project, tmp_path: Path) -> None:
+    project_service = fake_services.get("project")
+    project_service.set(fake_project)  # type: ignore[reportAttributeAccessIssue]
+    svc = fake_services.get("linter")
+    ctx = _make_ctx(tmp_path, fake_project)
 
     cli_cfg: IgnoreConfig = {
         "dummy.pre": IgnoreSpec(ids=set(), by_filename={"D001": {"*/README.*"}}),
@@ -101,15 +99,17 @@ def test_ignore_by_glob_cli(tmp_path: Path) -> None:
     assert int(svc.summary()) == 0
 
 
-def test_post_filter_hook_drops_issue(tmp_path: Path) -> None:
+def test_post_filter_hook_drops_issue(
+    fake_services, fake_project, tmp_path: Path
+) -> None:
     class Policy(LinterService):
         def post_filter_issues(self, linter: AbstractLinter, issues, ctx):  # type: ignore[override]
             return (i for i in issues if i.id != "D001")
 
-    app = AppMetadata(name="craft_application")
-    factory = ServiceFactory(app)
-    svc = Policy(app=app, services=factory)
-    ctx = _make_ctx(tmp_path)
+    project_service = fake_services.get("project")
+    project_service.set(fake_project)  # type: ignore[reportAttributeAccessIssue]
+    svc = Policy(app=fake_services.app, services=fake_services)
+    ctx = _make_ctx(tmp_path, fake_project)
 
     issues = list(svc.run(Stage.PRE, ctx))
     assert issues == []

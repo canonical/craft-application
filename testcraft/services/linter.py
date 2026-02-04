@@ -26,7 +26,6 @@ from typing import TYPE_CHECKING
 from craft_application.lint import LintContext, LinterIssue, Severity, Stage
 from craft_application.lint.base import AbstractLinter
 from craft_application.services.linter import LinterService
-from craft_application.util import yaml as yaml_util
 from craft_cli import emit
 
 from testcraft.application import TESTCRAFT
@@ -45,22 +44,16 @@ class MissingVersionLinter(AbstractLinter):
 
     def run(self, ctx: LintContext) -> Iterable[LinterIssue]:
         """Check for the presence of the 'version' field in the project file."""
-        project_file = ctx.project_dir / PROJECT_FILE
-        if not project_file.exists():
+        if not ctx.project:
             return
-
-        data = yaml_util.safe_yaml_load(project_file.read_text())
-        if not isinstance(data, dict):
-            return
-
-        if data.get("version"):
+        if ctx.project.version:
             return
 
         yield LinterIssue(
             id="TC001",
             message="project is missing the recommended 'version' field",
             severity=Severity.WARNING,
-            filename=str(project_file),
+            filename=str(ctx.project_dir / PROJECT_FILE),
         )
 
 
@@ -126,6 +119,7 @@ class TestcraftLinterService(LinterService):
                 if artifact_dirs:
                     ctx = LintContext(
                         project_dir=ctx.project_dir,
+                        project=ctx.project,
                         artifact_dirs=artifact_dirs,
                     )
                     yield from super().run(stage, ctx)

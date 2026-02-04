@@ -8,8 +8,9 @@ shared linter service.
 ---------------------
 
 Create a class that extends ``AbstractLinter`` and yields issues from ``run``.
-Use ``Stage.PRE`` to lint the source tree and ``Stage.POST`` to lint packed
-artifacts via ``ctx.artifact_dirs``.
+Use ``Stage.PRE`` to lint the source tree (and access the parsed project via
+``ctx.project``) and ``Stage.POST`` to lint packed artifacts via
+``ctx.artifact_dirs``.
 
 .. code-block:: python
 
