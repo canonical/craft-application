@@ -299,9 +299,29 @@ def test_init_parts_error(
     ]
 
 
+def test_init_parts_do_not_ignore_spread(
+    app_metadata, fake_project, fake_services, monkeypatch, new_dir
+):
+    """Don't ignore spread if the directory doesn't exist."""
+    mock_lifecycle = mock.Mock()
+    monkeypatch.setattr(lifecycle, "LifecycleManager", mock_lifecycle)
+
+    service = lifecycle.LifecycleService(
+        app_metadata,
+        fake_services,
+        work_dir=new_dir,
+        cache_dir=new_dir,
+    )
+
+    service.setup()
+
+    assert mock_lifecycle.mock_calls[0].kwargs["ignore_outdated"] == []
+
+
 def test_init_parts_ignore_spread(
     app_metadata, fake_project, fake_services, monkeypatch, new_dir
 ):
+    """Ignore spread if the directory exists."""
     mock_lifecycle = mock.Mock()
     monkeypatch.setattr(lifecycle, "LifecycleManager", mock_lifecycle)
 
@@ -318,11 +338,7 @@ def test_init_parts_ignore_spread(
 
     service.setup()
 
-    assert mock_lifecycle.mock_calls[0].kwargs["ignore_local_sources"] == [
-        ".craft",
-        "*.snap",
-        "*.charm",
-        "*.starcraft",
+    assert mock_lifecycle.mock_calls[0].kwargs["ignore_outdated"] == [
         "spread.yaml",
         "spread",
     ]
