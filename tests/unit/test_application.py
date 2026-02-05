@@ -1027,6 +1027,64 @@ def test_register_plugins_default(mocker, app_metadata, fake_services):
     assert reg.call_count == 0
 
 
+def test_set_plugin_group(mocker, app_metadata, fake_services):
+    """Test that we set the plugin group early."""
+    mock_set = mocker.patch("craft_parts.plugins.set_plugin_group")
+    mock_get_plugin_group = mocker.patch.object(
+        fake_services.get_class("lifecycle"), "get_plugin_group"
+    )
+
+    app = FakeApplication(app_metadata, fake_services)
+    with pytest.raises(SystemExit):
+        app.run()
+
+    mock_set.assert_called_once_with(mock_get_plugin_group.return_value)
+
+
+def test_set_plugin_group_empty(mocker, app_metadata, fake_services):
+    """Test that we set the plugin group early."""
+    mock_set = mocker.patch("craft_parts.plugins.set_plugin_group")
+    mock_get_plugin_group = mocker.patch.object(
+        fake_services.get_class("lifecycle"), "get_plugin_group", return_value=None
+    )
+
+    app = FakeApplication(app_metadata, fake_services)
+    with pytest.raises(SystemExit):
+        app.run()
+
+    mock_get_plugin_group.assert_called_once()
+    mock_set.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "planning_error",
+    [
+        craft_cli.CraftError("General craft error"),
+        craft_platforms.CraftPlatformsError("Platforms error"),
+        craft_application.errors.CraftValidationError("Validation!"),
+    ],
+)
+def test_set_plugin_group_ignores_errors(
+    mocker, app_metadata, fake_services, planning_error
+):
+    """Test that we set the plugin group early."""
+    mock_set = mocker.patch("craft_parts.plugins.set_plugin_group")
+    mock_get_plugin_group = mocker.patch.object(
+        fake_services.get_class("lifecycle"), "get_plugin_group", return_value=None
+    )
+    mock_planner = mocker.patch.object(
+        fake_services.get("build_plan"), "plan", side_effect=planning_error
+    )
+
+    app = FakeApplication(app_metadata, fake_services)
+    with pytest.raises(SystemExit):
+        app.run()
+
+    mock_planner.assert_called_once()
+    mock_get_plugin_group.assert_not_called()
+    mock_set.assert_not_called()
+
+
 @pytest.fixture
 def grammar_project_mini(tmp_path):
     """A project that builds on amd64 to riscv64 and s390x."""
