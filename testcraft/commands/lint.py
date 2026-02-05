@@ -54,9 +54,9 @@ def _parse_ignore_rule(value: str) -> IgnoreRule:
             raise argparse.ArgumentTypeError(
                 "Lint ignore glob rules must be in the form 'linter:id=glob'."
             )
-        return linter, issue, glob
+        return IgnoreRule(linter=linter, issue=issue, glob=glob)
 
-    return linter, remainder, None
+    return IgnoreRule(linter=linter, issue=remainder, glob=None)
 
 
 def _build_cli_ignore_config(rules: list[IgnoreRule]) -> IgnoreConfig:
