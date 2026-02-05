@@ -15,6 +15,15 @@ Changelog
 
     For a complete list of commits, check out the `1.2.3`_ release on GitHub.
 
+6.1.2 (2026-MM-DD)
+------------------
+
+Bug fixes
+=========
+
+- The ``test`` command can now run tests with an Ubuntu 26.04 backend, using daily
+  images.
+
 6.1.1 (2026-01-27)
 ------------------
 
