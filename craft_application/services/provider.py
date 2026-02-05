@@ -123,7 +123,7 @@ class ProviderService(base.AppService):
             snap_injected = False
             if is_snappy := util.is_running_from_snap(self._app.name):
                 # use the aliased name of the snap when injecting
-                snap_injected = self.try_inject_snap(
+                snap_injected = self.enqueue_snap_injection(
                     os.getenv("SNAP_INSTANCE_NAME", self._app.name)
                 )
             if not is_snappy or not snap_injected:
@@ -137,10 +137,11 @@ class ProviderService(base.AppService):
                 )
                 self.snaps.append(Snap(name=name, channel=channel, classic=True))
 
-    def try_inject_snap(self, name: str, *, include_base: bool = True) -> bool:
+    def enqueue_snap_injection(self, name: str, *, include_base: bool = True) -> bool:
         """Try to inject a snap from the host system.
 
         :param name: The name of the host snap to try to inject.
+        :include_base: Whether to inject the base snap (defaults to True).
         :returns: True if the snap can be injected, False otherwise.
         """
         emit.debug(
