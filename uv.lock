@@ -624,7 +624,7 @@ requires-dist = [
     { name = "license-expression", specifier = ">=30.0.0" },
     { name = "platformdirs", specifier = ">=3.10" },
     { name = "pydantic", specifier = "~=2.0" },
-    { name = "pygit2", specifier = ">=1.13.0,<1.19.0" },
+    { name = "pygit2", specifier = ">=1.13.0,<1.20.0" },
     { name = "pysocks", marker = "extra == 'remote'", specifier = ">=1.7.1" },
     { name = "python-apt", marker = "sys_platform == 'linux' and extra == 'apt'", specifier = ">=2.4.0", index = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels/" },
     { name = "pyyaml", specifier = ">=6.0" },

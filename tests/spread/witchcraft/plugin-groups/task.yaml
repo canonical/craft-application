@@ -16,7 +16,7 @@ execute: |
 
   # Check that the package referencing a plugin not used on this system does not pack.
   cd "invalid-${DISTRO}"
-  witchcraft pack --destructive-mode |& MATCH "Plugin '[a-z]+' in part 'part1' is not registered."
+  witchcraft pack --destructive-mode |& MATCH "plugin not registered: 'python' (in field 'parts.part1',"
 
 
 restore: |
