@@ -23,6 +23,7 @@ from typing import TYPE_CHECKING, cast
 
 from craft_cli import emit
 
+from craft_application import errors
 from craft_application.lint import (
     ExitCode,
     IgnoreConfig,
@@ -41,6 +42,8 @@ if TYPE_CHECKING:
 
     from craft_application.application import AppMetadata
     from craft_application.lint.base import AbstractLinter
+    from craft_application.models import Project
+    from craft_application.services.project import ProjectService
     from craft_application.services.service_factory import ServiceFactory
 
 
@@ -170,9 +173,16 @@ class LinterService(base.AppService):
             project_service = self._services.get("project")
             if not project_service.is_configured:
                 project_service.configure(platform=None, build_for=None)
+            try:
+                project = project_service.get()
+            except errors.CraftValidationError as exc:
+                if self._is_adoptable_missing_error(exc):
+                    project = self._build_project_without_adopt_info(project_service)
+                else:
+                    raise
             ctx = LintContext(
                 project_dir=ctx.project_dir,
-                project=project_service.get(),
+                project=project,
                 artifact_dirs=ctx.artifact_dirs,
             )
         self._issues.clear()
@@ -216,3 +226,20 @@ class LinterService(base.AppService):
     def issues_by_linter(self) -> dict[str, list[LinterIssue]]:
         """Return collected issues grouped by linter name."""
         return {name: list(issues) for name, issues in self._issues_by_linter.items()}
+
+    @staticmethod
+    def _is_adoptable_missing_error(error: errors.CraftValidationError) -> bool:
+        """Return True for adopt-info missing-field validation errors."""
+        message = str(error)
+        return (
+            "'adopt-info' not set" in message
+            and "required fields are missing" in message
+        )
+
+    def _build_project_without_adopt_info(
+        self, project_service: ProjectService
+    ) -> Project:
+        """Build a project model for linting without adopt-info validation."""
+        raw_project = project_service.get_raw()
+        project_path = project_service.resolve_project_file_path()
+        return self._app.ProjectClass.from_yaml_data(raw_project, project_path)

@@ -18,17 +18,13 @@
 from __future__ import annotations
 
 import argparse
+import importlib
 from typing import TYPE_CHECKING
 
 import pytest
 from craft_application.lint import LintContext, LinterIssue, Severity, Stage
 from craft_application.lint.base import AbstractLinter
 from craft_application.services.linter import LinterService
-from testcraft.commands.lint import (
-    LintCommand,
-    _build_cli_ignore_config,
-    _parse_ignore_rule,
-)
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -72,7 +68,8 @@ def test_lint_command_outputs_issues(
     emitter,
 ):
     LinterService.register(_ErroringLinter)
-    command = LintCommand({"app": app_metadata, "services": fake_services})
+    lint_module = importlib.import_module("testcraft.commands.lint")
+    command = lint_module.LintCommand({"app": app_metadata, "services": fake_services})
 
     project_service = fake_services.get("project")
     project_service.set(fake_project)  # type: ignore[reportAttributeAccessIssue]
@@ -98,6 +95,10 @@ def test_lint_command_outputs_issues(
 
 
 def test_build_cli_ignore_config() -> None:
+    lint_module = importlib.import_module("testcraft.commands.lint")
+    _build_cli_ignore_config = lint_module._build_cli_ignore_config
+    _parse_ignore_rule = lint_module._parse_ignore_rule
+
     rules = [
         _parse_ignore_rule("dummy.pre:D001"),
         _parse_ignore_rule("dummy.pre:D002=*.foo"),

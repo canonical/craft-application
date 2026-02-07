@@ -17,6 +17,7 @@
 
 from __future__ import annotations
 
+import importlib
 import tarfile
 from typing import TYPE_CHECKING, cast
 
@@ -24,7 +25,6 @@ import pytest
 from craft_application import models
 from craft_application.lint import LintContext, Stage
 from craft_application.services.linter import LinterService
-from testcraft.services.linter import TestcraftLinterService
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -60,6 +60,9 @@ def _make_artifact(tmp_path: Path) -> Path:
 
 
 def test_post_stage_uses_packed_artifact(tmp_path, app_metadata):
+    linter_module = importlib.import_module("testcraft.services.linter")
+    testcraft_linter_service = linter_module.TestcraftLinterService
+
     class StubPackage:
         def __init__(self, artifact_path: Path) -> None:
             self._state = models.PackState(artifact=artifact_path, resources=None)
@@ -78,7 +81,7 @@ def test_post_stage_uses_packed_artifact(tmp_path, app_metadata):
 
     artifact = _make_artifact(tmp_path)
     services = cast("ServiceFactory", StubServices(StubPackage(artifact)))
-    service = TestcraftLinterService(app_metadata, services)
+    service = testcraft_linter_service(app_metadata, services)
     context = LintContext(project_dir=tmp_path, artifact_dirs=[])
 
     issues = list(service.run(Stage.POST, context))
