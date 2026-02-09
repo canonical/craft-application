@@ -8,7 +8,7 @@ systems:
 
 prepare: |
   # Determine the base snap for the test (based on the testcraft base.)
-  HOST_BASE=$(snap info testcraft --verbose | awk '$1 == "base" { print $2; exit }')
+  HOST_BASE=$(snap info testcraft --verbose | awk '$1 == "base:" { print $2; exit }')
 
   if [ -z "${HOST_BASE:-}" ]; then
     echo "ERROR: Failed to determine HOST_BASE from 'snap info testcraft --verbose'" >&2
