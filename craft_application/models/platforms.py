@@ -22,6 +22,7 @@ from typing import Annotated, ClassVar, cast, get_args
 
 import craft_platforms
 import pydantic
+from craft_platforms import platform_types
 from pydantic_core import core_schema as cs
 from typing_extensions import Any, Self, TypeVar
 
@@ -60,6 +61,7 @@ PlatformName = Annotated[
     ),
 ]
 PlatformNameAdapter = pydantic.TypeAdapter[str](PlatformName)
+StrictPlatformNameAdapter = pydantic.TypeAdapter[str](platform_types.StrictPlatformName)
 
 
 class Platform(base.CraftBaseModel):
@@ -153,10 +155,11 @@ class Platform(base.CraftBaseModel):
         return result
 
 
+NameType = TypeVar("NameType", bound=str)
 PT = TypeVar("PT", bound=Platform)
 
 
-class GenericPlatformsDict(dict[PlatformName, PT]):
+class _GenericPlatformsDict(dict[NameType, PT]):
     """A generic dictionary describing the contents of the platforms key.
 
     This class exists to generate Pydantic and JSON schemas for the platforms key on
@@ -251,6 +254,46 @@ class GenericPlatformsDict(dict[PlatformName, PT]):
         return json_schema
 
 
+class GenericPlatformsDict(_GenericPlatformsDict[PlatformName, PT]):
+    """A generic dictionary describing the contents of the platforms key.
+
+    This class exists to generate Pydantic and JSON schemas for the platforms key on
+    a project. By making it a generic, an application can override the Platform
+    definition and provide its own PlatformsDict. A side effect of this, however, is
+    that an application cannot simply use the generic directly. Instead, it must create
+    a non-generic child class and use that.
+    """
+
+
+class GenericStrictPlatformsDict(
+    _GenericPlatformsDict[platform_types.StrictPlatformName, PT]
+):
+    """A generic platforms dictionary but with strict platform names."""
+
+    @classmethod
+    def __get_pydantic_core_schema__(
+        cls, source_type: type, handler: pydantic.GetCoreSchemaHandler
+    ) -> cs.CoreSchema:
+        """Get the Pydantic CoreSchema for this PlatformsDict.
+
+        From a Pydantic perspective, this dict is merely a ``dict[str, PT]``, where
+        ``PT`` is the type of the Platform field. It is unlikely to need to override
+        this method.
+        """
+        try:
+            (value_type,) = get_args(
+                cls.__orig_bases__[0]  # type: ignore[attr-defined]
+            )
+        except (ValueError, AttributeError):
+            raise RuntimeError(
+                "Cannot get value type. This likely means the application is using "
+                "GenericPlatformsDict directly rather than creating a child class."
+            )
+        return cs.dict_schema(
+            StrictPlatformNameAdapter.core_schema, value_type.__pydantic_core_schema__
+        )
+
+
 class PlatformsDict(GenericPlatformsDict[Platform]):
     """A dictionary with a Pydantic schema for the general platforms key.
 
@@ -259,4 +302,13 @@ class PlatformsDict(GenericPlatformsDict[Platform]):
     the default implementation. An application that uses the generic
     :ref:`platform-schema` may use this directly. Applications that need their own
     ``Platform`` model can override :py:class:`.GenericPlatformsDict`.
+    """
+
+
+class StrictPlatformsDict(GenericStrictPlatformsDict[Platform]):
+    """A dictionary with a Pydantic schema for a platforms key with strict names.
+
+    This is a Pydantic model for the ``platforms`` dictionary on a ``Project``
+    model. If a project model can use strict platform names, this dictionary should be
+    used to represent the platforms.
     """

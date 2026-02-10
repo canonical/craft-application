@@ -45,6 +45,9 @@ unreserved name. The name can't contain forward slashes (/).
 .. autoclass:: craft_application.models.PlatformsDict
    :show-inheritance:
 
+.. autoclass:: craft_application.models.StrictPlatformsDict
+   :show-inheritance:
+
 
 Inheritance
 -----------
@@ -58,6 +61,12 @@ class has several validators that may need to be modified.
    :private-members: _validate_architectures, _validate_build_on_real_arch
 
 .. autoclass:: craft_application.models.GenericPlatformsDict
+   :members:
+   :undoc-members:
+   :private-members: _shorthand_keys, __get_pydantic_core_schema__
+   :special-members: __get_pydantic_core_schema__, __get_pydantic_json_schema__
+
+.. autoclass:: craft_application.models.GenericStrictPlatformsDict
    :members:
    :undoc-members:
    :private-members: _shorthand_keys, __get_pydantic_core_schema__
