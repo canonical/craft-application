@@ -39,6 +39,12 @@ from craft_application.util import retry
 logger = logging.getLogger(__name__)
 
 
+SessionSecret = dict[str, Any]
+"""Type representing a secret for a fetch-service session. We could use concrete models
+ here but we want to be able to support new, arbitrary secret types without needing
+ to update this code and re-release craft-application and any craft tools using this."""
+
+
 @dataclass(frozen=True)
 class FetchServiceConfig:
     """Dataclass for the ports that a fetch-service instance uses."""
@@ -138,6 +144,8 @@ def start_service() -> tuple[subprocess.Popen[str] | None, pathlib.Path]:
 
     env = {"FETCH_SERVICE_AUTH": _DEFAULT_CONFIG.auth}
 
+    cmd.append("--verbosity=debug")
+
     # Add the ports
     cmd.append(f"--control-port={_DEFAULT_CONFIG.control}")
     cmd.append(f"--proxy-port={_DEFAULT_CONFIG.proxy}")
@@ -222,14 +230,20 @@ def stop_service(fetch_process: subprocess.Popen[str]) -> None:
         fetch_process.kill()
 
 
-def create_session(*, strict: bool, timeout: float = 5.0) -> SessionData:
+def create_session(
+    *, strict: bool, timeout: float = 5.0, secrets: list[SessionSecret] | None = None
+) -> SessionData:
     """Create a new fetch-service session.
 
     :param strict: Whether the created session should be strict.
     :param timeout: Maximum time to wait for the response from the fetch-service
+    :param secrets: Any secrets to be added to the session.
     :return: a SessionData object containing the session's id and token.
     """
-    json = {"policy": "strict" if strict else "permissive"}
+    json: dict[str, Any] = {"policy": "strict" if strict else "permissive"}
+    if secrets:
+        emit.debug(f"Adding secrets to session creation request: {secrets}")
+        json["secrets"] = secrets
     data = _service_request("post", "session", json=json, timeout=timeout).json()
 
     return SessionData.unmarshal(data=data)

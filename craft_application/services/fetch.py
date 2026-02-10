@@ -59,6 +59,16 @@ def _use_external_session() -> bool:
     return os.getenv(EXTERNAL_FETCH_SERVICE_ENV_VAR) == "1"
 
 
+# NOTE: We shouldn't pass the whole factory in the callback
+SecretCallback: typing.TypeAlias = """typing.Callable[
+    [service_factory.ServiceFactory], list[fetch.SessionSecret]
+]"""
+"""Type representing a function that might generate a secret.
+
+  The secret is passed to the fetch-service when creating a session. The callable receives
+  the service factory, from which it can access the app's metadata, the project, etc."""
+
+
 class FetchService(base.AppService):
     """Service class that handles communication with the fetch-service.
 
@@ -78,6 +88,8 @@ class FetchService(base.AppService):
     _session_data: fetch.SessionData | None
     _instance: craft_providers.Executor | None
     _proxy_cert: pathlib.Path | None
+
+    _secret_callbacks: typing.ClassVar[list[SecretCallback]] = []
 
     def __init__(
         self,
@@ -165,6 +177,11 @@ class FetchService(base.AppService):
             raise errors.CraftError(brief)
         return enable_command_line or _use_external_session()
 
+    @classmethod
+    def register_secret_callback(cls, callback: SecretCallback) -> None:
+        """Register a callback to provide secrets to the fetch-service."""
+        cls._secret_callbacks.append(callback)
+
     def configure_instance(self, instance: craft_providers.Executor) -> dict[str, str]:
         """Configure an instance for use with the fetch-service.
 
@@ -213,7 +230,10 @@ class FetchService(base.AppService):
         os.environ[PROVIDERS_SUPPRESS_UPGRADE_VAR] = "1"
 
         strict_session = self._session_policy == "strict"
-        self._session_data = fetch.create_session(strict=strict_session)
+        secrets = self._get_secrets()
+        self._session_data = fetch.create_session(
+            strict=strict_session, secrets=secrets
+        )
         self._instance = instance
         net_info = fetch.NetInfo(instance, self._session_data)
         self._services.get("proxy").configure(self._proxy_cert, net_info.http_proxy)
@@ -317,3 +337,9 @@ class FetchService(base.AppService):
             for line in text.splitlines():
                 display(line)
             display("This build will fail on 'strict' fetch-service sessions.")
+
+    def _get_secrets(self) -> list[dict[str, str]]:
+        secrets: list[fetch.SessionSecret] = []
+        for callback in self._secret_callbacks:
+            secrets.extend(callback(self._services))
+        return secrets
