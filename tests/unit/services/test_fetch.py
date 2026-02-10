@@ -30,6 +30,7 @@ import pathlib
 import re
 import textwrap
 from datetime import datetime
+from typing import Any
 from unittest import mock
 from unittest.mock import MagicMock, call
 
@@ -37,7 +38,7 @@ import craft_platforms
 import craft_providers
 import pytest
 import pytest_subprocess
-from craft_application import errors, fetch, services
+from craft_application import AppMetadata, errors, fetch, services
 from craft_application.services import fetch as service_module
 from craft_application.services.fetch import (
     EXTERNAL_FETCH_SERVICE_ENV_VAR,
@@ -52,7 +53,7 @@ from freezegun import freeze_time
 @pytest.fixture
 def fetch_service(app, fake_services, fake_project):
     return services.FetchService(
-        app,
+        app.app,
         fake_services,
     )
 
@@ -91,6 +92,43 @@ def test_create_session(fetch_service, mocker):
         proxy_cert, "http://id:token@test-gateway:13444/"
     )
     assert env == {"GOPROXY": "direct"}
+
+
+def test_create_session_with_secrets(fetch_service, mocker, request):
+    session_data = fetch.SessionData(id="id", token="token")  # noqa: S106
+    mocker.patch.object(fetch, "_get_gateway", return_value="test-gateway")
+    mocker.patch.object(services.ProxyService, "configure")
+    proxy_cert = pathlib.Path("test-cert.pem")
+    fetch_service._proxy_cert = proxy_cert
+
+    def create_secret(app: AppMetadata, **_kwargs: Any) -> list[fetch.SessionSecret]:
+        return [
+            {
+                "type": "basic-auth",
+                "url": "https://www.example-basic-auth.com:443/**",
+                "basic-credentials": f"{app.name}:deadbeef",
+            }
+        ]
+
+    request.addfinalizer(FetchService._secret_callbacks.clear)
+    FetchService.register_secret_callback(create_secret)
+
+    create_mock = mocker.patch.object(
+        fetch, "create_session", return_value=session_data
+    )
+
+    fetch_service.create_session(instance=MagicMock())
+
+    create_mock.assert_called_once_with(
+        strict=True,
+        secrets=[
+            {
+                "type": "basic-auth",
+                "url": "https://www.example-basic-auth.com:443/**",
+                "basic-credentials": "testcraft:deadbeef",
+            }
+        ],
+    )
 
 
 def test_create_session_not_setup(fetch_service):
