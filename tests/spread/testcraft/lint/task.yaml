@@ -20,6 +20,6 @@ execute: |
   grep -q "Errors found in artifacts" lint_post.log
 
 restore: |
-  rm -f *.testcraft
-  rm -f testcraft.yaml lint_pre.log lint_post.log pack.log
-  testcraft clean
+    testcraft clean
+    rm -f *.testcraft
+    rm -f testcraft.yaml lint_pre.log lint_post.log pack.log
