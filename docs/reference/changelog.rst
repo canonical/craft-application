@@ -15,6 +15,16 @@ Changelog
 
     For a complete list of commits, check out the `1.2.3`_ release on GitHub.
 
+6.2.0 (unreleased)
+------------------
+
+- The project service now has a
+  :py:class:`~craft_application.services.project.ProjectService.strict_platform_names`
+  property that, when True, enforces strict platform name validation. The property is
+  by default True for all bases except Ubuntu 20.04, 22.04, and 24.04.
+
+For a complete list of commits, check out the `6.2.0`_ release on GitHub.
+
 6.1.1 (2026-01-27)
 ------------------
 
@@ -1191,3 +1201,4 @@ For a complete list of commits, check out the `2.7.0`_ release on GitHub.
 .. _6.0.1: https://github.com/canonical/craft-application/releases/tag/6.0.1
 .. _6.1.0: https://github.com/canonical/craft-application/releases/tag/6.1.0
 .. _6.1.1: https://github.com/canonical/craft-application/releases/tag/6.1.1
+.. _6.2.0: https://github.com/canonical/craft-application/releases/tag/6.2.0

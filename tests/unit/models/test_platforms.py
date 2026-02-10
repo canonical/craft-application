@@ -22,6 +22,7 @@ import pytest
 from craft_application.models.platforms import (
     RESERVED_PLATFORM_NAMES,
     PlatformsDict,
+    StrictPlatformsDict,
 )
 from hypothesis import given, strategies
 
@@ -56,3 +57,37 @@ def test_platform_name_invalid_character(name):
 def test_fuzz_platform_name(name):
     adapter = pydantic.TypeAdapter(PlatformsDict)
     adapter.validate_python({name: {"build-on": ["riscv64"], "build-for": ["s390x"]}})
+
+
+@pytest.mark.parametrize("name", ["app_only_platform"])
+def test_strict_platform_name_invalid_character(name):
+    adapter = pydantic.TypeAdapter(StrictPlatformsDict)
+    with pytest.raises(ValueError, match=f"Invalid platform name: '{name}'"):
+        adapter.validate_python(
+            {name: {"build-on": ["riscv64"], "build-for": ["s390x"]}}
+        )
+
+
+@given(
+    strategies.text(
+        strategies.characters(categories=["L", "N", "So"]),
+        min_size=1,
+    ),
+)
+def test_fuzz_strict_platform_name(name):
+    adapter = pydantic.TypeAdapter(StrictPlatformsDict)
+    adapter.validate_python({name: {"build-on": ["riscv64"], "build-for": ["s390x"]}})
+
+
+@given(
+    strategies.text(
+        strategies.characters(exclude_categories=["L", "N", "So"]),
+        min_size=1,
+    ),
+)
+def test_fuzz_strict_platform_name_error(name):
+    adapter = pydantic.TypeAdapter(StrictPlatformsDict)
+    with pytest.raises(pydantic.ValidationError):
+        adapter.validate_python(
+            {name: {"build-on": ["riscv64"], "build-for": ["s390x"]}}
+        )

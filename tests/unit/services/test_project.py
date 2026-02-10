@@ -28,7 +28,10 @@ import pytest
 import pytest_mock
 from craft_application import errors, models
 from craft_application.application import AppMetadata
-from craft_application.services.project import ProjectService
+from craft_application.services.project import (
+    NON_STRICT_PLATFORM_NAME_BASES,
+    ProjectService,
+)
 from craft_application.services.service_factory import ServiceFactory
 from craft_parts import ProjectVar, ProjectVarInfo
 from hypothesis import given, strategies
@@ -302,6 +305,65 @@ def test_get_platforms_bad_value(
     )
 
     with pytest.raises(errors.CraftValidationError, match=match):
+        real_project_service.get_platforms()
+
+
+@pytest.mark.parametrize(
+    "platforms",
+    [
+        {
+            "__THIS_IS_NOT_A_VALID_STRICT_PLATFORM_NAME__": {
+                "build-on": ["riscv64"],
+                "build-for": ["riscv64"],
+            },
+        },
+        {
+            ";": {
+                "build-on": ["riscv64"],
+                "build-for": ["riscv64"],
+            },
+        },
+    ],
+)
+@pytest.mark.parametrize("base", NON_STRICT_PLATFORM_NAME_BASES)
+@pytest.mark.parametrize("base_key", ["base", "build-base"])
+def test_get_platforms_strict_name_exemption(
+    real_project_service: ProjectService, platforms, base, base_key
+):
+    real_project_service._load_raw_project = lambda: {  # type: ignore[invalid-assignment]
+        "platforms": platforms,
+        base_key: base,
+    }
+    real_project_service.get_platforms()
+
+
+@pytest.mark.parametrize(
+    "platforms",
+    [
+        {
+            "__THIS_IS_NOT_A_VALID_STRICT_PLATFORM_NAME__": {
+                "build-on": ["riscv64"],
+                "build-for": ["riscv64"],
+            },
+        },
+        {
+            ";": {
+                "build-on": ["riscv64"],
+                "build-for": ["riscv64"],
+            },
+        },
+    ],
+)
+@pytest.mark.parametrize("base", ["devel", "ubuntu@26.04"])
+def test_get_platforms_strict_name_error(
+    real_project_service: ProjectService, platforms, base
+):
+    real_project_service._load_raw_project = lambda: {  # type: ignore[invalid-assignment]
+        "platforms": platforms,
+        "base": base,
+    }
+
+    with pytest.raises(craft_platforms.InvalidPlatformNameError):
         real_project_service.get_platforms()
 
 
