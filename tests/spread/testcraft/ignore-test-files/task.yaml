@@ -3,6 +3,8 @@ summary: ignore test file changes
 prepare: |
   git init
   git config --global --add safe.directory "$(pwd)"
+  git config user.name "test"
+  git config user.email "test@example.com"
   mkdir spread
   touch spread/.extension
   touch spread.yaml
@@ -27,3 +29,4 @@ restore: |
   testcraft clean
   rm -rf .git spread
   rm -f spread.yaml output.txt *.testcraft
+  git config --global --unset-all safe.directory "$(pwd)"

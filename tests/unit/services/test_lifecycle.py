@@ -309,13 +309,13 @@ def test_init_parts_do_not_ignore_test_files(
 
     service.setup()
 
-    assert mock_lifecycle.mock_calls[0].kwargs["ignore_local_sources"] == [
+    assert mock_lifecycle.call_args.kwargs["ignore_local_sources"] == [
         ".craft",
         "*.snap",
         "*.charm",
         "*.starcraft",
     ]
-    assert mock_lifecycle.mock_calls[0].kwargs["ignore_outdated"] == [
+    assert mock_lifecycle.call_args.kwargs["ignore_outdated"] == [
         ".craft",
         "*.snap",
         "*.charm",
@@ -343,13 +343,13 @@ def test_init_parts_ignore_test_files(
 
     service.setup()
 
-    assert mock_lifecycle.mock_calls[0].kwargs["ignore_local_sources"] == [
+    assert mock_lifecycle.call_args.kwargs["ignore_local_sources"] == [
         ".craft",
         "*.snap",
         "*.charm",
         "*.starcraft",
     ]
-    assert mock_lifecycle.mock_calls[0].kwargs["ignore_outdated"] == [
+    assert mock_lifecycle.call_args.kwargs["ignore_outdated"] == [
         ".craft",
         "*.snap",
         "*.charm",
