@@ -1,0 +1,29 @@
+summary: ignore test file changes
+
+prepare: |
+  git init
+  git config --global --add safe.directory "$(pwd)"
+  mkdir spread
+  touch spread/.extension
+  touch spread.yaml
+  git add -A
+  git commit -m "initial commit"
+
+execute: |
+  testcraft pack
+
+  # test files shouldn't create a dirty build environment (#942)
+  file="$(find . -type f -name '*.testcraft' -print -quit)"
+  if grep -qi "dirty" "$file"; then
+    echo "error: artifact version is dirty"
+    exit 1
+  fi
+
+  # test file changes should be ignored by the lifecycle
+  echo "hello" > spread.yaml
+  testcraft pack 2>&1 | MATCH "Skipping pack"
+
+restore: |
+  testcraft clean
+  rm -rf .git spread
+  rm -f spread.yaml output.txt *.testcraft
