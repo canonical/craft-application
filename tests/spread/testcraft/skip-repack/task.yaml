@@ -3,9 +3,12 @@ summary: test testcraft pack/repack
 environment:
   CRAFT_BUILD_ENVIRONMENT/managed: ""
   CRAFT_BUILD_ENVIRONMENT/destructive: host
+  CRAFT_IDLE_MINS/managed: 2 # Speed up test by not restarting the container.
+
+prepare: |
+  mkdir repack-test
 
 execute: |
-  mkdir repack-test
   cd repack-test
 
   testcraft init
@@ -34,7 +37,8 @@ execute: |
   # Repacking is not necessary
   testcraft pack 2>&1 | MATCH "Skipping pack"
 
-  testcraft clean
-
 restore: |
+  pushd repack-test
+  testcraft clean
+  popd
   rm -Rf repack-test
