@@ -11,6 +11,10 @@ allocate-lxd-vm(){
   DISK="${DISK:-20}"
   CPU="${CPU:-4}"
   MEM="${MEM:-8}"
+  # Allow early testing on 26.04
+  if [[ "$SERIES" == "26.04" && "$DISTRO" == "ubuntu" ]]; then
+    DISTRO="ubuntu-daily"
+  fi
 
   cloud_config="$(mktemp)"
   sed "s|SPREAD_PASSWORD|$SPREAD_PASSWORD|g" "${SCRIPTDIR}/cloud-config.yaml" > "$cloud_config"
