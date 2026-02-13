@@ -125,7 +125,7 @@ ProjectName = Annotated[
 ProjectTitle = Annotated[
     str,
     pydantic.Field(
-        min_length=2,
+        min_length=1,
         max_length=40,
         title="Title",
         description="A human-readable title.",
