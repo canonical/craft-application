@@ -101,19 +101,24 @@ class LinterService(base.AppService):
             if not isinstance(spec, dict):
                 continue
             spec_dict = cast("dict[str, Any]", spec)
-            ids_raw = cast(str | list[str] | set[str] | None, spec_dict.get("ids"))
+            ids_raw = cast(str | Iterable[str] | None, spec_dict.get("ids"))
             by_filename_raw = cast(
-                dict[str, list[str] | set[str]] | None, spec_dict.get("by_filename")
+                dict[str, str | Iterable[str]] | None, spec_dict.get("by_filename")
             )
 
             if ids_raw == "*":
                 norm_ids: str | set[str] = "*"
+            elif isinstance(ids_raw, str):
+                norm_ids = {ids_raw}
             else:
                 norm_ids = set(cast(Iterable[str], ids_raw or []))
 
             norm_by_fname: dict[str, set[str]] = {}
             for issue_id, globs in (by_filename_raw or {}).items():
-                norm_by_fname[str(issue_id)] = set(cast(Iterable[str], globs or []))
+                if isinstance(globs, str):
+                    norm_by_fname[str(issue_id)] = {globs}
+                else:
+                    norm_by_fname[str(issue_id)] = set(cast(Iterable[str], globs or []))
             cfg[str(linter_name)] = IgnoreSpec(ids=norm_ids, by_filename=norm_by_fname)
         return cfg
 

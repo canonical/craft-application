@@ -24,7 +24,6 @@ from typing import TYPE_CHECKING, cast
 import pytest
 from craft_application import models
 from craft_application.lint import LintContext, Stage
-from craft_application.services.linter import LinterService
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -34,19 +33,10 @@ if TYPE_CHECKING:
 
 
 @pytest.fixture(autouse=True)
-def _reset_registry() -> Iterator[None]:
+def _reset_registry(linter_registry_guard) -> Iterator[None]:
     """Ensure the global linter registry does not leak between tests."""
-    snapshot = {
-        stage: list(classes) for stage, classes in LinterService._class_registry.items()
-    }
-    for registry in LinterService._class_registry.values():  # type: ignore[attr-defined]
-        registry.clear()
-    try:
+    with linter_registry_guard():
         yield
-    finally:
-        LinterService._class_registry = {
-            stage: list(classes) for stage, classes in snapshot.items()
-        }
 
 
 def _make_artifact(tmp_path: Path) -> Path:

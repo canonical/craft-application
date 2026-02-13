@@ -31,18 +31,9 @@ if TYPE_CHECKING:
 
 
 @pytest.fixture
-def restore_linter_registry() -> Iterator[None]:
-    snapshot = {
-        stage: list(classes) for stage, classes in LinterService._class_registry.items()
-    }
-    for registry in LinterService._class_registry.values():
-        registry.clear()
-    try:
+def restore_linter_registry(linter_registry_guard) -> Iterator[None]:
+    with linter_registry_guard():
         yield
-    finally:
-        LinterService._class_registry = {
-            stage: list(classes) for stage, classes in snapshot.items()
-        }
 
 
 class _ErroringLinter(AbstractLinter):

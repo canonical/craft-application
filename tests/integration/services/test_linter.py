@@ -37,19 +37,10 @@ from craft_application.services.linter import LinterService
 
 
 @pytest.fixture
-def restore_linter_registry() -> Iterator[None]:
+def restore_linter_registry(linter_registry_guard) -> Iterator[None]:
     """Snapshot and restore the linter registry around a test."""
-    snapshot = {
-        stage: list(classes) for stage, classes in LinterService._class_registry.items()
-    }
-    for registry in LinterService._class_registry.values():
-        registry.clear()
-    try:
+    with linter_registry_guard():
         yield
-    finally:
-        LinterService._class_registry = {
-            stage: list(classes) for stage, classes in snapshot.items()
-        }
 
 
 @pytest.mark.usefixtures("restore_linter_registry")

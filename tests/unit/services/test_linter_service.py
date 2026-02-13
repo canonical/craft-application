@@ -37,20 +37,10 @@ def _make_ctx(tmp_path: Path, project) -> LintContext:
 
 
 @pytest.fixture(autouse=True)
-def _seed_linter_registry() -> Iterator[None]:
+def _seed_linter_registry(linter_registry_guard) -> Iterator[None]:
     """Reset class-level linter registry and seed the dummy linter per test."""
-    snapshot = {
-        stage: list(classes) for stage, classes in LinterService._class_registry.items()
-    }
-    for registry in LinterService._class_registry.values():
-        registry.clear()
-    LinterService.register(_DummyPreLinter)
-    try:
+    with linter_registry_guard(_DummyPreLinter):
         yield
-    finally:
-        LinterService._class_registry = {
-            stage: list(classes) for stage, classes in snapshot.items()
-        }
 
 
 def test_run_warning(fake_services, fake_project, tmp_path: Path) -> None:
@@ -115,3 +105,41 @@ def test_post_filter_hook_drops_issue(
     assert issues == []
     assert svc.issues_by_linter == {}
     assert int(svc.summary()) == 0
+
+
+def test_normalize_ignore_config_handles_string_and_list_values() -> None:
+    raw = {
+        "dummy.pre": {
+            "ids": "D001",
+            "by_filename": {
+                "D001": "*.md",
+                "D002": ["*.txt", "*.rst"],
+            },
+        }
+    }
+
+    cfg = LinterService._normalize_ignore_config(raw)
+
+    spec = cfg["dummy.pre"]
+    assert spec.ids == {"D001"}
+    assert spec.by_filename == {
+        "D001": {"*.md"},
+        "D002": {"*.txt", "*.rst"},
+    }
+
+
+def test_normalize_ignore_config_keeps_wildcard_ids() -> None:
+    raw = {
+        "dummy.pre": {
+            "ids": "*",
+            "by_filename": {
+                "D001": "*.md",
+            },
+        }
+    }
+
+    cfg = LinterService._normalize_ignore_config(raw)
+
+    spec = cfg["dummy.pre"]
+    assert spec.ids == "*"
+    assert spec.by_filename == {"D001": {"*.md"}}

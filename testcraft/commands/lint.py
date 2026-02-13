@@ -133,6 +133,7 @@ class LintCommand(base.AppCommand):
                 with tarfile.open(artifact) as tar:
                     try:
                         tar.extractall(path=tmp_path, filter="data")
+                    # 'filter' keyword is only supported in Python 3.12 and newer.
                     except TypeError:
                         tar.extractall(path=tmp_path)
                 artifact_dirs = [tmp_path]

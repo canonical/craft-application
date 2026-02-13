@@ -69,12 +69,11 @@ class EmptyArtifactLinter(AbstractLinter):
             if not artifact_dir.exists():
                 continue
 
-            non_metadata_entries = [
-                entry
+            has_non_metadata_entries = any(
+                entry.name != "metadata.yaml" and not entry.name.startswith(".")
                 for entry in artifact_dir.iterdir()
-                if entry.name != "metadata.yaml" and not entry.name.startswith(".")
-            ]
-            if non_metadata_entries:
+            )
+            if has_non_metadata_entries:
                 continue
 
             yield LinterIssue(
@@ -158,6 +157,7 @@ class TestcraftLinterService(LinterService):
             with tarfile.open(artifact) as tar:
                 try:
                     tar.extractall(path=tmp_path, filter="data")
+                # 'filter' keyword is only supported in Python 3.12 and newer.
                 except TypeError:
                     tar.extractall(path=tmp_path)
             prepared.append(tmp_path)
