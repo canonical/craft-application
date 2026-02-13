@@ -160,7 +160,6 @@ def fake_project(fake_project_dict) -> models.Project:
         craft_platforms.DistroBase("ubuntu", "20.04"),
         craft_platforms.DistroBase("ubuntu", "22.04"),
         craft_platforms.DistroBase("ubuntu", "24.04"),
-        craft_platforms.DistroBase("ubuntu", "24.10"),
         craft_platforms.DistroBase("ubuntu", "devel"),
         craft_platforms.DistroBase("almalinux", "9"),
     ],
