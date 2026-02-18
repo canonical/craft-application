@@ -1,5 +1,5 @@
 .. meta::
-    :description: API reference for the BuildPlanService. In a craft application, the BuildPlanService creates build plans for a project on the current machine.
+    :description: API reference for the BuildPlanService. In a craft application, the BuildPlanService creates build plans for a project.
 
 .. py:currentmodule:: craft_application.services.buildplan
 
@@ -8,8 +8,9 @@
 ``BuildPlanService``
 ====================
 
-The ``BuildPlanService`` uses :external+craft-platforms:doc:`index` to create build plans.
-Apps that need to generate custom build plans that Craft Platforms cannot handle can
+The ``BuildPlanService`` uses :external+craft-platforms:doc:`index` to create
+:doc:`build plans </explanation/build-plans>`.
+Apps that need to generate custom build plans that Craft Platforms can't handle must
 override :py:meth:`~BuildPlanService._gen_exhaustive_build_plan`.
 
 
