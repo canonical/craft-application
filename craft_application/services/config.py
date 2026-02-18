@@ -42,9 +42,10 @@ T = TypeVar("T")
 
 
 class ConfigHandler(abc.ABC):
-    """An abstract class for configuration handlers."""
+    """The abstract class that is the parent of all configuration handlers."""
 
     def __init__(self, app: application.AppMetadata) -> None:
+        """Create the configuration handler with the relevant application metadata."""
         self._app = app
 
     @abc.abstractmethod
@@ -59,7 +60,11 @@ class ConfigHandler(abc.ABC):
 
 @final
 class AppEnvironmentHandler(ConfigHandler):
-    """Configuration handler to get values from app-specific environment variables."""
+    """Configuration handler to get values from app-specific environment variables.
+
+    Environment variables used for this are prefixed with a fully upper-case form
+    of the application name. For example, ``TESTCRAFT_DEBUG``.
+    """
 
     def __init__(self, app: application.AppMetadata) -> None:
         super().__init__(app)
@@ -89,7 +94,12 @@ class CraftEnvironmentHandler(ConfigHandler):
 
 
 class SnapConfigHandler(ConfigHandler):
-    """Configuration handler that gets values from snap."""
+    """Configuration handler that gets values from snapd.
+
+    Snap configuration values are set with kebab case, so the ``verbosity_level``
+    configuration value can be set to ``verbose`` using the command
+    ``snap get <app-name> verbosity-level=verbose``
+    """
 
     def __init__(self, app: application.AppMetadata) -> None:
         super().__init__(app)

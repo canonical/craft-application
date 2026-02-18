@@ -17,24 +17,44 @@
 
 from __future__ import annotations
 
-import craft_cli
 import pydantic
+from craft_cli import EmitterMode
 
 
 class ConfigModel(pydantic.BaseModel):
-    """A configuration model for a craft application."""
+    """The configuration model for the app.
 
-    verbosity_level: craft_cli.EmitterMode = craft_cli.EmitterMode.BRIEF
+    This model informs the config service what configuration items are available
+    to the application.
+    """
+
+    verbosity_level: EmitterMode = EmitterMode.BRIEF
+    """The verbosity level for the app."""
     debug: bool = False
+    """Whether the application is in debug mode."""
     build_environment: str | None = None
+    """The build environment to use for this  application.
+
+    Defaults to unset, can also be set as ``host``.
+    """
     secrets: str
 
     platform: str | None = None
+    """The platform for which to build."""
     build_for: str | None = None
+    """The target architecture for which to build."""
 
     parallel_build_count: int
+    """The parallel build count to send to Craft Parts."""
     max_parallel_build_count: int
+    """The maximum parallel build count to send to Craft Parts."""
     lxd_remote: str = "local"
+    """The LXD remote to use if using the LXD provider."""
     launchpad_instance: str = "production"
+    """The Launchpad instance to use for remote builds."""
 
     idle_mins: pydantic.NonNegativeInt | None = None
+    """How long the container used by lifecycle steps remains active after the app exits.
+
+    If unset, this defaults to exiting synchronously before the app exits.
+    """
