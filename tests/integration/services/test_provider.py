@@ -26,13 +26,6 @@ import pytest
 @pytest.mark.parametrize(
     "base_name",
     [
-        pytest.param(
-            craft_platforms.DistroBase("ubuntu", "24.10"),
-            id="ubuntu_latest",
-            marks=pytest.mark.skip(
-                reason="Skipping Oracular test for now; see https://github.com/canonical/craft-providers/issues/598"
-            ),
-        ),
         pytest.param(craft_platforms.DistroBase("ubuntu", "24.04"), id="ubuntu@24.04"),
         pytest.param(craft_platforms.DistroBase("ubuntu", "22.04"), id="ubuntu@22.04"),
         pytest.param(craft_platforms.DistroBase("almalinux", "9"), id="almalinux@9"),
