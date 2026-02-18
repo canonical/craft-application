@@ -95,7 +95,7 @@ class BuildPlanService(base.AppService):
         """Filter the build plan.
 
         This method filters the given build plan based on the provided filter values.
-        An application may override this if in needs to filter the build plan in
+        An application may override this if it needs to filter the build plan in
         non-default ways. It exists to allow applications to only change the build plan
         filter and should only be used by :meth:`get_build_plan` except in testing.
 
