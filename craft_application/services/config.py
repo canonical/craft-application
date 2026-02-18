@@ -94,11 +94,11 @@ class CraftEnvironmentHandler(ConfigHandler):
 
 
 class SnapConfigHandler(ConfigHandler):
-    """Configuration handler that gets values from snap.
+    """Configuration handler that gets values from snapd.
 
     Snap configuration values are set with kebab case, so the ``verbosity_level``
     configuration value can be set to ``verbose`` using the command
-    ``snap get <app name> verbosity-level=verbose``
+    ``snap get <app-name> verbosity-level=verbose``
     """
 
     def __init__(self, app: application.AppMetadata) -> None:

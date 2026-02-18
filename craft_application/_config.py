@@ -22,7 +22,11 @@ from craft_cli import EmitterMode
 
 
 class ConfigModel(pydantic.BaseModel):
-    """A configuration model for a craft application."""
+    """The configuration model for the app.
+
+    This model informs the config service what configuration items are available
+    to the application.
+    """
 
     verbosity_level: EmitterMode = EmitterMode.BRIEF
     """The verbosity level for the app."""
@@ -41,16 +45,16 @@ class ConfigModel(pydantic.BaseModel):
     """The target architecture for which to build."""
 
     parallel_build_count: int
-    """The parallel build count to send to craft-parts."""
+    """The parallel build count to send to Craft Parts."""
     max_parallel_build_count: int
-    """The maximum parallel build count to send to craft-parts."""
+    """The maximum parallel build count to send to Craft Parts."""
     lxd_remote: str = "local"
     """The LXD remote to use if using the LXD provider."""
     launchpad_instance: str = "production"
     """The Launchpad instance to use for remote builds."""
 
     idle_mins: pydantic.NonNegativeInt | None = None
-    """How long to let the build container or VM idle before exiting.
+    """How long the container used by lifecycle steps remains active after the app exits.
 
     If unset, this defaults to exiting synchronously before the app exits.
     """
