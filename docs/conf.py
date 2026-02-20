@@ -51,6 +51,7 @@ exclude_patterns = [
     "common/craft-application/how-to-guides/reuse-packages-between-builds.rst",
     "common/craft-application/reference/remote-builds.rst",
     "common/craft-application/reference/fetch-service.rst",
+    "common/craft-application/reference/strict-platform-names.rst",
     # There's no tutorials right now, so just hide the scaffolding
     "tutorials",
 ]
