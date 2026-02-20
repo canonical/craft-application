@@ -15,6 +15,24 @@ Changelog
 
     For a complete list of commits, check out the `1.2.3`_ release on GitHub.
 
+
+6.2.0 (2026-02-12)
+------------------
+
+Services
+========
+
+- The Provider service now injects the application's base snap from the host into the
+  build environment.
+
+Bug Fixes
+=========
+
+- Files for the test command, ``spread.yaml`` and ``spread/``, no longer cause
+  the part's build directory to be marked as dirty by Git.
+
+For a complete list of commits, check out the `6.2.0`_ release on GitHub.
+
 6.1.1 (2026-01-27)
 ------------------
 
@@ -1191,3 +1209,4 @@ For a complete list of commits, check out the `2.7.0`_ release on GitHub.
 .. _6.0.1: https://github.com/canonical/craft-application/releases/tag/6.0.1
 .. _6.1.0: https://github.com/canonical/craft-application/releases/tag/6.1.0
 .. _6.1.1: https://github.com/canonical/craft-application/releases/tag/6.1.1
+.. _6.2.0: https://github.com/canonical/craft-application/releases/tag/6.2.0
