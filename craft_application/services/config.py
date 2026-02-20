@@ -98,7 +98,7 @@ class SnapConfigHandler(ConfigHandler):
 
     Snap configuration values are set with kebab case, so the ``verbosity_level``
     configuration value can be set to ``verbose`` using the command
-    ``snap get <app-name> verbosity-level=verbose``
+    ``snap set <snap-name> verbosity-level=verbose``
     """
 
     def __init__(self, app: application.AppMetadata) -> None:

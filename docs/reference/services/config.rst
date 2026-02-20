@@ -25,11 +25,11 @@ they were registered to the config cervice. By default this order is:
 1. :py:class:`AppEnvironmentHandler` gets app-specific environment variables.
 2. :py:class:`CraftEnvironmentHandler` gets general ``CRAFT_*`` environment variables.
 3. Extra handlers (if any) provided by the application.
-4. :py:class:`SnapConfigHandler` (if running as a snap) gets `snap configuration`_.
+4. :py:class:`SnapConfigHandler` (if running as a snap) gets a `snap configuration option`_.
 5. :py:class:`DefaultConfigHandler` gets the default value, if there is one.
 
 A handler raises a :external+python:class:`KeyError` if it doesn't have a relevant
-config item set. If all handlers are exhausted when getting a configuration, a
+config option set. If no handlers return a value when getting a configuration option, a
 :external+python:class:`KeyError` is raised to signify that no configuration could be
 found.
 
@@ -68,4 +68,4 @@ API documentation
     :members:
     :private-members:
 
-.. _`snap configuration`: https://snapcraft.io/docs/configuration-in-snaps
+.. _`snap configuration option`: https://snapcraft.io/docs/configuration-in-snaps
