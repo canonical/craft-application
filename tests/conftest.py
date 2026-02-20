@@ -22,6 +22,7 @@ import os
 import pathlib
 import shutil
 import subprocess
+from contextlib import contextmanager
 from dataclasses import dataclass
 from importlib import metadata
 from typing import TYPE_CHECKING, Any, cast
@@ -37,6 +38,7 @@ import pytest
 from craft_application import application, errors, git, launchpad, models, services
 from craft_application.services import service_factory
 from craft_application.services.fetch import FetchService
+from craft_application.services.linter import LinterService
 from craft_application.services.project import ProjectService
 from craft_application.util import yaml
 from craft_cli import EmitterMode, emit
@@ -45,6 +47,8 @@ from typing_extensions import override
 
 if TYPE_CHECKING:  # pragma: no cover
     from collections.abc import Iterator
+
+    from craft_application.lint.base import AbstractLinter
 
 
 FAKE_PROJECT_YAML_TEMPLATE = """\
@@ -169,6 +173,30 @@ def fake_base(request: pytest.FixtureRequest):
 def reset_services():
     yield
     service_factory.ServiceFactory.reset()
+
+
+@pytest.fixture
+def linter_registry_guard():
+    """Provide an isolated linter-registry context for tests."""
+
+    @contextmanager
+    def _guard(*seed_linters: type[AbstractLinter]) -> Iterator[None]:
+        snapshot = {
+            stage: list(classes)
+            for stage, classes in LinterService._class_registry.items()
+        }
+        for registry in LinterService._class_registry.values():
+            registry.clear()
+        for linter_cls in seed_linters:
+            LinterService.register(linter_cls)
+        try:
+            yield
+        finally:
+            LinterService._class_registry = {
+                stage: list(classes) for stage, classes in snapshot.items()
+            }
+
+    return _guard
 
 
 @pytest.fixture

@@ -1,4 +1,4 @@
-# This file is part of craft_application.
+# This file is part of craft-application.
 #
 # Copyright 2025 Canonical Ltd.
 #
@@ -13,12 +13,8 @@
 #
 # You should have received a copy of the GNU Lesser General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
-"""Testcraft CLI commands."""
+"""Namespace for built-in linters.
 
-from .lint import LintCommand
-from .state import StateCommand
-
-__all__ = [
-    "LintCommand",
-    "StateCommand",
-]
+Empty by default; applications may provide their own linters in-tree and
+import them explicitly where appropriate.
+"""

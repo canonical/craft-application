@@ -10,3 +10,4 @@ Services
    buildplan
    lifecycle
    project
+   linter

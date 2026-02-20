@@ -44,6 +44,7 @@ _DEFAULT_SERVICES = {
     "fetch": "FetchService",
     "init": "InitService",
     "lifecycle": "LifecycleService",
+    "package": "PackageService",
     "project": "ProjectService",
     "provider": "ProviderService",
     "proxy": "ProxyService",
@@ -51,6 +52,7 @@ _DEFAULT_SERVICES = {
     "request": "RequestService",
     "state": "StateService",
     "testing": "TestingService",
+    "linter": "LinterService",
 }
 _CAMEL_TO_PYTHON_CASE_REGEX = re.compile(r"(?<!^)(?=[A-Z])")
 
@@ -87,6 +89,7 @@ class ServiceFactory:
         request: services.RequestService
         state: services.StateService
         testing: services.TestingService
+        linter: services.LinterService
 
     def __init__(
         self,
@@ -250,6 +253,11 @@ class ServiceFactory:
     ) -> type[services.TestingService]: ...
     @overload
     @classmethod
+    def get_class(
+        cls, name: Literal["linter", "LinterService", "LinterClass"]
+    ) -> type[services.LinterService]: ...
+    @overload
+    @classmethod
     def get_class(cls, name: str) -> type[services.AppService]: ...
     @classmethod
     def get_class(cls, name: str) -> type[services.AppService]:
@@ -299,6 +307,8 @@ class ServiceFactory:
     def get(self, service: Literal["state"]) -> services.StateService: ...
     @overload
     def get(self, service: Literal["testing"]) -> services.TestingService: ...
+    @overload
+    def get(self, service: Literal["linter"]) -> services.LinterService: ...
     @overload
     def get(self, service: str) -> services.AppService: ...
     def get(self, service: str) -> services.AppService:

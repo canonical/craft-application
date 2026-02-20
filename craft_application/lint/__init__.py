@@ -1,4 +1,4 @@
-# This file is part of craft_application.
+# This file is part of craft-application.
 #
 # Copyright 2025 Canonical Ltd.
 #
@@ -13,12 +13,30 @@
 #
 # You should have received a copy of the GNU Lesser General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
-"""Testcraft CLI commands."""
+"""Linter framework public API surface."""
 
-from .lint import LintCommand
-from .state import StateCommand
+from __future__ import annotations
+
+from ._types import (
+    ExitCode,
+    IgnoreConfig,
+    IgnoreSpec,
+    LintContext,
+    LinterIssue,
+    Severity,
+    Stage,
+    should_ignore,
+)
+from .base import AbstractLinter
 
 __all__ = [
-    "LintCommand",
-    "StateCommand",
+    "ExitCode",
+    "IgnoreConfig",
+    "IgnoreSpec",
+    "LintContext",
+    "LinterIssue",
+    "Severity",
+    "Stage",
+    "should_ignore",
+    "AbstractLinter",
 ]
