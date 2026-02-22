@@ -27,10 +27,11 @@ import subprocess
 import sys
 import urllib.request
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, cast
 
 import craft_platforms
 import craft_providers
+import snap_http  # type: ignore[import-untyped]
 from craft_cli import CraftError, emit
 from craft_providers import bases
 from craft_providers.actions.snap_installer import Snap
@@ -119,16 +120,13 @@ class ProviderService(base.AppService):
         if self._install_snap:
             self.snaps.extend(_REQUESTED_SNAPS.values())
 
-            if util.is_running_from_snap(self._app.name):
+            snap_injected = False
+            if is_snappy := util.is_running_from_snap(self._app.name):
                 # use the aliased name of the snap when injecting
-                name = os.getenv("SNAP_INSTANCE_NAME", self._app.name)
-                channel = None
-                emit.debug(
-                    f"Setting {self._app.name} to be injected from the "
-                    "host into the build environment because it is running "
-                    "as a snap."
+                snap_injected = self.enqueue_snap_injection(
+                    os.getenv("SNAP_INSTANCE_NAME", self._app.name)
                 )
-            else:
+            if not is_snappy or not snap_injected:
                 # use the snap name when installing from the store
                 name = self._app.name
                 channel = os.getenv("CRAFT_SNAP_CHANNEL", "latest/stable")
@@ -137,8 +135,44 @@ class ProviderService(base.AppService):
                     "channel in the build environment because it is not running "
                     "as a snap."
                 )
+                self.snaps.append(Snap(name=name, channel=channel, classic=True))
 
-            self.snaps.append(Snap(name=name, channel=channel, classic=True))
+    def enqueue_snap_injection(self, name: str, *, include_base: bool = True) -> bool:
+        """Try to inject a snap from the host system.
+
+        :param name: The name of the host snap to try to inject.
+        :include_base: Whether to inject the base snap (defaults to True).
+        :returns: True if the snap can be injected, False otherwise.
+        """
+        emit.debug(
+            f"Setting {name} to be injected from the host into the build environment."
+        )
+        # NOTE: A future version of snap-http will allow a smaller response.
+        # https://github.com/canonical/snap-http/pull/30
+        snap_list = cast(list[dict[str, Any]], snap_http.list().result)
+        matching_snaps = [s for s in snap_list if s["name"] == name]
+        for snap in matching_snaps:
+            # Must inject the base before the app or snapd will download the base.
+            if include_base:
+                matching_base_snaps = [
+                    s for s in snap_list if s["name"] == snap.get("base")
+                ]
+                installing_base = [
+                    base for base in self.snaps if base.name == snap.get("base")
+                ]
+                if matching_base_snaps and not installing_base:
+                    self.snaps.append(Snap(name=snap["base"], channel=None))
+
+            self.snaps.append(
+                Snap(
+                    name=snap["name"],
+                    channel=None,
+                    classic=snap["confinement"] == "classic",
+                )
+            )
+        if not matching_snaps:
+            emit.debug(f"Snap {name} not installed on the system, not injecting.")
+        return len(matching_snaps) >= 1
 
     @contextlib.contextmanager
     def instance(
