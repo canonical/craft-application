@@ -22,6 +22,8 @@ Use ``Stage.PRE`` when checks depend on source files and parsed project data
 Your ``run()`` method is your custom processing hook. Iterate the relevant
 context data and yield ``LinterIssue`` entries when you find problems.
 
+Here's an example linter that checks project and compiled part files:
+
 .. code-block:: python
    :caption: mycraft/lint/my_pre_linter.py
 
@@ -41,7 +43,6 @@ context data and yield ``LinterIssue`` entries when you find problems.
                filename=str(ctx.project_dir / "README.md"),
            )
 
-Here's an example linter that checks project and compiled part files:
 
 When linting artifacts in ``Stage.POST``:
 
