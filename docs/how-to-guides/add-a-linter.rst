@@ -22,12 +22,6 @@ Use ``Stage.PRE`` when checks depend on source files and parsed project data
 Your ``run()`` method is your custom processing hook. Iterate the relevant
 context data and yield ``LinterIssue`` entries when you find problems.
 
-When linting artifacts in ``Stage.POST``:
-
-* Iterate every directory in ``ctx.artifact_dirs`` instead of assuming a single artifact.
-* Validate packaged content (for example, required files, layout, or metadata).
-* Keep checks read-only and deterministic (avoid mutating files or relying on network access).
-
 .. code-block:: python
    :caption: mycraft/lint/my_pre_linter.py
 
@@ -46,6 +40,16 @@ When linting artifacts in ``Stage.POST``:
                severity=Severity.WARNING,
                filename=str(ctx.project_dir / "README.md"),
            )
+
+Here's an example linter that checks project and compiled part files:
+
+When linting artifacts in ``Stage.POST``:
+
+* Iterate every directory in ``ctx.artifact_dirs`` instead of assuming a single artifact.
+* Validate packaged content (for example, required files, layout, or metadata).
+* Keep checks read-only and deterministic (avoid mutating files or relying on network access).
+
+This example linter checks the finalized files to be packed into the artifact:
 
 .. code-block:: python
    :caption: mycraft/lint/my_post_linter.py
