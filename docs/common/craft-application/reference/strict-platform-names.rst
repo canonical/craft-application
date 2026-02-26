@@ -9,7 +9,7 @@ from this norm if they satisfy the following rules:
 * A platform name must be at least one character in length.
 * A platform name must begin and end with a letter, a number, or a unicode character
   classified as "Symbol, other".
-  
+
   - In addition to those categories, characters other than the beginning and end of a
     platform name may contain a hyphen (``-``), an at sign (``@``), a full stop (``.``),
     or a colon (``:``).
