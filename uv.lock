@@ -661,7 +661,7 @@ dev-questing = [{ name = "python-apt", marker = "sys_platform == 'linux'", speci
 dev-resolute = [{ name = "python-apt", marker = "sys_platform == 'linux'", specifier = "~=3.0.0", index = "https://people.canonical.com/~lengau/python-apt-ubuntu-wheels/" }]
 docs = [
     { name = "canonical-sphinx", extras = ["full"], specifier = "~=0.5.1" },
-    { name = "pydantic-kitbash", specifier = "~=0.1.1" },
+    { name = "pydantic-kitbash", specifier = "~=1.0.1" },
     { name = "sphinx-autobuild", specifier = "==2024.10.3" },
     { name = "sphinx-lint", specifier = "==1.0.2" },
     { name = "sphinx-substitution-extensions", specifier = ">=2025.1.2" },
@@ -1694,7 +1694,7 @@ wheels = [
 
 [[package]]
 name = "pydantic-kitbash"
-version = "0.1.1"
+version = "1.0.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "docutils" },
@@ -1702,9 +1702,9 @@ dependencies = [
     { name = "pyyaml" },
     { name = "sphinx" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/cd/e1/5caae54ee150f118c883a7a2b14a3dcb836daae177914491f7f71faa1d2f/pydantic_kitbash-0.1.1.tar.gz", hash = "sha256:3f1382ee2381a7e29c62ef9662845c6af7c64e99a345fc78c00a4ff8f33599e7", size = 155732, upload-time = "2025-12-12T18:47:33.308Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/e6/5d/2d1916a0aafc290768ee06b233f5c8c1debb65562e853fc0b6220bf6d5f9/pydantic_kitbash-1.0.1.tar.gz", hash = "sha256:44ad7f851cbba3c9fdbc1e705d2b36bca455befbdc361d86ad53af421e2b2eb1", size = 117282, upload-time = "2026-02-23T21:51:41.236Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/49/0e/199fc675c068067846c47886395894ef4a61b0366d5d1078e50db4b1330c/pydantic_kitbash-0.1.1-py3-none-any.whl", hash = "sha256:9cd4a47a6646a358f84b186ab6d70bd20f2ec9bece039210ade1206594633e3a", size = 14400, upload-time = "2025-12-12T18:47:31.3Z" },
+    { url = "https://files.pythonhosted.org/packages/02/54/c24ce86ecf25c67a4fe7f0f47fe742daf4ccafb3ba4c770baa0d88623778/pydantic_kitbash-1.0.1-py3-none-any.whl", hash = "sha256:8a8055cea6f2e18e5e45336436107b527ae6ab7d32b686eeec95a7aaec18adf2", size = 17762, upload-time = "2026-02-23T21:51:40.028Z" },
 ]
 
 [[package]]
