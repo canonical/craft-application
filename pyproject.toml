@@ -71,7 +71,7 @@ dev = [
     "pytest-rerunfailures==15.1",
     "pytest-subprocess~=1.5.2",
     "pytest-time>=0.3.1",
-    "responses~=0.25.0",
+    "responses~=0.26.0",
     "craft-application[remote]",
     "jsonschema>=4.23.0",
 ]
