@@ -33,7 +33,7 @@ class ConfigModel(pydantic.BaseModel):
     debug: bool = False
     """Whether the application is in debug mode."""
     build_environment: str | None = None
-    """The build environment to use for this  application.
+    """The build environment to use for this application.
 
     Defaults to unset, can also be set as ``host``.
     """

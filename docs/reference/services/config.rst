@@ -1,5 +1,5 @@
 .. meta::
-    :description: API reference for the ConfigService. In a craft application, the ConfigService provides access to application configuration.
+    :description: API reference for the ConfigService. In a craft app, the ConfigService provides access to the configuration.
 
 .. py:currentmodule:: craft_application.services.config
 
