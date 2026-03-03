@@ -37,7 +37,7 @@ Configuration model
 -------------------
 
 Each application has a configuration model, by default ``craft_application.ConfigModel``,
-which is provided to the application by the ``ConfigModel`` field of the app's :attr:`~craft_application.AppMetadata` instance. An app may extend its fields from those
+which is provided to the application by the ``ConfigModel`` attribute of the app's :attr:`~craft_application.AppMetadata` instance. An app may extend its fields from those
 in the configuration model.
 
 .. autoclass:: craft_application.ConfigModel
