@@ -33,9 +33,9 @@ class ConfigModel(pydantic.BaseModel):
     debug: bool = False
     """Whether the application is in debug mode."""
     build_environment: str | None = None
-    """The build environment to use for this application.
+    """The build environment to use for this app.
 
-    Defaults to unset, can also be set as ``host``.
+    Defaults to unset, can also be set as ``host`` to enable destructive mode.
     """
     secrets: str
 
@@ -45,9 +45,17 @@ class ConfigModel(pydantic.BaseModel):
     """The target architecture for which to build."""
 
     parallel_build_count: int
-    """The parallel build count to send to Craft Parts."""
+    """The parallel build count to send to Craft Parts.
+
+    Supersedes any value set in ``max_parallel_build_count``.
+    """
     max_parallel_build_count: int
-    """The maximum parallel build count to send to Craft Parts."""
+    """The maximum parallel build count to send to Craft Parts.
+
+    If this value is set but ``parallel_build_count`` is not, the smaller of
+    ``max_parallel_build_count`` or the number of processor cores available to the
+    app process is used. If unset, the number of processor cores available is used.
+    """
     lxd_remote: str = "local"
     """The LXD remote to use if using the LXD provider."""
     launchpad_instance: str = "production"
