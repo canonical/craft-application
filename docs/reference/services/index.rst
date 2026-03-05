@@ -10,4 +10,5 @@ Services
    buildplan
    config
    lifecycle
+   package
    project
