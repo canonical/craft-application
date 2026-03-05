@@ -12,6 +12,7 @@ need to configure their own :py:class:`AppMetadata`.
 
 .. autoclass:: AppMetadata
     :members:
+    :no-index: ConfigModel
 
 
 ``Application``
