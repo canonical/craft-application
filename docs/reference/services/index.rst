@@ -8,5 +8,6 @@ Services
 
    app
    buildplan
+   config
    lifecycle
    project
