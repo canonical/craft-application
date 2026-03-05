@@ -263,10 +263,11 @@ class LifecycleService(base.AppService):
             *self._app.source_ignore_patterns,
         ]
 
-        if Path("spread/.extension").exists():
-            # Ignore spread.yaml and spread to prevent repulling sources
-            # when test files are changed.
-            source_ignore_patterns.extend(["spread.yaml", "spread"])
+        # Ignore spread.yaml and spread to prevent repulling sources
+        # when test files are changed.
+        ignore_outdated = source_ignore_patterns + (
+            ["spread.yaml", "spread"] if Path("spread/.extension").exists() else []
+        )
 
         try:
             return LifecycleManager(
@@ -276,6 +277,7 @@ class LifecycleService(base.AppService):
                 cache_dir=self._cache_dir,
                 work_dir=self._work_dir,
                 ignore_local_sources=source_ignore_patterns,
+                ignore_outdated=ignore_outdated,
                 parallel_build_count=util.get_parallel_build_count(self._app.name),
                 project_vars=project_service.project_vars,
                 track_stage_packages=True,

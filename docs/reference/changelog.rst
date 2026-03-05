@@ -15,13 +15,26 @@ Changelog
 
     For a complete list of commits, check out the `1.2.3`_ release on GitHub.
 
-6.2.0 (unreleased)
+6.3.0 (unreleased)
 ------------------
 
 - The project service now has a
   :py:class:`~craft_application.services.project.ProjectService.strict_platform_names`
   property that, when True, enforces strict platform name validation. The property is
   by default True for all bases except Ubuntu 20.04, 22.04, and 24.04.
+
+6.2.0 (2026-02-12)
+------------------
+
+Services
+
+- The Provider service now injects the application's base snap from the host into the
+  build environment.
+
+Bug Fixes
+
+- Files for the test command, ``spread.yaml`` and ``spread/``, no longer cause
+  the part's build directory to be marked as dirty by Git.
 
 For a complete list of commits, check out the `6.2.0`_ release on GitHub.
 

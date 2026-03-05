@@ -7,5 +7,8 @@ Services
    :maxdepth: 1
 
    app
+   buildplan
+   config
    lifecycle
+   package
    project
