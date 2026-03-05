@@ -41,6 +41,7 @@ from craft_application.models.constraints import (
 from craft_application.models.platforms import (
     Platform,
     PlatformsDict,
+    StrictPlatformsDict,
 )
 
 
@@ -134,7 +135,7 @@ class Project(base.CraftBaseModel):
     base: str | None = None
     build_base: str | None = None
 
-    platforms: PlatformsDict = pydantic.Field(
+    platforms: PlatformsDict | StrictPlatformsDict = pydantic.Field(
         description="Determines which architectures the project builds and runs on.",
         examples=[
             "{amd64: {build-on: [amd64], build-for: [amd64]}, arm64: {build-on: [amd64, arm64], build-for: [arm64]}}"

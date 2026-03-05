@@ -27,6 +27,7 @@ import craft_platforms
 import distro_support
 import pydantic
 from craft_cli import emit
+from craft_platforms import validators
 from distro_support.errors import (
     UnknownDistributionError,
     UnknownVersionError,
@@ -43,6 +44,20 @@ if TYPE_CHECKING:
     from craft_application.application import AppMetadata
 
     from .service_factory import ServiceFactory
+
+
+NON_STRICT_PLATFORM_NAME_BASES = (
+    "ubuntu:20.04",
+    "ubuntu@20.04",
+    "core20",
+    "ubuntu:22.04",
+    "ubuntu@22.04",
+    "core22",
+    "ubuntu:24.04",
+    "ubuntu@24.04",
+    "core24",
+)
+"""Bases that do not get strict platform name validation."""
 
 
 class ProjectService(base.AppService):
@@ -283,6 +298,11 @@ class ProjectService(base.AppService):
                 file_name=self.project_file_name,
             ) from None
         self._validate_multi_base(self.__platforms)
+        if self.strict_platform_names:
+            for name in self.__platforms:
+                validators.validate_strict_platform_name(
+                    name, allow_app_characters=False
+                )
         return copy.deepcopy(self.__platforms)
 
     def _validate_multi_base(
@@ -790,3 +810,22 @@ class ProjectService(base.AppService):
             else:
                 base[key] = new_value
         return base
+
+    @property
+    def strict_platform_names(self) -> bool:
+        """Determine whether to use strict platform names.
+
+        Applications may override this. The default behaviour is to return True for any
+        base or build base in a list of legacy bases or False otherwise.
+        Having a base or build-base of ``devel`` always returns True.
+        """
+        base = self._load_raw_project().get("base")
+        build_base = self._load_raw_project().get("build-base")
+
+        if "devel" in (base, build_base):
+            return True
+
+        if not build_base and base in NON_STRICT_PLATFORM_NAME_BASES:
+            return False
+
+        return build_base not in NON_STRICT_PLATFORM_NAME_BASES
