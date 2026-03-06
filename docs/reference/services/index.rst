@@ -22,5 +22,7 @@ Service factory API documentation
 
    app
    buildplan
+   config
    lifecycle
+   package
    project
