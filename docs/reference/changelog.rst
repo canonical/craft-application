@@ -15,6 +15,23 @@ Changelog
 
     For a complete list of commits, check out the `1.2.3`_ release on GitHub.
 
+6.2.1 (2026-03-05)
+------------------
+
+Bug fixes
+=========
+
+- The :py:class:`~craft_application.Application` now sets the plugin group on
+  application load.
+
+Documentation
+=============
+
+- Add a :ref:`reference-BuildPlanService` reference document.
+- Add a :ref:`reference-ConfigService` reference document.
+- Add a :ref:`reference-PackageService` reference document.
+- Add a snippet for :ref:`platform naming rules <reference-strict-platform-names>`
+  that can be reused across applications.
 
 6.2.0 (2026-02-12)
 ------------------
