@@ -183,7 +183,7 @@ class ServiceFactory:
 
         This works like ``dict.update()``, overwriting already-set values.
 
-        :param service: the name of the service (e.g. "lifecycle")
+        :param service: the name of the service. For example,  "lifecycle".
         :param kwargs: keyword arguments to set.
         """
         self._service_kwargs.setdefault(service, {}).update(kwargs)
@@ -304,11 +304,11 @@ class ServiceFactory:
     def get(self, service: str) -> services.AppService:
         """Get a service by name.
 
-        :param service: the name of the service (e.g. "config")
-        :returns: An instantiated and set up service class.
-
         Also caches the service so as to provide a single service instance per
-        ServiceFactory.
+        ``ServiceFactory``.
+
+        :param service: the name of the service. For example, "config".
+        :returns: An instantiated and setup service class.
         """
         if service in self._services:
             return self._services[service]
