@@ -28,6 +28,11 @@ The following mockup shows all the valid ways to create platform entries:
       build-on: [<arch 1>, <arch 2>]
       build-for: <arch 2>
 
+.. |star| replace:: package
+.. |Starcraft| replace:: Craft Application
+
+.. include:: /common/craft-application/reference/strict-platform-names.rst
+
 .. _platform-schema:
 
 ``Platform`` schema

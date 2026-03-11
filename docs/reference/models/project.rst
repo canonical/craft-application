@@ -40,6 +40,11 @@ This key determines the project's build environment.
 .. kitbash-field:: Project platforms
     :override-type: dict[str, Platform]
 
+    If the application has enabled strict platform naming (the default when using the
+    base ``ubuntu@25.10`` or newer), platform names must follow
+    :ref:`a set of rules <reference-strict-platform-names>` that limit what can
+    be used in a platform name.
+
 .. kitbash-field:: Project contact
     :override-type: str | list[str]
 
