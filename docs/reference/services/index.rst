@@ -26,3 +26,4 @@ Service factory API documentation
    lifecycle
    package
    project
+   linter
