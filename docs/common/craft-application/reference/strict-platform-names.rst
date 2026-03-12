@@ -7,7 +7,7 @@ A platform's name typically matches its target architecture. However, names can 
 from this norm if they satisfy the following rules:
 
 * A platform name must be at least one character in length.
-* A platform name must begin and end with a letter, a number, or a unicode character
+* A platform name must begin and end with a letter, a number, or a Unicode character
   classified as "Symbol, other".
 
   - In addition to those categories, characters other than the beginning and end of a
