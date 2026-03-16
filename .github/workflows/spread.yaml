@@ -46,7 +46,7 @@ jobs:
 
   snap-tests-amd64:
     runs-on: spread-installed
-    needs: [snap-build]
+    needs: [snap-build-amd64]
     strategy:
       fail-fast: false
       matrix:
@@ -89,7 +89,7 @@ jobs:
 
   snap-tests-arm64:
     runs-on: spread-installed
-    needs: [snap-build]
+    needs: [snap-build-arm64]
     strategy:
       fail-fast: false
       matrix:
