@@ -674,6 +674,7 @@ def test_instance(
         mock_provider.launched_environment.assert_called_once_with(
             project_name=fake_project.name,
             project_path=tmp_path,
+            instance_architecture=mock.ANY,
             instance_name=mock.ANY,
             base_configuration=mock.ANY,
             allow_unstable=allow_unstable,
