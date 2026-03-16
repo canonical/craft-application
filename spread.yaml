@@ -149,7 +149,7 @@ prepare: |
   sudo snap install snapd || sudo snap refresh snapd
   sudo snap wait system seed.loaded
 
-  sudo snap install --dangerous --classic tests/spread/*.snap
+  sudo snap install --dangerous --classic tests/spread/*$(dpkg --print-architecture).snap
 
   # Select older LXD channels for older bases.
   . /etc/os-release

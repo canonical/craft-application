@@ -44,16 +44,14 @@ jobs:
           name: snap-arm64
           path: ${{ steps.snap.outputs.snap }}
 
-  snap-tests-amd64:
+  snap-tests:
     runs-on: spread-installed
-    needs: [snap-build-amd64]
+    needs: [snap-build-amd64, snap-build-arm64]
     strategy:
       fail-fast: false
       matrix:
         spread:
-          - "google:ubuntu-20.04-64"
-          - "google:ubuntu-22.04-64"
-          - "google:ubuntu-24.04-64"
+          - "google:"
 
     steps:
       - name: Cleanup job workspace
@@ -67,48 +65,12 @@ jobs:
           fetch-depth: 1
           submodules: true
 
-      - name: Download snap artifact
+      - name: Download amd64 snap artifact
         uses: actions/download-artifact@v6
         with:
           name: snap-amd64
 
-      - name: Run spread
-        run: |
-          mv *.snap tests/spread/
-          spread ${{ matrix.spread }}
-
-      - name: Discard spread workers
-        if: always()
-        run: |
-          shopt -s nullglob
-          for r in .spread-reuse.*.yaml; do
-            pid="$(echo "$r" | grep -o -E '[0-9]+')"
-            kill -9 $pid
-            spread -discard -reuse-pid=$pid
-          done
-
-  snap-tests-arm64:
-    runs-on: spread-installed
-    needs: [snap-build-arm64]
-    strategy:
-      fail-fast: false
-      matrix:
-        spread:
-          - "google:ubuntu-24.04-arm-64"
-
-    steps:
-      - name: Cleanup job workspace
-        run: |
-          rm -rf "${{ github.workspace }}"
-          mkdir "${{ github.workspace }}"
-
-      - name: Checkout
-        uses: actions/checkout@v6
-        with:
-          fetch-depth: 1
-          submodules: true
-
-      - name: Download snap artifact
+      - name: Download arm64 snap artifact
         uses: actions/download-artifact@v6
         with:
           name: snap-arm64
