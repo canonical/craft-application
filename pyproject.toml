@@ -72,7 +72,7 @@ dev = [
     "pytest-rerunfailures==16.1",
     "pytest-subprocess~=1.5.2",
     "pytest-time>=0.3.1",
-    "responses~=0.25.0",
+    "responses~=0.26.0",
     "craft-application[remote]",
     "jsonschema>=4.23.0",
 ]
@@ -86,7 +86,7 @@ types = [
     "types-urllib3",
 ]
 docs = [
-    "canonical-sphinx[full]~=0.5.1",
+    "canonical-sphinx[full]~=0.6.0",
     "pydantic-kitbash~=1.0.1",
     "sphinx-autobuild==2024.10.3",
     "sphinx-lint==1.0.2",
