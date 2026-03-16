@@ -48,6 +48,10 @@ class ProjectFileError(CraftError):
     """Errors to do with the project file or directory."""
 
 
+class TestFileError(CraftError):
+    """Errors to do with the craft test or spread file."""
+
+
 class ProjectGenerationError(CraftError):
     """Errors to do with prime project generation."""
 
