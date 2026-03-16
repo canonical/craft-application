@@ -1,0 +1,17 @@
+summary: Testcraft can build on armhf on an arm64 runner
+
+priority: 100
+
+systems:
+  - ubuntu-24.04-arm-64
+
+execute: |
+  # Configure testcraft to build on armhf
+  export CRAFT_BUILD_ON=armhf
+
+  testcraft pack --verbosity=debug
+  test -f built-on-armhf_0.1.testcraft
+
+restore: |
+  testcraft clean
+  rm -f built-an-armhf*.testcraft

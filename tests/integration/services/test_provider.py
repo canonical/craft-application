@@ -16,11 +16,13 @@
 """Integration tests for provider service."""
 
 import contextlib
+import pathlib
 import subprocess
 
 import craft_platforms
 import craft_providers
 import pytest
+from craft_application import ProviderService
 
 
 @pytest.mark.parametrize(
@@ -142,3 +144,89 @@ def test_run_managed(provider_service, fake_services, fetch, snap_safe_tmp_path)
     provider_service.run_managed(
         build_info, enable_fetch_service=fetch, command=["echo", "hi"]
     )
+
+
+@pytest.mark.slow
+@pytest.mark.parametrize(
+    "build_on",
+    [
+        pytest.param(
+            "riscv64",
+            marks=pytest.mark.skipif(
+                craft_platforms.DebianArchitecture.from_host()
+                == craft_platforms.DebianArchitecture.RISCV64,
+                reason="Not testing on compatible host.",
+            ),
+        ),
+        pytest.param(
+            "s390x",
+            marks=pytest.mark.skipif(
+                craft_platforms.DebianArchitecture.from_host()
+                == craft_platforms.DebianArchitecture.S390X,
+                reason="Not testing on compatible host.",
+            ),
+        ),
+    ],
+)
+@pytest.mark.parametrize("base", [craft_platforms.DistroBase("ubuntu", "26.04")])
+def test_get_incompatible_instance_error(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: pathlib.Path,
+    provider_service: ProviderService,
+    build_on: str,
+    base: craft_platforms.DistroBase,
+):
+    monkeypatch.setenv("CRAFT_BUILD_ON", build_on)
+
+    build_info = craft_platforms.BuildInfo(
+        platform="foo",
+        build_on=craft_platforms.DebianArchitecture(build_on),
+        build_for=craft_platforms.DebianArchitecture.from_host(),
+        build_base=base,
+    )
+
+    with pytest.raises(
+        craft_providers.errors.ProviderError,
+        match="Requested architecture isn't supported by this host",
+    ):
+        with provider_service.instance(build_info, work_dir=tmp_path):
+            pass
+
+
+@pytest.mark.slow
+@pytest.mark.parametrize(
+    "build_on",
+    [
+        pytest.param(
+            "armhf",
+            marks=pytest.mark.skipif(
+                craft_platforms.DebianArchitecture.from_host()
+                != craft_platforms.DebianArchitecture.ARM64,
+                reason="Skipping incompatible host.",
+            ),
+        ),
+    ],
+)
+@pytest.mark.parametrize("base", [craft_platforms.DistroBase("ubuntu", "26.04")])
+def test_instance_with_different_architecture(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: pathlib.Path,
+    provider_service: ProviderService,
+    build_on: str,
+    base: craft_platforms.DistroBase,
+):
+    monkeypatch.setenv("CRAFT_BUILD_ON", build_on)
+
+    build_info = craft_platforms.BuildInfo(
+        platform="foo",
+        build_on=craft_platforms.DebianArchitecture(build_on),
+        build_for=craft_platforms.DebianArchitecture.from_host(),
+        build_base=base,
+    )
+
+    with provider_service.instance(build_info, work_dir=tmp_path) as instance:
+        result = instance.execute_run(
+            ["dpkg", "--print-architecture"], text=True, capture_output=True
+        )
+
+    assert result.stdout == build_on
