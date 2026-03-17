@@ -229,4 +229,4 @@ def test_instance_with_different_architecture(
             ["dpkg", "--print-architecture"], text=True, capture_output=True
         )
 
-    assert result.stdout == build_on
+    assert result.stdout.rstrip() == build_on
