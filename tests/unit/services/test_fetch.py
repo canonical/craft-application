@@ -33,6 +33,7 @@ from datetime import datetime
 from unittest import mock
 from unittest.mock import MagicMock, call
 
+import craft_platforms
 import craft_providers
 import pytest
 import pytest_subprocess
@@ -111,6 +112,10 @@ def test_teardown_session_no_session(fetch_service):
         fetch_service.teardown_session()
 
 
+@pytest.mark.skipif(
+    craft_platforms.DebianArchitecture.from_host() != "amd64",
+    reason="https://github.com/canonical/craft-application/issues/1032",
+)
 @freeze_time(datetime.fromisoformat("2024-09-16T01:02:03.456789"))
 def test_create_project_manifest(
     fetch_service, tmp_path, monkeypatch, manifest_data_dir
@@ -144,6 +149,10 @@ def test_create_project_manifest_not_managed(fetch_service, tmp_path, monkeypatc
     assert not manifest_path.exists()
 
 
+@pytest.mark.skipif(
+    craft_platforms.DebianArchitecture.from_host() != "amd64",
+    reason="https://github.com/canonical/craft-application/issues/1032",
+)
 def test_teardown_session_create_manifest(
     fetch_service,
     tmp_path,

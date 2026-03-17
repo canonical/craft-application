@@ -277,6 +277,10 @@ def lxd_instance(snap_safe_tmp_path, provider_service):
             executor.delete()
 
 
+@pytest.mark.skipif(
+    craft_platforms.DebianArchitecture.from_host() != "amd64",
+    reason="https://github.com/canonical/craft-application/issues/1032",
+)
 @pytest.mark.slow
 def test_build_instance_integration_managed_fetch_service(
     app_service,
