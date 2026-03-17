@@ -1,0 +1,7 @@
+name: bad-platforms
+parts: {}
+version: "0.0"
+summary: A bad short-form platforms entry.
+
+platforms:
+  my-laptop:

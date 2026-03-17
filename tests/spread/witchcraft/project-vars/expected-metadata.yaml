@@ -1,0 +1,10 @@
+name: project-vars
+version: '0.4'
+components:
+  component1:
+    summary: test component 1
+    version: '0.5'
+    adopt-info: part2
+  component2:
+    summary: test component 2
+    version: '0.3'

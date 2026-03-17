@@ -1,10 +1,18 @@
 """Tests for anonymous access."""
 
-import datetime
-
 import pytest
-
+import requests
 from craft_application import launchpad
+
+
+def _ignore_staging() -> bool:
+    """Check if we should ignore staging."""
+    # If the base API page is up, run the tests as normal.
+    api_result = requests.get("https://api.staging.launchpad.net/devel/", timeout=4.0)
+    return api_result.status_code >= 500
+
+
+_IGNORE_STAGING = _ignore_staging()
 
 
 @pytest.mark.parametrize(
@@ -12,16 +20,15 @@ from craft_application import launchpad
     [
         pytest.param(
             "staging",
-            marks=pytest.mark.xfail(
-                # Only xfail until the end of January.
-                datetime.date.today() < datetime.date(2025, 2, 1),
-                strict=False,
+            marks=pytest.mark.skipif(
+                _IGNORE_STAGING,
                 reason="staging endpoint is offline",
             ),
         ),
         "production",
     ],
 )
+@pytest.mark.slow
 def test_anonymous_login(tmp_path, root):
     cache_dir = tmp_path / "cache"
     assert not cache_dir.exists()
@@ -35,6 +42,7 @@ def test_anonymous_login(tmp_path, root):
 
 # TODO: Re-enable this
 # https://github.com/canonical/craft-application/issues/306
+# @pytest.mark.slow
 # def test_get_basic_items(anonymous_lp):
 #     snapstore_server = anonymous_lp.get_project("snapstore-server")
 #     assert snapstore_server.name == "snapstore-server"
@@ -53,6 +61,7 @@ def test_anonymous_login(tmp_path, root):
         ("charmcraft", "~charmcraft-team/charmcraft/+git/charmcraft"),
     ],
 )
+@pytest.mark.slow
 def test_get_real_repository_by_path(anonymous_lp, name, path):
     repo = anonymous_lp.get_repository(path=path)
 
@@ -68,6 +77,7 @@ def test_get_real_repository_by_path(anonymous_lp, name, path):
         ("snapcraft", "canonical-starcraft", "snapcraft"),
     ],
 )
+@pytest.mark.slow
 def test_get_real_repository_by_name(anonymous_lp, name, owner, project):
     repo = anonymous_lp.get_repository(name=name, owner=owner, project=project)
 

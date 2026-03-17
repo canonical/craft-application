@@ -12,6 +12,7 @@
 # You should have received a copy of the GNU Lesser General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Miscellaneous commands in the 'Other' command group."""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
@@ -46,7 +47,8 @@ class VersionCommand(base.AppCommand):
     common = True
 
     def run(
-        self, parsed_args: argparse.Namespace  # noqa: ARG002 (Unused method argument)
+        self,
+        parsed_args: argparse.Namespace,  # noqa: ARG002 (Unused method argument)
     ) -> None:
         """Run the command."""
         emit.message(f"{self._app.name} {self._app.version}")

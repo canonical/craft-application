@@ -1,0 +1,4 @@
+summary: Basic test for testcraft version
+
+execute: |
+  testcraft --version | MATCH "testcraft dev"

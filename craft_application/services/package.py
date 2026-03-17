@@ -14,33 +14,88 @@
 #  You should have received a copy of the GNU Lesser General Public License
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Service class for lifecycle commands."""
+
 from __future__ import annotations
 
 import abc
-from typing import TYPE_CHECKING
+import pathlib
+from typing import TYPE_CHECKING, cast
 
 from craft_cli import emit
 
-from craft_application import errors, util
+from craft_application import errors, models, util
 from craft_application.services import base
 
 if TYPE_CHECKING:  # pragma: no cover
-    import pathlib
+    from craft_application.application import AppMetadata
+    from craft_application.services import ServiceFactory
 
-    from craft_application import models
 
+class PackageService(base.AppService):
+    """The business logic for creating packages."""
 
-class PackageService(base.ProjectService):
-    """Business logic for creating packages."""
+    def __init__(self, app: AppMetadata, services: ServiceFactory) -> None:
+        super().__init__(app, services)
+        self._resource_map: dict[str, pathlib.Path] | None = None
 
     @abc.abstractmethod
     def pack(self, prime_dir: pathlib.Path, dest: pathlib.Path) -> list[pathlib.Path]:
-        """Create one or more packages as appropriate.
+        """Create one or more packages.
 
-        :param prime_dir: Directory path to the prime directory.
+        :param prime_dir: Directory path to the default prime directory.
+            **DEPRECATED** in favour of retrieving this information from the
+            :attr:`LifecycleService
+            <craft_application.services.lifecycle.LifecycleService.project_info>`.
         :param dest: Directory into which to write the package(s).
-        :returns: A list of paths to created packages.
+        :returns: A list of paths to the created packages.
         """
+
+    # This was implemented as a separate property to allow applications to
+    # retrieve this information without changing the pack method to also
+    # return the resource mapping. The two calls can be consolidated in the
+    # next API change.
+    @property
+    def resource_map(self) -> dict[str, pathlib.Path] | None:
+        """Map resource name to artifact file name."""
+        return self._resource_map
+
+    def write_state(
+        self, artifact: pathlib.Path | None, resources: dict[str, pathlib.Path] | None
+    ) -> None:
+        """Write the packaging state."""
+        platform = self._build_info.platform
+        state_service = self._services.get("state")
+
+        state_service.set(
+            "artifact", platform, value=str(artifact) if artifact else None
+        )
+        state_service.set(
+            "resources",
+            platform,
+            value={k: str(v) for k, v in resources.items()} if resources else None,
+        )
+
+    def read_state(self, platform: str | None = None) -> models.PackState:
+        """Read the packaging state.
+
+        :param platform: The name of the platform to read. If not provided, uses the
+            first platform in the build plan.
+        :returns: A PackState object containing the artifact and resources.
+        """
+        if platform is None:
+            platform = self._build_info.platform
+        state_service = self._services.get("state")
+
+        artifact = cast(str | None, state_service.get("artifact", platform))
+        resources = cast(
+            dict[str, str] | None, state_service.get("resources", platform)
+        )
+        return models.PackState(
+            artifact=pathlib.Path(artifact) if artifact else None,
+            resources={k: pathlib.Path(v) for k, v in resources.items()}
+            if resources
+            else None,
+        )
 
     @property
     @abc.abstractmethod
@@ -49,13 +104,13 @@ class PackageService(base.ProjectService):
 
     def update_project(self) -> None:
         """Update project fields with dynamic values set during the lifecycle."""
-        update_vars: dict[str, str] = {}
-        project_info = self._services.lifecycle.project_info
-        for var in self._app.project_variables:
-            update_vars[var] = project_info.get_project_var(var)
+        project_info = self._services.get("lifecycle").project_info
+        update_vars = project_info.project_vars.marshal("value")
+        emit.debug(f"Project variable updates: {update_vars}")
 
-        emit.debug(f"Update project variables: {update_vars}")
-        self._project.__dict__.update(update_vars)
+        project_service = self._services.get("project")
+        project_service.deep_update(update_vars)
+        project = project_service.get()
 
         # Give subclasses a chance to update the project with their own logic
         self._extra_project_updates()
@@ -63,7 +118,7 @@ class PackageService(base.ProjectService):
         unset_fields = [
             field
             for field in self._app.mandatory_adoptable_fields
-            if not getattr(self._project, field)
+            if not getattr(project, field)
         ]
 
         if unset_fields:

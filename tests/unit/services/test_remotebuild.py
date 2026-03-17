@@ -14,6 +14,7 @@
 #  You should have received a copy of the GNU Lesser General Public License
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Tests for the remote build service."""
+
 import datetime
 import pathlib
 from unittest import mock
@@ -23,12 +24,12 @@ import lazr.restfulclient.errors
 import lazr.restfulclient.resource
 import platformdirs
 import pytest
-
 from craft_application import errors, git, launchpad, services
 from craft_application.remote.errors import (
     RemoteBuildGitError,
     RemoteBuildInvalidGitRepoError,
 )
+
 from tests.unit.services.conftest import (
     get_mock_callable,
 )
@@ -428,6 +429,37 @@ def test_fetch_logs(tmp_path, remote_build_service, logs, mocker):
             log["build_log_url"]: tmp_path
             / f"appname-project-checksum_{log['arch_tag']}_2024-01-01T12:34:56.txt"
             for log in logs
+        }
+    )
+
+
+def test_fetch_artifacts_url_decode(tmp_path, remote_build_service, mocker):
+    """Test that artifact filenames are URL-decoded (e.g., %40 -> @)."""
+    remote_build_service._name = "appname-project-checksum"
+    # Simulate artifact URLs with URL-encoded characters
+    mock_builds = [
+        mock.Mock(
+            get_artifact_urls=mock.Mock(
+                return_value=[
+                    "https://example.com/files/test_ubuntu%4020.04-amd64.charm",
+                    "https://example.com/files/test_ubuntu%4022.04-arm64.charm",
+                ]
+            )
+        )
+    ]
+    remote_build_service._builds = mock_builds
+    remote_build_service._is_setup = True
+    remote_build_service.request = mock.Mock()
+
+    remote_build_service.fetch_artifacts(tmp_path)
+
+    # Verify that the filenames are URL-decoded (@ instead of %40)
+    remote_build_service.request.download_files_with_progress.assert_called_once_with(
+        {
+            "https://example.com/files/test_ubuntu%4020.04-amd64.charm": tmp_path
+            / "test_ubuntu@20.04-amd64.charm",
+            "https://example.com/files/test_ubuntu%4022.04-arm64.charm": tmp_path
+            / "test_ubuntu@22.04-arm64.charm",
         }
     )
 

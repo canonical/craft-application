@@ -1,17 +1,17 @@
 .. _reference:
 
 Reference
-*********
+=========
 
 .. toctree::
    :maxdepth: 1
 
    changelog
+   application
+   commands/index
    environment-variables
-   platforms
-
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
+   models/index
+   pytest-plugin
+   remote-builds
+   services/index
+   fetch-service

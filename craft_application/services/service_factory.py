@@ -1,4 +1,4 @@
-# Copyright 2023-2024 Canonical Ltd.
+# Copyright 2023-2025 Canonical Ltd.
 #
 # This program is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Lesser General Public License version 3, as
@@ -12,9 +12,9 @@
 # You should have received a copy of the GNU Lesser General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Factory class for lazy-loading service classes."""
+
 from __future__ import annotations
 
-import dataclasses
 import importlib
 import re
 import warnings
@@ -31,19 +31,28 @@ from typing import (
 
 import annotated_types
 
-from craft_application import models, services
+from craft_application import services
 
 if TYPE_CHECKING:
     from craft_application.application import AppMetadata
+    from craft_application.services.buildplan import BuildPlanService
+    from craft_application.services.project import ProjectService
 
 _DEFAULT_SERVICES = {
+    "build_plan": "BuildPlanService",
     "config": "ConfigService",
     "fetch": "FetchService",
     "init": "InitService",
     "lifecycle": "LifecycleService",
+    "package": "PackageService",
+    "project": "ProjectService",
     "provider": "ProviderService",
+    "proxy": "ProxyService",
     "remote_build": "RemoteBuildService",
     "request": "RequestService",
+    "state": "StateService",
+    "testing": "TestingService",
+    "linter": "LinterService",
 }
 _CAMEL_TO_PYTHON_CASE_REGEX = re.compile(r"(?<!^)(?=[A-Z])")
 
@@ -51,7 +60,6 @@ T = TypeVar("T")
 _ClassName = Annotated[str, annotated_types.Predicate(lambda x: x.endswith("Class"))]
 
 
-@dataclasses.dataclass
 class ServiceFactory:
     """Factory class for lazy-loading service classes.
 
@@ -66,35 +74,33 @@ class ServiceFactory:
         dict[str, tuple[str, str] | type[services.AppService]]
     ] = {}
 
-    # These exist so that child ServiceFactory classes can use them.
-    app: AppMetadata
-    PackageClass: type[services.PackageService] = None  # type: ignore[assignment]
-    LifecycleClass: type[services.LifecycleService] = None  # type: ignore[assignment]
-    ProviderClass: type[services.ProviderService] = None  # type: ignore[assignment]
-    RemoteBuildClass: type[services.RemoteBuildService] = None  # type: ignore[assignment]
-    RequestClass: type[services.RequestService] = None  # type: ignore[assignment]
-    ConfigClass: type[services.ConfigService] = None  # type: ignore[assignment]
-    FetchClass: type[services.FetchService] = None  # type: ignore[assignment]
-    InitClass: type[services.InitService] = None  # type: ignore[assignment]
-    project: models.Project | None = None
-
     if TYPE_CHECKING:
         # Cheeky hack that lets static type checkers report the correct types.
-        package: services.PackageService = None  # type: ignore[assignment]
-        lifecycle: services.LifecycleService = None  # type: ignore[assignment]
-        provider: services.ProviderService = None  # type: ignore[assignment]
-        remote_build: services.RemoteBuildService = None  # type: ignore[assignment]
-        request: services.RequestService = None  # type: ignore[assignment]
-        config: services.ConfigService = None  # type: ignore[assignment]
-        fetch: services.FetchService = None  # type: ignore[assignment]
-        init: services.InitService = None  # type: ignore[assignment]
+        # This does not need any new types added as the ``__getattr__`` method is
+        # deprecated and we should encourage using ``get()`` instead.
+        config: services.ConfigService
+        fetch: services.FetchService
+        init: services.InitService
+        lifecycle: services.LifecycleService
+        package: services.PackageService
+        provider: services.ProviderService
+        proxy: services.ProxyService
+        remote_build: services.RemoteBuildService
+        request: services.RequestService
+        state: services.StateService
+        testing: services.TestingService
+        linter: services.LinterService
 
-    def __post_init__(self) -> None:
+    def __init__(
+        self,
+        app: AppMetadata,
+        **kwargs: type[services.AppService] | None,
+    ) -> None:
+        self.app = app
         self._service_kwargs: dict[str, dict[str, Any]] = {}
         self._services: dict[str, services.AppService] = {}
 
-        factory_dict = dataclasses.asdict(self)
-        for cls_name, value in factory_dict.items():
+        for cls_name, value in kwargs.items():
             if cls_name.endswith("Class"):
                 if value is not None:
                     identifier = _CAMEL_TO_PYTHON_CASE_REGEX.sub(
@@ -161,11 +167,11 @@ class ServiceFactory:
     ) -> None:
         """Set up the keyword arguments to pass to a particular service class.
 
-        PENDING DEPRECATION: use update_kwargs instead
+        DEPRECATED: use update_kwargs instead
         """
         warnings.warn(
-            PendingDeprecationWarning(
-                "ServiceFactory.set_kwargs is pending deprecation. Use update_kwargs instead."
+            DeprecationWarning(
+                "ServiceFactory.set_kwargs is deprecated. Use update_kwargs instead."
             ),
             stacklevel=2,
         )
@@ -180,11 +186,16 @@ class ServiceFactory:
 
         This works like ``dict.update()``, overwriting already-set values.
 
-        :param service: the name of the service (e.g. "lifecycle")
+        :param service: the name of the service. For example,  "lifecycle".
         :param kwargs: keyword arguments to set.
         """
         self._service_kwargs.setdefault(service, {}).update(kwargs)
 
+    @overload
+    @classmethod
+    def get_class(
+        cls, name: Literal["build_plan", "BuildPlanService", "BuildPlanClass"]
+    ) -> type[BuildPlanService]: ...
     @overload
     @classmethod
     def get_class(
@@ -218,6 +229,11 @@ class ServiceFactory:
     @overload
     @classmethod
     def get_class(
+        cls, name: Literal["proxy", "ProxyService", "ProxyClass"]
+    ) -> type[services.ProxyService]: ...
+    @overload
+    @classmethod
+    def get_class(
         cls, name: Literal["remote_build", "RemoteBuildService", "RemoteBuildClass"]
     ) -> type[services.RemoteBuildService]: ...
     @overload
@@ -225,6 +241,21 @@ class ServiceFactory:
     def get_class(
         cls, name: Literal["request", "RequestService", "RequestClass"]
     ) -> type[services.RequestService]: ...
+    @overload
+    @classmethod
+    def get_class(
+        cls, name: Literal["state", "StateService", "StateClass"]
+    ) -> type[services.StateService]: ...
+    @overload
+    @classmethod
+    def get_class(
+        cls, name: Literal["testing", "TestingService", "TestingClass"]
+    ) -> type[services.TestingService]: ...
+    @overload
+    @classmethod
+    def get_class(
+        cls, name: Literal["linter", "LinterService", "LinterClass"]
+    ) -> type[services.LinterService]: ...
     @overload
     @classmethod
     def get_class(cls, name: str) -> type[services.AppService]: ...
@@ -251,6 +282,8 @@ class ServiceFactory:
         return service_info
 
     @overload
+    def get(self, service: Literal["build_plan"]) -> BuildPlanService: ...
+    @overload
     def get(self, service: Literal["config"]) -> services.ConfigService: ...
     @overload
     def get(self, service: Literal["fetch"]) -> services.FetchService: ...
@@ -261,33 +294,36 @@ class ServiceFactory:
     @overload
     def get(self, service: Literal["lifecycle"]) -> services.LifecycleService: ...
     @overload
+    def get(self, service: Literal["project"]) -> ProjectService: ...
+    @overload
     def get(self, service: Literal["provider"]) -> services.ProviderService: ...
+    @overload
+    def get(self, service: Literal["proxy"]) -> services.ProxyService: ...
     @overload
     def get(self, service: Literal["remote_build"]) -> services.RemoteBuildService: ...
     @overload
     def get(self, service: Literal["request"]) -> services.RequestService: ...
     @overload
+    def get(self, service: Literal["state"]) -> services.StateService: ...
+    @overload
+    def get(self, service: Literal["testing"]) -> services.TestingService: ...
+    @overload
+    def get(self, service: Literal["linter"]) -> services.LinterService: ...
+    @overload
     def get(self, service: str) -> services.AppService: ...
     def get(self, service: str) -> services.AppService:
         """Get a service by name.
 
-        :param service: the name of the service (e.g. "config")
-        :returns: An instantiated and set up service class.
-
         Also caches the service so as to provide a single service instance per
-        ServiceFactory.
+        ``ServiceFactory``.
+
+        :param service: the name of the service. For example, "config".
+        :returns: An instantiated and setup service class.
         """
         if service in self._services:
             return self._services[service]
         cls = self.get_class(service)
         kwargs = self._service_kwargs.get(service, {})
-        if issubclass(cls, services.ProjectService):
-            if not self.project:
-                raise ValueError(
-                    f"{cls.__name__} requires a project to be available before creation."
-                )
-            kwargs.setdefault("project", self.project)
-
         instance = cls(app=self.app, services=self, **kwargs)
         instance.setup()
         self._services[service] = instance

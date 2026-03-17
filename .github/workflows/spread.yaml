@@ -1,0 +1,70 @@
+name: Spread
+on:
+  pull_request:
+  merge_group:
+  push:
+    branches:
+      - main
+      - hotfix/*
+# Cancel existing jobs for this branch/PR
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  snap-build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: Build snap
+        uses: snapcore/action-build@v1
+        id: snap
+      - name: Upload snap artifact
+        uses: actions/upload-artifact@v5
+        with:
+          name: snap
+          path: ${{ steps.snap.outputs.snap }}
+
+  snap-tests:
+    runs-on: spread-installed
+    needs: [snap-build]
+    strategy:
+      fail-fast: false
+      matrix:
+        spread:
+          - "google:"
+
+    steps:
+      - name: Cleanup job workspace
+        run: |
+          rm -rf "${{ github.workspace }}"
+          mkdir "${{ github.workspace }}"
+
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+          submodules: true
+
+      - name: Download snap artifact
+        uses: actions/download-artifact@v6
+        with:
+          name: snap
+
+      - name: Run spread
+        run: |
+          mv *.snap tests/spread/
+          spread ${{ matrix.spread }}
+
+      - name: Discard spread workers
+        if: always()
+        run: |
+          shopt -s nullglob
+          for r in .spread-reuse.*.yaml; do
+            pid="$(echo "$r" | grep -o -E '[0-9]+')"
+            kill -9 $pid
+            spread -discard -reuse-pid=$pid
+          done

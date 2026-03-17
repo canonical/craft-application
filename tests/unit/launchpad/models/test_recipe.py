@@ -14,10 +14,10 @@
 #  You should have received a copy of the GNU Lesser General Public License
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Unit tests for launchpad recipe models."""
+
 from unittest import mock
 
 import pytest
-
 from craft_application.launchpad import CharmRecipe, RecipeType, RockRecipe, SnapRecipe
 from craft_application.launchpad.models import get_recipe_class
 from craft_application.launchpad.models.recipe import BaseRecipe

@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU Lesser General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Utilities to interact with the fetch-service."""
+
 import contextlib
 import io
 import logging
@@ -25,6 +26,7 @@ from functools import cache
 from typing import Any, cast
 
 import craft_providers
+import craft_providers.lxd
 import requests
 from craft_cli import emit
 from pydantic import Field
@@ -56,6 +58,9 @@ class FetchServiceConfig:
         return f"{self.username}:{self.password}"
 
 
+_CERT_FILE_NAME = "local-ca.pem"
+_KEY_FILE_NAME = "local-ca.key.pem"
+
 _FETCH_BINARY = "/snap/bin/fetch-service"
 
 _DEFAULT_CONFIG = FetchServiceConfig(
@@ -63,11 +68,6 @@ _DEFAULT_CONFIG = FetchServiceConfig(
     control=13555,
     username="craft",
     password="craft",  # noqa: S106 (hardcoded-password-func-arg)
-)
-
-# The path to the fetch-service's certificate inside the build instance.
-_FETCH_CERT_INSTANCE_PATH = pathlib.Path(
-    "/usr/local/share/ca-certificates/local-ca.crt"
 )
 
 
@@ -95,16 +95,10 @@ class NetInfo:
         gw = self._gateway
         return f"http://{session.session_id}:{session.token}@{gw}:{port}/"
 
-    @property
-    def env(self) -> dict[str, str]:
+    @staticmethod
+    def env() -> dict[str, str]:
         """Environment variables to use for the proxy."""
         return {
-            "http_proxy": self.http_proxy,
-            "https_proxy": self.http_proxy,
-            # This makes the requests lib take our cert into account.
-            "REQUESTS_CA_BUNDLE": str(_FETCH_CERT_INSTANCE_PATH),
-            # Same, but for cargo.
-            "CARGO_HTTP_CAINFO": str(_FETCH_CERT_INSTANCE_PATH),
             # Have go download directly from repositories
             "GOPROXY": "direct",
         }
@@ -128,11 +122,14 @@ def get_service_status() -> dict[str, Any]:
     return cast(dict[str, Any], response.json())
 
 
-def start_service() -> subprocess.Popen[str] | None:
-    """Start the fetch-service with default ports and auth."""
+def start_service() -> tuple[subprocess.Popen[str] | None, pathlib.Path]:
+    """Start the fetch-service with default ports and auth.
+
+    :returns: A tuple containing the fetch-service subprocess and a path to the proxy certificate.
+    """
     if is_service_online():
         # Nothing to do, service is already up.
-        return None
+        return None, _get_certificate_dir() / _CERT_FILE_NAME
 
     # Check that the fetch service is actually installed
     verify_installed()
@@ -181,7 +178,7 @@ def start_service() -> subprocess.Popen[str] | None:
 
     # Wait a bit for the service to come online
     with contextlib.suppress(subprocess.TimeoutExpired):
-        fetch_process.wait(0.1)
+        fetch_process.wait(0.5)
 
     if fetch_process.poll() is not None:
         # fetch-service already exited, something is wrong
@@ -210,7 +207,7 @@ def start_service() -> subprocess.Popen[str] | None:
             f"Fetch service did not start correctly: {status}"
         )
 
-    return fetch_process
+    return fetch_process, cert
 
 
 def stop_service(fetch_process: subprocess.Popen[str]) -> None:
@@ -225,22 +222,26 @@ def stop_service(fetch_process: subprocess.Popen[str]) -> None:
         fetch_process.kill()
 
 
-def create_session(*, strict: bool) -> SessionData:
+def create_session(*, strict: bool, timeout: float = 5.0) -> SessionData:
     """Create a new fetch-service session.
 
     :param strict: Whether the created session should be strict.
+    :param timeout: Maximum time to wait for the response from the fetch-service
     :return: a SessionData object containing the session's id and token.
     """
     json = {"policy": "strict" if strict else "permissive"}
-    data = _service_request("post", "session", json=json).json()
+    data = _service_request("post", "session", json=json, timeout=timeout).json()
 
     return SessionData.unmarshal(data=data)
 
 
-def teardown_session(session_data: SessionData) -> dict[str, Any]:
+def teardown_session(
+    session_data: SessionData, timeout: float = 10.0
+) -> dict[str, Any]:
     """Stop and cleanup a running fetch-service session.
 
     :param session_data: the data of a previously-created session.
+    :param timeout: Maximum time to wait for the response from the fetch-service
     :return: A dict containing the session's report (the contents and format
       of this dict are still subject to change).
     """
@@ -249,33 +250,27 @@ def teardown_session(session_data: SessionData) -> dict[str, Any]:
 
     # Revoke token
     _revoke_data = _service_request(
-        "delete", f"session/{session_id}/token", json={"token": session_token}
+        "delete",
+        f"session/{session_id}/token",
+        json={"token": session_token},
+        timeout=timeout,
     ).json()
 
     # Get session report
-    session_report = _service_request("get", f"session/{session_id}", json={}).json()
+    session_report = _service_request(
+        "get",
+        f"session/{session_id}",
+        json={},
+        timeout=timeout,
+    ).json()
 
     # Delete session
-    _service_request("delete", f"session/{session_id}")
+    _service_request("delete", f"session/{session_id}", timeout=timeout)
 
     # Delete session resources
-    _service_request("delete", f"resources/{session_id}")
+    _service_request("delete", f"resources/{session_id}", timeout=timeout)
 
     return cast(dict[str, Any], session_report)
-
-
-def configure_instance(
-    instance: craft_providers.Executor, session_data: SessionData
-) -> dict[str, str]:
-    """Configure a build instance to use a given fetch-service session."""
-    net_info = NetInfo(instance, session_data)
-
-    _install_certificate(instance)
-    _configure_pip(instance)
-    _configure_snapd(instance, net_info)
-    _configure_apt(instance, net_info)
-
-    return net_info.env
 
 
 def get_log_filepath() -> pathlib.Path:
@@ -301,7 +296,10 @@ def verify_installed() -> None:
 
 
 def _service_request(
-    verb: str, endpoint: str, json: dict[str, Any] | None = None
+    verb: str,
+    endpoint: str,
+    json: dict[str, Any] | None = None,
+    timeout: float = 10.0,
 ) -> requests.Response:
     headers = {
         "Content-type": "application/json",
@@ -314,7 +312,7 @@ def _service_request(
             auth=auth,
             headers=headers,
             json=json,  # Use defaults
-            timeout=0.1,
+            timeout=timeout,
         )
         response.raise_for_status()
     except requests.RequestException as err:
@@ -334,83 +332,73 @@ def _get_service_base_dir() -> pathlib.Path:
     return pathlib.Path(output.strip())
 
 
-def _install_certificate(instance: craft_providers.Executor) -> None:
-
-    logger.info("Installing certificate")
-    # Push the local certificate
-    cert, _key = _obtain_certificate()
-    instance.push_file(
-        source=cert,
-        destination=_FETCH_CERT_INSTANCE_PATH,
-    )
-    # Update the certificates db
-    _execute_run(
-        instance, ["/bin/sh", "-c", "/usr/sbin/update-ca-certificates > /dev/null"]
-    )
-
-
-def _configure_pip(instance: craft_providers.Executor) -> None:
-    logger.info("Configuring pip")
-
-    _execute_run(instance, ["mkdir", "-p", "/root/.pip"])
-    pip_config = b"[global]\ncert=/usr/local/share/ca-certificates/local-ca.crt"
-    instance.push_file_io(
-        destination=pathlib.Path("/root/.pip/pip.conf"),
-        content=io.BytesIO(pip_config),
-        file_mode="0644",
-    )
-
-
-def _configure_snapd(instance: craft_providers.Executor, net_info: NetInfo) -> None:
-    """Configure snapd to use the proxy and see our certificate.
-
-    Note: This *must* be called *after* _install_certificate(), to ensure that
-    when the snapd restart happens the new cert is there.
-    """
-    logger.info("Configuring snapd")
-    _execute_run(instance, ["systemctl", "restart", "snapd"])
-    for config in ("proxy.http", "proxy.https"):
-        _execute_run(
-            instance, ["snap", "set", "system", f"{config}={net_info.http_proxy}"]
-        )
-
-
-def _configure_apt(instance: craft_providers.Executor, net_info: NetInfo) -> None:
-    logger.info("Configuring Apt")
-    apt_config = f'Acquire::http::Proxy "{net_info.http_proxy}";\n'
-    apt_config += f'Acquire::https::Proxy "{net_info.http_proxy}";\n'
-
-    instance.push_file_io(
-        destination=pathlib.Path("/etc/apt/apt.conf.d/99proxy"),
-        content=io.BytesIO(apt_config.encode("utf-8")),
-        file_mode="0644",
-    )
-    _execute_run(instance, ["/bin/rm", "-Rf", "/var/lib/apt/lists"])
-
-    logger.info("Refreshing Apt package listings")
-    _execute_run(instance, ["apt", "update"])
-
-
 def _get_gateway(instance: craft_providers.Executor) -> str:
-    from craft_providers.lxd import LXDInstance
-
-    if not isinstance(instance, LXDInstance):
+    if not isinstance(instance, craft_providers.lxd.LXDInstance):
         raise TypeError("Don't know how to handle non-lxd instances")
 
+    config = _get_config(instance)
+    network_device = _get_network_name(config)
+
+    route = subprocess.check_output(
+        ["ip", "route", "show", "dev", network_device],
+        text=True,
+    )
+    return route.strip().split()[-1]
+
+
+def _get_config(instance: craft_providers.lxd.LXDInstance) -> dict[str, Any]:
+    """Get the config for a lxc instance."""
     instance_name = instance.instance_name
     project = instance.project
     output = subprocess.check_output(
         ["lxc", "--project", project, "config", "show", instance_name, "--expanded"],
         text=True,
     )
-    config = util.safe_yaml_load(io.StringIO(output))
-    network = config["devices"]["eth0"]["network"]
 
-    route = subprocess.check_output(
-        ["ip", "route", "show", "dev", network],
-        text=True,
+    raw_config = util.safe_yaml_load(io.StringIO(output))
+
+    if not isinstance(raw_config, dict):
+        emit.trace(f"Config: {raw_config}")
+        raise errors.FetchServiceError("Failed to parse LXD instance config.")
+
+    return cast(dict[str, Any], raw_config)
+
+
+def _get_network_name(config: dict[Any, Any]) -> str:
+    """Get the network name of the default network device.
+
+    LXD 4 and newer create the following default network device:
+    eth0:
+      name: eth0
+      network: lxdbr0
+      type: nic
+    LXD 3 and older create the following default network device:
+    eth0:
+      name: eth0
+      nictype: bridged
+      parent: lxdbr0
+      type: nic
+
+    :param config: A dictionary of LXD configuration objects.
+
+    :returns: The network name of the default network device.
+    """
+    try:
+        device = config["devices"]["eth0"]
+    except (KeyError, TypeError):
+        raise errors.FetchServiceError("Couldn't find a network device named 'eth0'.")
+    emit.debug(f"Parsing the network device 'eth0': {device}")
+
+    if name := device.get("network"):
+        return str(name)
+
+    if name := device.get("parent"):
+        return str(name)
+
+    raise errors.FetchServiceError(
+        message="Couldn't find the network name of the default network device.",
+        resolution="Use a LXD installation with a default network configuration.",
     )
-    return route.strip().split()[-1]
 
 
 def _obtain_certificate() -> tuple[pathlib.Path, pathlib.Path]:
@@ -422,8 +410,8 @@ def _obtain_certificate() -> tuple[pathlib.Path, pathlib.Path]:
 
     cert_dir.mkdir(parents=True, exist_ok=True)
 
-    cert = cert_dir / "local-ca.pem"
-    key = cert_dir / "local-ca.key.pem"
+    cert = cert_dir / _CERT_FILE_NAME
+    key = cert_dir / _KEY_FILE_NAME
 
     if cert.is_file() and key.is_file():
         # Certificate and key already generated
@@ -504,11 +492,3 @@ def _get_certificate_dir() -> pathlib.Path:
 def _check_installed() -> bool:
     """Check whether the fetch-service is installed."""
     return pathlib.Path(_FETCH_BINARY).is_file()
-
-
-def _execute_run(
-    instance: craft_providers.Executor, cmd: list[str]
-) -> subprocess.CompletedProcess[str]:
-    return instance.execute_run(  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]
-        cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE
-    )

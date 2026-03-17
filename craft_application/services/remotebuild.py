@@ -14,6 +14,7 @@
 #  You should have received a copy of the GNU Lesser General Public License
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Service class for remote build commands."""
+
 from __future__ import annotations
 
 import contextlib
@@ -23,7 +24,6 @@ import os
 import pathlib
 import time
 import urllib.parse
-from collections.abc import Collection, Iterable, Mapping
 from typing import TYPE_CHECKING, Any, cast
 from urllib import parse
 
@@ -31,7 +31,7 @@ import craft_cli
 import launchpadlib.errors  # type: ignore[import-untyped]
 import platformdirs
 
-from craft_application import errors, launchpad, models
+from craft_application import errors, launchpad
 from craft_application.git import GitError, GitRepo
 from craft_application.remote import (
     RemoteBuildGitError,
@@ -42,6 +42,8 @@ from craft_application.remote import (
 from craft_application.services import base
 
 if TYPE_CHECKING:  # pragma: no cover
+    from collections.abc import Collection, Iterable, Mapping
+
     from craft_application import AppMetadata, ServiceFactory
 
 DEFAULT_POLL_INTERVAL = 30
@@ -122,7 +124,7 @@ class RemoteBuildService(base.AppService):
         if self._builds:
             raise ValueError("Cannot start builds if already running builds")
 
-        project = cast(models.Project, self._services.project)
+        project = self._services.get("project").get()
 
         check_git_repo_for_remote_build(project_dir)
 
@@ -200,7 +202,10 @@ class RemoteBuildService(base.AppService):
             )
         artifact_downloads: dict[str, pathlib.Path] = {}
         for url in self._get_artifact_urls():
-            filename = pathlib.PurePosixPath(urllib.parse.urlparse(url).path).name
+            # Decode URL-encoded characters (e.g., %40 -> @) in the filename
+            filename = urllib.parse.unquote(
+                pathlib.PurePosixPath(urllib.parse.urlparse(url).path).name
+            )
             artifact_downloads[url] = output_dir / filename
         return self.request.download_files_with_progress(artifact_downloads).values()
 

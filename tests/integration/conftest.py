@@ -15,17 +15,18 @@
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Configuration for craft-application integration tests."""
 
+import atexit
 import os
 import pathlib
 import sys
 import tempfile
 from unittest import mock
 
+import craft_platforms
 import pytest
-from craft_providers import bases, lxd, multipass
-
 from craft_application import launchpad
 from craft_application.services import provider, remotebuild
+from craft_providers import lxd, multipass
 
 
 def pytest_configure(config: pytest.Config):
@@ -45,14 +46,12 @@ def pytest_runtest_setup(item: pytest.Item):
 
 
 @pytest.fixture
-def provider_service(app_metadata, fake_project, fake_build_plan, fake_services):
+def provider_service(app_metadata, fake_services):
     """Provider service with install snap disabled for integration tests"""
     return provider.ProviderService(
         app_metadata,
         fake_services,
-        project=fake_project,
         work_dir=pathlib.Path(),
-        build_plan=fake_build_plan,
         install_snap=False,
     )
 
@@ -92,10 +91,50 @@ def snap_safe_tmp_path():
 @pytest.fixture
 def pretend_jammy(mocker) -> None:
     """Pretend we're running on jammy. Used for tests that use destructive mode."""
-    fake_host = bases.BaseName(name="ubuntu", version="22.04")
-    mocker.patch("craft_application.util.get_host_base", return_value=fake_host)
+    fake_host = craft_platforms.DistroBase("ubuntu", "22.04")
+    mocker.patch(
+        "craft_platforms.DistroBase.from_linux_distribution", return_value=fake_host
+    )
 
 
 @pytest.fixture
 def hello_repository_lp_url() -> str:
     return "https://git.launchpad.net/ubuntu/+source/hello"
+
+
+_registered_exit_funcs = []
+"""Tracks atexit functions registered by craft application."""
+
+
+@pytest.fixture(autouse=True, scope="session")
+def track_atexit_register():
+    """Tracks atexit.register calls from craft application."""
+    original_register = atexit.register
+
+    def tracking_wrapper(func, *args, **kwargs):
+        """Track atexit calls from craft application and pass-through others."""
+        if func.__module__.startswith("craft_application."):
+            # Only track functions from craft_application
+            _registered_exit_funcs.append(func)
+            return None
+        # atexit.register from pytest is passed through
+        return original_register(func, *args, **kwargs)
+
+    # a context manager is required for a session-scoped monkeypatch fixture
+    with pytest.MonkeyPatch.context() as mp:
+        mp.setattr(atexit, "register", tracking_wrapper)
+        yield
+
+
+@pytest.fixture(autouse=True)
+def call_atexit_funcs(monkeypatch):
+    """Calls atexit functions registered by craft application.
+
+    This is needed because atexit functions are not called between parametrized runs of a test.
+    """
+    yield
+    # If CRAFT_DEBUG is set, the state service won't be able to clean up properly.
+    monkeypatch.delenv("CRAFT_DEBUG", raising=False)
+    for func in _registered_exit_funcs:
+        func()
+    _registered_exit_funcs.clear()

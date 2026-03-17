@@ -15,17 +15,19 @@
 
 from __future__ import annotations
 
-import argparse
 import importlib.resources
 import pathlib
 from textwrap import dedent
-from typing import cast
+from typing import TYPE_CHECKING, cast
 
 import craft_cli
 
 from craft_application.util import humanize_list
 
 from . import base
+
+if TYPE_CHECKING:
+    import argparse
 
 
 class InitCommand(base.AppCommand):
@@ -55,7 +57,7 @@ class InitCommand(base.AppCommand):
     common = True
 
     default_profile = "simple"
-    """The default profile to use when initialising a project."""
+    """The default profile to use when initializing a project."""
 
     def fill_parser(self, parser: argparse.ArgumentParser) -> None:
         """Specify command's specific parameters."""
@@ -120,7 +122,7 @@ class InitCommand(base.AppCommand):
             project_dir=project_dir, template_dir=template_dir
         )
 
-        craft_cli.emit.progress("Initialising project.")
+        craft_cli.emit.progress("Initializing project.")
         self._services.init.initialise_project(
             project_dir=project_dir,
             project_name=project_name,

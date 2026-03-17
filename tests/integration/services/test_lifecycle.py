@@ -14,14 +14,18 @@
 # You should have received a copy of the GNU Lesser General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Integration tests for parts lifecycle."""
+
 import os
 import textwrap
+from unittest import mock
 
 import craft_cli
+import craft_parts
 import pytest
 import pytest_check
-
 from craft_application.services.lifecycle import LifecycleService
+from craft_parts.plugins import plugins
+from craft_parts.plugins.nil_plugin import NilPlugin
 
 
 @pytest.fixture(
@@ -33,25 +37,54 @@ from craft_application.services.lifecycle import LifecycleService
         ),
     ]
 )
-def parts_lifecycle(
-    app_metadata, fake_project, fake_services, tmp_path, request, fake_build_plan
-):
+def parts_lifecycle(app_metadata, fake_project, fake_services, tmp_path, request):
+    fake_services.get("project").set(fake_project)
     fake_project.parts = request.param
 
     service = LifecycleService(
         app_metadata,
         fake_services,
-        project=fake_project,
         work_dir=tmp_path / "work",
         cache_dir=tmp_path / "cache",
-        platform=None,
-        build_plan=fake_build_plan,
     )
     service.setup()
     return service
 
 
-def test_run_and_clean_all_parts(parts_lifecycle, emitter, check, tmp_path):
+@pytest.mark.parametrize(
+    "plugin_group",
+    [
+        *(pytest.param(group.value, id=group.name) for group in plugins.PluginGroup),
+        pytest.param({"nil": NilPlugin}, id="nil-only"),
+    ],
+)
+def test_setup_with_different_plugin_group(
+    tmp_path, app_metadata, fake_project, fake_services, plugin_group
+):
+    try:
+        lifecycle_service = LifecycleService(
+            app=app_metadata,
+            services=fake_services,
+            work_dir=tmp_path,
+            cache_dir=tmp_path / "cache",
+        )
+
+        lifecycle_service.get_plugin_group = mock.Mock(return_value=plugin_group)
+
+        lifecycle_service.setup()
+
+        assert craft_parts.plugins.get_registered_plugins() == plugin_group
+    finally:
+        craft_parts.plugins.plugins.unregister_all()
+
+
+@pytest.mark.slow
+def test_run_and_clean_all_parts(
+    parts_lifecycle: LifecycleService, build_plan_service, emitter, check, tmp_path
+):
+    build_plan_service.setup()  # Reset the build plan
+    build_plan_service.set_platforms("s390x")
+
     parts_lifecycle.run("prime")
 
     with check:
@@ -67,7 +100,10 @@ def test_run_and_clean_all_parts(parts_lifecycle, emitter, check, tmp_path):
     pytest_check.is_false([*(tmp_path / "work").iterdir()])
 
 
-def test_run_and_clean_my_part(parts_lifecycle, emitter, check):
+def test_run_and_clean_my_part(parts_lifecycle, build_plan_service, emitter, check):
+    build_plan_service.setup()  # Reset the build plan
+    build_plan_service.set_platforms("s390x")
+
     parts_lifecycle.run("prime", ["my-part"])
 
     with check:
@@ -81,7 +117,11 @@ def test_run_and_clean_my_part(parts_lifecycle, emitter, check):
         emitter.assert_progress("Cleaning parts: my-part")
 
 
-def test_lifecycle_messages_no_duplicates(parts_lifecycle, request, capsys):
+def test_lifecycle_messages_no_duplicates(
+    parts_lifecycle, build_plan_service, request, capsys
+):
+    build_plan_service.setup()  # Reset the build plan
+    build_plan_service.set_platforms("s390x")
     if request.node.callspec.id != "basic":
         pytest.skip("Hardcoded expected output assumes 'basic' lifecycle parts.")
 
@@ -102,10 +142,19 @@ def test_lifecycle_messages_no_duplicates(parts_lifecycle, request, capsys):
     assert expected_output in stderr
 
 
+@pytest.mark.slow
 @pytest.mark.usefixtures("enable_overlay")
 def test_package_repositories_in_overlay(
-    app_metadata, fake_project, fake_services, tmp_path, mocker, fake_build_plan
+    app_metadata,
+    fake_project,
+    fake_services,
+    build_plan_service,
+    tmp_path,
+    mocker,
 ):
+    build_plan_service.setup()  # Reset the build plan
+    build_plan_service.set_platforms("s390x")
+    fake_services.get("project").set(fake_project)
     # Mock overlay-related calls that need root; we won't be actually installing
     # any packages, just checking that the repositories are correctly installed
     # in the overlay.
@@ -142,6 +191,24 @@ def test_package_repositories_in_overlay(
     # is undesired and will fail without root.
     mocker.patch("craft_application.util.repositories.install_package_repositories")
 
+    # Mock apt key install to avoid failures in keyserver access from the test runners
+    def fake_install_key(self, *, key_id: str, key_server: str):
+        apt_path = tmp_path / "work/overlay/overlay/etc/apt"
+        keyring_path = apt_path / "keyrings/craft-9BE21867.gpg"
+        keyring_path.parent.mkdir(parents=True, exist_ok=True)
+        keyring_path.touch()
+        sources_path = apt_path / "sources.list.d/craft-ppa-mozillateam_ppa.sources"
+        sources_path.parent.mkdir(parents=True, exist_ok=True)
+        sources_path.touch()
+
+    mocker.patch(
+        "craft_archives.repo.apt_key_manager.AptKeyManager.install_key_from_keyserver",
+        new=fake_install_key,
+    )
+    mocker.patch(
+        "craft_archives.repo.apt_sources_manager.AptSourcesManager._install_sources"
+    )
+
     fake_project.package_repositories = package_repositories
     fake_project.parts = parts
     service = LifecycleService(
@@ -151,7 +218,6 @@ def test_package_repositories_in_overlay(
         work_dir=work_dir,
         cache_dir=tmp_path / "cache",
         platform=None,
-        build_plan=fake_build_plan,
         base_layer_dir=base_layer_dir,
         base_layer_hash=b"deadbeef",
     )

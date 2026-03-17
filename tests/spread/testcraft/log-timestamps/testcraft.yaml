@@ -1,0 +1,13 @@
+name: log-timestamps
+description: Testing doubled log timestamps from craft-cli
+base: ubuntu@24.04
+version: 0.0.1
+
+platforms:
+  amd64:
+
+parts:
+  broken:
+    plugin: nil
+    override-build: |
+      false

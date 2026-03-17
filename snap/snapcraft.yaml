@@ -1,0 +1,132 @@
+name: testcraft
+summary: A craft for testing craft-application
+description: |
+  This is a snap for testing craft-application.
+# adopt-info: testcraft  # Real apps should include adopt-info rather than version.
+version: dev
+
+grade: devel
+confinement: classic
+
+environment:
+  PATH: "$SNAP/libexec/testcraft/bin:$SNAP/bin:/snap/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+  # https://github.com/snapcore/snapcraft/issues/4187
+  LD_LIBRARY_PATH: "$SNAP/none"
+
+base: core24
+platforms:
+  amd64:
+  arm64:
+  armhf:
+  riscv64:
+  s390x:
+  ppc64el:
+
+apps:
+  testcraft:
+    command: bin/python -m testcraft
+  partitioncraft:
+    command: bin/python -m partitioncraft
+  witchcraft:
+    command: bin/python -m witchcraft
+
+plugs:
+  python-runtime:
+    content: python-runtime
+    interface: content
+    target: "$SNAP/python-runtime"
+    default-provider: python-runtime-core24-312
+
+parts:
+  apt:
+    plugin: nil
+    stage-packages:
+      - apt
+    build-attributes:
+      - enable-patchelf
+  # Build our own version of fuse-overlayfs due to https://github.com/containers/fuse-overlayfs/issues/429
+  # The apt and Launchpad repositories as of 23/07/25 do not have a sufficiently new version to get this patch
+  fuse-overlayfs:
+    source: https://github.com/containers/fuse-overlayfs.git
+    source-tag: v1.15
+    plugin: autotools
+    build-attributes:
+      - enable-patchelf
+    build-packages:
+      - libfuse3-dev
+      - pkgconf
+    stage-packages:
+      - libfuse3-3
+    organize:
+      "usr/local/bin/fuse-overlayfs": "libexec/testcraft/bin/fuse-overlayfs"
+  python-apt:
+    plugin: nil
+    stage-packages:
+      - python3-apt
+    organize:
+      usr/lib/python3/dist-packages/*: lib/python3.12/site-packages/
+    build-attributes:
+      - enable-patchelf
+  libs:
+    plugin: nil
+    stage-packages:
+      - libgit2-1.7
+    build-attributes:
+      - enable-patchelf
+  fake-python:
+    plugin: nil
+    override-build: |
+      # Fake there being a Python interpreter here to trick the python plugin.
+      mkdir -p "${CRAFT_PART_INSTALL}/usr/bin"
+      cp -af /snap/python-runtime-core24-312/current/usr/bin/python3.12 "${CRAFT_PART_INSTALL}/usr/bin/python3.12"
+    prime:
+      - -usr/bin/python3.12 # Don't actually include that Python interpreter.
+
+  testcraft:
+    source: .
+    after: [python-apt, libs, fake-python]
+    plugin: uv
+    build-snaps:
+      - astral-uv
+    build-packages:
+      - git
+      - cargo # for building maturin and other rust-based packages
+      - libffi-dev # for building cffi
+      - libgit2-dev # for pygit2
+      - libxml2-dev
+      - libxslt-dev
+      - python3.12-dev
+    build-environment:
+      # - UV_NO_BINARY: "1"  # Uncomment this for any real, released craft.
+      - UV_FROZEN: "true"
+      - UV_COMPILE_BYTECODE: "1"
+      - UV_PYTHON: /snap/python-runtime-core24-312/current/usr/bin/python3.12
+      - UV_PROJECT_ENVIRONMENT: "${CRAFT_PART_INSTALL}"
+      - MAKEOPTS: -j$(nproc --all)
+    build-attributes:
+      - enable-patchelf
+    override-build: |
+      /snap/snapcraft/current/libexec/snapcraft/craftctl default
+
+      # Include the actual fake apps
+      cp -r testcraft "${CRAFT_PART_INSTALL}/lib/python3.12/site-packages/"
+      cp -r partitioncraft "${CRAFT_PART_INSTALL}/lib/python3.12/site-packages/"
+      cp -r witchcraft "${CRAFT_PART_INSTALL}/lib/python3.12/site-packages/"
+
+      ln -sf "${UV_PYTHON}" "${CRAFT_PART_INSTALL}/bin/python3"
+
+      sed -i 's|#!/root/parts/testcraft/install/|#!/snap/testcraft/current/|' "${CRAFT_PART_INSTALL}/bin/craftctl"
+
+  spread:
+    plugin: go
+    source: https://github.com/canonical/spread.git
+    source-commit: d6447c43754c8ca0741901e9db73d5fdb4d21c93 # 'main' as of 28-March-2025
+    build-snaps:
+      - go
+    build-attributes:
+      - enable-patchelf
+    build-environment:
+      - CGO_ENABLED: "0"
+      - GOFLAGS: -trimpath -ldflags=-w -ldflags=-s
+    organize:
+      bin/spread: bin/craft.spread

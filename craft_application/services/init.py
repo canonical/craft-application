@@ -15,13 +15,12 @@
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """Service for initializing a project."""
+
 from __future__ import annotations
 
 import os
-import pathlib
 import shutil
 import typing
-from re import Pattern
 from typing import Any
 
 import jinja2
@@ -37,6 +36,9 @@ from craft_application.models.constraints import (
 from . import base
 
 if typing.TYPE_CHECKING:  # pragma: no cover
+    import pathlib
+    from re import Pattern
+
     from craft_application.application import AppMetadata
     from craft_application.services import ServiceFactory
 
@@ -84,7 +86,7 @@ class InitService(base.AppService):
         """Initialise a new project from a template.
 
         If a file already exists in the project directory, it is not overwritten.
-        Use `check_for_existing_files()` to see if this will occur before initialising
+        Use `check_for_existing_files()` to see if this will occur before initializing
         the project.
 
         :param project_dir: The directory to initialise the project in.
@@ -92,7 +94,7 @@ class InitService(base.AppService):
         :param template_dir: The directory containing the templates.
         """
         emit.debug(
-            f"Initialising project {project_name!r} in {str(project_dir)!r} from "
+            f"Initializing project {project_name!r} in {str(project_dir)!r} from "
             f"template in {str(template_dir)!r}."
         )
         environment = self._get_templates_environment(template_dir)
@@ -192,8 +194,7 @@ class InitService(base.AppService):
                 emit.trace(f"Skipping file {template_name} as it is already present")
                 continue
             path.parent.mkdir(parents=True, exist_ok=True)
-            with path.open("wt", encoding="utf8") as file:
-                file.write(template.render(context))
+            path.write_text(template.render(context), encoding="utf8")
             shutil.copystat((template_dir / template_name), path)
         emit.progress("Rendered project.")
 

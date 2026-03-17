@@ -18,7 +18,6 @@
 
 import pytest
 import pytest_mock
-
 from craft_application import util
 from craft_application.util.platforms import (
     _ARCH_TRANSLATIONS_DEB_TO_PLATFORM,

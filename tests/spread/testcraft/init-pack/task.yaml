@@ -1,0 +1,34 @@
+summary: test testcraft init/pack/clean cycle
+
+environment:
+  CRAFT_BUILD_ENVIRONMENT/managed: ""
+  CRAFT_BUILD_ENVIRONMENT/destructive: host
+
+execute: |
+  mkdir init-test
+  cd init-test
+
+  testcraft init
+  . /etc/os-release
+  sed -i  "s/base: ubuntu@24.04/base: ubuntu@${VERSION_ID}/" testcraft.yaml
+
+  # Speed up the tests by not shutting down the instance.
+  export CRAFT_IDLE_MINS=2
+
+  # Test each step of the lifecycle in order.
+  testcraft pull
+  testcraft build
+  testcraft stage
+  testcraft prime
+  testcraft pack
+
+  testcraft clean
+
+  if [[ $(find . -maxdepth 1 -name '*.testcraft') == "" ]]; then
+    echo "No testcraft file created" >> /dev/stderr
+    exit 1
+  fi
+
+restore: |
+  rm -f *.testcraft
+  rm -rf init-test

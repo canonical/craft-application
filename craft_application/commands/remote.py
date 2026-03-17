@@ -23,22 +23,19 @@ from typing import Any, cast
 from craft_cli import emit
 from overrides import override  # pyright: ignore[reportUnknownVariableType]
 
-from craft_application import models
+from craft_application import errors
 from craft_application.commands import ExtensibleCommand
 from craft_application.launchpad.models import Build, BuildState
 from craft_application.remote.utils import get_build_id
 
-OVERVIEW = """\
+OVERVIEW = """
 Command remote-build sends the current project to be built
 remotely. After the build is complete, packages for each
 architecture are retrieved and will be available in the
 local filesystem.
 
 Interrupted remote builds can be resumed using the --recover
-option, followed by the build number informed when the remote
-build was originally dispatched. The current state of the
-remote build for each architecture can be checked using the
---status option.
+option.
 
 To set a timeout on the remote-build command, use the option
 ``--launchpad-timeout=<seconds>``. The timeout is local, so
@@ -60,15 +57,25 @@ class RemoteBuild(ExtensibleCommand):
     overview = OVERVIEW
     always_load_project = True
 
+    def _pre_build(self, parsed_args: argparse.Namespace) -> None:
+        """Run steps to take before building, e.g. validations."""
+
+    def _get_build_args(
+        self,
+        parsed_args: argparse.Namespace,  # noqa: ARG002 (unused parameter)
+    ) -> dict[str, Any]:
+        """Get arguments to pass to the builder."""
+        return {}
+
     @override
     def _fill_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
-            "--recover", action="store_true", help="recover an interrupted build"
+            "--recover", action="store_true", help="Recover an interrupted build"
         )
         parser.add_argument(
             "--launchpad-accept-public-upload",
             action="store_true",
-            help="acknowledge that uploaded code will be publicly available.",
+            help="Acknowledge that uploaded code will be publicly available",
         )
         parser.add_argument(
             "--launchpad-timeout",
@@ -76,6 +83,9 @@ class RemoteBuild(ExtensibleCommand):
             default=0,
             metavar="<seconds>",
             help="Time in seconds to wait for launchpad to build.",
+        )
+        parser.add_argument(
+            "--project", help="Upload to the specified Launchpad project"
         )
 
     def _run(
@@ -87,7 +97,8 @@ class RemoteBuild(ExtensibleCommand):
 
         :param parsed_args: parsed argument namespace from craft_cli.
 
-        :raises AcceptPublicUploadError: If the user does not agree to upload data.
+        :raises RemoteBuildError: If the user both does not specify their project and
+        does not agree to upload data.
         """
         if os.getenv("SUDO_USER") and os.geteuid() == 0:
             emit.progress(
@@ -102,14 +113,32 @@ class RemoteBuild(ExtensibleCommand):
             permanent=True,
         )
 
-        if not parsed_args.launchpad_accept_public_upload and not emit.confirm(
-            _CONFIRMATION_PROMPT, default=False
+        if parsed_args.project:
+            self._services.remote_build.set_project(parsed_args.project)
+
+        if (
+            not parsed_args.launchpad_accept_public_upload
+            and (
+                not parsed_args.project
+                or not self._services.remote_build.is_project_private()
+            )
+            and not emit.confirm(_CONFIRMATION_PROMPT, default=False)
         ):
-            emit.message("Cannot proceed without accepting a public upload.")
-            return 77  # permission denied from sysexits.h
+            raise errors.RemoteBuildError(
+                "Remote build needs explicit acknowledgement that data sent to build servers "
+                "is public.",
+                details=(
+                    "In non-interactive runs, use the option "
+                    "`--launchpad-accept-public-upload`."
+                ),
+                reportable=False,
+                retcode=77,  # os.EX_NOPERM
+            )
+
+        self._pre_build(parsed_args)
+        build_args = self._get_build_args(parsed_args)
 
         builder = self._services.remote_build
-        project = cast(models.Project, self._services.project)
         config = cast(dict[str, Any], self.config)
         project_dir = (
             pathlib.Path(config.get("global_args", {}).get("project_dir") or ".")
@@ -122,7 +151,7 @@ class RemoteBuild(ExtensibleCommand):
             emit.debug(f"Setting timeout to {parsed_args.launchpad_timeout} seconds")
             builder.set_timeout(parsed_args.launchpad_timeout)
 
-        build_id = get_build_id(self._app.name, project.name, project_dir)
+        build_id = get_build_id(self._app.name, self._project.name, project_dir)
         if parsed_args.recover:
             emit.progress(f"Recovering build {build_id}")
             builds = builder.resume_builds(build_id)
@@ -130,10 +159,10 @@ class RemoteBuild(ExtensibleCommand):
             emit.progress(
                 "Starting new build. It may take a while to upload large projects."
             )
-            builds = builder.start_builds(project_dir)
+            builds = builder.start_builds(project_dir, **build_args)
 
         try:
-            returncode = self._monitor_and_complete(build_id, builds)
+            returncode = self._monitor_and_complete(builds=builds)
         except KeyboardInterrupt:
             if emit.confirm("Cancel builds?", default=True):
                 emit.progress("Cancelling builds.")
@@ -141,52 +170,55 @@ class RemoteBuild(ExtensibleCommand):
                 emit.progress("Cleaning up")
                 builder.cleanup()
             returncode = 0
+        except TimeoutError:
+            resume_command = f"{self._app.name} remote-build --recover"
+            emit.message(
+                f"Timed out waiting for build.\nTo resume, run {resume_command!r}"
+            )
+            return 75  # os.EX_TEMPFAIL
         else:
             emit.progress("Cleaning up")
             builder.cleanup()
         return returncode
 
-    def _monitor_and_complete(  # noqa: PLR0912 (too many branches)
-        self, build_id: str | None, builds: Collection[Build]
-    ) -> int:
+    def _monitor_and_complete(self, *, builds: Collection[Build]) -> int:
+        """Monitor the builds and complete them when done.
+
+        :param builds: A collection of Builds to monitor.
+        :returns: The expected exit code of the application.
+        :raises: TimeoutError if a build timeout was reached.
+        """
         builder = self._services.remote_build
         emit.progress("Monitoring build")
-        try:
-            for states in builder.monitor_builds():
-                building: set[str] = set()
-                succeeded: set[str] = set()
-                uploading: set[str] = set()
-                not_building: set[str] = set()
-                for arch, build_state in states.items():
-                    if build_state.is_running:
-                        building.add(arch)
-                    elif build_state == BuildState.SUCCESS:
-                        succeeded.add(arch)
-                    elif build_state == BuildState.UPLOADING:
-                        uploading.add(arch)
-                    else:
-                        not_building.add(arch)
-                progress_parts: list[str] = []
-                if not_building:
-                    progress_parts.append("Stopped: " + ", ".join(sorted(not_building)))
-                if building:
-                    progress_parts.append("Building: " + ", ".join(sorted(building)))
-                if uploading:
-                    progress_parts.append("Uploading: " + ", ".join(sorted(uploading)))
-                if succeeded:
-                    progress_parts.append("Succeeded: " + ", ".join(sorted(succeeded)))
-                emit.progress("; ".join(progress_parts))
-        except TimeoutError:
-            if build_id:
-                resume_command = (
-                    f"{self._app.name} remote-build --recover --build-id={build_id}"
-                )
-            else:
-                resume_command = f"{self._app.name} remote-build --recover"
-            emit.message(
-                f"Timed out waiting for build.\nTo resume, run {resume_command!r}"
-            )
-            return 75  # Temporary failure
+        for states in builder.monitor_builds():
+            building: set[str] = set()
+            succeeded: set[str] = set()
+            uploading: set[str] = set()
+            pending: set[str] = set()
+            not_building: set[str] = set()
+            for arch, build_state in states.items():
+                if build_state.is_running:
+                    building.add(arch)
+                elif build_state == BuildState.SUCCESS:
+                    succeeded.add(arch)
+                elif build_state == BuildState.UPLOADING:
+                    uploading.add(arch)
+                elif build_state == BuildState.PENDING:
+                    pending.add(arch)
+                else:
+                    not_building.add(arch)
+            progress_parts: list[str] = []
+            if not_building:
+                progress_parts.append("Stopped: " + ", ".join(sorted(not_building)))
+            if building:
+                progress_parts.append("Building: " + ", ".join(sorted(building)))
+            if uploading:
+                progress_parts.append("Uploading: " + ", ".join(sorted(uploading)))
+            if succeeded:
+                progress_parts.append("Succeeded: " + ", ".join(sorted(succeeded)))
+            if pending:
+                progress_parts.append("Pending: " + ", ".join(sorted(pending)))
+            emit.progress("; ".join(progress_parts))
 
         emit.progress("Fetching build artifacts...")
         artifacts = builder.fetch_artifacts(pathlib.Path.cwd())

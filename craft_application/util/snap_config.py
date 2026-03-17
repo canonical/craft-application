@@ -15,6 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """Snap config file definitions and helpers."""
+
 import os
 from typing import Any, Literal
 
