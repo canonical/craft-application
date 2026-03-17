@@ -15,11 +15,20 @@ Changelog
 
     For a complete list of commits, check out the `1.2.3`_ release on GitHub.
 
+6.3.0 (unreleased)
+------------------
+
+Testing
+
+- The ``test`` command now reads ``spread.yaml`` before beginning the lifecycle,
+  erroring early if the file is invalid.
+
+For a complete list of commits, check out the `6.3.0`_ release on GitHub.
+
 6.2.2 (2026-03-12)
 ------------------
 
 Documentation
-=============
 
 - Fix a misspelling.
 
@@ -1241,3 +1250,4 @@ For a complete list of commits, check out the `2.7.0`_ release on GitHub.
 .. _6.2.0: https://github.com/canonical/craft-application/releases/tag/6.2.0
 .. _6.2.1: https://github.com/canonical/craft-application/releases/tag/6.2.1
 .. _6.2.2: https://github.com/canonical/craft-application/releases/tag/6.2.2
+.. _6.3.0: https://github.com/canonical/craft-application/releases/tag/6.3.0
