@@ -12,7 +12,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  snap-build-amd64:
+  snap-build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -25,28 +25,12 @@ jobs:
       - name: Upload snap artifact
         uses: actions/upload-artifact@v5
         with:
-          name: snap-amd64
-          path: ${{ steps.snap.outputs.snap }}
-
-  snap-build-arm64:
-    runs-on: ubuntu-24.04-arm
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-      - name: Build snap
-        uses: snapcore/action-build@v1
-        id: snap
-      - name: Upload snap artifact
-        uses: actions/upload-artifact@v5
-        with:
-          name: snap-arm64
+          name: snap
           path: ${{ steps.snap.outputs.snap }}
 
   snap-tests:
     runs-on: spread-installed
-    needs: [snap-build-amd64, snap-build-arm64]
+    needs: [snap-build]
     strategy:
       fail-fast: false
       matrix:
@@ -65,15 +49,10 @@ jobs:
           fetch-depth: 1
           submodules: true
 
-      - name: Download amd64 snap artifact
+      - name: Download snap artifact
         uses: actions/download-artifact@v6
         with:
-          name: snap-amd64
-
-      - name: Download arm64 snap artifact
-        uses: actions/download-artifact@v6
-        with:
-          name: snap-arm64
+          name: snap
 
       - name: Run spread
         run: |
