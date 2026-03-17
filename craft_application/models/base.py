@@ -14,15 +14,18 @@
 # You should have received a copy of the GNU Lesser General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Base pydantic model for *craft applications."""
+
 from __future__ import annotations
 
-import pathlib
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pydantic
 from typing_extensions import Self
 
 from craft_application import errors, util
+
+if TYPE_CHECKING:
+    import pathlib
 
 
 def alias_generator(s: str) -> str:

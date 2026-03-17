@@ -16,28 +16,27 @@
 import json
 from datetime import datetime
 
+import craft_platforms
 import pytest
-from craft_providers import bases
-from freezegun import freeze_time
-
 from craft_application import util
-from craft_application.models import BuildInfo
 from craft_application.models.manifest import (
     CraftManifest,
     ProjectManifest,
     SessionArtifactManifest,
 )
+from freezegun import freeze_time
 
 
 @pytest.fixture
 @freeze_time(datetime.fromisoformat("2024-09-16T01:02:03.456789"))
 def project_manifest(tmp_path, fake_project):
     project = fake_project
-    build_info = BuildInfo(
-        platform="amd64",
-        build_on="amd64",
-        build_for="amd64",
-        base=bases.BaseName("ubuntu", "24.04"),
+    host_arch = craft_platforms.DebianArchitecture.from_host()
+    build_info = craft_platforms.BuildInfo(
+        platform=host_arch.value,
+        build_on=host_arch,
+        build_for=host_arch,
+        build_base=craft_platforms.DistroBase("ubuntu", "24.04"),
     )
 
     artifact = tmp_path / "my-artifact.file"

@@ -1,0 +1,11 @@
+summary: Check that testcraft fails with an unset adopt-info field
+
+systems:
+  - ubuntu-24.04-64
+
+environment:
+  CRAFT_BUILD_ENVIRONMENT/destructive: host
+  CRAFT_MANAGED_MODE/managed: 1
+
+execute: |
+  testcraft pack |& MATCH "Project field 'version' was not set."

@@ -1,0 +1,18 @@
+name: merlin-build
+description: |
+  A witchcraft cauldron that fails to pack on Ubuntu 22.04 due to the lack of a rust plugin.
+base: ubuntu@22.04
+platforms:
+  platform-independent:
+    build-on: [amd64, arm64, ppc64el, s390x, riscv64]
+    build-for: [all]
+
+version: "0.1"
+
+parts:
+  part1:
+    # The rust plugin is only available for 24.04+ in witchcraft
+    plugin: rust
+    source: .
+    override-build: |
+      true

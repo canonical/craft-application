@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Tests for CraftBaseModel"""
+
 from pathlib import Path
 
 import pydantic
@@ -25,7 +26,6 @@ from craft_application import errors, models
 
 
 class MyBaseModel(models.CraftBaseModel):
-
     value1: int
     value2: str
 
@@ -55,15 +55,14 @@ def test_model_reference_slug_errors():
 
     expected = (
         "Bad testcraft.yaml content:\n"
-        "- bad value1 value (in field 'value1')\n"
-        "- bad value2 value (in field 'value2')"
+        "- bad value1 value (in field 'value1', input: 1)\n"
+        "- bad value2 value (in field 'value2', input: 'hi')"
     )
     assert str(err.value) == expected
     assert err.value.doc_slug == "/mymodel.html"
 
 
 class CoerceModel(models.CraftBaseModel):
-
     stringy: str
 
 

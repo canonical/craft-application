@@ -23,15 +23,14 @@ import subprocess
 from collections.abc import Iterator
 from unittest import mock
 
+import craft_application
 import craft_cli
 import pytest
 import pytest_subprocess
 import snaphelpers
-from hypothesis import given, strategies
-
-import craft_application
 from craft_application import launchpad
 from craft_application.services import config
+from hypothesis import given, strategies
 
 CRAFT_APPLICATION_TEST_ENTRY_VALUES = [
     *(
@@ -178,7 +177,10 @@ def test_snap_config_handler_not_snap(mocker, default_app_metadata):
 )
 def test_snap_config_handler(snap_config_handler, item: str, content: str):
     snap_item = item.replace("_", "-")
-    with pytest_subprocess.FakeProcess.context() as fp, pytest.MonkeyPatch.context() as mp:
+    with (
+        pytest_subprocess.FakeProcess.context() as fp,
+        pytest.MonkeyPatch.context() as mp,
+    ):
         mp.setattr("snaphelpers._ctl.Popen", subprocess.Popen)
         fp.register(
             ["/usr/bin/snapctl", "get", "-d", snap_item],
@@ -246,6 +248,7 @@ def test_default_config_handler_success(default_config_handler, item, expected):
         ),
     ],
 )
+@pytest.mark.usefixtures("production_mode")
 def test_config_service_converts_type(
     monkeypatch: pytest.MonkeyPatch,
     fake_process: pytest_subprocess.FakeProcess,
@@ -259,3 +262,32 @@ def test_config_service_converts_type(
         monkeypatch.setenv(key, value)
     fake_process.register(["/usr/bin/snapctl", fake_process.any()], stdout="{}")
     assert fake_services.config.get(item) == expected
+
+
+@pytest.mark.parametrize(
+    "environment_variables",
+    [
+        {},
+        {"CRAFT_PARALLEL_BUILD_COUNT": "1337"},
+        {"CRAFT_MAX_PARALLEL_BUILD_COUNT": "1138"},
+        {"TESTCRAFT_DEBUG": "True", "TESTCRAFT_PARALLEL_BUILD_COUNT": "0"},
+    ],
+)
+def test_get_all(
+    monkeypatch: pytest.MonkeyPatch,
+    app_metadata,
+    fake_process: pytest_subprocess.FakeProcess,
+    fake_services,
+    environment_variables: dict[str, str],
+):
+    monkeypatch.setattr("snaphelpers._ctl.Popen", subprocess.Popen)
+    for key, value in environment_variables.items():
+        monkeypatch.setenv(key, value)
+    for config_item in app_metadata.ConfigModel.model_fields:
+        fake_process.register(
+            f"/usr/bin/snapctl get -d {config_item.replace('_', '-')}", stdout="{}"
+        )
+    config = fake_services.config.get_all()
+    for var, value in environment_variables.items():
+        config_name = var.partition("_")[2].lower()
+        assert str(config[config_name]) == value

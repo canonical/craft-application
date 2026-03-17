@@ -1,0 +1,30 @@
+summary: Test for craft-application's inner instance log handling
+
+restore: |
+  rm -f *.testcraft
+  testcraft clean
+
+execute: |
+  # Clear out the logs directory to make sure there's just one log in there after packing
+  rm -rf /root/.local/state/testcraft/log/*
+
+  testcraft pack || true
+
+  LOG_FILE=$(find /root/.local/state/testcraft/log -type f -name "*.log")
+
+  TIMESTAMP_RE="\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}\\.\\d{3}"
+
+  # Basic structure of a line in the log. Should optionally begin with ":: " for inner instance
+  # log lines, then be followed by a timestamp, then not have a second timestamp after that.
+  LINE_RE="^(?::: )?${TIMESTAMP_RE}(?!.*${TIMESTAMP_RE}.*).*$"
+
+  # To avoid an overly complicated regex, the second condition is kept in a separate pattern.
+  # Terminal output is sometimes given no timestamp at all, so if the original LINE_RE regex
+  # fails then just make sure there aren't any time stamps at all.
+  NO_TIMESTAMP_RE="^(?!.*${TIMESTAMP_RE}).*$"
+
+  # Check that every line in the log conforms to LINE_RE or NO_TIMESTAMP_RE
+  while read line; do
+    echo "$line" | grep -Pqe "$LINE_RE" || \
+    echo "$line" | grep -Pqe "$NO_TIMESTAMP_RE"
+  done < $LOG_FILE

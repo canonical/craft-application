@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU Lesser General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 """System-level util functions."""
+
 from __future__ import annotations
 
 import os
@@ -98,8 +99,7 @@ def get_parallel_build_count(app_name: str) -> int:
         if parallel_build_count is None:
             parallel_build_count = cpu_count
             emit.debug(
-                f"Using parallel build count of {parallel_build_count} "
-                "from CPU count"
+                f"Using parallel build count of {parallel_build_count} from CPU count"
             )
 
     return parallel_build_count

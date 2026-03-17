@@ -13,17 +13,20 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """Remote build utilities."""
+
 from __future__ import annotations
 
 import shutil
 import stat
-from collections.abc import Callable
 from functools import partial
 from hashlib import md5
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from .errors import UnsupportedArchitectureError
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 _SUPPORTED_ARCHS = ["amd64", "arm64", "armhf", "i386", "ppc64el", "riscv64", "s390x"]
 
@@ -108,7 +111,9 @@ def rmtree(directory: Path) -> None:
 
 
 def _remove_readonly(
-    func: Callable[..., Any], filepath: str, _: Any  # noqa: ANN401
+    func: Callable[..., Any],
+    filepath: str,
+    _: Any,  # noqa: ANN401
 ) -> None:
     """Shutil onerror function to make read-only files writable.
 

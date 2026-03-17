@@ -23,9 +23,8 @@ import shutil
 import subprocess
 import time
 from functools import lru_cache
-from pathlib import Path
 from shlex import quote
-from typing import Final, cast
+from typing import TYPE_CHECKING, Final, cast
 
 from craft_parts.utils import os_utils
 from typing_extensions import Self
@@ -36,10 +35,12 @@ from typing_extensions import Self
 try:
     import pygit2  # type: ignore[import-untyped]
 except Exception:  # noqa: BLE001 (narrower types are provided by the import)
+    from ._utils import find_ssl_cert_dir
+
     # This environment comes from ssl.get_default_verify_paths
     _old_env = os.getenv("SSL_CERT_DIR")
-    # Needs updating when the base changes for applications' snap
-    os.environ["SSL_CERT_DIR"] = "/snap/core22/current/etc/ssl/certs"
+
+    os.environ["SSL_CERT_DIR"] = find_ssl_cert_dir()
     import pygit2  # type: ignore[import-untyped]
 
     # Restore the environment in case the application shells out and the
@@ -52,6 +53,9 @@ except Exception:  # noqa: BLE001 (narrower types are provided by the import)
 from ._consts import CRAFTGIT_BINARY_NAME, GIT_FALLBACK_BINARY_NAME, NO_PUSH_URL
 from ._errors import GitError
 from ._models import Commit, GitType, short_commit_sha
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -218,17 +222,10 @@ class GitRepo:
         """Get the last Commit on the current head."""
         try:
             last_commit = self._repo[self._repo.head.target]
-        except pygit2.GitError as error:
+            assert isinstance(last_commit, pygit2.Commit)  # noqa: S101 (type narrowing)
+        except (pygit2.GitError, AssertionError) as error:
             raise GitError("could not retrieve last commit") from error
-        else:
-            commit_message = cast(
-                str,
-                last_commit.message,  # pyright: ignore[reportAttributeAccessIssue,reportUnknownMemberType]
-            )
-            return Commit(
-                sha=str(last_commit.id),
-                message=commit_message,
-            )
+        return Commit(sha=str(last_commit.id), message=last_commit.message)
 
     def get_last_commit_on_branch_or_tag(
         self,
@@ -262,19 +259,16 @@ class GitRepo:
         commit_sha = rev_parse_output.strip()
         try:
             commit_obj = self._repo.get(commit_sha)
+            assert isinstance(commit_obj, pygit2.Commit)  # noqa: S101 (type narrowing)
         except (pygit2.GitError, ValueError) as error:
             raise GitError(
                 f"cannot find commit: {short_commit_sha(commit_sha)!r}"
             ) from error
-        else:
-            commit_message = cast(
-                str,
-                commit_obj.message,  # pyright: ignore[reportOptionalMemberAccess,reportAttributeAccessIssue,reportUnknownMemberType]
-            )
-            return Commit(
-                sha=commit_sha,
-                message=commit_message,
-            )
+        except AssertionError as error:  # pragma: no-cover
+            raise GitError(
+                f"object is not a commit: {short_commit_sha(commit_sha)!r}"
+            ) from error
+        return Commit(sha=commit_sha, message=commit_obj.message)
 
     def is_clean(self) -> bool:
         """Check if the repo is clean.
@@ -588,6 +582,8 @@ class GitRepo:
         checking_command = [
             self.get_git_command(),
             "branch",
+            "--color=never",
+            "--column=never",
             "--remotes",
             "--contains",
             commit_sha,
@@ -705,6 +701,21 @@ class GitRepo:
                 f"cannot clone repository: {url} to {str(path)!r}"
             ) from error
         return cls(path)
+
+    def get_config_value(self, key: str) -> str | None:
+        """Get value for the configuration key if available else return None."""
+        try:
+            return self._repo.config[key]
+        except (KeyError, ValueError):
+            logger.debug("Config key %r not found in the repository", key)
+            return None
+
+    def set_config_value(self, key: str, value: str) -> None:
+        """Set new value for the configuration key.
+
+        :raises ValueError: if configuration is incorrect
+        """
+        self._repo.config[key] = value
 
     @classmethod
     @lru_cache(maxsize=1)

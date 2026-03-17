@@ -14,24 +14,55 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Configuration model for craft applications."""
+
 from __future__ import annotations
 
-import craft_cli
 import pydantic
+from craft_cli import EmitterMode
 
 
 class ConfigModel(pydantic.BaseModel):
-    """A configuration model for a craft application."""
+    """The configuration model for the app.
 
-    verbosity_level: craft_cli.EmitterMode = craft_cli.EmitterMode.BRIEF
+    This model informs the config service what configuration items are available
+    to the application.
+    """
+
+    verbosity_level: EmitterMode = EmitterMode.BRIEF
+    """The verbosity level for the app."""
     debug: bool = False
+    """Whether the application is in debug mode."""
     build_environment: str | None = None
+    """The build environment to use for this app.
+
+    Defaults to unset, can also be set as ``host`` to enable destructive mode.
+    """
     secrets: str
 
     platform: str | None = None
+    """The platform for which to build."""
     build_for: str | None = None
+    """The target architecture for which to build."""
 
     parallel_build_count: int
+    """The parallel build count to send to Craft Parts.
+
+    Supersedes any value set in ``max_parallel_build_count``.
+    """
     max_parallel_build_count: int
+    """The maximum parallel build count to send to Craft Parts.
+
+    If this value is set but ``parallel_build_count`` is not, the smaller of
+    ``max_parallel_build_count`` or the number of processor cores available to the
+    app process is used. If unset, the number of processor cores available is used.
+    """
     lxd_remote: str = "local"
+    """The LXD remote to use if using the LXD provider."""
     launchpad_instance: str = "production"
+    """The Launchpad instance to use for remote builds."""
+
+    idle_mins: pydantic.NonNegativeInt | None = None
+    """How long the container used by lifecycle steps remains active after the app exits.
+
+    If unset, this defaults to exiting synchronously before the app exits.
+    """

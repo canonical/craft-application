@@ -14,9 +14,14 @@
 #  You should have received a copy of the GNU Lesser General Public License
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Unit tests for main Launchpad client."""
+
 from __future__ import annotations
 
-import enum
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    import enum
+
 import pathlib
 from unittest import mock
 

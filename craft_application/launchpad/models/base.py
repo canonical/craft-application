@@ -14,6 +14,7 @@
 #  You should have received a copy of the GNU Lesser General Public License
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Base LaunchpadObject."""
+
 # This file relies heavily on dynamic features from launchpadlib that cause pyright
 # to complain a lot. As such, we're disabling several pyright checkers for this file
 # since in this case they generate more noise than utility.
@@ -29,7 +30,6 @@
 from __future__ import annotations
 
 import enum
-from collections.abc import Mapping
 from typing import TYPE_CHECKING
 
 import lazr.restfulclient.errors  # type: ignore[import-untyped]
@@ -39,6 +39,8 @@ from typing_extensions import Any
 from craft_application.launchpad import errors, util
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
+
     from craft_application.launchpad import Launchpad
 
 
@@ -73,9 +75,7 @@ class LaunchpadObject:
     def __init__(self, lp: Launchpad, lp_obj: Entry) -> None:
         self._lp = lp
 
-        if not isinstance(
-            lp_obj, Entry
-        ):  # pyright: ignore[reportUnnecessaryIsInstance]
+        if not isinstance(lp_obj, Entry):  # pyright: ignore[reportUnnecessaryIsInstance]
             raise TypeError(
                 f"Cannot use type {lp_obj.__class__.__name__} for launchpad entries."
             )

@@ -1,0 +1,197 @@
+project: testcraft
+
+path: /testcraft
+environment:
+  PROJECT_PATH: /testcraft
+  PATH: /snap/bin:$PATH
+  CRAFT_DEBUG: "1"
+
+include:
+  - tests/spread
+
+exclude:
+  - .venv
+
+backends:
+  google:
+    key: '$(HOST: echo "$SPREAD_GOOGLE_KEY")'
+    location: snapd-spread/us-east1-b
+    halt-timeout: 3h
+    systems:
+      - ubuntu-20.04-64:
+          image: ubuntu-2004-64
+          workers: 4
+          memory: 4G
+          storage: 20G
+      - ubuntu-22.04-64:
+          image: ubuntu-2204-64
+          workers: 4
+          memory: 4G
+          storage: 20G
+      - ubuntu-24.04-64:
+          image: ubuntu-2404-64
+          workers: 4
+          memory: 4G
+          storage: 20G
+  # lxd:  # Disabled due to https://github.com/canonical/spread/issues/215
+  #   systems:
+  #     - ubuntu-24.04
+  # lxd: # Copied and modified from chisel-releases. Not usable for managed mode.
+  #   type: adhoc
+  #   allocate: |
+  #     set -x
+  #
+  #     mkdir -p $HOME/.spread
+  #     export counter_file="$HOME/.spread/multipass-count"
+  #     instance_num=$(flock -x $counter_file bash -c '
+  #       [ -s $counter_file ] || echo 0 > $counter_file
+  #       num=$(< $counter_file)
+  #       echo $num
+  #       echo $(( $num + 1 )) > $counter_file')
+  #
+  #     instance_name=${SPREAD_SYSTEM}-${instance_num}
+  #
+  #     release=$(echo $SPREAD_SYSTEM | awk -F '-' '{print $2}')
+  #
+  #     # Ideally, we would add the ubuntu-minimal remote
+  #     # e.g. https://cloud-images.ubuntu.com/minimal/releases/jammy/
+  #     # but that would effectively change the host's LXC configurations.
+  #
+  #     echo "Allocating ${instance_name}..."
+  #     lxc launch --ephemeral ubuntu-daily:$release ${instance_name}
+  #     lxc config set ${instance_name} security.nesting true
+  #     lxc config set ${instance_name} security.privileged true
+  #     until lxc exec ${instance_name} -- systemctl status | grep "running"
+  #     do
+  #       sleep 5
+  #     done
+  #     lxc exec ${instance_name} -- systemctl enable --now ssh
+  #     lxc exec ${instance_name} -- sed -i 's/^\s*#\?\s*\(PermitRootLogin\|PasswordAuthentication\)\>.*/\1 yes/' /etc/ssh/sshd_config
+  #     lxc exec ${instance_name} -- bash -c "sed -i 's/^\s*\(PermitRootLogin\|PasswordAuthentication\)\>.*/# COMMENTED OUT BY SPREAD: \0/' /etc/ssh/sshd_config.d/* || true"
+  #     lxc exec ${instance_name} -- bash -c "test -d /etc/ssh/sshd_config.d && echo -e 'PermitRootLogin=yes\nPasswordAuthentication=yes' > /etc/ssh/sshd_config.d/00-spread.conf"
+  #     lxc exec ${instance_name} -- bash -c "echo 'root:${SPREAD_PASSWORD}' | chpasswd"
+  #     lxc exec ${instance_name} -- killall -HUP sshd
+  #     ADDRESS `lxc list --format=json ${instance_name} | jq -r '.[0].state.network.eth0.addresses[] | select(.family=="inet") | .address'`
+  #   discard: |
+  #     instance_name=$(lxc list --format csv | grep $SPREAD_SYSTEM_ADDRESS | cut -f1 -d\,)
+  #     lxc stop $instance_name || true
+  #   systems:
+  #     - ubuntu-noble:
+  multipass:
+    type: adhoc
+    allocate: |
+      sleep 0.$RANDOM  # Minimize chances of a race condition
+      mkdir -p $HOME/.spread
+      export counter_file="$HOME/.spread/multipass-count"
+      instance_num=$(flock -x $counter_file bash -c '
+        [ -s $counter_file ] || echo 0 > $counter_file
+        num=$(< $counter_file)
+        echo $num
+        echo $(( $num + 1 )) > $counter_file')
+
+      multipass_image=$(echo ${SPREAD_SYSTEM} | sed -e s/ubuntu-// -e s/-64//)
+
+      system=$(echo "${SPREAD_SYSTEM}" | tr . -)
+      instance_name="spread-${SPREAD_BACKEND}-${instance_num}-${system}"
+
+      multipass launch --cpus 4 --disk 40G --memory 8G --name "${instance_name}" "${multipass_image}"
+
+      # Enable PasswordAuthentication for root over SSH.
+      multipass exec "$instance_name" -- \
+        sudo sh -c "echo root:${SPREAD_PASSWORD} | sudo chpasswd"
+      multipass exec "$instance_name" -- \
+        sudo sh -c \
+        "if [ -d /etc/ssh/sshd_config.d/ ]
+        then
+          echo 'PasswordAuthentication yes' > /etc/ssh/sshd_config.d/10-spread.conf
+          echo 'PermitRootLogin yes' >> /etc/ssh/sshd_config.d/10-spread.conf
+        else
+          sed -i /etc/ssh/sshd_config -E -e 's/^#?PasswordAuthentication.*/PasswordAuthentication yes/' -e 's/^#?PermitRootLogin.*/PermitRootLogin yes/'
+        fi"
+      multipass exec "$instance_name" -- \
+        sudo systemctl restart ssh
+
+      # Get the IP from the instance
+      ip=$(multipass info --format csv "$instance_name" | tail -1 | cut -d\, -f3)
+      ADDRESS "$ip"
+    discard: |
+      instance_name=$(multipass list --format csv | grep $SPREAD_SYSTEM_ADDRESS | cut -f1 -d\,)
+      multipass delete --purge "${instance_name}"
+    systems:
+      - ubuntu-20.04-64:
+          workers: 4
+      - ubuntu-22.04-64:
+          workers: 4
+      - ubuntu-24.04-64:
+          workers: 4
+      - ubuntu-25.10-64:
+          workers: 4
+  craft:
+    type: adhoc
+    allocate: "false"
+    systems:
+      - ubuntu-20.04-64:
+      - ubuntu-22.04-64:
+      - ubuntu-24.04-64:
+      - ubuntu-25.10-64:
+
+prepare: |
+  sudo snap wait system seed.loaded
+  # IDK why but if we don't sleep after this we get:
+  # error: cannot install "snapd": Post "https://api.snapcraft.io/v2/snaps/refresh": context canceled
+  sleep 4
+  sudo snap install snapd || sudo snap refresh snapd
+  sudo snap wait system seed.loaded
+
+  sudo snap install --dangerous --classic tests/spread/*.snap
+
+  # Select older LXD channels for older bases.
+  . /etc/os-release
+  case "${VERSION_ID}" in
+    [0-9][24680].10 | [0-9][13579].*)  # Use the latest track for interim releases.
+      lxd_channel="latest/beta"
+      ;;
+    20.04)
+      lxd_channel="4.0/beta"
+      ;;
+    22.04)
+      lxd_channel="5.0/beta"
+      ;;
+    24.04)
+      lxd_channel="5.21/beta"
+      ;;
+    26.04)
+      lxd_channel="6/beta"
+      ;;
+    *)
+      echo "Please select an LXD channel for this LTS release!" >> /dev/stderr
+      # exit 1
+      ;;
+  esac
+  if snap list lxd; then
+    snap refresh --channel=${lxd_channel} lxd
+  else
+    snap install --channel=${lxd_channel} lxd
+  fi
+
+  # Initialize LXD; some tests need it ready *before* testcraft is called
+  lxd init --auto
+
+  sudo apt-get --yes install jq
+
+restore-each: |
+  testcraft clean || true
+
+suites:
+  tests/spread/testcraft/:
+    summary: Tests for testcraft core functionality
+
+  tests/spread/partitioncraft/:
+    summary: Tests for partitioncraft (app with partitions enabled)
+    prepare: |
+      sudo snap alias testcraft.partitioncraft partitioncraft
+
+  tests/spread/witchcraft/:
+    summary: Tests for witchcraft (app with many features enabled)
+    prepare: |
+      sudo snap alias testcraft.witchcraft witchcraft

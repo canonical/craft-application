@@ -1,0 +1,7 @@
+.. _`Pydantic`: https://docs.pydantic.dev/
+.. _`YAML`: https://yaml.org/
+
+
+.. Used in howto/platforms.rst but make the line too long.
+.. _`get_pydantic_json_schema`: https://docs.pydantic.dev/latest/concepts/json_schema/#implementing-__get_pydantic_json_schema__
+.. _`platforms_integration_tests`: https://github.com/canonical/craft-application/pull/735/files#diff-679623d6baf2a08d31d5d50a26f0819ceb085a5fc33e869b277524e27b439a82

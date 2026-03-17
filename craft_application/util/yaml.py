@@ -14,12 +14,14 @@
 # You should have received a copy of the GNU Lesser General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 """YAML helpers for craft applications."""
+
 from __future__ import annotations
 
 import contextlib
 import pathlib
 from typing import TYPE_CHECKING, Any, TextIO, cast, overload
 
+import craft_platforms
 import yaml
 
 from craft_application import errors
@@ -96,7 +98,7 @@ class _SafeYamlLoader(yaml.SafeLoader):
         )
 
 
-def safe_yaml_load(stream: TextIO) -> Any:  # noqa: ANN401 - The YAML could be anything
+def safe_yaml_load(stream: TextIO | str) -> Any:  # noqa: ANN401 - The YAML could be anything
     """Equivalent to pyyaml's safe_load function, but constraining duplicate keys.
 
     :param stream: Any text-like IO object.
@@ -107,13 +109,18 @@ def safe_yaml_load(stream: TextIO) -> Any:  # noqa: ANN401 - The YAML could be a
         # using our own safe loader.
         return yaml.load(stream, Loader=_SafeYamlLoader)  # noqa: S506
     except yaml.YAMLError as error:
-        filename = pathlib.Path(stream.name).name
+        if isinstance(stream, str):
+            filename = "(unknown)"
+        else:
+            filename = pathlib.Path(stream.name).name
         raise errors.YamlError.from_yaml_error(filename, error) from error
 
 
 @overload
 def dump_yaml(
-    data: Any, stream: TextIO, **kwargs: Any  # noqa: ANN401 # Any gets passed to pyyaml
+    data: Any,  # noqa: ANN401 # Any gets passed to pyyaml
+    stream: TextIO,
+    **kwargs: Any,
 ) -> None: ...  # pragma: no cover
 
 
@@ -121,7 +128,7 @@ def dump_yaml(
 def dump_yaml(
     data: Any,  # noqa: ANN401 # Any gets passed to pyyaml
     stream: None = None,
-    **kwargs: Any,  # Any gets passed to pyyaml
+    **kwargs: Any,
 ) -> str: ...  # pragma: no cover
 
 
@@ -137,6 +144,11 @@ def dump_yaml(data: Any, stream: TextIO | None = None, **kwargs: Any) -> str | N
     """
     yaml.add_representer(
         str, _repr_str, Dumper=cast(type[yaml.Dumper], yaml.SafeDumper)
+    )
+    yaml.add_representer(
+        craft_platforms.DebianArchitecture,
+        _repr_str,
+        Dumper=cast(type[yaml.Dumper], yaml.SafeDumper),
     )
     kwargs.setdefault("sort_keys", False)
     kwargs.setdefault("allow_unicode", True)
