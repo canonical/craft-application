@@ -76,14 +76,8 @@ class TestingService(base.AppService):
                 debug=debug,
             )
 
-    def process_spread_yaml(
-        self, dest: pathlib.Path, pack_state: models.PackState
-    ) -> None:
-        """Process the spread configuration file.
-
-        :param dest: the output path for spread.yaml.
-        """
-        emit.debug("Processing spread.yaml.")
+    def parse_spread_yaml(self) -> models.CraftSpreadYaml:
+        """Read and parse the spread.yaml file for this project."""
         spread_path = pathlib.Path("spread.yaml")
         if not spread_path.is_file():
             raise CraftError(
@@ -94,6 +88,22 @@ class TestingService(base.AppService):
                 retcode=os.EX_CONFIG,
             )
 
+        with spread_path.open() as file:
+            data = util.safe_yaml_load(file)
+
+        return models.CraftSpreadYaml.unmarshal(data)
+
+    def process_spread_yaml(
+        self, dest: pathlib.Path, pack_state: models.PackState
+    ) -> None:
+        """Process the spread configuration file.
+
+        :param dest: the output path for spread.yaml.
+        """
+        emit.debug("Processing spread.yaml.")
+
+        simple = self.parse_spread_yaml()
+
         craft_backend = self._get_backend()
 
         if not pack_state.artifact:
@@ -101,11 +111,6 @@ class TestingService(base.AppService):
                 f"No {self._app.artifact_type} files to test.",
                 resolution=f"Ensure that {self._app.artifact_type} files are generated before running the test.",
             )
-
-        with spread_path.open() as file:
-            data = util.safe_yaml_load(file)
-
-        simple = models.CraftSpreadYaml.unmarshal(data)
 
         spread_yaml = models.SpreadYaml.from_craft(
             simple,

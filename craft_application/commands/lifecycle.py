@@ -22,12 +22,15 @@ import subprocess
 import textwrap
 from typing import Any, Literal, cast
 
+import pydantic
 from craft_cli import CommandGroup, CraftError, emit
 from craft_parts.features import Features
 from typing_extensions import override
 
 from craft_application import errors, models, util
 from craft_application.commands import base
+from craft_application.errors import TestFileError
+from craft_application.util.error_formatting import format_pydantic_errors
 from craft_application.util.logging import handle_runtime_error
 
 _PACKED_FILE_LIST_PATH = ".craft/packed-files"
@@ -675,6 +678,17 @@ class TestCommand(PackCommand):
         # Add values for super classes like pack.
         parsed_args.output = pathlib.Path.cwd()
 
+        testing_service = self._services.get("testing")
+        # Fail early if spread.yaml is invalid.
+        try:
+            testing_service.parse_spread_yaml()
+        except pydantic.ValidationError as exc:
+            raise TestFileError(
+                format_pydantic_errors(exc.errors(), file_name="spread.yaml"),
+                reportable=False,
+                retcode=os.EX_DATAERR,
+            )
+
         if util.is_managed_mode():
             # If we're in managed mode, we just need to pack.
             return super()._run(parsed_args=parsed_args, step_name=step_name, **kwargs)
@@ -687,8 +701,6 @@ class TestCommand(PackCommand):
         if parsed_args.platform:
             os.environ["CRAFT_PLATFORM"] = parsed_args.platform
             build_planner.set_platforms(parsed_args.platform)
-
-        testing_service = self._services.get("testing")
         package = self._services.get("package")
         provider = self._services.get("provider")
 

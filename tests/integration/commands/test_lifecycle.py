@@ -16,11 +16,13 @@
 """Integration tests for lifecycle commands."""
 
 import os
+import pathlib
 import re
 
 import freezegun
 import pytest
 from craft_application.application import Application
+from craft_application.commands import TestCommand
 
 
 @pytest.mark.usefixtures("fake_process")  # Ensure we don't spin up a container.
@@ -41,5 +43,28 @@ def test_unsupported_base_error(
     assert return_code == os.EX_DATAERR
     assert re.match(
         rf"Cannot {command} artifact. (Build b|B)ase '[a-z]+@\d+\.\d+' has reached end-of-life.",
+        stderr,
+    )
+
+
+@pytest.mark.usefixtures("fake_process")  # Ensure we don't spin up a container.
+def test_test_with_bad_spread_yaml(
+    app: Application,
+    capsys: pytest.CaptureFixture,
+    monkeypatch: pytest.MonkeyPatch,
+    new_dir: pathlib.Path,
+):
+    """Initialise a project."""
+    app.add_command_group("Lifecycle", [TestCommand], ordered=True)
+    monkeypatch.setattr("sys.argv", ["testcraft", "test"])
+    spread_file = new_dir / "spread.yaml"
+    spread_file.write_text("summary: An incomplete test file.")
+
+    retcode = app.run()
+    _, stderr = capsys.readouterr()
+
+    assert retcode == os.EX_DATAERR
+    assert re.match(
+        r"^Bad spread.yaml content:\n- field 'backends' required in top-level configuration",
         stderr,
     )
