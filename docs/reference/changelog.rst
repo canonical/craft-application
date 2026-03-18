@@ -19,7 +19,6 @@ Changelog
 ------------------
 
 Providers
-=========
 
 - Craft Application can now build on a provider using a different architecture from the host architecture as long as the provider supports that architecture. Set the ``CRAFT_BUILD_ON`` environment variable to an architecture to use this.
 
@@ -30,6 +29,15 @@ Commands
   erroring early if the file is invalid.
 
 For a complete list of commits, check out the `6.3.0`_ release on GitHub.
+
+6.2.2 (2026-03-12)
+------------------
+
+Documentation
+
+- Fix a misspelling.
+
+For a complete list of commits, check out the `6.2.2`_ release on GitHub.
 
 6.2.1 (2026-03-06)
 ------------------
@@ -48,6 +56,8 @@ Documentation
 - Add a :ref:`reference-PackageService` reference document.
 - Add a snippet for :ref:`platform naming rules <reference-strict-platform-names>`
   that can be reused across applications.
+
+For a complete list of commits, check out the `6.2.1`_ release on GitHub.
 
 6.2.0 (2026-02-12)
 ------------------
@@ -1243,4 +1253,6 @@ For a complete list of commits, check out the `2.7.0`_ release on GitHub.
 .. _6.1.0: https://github.com/canonical/craft-application/releases/tag/6.1.0
 .. _6.1.1: https://github.com/canonical/craft-application/releases/tag/6.1.1
 .. _6.2.0: https://github.com/canonical/craft-application/releases/tag/6.2.0
+.. _6.2.1: https://github.com/canonical/craft-application/releases/tag/6.2.1
+.. _6.2.2: https://github.com/canonical/craft-application/releases/tag/6.2.2
 .. _6.3.0: https://github.com/canonical/craft-application/releases/tag/6.3.0
