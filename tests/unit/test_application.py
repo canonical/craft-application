@@ -577,6 +577,8 @@ def test_fails_without_project(
     tmp_path,
     app_metadata,
     fake_services,
+    app,
+    debug_mode,
     mock_pro_api_call,
 ):
     # Set up a real project service - the fake one for testing gets a fake project!

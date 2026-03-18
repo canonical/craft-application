@@ -623,6 +623,7 @@ def repository_with_unannotated_tag(
     repository_with_commit.tag = test_tag
     return repository_with_commit
 
+
 @pytest.fixture
 def mock_pro_api_call(mocker):
 

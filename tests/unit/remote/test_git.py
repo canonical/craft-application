@@ -15,7 +15,6 @@
 """Remote-build git tests."""
 
 import pytest
-
 from craft_application.git import GitType
 from craft_application.remote import errors, git
 
