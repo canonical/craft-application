@@ -19,14 +19,31 @@ parts:
     source:
       - on amd64 to amd64: src/on-amd64-to-amd64
       - on amd64 to arm64: src/on-amd64-to-arm64
+      - on arm64 to arm64: src/on-arm64-to-arm64
+      - on armhf to armhf: src/on-armhf-to-armhf
+      - on i386 to i386: src/on-i386-to-i386
+      - on ppc64el to ppc64el: src/on-ppc64el-to-ppc64el
+      - on riscv64 to riscv64: src/on-riscv64-to-riscv64
+      - on s390x to s390x: src/on-s390x-to-s390x
     organize:
-      - on amd64 to amd64:
+      - to amd64:
           hello.txt: hello-amd64.txt
-      - on amd64 to arm64:
+      - to arm64:
           hello.txt: hello-arm64.txt
+      - to armhf:
+          hello.txt: hello-armhf.txt
+      - to i386:
+          hello.txt: hello-i386.txt
+      - to ppc64el:
+          hello.txt: hello-ppc64el.txt
+      - to riscv64:
+          hello.txt: hello-riscv64.txt
+      - to s390x:
+          hello.txt: hello-s390x.txt
+
     build-environment:
       - HELLO: hello
-      - on amd64 to amd64:
+      - to amd64:
           - MY_VAR: amd64
-      - on amd64 to arm64:
+      - to arm64:
           - MY_VAR: arm64

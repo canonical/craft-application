@@ -413,7 +413,7 @@ def test_partitions(
                         "source-tag": "v1.2.3",
                         "build-environment": [
                             {
-                                "BUILD_ON": craft_platforms.DebianArchitecture.from_host().value
+                                "BUILD_ON": "Placeholder value replaced with fake_host_architecture within the test."
                             },
                         ],
                         "override-build": "echo my-name",
@@ -435,6 +435,18 @@ def test_expand_environment_no_partitions_any_platform(
     fake_platform,
     expected,
 ):
+    # Get the BUILD_ON environment variable and substitute the fake host architecture.
+    expected = copy.deepcopy(expected)
+    build_env = (
+        expected.get("parts", {}).get("my-part", {}).get("build-environment", [])
+    )
+    for env_var in build_env:
+        if "BUILD_ON" in env_var:
+            env_var["BUILD_ON"] = fake_host_architecture
+
+    # This test modifies the project data, so we make a deep copy to handle parametrizations.
+    project_data = copy.deepcopy(project_data)
+
     real_project_service._expand_environment(
         project_data,
         platform=fake_platform,
