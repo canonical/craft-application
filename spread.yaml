@@ -1,13 +1,13 @@
 project: testcraft
 
-path: /testcraft
-environment:
-  PROJECT_PATH: /testcraft
-  PATH: /snap/bin:$PATH
-  CRAFT_DEBUG: "1"
+# path: /testcraft
+# environment:
+#   PROJECT_PATH: /testcraft
+#   PATH: /snap/bin:$PATH
+#   CRAFT_DEBUG: "1"
 
-include:
-  - tests/spread
+# include:
+#   - tests/spread
 
 exclude:
   - .venv
@@ -127,8 +127,6 @@ backends:
       - ubuntu-25.10-64:
           workers: 4
   craft:
-    type: adhoc
-    allocate: "false"
     systems:
       - ubuntu-20.04-64:
       - ubuntu-22.04-64:
@@ -136,6 +134,8 @@ backends:
       - ubuntu-25.10-64:
 
 prepare: |
+  sudo apt-get update
+
   sudo snap wait system seed.loaded
   # IDK why but if we don't sleep after this we get:
   # error: cannot install "snapd": Post "https://api.snapcraft.io/v2/snaps/refresh": context canceled
@@ -143,7 +143,7 @@ prepare: |
   sudo snap install snapd || sudo snap refresh snapd
   sudo snap wait system seed.loaded
 
-  sudo snap install --dangerous --classic tests/spread/*.snap
+  sudo snap install --dangerous --classic "$CRAFT_ARTIFACT"
 
   # Select older LXD channels for older bases.
   . /etc/os-release
