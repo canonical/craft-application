@@ -129,7 +129,7 @@ class ProviderService(base.AppService):
 
         build_on = self._services.get("config").get("build_on")
         host_arch_matches = not build_on or (
-            build_on == craft_platforms.DebianArchitecture.from_host()
+            build_on == craft_platforms.DebianArchitecture.from_host().value
         )
 
         if is_snappy and host_arch_matches:
@@ -145,10 +145,18 @@ class ProviderService(base.AppService):
                 instance_name = os.getenv("SNAP_INSTANCE_NAME", self._app.name)
                 channel = self._get_snap_store_channel(instance_name)
             channel = channel or "latest/stable"
+            if not is_snappy:
+                reason = "the application is not running as a snap"
+            elif not host_arch_matches:
+                reason = (
+                    "the snap cannot be injected because the host architecture "
+                    "does not match the build-on architecture"
+                )
+            else:
+                reason = "snap injection was not performed successfully"
             emit.debug(
                 f"Setting {self._app.name} to be installed from the {channel} "
-                "channel in the build environment because it is not running "
-                "as a snap."
+                f"channel in the build environment because {reason}."
             )
             self.snaps.append(Snap(name=name, channel=channel, classic=True))
 
