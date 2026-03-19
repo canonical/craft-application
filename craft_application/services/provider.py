@@ -118,24 +118,35 @@ class ProviderService(base.AppService):
             self.environment[f"{scheme.upper()}_PROXY"] = value
 
         if self._install_snap:
-            self.snaps.extend(_REQUESTED_SNAPS.values())
+            self._setup_snaps()
 
-            snap_injected = False
-            if is_snappy := util.is_running_from_snap(self._app.name):
-                # use the aliased name of the snap when injecting
-                snap_injected = self.enqueue_snap_injection(
-                    os.getenv("SNAP_INSTANCE_NAME", self._app.name)
-                )
-            if not is_snappy or not snap_injected:
-                # use the snap name when installing from the store
-                name = self._app.name
-                channel = os.getenv("CRAFT_SNAP_CHANNEL", "latest/stable")
-                emit.debug(
-                    f"Setting {self._app.name} to be installed from the {channel} "
-                    "channel in the build environment because it is not running "
-                    "as a snap."
-                )
-                self.snaps.append(Snap(name=name, channel=channel, classic=True))
+    def _setup_snaps(self) -> None:
+        """Set up the app snap to be installed in the build environment."""
+        self.snaps.extend(_REQUESTED_SNAPS.values())
+
+        snap_injected = False
+        is_snappy = util.is_running_from_snap(self._app.name)
+
+        build_on = self._services.get("config").get("build_on")
+        host_arch_matches = not build_on or (
+            build_on == craft_platforms.DebianArchitecture.from_host()
+        )
+
+        if is_snappy and host_arch_matches:
+            # use the aliased name of the snap when injecting
+            snap_injected = self.enqueue_snap_injection(
+                os.getenv("SNAP_INSTANCE_NAME", self._app.name)
+            )
+        if not is_snappy or not snap_injected:
+            # use the snap name when installing from the store
+            name = self._app.name
+            channel = os.getenv("CRAFT_SNAP_CHANNEL", "latest/stable")
+            emit.debug(
+                f"Setting {self._app.name} to be installed from the {channel} "
+                "channel in the build environment because it is not running "
+                "as a snap."
+            )
+            self.snaps.append(Snap(name=name, channel=channel, classic=True))
 
     def enqueue_snap_injection(self, name: str, *, include_base: bool = True) -> bool:
         """Try to inject a snap from the host system.
