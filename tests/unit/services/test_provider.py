@@ -20,7 +20,7 @@ import pathlib
 import pkgutil
 import subprocess
 import uuid
-from typing import NamedTuple
+from typing import Any, NamedTuple
 from unittest import mock
 
 import craft_application
@@ -368,6 +368,85 @@ def test_setup_snaps_skips_injection_on_arch_mismatch(
             Snap(name="testcraft", channel="latest/stable", classic=True)
             in service.snaps
         )
+
+
+@pytest.mark.parametrize(
+    ("tracking_channel", "craft_snap_channel", "expected_channel"),
+    [
+        pytest.param("latest/edge", None, "latest/edge", id="uses-tracking-channel"),
+        pytest.param(
+            "latest/edge",
+            "latest/stable",
+            "latest/stable",
+            id="craft-snap-channel-overrides-tracking",
+        ),
+        pytest.param(None, None, "latest/stable", id="no-tracking-channel-fallback"),
+    ],
+)
+def test_setup_snaps_uses_tracking_channel(
+    monkeypatch,
+    app_metadata,
+    fake_project,
+    fake_process: pytest_subprocess.FakeProcess,
+    fake_services,
+    tracking_channel,
+    craft_snap_channel,
+    expected_channel,
+):
+    """When injection is skipped and CRAFT_SNAP_CHANNEL is unset, use the snap's tracking channel."""
+    monkeypatch.setattr(
+        craft_platforms.DebianArchitecture,
+        "from_host",
+        lambda: craft_platforms.DebianArchitecture.RISCV64,
+    )
+    monkeypatch.setattr(
+        fake_services.get("config"),
+        "get",
+        lambda item: "amd64" if item == "build_on" else None,
+    )
+    monkeypatch.setattr("snaphelpers._ctl.Popen", subprocess.Popen)
+    snap_result: dict[str, Any] = {
+        "name": "testcraft",
+        "confinement": "classic",
+        "base": "core24",
+    }
+    if tracking_channel is not None:
+        snap_result["tracking-channel"] = tracking_channel
+    monkeypatch.setattr(
+        "snap_http.http.get",
+        mock.Mock(
+            return_value=SnapdResponse(
+                type="fake",
+                status_code=200,
+                status="OK",
+                result=[snap_result, {"name": "core24", "confinement": "strict"}],
+            )
+        ),
+    )
+    fake_process.register(
+        ["/usr/bin/snapctl", "get", "-d", fake_process.any()],
+        stdout="{}",
+        occurrences=1000,
+    )
+    monkeypatch.setenv("SNAP_NAME", "testcraft")
+    monkeypatch.setenv("SNAP_INSTANCE_NAME", "testcraft")
+    monkeypatch.setenv("SNAP", "/snap/testcraft/x1")
+    if craft_snap_channel is not None:
+        monkeypatch.setenv("CRAFT_SNAP_CHANNEL", craft_snap_channel)
+    else:
+        monkeypatch.delenv("CRAFT_SNAP_CHANNEL", raising=False)
+
+    service = provider.ProviderService(
+        app_metadata,
+        fake_services,
+        work_dir=pathlib.Path(),
+        install_snap=True,
+    )
+    service.setup()
+
+    assert (
+        Snap(name="testcraft", channel=expected_channel, classic=True) in service.snaps
+    )
 
 
 @pytest.mark.parametrize(

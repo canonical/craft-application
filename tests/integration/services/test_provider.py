@@ -22,7 +22,8 @@ import subprocess
 import craft_platforms
 import craft_providers
 import pytest
-from craft_application import ProviderService
+from craft_application import AppMetadata, ProviderService
+from craft_application.services import provider as provider_module
 
 
 @pytest.mark.parametrize(
@@ -230,3 +231,95 @@ def test_instance_with_different_architecture(
         )
 
     assert result.stdout.rstrip() == build_on
+
+
+def _get_store_revision(snap_name: str, channel: str) -> int:
+    """Get the revision of a snap published in a specific channel from the store.
+
+    :param snap_name: The name of the snap to query.
+    :param channel: The channel to query (e.g. ``"latest/stable"``).
+    :returns: The revision number published in that channel.
+    :raises pytest.skip.Exception: If the channel is not available in the store.
+    """
+    result = subprocess.run(
+        ["snap", "info", "--unicode=never", snap_name],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    for line in result.stdout.splitlines():
+        stripped = line.strip()
+        if stripped.startswith(f"{channel}:"):
+            # e.g. "latest/stable:    1.17.2    2026-03-12 (4238) 94MB classic"
+            for part in stripped.split():
+                if part.startswith("(") and part.endswith(")"):
+                    return int(part[1:-1])
+    pytest.skip(f"Channel {channel!r} is not available for snap {snap_name!r}")
+
+
+@pytest.mark.parametrize(
+    "channel",
+    [
+        pytest.param("latest/stable", id="stable"),
+        pytest.param("latest/candidate", id="candidate"),
+        pytest.param("latest/beta", id="beta"),
+        pytest.param("latest/edge", id="edge"),
+    ],
+)
+@pytest.mark.lxd
+@pytest.mark.slow
+@pytest.mark.flaky(reruns=3, reruns_delay=2)
+def test_rockcraft_channel_install(
+    monkeypatch: pytest.MonkeyPatch,
+    snap_safe_tmp_path: pathlib.Path,
+    fake_services,
+    channel: str,
+):
+    """Test that each rockcraft channel installs the correct version in the container.
+
+    Verifies the full provider service flow: the channel is read from
+    ``CRAFT_SNAP_CHANNEL``, passed to the snap installer, and the version of
+    rockcraft found inside the container matches what the snap store reports
+    for that channel.
+    """
+    expected_revision = _get_store_revision("rockcraft", channel)
+
+    monkeypatch.setenv("CRAFT_SNAP_CHANNEL", channel)
+    rockcraft_metadata = AppMetadata("rockcraft", "Rockcraft")
+
+    service = provider_module.ProviderService(
+        rockcraft_metadata,
+        fake_services,
+        work_dir=snap_safe_tmp_path,
+        install_snap=True,
+    )
+    service.setup()
+    service.get_provider("lxd")
+
+    base_name = craft_platforms.DistroBase("ubuntu", "24.04")
+    arch = craft_platforms.DebianArchitecture.from_host()
+    build_info = craft_platforms.BuildInfo("foo", arch, arch, base_name)
+
+    executor = None
+    try:
+        with service.instance(build_info, work_dir=snap_safe_tmp_path) as executor:
+            result = executor.execute_run(
+                ["snap", "list", "rockcraft"],
+                text=True,
+                stdout=subprocess.PIPE,
+                check=True,
+            )
+    finally:
+        if executor is not None:
+            with contextlib.suppress(craft_providers.ProviderError):
+                executor.delete()
+
+    # Parse `snap list` output:  Name  Version  Rev  Tracking  Publisher  Notes
+    lines = result.stdout.strip().splitlines()
+    assert len(lines) >= 2, f"Unexpected snap list output:\n{result.stdout}"
+    installed_revision = int(lines[1].split()[2])
+
+    assert installed_revision == expected_revision, (
+        f"Channel {channel!r}: expected revision {expected_revision!r} from the store "
+        f"but got {installed_revision!r} inside the container"
+    )
