@@ -663,8 +663,9 @@ def test_instance(
     allow_unstable,
     mock_provider,
 ):
-    # In case the user's system has this set.
+    # In case the user's system has these set.
     monkeypatch.delenv("CRAFT_IDLE_MINS", raising=False)
+    monkeypatch.delenv("CRAFT_BUILD_ON", raising=False)
     with provider_service.instance(
         fake_build_info, work_dir=tmp_path, allow_unstable=allow_unstable
     ) as instance:
@@ -674,7 +675,7 @@ def test_instance(
         mock_provider.launched_environment.assert_called_once_with(
             project_name=fake_project.name,
             project_path=tmp_path,
-            instance_architecture=mock.ANY,
+            instance_architecture=None,
             instance_name=mock.ANY,
             base_configuration=mock.ANY,
             allow_unstable=allow_unstable,

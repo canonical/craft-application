@@ -46,7 +46,7 @@ class ConfigModel(pydantic.BaseModel):
     build_on: str | None = None
     """The architecture on which to build.
 
-    This is ignored in destructive made and is only used for launching a provider.
+    This is ignored in destructive mode and is only used for launching a provider.
     The provider is instructed about the requested architecture. If that architecture
     cannot run with the current system configuration, it will raise an error.
     """

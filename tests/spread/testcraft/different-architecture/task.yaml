@@ -14,4 +14,4 @@ execute: |
 
 restore: |
   testcraft clean
-  rm -f built-an-armhf*.testcraft
+  rm -f built-on-armhf*.testcraft
