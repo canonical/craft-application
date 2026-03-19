@@ -12,5 +12,5 @@ parts:
   my-test:
     plugin: nil
     override-build: |
-      echo -e "/bin/bash\necho Hello, world!" > $CRAFT_PART_INSTALL/hello
+      echo -e "#!/bin/bash\necho Hello, world!" > $CRAFT_PART_INSTALL/hello
       chmod a+x $CRAFT_PART_INSTALL/hello

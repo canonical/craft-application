@@ -666,6 +666,7 @@ def test_instance(
     # In case the user's system has these set.
     monkeypatch.delenv("CRAFT_IDLE_MINS", raising=False)
     monkeypatch.delenv("CRAFT_BUILD_ON", raising=False)
+    monkeypatch.delenv(f"{app_metadata.name.upper()}_BUILD_ON", raising=False)
     with provider_service.instance(
         fake_build_info, work_dir=tmp_path, allow_unstable=allow_unstable
     ) as instance:
