@@ -1,0 +1,16 @@
+name: built-on-armhf
+summary: A testcraft package that gets built on an armhf runner.
+version: "0.1"
+
+base: ubuntu@24.04
+platforms:
+  platform-independent:
+    build-on: [armhf]
+    build-for: [all]
+
+parts:
+  my-test:
+    plugin: nil
+    override-build: |
+      echo -e "#!/bin/bash\necho Hello, world!" > $CRAFT_PART_INSTALL/hello
+      chmod a+x $CRAFT_PART_INSTALL/hello

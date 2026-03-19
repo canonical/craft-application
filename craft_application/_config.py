@@ -43,6 +43,13 @@ class ConfigModel(pydantic.BaseModel):
     """The platform for which to build."""
     build_for: str | None = None
     """The target architecture for which to build."""
+    build_on: str | None = None
+    """The architecture on which to build.
+
+    This is ignored in destructive mode and is only used for launching a provider.
+    The provider is instructed about the requested architecture. If that architecture
+    cannot run with the current system configuration, it will raise an error.
+    """
 
     parallel_build_count: int
     """The parallel build count to send to Craft Parts.

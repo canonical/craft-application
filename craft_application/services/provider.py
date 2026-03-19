@@ -215,6 +215,8 @@ class ProviderService(base.AppService):
         if clean_existing:
             self._clean_instance(provider, work_dir, build_info, project_name)
 
+        build_on = self._services.get("config").get("build_on")
+
         emit.progress(f"Launching managed {base_name[0]} {base_name[1]} instance...")
         with provider.launched_environment(
             project_name=project_name,
@@ -225,6 +227,7 @@ class ProviderService(base.AppService):
             use_base_instance=use_base_instance,
             prepare_instance=prepare_instance,
             shutdown_delay_mins=shutdown_delay,
+            instance_architecture=build_on,
         ) as instance:
             instance.mount(
                 host_source=work_dir,

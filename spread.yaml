@@ -33,6 +33,12 @@ backends:
           workers: 4
           memory: 4G
           storage: 20G
+      # - ubuntu-24.04-arm-64:
+      #     image: ubuntu-os-cloud/ubuntu-2404-lts-arm64
+      #     workers: 4
+      #     memory: 4G
+      #     storage: 20G
+
   # lxd:  # Disabled due to https://github.com/canonical/spread/issues/215
   #   systems:
   #     - ubuntu-24.04
@@ -143,7 +149,7 @@ prepare: |
   sudo snap install snapd || sudo snap refresh snapd
   sudo snap wait system seed.loaded
 
-  sudo snap install --dangerous --classic tests/spread/*.snap
+  sudo snap install --dangerous --classic tests/spread/*$(dpkg --print-architecture).snap
 
   # Select older LXD channels for older bases.
   . /etc/os-release
