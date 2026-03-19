@@ -413,7 +413,7 @@ def test_partitions(
                         "source-tag": "v1.2.3",
                         "build-environment": [
                             {
-                                "BUILD_ON": "craft_platforms.DebianArchitecture.from_host().value"
+                                "BUILD_ON": "Placeholder value replaced with fake_host_architecture within the test."
                             },
                         ],
                         "override-build": "echo my-name",

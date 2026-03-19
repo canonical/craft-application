@@ -1,4 +1,5 @@
 summary: Testcraft can use an external fetch service session
+manual: true  # https://github.com/canonical/craft-application/issues/1035
 
 priority: 100
 
