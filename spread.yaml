@@ -33,6 +33,12 @@ backends:
           workers: 4
           memory: 4G
           storage: 20G
+      # - ubuntu-24.04-arm-64:
+      #     image: ubuntu-os-cloud/ubuntu-2404-lts-arm64
+      #     workers: 4
+      #     memory: 4G
+      #     storage: 20G
+
   # lxd:  # Disabled due to https://github.com/canonical/spread/issues/215
   #   systems:
   #     - ubuntu-24.04

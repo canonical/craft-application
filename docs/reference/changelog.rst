@@ -18,7 +18,16 @@ Changelog
 6.3.0 (unreleased)
 ------------------
 
-Testing
+Providers
+=========
+
+- Craft Application can now build on a provider using a different architecture
+  from the host architecture as long as the provider supports that architecture.
+  Set the ``CRAFT_BUILD_ON`` environment variable to an architecture to use
+  this.
+
+Commands
+========
 
 - The ``test`` command now reads ``spread.yaml`` before beginning the lifecycle,
   erroring early if the file is invalid.
