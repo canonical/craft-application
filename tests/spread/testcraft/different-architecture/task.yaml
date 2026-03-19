@@ -10,7 +10,7 @@ execute: |
   export CRAFT_BUILD_ON=armhf
 
   testcraft pack --verbosity=debug
-  test -f built-on-armhf_0.1.testcraft
+  test -f built-on-armhf-0.1-platform-independent.testcraft
 
 restore: |
   testcraft clean
