@@ -86,13 +86,14 @@ Committing triggers the pre-commit hook, which runs the automatic code formatter
 
 ### Manual Sandbox Configuration
 
-For AI agents that do not provide native sandboxing (e.g., via a `--sandbox` flag), all commands should be executed inside an isolated container or VM. This is **mandatory** for end-to-end testing with `snapcraft`, which requires access to `systemd` and `snapd`.
+For AI agents that do not provide native sandboxing (e.g., via a `--sandbox` flag), all commands should be executed inside an isolated container or VM. This is **mandatory** for development and unit/integration testing.
 
-> [!IMPORTANT] > **Never use `snapcraft --destructive-mode`.** All snap builds must be performed in the standard, isolated manner (using LXD or Multipass) inside the sandbox. This ensures build reproducibility and prevents contamination of the sandbox environment.
+> [!IMPORTANT] > **DESTRUCTIVE MODE IS NEVER ALLOWED.** Never use `snapcraft --destructive-mode` or any command that modifies the host system directly (other than `snapcraft` in its standard isolated mode). All snap builds must be performed in the standard, isolated manner (using LXD or Multipass). This ensures build reproducibility and prevents contamination of the environment.
 
 #### Requirements
 
-- **On Linux machines:** Use LXC, LXD, or Incus containers.
+- **On Linux machines:** Use LXC, LXD, or Incus containers for all development, linting, and testing tasks.
+    - **Exception:** `snapcraft` commands (e.g., `snapcraft pack`) MAY be executed on the host machine to avoid nested container complexity, provided they are **never** run with `--destructive-mode`.
     - **Operating System:** Latest Ubuntu LTS (e.g., `noble`).
     - **Configuration:** Containers must have nesting enabled (e.g., `security.nesting=true`).
 - **On non-Linux machines:** Use a Virtual Machine (e.g., `multipass`).
@@ -180,24 +181,83 @@ For AI agents that do not provide native sandboxing (e.g., via a `--sandbox` fla
     multipass delete --purge "${CONTAINER_NAME}"                     # Multipass
     ```
 
-### Troubleshooting Sandbox Issues
+## Packing the Snap
 
-If `snapcraft pack` fails (specifically with errors like `Failed to enable snapd service` or `snapd.socket: Control process exited`), it is likely because the sandbox wasn't prepared for nested container operations. While less sophisticated agents (like Copilot) have been known to struggle with this, a senior-level agent should verify the following:
+To build and pack the snap, run `snapcraft pack` either on the host (Linux only) or inside the sandbox container. Always set `CRAFT_VERBOSITY_LEVEL=debug` to get detailed output useful for diagnosing failures:
 
-1.  **FUSE/SquashFS Support:** The sandbox container itself must have the primitives to support nested snap mounting. Run this inside the sandbox:
+```bash
+# On the Host (Linux only — simplest option, avoids nested container complexity)
+CRAFT_VERBOSITY_LEVEL=debug snapcraft pack
+
+# LXC (Linux — inside the sandbox container)
+lxc exec "${CONTAINER_NAME}" --user 1000 --group 1000 --cwd /home/ubuntu/craft-application -- \
+  env HOME=/home/ubuntu UV_PROJECT_ENVIRONMENT=/home/ubuntu/.venv XDG_RUNTIME_DIR=/run/user/1000 CRAFT_VERBOSITY_LEVEL=debug \
+  sg lxd -c "snapcraft pack 2>&1"
+
+# Multipass (Non-Linux)
+multipass exec "${CONTAINER_NAME}" --working-directory /home/ubuntu/craft-application -- \
+  env UV_PROJECT_ENVIRONMENT=/home/ubuntu/.venv CRAFT_VERBOSITY_LEVEL=debug snapcraft pack
+```
+
+> **Note:** `CRAFT_VERBOSITY_LEVEL=debug` is **mandatory** when packing the snap. It produces the detailed logs needed to diagnose build failures without having to re-run.
+
+The resulting `.snap` file will be written to the current working directory.
+
+### One-Time Snapcraft LXD Profile Setup (Inside-Container Builds Only)
+
+If running `snapcraft pack` from **inside the LXC sandbox container** (not on the host), you must configure the LXD profile that snapcraft uses for its nested build containers. This is a one-time step per new sandbox.
+
+> **Note:** A previous draft of this document characterised the nested snapd failure as a vague mystery attributable to agent unsophistication. The actual root cause is that LXD drops `CAP_MAC_ADMIN` and `CAP_MAC_OVERRIDE` from nested privileged containers by default, preventing `apparmor_parser` from loading snap-confine profiles inside `snapd`. Copilot diagnosed and fixed this; the fix is documented below for the benefit of future agents of all sophistication levels.
+
+Run the following **once**, inside the sandbox (as root or via `lxc exec "${CONTAINER_NAME}" --`):
+
+```bash
+# Install FUSE/SquashFS support
+sudo apt-get install -y squashfuse fuse
+
+# Initialise LXD inside the sandbox (if not already done)
+sudo lxd init --minimal
+
+# Configure the snapcraft LXD project's default profile
+lxc --project snapcraft profile set default security.privileged true
+lxc --project snapcraft profile set default security.nesting true
+lxc --project snapcraft profile set default raw.lxc \
+  'lxc.apparmor.profile = unconfined
+lxc.cap.drop ='
+```
+
+These settings:
+
+- `security.privileged=true` / `security.nesting=true` — allow the nested build container to run snaps.
+- `lxc.apparmor.profile = unconfined` — removes AppArmor confinement from the build container so `snapd` can operate.
+- `lxc.cap.drop =` (empty) — clears LXD's default capability drop list, restoring `CAP_MAC_ADMIN` and `CAP_MAC_OVERRIDE` so `apparmor_parser` can load profiles inside `snapd`.
+
+If a stale base instance exists from a previous failed attempt, delete it so it is recreated with the new profile:
+
+```bash
+lxc --project snapcraft list
+lxc --project snapcraft delete --force <instance-name>
+```
+
+### Troubleshooting Snap Build Failures
+
+If `snapcraft pack` fails with `Failed to enable snapd service` or `snapd.socket: Control process exited`:
+
+1. **Inspect the nested container journal** — don't guess:
+
     ```bash
-    sudo apt-get update && sudo apt-get install -y squashfuse fuse
+    # Find the instance name first
+    lxc --project snapcraft list
+    lxc --project snapcraft exec local:<instance-name> -- journalctl -xeu snapd.service --no-pager
     ```
-2.  **LXD Initialization:** Ensure LXD is initialized in the sandbox before running `snapcraft`:
-    ```bash
-    sudo lxd init --minimal
-    ```
-3.  **Nested Log Inspection:** If the build fails, don't just guess. Inspect the journal of the _nested_ build container:
-    ```bash
-    # Find the instance name first: lxc --project snapcraft list
-    lxc --project snapcraft exec local:<instance-name> -- journalctl -xeu snapd.service
-    ```
-4.  **Nesting Verification:** Double-check that `security.nesting=true` was actually applied to the sandbox. If not, apply it and restart:
+
+2. **AppArmor `Access denied. You need policy admin privileges`** — this means the one-time LXD profile setup above was not applied. Apply it, delete the stale base instance, and retry.
+
+3. **FUSE/SquashFS not installed** — run `sudo apt-get install -y squashfuse fuse` inside the sandbox.
+
+4. **LXD not initialised** — run `sudo lxd init --minimal` inside the sandbox.
+
+5. **Nesting not enabled on the sandbox container** — verify and fix from the host:
     ```bash
     lxc config set "${CONTAINER_NAME}" security.nesting true
     lxc restart "${CONTAINER_NAME}"
