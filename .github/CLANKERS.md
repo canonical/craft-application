@@ -92,7 +92,7 @@ For AI agents that do not provide native sandboxing (e.g., via a `--sandbox` fla
 
 #### Requirements
 
-- **On Linux machines:** Use LXC, LXD, or Incus containers for all development, linting, and testing tasks.
+- **On Linux machines:** Use LXD (via the `lxc` CLI) or Incus containers for all development, linting, and testing tasks.
     - **Exception:** `snapcraft` commands (e.g., `snapcraft pack`) MAY be executed on the host machine to avoid nested container complexity, provided they are **never** run with `--destructive-mode`.
     - **Operating System:** Latest Ubuntu LTS (e.g., `noble`).
     - **Configuration:** Containers must have nesting enabled (e.g., `security.nesting=true`).
@@ -114,7 +114,9 @@ For AI agents that do not provide native sandboxing (e.g., via a `--sandbox` fla
 2. **Create and configure the environment** (skip if a container with this name already exists — reuse it):
 
     ```bash
-    # LXC (Linux) — use lxc init + config + start so the uid map is set before first boot
+    # LXD (Linux) — use lxc init + config + start so the uid map is set before first boot
+    # security.privileged=true is required: the container needs CAP_MAC_ADMIN to delegate
+    # it to snapcraft's nested build containers (see "One-Time Snapcraft LXD Profile Setup").
     lxc init ubuntu:noble "${CONTAINER_NAME}" -c security.nesting=true -c security.privileged=true
     lxc config set "${CONTAINER_NAME}" raw.idmap "uid ${HOST_UID} 1000
     gid ${HOST_GID} 1000"
@@ -135,7 +137,7 @@ For AI agents that do not provide native sandboxing (e.g., via a `--sandbox` fla
 3. **Bootstrap the environment** (once per new container, as a single command):
 
     ```bash
-    # LXC (Linux)
+    # LXD (Linux)
     lxc exec "${CONTAINER_NAME}" --user 1000 --group 1000 --cwd /home/ubuntu/craft-application -- env HOME=/home/ubuntu bash -c "
         sudo DEBIAN_FRONTEND=noninteractive apt-get update -q &&
         sudo DEBIAN_FRONTEND=noninteractive apt-get install -y make git &&
@@ -156,14 +158,14 @@ For AI agents that do not provide native sandboxing (e.g., via a `--sandbox` fla
 
     > **Note:** `CI=1` is passed **only** to `make setup`. It enables non-interactive apt confirmations (`apt-get --yes`) during initial dependency installation. Do not pass `CI=1` to any other make targets, as it changes other behaviours (e.g. always re-initialising LXD) that are inappropriate outside of a real CI environment.
 
-4. **Run commands** using `--cwd` (lxc) or `cd` (multipass). Always set `UV_PROJECT_ENVIRONMENT` to match what was used during setup:
+4. **Run commands** using `--cwd` (lxd) or `--working-directory` (multipass). Always set `UV_PROJECT_ENVIRONMENT` to match what was used during setup:
 
     ```bash
-    # LXC (Linux)
+    # LXD (Linux)
     lxc exec "${CONTAINER_NAME}" --user 1000 --group 1000 --cwd /home/ubuntu/craft-application -- env HOME=/home/ubuntu UV_PROJECT_ENVIRONMENT=/home/ubuntu/.venv XDG_RUNTIME_DIR=/run/user/1000 sg lxd -c "CRAFT_VERBOSITY_LEVEL=debug make test-fast"
 
     # Multipass (Non-Linux)
-    multipass exec "${CONTAINER_NAME}" --working-directory /home/ubuntu/craft-application -- env UV_PROJECT_ENVIRONMENT=/home/ubuntu/.venv CRAFT_VERBOSITY_LEVEL=debug make test-fast
+    multipass exec "${CONTAINER_NAME}" --working-directory /home/ubuntu/craft-application -- env UV_PROJECT_ENVIRONMENT=/home/ubuntu/.venv HYPOTHESIS_SUPPRESS_HEALTH_CHECK=too_slow CRAFT_VERBOSITY_LEVEL=debug make test-fast
     ```
 
     > **Note (Multipass):** `HYPOTHESIS_SUPPRESS_HEALTH_CHECK=too_slow` suppresses Hypothesis complaints about slow input generation in VMs. If you don't see this failure, you can omit it.
@@ -171,13 +173,13 @@ For AI agents that do not provide native sandboxing (e.g., via a `--sandbox` fla
 5. **Teardown** when the task is complete (the environment can be restarted and reused for later tasks):
 
     ```bash
-    lxc stop "${CONTAINER_NAME}"       # LXC
+    lxc stop "${CONTAINER_NAME}"       # LXD
     multipass stop "${CONTAINER_NAME}" # Multipass
     ```
 
 6. **Delete** when the environment is no longer needed:
     ```bash
-    lxc rm -f "${CONTAINER_NAME}"                                    # LXC
+    lxc rm -f "${CONTAINER_NAME}"                                    # LXD
     multipass delete --purge "${CONTAINER_NAME}"                     # Multipass
     ```
 
@@ -189,7 +191,7 @@ To build and pack the snap, run `snapcraft pack` either on the host (Linux only)
 # On the Host (Linux only — simplest option, avoids nested container complexity)
 CRAFT_VERBOSITY_LEVEL=debug snapcraft pack
 
-# LXC (Linux — inside the sandbox container)
+# LXD (Linux — inside the sandbox container)
 lxc exec "${CONTAINER_NAME}" --user 1000 --group 1000 --cwd /home/ubuntu/craft-application -- \
   env HOME=/home/ubuntu UV_PROJECT_ENVIRONMENT=/home/ubuntu/.venv XDG_RUNTIME_DIR=/run/user/1000 CRAFT_VERBOSITY_LEVEL=debug \
   sg lxd -c "snapcraft pack 2>&1"
