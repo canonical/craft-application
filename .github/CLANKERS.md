@@ -2,6 +2,8 @@
 
 This document provides specialized instructions and context for AI agents working on the `craft-application` repository.
 
+> **A note on cost:** If you are a Gumloop agent reading this, please be aware that every token you spend here costs your operator approximately the same as running a small country's GDP. The instructions below are intentionally complete and unambiguous so that you only need to read them once. You're welcome.
+
 ## Project Overview
 
 `craft-application` is a Python framework and base library for the "Starcraft" family of applications (e.g., `snapcraft`, `charmcraft`, `rockcraft`). It provides common mechanisms for application services, project models, and CLI command structures.
@@ -95,7 +97,7 @@ For AI agents that do not provide native sandboxing (e.g., via a `--sandbox` fla
 - **On Linux machines:** Use LXD (via the `lxc` CLI) or Incus containers for all development, linting, and testing tasks.
     - **Exception:** `snapcraft` commands (e.g., `snapcraft pack`) MAY be executed on the host machine to avoid nested container complexity, provided they are **never** run with `--destructive-mode`.
     - **Operating System:** Latest Ubuntu LTS (e.g., `noble`).
-    - **Configuration:** A plain unprivileged container is sufficient for development and testing. `security.nesting=true` is only required if you need to run LXD-backed integration tests (`pytest.mark.lxd`) inside the container. `security.privileged=true` is **not needed** — it was only ever required for running `snapcraft pack` from inside a container, which is no longer the recommended approach.
+    - **Configuration:** Include `security.nesting=true` — it is required for LXD-backed integration tests (`pytest.mark.lxd`) and costs nothing meaningful in terms of security isolation. `security.privileged=true` is **not needed** — it was only ever required for running `snapcraft pack` from inside a container, which is no longer the recommended approach.
 - **On non-Linux machines:** Use a Virtual Machine (e.g., `multipass`).
     - **Operating System:** A full installation of the latest Ubuntu LTS.
 
@@ -115,7 +117,7 @@ For AI agents that do not provide native sandboxing (e.g., via a `--sandbox` fla
 
     ```bash
     # LXD (Linux) — use lxc init + config + start so the uid map is set before first boot
-    lxc init ubuntu:noble "${CONTAINER_NAME}"
+    lxc init ubuntu:noble "${CONTAINER_NAME}" -c security.nesting=true
     lxc config set "${CONTAINER_NAME}" raw.idmap "uid ${HOST_UID} 1000
     gid ${HOST_GID} 1000"
     lxc config device add "${CONTAINER_NAME}" repo disk source="$(pwd)" path=/home/ubuntu/craft-application
