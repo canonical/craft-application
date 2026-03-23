@@ -55,7 +55,12 @@ class ProjectService(base.AppService):
     _project_model: models.Project | None
 
     def __init__(
-        self, app: AppMetadata, services: ServiceFactory, *, project_dir: pathlib.Path
+        self,
+        app: AppMetadata,
+        services: ServiceFactory,
+        *,
+        project_dir: pathlib.Path,
+        pro_services: util.ProServices | None = None,
     ) -> None:
         super().__init__(app, services)
         self.__platforms = None
@@ -68,6 +73,7 @@ class ProjectService(base.AppService):
         self._build_for: str | None = None
         self._platform: str | None = None
         self._project_vars: craft_parts.ProjectVarInfo | None = None
+        self._pro_services = pro_services
 
     @final
     def configure(self, *, platform: str | None, build_for: str | None) -> None:
@@ -564,6 +570,9 @@ class ProjectService(base.AppService):
                 raise errors.CraftValidationError(
                     f"'adopt-info' not set and required fields are missing: {missing}"
                 )
+
+        if self._pro_services:
+            self._pro_services.validate_project(project_model)
 
         return project_model
 

@@ -24,7 +24,13 @@ import pytest_check
 import yaml
 from craft_application.errors import (
     CraftValidationError,
+    InvalidUbuntuProBaseError,
+    InvalidUbuntuProServiceError,
+    InvalidUbuntuProStatusError,
     PartsLifecycleError,
+    UbuntuProAttachedError,
+    UbuntuProClientNotFoundError,
+    UbuntuProDetachedError,
     YamlError,
 )
 from pydantic import BaseModel
@@ -161,3 +167,174 @@ def test_validation_error_from_pydantic_model():
 
     message = str(err)
     assert message == expected
+
+
+def test_ubuntu_pro_client_not_found_error():
+    err = UbuntuProClientNotFoundError("/usr/bin/pro")
+
+    assert (
+        str(err)
+        == "The Ubuntu Pro client was not found on the system at '/usr/bin/pro'"
+    )
+
+
+def test_ubuntu_pro_detached_error():
+    err = UbuntuProDetachedError()
+
+    assert str(err) == "Ubuntu Pro is requested, but was found detached."
+    assert err.resolution is not None
+    assert (
+        err.resolution
+        == "Attach Ubuntu Pro to continue. See 'pro' command for details."
+    )
+
+
+def test_ubuntu_pro_attached_error():
+    err = UbuntuProAttachedError()
+
+    assert str(err) == "Ubuntu Pro is not requested, but was found attached."
+    assert err.resolution is not None
+    assert (
+        err.resolution
+        == "Detach Ubuntu Pro to continue. See 'pro' command for details."
+    )
+
+
+@pytest.mark.parametrize(
+    ("invalid_services", "expected"),
+    [
+        pytest.param({"bad-service"}, "bad-service", id="simple"),
+        pytest.param(
+            {"a-service", "z-service"}, "a-service, z-service", id="multiple-sorted"
+        ),
+        pytest.param(
+            {"z-service", "a-service"}, "a-service, z-service", id="multiple-unsorted"
+        ),
+        pytest.param(None, "", id="none"),
+    ],
+)
+def test_invalid_ubuntu_pro_service_error(invalid_services, expected):
+    err = InvalidUbuntuProServiceError(invalid_services)
+
+    assert str(err) == "Invalid Ubuntu Pro Services were requested."
+    assert err.resolution is not None
+    assert err.resolution == (
+        "The services listed are either not supported by this application "
+        "or are invalid Ubuntu Pro Services.\n"
+        f"Invalid Services: {expected}\n"
+        "See '--pro' argument details for supported services."
+    )
+
+
+def test_invalid_ubuntu_pro_base_error():
+    err = InvalidUbuntuProBaseError("base", "devel")
+
+    assert str(err) == "Ubuntu Pro builds are not supported on 'devel' base."
+    assert err.resolution is not None
+    assert err.resolution == "Remove '--pro' argument or set base to a supported base."
+
+
+@pytest.mark.parametrize(
+    ("requested", "available", "env", "expected"),
+    [
+        pytest.param(
+            {"esm-apps"},
+            set(),
+            {"container": "lxc"},
+            (
+                "Enable or disable the following services.\n"
+                "Enable: esm-apps\n"
+                "See 'pro' command for details."
+            ),
+            id="container-enabled",
+        ),
+        pytest.param(
+            set(),
+            {"fips-updates"},
+            {"container": "lxc"},
+            (
+                "Enable or disable the following services.\n"
+                "Disable: fips-updates\n"
+                "See 'pro' command for details."
+            ),
+            id="container-disabled",
+        ),
+        pytest.param(
+            {"esm-apps"},
+            {"fips-updates"},
+            {"container": "lxc"},
+            (
+                "Enable or disable the following services.\n"
+                "Enable: esm-apps\n"
+                "Disable: fips-updates\n"
+                "See 'pro' command for details."
+            ),
+            id="container-enabled-and-disabled",
+        ),
+        pytest.param(
+            {"a-service", "b-service"},
+            {"c-service", "d-service"},
+            {"container": "lxc"},
+            (
+                "Enable or disable the following services.\n"
+                "Enable: a-service, b-service\n"
+                "Disable: c-service, d-service\n"
+                "See 'pro' command for details."
+            ),
+            id="multiple-sorted-services",
+        ),
+        pytest.param(
+            {"b-service", "a-service"},
+            {"d-service", "c-service"},
+            {"container": "lxc"},
+            (
+                "Enable or disable the following services.\n"
+                "Enable: a-service, b-service\n"
+                "Disable: c-service, d-service\n"
+                "See 'pro' command for details."
+            ),
+            id="multiple-unsorted-services",
+        ),
+        pytest.param(
+            set(),
+            set(),
+            {"container": "lxc"},
+            "See 'pro' command for details.",
+            id="container-none",
+        ),
+        pytest.param(
+            {"esm-apps"},
+            {"fips-updates"},
+            {"SNAP_INSTANCE_NAME": "mysnap"},
+            "Run 'mysnap clean' to reset Ubuntu Pro services.",
+            id="snap",
+        ),
+        pytest.param(
+            {"esm-apps"},
+            {"fips-updates"},
+            {},
+            "Use the application's 'clean' command to reset Ubuntu Pro services.",
+            id="enabled-and-disabled-unknown",
+        ),
+        pytest.param(
+            None,
+            None,
+            {},
+            "Use the application's 'clean' command to reset Ubuntu Pro services.",
+            id="unknown",
+        ),
+    ],
+)
+def test_invalid_ubuntu_pro_status_error(
+    monkeypatch, requested, available, env, expected
+):
+    monkeypatch.delenv("container", raising=False)
+    monkeypatch.delenv("SNAP_INSTANCE_NAME", raising=False)
+    for key, val in env.items():
+        monkeypatch.setenv(key, val)
+
+    err = InvalidUbuntuProStatusError(requested, available)
+
+    assert str(err) == "Incorrect Ubuntu Pro services are enabled."
+    assert err.resolution is not None
+    assert err.resolution == expected

@@ -19,7 +19,6 @@ import argparse
 import pathlib
 import re
 import subprocess
-from contextlib import nullcontext
 from unittest import mock
 
 import craft_cli
@@ -44,16 +43,9 @@ from craft_application.commands.lifecycle import (
     _BaseLifecycleCommand,
     get_lifecycle_command_group,
 )
-from craft_application.errors import (
-    InvalidUbuntuProBaseError,
-    InvalidUbuntuProServiceError,
-    InvalidUbuntuProStatusError,
-    UbuntuProAttachedError,
-    UbuntuProDetachedError,
-)
-from craft_application.util import ProServices
 from craft_application.services import LifecycleService
 from craft_application.services.service_factory import ServiceFactory
+from craft_application.util import ProServices
 from craft_cli.pytest_plugin import RecordingEmitter
 from craft_parts import Features
 
@@ -79,37 +71,13 @@ BUILD_ENV_COMMANDS = [
     ({"destructive_mode": False, "use_lxd": True}, ["--use-lxd"]),
 ]
 
-# test paring --pro argument with various pro services, and whitespace
+# test parsing --pro argument with various Pro services, and whitespace
 PRO_SERVICE_COMMANDS = [
     ({"pro": ProServices()},                                []),
     ({"pro": ProServices(["fips-updates"])},                ["--pro", "fips-updates"]),
     ({"pro": ProServices(["fips-updates", "esm-infra"])},   ["--pro", "fips-updates,esm-infra"]),
     ({"pro": ProServices(["fips-updates", "esm-infra"])},   ["--pro", "fips-updates , esm-infra"]),
     ({"pro": ProServices(["fips-updates"])},                ["--pro", "fips-updates,fips-updates"]),
-]
-
-PRO_SERVICE_CONFIGS = [
-    # is_attached,           enabled_services,           pro_services_args,                  expected_exception
-    (False,                 [],                          [],                                None),
-    (True,                  ["esm-apps"],                ["esm-apps"],                      None),
-    (True,                  ["esm-apps", "fips-updates"],["esm-apps", "fips-updates"],      None),
-    (True,                  ["esm-apps"],                [],                                UbuntuProAttachedError),
-    (False,                 [],                          ["esm-apps"],                      UbuntuProDetachedError),
-    (True,                  ["esm-apps", "fips-updates"],["fips-updates"],                  InvalidUbuntuProStatusError),
-    (True,                  ["esm-apps"],               ["fips-updates", "fips-updates"],  InvalidUbuntuProStatusError),
-    (True,                  ["esm-apps"],                ["esm-apps", "invalid-service"],   InvalidUbuntuProServiceError),
-]
-
-PRO_PROJECT_CONFIGS = [
-    # base              build_base      pro_services_args   expected_exception
-    ("ubuntu@20.04",    None,           "esm-apps",         None),
-    ("ubuntu@20.04",    "ubuntu@20.04", "esm-apps",         None),
-    ("devel",           None,           "esm-apps",         InvalidUbuntuProBaseError),
-    ("ubuntu@20.04",    "devel",        "esm-apps",         InvalidUbuntuProBaseError),
-    ("devel",           "ubuntu@20.04", "esm-apps",         InvalidUbuntuProBaseError),
-    ("devel",           None,           None,               None),
-    ("ubuntu@20.04",    "devel",        None,               None),
-    ("devel",           "ubuntu@20.04", None,               None),
 ]
 
 STEP_NAMES = [step.name.lower() for step in craft_parts.Step]
@@ -140,58 +108,6 @@ def get_fake_command_class(parent_cls, managed):
             return self._run_managed
 
     return FakeCommand
-
-
-@pytest.mark.parametrize(
-    ("is_attached", "enabled_services", "pro_services_args", "expected_exception"),
-    PRO_SERVICE_CONFIGS,
-)
-def pro_services_validate_environment(
-    mock_pro_api_call,
-    is_attached,
-    enabled_services,
-    pro_services_args,
-    expected_exception,
-):
-    # configure api state
-    set_is_attached, set_enabled_service = mock_pro_api_call
-    set_is_attached(is_attached)
-    set_enabled_service(enabled_services)
-
-    exception_context = (
-        pytest.raises(expected_exception) if expected_exception else nullcontext()
-    )
-
-    with exception_context:
-        # create and validate pro services
-        pro_services = ProServices(pro_services_args)
-        pro_services.validate_environment()
-
-
-@pytest.mark.parametrize(
-    ("base", "build_base", "pro_services_args", "expected_exception"),
-    PRO_PROJECT_CONFIGS,
-)
-def pro_services_validate_project(
-    mocker,
-    base,
-    build_base,
-    pro_services_args,
-    expected_exception,
-):
-    # configure project
-    project = mocker.Mock()
-    project.base = base
-    project.build_base = build_base
-
-    exception_context = (
-        pytest.raises(expected_exception) if expected_exception else nullcontext()
-    )
-
-    with exception_context:
-        # create and validate pro services
-        pro_services = ProServices(pro_services_args)
-        pro_services.validate_project(project)
 
 
 @pytest.mark.parametrize(

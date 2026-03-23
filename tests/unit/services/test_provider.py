@@ -18,6 +18,7 @@
 import enum
 import pathlib
 import pkgutil
+import re
 import subprocess
 import uuid
 from typing import NamedTuple
@@ -31,7 +32,7 @@ import pytest_subprocess
 from craft_application import errors
 from craft_application.services import provider
 from craft_application.services.service_factory import ServiceFactory
-from craft_application.util import snap_config
+from craft_application.util import ProServices, snap_config
 from craft_cli import emit
 from craft_providers import bases, lxd, multipass
 from craft_providers.actions.snap_installer import Snap
@@ -969,3 +970,50 @@ def test_run_managed(
     )
 
     instance_context.prepare_instance.assert_called_once_with(mock.ANY)
+
+
+def test_configure_instance_with_pro(mocker, provider_service):
+    """Ensure Pro is installed and configured in the instance."""
+    mock_instance = mocker.MagicMock(spec=lxd.LXDInstance)
+    mock_instance.pro_services = None
+    provider_service._pro_services = ProServices(["esm-apps"])
+
+    provider_service.configure_instance_with_pro(mock_instance)
+
+    mock_instance.install_pro_client.assert_called_once()
+    mock_instance.attach_pro_subscription.assert_called_once()
+    mock_instance.enable_pro_service.assert_called_once()
+    assert mock_instance.pro_services == ProServices(["esm-apps"])
+
+
+def test_configure_instance_with_pro_reentry_guard(mocker, provider_service):
+    """Error if the instance was built with different Pro services."""
+    mock_instance = mocker.MagicMock(spec=lxd.LXDInstance)
+    mock_instance.pro_services = ProServices(["fips-updates"])
+    provider_service._pro_services = ProServices(["esm-apps"])
+
+    with pytest.raises(errors.InvalidUbuntuProStatusError):
+        provider_service.configure_instance_with_pro(mock_instance)
+
+
+def test_configure_instance_with_pro_not_supported(mocker, provider_service):
+    """Error when Pro services are requested on a non-LXD instance."""
+    mock_instance = mocker.MagicMock(spec=multipass.MultipassInstance)
+    provider_service._pro_services = ProServices(["esm-apps"])
+    expected = re.escape("Ubuntu Pro builds are only supported with LXD backend.")
+
+    with pytest.raises(errors.UbuntuProNotSupportedError, match=expected):
+        provider_service.configure_instance_with_pro(mock_instance)
+
+
+def test_configure_instance_with_pro_skipped(mocker, provider_service):
+    """Pro is not configured when no services are requested."""
+    mock_instance = mocker.MagicMock(spec=lxd.LXDInstance)
+    mock_instance.pro_services = None
+    provider_service._pro_services = ProServices()
+
+    provider_service.configure_instance_with_pro(mock_instance)
+
+    mock_instance.install_pro_client.assert_not_called()
+    mock_instance.attach_pro_subscription.assert_not_called()
+    mock_instance.enable_pro_service.assert_not_called()

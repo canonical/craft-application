@@ -152,7 +152,7 @@ class LifecycleCommand(_BaseLifecycleCommand):
             )
 
         supported_pro_services = ", ".join(
-            [f"'{name}'" for name in ProServices.supported_services]
+            [f"'{name}'" for name in sorted(ProServices.supported_services)]
         )
 
         parser.add_argument(

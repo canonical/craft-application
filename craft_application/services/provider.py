@@ -35,12 +35,16 @@ import snap_http  # type: ignore[import-untyped]
 from craft_cli import CraftError, emit
 from craft_providers import bases
 from craft_providers.actions.snap_installer import Snap
-from craft_providers.lxd import LXDProvider
+from craft_providers.lxd import LXDInstance, LXDProvider
 from craft_providers.multipass import MultipassProvider
 
 from craft_application import models, util
+from craft_application.errors import (
+    InvalidUbuntuProStatusError,
+    UbuntuProNotSupportedError,
+)
 from craft_application.services import base
-from craft_application.util import platforms, snap_config
+from craft_application.util import ProServices, platforms, snap_config
 
 if TYPE_CHECKING:  # pragma: no cover
     from collections.abc import Callable, Generator, Iterable, Sequence
@@ -74,6 +78,7 @@ class ProviderService(base.AppService):
         work_dir: pathlib.Path,
         provider_name: str | None = None,
         install_snap: bool = True,
+        pro_services: ProServices | None = None,
     ) -> None:
         super().__init__(app, services)
         self._provider: craft_providers.Provider | None = None
@@ -88,6 +93,7 @@ class ProviderService(base.AppService):
         self._pack_state: models.PackState = models.PackState(
             artifact=None, resources=None
         )
+        self._pro_services = pro_services
 
     @property
     def compatibility_tag(self) -> str:
@@ -452,6 +458,45 @@ class ProviderService(base.AppService):
         except KeyError:
             raise ValueError(f"Snap not registered: {name!r}")
 
+    def configure_instance_with_pro(self, instance: craft_providers.Executor) -> None:
+        """Configure Ubuntu Pro services in a managed instance.
+
+        :param instance: The instance to configure.
+
+        :raises InvalidUbuntuProStatusError: If the enabled Pro services in the instance
+            don't match the requested services.
+        :raises UbuntuProNotSupportedError: If Pro services are enabled for a provider
+            that lacks Pro support.
+        :raises LXDError: If configuring Pro for an LXD instance fails.
+        """
+        # Check if the instance has Pro services enabled and if they match the requested services.
+        # If not, raise an error and bail out.
+        if (
+            isinstance(instance, LXDInstance)
+            and instance.pro_services
+            and instance.pro_services != self._pro_services
+        ):
+            raise InvalidUbuntuProStatusError(self._pro_services, instance.pro_services)
+
+        # if Pro services are required, ensure the Pro client is
+        # installed, attached, and the correct services are enabled
+        if self._pro_services:
+            if not isinstance(instance, LXDInstance):
+                raise UbuntuProNotSupportedError(
+                    "Ubuntu Pro builds are only supported with LXD backend."
+                )
+
+            emit.debug(f"Enabling Ubuntu Pro services: {self._pro_services}")
+            emit.progress("Enabling Ubuntu Pro services.")
+            instance.install_pro_client()
+            instance.attach_pro_subscription()
+            instance.enable_pro_service(self._pro_services)
+            emit.debug("Enabled Ubuntu Pro services.")
+
+        # Cache the current Pro services, for prior checks in reentrant calls.
+        if self._pro_services is not None and isinstance(instance, LXDInstance):
+            instance.pro_services = set(self._pro_services)
+
     def run_managed(
         self,
         build_info: craft_platforms.BuildInfo,
@@ -495,6 +540,7 @@ class ProviderService(base.AppService):
             prepare_instance=prepare_instance,
             use_base_instance=not active_fetch_service,
         ) as instance:
+            self.configure_instance_with_pro(instance)
             emit.debug(f"Running in instance: {command}")
             self._services.get("proxy").finalize_instance_configuration(instance)
             try:

@@ -15,6 +15,23 @@ Changelog
 
     For a complete list of commits, check out the `1.2.3`_ release on GitHub.
 
+
+6.3.0 (unreleased)
+------------------
+
+Commands
+========
+
+- Lifecycle commands have a new ``--pro`` argument for enabling Ubuntu Pro services.
+
+Services
+========
+
+- The Provider service installs, attaches, and enables Ubuntu Pro services in an
+  instance.
+
+For a complete list of commits, check out the `6.3.0`_ release on GitHub.
+
 6.2.1 (2026-03-06)
 ------------------
 
@@ -1227,3 +1244,4 @@ For a complete list of commits, check out the `2.7.0`_ release on GitHub.
 .. _6.1.0: https://github.com/canonical/craft-application/releases/tag/6.1.0
 .. _6.1.1: https://github.com/canonical/craft-application/releases/tag/6.1.1
 .. _6.2.0: https://github.com/canonical/craft-application/releases/tag/6.2.0
+.. _6.3.0: https://github.com/canonical/craft-application/releases/tag/6.3.0
