@@ -15,7 +15,7 @@ Changelog
 
     For a complete list of commits, check out the `1.2.3`_ release on GitHub.
 
-6.3.0 (unreleased)
+6.3.0 (2026-03-26)
 ------------------
 
 Providers
@@ -26,6 +26,8 @@ Providers
   Set the ``CRAFT_BUILD_ON`` environment variable to an architecture to use
   this. When this is the case, in the provider instance the snap is installed from
   the store rather than being injected from the host.
+- When using the LXD provider, Ubuntu Pro services can be enabled in the managed
+  instance if both the application and the user enable it.
 
 Commands
 ========
