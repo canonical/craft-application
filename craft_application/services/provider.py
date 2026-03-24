@@ -493,9 +493,8 @@ class ProviderService(base.AppService):
             instance.enable_pro_service(self._pro_services)
             emit.debug("Enabled Ubuntu Pro services.")
 
-        # Cache the current Pro services, for prior checks in reentrant calls.
-        if self._pro_services is not None and isinstance(instance, LXDInstance):
-            instance.pro_services = set(self._pro_services)
+            # Cache the current Pro services, for prior checks in reentrant calls.
+            instance.pro_services = set(self._pro_services)  # type: ignore[reportAttributeAccessIssue]
 
     def run_managed(
         self,
