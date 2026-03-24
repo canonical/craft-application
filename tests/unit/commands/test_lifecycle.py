@@ -138,12 +138,17 @@ def test_get_lifecycle_command_group(enable_overlay, commands):
     Features.reset()
 
 
+@pytest.mark.parametrize(
+    "app_metadata",
+    [{"enable_pro_support": True, "check_supported_base": False}],
+    indirect=True,
+)
 @pytest.mark.parametrize(("pro_service_dict", "pro_service_args"), PRO_SERVICE_COMMANDS)
 @pytest.mark.parametrize(("build_env_dict", "build_env_args"), BUILD_ENV_COMMANDS)
 @pytest.mark.parametrize(("debug_dict", "debug_args"), DEBUG_PARAMS)
 @pytest.mark.parametrize(("shell_dict", "shell_args"), SHELL_PARAMS)
 def test_lifecycle_command_fill_parser(
-    default_app_metadata,
+    app_metadata,
     fake_services,
     pro_service_dict,
     pro_service_args,
@@ -156,7 +161,7 @@ def test_lifecycle_command_fill_parser(
 ):
     cls = get_fake_command_class(LifecycleCommand, managed=True)
     parser = argparse.ArgumentParser("parts_command")
-    command = cls({"app": default_app_metadata, "services": fake_services})
+    command = cls({"app": app_metadata, "services": fake_services})
     expected = {
         "platform": None,
         "build_for": None,
@@ -320,13 +325,18 @@ def test_run_manager_for_build_plan(
     mock_run_managed.assert_called_once_with(build, fetch)
 
 
+@pytest.mark.parametrize(
+    "app_metadata",
+    [{"enable_pro_support": True, "check_supported_base": False}],
+    indirect=True,
+)
 @pytest.mark.parametrize(("pro_service_dict", "pro_service_args"), PRO_SERVICE_COMMANDS)
 @pytest.mark.parametrize(("build_env_dict", "build_env_args"), BUILD_ENV_COMMANDS)
 @pytest.mark.parametrize(("debug_dict", "debug_args"), DEBUG_PARAMS)
 @pytest.mark.parametrize(("shell_dict", "shell_args"), SHELL_PARAMS)
 @pytest.mark.parametrize("parts_args", PARTS_LISTS)
 def test_step_command_fill_parser(
-    default_app_metadata,
+    app_metadata,
     fake_services,
     pro_service_dict,
     pro_service_args,
@@ -349,7 +359,7 @@ def test_step_command_fill_parser(
         **build_env_dict,
         **pro_service_dict,
     }
-    command = cls({"app": default_app_metadata, "services": fake_services})
+    command = cls({"app": app_metadata, "services": fake_services})
 
     command.fill_parser(parser)
 
@@ -495,6 +505,7 @@ def test_clean_run_without_parts(
     assert mock_services.provider.clean_instances.called == expected_provider
 
 
+@pytest.mark.parametrize("app_metadata", [{"enable_pro_support": True}], indirect=True)
 @pytest.mark.parametrize(("pro_service_dict", "pro_service_args"), PRO_SERVICE_COMMANDS)
 @pytest.mark.parametrize(("build_env_dict", "build_env_args"), BUILD_ENV_COMMANDS)
 @pytest.mark.parametrize(("shell_dict", "shell_args"), SHELL_PARAMS)

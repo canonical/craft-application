@@ -123,6 +123,9 @@ class AppMetadata:
     enable_for_grammar: bool = False
     """Whether this application supports the 'for' variant of advanced grammar."""
 
+    enable_pro_support: bool = False
+    """Whether this application supports Ubuntu Pro services."""
+
     def __post_init__(self) -> None:
         setter = super().__setattr__
 
@@ -456,7 +459,8 @@ class Application:
                     fetch_env = self.services.fetch.create_session(instance)
                     env.update(fetch_env)
 
-                self.services.provider.configure_instance_with_pro(instance)
+                if self.app.enable_pro_support:
+                    self.services.provider.configure_instance_with_pro(instance)
 
                 session_env = self.services.get("proxy").configure_instance(instance)
                 env.update(session_env)
@@ -645,14 +649,13 @@ class Application:
 
         managed_mode = command.run_managed(parsed_args)
 
-        # A ProServices instance will only be available for lifecycle commands,
-        # which may consume Pro packages,
-        self._pro_services = getattr(dispatcher.parsed_args(), "pro", None)
-        # Check that Pro services are correctly configured if available
-        if self._pro_services is not None:
-            self._pro_services.check_pro_context(
-                run_managed=managed_mode, is_managed=self.is_managed()
-            )
+        if self.app.enable_pro_support:
+            self._pro_services = getattr(dispatcher.parsed_args(), "pro", None)
+
+            if self._pro_services is not None:
+                self._pro_services.check_pro_context(
+                    run_managed=managed_mode, is_managed=self.is_managed()
+                )
 
         craft_cli.emit.debug(f"Build plan: platform={platform}, build_for={build_for}")
         self._pre_run(dispatcher)

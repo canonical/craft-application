@@ -151,22 +151,23 @@ class LifecycleCommand(_BaseLifecycleCommand):
                 help="Shell into the environment after the step has run.",
             )
 
-        supported_pro_services = ", ".join(
-            [f"'{name}'" for name in sorted(ProServices.supported_services)]
-        )
+        if self._app.enable_pro_support:
+            supported_pro_services = ", ".join(
+                [f"'{name}'" for name in sorted(ProServices.supported_services)]
+            )
 
-        parser.add_argument(
-            "--pro",
-            type=ProServices.from_csv,
-            metavar="<pro-services>",
-            help=(
-                "Enable Ubuntu Pro services for this command. "
-                f"Supported values include: {supported_pro_services}. "
-                "Multiple values can be passed separated by commas. "
-                "Note: This feature requires an Ubuntu Pro compatible host and build base."
-            ),
-            default=ProServices(),
-        )
+            parser.add_argument(
+                "--pro",
+                type=ProServices.from_csv,
+                metavar="<pro-services>",
+                help=(
+                    "Enable Ubuntu Pro services for this command. "
+                    f"Supported values include: {supported_pro_services}. "
+                    "Multiple values can be passed separated by commas. "
+                    "Note: This feature requires an Ubuntu Pro compatible host and build base."
+                ),
+                default=ProServices(),
+            )
 
         parser.add_argument(
             "--debug",
