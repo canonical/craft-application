@@ -478,6 +478,7 @@ class InvalidUbuntuProStatusError(InvalidUbuntuProStateError):
             sorted(available_services_set - requested_services_set)
         )
         message = "Incorrect Ubuntu Pro services are enabled."
+        details = ""
 
         if "container" in os.environ:
             resolution = ""
@@ -488,11 +489,22 @@ class InvalidUbuntuProStatusError(InvalidUbuntuProStateError):
             if disable_services_str:
                 resolution += f"Disable: {disable_services_str}\n"
             resolution += "See 'pro' command for details."
-        elif app_name := os.environ.get("SNAP_INSTANCE_NAME"):
-            resolution = f"Run '{app_name} clean' to reset Ubuntu Pro services."
         else:
-            resolution = (
-                "Use the application's 'clean' command to reset Ubuntu Pro services."
-            )
+            if app_name := os.environ.get("SNAP_INSTANCE_NAME"):
+                resolution = f"Run '{app_name} clean' to reset Ubuntu Pro services."
+            else:
+                resolution = "Use the application's 'clean' command to reset Ubuntu Pro services."
+            if requested_services:
+                details += (
+                    f"Requested services: {', '.join(sorted(requested_services))}"
+                )
+            if available_services:
+                if details:
+                    details += "\n"
+                details += (
+                    f"Available services: {', '.join(sorted(available_services))}"
+                )
 
-        super().__init__(message=message, resolution=resolution)
+        super().__init__(
+            message=message, details=details or None, resolution=resolution
+        )

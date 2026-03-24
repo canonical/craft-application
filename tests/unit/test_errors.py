@@ -338,3 +338,77 @@ def test_invalid_ubuntu_pro_status_error(
     assert str(err) == "Incorrect Ubuntu Pro services are enabled."
     assert err.resolution is not None
     assert err.resolution == expected
+
+
+@pytest.mark.parametrize(
+    ("requested", "available", "env", "expected_details"),
+    [
+        pytest.param(
+            {"esm-apps"},
+            {"fips-updates"},
+            {"container": "lxc"},
+            None,
+            id="container-no-details",
+        ),
+        pytest.param(
+            set(),
+            set(),
+            {},
+            None,
+            id="empty-sets-no-details",
+        ),
+        pytest.param(
+            None,
+            None,
+            {},
+            None,
+            id="none-no-details",
+        ),
+        pytest.param(
+            {"esm-apps"},
+            None,
+            {},
+            "Requested services: esm-apps",
+            id="requested-only",
+        ),
+        pytest.param(
+            None,
+            {"fips-updates"},
+            {},
+            "Available services: fips-updates",
+            id="available-only",
+        ),
+        pytest.param(
+            {"esm-apps"},
+            {"fips-updates"},
+            {},
+            "Requested services: esm-apps\nAvailable services: fips-updates",
+            id="both",
+        ),
+        pytest.param(
+            {"a-service", "b-service"},
+            {"c-service", "d-service"},
+            {},
+            "Requested services: a-service, b-service\nAvailable services: c-service, d-service",
+            id="multiple-sorted",
+        ),
+        pytest.param(
+            {"b-service", "a-service"},
+            {"d-service", "c-service"},
+            {},
+            "Requested services: a-service, b-service\nAvailable services: c-service, d-service",
+            id="multiple-unsorted",
+        ),
+    ],
+)
+def test_invalid_ubuntu_pro_status_error_details(
+    monkeypatch, requested, available, env, expected_details
+):
+    monkeypatch.delenv("container", raising=False)
+    monkeypatch.delenv("SNAP_INSTANCE_NAME", raising=False)
+    for key, val in env.items():
+        monkeypatch.setenv(key, val)
+
+    err = InvalidUbuntuProStatusError(requested, available)
+
+    assert err.details == expected_details
