@@ -136,15 +136,6 @@ class LifecycleService(base.AppService):
         *,
         work_dir: Path | str,
         cache_dir: Path | str,
-<<<<<<< HEAD
-        build_plan: list[models.BuildInfo],
-        partitions: list[str] | None = None,
-||||||| 6a798fe
-        build_plan: list[models.BuildInfo],
-        partitions: list[str] | None = None,
-        **lifecycle_kwargs: Any,  # noqa: ANN401 - eventually used in an Any
-=======
->>>>>>> origin/main
         **lifecycle_kwargs: Any,
     ) -> None:
         super().__init__(app, services)

@@ -34,12 +34,10 @@ import annotated_types
 import craft_cli
 import craft_platforms
 import craft_providers
-import craft_providers.lxd
 from platformdirs import user_cache_path
 
 from craft_application import _config, commands, errors, models, util
-from craft_application.errors import InvalidUbuntuProStatusError, PathInvalidError
-from craft_application.util import ProServices, ValidatorOptions
+from craft_application.errors import PathInvalidError
 from craft_application.util.logging import handle_runtime_error
 
 if TYPE_CHECKING:
@@ -50,6 +48,7 @@ if TYPE_CHECKING:
     from craft_parts.plugins.plugins import PluginType
 
     from craft_application.services import service_factory
+    from craft_application.util import ProServices
 
 GLOBAL_VERSION = craft_cli.GlobalArgument(
     "version", "flag", "-V", "--version", "Show the application version and exit"
@@ -184,7 +183,7 @@ class Application:
         # Set a globally usable project directory for the application.
         # This may be overridden by specific application implementations.
         self.project_dir = pathlib.Path.cwd()
-        # Ubuntu ProServices instance containing relevant pro services specified by the user.
+        # ProServices instance containing relevant Pro services specified by the user.
         # Storage of this instance may change in the future as we migrate Pro operations towards
         # an application service.
         self._pro_services: ProServices | None = None
@@ -376,6 +375,7 @@ class Application:
             "provider",
             work_dir=self._work_dir,
             provider_name=provider_name,
+            pro_services=self._pro_services,
         )
 
     def get_project(
@@ -413,41 +413,6 @@ class Application:
     def is_managed(self) -> bool:
         """Shortcut to tell whether we're running in managed mode."""
         return self.services.get_class("provider").is_managed()
-
-    def _configure_instance_with_pro(self, instance: craft_providers.Executor) -> None:
-        """Configure an instance with Ubuntu Pro. Currently we only support LXD instances."""
-        # TODO: Remove craft_provider typing ignores after feature/pro-sources # noqa: FIX002
-        # has been merged into main.
-
-        # Check if the instance has pro services enabled and if they match the requested services.
-        # If not, raise an Exception and bail out.
-        if (
-            isinstance(instance, craft_providers.lxd.LXDInstance)
-            and instance.pro_services is not None  # type: ignore  # noqa: PGH003
-            and instance.pro_services != self._pro_services  # type: ignore  # noqa: PGH003
-        ):
-            raise InvalidUbuntuProStatusError(self._pro_services, instance.pro_services)  # type: ignore  # noqa: PGH003
-
-        # if pro services are required, ensure the pro client is
-        # installed, attached and the correct services are enabled
-        if self._pro_services:
-            # Suggestion: create a Pro abstract class used to ensure minimum support by instances.
-            # we can then check for pro support by inheritance.
-            if not isinstance(instance, craft_providers.lxd.LXDInstance):
-                raise errors.UbuntuProNotSupportedError(
-                    "Ubuntu Pro builds are only supported with LXC backend."
-                )
-
-            craft_cli.emit.debug(
-                f"Enabling Ubuntu Pro Services {self._pro_services}, {set(self._pro_services)}"
-            )
-            instance.install_pro_client()  # type: ignore  # noqa: PGH003
-            instance.attach_pro_subscription()  # type: ignore  # noqa: PGH003
-            instance.enable_pro_service(self._pro_services)  # type: ignore  # noqa: PGH003
-
-        # Cache the current pro services, for prior checks in reentrant calls.
-        if self._pro_services is not None:
-            instance.pro_services = self._pro_services  # type: ignore  # noqa: PGH003
 
     def run_managed(self, platform: str | None, build_for: str | None) -> None:
         """Run the application in a managed instance."""
@@ -491,7 +456,7 @@ class Application:
                     fetch_env = self.services.fetch.create_session(instance)
                     env.update(fetch_env)
 
-                self._configure_instance_with_pro(instance)
+                self.services.provider.configure_instance_with_pro(instance)
 
                 session_env = self.services.get("proxy").configure_instance(instance)
                 env.update(session_env)
@@ -659,37 +624,6 @@ class Application:
             return arg_value
         return self.services.get("config").get(item)
 
-    @staticmethod
-    def _check_pro_requirement(
-        pro_services: ProServices | None,
-        run_managed: bool,  # noqa: FBT001
-        is_managed: bool,  # noqa: FBT001
-    ) -> None:
-        craft_cli.emit.debug(
-            f"pro_services: {pro_services}, run_managed: {run_managed}, is_managed: {is_managed}"
-        )
-        if pro_services is not None:  # should not be None for all lifecycle commands.
-            # Validate requested pro services on the host if we are running in destructive mode.
-            if not run_managed and not is_managed:
-                craft_cli.emit.debug(
-                    f"Validating requested Ubuntu Pro status on host: {pro_services}"
-                )
-                pro_services.validate_environment()
-            # Validate requested pro services running in managed mode inside a managed instance.
-            elif run_managed and is_managed:
-                craft_cli.emit.debug(
-                    f"Validating requested Ubuntu Pro status in managed instance: {pro_services}"
-                )
-                pro_services.validate_environment()
-            # Validate pro attachment and service names on the host before starting a managed instance.
-            elif run_managed and not is_managed:
-                craft_cli.emit.debug(
-                    f"Validating requested Ubuntu Pro attachment on host: {pro_services}"
-                )
-                pro_services.validate_environment(
-                    options=ValidatorOptions.AVAILABILITY,
-                )
-
     def _run_inner(self) -> int:
         """Actual run implementation."""
         dispatcher = self._get_dispatcher()
@@ -712,15 +646,19 @@ class Application:
         managed_mode = command.run_managed(parsed_args)
 
         # A ProServices instance will only be available for lifecycle commands,
-        # which may consume pro packages,
+        # which may consume Pro packages,
         self._pro_services = getattr(dispatcher.parsed_args(), "pro", None)
-        # Check that pro services are correctly configured if available
-        self._check_pro_requirement(self._pro_services, managed_mode, self.is_managed())
+        # Check that Pro services are correctly configured if available
+        if self._pro_services is not None:
+            self._pro_services.check_pro_context(
+                run_managed=managed_mode, is_managed=self.is_managed()
+            )
 
         craft_cli.emit.debug(f"Build plan: platform={platform}, build_for={build_for}")
         self._pre_run(dispatcher)
 
         if command.needs_project(parsed_args):
+            self.services.update_kwargs("project", pro_services=self._pro_services)
             project_service = self.services.get("project")
             # This branch always runs, except during testing.
             if not project_service.is_configured:

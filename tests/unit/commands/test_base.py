@@ -19,10 +19,9 @@ import argparse
 from unittest import mock
 
 import pytest
+from craft_application.commands import base
 from craft_cli import EmitterMode, emit
 from typing_extensions import override
-
-from craft_application.commands import base
 
 
 @pytest.fixture

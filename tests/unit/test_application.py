@@ -41,7 +41,6 @@ from craft_application import (
     commands,
     errors,
     services,
-    util,
 )
 from craft_application.commands import (
     AppCommand,
@@ -49,6 +48,7 @@ from craft_application.commands import (
     get_other_command_group,
 )
 from craft_application.util import (
+    ProServices,
     get_host_architecture,  # pyright: ignore[reportGeneralTypeIssues]
 )
 from craft_cli import CraftError, emit
@@ -315,78 +315,37 @@ def test_run_managed_failure(app, fake_project):
     assert exc_info.value.brief == "Failed to execute testcraft in instance."
 
 
-def test_run_managed_configure_pro(mocker, app, fake_project, fake_build_plan):
-    """Ensure that Pro is installed and configured in a managed instance."""
+def test_run_managed_configure_pro(mocker, app, fake_project):
+    """Ensure that configure_instance_with_pro is called during run_managed."""
     mock_provider = mocker.MagicMock(spec_set=services.ProviderService)
     app.services.provider = mock_provider
-    # provide spec to pass type check for pro support
     mock_instance = mocker.MagicMock(spec=lxd.LXDInstance)
-
-    # TODO: these methods are currently in review, https://github.com/canonical/craft-providers/pull/664/files  # noqa: FIX002
-    # Remove when craft-providers with pro support in lxd is merged to main.
-    mock_instance.install_pro_client = mocker.Mock()
-    mock_instance.attach_pro_subscription = mocker.Mock()
-    mock_instance.enable_pro_service = mocker.Mock()
-    # pretend to be a fresh instance w/o any services installed
-    mock_instance.pro_services = None
-
     mock_provider.instance.return_value.__enter__.return_value = mock_instance
     app.project = fake_project
-    app._build_plan = fake_build_plan
-    app._pro_services = util.ProServices(["esm-apps"])
-    arch = get_host_architecture()
+    app._pro_services = ProServices(["esm-apps"])
 
-    app.run_managed(None, arch)
+    app.run_managed(None, get_host_architecture())
 
-    assert mock_instance.install_pro_client.call_count == 1
-    assert mock_instance.attach_pro_subscription.call_count == 1
-    assert mock_instance.enable_pro_service.call_count == 1
+    mock_provider.configure_instance_with_pro.assert_called_once_with(mock_instance)
 
 
-def test_run_managed_pro_not_supported(mocker, app, fake_project, fake_build_plan):
-    """Ensure that providers that do not support Ubuntu Pro cause an exception
-    when pro services are requested."""
-    mock_provider = mocker.MagicMock(spec_set=services.ProviderService)
-    app.services.provider = mock_provider
-    # Provide an unsupported instance type to raise exception
-    mock_instance = mocker.MagicMock()
+@pytest.mark.parametrize(
+    "pro_services", [None, ProServices(), ProServices(["esm-apps"])]
+)
+@pytest.mark.usefixtures("fake_project_file")
+def test_configure_services_pro_services(
+    mocker, app_metadata, fake_services, pro_services
+):
+    """Configure services to use Pro."""
+    app = FakeApplication(app_metadata, fake_services)
+    app._pro_services = pro_services
+    mock_update = mocker.spy(app.services, "update_kwargs")
 
-    mock_provider.instance.return_value.__enter__.return_value = mock_instance
-    app.project = fake_project
-    app._build_plan = fake_build_plan
-    app._pro_services = util.ProServices(["esm-apps"])
-    arch = get_host_architecture()
+    app._configure_services("lxd")
 
-    with pytest.raises(errors.UbuntuProNotSupportedError):
-        app.run_managed(None, arch)
-
-
-def test_run_managed_skip_configure_pro(mocker, app, fake_project, fake_build_plan):
-    """Ensure that Pro is not installed and configured when it is not required."""
-    mock_provider = mocker.MagicMock(spec_set=services.ProviderService)
-    app.services.provider = mock_provider
-    # provide spec to pass type check for pro support
-    mock_instance = mocker.MagicMock(spec=lxd.LXDInstance)
-
-    # TODO: Remove when these mocks when methods are present in main. # noqa: FIX002
-    # see TODO in test_run_managed_configure_pro for details.
-    mock_instance.install_pro_client = mocker.Mock()
-    mock_instance.attach_pro_subscription = mocker.Mock()
-    mock_instance.enable_pro_service = mocker.Mock()
-    # pretend to be a fresh instance w/o any services installed
-    mock_instance.pro_services = None
-
-    mock_provider.instance.return_value.__enter__.return_value = mock_instance
-    app.project = fake_project
-    app._build_plan = fake_build_plan
-    app._pro_services = util.ProServices([])
-    arch = get_host_architecture()
-
-    app.run_managed(None, arch)
-
-    assert mock_instance.install_pro_client.call_count == 0
-    assert mock_instance.attach_pro_subscription.call_count == 0
-    assert mock_instance.enable_pro_service.call_count == 0
+    calls = {call.args[0]: call.kwargs for call in mock_update.call_args_list}
+    assert calls["lifecycle"]["use_host_sources"] is bool(pro_services)
+    assert calls["provider"]["pro_services"] is pro_services
 
 
 def test_run_managed_multiple(app, fake_host_architecture):
@@ -556,7 +515,6 @@ def test_craft_lib_log_level(app_metadata, fake_services):
 
 def test_gets_project(
     monkeypatch,
-    tmp_path,
     app_metadata,
     fake_services,
     mock_pro_api_call,
@@ -571,12 +529,62 @@ def test_gets_project(
     pytest_check.is_not_none(app.project)
 
 
+@pytest.mark.parametrize(
+    ("pro_arg", "expected_pro_services"),
+    [
+        pytest.param(
+            [],
+            ProServices(),
+            id="no-pro",
+        ),
+        pytest.param(
+            ["--pro", "esm-apps"],
+            ProServices(["esm-apps"]),
+            id="one-service",
+        ),
+        pytest.param(
+            ["--pro", "esm-apps,fips-updates"],
+            ProServices(["esm-apps", "fips-updates"]),
+            id="multiple-services",
+        ),
+    ],
+)
+@pytest.mark.usefixtures("fake_project_file")
+def test_pass_pro_services_to_project(
+    monkeypatch,
+    mocker,
+    app_metadata,
+    fake_services,
+    mock_pro_api_call,
+    pro_arg,
+    expected_pro_services,
+):
+    """_run_inner passes Pro services to the project service using update_kwargs."""
+    set_is_attached, set_enabled_services = mock_pro_api_call
+    if expected_pro_services:
+        set_is_attached(True)
+        set_enabled_services(list(expected_pro_services))
+
+    monkeypatch.setattr(
+        sys, "argv", ["testcraft", "pull", "--destructive-mode", *pro_arg]
+    )
+
+    app = FakeApplication(app_metadata, fake_services)
+    mock_update = mocker.spy(app.services, "update_kwargs")
+
+    app.run()
+
+    mock_update.assert_any_call("project", pro_services=expected_pro_services)
+
+
 def test_fails_without_project(
     monkeypatch,
     capsys,
     tmp_path,
     app_metadata,
     fake_services,
+    app,
+    debug_mode,
     mock_pro_api_call,
 ):
     # Set up a real project service - the fake one for testing gets a fake project!
@@ -1328,49 +1336,3 @@ def test_doc_url_in_command_help(monkeypatch, capsys, app):
     expected = "For more information, check out: www.testcraft.example/docs/3.14159/reference/commands/app-config\n\n"
     _, err = capsys.readouterr()
     assert err.endswith(expected)
-
-
-# fmt: off
-@pytest.mark.parametrize(
-    (   "run_managed",     "is_managed",   "val_env_calls",   "validator_options"),
-    [
-        (False,             False,         1,                 None),
-        (True,              True,          1,                 None),
-        (True,              False,         1,                 util.ValidatorOptions.AVAILABILITY),
-        (False,             True,          0,                 None),
-    ],
-)
-# fmt: on
-def test_check_pro_requirement(
-    mocker, app, run_managed, is_managed, val_env_calls, validator_options
-):
-    """Test that _check_pro_requirement validates Pro Services in the correct situations"""
-    pro_services = mocker.Mock()
-    app._check_pro_requirement(pro_services, run_managed, is_managed)
-
-    assert pro_services.validate_environment.call_count == val_env_calls
-
-    for call in pro_services.validate.call_args_list:
-        if validator_options is not None:  # skip assert if default value is passed
-            assert call.kwargs["options"] == validator_options
-
-
-# fmt: off
-@pytest.mark.parametrize(
-    (   "is_pro",   "val_prj_calls"),
-    [
-        (False,     0),
-        (True,     1),
-    ],
-)
-# fmt: on
-@pytest.mark.usefixtures("fake_project_file")
-def test_validate_project_pro_requirements(mocker, is_pro, val_prj_calls, app_metadata, fake_services):
-    """Test validate_project is called only when ProServices are available."""
-    app = application.Application(app_metadata, fake_services)
-
-    app._pro_services = mocker.MagicMock()
-
-    app._pro_services.__bool__.return_value = is_pro # type: ignore # noqa: PGH003
-    app.get_project(build_for=get_host_architecture())
-    assert app._pro_services.validate_project.call_count == val_prj_calls # type: ignore # noqa: PGH003

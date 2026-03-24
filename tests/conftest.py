@@ -623,6 +623,7 @@ def repository_with_unannotated_tag(
     repository_with_commit.tag = test_tag
     return repository_with_commit
 
+
 @pytest.fixture
 def mock_pro_api_call(mocker):
 
@@ -639,7 +640,7 @@ def mock_pro_api_call(mocker):
         },
     }
 
-    def set_is_attached(value: bool):  # noqa: FBT001
+    def set_is_attached(value: bool):
         response = mock_responses["u.pro.status.is_attached.v1"]
         response["data"]["attributes"]["is_attached"] = value
 

@@ -13,21 +13,19 @@
 #
 # You should have received a copy of the GNU Lesser General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
-"""Handling of Ubuntu Pro Services."""
+"""Handling of Pro services."""
 
 from __future__ import annotations
 
 import json
 import logging
-import subprocess as sub
+import subprocess
 from enum import Flag, auto
-from io import TextIOWrapper
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-import yaml
+import craft_cli
 
-from craft_application import models
 from craft_application.errors import (
     InvalidUbuntuProBaseError,
     InvalidUbuntuProServiceError,
@@ -38,24 +36,27 @@ from craft_application.errors import (
     UbuntuProDetachedError,
 )
 
+if TYPE_CHECKING:
+    from craft_application import models
+
 logger = logging.getLogger(__name__)
 
 
-# check for pro client in these paths for backwards compatibility.
-PRO_CLIENT_PATHS = [
+# check for Pro client in these paths for backwards compatibility.
+_PRO_CLIENT_PATHS = [
     Path("/usr/bin/ubuntu-advantage"),
     Path("/usr/bin/ua"),
     Path("/usr/bin/pro"),
 ]
 
 
-class ValidatorOptions(Flag):
+class _ValidatorOptions(Flag):
     """Options for ProServices.validate method.
 
     SUPPORT: Check names in ProServices set against supported services.
-    AVAILABILITY: Check Ubuntu Pro is attached if ProServices are valid.
-    ATTACHMENT: Check Ubuntu Pro is attached or detached to match ProServices set.
-    ENABLEMENT: Check enabled Ubuntu Pro enablement matches ProServices set.
+    AVAILABILITY: Check Pro is attached if ProServices are valid.
+    ATTACHMENT: Check Pro is attached or detached to match ProServices set.
+    ENABLEMENT: Check enabled Pro enablement matches ProServices set.
     """
 
     SUPPORT = auto()
@@ -68,55 +69,42 @@ class ValidatorOptions(Flag):
 
 
 class ProServices(set[str]):
-    """Class for managing pro-services within the lifecycle."""
+    """Class for managing Pro services within the lifecycle."""
 
     # placeholder for empty sets
-    empty_placeholder = "None"
+    _empty_placeholder = "None"
 
     supported_services: set[str] = {
         "esm-apps",
         "esm-infra",
         "fips",
-        # TODO: fips-preview is not part of the spec, but  # noqa: FIX002
-        # it should be added. Bring this up at regular sync.
         "fips-preview",
         "fips-updates",
     }
 
-    # location of pro client
-    pro_executable: Path | None = next(
-        (path for path in PRO_CLIENT_PATHS if path.exists()), None
+    # location of Pro client
+    _pro_executable: Path | None = next(
+        (path for path in _PRO_CLIENT_PATHS if path.exists()), None
     )
-    # locations to check for pro client
 
     def __str__(self) -> str:
         """Convert to string for display to user."""
-        services = ", ".join(self) if self else self.empty_placeholder
+        services = ", ".join(sorted(self)) if self else self._empty_placeholder
         return f"<ProServices: {services}>"
-
-    @classmethod
-    def load_yaml(cls, f: TextIOWrapper) -> ProServices:
-        """Create a new ProServices instance from a yaml file."""
-        serialized_data = yaml.safe_load(f)
-        return cls(serialized_data)
-
-    def save_yaml(self, f: TextIOWrapper) -> None:
-        """Save the ProServices instance to a yaml file."""
-        yaml.safe_dump(set(self), f)
 
     @classmethod
     def from_csv(cls, services: str) -> ProServices:
         """Create a new ProServices instance from a csv string."""
-        split = [service.strip() for service in services.split(",")]
+        split = [service.strip() for service in services.split(",") if service.strip()]
         return cls(split)
 
     @classmethod
-    def pro_client_exists(cls) -> bool:
-        """Check if Ubuntu Pro executable exists or not."""
-        return cls.pro_executable is not None and cls.pro_executable.exists()
+    def _pro_client_exists(cls) -> bool:
+        """Check if the Pro executable exists or not."""
+        return cls._pro_executable is not None and cls._pro_executable.exists()
 
     @classmethod
-    def _log_processes(cls, process: sub.CompletedProcess[str]) -> None:
+    def _log_processes(cls, process: subprocess.CompletedProcess[str]) -> None:
         logger.error(
             "Ubuntu Pro Client Response: \n"
             f"Return Code: {process.returncode}\n"
@@ -126,27 +114,27 @@ class ProServices(set[str]):
 
     @classmethod
     def _pro_api_call(cls, endpoint: str) -> dict[str, Any]:
-        """Call Ubuntu Pro executable and parse response."""
-        if not cls.pro_client_exists():
-            raise UbuntuProClientNotFoundError(str(cls.pro_executable))
+        """Call Pro executable and parse response."""
+        if not cls._pro_client_exists():
+            raise UbuntuProClientNotFoundError(str(cls._pro_executable))
 
         try:
-            proc = sub.run(
-                [str(cls.pro_executable), "api", endpoint],
+            proc = subprocess.run(
+                [str(cls._pro_executable), "api", endpoint],
                 capture_output=True,
                 text=True,
                 check=False,
             )
         except Exception as exc:
             raise UbuntuProApiError(
-                f'An error occurred while executing "{cls.pro_executable}"'
+                f"An error occurred while executing {str(cls._pro_executable)!r}."
             ) from exc
 
         if proc.returncode != 0:
             cls._log_processes(proc)
             raise UbuntuProApiError(
-                f"The Pro Client returned a non-zero status: {proc.returncode}. "
-                "See log for more details"
+                f"The Ubuntu Pro client returned a non-zero status: {proc.returncode}. "
+                "See log for more details."
             )
 
         try:
@@ -155,14 +143,14 @@ class ProServices(set[str]):
         except json.decoder.JSONDecodeError:
             cls._log_processes(proc)
             raise UbuntuProApiError(
-                "Could not parse JSON response from Ubuntu Pro client. "
-                "See log for more details"
+                "Could not parse JSON response from the Ubuntu Pro client. "
+                "See log for more details."
             )
 
-        if result["result"] != "success":
+        if result.get("result") != "success":
             cls._log_processes(proc)
             raise UbuntuProApiError(
-                "Ubuntu Pro API returned an error response. See log for more details"
+                "The Ubuntu Pro API returned an error response. See log for more details."
             )
 
         # Ignore typing for this private method. The returned object is variable in type, but types are declared in the API docs:
@@ -170,8 +158,8 @@ class ProServices(set[str]):
         return result  # type: ignore [no-any-return]
 
     @classmethod
-    def is_pro_attached(cls) -> bool:
-        """Return True if environment is attached to Ubuntu Pro."""
+    def _is_pro_attached(cls) -> bool:
+        """Return True if environment is attached to Pro."""
         response = cls._pro_api_call("u.pro.status.is_attached.v1")
 
         # Ignore typing here. This field's type is static according to:
@@ -179,8 +167,8 @@ class ProServices(set[str]):
         return response["data"]["attributes"]["is_attached"]  # type: ignore [no-any-return]
 
     @classmethod
-    def get_pro_services(cls) -> ProServices:
-        """Return set of enabled Ubuntu Pro services in the environment.
+    def _get_pro_services(cls) -> ProServices:
+        """Return set of enabled Pro services in the environment.
 
         The returned set only includes services relevant to lifecycle commands.
         """
@@ -195,7 +183,7 @@ class ProServices(set[str]):
         return cls(service_names)
 
     def validate_project(self, project: models.Project) -> None:
-        """Ensure no unsupported interim bases are used in Ubuntu Pro builds."""
+        """Ensure no unsupported interim bases are used in Pro builds."""
         invalid_bases = ["devel"]
         if bool(self):
             if project.base is not None and project.base in invalid_bases:
@@ -203,49 +191,94 @@ class ProServices(set[str]):
             if project.build_base is not None and project.build_base in invalid_bases:
                 raise InvalidUbuntuProBaseError("build-base", project.build_base)
 
-    def validate_environment(
+    def _validate_environment(
         self,
-        options: ValidatorOptions = ValidatorOptions.DEFAULT,
+        options: _ValidatorOptions = _ValidatorOptions.DEFAULT,
     ) -> None:
-        """Validate the environment against pro services specified in this ProServices instance."""
+        """Validate the environment against Pro services specified in this ProServices instance.
+
+        :param options: An enum of what to validate.
+
+        :raises InvalidUbuntuProServiceError: If any unsupported services are enabled.
+        :raises InvalidUbuntuProStatusError: If the incorrect services are enabled.
+        :raises UbuntuProDetachedError: If Pro isn't attached and it should be.
+        :raises UbuntuProAttachedError: If Pro is attached and it shouldn't be.
+        :raises UbuntuProClientNotFoundError: If the Pro client can't be found.
+        """
         # raise exception if any service was requested outside of build_service_scope
-        if ValidatorOptions.SUPPORT in options and (
+        if _ValidatorOptions.SUPPORT in options and (
             invalid_services := self - self.supported_services
         ):
             raise InvalidUbuntuProServiceError(invalid_services)
 
         try:
-            # first, check Ubuntu Pro status
+            # first, check Pro status
             # Since we extend the set class, cast ourselves to bool to check if we empty. if we are not
-            # empty, this implies we require pro services.
-
-            is_pro_attached = self.is_pro_attached()
+            # empty, this implies we require Pro services.
+            is_pro_attached = self._is_pro_attached()
 
             if (
-                ValidatorOptions.ATTACHED in options
+                _ValidatorOptions.ATTACHED in options
                 and bool(self)
                 and not is_pro_attached
             ):
-                # Ubuntu Pro is requested but not attached
+                # Pro is requested but not attached
                 raise UbuntuProDetachedError
 
             if (
-                ValidatorOptions.DETACHED in options
+                _ValidatorOptions.DETACHED in options
                 and not bool(self)
                 and is_pro_attached
             ):
-                # Ubuntu Pro is not requested but attached
+                # Pro is not requested but attached
                 raise UbuntuProAttachedError
 
-            # second, check that the set of enabled pro services in the environment matches
+            # second, check that the set of enabled Pro services in the environment matches
             # the services specified in this set
-            if ValidatorOptions.ENABLEMENT in options and (
-                (available_services := self.get_pro_services()) != self
+            if _ValidatorOptions.ENABLEMENT in options and (
+                (available_services := self._get_pro_services()) != self
             ):
                 raise InvalidUbuntuProStatusError(self, available_services)
 
         except UbuntuProClientNotFoundError:
-            # If The pro client was not found, we may be on a non Ubuntu
+            # If the Pro client was not found, we may be on a non Ubuntu
             # system, but if Pro services were requested, re-raise error
-            if self and not self.pro_client_exists():
+            if self and not self._pro_client_exists():
                 raise
+
+    def check_pro_context(self, *, run_managed: bool, is_managed: bool) -> None:
+        """Validate Pro services are correctly configured for the current context.
+
+        :param run_managed: Whether the command runs inside a managed instance.
+        :param is_managed: Whether the application is currently running inside a
+            managed instance.
+
+        :raises InvalidUbuntuProStateError: If Pro isn't properly configured.
+        :raises UbuntuProClientNotFoundError: If the Pro client can't be found.
+        """
+        # Validate requested Pro services on the host if we are running in destructive mode.
+        if not run_managed and not is_managed:
+            craft_cli.emit.debug(
+                f"Validating requested Ubuntu Pro status on host: {self}"
+            )
+            self._validate_environment()
+        # Validate requested Pro services running in managed mode inside a managed instance.
+        elif run_managed and is_managed:
+            craft_cli.emit.debug(
+                f"Validating requested Ubuntu Pro status in managed instance: {self}"
+            )
+            self._validate_environment()
+        # Validate Pro attachment and service names on the host before starting a managed instance.
+        elif run_managed and not is_managed:
+            craft_cli.emit.debug(
+                f"Validating requested Ubuntu Pro attachment on host: {self}"
+            )
+            self._validate_environment(
+                options=_ValidatorOptions.AVAILABILITY,
+            )
+        # no-op if running a non-managed command inside a managed instance
+        else:
+            craft_cli.emit.debug(
+                "Skipping Ubuntu Pro validation: running a non-managed command "
+                "inside a managed instance."
+            )

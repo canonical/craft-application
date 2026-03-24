@@ -399,9 +399,6 @@ class UbuntuProApiError(UbuntuProError):
 class InvalidUbuntuProStateError(UbuntuProError):
     """Base class for exceptions raised during Ubuntu Pro validation."""
 
-    # TODO: some of the resolution strings may not sense in a managed  # noqa: FIX002
-    # environment. What is the best way to get the is_managed method here?
-
 
 class UbuntuProNotSupportedError(UbuntuProError):
     """Raised when Ubuntu Pro client is not supported on the base or build base."""
@@ -411,7 +408,7 @@ class UbuntuProClientNotFoundError(UbuntuProApiError):
     """Raised when Ubuntu Pro client was not found on the system."""
 
     def __init__(self, path: str) -> None:
-        message = f'The Ubuntu Pro client was not found on the system at "{path}"'
+        message = f"The Ubuntu Pro client was not found on the system at '{path}'"
 
         super().__init__(message=message)
 
@@ -421,7 +418,7 @@ class UbuntuProDetachedError(InvalidUbuntuProStateError):
 
     def __init__(self) -> None:
         message = "Ubuntu Pro is requested, but was found detached."
-        resolution = 'Attach Ubuntu Pro to continue. See "pro" command for details.'
+        resolution = "Attach Ubuntu Pro to continue. See 'pro' command for details."
 
         super().__init__(message=message, resolution=resolution)
 
@@ -431,7 +428,7 @@ class UbuntuProAttachedError(InvalidUbuntuProStateError):
 
     def __init__(self) -> None:
         message = "Ubuntu Pro is not requested, but was found attached."
-        resolution = 'Detach Ubuntu Pro to continue. See "pro" command for details.'
+        resolution = "Detach Ubuntu Pro to continue. See 'pro' command for details."
 
         super().__init__(message=message, resolution=resolution)
 
@@ -440,15 +437,14 @@ class InvalidUbuntuProServiceError(InvalidUbuntuProStateError):
     """Raised when the requested Ubuntu Pro service is not supported or invalid."""
 
     def __init__(self, invalid_services: set[str] | None) -> None:
-        invalid_services_set = invalid_services or set()
-        invalid_services_str = "".join(invalid_services_set)
+        invalid_services_str = ", ".join(sorted(invalid_services or set()))
 
         message = "Invalid Ubuntu Pro Services were requested."
         resolution = (
             "The services listed are either not supported by this application "
             "or are invalid Ubuntu Pro Services.\n"
             f"Invalid Services: {invalid_services_str}\n"
-            'See "--pro" argument details for supported services.'
+            "See '--pro' argument details for supported services."
         )
 
         super().__init__(message=message, resolution=resolution)
@@ -458,8 +454,8 @@ class InvalidUbuntuProBaseError(InvalidUbuntuProStateError):
     """Raised when the requested base, (or build_base) do not support Ubuntu Pro Builds."""
 
     def __init__(self, base_type: str, base_name: str) -> None:
-        message = f'Ubuntu Pro builds are not supported on "{base_name}" {base_type}.'
-        resolution = f"Remove --pro argument or set {base_type} to a supported base."
+        message = f"Ubuntu Pro builds are not supported on {base_name!r} {base_type}."
+        resolution = f"Remove '--pro' argument or set {base_type} to a supported base."
 
         super().__init__(message=message, resolution=resolution)
 
@@ -475,21 +471,28 @@ class InvalidUbuntuProStatusError(InvalidUbuntuProStateError):
         requested_services_set = requested_services or set()
         available_services_set = available_services or set()
 
-        enable_services_str = str(requested_services_set - available_services_set)
-        disable_services_str = str(available_services_set - requested_services_set)
-        message = "Incorrect Ubuntu Pro Services were enabled."
+        enable_services_str = ", ".join(
+            sorted(requested_services_set - available_services_set)
+        )
+        disable_services_str = ", ".join(
+            sorted(available_services_set - requested_services_set)
+        )
+        message = "Incorrect Ubuntu Pro services are enabled."
 
         if "container" in os.environ:
-            resolution = (
-                "Please enable or disable the following services.\n"
-                f"Enable: {enable_services_str}\n"
-                f"Disable: {disable_services_str}\n"
-                'See "pro" command for details.'
-            )
+            resolution = ""
+            if enable_services_str or disable_services_str:
+                resolution += "Enable or disable the following services.\n"
+            if enable_services_str:
+                resolution += f"Enable: {enable_services_str}\n"
+            if disable_services_str:
+                resolution += f"Disable: {disable_services_str}\n"
+            resolution += "See 'pro' command for details."
+        elif app_name := os.environ.get("SNAP_INSTANCE_NAME"):
+            resolution = f"Run '{app_name} clean' to reset Ubuntu Pro services."
         else:
-            app_name = os.environ.get("SNAP_INSTANCE_NAME", "*craft")
             resolution = (
-                f'Please run "{app_name} clean" to reset Ubuntu Pro Services.\n'
+                "Use the application's 'clean' command to reset Ubuntu Pro services."
             )
 
         super().__init__(message=message, resolution=resolution)
