@@ -315,6 +315,7 @@ def test_run_managed_failure(app, fake_project):
     assert exc_info.value.brief == "Failed to execute testcraft in instance."
 
 
+@pytest.mark.parametrize("app_metadata", [{"enable_pro_support": True}], indirect=True)
 def test_run_managed_configure_pro(mocker, app, fake_project):
     """Ensure that configure_instance_with_pro is called during run_managed."""
     mock_provider = mocker.MagicMock(spec_set=services.ProviderService)
@@ -529,6 +530,7 @@ def test_gets_project(
     pytest_check.is_not_none(app.project)
 
 
+@pytest.mark.parametrize("app_metadata", [{"enable_pro_support": True}], indirect=True)
 @pytest.mark.parametrize(
     ("pro_arg", "expected_pro_services"),
     [
