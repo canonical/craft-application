@@ -26,7 +26,7 @@ import craft_platforms
 import freezegun
 import pytest
 import pytest_mock
-from craft_application import errors, models
+from craft_application import errors, models, util
 from craft_application.application import AppMetadata
 from craft_application.services.project import ProjectService
 from craft_application.services.service_factory import ServiceFactory
@@ -1080,3 +1080,41 @@ def test_deep_update(fake_project_file, real_project_service: ProjectService):
             },
         }
     )
+
+
+@pytest.mark.parametrize(
+    ("pro_services", "expect_called"),
+    [
+        pytest.param(None, False, id="none"),
+        pytest.param(util.ProServices([]), False, id="empty"),
+        pytest.param(util.ProServices(["esm-apps"]), True, id="one-service"),
+        pytest.param(
+            util.ProServices(["esm-apps", "fips-updates"]), True, id="multiple-services"
+        ),
+    ],
+)
+@pytest.mark.usefixtures("fake_project_file")
+def test_render_for_validates_pro_project(
+    mocker,
+    real_project_service,
+    fake_host_architecture,
+    fake_platform,
+    pro_services,
+    expect_called,
+):
+    """Validate Pro services when rendering the project."""
+    real_project_service._pro_services = pro_services
+    mock_validate = mocker.patch.object(
+        util.ProServices, "validate_project", autospec=True
+    )
+
+    project = real_project_service.render_for(
+        build_for=fake_host_architecture,
+        build_on=fake_host_architecture,
+        platform=fake_platform,
+    )
+
+    if expect_called:
+        mock_validate.assert_called_once_with(pro_services, project)
+    else:
+        mock_validate.assert_not_called()

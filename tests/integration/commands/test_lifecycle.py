@@ -25,7 +25,10 @@ from craft_application.application import Application
 from craft_application.commands import TestCommand
 
 
-@pytest.mark.usefixtures("fake_process")  # Ensure we don't spin up a container.
+@pytest.mark.usefixtures(
+    "fake_process",  # Ensure we don't spin up a container.
+    "mock_pro_api_call",
+)
 @freezegun.freeze_time("2305-07-13")  # None of our current bases will be supported.
 @pytest.mark.parametrize("command", ["pull", "build", "stage", "pack"])
 def test_unsupported_base_error(

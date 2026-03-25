@@ -48,6 +48,7 @@ if TYPE_CHECKING:
     from craft_parts.plugins.plugins import PluginType
 
     from craft_application.services import service_factory
+    from craft_application.util import ProServices
 
 GLOBAL_VERSION = craft_cli.GlobalArgument(
     "version", "flag", "-V", "--version", "Show the application version and exit"
@@ -122,6 +123,9 @@ class AppMetadata:
     enable_for_grammar: bool = False
     """Whether this application supports the 'for' variant of advanced grammar."""
 
+    enable_pro_support: bool = False
+    """Whether this application supports Ubuntu Pro services."""
+
     def __post_init__(self) -> None:
         setter = super().__setattr__
 
@@ -182,6 +186,10 @@ class Application:
         # Set a globally usable project directory for the application.
         # This may be overridden by specific application implementations.
         self.project_dir = pathlib.Path.cwd()
+        # ProServices instance containing relevant Pro services specified by the user.
+        # Storage of this instance may change in the future as we migrate Pro operations towards
+        # an application service.
+        self._pro_services: ProServices | None = None
 
         if self.is_managed():
             self._work_dir = pathlib.Path("/root")
@@ -364,11 +372,13 @@ class Application:
             "lifecycle",
             cache_dir=self.cache_dir,
             work_dir=self._work_dir,
+            use_host_sources=bool(self._pro_services),
         )
         self.services.update_kwargs(
             "provider",
             work_dir=self._work_dir,
             provider_name=provider_name,
+            pro_services=self._pro_services,
         )
 
     def get_project(
@@ -449,6 +459,9 @@ class Application:
                     fetch_env = self.services.fetch.create_session(instance)
                     env.update(fetch_env)
 
+                if self.app.enable_pro_support:
+                    self.services.provider.configure_instance_with_pro(instance)
+
                 session_env = self.services.get("proxy").configure_instance(instance)
                 env.update(session_env)
 
@@ -458,7 +471,6 @@ class Application:
                 )
                 try:
                     with craft_cli.emit.pause():
-                        # Pyright doesn't fully understand craft_providers's CompletedProcess.
                         instance.execute_run(  # pyright: ignore[reportUnknownMemberType,reportUnknownVariableType]
                             cmd,
                             cwd=instance_path,
@@ -634,17 +646,27 @@ class Application:
             platform = platform.split(",", maxsplit=1)[0]
         if build_for and "," in build_for:
             build_for = build_for.split(",", maxsplit=1)[0]
-        craft_cli.emit.debug(f"Build plan: platform={platform}, build_for={build_for}")
 
+        managed_mode = command.run_managed(parsed_args)
+
+        if self.app.enable_pro_support:
+            self._pro_services = getattr(dispatcher.parsed_args(), "pro", None)
+
+            if self._pro_services is not None:
+                self._pro_services.check_pro_context(
+                    run_managed=managed_mode, is_managed=self.is_managed()
+                )
+
+        craft_cli.emit.debug(f"Build plan: platform={platform}, build_for={build_for}")
         self._pre_run(dispatcher)
 
         if command.needs_project(parsed_args):
+            self.services.update_kwargs("project", pro_services=self._pro_services)
             project_service = self.services.get("project")
             # This branch always runs, except during testing.
             if not project_service.is_configured:
                 project_service.configure(platform=platform, build_for=build_for)
 
-        managed_mode = command.run_managed(parsed_args)
         provider_name = command.provider_name(parsed_args)
         self._configure_services(provider_name)
 
