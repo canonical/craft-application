@@ -48,10 +48,12 @@ from craft_application.commands import (
     get_other_command_group,
 )
 from craft_application.util import (
+    ProServices,
     get_host_architecture,  # pyright: ignore[reportGeneralTypeIssues]
 )
 from craft_cli import CraftError, emit
 from craft_parts.plugins.plugins import PluginType
+from craft_providers import lxd
 
 from tests.conftest import FakeApplication
 
@@ -313,6 +315,40 @@ def test_run_managed_failure(app, fake_project):
     assert exc_info.value.brief == "Failed to execute testcraft in instance."
 
 
+@pytest.mark.parametrize("app_metadata", [{"enable_pro_support": True}], indirect=True)
+def test_run_managed_configure_pro(mocker, app, fake_project):
+    """Ensure that configure_instance_with_pro is called during run_managed."""
+    mock_provider = mocker.MagicMock(spec_set=services.ProviderService)
+    app.services.provider = mock_provider
+    mock_instance = mocker.MagicMock(spec=lxd.LXDInstance)
+    mock_provider.instance.return_value.__enter__.return_value = mock_instance
+    app.project = fake_project
+    app._pro_services = ProServices(["esm-apps"])
+
+    app.run_managed(None, get_host_architecture())
+
+    mock_provider.configure_instance_with_pro.assert_called_once_with(mock_instance)
+
+
+@pytest.mark.parametrize(
+    "pro_services", [None, ProServices(), ProServices(["esm-apps"])]
+)
+@pytest.mark.usefixtures("fake_project_file")
+def test_configure_services_pro_services(
+    mocker, app_metadata, fake_services, pro_services
+):
+    """Configure services to use Pro."""
+    app = FakeApplication(app_metadata, fake_services)
+    app._pro_services = pro_services
+    mock_update = mocker.spy(app.services, "update_kwargs")
+
+    app._configure_services("lxd")
+
+    calls = {call.args[0]: call.kwargs for call in mock_update.call_args_list}
+    assert calls["lifecycle"]["use_host_sources"] is bool(pro_services)
+    assert calls["provider"]["pro_services"] is pro_services
+
+
 def test_run_managed_multiple(app, fake_host_architecture):
     mock_provider = mock.MagicMock(spec_set=services.ProviderService)
     app.services._services["provider"] = mock_provider
@@ -478,7 +514,12 @@ def test_craft_lib_log_level(app_metadata, fake_services):
         assert logger.level == logging.DEBUG
 
 
-def test_gets_project(monkeypatch, fake_project_file, app_metadata, fake_services):
+def test_gets_project(
+    monkeypatch,
+    app_metadata,
+    fake_services,
+    mock_pro_api_call,
+):
     monkeypatch.setattr(sys, "argv", ["testcraft", "pull", "--destructive-mode"])
 
     app = FakeApplication(app_metadata, fake_services)
@@ -489,8 +530,64 @@ def test_gets_project(monkeypatch, fake_project_file, app_metadata, fake_service
     pytest_check.is_not_none(app.project)
 
 
+@pytest.mark.parametrize("app_metadata", [{"enable_pro_support": True}], indirect=True)
+@pytest.mark.parametrize(
+    ("pro_arg", "expected_pro_services"),
+    [
+        pytest.param(
+            [],
+            ProServices(),
+            id="no-pro",
+        ),
+        pytest.param(
+            ["--pro", "esm-apps"],
+            ProServices(["esm-apps"]),
+            id="one-service",
+        ),
+        pytest.param(
+            ["--pro", "esm-apps,fips-updates"],
+            ProServices(["esm-apps", "fips-updates"]),
+            id="multiple-services",
+        ),
+    ],
+)
+@pytest.mark.usefixtures("fake_project_file")
+def test_pass_pro_services_to_project(
+    monkeypatch,
+    mocker,
+    app_metadata,
+    fake_services,
+    mock_pro_api_call,
+    pro_arg,
+    expected_pro_services,
+):
+    """_run_inner passes Pro services to the project service using update_kwargs."""
+    set_is_attached, set_enabled_services = mock_pro_api_call
+    if expected_pro_services:
+        set_is_attached(True)
+        set_enabled_services(list(expected_pro_services))
+
+    monkeypatch.setattr(
+        sys, "argv", ["testcraft", "pull", "--destructive-mode", *pro_arg]
+    )
+
+    app = FakeApplication(app_metadata, fake_services)
+    mock_update = mocker.spy(app.services, "update_kwargs")
+
+    app.run()
+
+    mock_update.assert_any_call("project", pro_services=expected_pro_services)
+
+
 def test_fails_without_project(
-    monkeypatch, capsys, tmp_path, app_metadata, fake_services, app, debug_mode
+    monkeypatch,
+    capsys,
+    tmp_path,
+    app_metadata,
+    fake_services,
+    app,
+    debug_mode,
+    mock_pro_api_call,
 ):
     # Set up a real project service - the fake one for testing gets a fake project!
     del app.services._services["project"]
@@ -590,7 +687,14 @@ def test_pre_run_project_dir_not_a_directory(app, fs, project_dir):
 @pytest.mark.parametrize("load_project", [True, False])
 @pytest.mark.parametrize("return_code", [None, 0, 1])
 def test_run_success_unmanaged(
-    monkeypatch, emitter, check, app, fake_project, return_code, load_project
+    monkeypatch,
+    emitter,
+    check,
+    app,
+    fake_project,
+    return_code,
+    load_project,
+    mock_pro_api_call,
 ):
     class UnmanagedCommand(commands.AppCommand):
         name = "pass"
@@ -615,7 +719,14 @@ def test_run_success_unmanaged(
 
 @pytest.mark.parametrize("return_code", [None, 0, 1])
 def test_run_success_managed_inside_managed(
-    monkeypatch, check, app, fake_project, mock_dispatcher, return_code, mocker
+    monkeypatch,
+    check,
+    app,
+    fake_project,
+    mock_dispatcher,
+    return_code,
+    mocker,
+    mock_pro_api_call,
 ):
     mocker.patch.object(app, "get_project", return_value=fake_project)
     mocker.patch.object(
