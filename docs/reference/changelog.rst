@@ -32,8 +32,6 @@ Providers
   Set the ``CRAFT_BUILD_ON`` environment variable to an architecture to use
   this. When this is the case, in the provider instance the snap is installed from
   the store rather than being injected from the host.
-- When using the LXD provider, Ubuntu Pro services can be enabled in the managed
-  instance if both the application and the user enable it.
 
 Commands
 ========
