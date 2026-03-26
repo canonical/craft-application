@@ -1,0 +1,4 @@
+[[IgnoredVulns]]
+id = "CVE-2026-4539"
+ignoreUntil = 2027-01-01
+reason = "Low severity and only applies to docs & tests"
