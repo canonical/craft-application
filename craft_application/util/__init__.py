@@ -42,6 +42,7 @@ from craft_application.util.snap_config import (
 from craft_application.util.string import humanize_list, strtobool
 from craft_application.util.system import get_parallel_build_count
 from craft_application.util.yaml import dump_yaml, safe_yaml_load
+from craft_application.util.pro_services import ProServices
 from craft_application.util.cli import format_timestamp
 
 __all__ = [
@@ -66,6 +67,7 @@ __all__ = [
     "safe_yaml_load",
     "retry",
     "get_parallel_build_count",
+    "ProServices",
     "get_hostname",
     "is_managed_mode",
     "format_timestamp",

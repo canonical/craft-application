@@ -18,6 +18,12 @@ Changelog
 6.3.0 (2026-03-26)
 ------------------
 
+Application
+===========
+
+- Adds a new :py:attr:`~craft_application.AppMetadata.enable_pro_support` parameter
+  to :py:class:`~craft_application.AppMetadata` to enable Ubuntu Pro support.
+
 Providers
 =========
 
@@ -34,6 +40,12 @@ Commands
 
 - The ``test`` command now reads ``spread.yaml`` before beginning the lifecycle,
   erroring early if the file is invalid.
+- Lifecycle commands have a new ``--pro`` argument for enabling Ubuntu Pro support.
+
+Services
+========
+
+- The Provider service installs, attaches, and enables Ubuntu Pro in LXD instances.
 
 For a complete list of commits, check out the `6.3.0`_ release on GitHub.
 

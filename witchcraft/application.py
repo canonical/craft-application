@@ -32,6 +32,7 @@ WITCHCRAFT = craft_application.AppMetadata(
     always_repack=False,
     check_supported_base=True,
     enable_for_grammar=True,
+    enable_pro_support=True,
     ProjectClass=Project,
 )
 
