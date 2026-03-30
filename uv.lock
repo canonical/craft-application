@@ -645,7 +645,7 @@ dev = [
     { name = "jsonschema", specifier = ">=4.23.0" },
     { name = "pyfakefs", specifier = "~=6.1" },
     { name = "pytest", specifier = "==9.0.2" },
-    { name = "pytest-check", specifier = "==2.7.6" },
+    { name = "pytest-check", specifier = "==2.8.0" },
     { name = "pytest-cov", specifier = "==7.0.0" },
     { name = "pytest-freezer", specifier = "==0.4.9" },
     { name = "pytest-mock", specifier = "~=3.14" },
@@ -1945,15 +1945,15 @@ wheels = [
 
 [[package]]
 name = "pytest-check"
-version = "2.7.6"
+version = "2.8.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "pytest" },
     { name = "typing-extensions", marker = "python_full_version < '3.11' or (extra == 'group-17-craft-application-dev-jammy' and extra == 'group-17-craft-application-dev-noble') or (extra == 'group-17-craft-application-dev-jammy' and extra == 'group-17-craft-application-dev-plucky') or (extra == 'group-17-craft-application-dev-jammy' and extra == 'group-17-craft-application-dev-questing') or (extra == 'group-17-craft-application-dev-jammy' and extra == 'group-17-craft-application-dev-resolute') or (extra == 'group-17-craft-application-dev-noble' and extra == 'group-17-craft-application-dev-plucky') or (extra == 'group-17-craft-application-dev-noble' and extra == 'group-17-craft-application-dev-questing') or (extra == 'group-17-craft-application-dev-noble' and extra == 'group-17-craft-application-dev-resolute') or (extra == 'group-17-craft-application-dev-plucky' and extra == 'group-17-craft-application-dev-questing') or (extra == 'group-17-craft-application-dev-plucky' and extra == 'group-17-craft-application-dev-resolute') or (extra == 'group-17-craft-application-dev-questing' and extra == 'group-17-craft-application-dev-resolute')" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/79/2a/800011fcbceb6f77e692d926f4f9e5df1a257bcbfbacfcfae1623305ef82/pytest_check-2.7.6.tar.gz", hash = "sha256:0f745df49aec83d6f80d53eb9d3a9195b6b996134779bf10594bc8b46d97f818", size = 35536, upload-time = "2026-03-05T07:40:10.352Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/7e/22/d6d5e05a1a36bc723b687e624f6d50c9ec3ce7e0752857ec07f77c2da4d1/pytest_check-2.8.0.tar.gz", hash = "sha256:c42e08ddd41ad9c387bd16efa664ade5def4d7aa5c607b05ba9e25f5aaba70c2", size = 37723, upload-time = "2026-03-22T15:10:23.242Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/34/1f/73ca8ab12d3c63b906f522482b02ab661b74afdeec7fffc62bb5c1f224c8/pytest_check-2.7.6-py3-none-any.whl", hash = "sha256:101bc9b8b481707dea5caafef9ff91df5623e954a00ae1f82b3bca5b8e626d8f", size = 19488, upload-time = "2026-03-05T07:40:09.3Z" },
+    { url = "https://files.pythonhosted.org/packages/f0/a7/cc6712a6b214fe117a2232182113d0e4deeb2b1fba22f80197b483525a0c/pytest_check-2.8.0-py3-none-any.whl", hash = "sha256:671d94f857cebb4a4195baaf064ad77e3af8c37d0428dabdcfc3dcc992761634", size = 20124, upload-time = "2026-03-22T15:10:22.171Z" },
 ]
 
 [[package]]
