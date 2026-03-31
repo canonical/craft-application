@@ -233,10 +233,10 @@ class ProServices(set[str]):
                 # Pro is not requested but attached
                 raise UbuntuProAttachedError
 
-            # second, check that the set of enabled Pro services in the environment matches
-            # the services specified in this set
+            # second, check that the set of requested Pro services are all enabled in the
+            # environment
             if _ValidatorOptions.ENABLEMENT in options and (
-                (available_services := self._get_pro_services()) != self
+                not self.issubset(available_services := self._get_pro_services())
             ):
                 raise InvalidUbuntuProStatusError(self, available_services)
 

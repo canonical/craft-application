@@ -349,6 +349,13 @@ def test_validate_project(services, base, build_base, expectation):
         ),
         pytest.param(
             True,
+            ["esm-apps", "fips-updates"],
+            ["esm-apps"],
+            nullcontext(),
+            id="attached-requested-subset",
+        ),
+        pytest.param(
+            True,
             ["esm-apps"],
             [],
             pytest.raises(errors.UbuntuProAttachedError),
