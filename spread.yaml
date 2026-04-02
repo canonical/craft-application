@@ -204,6 +204,7 @@ suites:
 
   tests/spread/pro/:
     summary: manually-triggered when Ubuntu Pro token is available
+    manual: true
     environment:
       UBUNTU_PRO_TOKEN: '$(HOST: echo "$UBUNTU_PRO_TOKEN")'
     prepare: |

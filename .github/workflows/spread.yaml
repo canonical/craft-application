@@ -59,6 +59,14 @@ jobs:
           mv *.snap tests/spread/
           spread ${{ matrix.spread }}
 
+      - name: Run Ubuntu Pro tests
+        run: |
+          if [ -z "$UBUNTU_PRO_TOKEN" ]; then
+            echo "Skipping Ubuntu Pro spread tests."
+            exit
+          fi
+          spread google:tests/spread/pro/
+
       - name: Discard spread workers
         if: always()
         run: |
