@@ -15,6 +15,20 @@ Changelog
 
     For a complete list of commits, check out the `1.2.3`_ release on GitHub.
 
+6.3.1 (unreleased)
+------------------
+
+Bug fixes
+=========
+
+- :py:class:`~craft_application.util.pro_services.ProServices` no longer raises an error
+  if the requested set of pro features doesn't strictly match the set of enabled
+  features on the host.
+- :py:class:`~craft_application.util.pro_services.ProServices` no longer raises an error
+  during managed runs for missing features when validating pro availability on the host.
+
+For a complete list of commits, check out the `6.3.1`_ release on GitHub.
+
 6.3.0 (2026-03-26)
 ------------------
 
@@ -51,6 +65,7 @@ For a complete list of commits, check out the `6.3.0`_ release on GitHub.
 ------------------
 
 Documentation
+=============
 
 - Fix a misspelling.
 
@@ -1273,3 +1288,4 @@ For a complete list of commits, check out the `2.7.0`_ release on GitHub.
 .. _6.2.1: https://github.com/canonical/craft-application/releases/tag/6.2.1
 .. _6.2.2: https://github.com/canonical/craft-application/releases/tag/6.2.2
 .. _6.3.0: https://github.com/canonical/craft-application/releases/tag/6.3.0
+.. _6.3.1: https://github.com/canonical/craft-application/releases/tag/6.3.1
