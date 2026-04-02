@@ -246,10 +246,12 @@ class ProServices(set[str]):
             if self and not self._pro_client_exists():
                 raise
 
-    def check_pro_context(self, *, run_managed: bool, is_managed: bool) -> None:
+    def check_pro_context(
+        self, *, will_launch_provider: bool, is_managed: bool
+    ) -> None:
         """Validate Pro services are correctly configured for the current context.
 
-        :param run_managed: Whether the command runs inside a managed instance.
+        :param will_launch_provider: Whether the command will run inside a managed instance.
         :param is_managed: Whether the application is currently running inside a
             managed instance.
 
@@ -257,19 +259,19 @@ class ProServices(set[str]):
         :raises UbuntuProClientNotFoundError: If the Pro client can't be found.
         """
         # Validate requested Pro services on the host if we are running in destructive mode.
-        if not run_managed and not is_managed:
+        if not will_launch_provider and not is_managed:
             craft_cli.emit.debug(
                 f"Validating requested Ubuntu Pro status on host: {self}"
             )
             self._validate_environment()
         # Validate requested Pro services running in managed mode inside a managed instance.
-        elif run_managed and is_managed:
+        elif will_launch_provider and is_managed:
             craft_cli.emit.debug(
                 f"Validating requested Ubuntu Pro status in managed instance: {self}"
             )
             self._validate_environment()
         # Validate Pro attachment and service names on the host before starting a managed instance.
-        elif run_managed and not is_managed:
+        elif will_launch_provider and not is_managed:
             craft_cli.emit.debug(
                 f"Validating requested Ubuntu Pro attachment on host: {self}"
             )

@@ -647,16 +647,6 @@ class Application:
         if build_for and "," in build_for:
             build_for = build_for.split(",", maxsplit=1)[0]
 
-        managed_mode = command.run_managed(parsed_args)
-
-        if self.app.enable_pro_support:
-            self._pro_services = getattr(dispatcher.parsed_args(), "pro", None)
-
-            if self._pro_services is not None:
-                self._pro_services.check_pro_context(
-                    run_managed=managed_mode, is_managed=self.is_managed()
-                )
-
         craft_cli.emit.debug(f"Build plan: platform={platform}, build_for={build_for}")
         self._pre_run(dispatcher)
 
@@ -671,7 +661,7 @@ class Application:
         self._configure_services(provider_name)
 
         return_code = 1  # General error
-        if not managed_mode:
+        if not command.run_managed(parsed_args):
             # command runs in the outer instance
             craft_cli.emit.debug(f"Running {self.app.name} {command.name} on host")
             return_code = dispatcher.run() or os.EX_OK

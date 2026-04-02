@@ -19,12 +19,15 @@ import re
 import subprocess
 from contextlib import nullcontext
 from pathlib import Path
+from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
 from craft_application import errors, models
+from craft_application.errors import UbuntuProAttachedError
 from craft_application.util import ProServices
 from craft_application.util.pro_services import _ValidatorOptions
+from typing_extensions import ContextManager
 
 
 @pytest.fixture
@@ -467,7 +470,7 @@ def test_check_pro_context(
     """Pro services are validated in the correct situations."""
     pro_services = mocker.MagicMock(spec=ProServices)
     ProServices.check_pro_context(
-        pro_services, run_managed=run_managed, is_managed=is_managed
+        pro_services, will_launch_provider=run_managed, is_managed=is_managed
     )
 
     assert pro_services._validate_environment.called is validate_environment
@@ -475,3 +478,31 @@ def test_check_pro_context(
     if validator_options is not None:
         for call in pro_services._validate_environment.call_args_list:
             assert call.kwargs["options"] == validator_options
+
+
+@pytest.mark.parametrize(
+    ("run_managed", "is_managed", "expectation"),
+    [
+        pytest.param(
+            False, False, pytest.raises(UbuntuProAttachedError), id="destructive"
+        ),
+        pytest.param(
+            True, True, pytest.raises(UbuntuProAttachedError), id="managed-in-inner"
+        ),
+        pytest.param(True, False, nullcontext(), id="managed-in-outer"),
+    ],
+)
+def test_check_pro_context_attachment(
+    mock_pro_api: dict[str, Any],
+    run_managed: bool,
+    is_managed: bool,
+    expectation: ContextManager,
+) -> None:
+    mock_pro_api["enabled_services"] = []
+    mock_pro_api["is_attached"] = True
+    pro_services = ProServices()
+
+    with expectation:
+        pro_services.check_pro_context(
+            will_launch_provider=run_managed, is_managed=is_managed
+        )

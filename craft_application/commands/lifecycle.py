@@ -80,6 +80,20 @@ class _BaseLifecycleCommand(base.ExtensibleCommand):
                 "Running in destructive mode as a non-super user is not recommended and may cause unexpected behavior."
             )
 
+        self._pro_precheck(parsed_args)
+
+    def _pro_precheck(self, parsed_args: argparse.Namespace) -> None:
+        # If no pro services were requested, this is `ProServices()` rather than None
+        # None is for commands that explicitly don't choose to support pro
+        pro_services = cast(ProServices | None, getattr(parsed_args, "pro", None))
+        if pro_services is None:
+            return
+
+        pro_services.check_pro_context(
+            will_launch_provider=self._use_provider(parsed_args),
+            is_managed=util.is_managed_mode(),
+        )
+
     @override
     def _fill_parser(self, parser: argparse.ArgumentParser) -> None:
         super()._fill_parser(parser)  # type: ignore[arg-type]

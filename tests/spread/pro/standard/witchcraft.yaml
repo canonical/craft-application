@@ -1,0 +1,16 @@
+name: bare-base
+version: "0.1"
+summary: Test packing in witchcraft with pro services
+description: |
+  This tests that witchcraft, which has enable_pro_services turned on, can pack
+  with said services.
+
+base: ubuntu@24.04
+platforms:
+  platform-independent:
+    build-on: [amd64, arm64, ppc64el, s390x, riscv64]
+    build-for: [all]
+
+parts:
+  my-test:
+    plugin: nil
