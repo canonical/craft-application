@@ -647,6 +647,9 @@ class Application:
         if build_for and "," in build_for:
             build_for = build_for.split(",", maxsplit=1)[0]
 
+        if self.app.enable_pro_support:
+            self._pro_services = getattr(parsed_args, "pro", None)
+
         craft_cli.emit.debug(f"Build plan: platform={platform}, build_for={build_for}")
         self._pre_run(dispatcher)
 
