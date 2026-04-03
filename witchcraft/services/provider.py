@@ -31,6 +31,7 @@ class ProviderService(provider.ProviderService):
     @override
     def _setup_snaps(self) -> None:
         """Inject Testcraft since there is no "witchcraft" snap."""
+        super()._setup_snaps()
         self.enqueue_snap_injection("testcraft")
 
     @override
