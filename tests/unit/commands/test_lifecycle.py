@@ -1178,7 +1178,7 @@ def test_warning_no_root_destructive(
 
 
 @pytest.mark.parametrize(
-    ("will_launch_provider", "is_managed_mode"),
+    ("run_managed", "is_managed_mode"),
     [
         pytest.param(False, True, id="managed_inner"),
         pytest.param(False, False, id="destructive"),
@@ -1198,7 +1198,7 @@ def test_check_pro_features(
     app_metadata: AppMetadata,
     tmp_path: pathlib.Path,
     mock_services: ServiceFactory,
-    will_launch_provider: bool,
+    run_managed: bool,
     is_managed_mode: bool,
     pro_services: set[str],
 ) -> None:
@@ -1207,10 +1207,10 @@ def test_check_pro_features(
         {"app": app_metadata, "services": mock_services}
     )
     mocker.patch("craft_application.util.is_managed_mode", return_value=is_managed_mode)
-    mocker.patch.object(command, "_use_provider", return_value=will_launch_provider)
+    mocker.patch.object(command, "_use_provider", return_value=run_managed)
     mock_check = mocker.patch.object(ProServices, "check_pro_context")
     parsed_args = argparse.Namespace(
-        destructive_mode=not will_launch_provider,
+        destructive_mode=not run_managed,
         pro=ProServices(pro_services),
         output=tmp_path,
     )
@@ -1218,5 +1218,5 @@ def test_check_pro_features(
     command._run(parsed_args)
 
     mock_check.assert_called_once_with(
-        will_launch_provider=will_launch_provider, is_managed=is_managed_mode
+        run_managed=run_managed, is_managed=is_managed_mode
     )

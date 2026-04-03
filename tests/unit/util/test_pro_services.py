@@ -470,7 +470,7 @@ def test_check_pro_context(
     """Pro services are validated in the correct situations."""
     pro_services = mocker.MagicMock(spec=ProServices)
     ProServices.check_pro_context(
-        pro_services, will_launch_provider=run_managed, is_managed=is_managed
+        pro_services, run_managed=run_managed, is_managed=is_managed
     )
 
     assert pro_services._validate_environment.called is validate_environment
@@ -503,6 +503,4 @@ def test_check_pro_context_attachment(
     pro_services = ProServices()
 
     with expectation:
-        pro_services.check_pro_context(
-            will_launch_provider=run_managed, is_managed=is_managed
-        )
+        pro_services.check_pro_context(run_managed=run_managed, is_managed=is_managed)

@@ -90,7 +90,7 @@ class _BaseLifecycleCommand(base.ExtensibleCommand):
             return
 
         pro_services.check_pro_context(
-            will_launch_provider=self._use_provider(parsed_args),
+            run_managed=self._use_provider(parsed_args),
             is_managed=util.is_managed_mode(),
         )
 
