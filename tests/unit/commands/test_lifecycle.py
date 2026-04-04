@@ -1175,3 +1175,48 @@ def test_warning_no_root_destructive(
 
     # Assert that the warning shows up if we didn't run as root, but is absent if we did run as root
     assert as_root == (mock.call("warning", warning_str) not in emitter.interactions)
+
+
+@pytest.mark.parametrize(
+    ("run_managed", "is_managed_mode"),
+    [
+        pytest.param(False, True, id="managed_inner"),
+        pytest.param(False, False, id="destructive"),
+        pytest.param(True, False, id="managed_outer"),
+    ],
+)
+@pytest.mark.parametrize(
+    ("pro_services"),
+    [
+        pytest.param(set(), id="empty"),
+        pytest.param({"esm-apps"}, id="one"),
+        pytest.param({"esm-apps", "esm-infra"}, id="two"),
+    ],
+)
+def test_check_pro_features(
+    mocker: pytest_mock.MockFixture,
+    app_metadata: AppMetadata,
+    tmp_path: pathlib.Path,
+    mock_services: ServiceFactory,
+    run_managed: bool,
+    is_managed_mode: bool,
+    pro_services: set[str],
+) -> None:
+    """Ensure that lifecycle commands will validate the pro context, even if it is not requested"""
+    command = get_fake_command_class(_BaseLifecycleCommand, managed=False)(
+        {"app": app_metadata, "services": mock_services}
+    )
+    mocker.patch("craft_application.util.is_managed_mode", return_value=is_managed_mode)
+    mocker.patch.object(command, "_use_provider", return_value=run_managed)
+    mock_check = mocker.patch.object(ProServices, "check_pro_context")
+    parsed_args = argparse.Namespace(
+        destructive_mode=not run_managed,
+        pro=ProServices(pro_services),
+        output=tmp_path,
+    )
+
+    command._run(parsed_args)
+
+    mock_check.assert_called_once_with(
+        run_managed=run_managed, is_managed=is_managed_mode
+    )

@@ -39,3 +39,8 @@ def register_services() -> None:
         "ProjectService",
         module="witchcraft.services.project",
     )
+    craft_application.ServiceFactory.register(
+        "provider",
+        "ProviderService",
+        module="witchcraft.services.provider",
+    )

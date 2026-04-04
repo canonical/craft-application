@@ -1,0 +1,8 @@
+summary: Pack arbitrary witchcraft files
+
+prepare: |
+  . /etc/os-release
+  sed -i  "s/base: ubuntu@24.04/base: ubuntu@${VERSION_ID}/" witchcraft.yaml
+
+execute: |
+  witchcraft pack --ignore=unmaintained --pro esm-apps

@@ -233,10 +233,10 @@ class ProServices(set[str]):
                 # Pro is not requested but attached
                 raise UbuntuProAttachedError
 
-            # second, check that the set of enabled Pro services in the environment matches
-            # the services specified in this set
+            # second, check that the set of requested Pro services are all enabled in the
+            # environment
             if _ValidatorOptions.ENABLEMENT in options and (
-                (available_services := self._get_pro_services()) != self
+                not self.issubset(available_services := self._get_pro_services())
             ):
                 raise InvalidUbuntuProStatusError(self, available_services)
 
@@ -249,7 +249,7 @@ class ProServices(set[str]):
     def check_pro_context(self, *, run_managed: bool, is_managed: bool) -> None:
         """Validate Pro services are correctly configured for the current context.
 
-        :param run_managed: Whether the command runs inside a managed instance.
+        :param run_managed: Whether the command will run inside a managed instance.
         :param is_managed: Whether the application is currently running inside a
             managed instance.
 
