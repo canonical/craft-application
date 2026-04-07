@@ -5,4 +5,7 @@ prepare: |
   sed -i  "s/base: ubuntu@24.04/base: ubuntu@${VERSION_ID}/" witchcraft.yaml
 
 execute: |
+  witchcraft init
+  witchcraft pack --ignore=unmaintained --pro esm-apps
+  witchcraft clean --ignore=unmaintained --pro esm-apps
   witchcraft pack --ignore=unmaintained --pro esm-apps
