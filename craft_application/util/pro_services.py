@@ -236,9 +236,9 @@ class ProServices(set[str]):
             # second, check that the set of requested Pro services are all enabled in the
             # environment
             if _ValidatorOptions.ENABLEMENT in options and (
-                not self.issubset(available_services := self._get_pro_services())
+                not self.issubset(enabled_services := self._get_pro_services())
             ):
-                raise InvalidUbuntuProStatusError(self, available_services)
+                raise InvalidUbuntuProStatusError(self, enabled_services)
 
         except UbuntuProClientNotFoundError:
             # If the Pro client was not found, we may be on a non Ubuntu
