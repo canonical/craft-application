@@ -597,3 +597,40 @@ class ProviderService(base.AppService):
             finally:
                 if active_fetch_service:
                     self._services.get("fetch").teardown_instance()
+
+    def prune_instances(
+        self,
+        *,
+        all_providers: bool = False,
+        provider_name: str | None = None,
+        include_templates: bool = False,
+    ) -> None:
+        """Prune instances and optionally templates for the provider(s).
+
+        :param all_providers: Whether to prune instances for all providers or just the
+            current provider.
+        :param provider_name: Optional name of the provider to prune (if all_providers
+            is False).
+        :param include_templates: Whether to also prune templates (if supported by the
+            provider).
+        """
+        providers: list[craft_providers.Provider] = []
+        if all_providers:
+            try:
+                providers.append(self._get_provider_by_name("lxd"))
+                providers.append(self._get_provider_by_name("LXD"))
+            except RuntimeError:
+                emit.debug("LXD provider not available, skipping.")
+
+            try:
+                providers.append(self._get_provider_by_name("multipass"))
+                providers.append(self._get_provider_by_name("Multipass"))
+            except RuntimeError:
+                emit.debug("Multipass provider not available, skipping.")
+
+        else:
+            providers.append(self.get_provider(name=provider_name))
+
+        for provider in providers:
+            emit.progress(f"Pruning instances for provider {provider.name!r}...")
+            provider.prune(prune_templates=include_templates)

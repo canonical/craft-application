@@ -20,12 +20,14 @@ from . import lifecycle
 from .init import InitCommand
 from .lifecycle import get_lifecycle_command_group, LifecycleCommand, TestCommand
 from .other import get_other_command_group
+from .prune_instances import PruneInstancesCommand
 from .remote import RemoteBuild  # Not part of the default commands.
 
 __all__ = [
     "AppCommand",
     "ExtensibleCommand",
     "InitCommand",
+    "PruneInstancesCommand",
     "RemoteBuild",
     "lifecycle",
     "LifecycleCommand",
