@@ -1,0 +1,37 @@
+name: Snapcraft test
+
+on:
+  pull_request:
+  merge_group:
+  push:
+    branches:
+      - main
+      - hotfix/*
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  craft-test:
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        runner:
+          - ubuntu-22.04
+          - ubuntu-24.04
+          - ubuntu-22.04-arm
+          - ubuntu-24.04-arm
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - uses: canonical/craft-actions/snapcraft/setup@main
+        with:
+          channel: latest/edge
+
+      - name: Run spread tests
+        run: snapcraft test
