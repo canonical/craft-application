@@ -212,6 +212,7 @@ suites:
 
       # Enable Ubuntu Pro
       sudo pro attach --no-auto-enable $UBUNTU_PRO_TOKEN
+      pro enable --assume-yes esm-apps esm-infra
 
       # Enable guest attachment so that Witchcraft can enable Pro on the instances
       sudo pro config set lxd_guest_attach=available
