@@ -205,6 +205,7 @@ suites:
   tests/spread/pro/:
     summary: manually-triggered when Ubuntu Pro token is available
     manual: true
+    # The ability to attach pro to a LXD instance is only present on 24.04+
     systems:
       - ubuntu-24.04*
     environment:
