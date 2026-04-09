@@ -55,10 +55,9 @@ jobs:
           name: snap
           path: tests/spread/
 
-      # - name: Run spread
-      #   run: |
-      #     mv *.snap tests/spread/
-      #     spread ${{ matrix.spread }}
+      - name: Run spread
+        run: |
+          spread ${{ matrix.spread }}
 
       - name: Run Ubuntu Pro spread tests
         env:
