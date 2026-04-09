@@ -205,6 +205,8 @@ suites:
   tests/spread/pro/:
     summary: manually-triggered when Ubuntu Pro token is available
     manual: true
+    systems:
+      - ubuntu-24.04*
     environment:
       UBUNTU_PRO_TOKEN: '$(HOST: echo "$UBUNTU_PRO_TOKEN")'
     prepare: |
@@ -212,7 +214,6 @@ suites:
 
       # Enable Ubuntu Pro
       sudo pro attach --no-auto-enable $UBUNTU_PRO_TOKEN
-      pro enable --assume-yes esm-apps esm-infra
 
       # Enable guest attachment so that Witchcraft can enable Pro on the instances
       sudo pro config set lxd_guest_attach=available
