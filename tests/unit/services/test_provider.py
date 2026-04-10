@@ -1174,3 +1174,54 @@ def test_configure_instance_with_pro_skipped(mocker, provider_service):
     mock_instance.install_pro_client.assert_not_called()
     mock_instance.attach_pro_subscription.assert_not_called()
     mock_instance.enable_pro_service.assert_not_called()
+
+
+def test_prune_instances_single_provider(monkeypatch, provider_service):
+    """Prune for a single provider."""
+    mock_lxd = mock.MagicMock()
+    mock_lxd.name = "lxd"
+
+    monkeypatch.setattr(provider_service, "get_provider", lambda name: mock_lxd)
+
+    provider_service.prune_instances(provider_name="lxd", prune_templates=True)
+
+    mock_lxd.prune.assert_called_once_with(prune_templates=True)
+
+
+def test_prune_instances_all_providers(monkeypatch, provider_service):
+    """Prune for all supported providers."""
+    mock_lxd = mock.MagicMock()
+    mock_lxd.name = "lxd"
+    mock_multipass = mock.MagicMock()
+    mock_multipass.name = "multipass"
+
+    def mock_get_by_name(name):
+        if name == "lxd":
+            return mock_lxd
+        if name == "multipass":
+            return mock_multipass
+        raise RuntimeError(f"Unknown provider: {name}")
+
+    monkeypatch.setattr(provider_service, "_get_provider_by_name", mock_get_by_name)
+
+    provider_service.prune_instances(all_providers=True, prune_templates=False)
+
+    mock_lxd.prune.assert_called_once_with(prune_templates=False)
+    mock_multipass.prune.assert_called_once_with(prune_templates=False)
+
+
+def test_prune_instances_all_providers_skips_unsupported(monkeypatch, provider_service):
+    """Prune for all supported providers, skipping those not supported on the host."""
+    mock_lxd = mock.MagicMock()
+    mock_lxd.name = "lxd"
+
+    def mock_get_by_name(name):
+        if name == "lxd":
+            return mock_lxd
+        raise RuntimeError("Unsupported on this platform")
+
+    monkeypatch.setattr(provider_service, "_get_provider_by_name", mock_get_by_name)
+
+    provider_service.prune_instances(all_providers=True)
+
+    mock_lxd.prune.assert_called_once_with(prune_templates=False)
