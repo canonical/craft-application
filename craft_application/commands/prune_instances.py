@@ -56,5 +56,5 @@ class PruneInstancesCommand(base.AppCommand):
         self._services.provider.prune_instances(
             all_providers=parsed_args.all_providers,
             provider_name=parsed_args.provider,
-            include_templates=parsed_args.include_templates,
+            prune_templates=parsed_args.include_templates,
         )

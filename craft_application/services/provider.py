@@ -603,7 +603,7 @@ class ProviderService(base.AppService):
         *,
         all_providers: bool = False,
         provider_name: str | None = None,
-        include_templates: bool = False,
+        prune_templates: bool = False,
     ) -> None:
         """Prune instances and optionally templates for the provider(s).
 
@@ -611,7 +611,7 @@ class ProviderService(base.AppService):
             current provider.
         :param provider_name: Optional name of the provider to prune (if all_providers
             is False).
-        :param include_templates: Whether to also prune templates (if supported by the
+        :param prune_templates: Whether to also prune templates (if supported by the
             provider).
         """
         providers: list[craft_providers.Provider] = []
@@ -633,4 +633,4 @@ class ProviderService(base.AppService):
 
         for provider in providers:
             emit.progress(f"Pruning instances for provider {provider.name!r}...")
-            provider.prune(prune_templates=include_templates)
+            provider.prune(prune_templates=prune_templates)

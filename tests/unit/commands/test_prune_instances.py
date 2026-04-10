@@ -24,7 +24,7 @@ def test_prune_instances_run(app_metadata, mock_services):
     parsed_args = argparse.Namespace(
         all_providers=True,
         provider="lxd",
-        include_templates=True,
+        prune_templates=True,
     )
     command = PruneInstancesCommand({"app": app_metadata, "services": mock_services})
     command.run(parsed_args)
@@ -32,5 +32,5 @@ def test_prune_instances_run(app_metadata, mock_services):
     mock_services.provider.prune_instances.assert_called_once_with(
         all_providers=True,
         provider_name="lxd",
-        include_templates=True,
+        prune_templates=True,
     )

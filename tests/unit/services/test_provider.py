@@ -1183,9 +1183,9 @@ def test_prune_instances_single_provider(monkeypatch, provider_service):
 
     monkeypatch.setattr(provider_service, "get_provider", lambda name: mock_lxd)
 
-    provider_service.prune_instances(provider_name="lxd", include_templates=True)
+    provider_service.prune_instances(provider_name="lxd", prune_templates=True)
 
-    mock_lxd.prune.assert_called_once_with(include_templates=True)
+    mock_lxd.prune.assert_called_once_with(prune_templates=True)
 
 
 def test_prune_instances_all_providers(monkeypatch, provider_service):
@@ -1204,10 +1204,10 @@ def test_prune_instances_all_providers(monkeypatch, provider_service):
 
     monkeypatch.setattr(provider_service, "_get_provider_by_name", mock_get_by_name)
 
-    provider_service.prune_instances(all_providers=True, include_templates=False)
+    provider_service.prune_instances(all_providers=True, prune_templates=False)
 
-    mock_lxd.prune.assert_called_once_with(include_templates=False)
-    mock_multipass.prune.assert_called_once_with(include_templates=False)
+    mock_lxd.prune.assert_called_once_with(prune_templates=False)
+    mock_multipass.prune.assert_called_once_with(prune_templates=False)
 
 
 def test_prune_instances_all_providers_skips_unsupported(monkeypatch, provider_service):
@@ -1224,4 +1224,4 @@ def test_prune_instances_all_providers_skips_unsupported(monkeypatch, provider_s
 
     provider_service.prune_instances(all_providers=True)
 
-    mock_lxd.prune.assert_called_once_with(include_templates=False)
+    mock_lxd.prune.assert_called_once_with(prune_templates=False)
