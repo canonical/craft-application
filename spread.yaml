@@ -201,3 +201,24 @@ suites:
     summary: Tests for witchcraft (app with many features enabled)
     prepare: |
       sudo snap alias testcraft.witchcraft witchcraft
+
+  tests/spread/pro/:
+    summary: manually-triggered when Ubuntu Pro token is available
+    manual: true
+    # The ability to attach pro to a LXD instance is only present on LXD 5.21+
+    # These tests install older versions of LXD for systems lower than 24.04, so
+    # restrict tests just to the systems that we can expect to support this
+    # piece of the pro puzzle
+    systems:
+      - ubuntu-24.04*
+    environment:
+      UBUNTU_PRO_TOKEN: '$(HOST: echo "$UBUNTU_PRO_TOKEN")'
+    prepare: |
+      sudo snap alias testcraft.witchcraft witchcraft
+
+      # Enable Ubuntu Pro
+      sudo pro attach --no-auto-enable $UBUNTU_PRO_TOKEN
+
+      # Enable guest attachment so that Witchcraft can enable Pro on the instances
+      sudo pro config set lxd_guest_attach=available
+      sudo snap restart lxd
