@@ -1,0 +1,22 @@
+summary: Testcraft should prune its instances
+
+prepare: |
+  . /etc/os-release
+  sed -i "s/base: ubuntu@24.04/base: ubuntu@${VERSION_ID}/" testcraft.yaml
+
+execute: |
+  # Create a LXD instance by running a build.
+  # We use --use-lxd to ensure it uses the LXD provider.
+  testcraft build --use-lxd
+
+  # Verify the instance exists. The name should start with 'testcraft-prune-instances-test-'.
+  lxc list --format csv -c n | grep "^testcraft-prune-instances-test-"
+
+  # Prune instances.
+  testcraft prune-instances --all
+
+  # Verify the instance is gone.
+  if lxc list --format csv -c n | grep "^testcraft-prune-instances-test-"; then
+    echo "Instance was not pruned!"
+    exit 1
+  fi
