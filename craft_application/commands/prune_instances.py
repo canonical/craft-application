@@ -28,27 +28,25 @@ class PruneInstancesCommand(base.AppCommand):
     """Prune instances for the active provider."""
 
     name = "prune-instances"
-    help_msg = "Prune instances for the active provider"
+    help_msg = "Prune instances for the selected provider or all providers"
     overview = textwrap.dedent(
         """
-        Prune instances for the active provider.
+        Prune instances using the standard provider-selection logic.
+        Use --provider to prune instances for a specific provider, or
+        --all-providers to prune instances from all providers.
         """
     )
 
     def _fill_parser(self, parser: argparse.ArgumentParser) -> None:
-        parser.add_argument(
+        provider_group = parser.add_mutually_exclusive_group()
+        provider_group.add_argument(
             "--all-providers",
             action="store_true",
             help="Prune instances from all providers",
         )
-        parser.add_argument(
+        provider_group.add_argument(
             "--provider",
-            help="Prune for a specific provider",
-        )
-        parser.add_argument(
-            "--include-templates",
-            action="store_true",
-            help="Prune base instances (templates)",
+            help="Prune instances for a specific provider; omit to use the standard provider-selection logic",
         )
 
     def run(self, parsed_args: argparse.Namespace) -> None:
@@ -56,5 +54,5 @@ class PruneInstancesCommand(base.AppCommand):
         self._services.provider.prune_instances(
             all_providers=parsed_args.all_providers,
             provider_name=parsed_args.provider,
-            prune_templates=parsed_args.include_templates,
+            prune_templates=parsed_args.prune_templates,
         )
