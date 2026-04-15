@@ -47,6 +47,7 @@ class PruneInstancesCommand(base.AppCommand):
         provider_group.add_argument(
             "--provider",
             help="Prune instances for a specific provider; omit to use the standard provider-selection logic",
+            choices=["lxd", "multipass"],
         )
 
     def run(self, parsed_args: argparse.Namespace) -> None:
