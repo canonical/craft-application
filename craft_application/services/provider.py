@@ -33,6 +33,7 @@ import craft_platforms
 import craft_providers
 import snap_http  # type: ignore[import-untyped]
 from craft_cli import CraftError, emit
+from craft_cli.utils import humanize_list
 from craft_providers import bases
 from craft_providers.actions.snap_installer import Snap
 from craft_providers.lxd import LXDInstance, LXDProvider
@@ -128,8 +129,6 @@ class ProviderService(base.AppService):
 
     def _setup_snaps(self) -> None:
         """Set up the app snap to be installed in the build environment."""
-        self.snaps.extend(_REQUESTED_SNAPS.values())
-
         snap_injected = False
         is_snappy = util.is_running_from_snap(self._app.name)
 
@@ -137,6 +136,28 @@ class ProviderService(base.AppService):
         host_arch_matches = not build_on or (
             build_on == craft_platforms.DebianArchitecture.from_host().value
         )
+
+        # If the host architecture matches, we can inject snaps from the host
+        # environment. If it doesn't match, we can still inject snaps that have a
+        # channel specified
+        if host_arch_matches:
+            self.snaps.extend(_REQUESTED_SNAPS.values())
+        else:
+            emit.debug(
+                "Host architecture does not match build-on architecture, "
+                "will not inject snaps from the host environment."
+            )
+            snaps_without_channels = list(
+                filter(lambda snap: snap.channel is None, _REQUESTED_SNAPS.values())
+            )
+            snaps_with_channels = list(
+                filter(lambda snap: snap.channel is not None, _REQUESTED_SNAPS.values())
+            )
+            if snaps_without_channels:
+                emit.debug(
+                    f"Skipping the following snaps: {humanize_list([snap.name for snap in snaps_without_channels])}"
+                )
+            self.snaps.extend(snaps_with_channels)
 
         if is_snappy and host_arch_matches:
             # use the aliased name of the snap when injecting

@@ -29,11 +29,12 @@ import craft_platforms
 import craft_providers
 import pytest
 import pytest_subprocess
-from craft_application import errors
+from craft_application import ProviderService, errors
 from craft_application.services import provider
 from craft_application.services.service_factory import ServiceFactory
 from craft_application.util import ProServices, snap_config
 from craft_cli import emit
+from craft_cli.pytest_plugin import RecordingEmitter
 from craft_providers import bases, lxd, multipass
 from craft_providers.actions.snap_installer import Snap
 from snap_http.types import SnapdResponse
@@ -1174,3 +1175,115 @@ def test_configure_instance_with_pro_skipped(mocker, provider_service):
     mock_instance.install_pro_client.assert_not_called()
     mock_instance.attach_pro_subscription.assert_not_called()
     mock_instance.enable_pro_service.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "snaps",
+    [
+        pytest.param([], id="empty"),
+        pytest.param([Snap(name="eenie", channel=None)], id="inject-1"),
+        pytest.param([Snap(name="meenie", channel="latest/edge")], id="download-1"),
+        pytest.param(
+            [
+                Snap(name="eenie", channel=None),
+                Snap(name="meenie", channel="latest/edge"),
+            ],
+            id="inject-1-download-1",
+        ),
+        pytest.param(
+            [
+                Snap(name="eenie", channel=None),
+                Snap(name="meenie", channel="latest/edge"),
+                Snap(name="miny", channel=None),
+                Snap(name="moe", channel="latest/edge"),
+            ],
+            id="inject-2-download-2",
+        ),
+    ],
+)
+def test_setup_snaps_same_arch(
+    provider_service: ProviderService,
+    emitter: RecordingEmitter,
+    snaps: list[Snap],
+) -> None:
+    """Test that snap injection always happens when the host arch matches the build_on"""
+    for snap in snaps:
+        provider_service.register_snap(snap.name, snap)
+    expected_snaps = [
+        *snaps,
+        Snap(name="testcraft", channel="latest/stable", classic=True),
+    ]
+
+    provider_service._setup_snaps()
+
+    assert (
+        mock.call(
+            "debug",
+            "Host architecture does not match build-on architecture, will not inject snaps from the host environment.",
+        )
+        not in emitter.interactions
+    )
+    assert provider_service.snaps == expected_snaps
+
+
+@pytest.mark.parametrize(
+    ("snaps", "expected_snaps"),
+    [
+        pytest.param([], [], id="empty"),
+        pytest.param([Snap(name="eenie", channel=None)], [], id="inject-1"),
+        pytest.param(
+            [Snap(name="meenie", channel="latest/edge")],
+            [Snap(name="meenie", channel="latest/edge")],
+            id="download-1",
+        ),
+        pytest.param(
+            [
+                Snap(name="eenie", channel=None),
+                Snap(name="meenie", channel="latest/edge"),
+            ],
+            [Snap(name="meenie", channel="latest/edge")],
+            id="inject-1-download-1",
+        ),
+        pytest.param(
+            [
+                Snap(name="eenie", channel=None),
+                Snap(name="meenie", channel="latest/edge"),
+                Snap(name="miny", channel=None),
+                Snap(name="moe", channel="latest/edge"),
+            ],
+            [
+                Snap(name="meenie", channel="latest/edge"),
+                Snap(name="moe", channel="latest/edge"),
+            ],
+            id="inject-2-download-2",
+        ),
+    ],
+)
+def test_setup_snaps_other_arch(
+    monkeypatch: pytest.MonkeyPatch,
+    provider_service: ProviderService,
+    emitter: RecordingEmitter,
+    snaps: list[Snap],
+    expected_snaps: list[Snap],
+) -> None:
+    """Test that snap injection is skipped when the host arch does not match the build_on"""
+    for snap in snaps:
+        provider_service.register_snap(snap.name, snap)
+    expected_snaps.append(Snap(name="testcraft", channel="latest/stable", classic=True))
+    monkeypatch.setattr(
+        craft_platforms.DebianArchitecture,
+        "from_host",
+        lambda: craft_platforms.DebianArchitecture.RISCV64,
+    )
+    monkeypatch.setenv("CRAFT_BUILD_ON", "arm64")
+
+    provider_service._setup_snaps()
+
+    emitter.assert_debug(
+        "Host architecture does not match build-on architecture, will not inject snaps from the host environment.",
+    )
+    # If this permutation of the test expects there to be snaps that were skipped...
+    if len(snaps) - (len(expected_snaps) - 1) > 0:
+        emitter.assert_debug("Skipping the following snaps: .*", regex=True)
+
+    assert provider_service.snaps == expected_snaps
