@@ -1,0 +1,11 @@
+name: prune-instances-test
+summary: test summary
+version: "0.1"
+
+base: ubuntu@24.04
+platforms:
+  amd64:
+
+parts:
+  my-part:
+    plugin: nil

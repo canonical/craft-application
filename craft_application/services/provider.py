@@ -597,3 +597,54 @@ class ProviderService(base.AppService):
             finally:
                 if active_fetch_service:
                     self._services.get("fetch").teardown_instance()
+
+    def prune_instances(
+        self,
+        *,
+        all_providers: bool = False,
+        provider_name: str | None = None,
+        prune_templates: bool = False,
+    ) -> None:
+        """Prune instances and optionally templates for the provider(s).
+
+        :param all_providers: Whether to prune instances for all providers or just the
+            current provider.
+        :param provider_name: Optional name of the provider to prune (if all_providers
+            is False).
+        :param prune_templates: Whether to also prune templates (if supported by the
+            provider).
+        """
+        providers: list[craft_providers.Provider] = []
+
+        if provider_name:
+            providers.append(self.get_provider(name=provider_name))
+        elif all_providers:
+            self.add_provider_if_available(
+                providers, "lxd", "LXD provider not available, skipping LXD pruning."
+            )
+            self.add_provider_if_available(
+                providers,
+                "multipass",
+                "Multipass provider not available, skipping multipass pruning.",
+            )
+        else:
+            providers.append(self.get_provider())
+
+        for provider in providers:
+            emit.progress(f"Pruning instances for provider {provider.name!r}...")
+            provider.prune(prune_templates=prune_templates)
+
+    def add_provider_if_available(
+        self,
+        providers: list[craft_providers.Provider],
+        provider_key: str,
+        unavailable_message: str,
+    ) -> None:
+        """Add provider to the providers list if it is available, otherwise logs the unavailable_message."""
+        try:
+            provider = self._get_provider_by_name(provider_key)
+            provider.ensure_provider_is_available()
+        except (craft_providers.ProviderError, RuntimeError):
+            emit.debug(unavailable_message)
+            return
+        providers.append(provider)
