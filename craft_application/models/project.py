@@ -110,6 +110,7 @@ def _validate_part(part: dict[str, Any]) -> dict[str, Any]:
     return part
 
 
+PartName = Annotated[str, pydantic.Field(pattern=r"^[^/]*$")]
 Part = Annotated[dict[str, Any], pydantic.BeforeValidator(_validate_part)]
 
 
@@ -189,7 +190,7 @@ class Project(base.CraftBaseModel):
     )
 
     # parts are handled by craft-parts
-    parts: dict[str, Part] = pydantic.Field(
+    parts: dict[PartName | str, Part] = pydantic.Field(
         description="The self-contained software pieces needed to create the final artifact.",
         examples=[
             textwrap.dedent(
