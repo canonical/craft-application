@@ -1118,7 +1118,7 @@ def test_render_for_validates_pro_project(
     if expect_called:
         mock_validate.assert_called_once_with(pro_services, project)
     else:
-        mock_validate.asserot_called()
+        mock_validate.assert_not_called()
 
 
 SAMPLE_VALID_PART_NAMES = ["my-part", "yourpart", "our_part", "a part name with spaces"]
