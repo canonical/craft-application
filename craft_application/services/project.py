@@ -490,7 +490,7 @@ class ProjectService(base.AppService):
 
         Applications may override this if needed.
         """
-        base = project_dict.get("base", project_dict.get("build-base"))
+        base = project_dict.get("build-base", project_dict.get("base"))
         if base in _const.BASES_ALLOW_SLASH_IN_PART_NAME:
             return
 
