@@ -149,8 +149,8 @@ def test_load_invalid_project(
 class PartInjectingProjectService(ProjectService):
     """A ProjectService that injects an app-only part name into the project."""
 
-    @override
     @staticmethod
+    @override
     def _app_preprocess_project(
         project: dict[str, Any],
         *,
