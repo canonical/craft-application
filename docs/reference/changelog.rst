@@ -21,8 +21,8 @@ Changelog
 Services
 ========
 
-- In a user-written part, upcoming base names can no longer contain forward slashes (/).
-  for future bases. This does not apply to current stable bases.
+- In a user-written part, upcoming base names can no longer contain forward slashes
+  (/) for bases starting with Ubuntu 26.04.
 
 For a complete list of commits, check out the `6.4.0`_ release on GitHub.
 
