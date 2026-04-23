@@ -343,7 +343,7 @@ class FetchService(base.AppService):
                 display(line)
             display("This build will fail on 'strict' fetch-service sessions.")
 
-    def _get_secrets(self) -> list[dict[str, str]]:
+    def _get_secrets(self) -> list[fetch.SessionSecret]:
         secrets: list[fetch.SessionSecret] = []
         for callback in self._secret_callbacks:
             secrets.extend(callback(self._app))
