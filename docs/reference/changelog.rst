@@ -15,7 +15,7 @@ Changelog
 
     For a complete list of commits, check out the `1.2.3`_ release on GitHub.
 
-6.4.0 (unreleased)
+6.4.0 (2026-04-23)
 ------------------
 
 Services
@@ -23,6 +23,8 @@ Services
 
 - In a user-written part, upcoming base names can no longer contain forward slashes
   (/) for bases starting with Ubuntu 26.04.
+- The FetchService now supports registering callbacks to provide secrets during fetch-service
+  session creation.
 
 For a complete list of commits, check out the `6.4.0`_ release on GitHub.
 
