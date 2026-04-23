@@ -97,5 +97,5 @@ API documentation
 
 .. autoclass:: ProjectService
     :members:
-    :private-members: _app_preprocess_project,_app_render_legacy_platforms,_preprocess
+    :private-members: _app_preprocess_project,_app_render_legacy_platforms,_preprocess,_validate_user_provided_part_names
     :undoc-members:

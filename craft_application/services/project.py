@@ -32,9 +32,11 @@ from distro_support.errors import (
     UnknownVersionError,
 )
 
-from craft_application import errors, grammar, util
+from craft_application import _const, errors, grammar, util
+from craft_application.errors import CraftValidationError
 from craft_application.models import Platform
 from craft_application.models.grammar import GrammarAwareProject
+from craft_application.models.project import PartName
 
 from . import base
 
@@ -479,6 +481,39 @@ class ProjectService(base.AppService):
         self.update_project_environment(info)
         craft_parts.expand_environment(project_data, info=info)
 
+    def _validate_user_provided_part_names(self, project_dict: dict[str, Any]) -> None:
+        """Validate that user-provided part names meet our standards.
+
+        This must be done through the project service rather than through the model
+        because we allow the application to add app-provided part names in
+        ``_app_preprocess_project``.
+
+        Applications may override this if needed.
+        """
+        base = project_dict.get("build-base", project_dict.get("base"))
+        if base in _const.BASES_ALLOW_SLASH_IN_PART_NAME:
+            return
+
+        part_names = project_dict.get("parts", {}).keys()
+        name_adapter: pydantic.TypeAdapter[PartName] = pydantic.TypeAdapter(PartName)
+        invalid_part_names: list[str] = []
+        for name in part_names:
+            try:
+                name_adapter.validate_python(name)
+            except pydantic.ValidationError:  # noqa: PERF203 (More than 1 is unlikely)
+                invalid_part_names.append(name)
+
+        if invalid_part_names:
+            names_str = ", ".join(invalid_part_names)
+            raise CraftValidationError(
+                message=f"Invalid part names: {names_str}",
+                details="Part names may not contain the '/' character.",
+                resolution="Rename invalid parts.",
+                logpath_report=False,
+                reportable=False,
+                retcode=os.EX_DATAERR,
+            )
+
     @final
     def _preprocess(
         self,
@@ -502,6 +537,7 @@ class ProjectService(base.AppService):
         """
         project = self.get_raw()
         GrammarAwareProject.validate_grammar(project)
+        self._validate_user_provided_part_names(project)
         self._app_preprocess_project(
             project, build_on=build_on, build_for=build_for, platform=platform
         )
