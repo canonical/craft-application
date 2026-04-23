@@ -21,7 +21,7 @@ Changelog
 Services
 ========
 
-- The Project service prohibits user-provided parts that contain a ``/`` character
+- In a user-written part, upcoming base names can no longer contain forward slashes (/).
   for future bases. This does not apply to current stable bases.
 
 For a complete list of commits, check out the `6.4.0`_ release on GitHub.
