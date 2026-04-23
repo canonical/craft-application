@@ -15,6 +15,17 @@ Changelog
 
     For a complete list of commits, check out the `1.2.3`_ release on GitHub.
 
+6.4.0 (unreleased)
+------------------
+
+Services
+========
+
+- In a user-written part, upcoming base names can no longer contain forward slashes
+  (/) for bases starting with Ubuntu 26.04.
+
+For a complete list of commits, check out the `6.4.0`_ release on GitHub.
+
 6.3.1 (2026-04-09)
 ------------------
 
@@ -1289,3 +1300,4 @@ For a complete list of commits, check out the `2.7.0`_ release on GitHub.
 .. _6.2.2: https://github.com/canonical/craft-application/releases/tag/6.2.2
 .. _6.3.0: https://github.com/canonical/craft-application/releases/tag/6.3.0
 .. _6.3.1: https://github.com/canonical/craft-application/releases/tag/6.3.1
+.. _6.4.0: https://github.com/canonical/craft-application/releases/tag/6.4.0
