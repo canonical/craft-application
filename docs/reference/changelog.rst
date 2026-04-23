@@ -15,7 +15,7 @@ Changelog
 
     For a complete list of commits, check out the `1.2.3`_ release on GitHub.
 
-6.4.0 (unreleased)
+6.4.0 (2026-04-23)
 ------------------
 
 Services
