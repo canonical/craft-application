@@ -710,7 +710,7 @@ def test_run_success_unmanaged(
     app.add_command_group("test", [UnmanagedCommand])
     app.set_project(fake_project)
 
-    check.equal(app.run(), return_code or 0)
+    check.equal(app.run(), 1 if return_code is None else return_code)
     with check:
         emitter.assert_debug("Preparing application...")
     with check:
@@ -738,7 +738,7 @@ def test_run_success_managed_inside_managed(
     monkeypatch.setattr(sys, "argv", ["testcraft", "pull"])
     monkeypatch.setenv("CRAFT_MANAGED_MODE", "1")
 
-    check.equal(app.run(), return_code or 0)
+    check.equal(app.run(), 1 if return_code is None else return_code)
     with check:
         app.run_managed.assert_not_called()
     with check:

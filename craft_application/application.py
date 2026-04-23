@@ -667,14 +667,18 @@ class Application:
         if not command.run_managed(parsed_args):
             # command runs in the outer instance
             craft_cli.emit.debug(f"Running {self.app.name} {command.name} on host")
-            return_code = dispatcher.run() or os.EX_OK
+            dispatcher_return = dispatcher.run()
+            if dispatcher_return is not None:
+                return_code = dispatcher_return
         elif not self.is_managed():
             # command runs in inner instance, but this is the outer instance
             self.run_managed(platform, build_for)
             return_code = os.EX_OK
         else:
             # command runs in inner instance
-            return_code = dispatcher.run() or 0
+            dispatcher_return = dispatcher.run()
+            if dispatcher_return is not None:
+                return_code = dispatcher_return
 
         return return_code
 
