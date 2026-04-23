@@ -34,6 +34,7 @@ BASES_ALLOW_SLASH_IN_PART_NAME = (
     "ubuntu@24.04",
     "ubuntu@24.10",
     "ubuntu@25.04",
+    "ubuntu@25.10",
     "centos@7",
     "almalinux@9",
 )

@@ -8,7 +8,7 @@ platforms:
     build-on: [amd64, arm64, armhf, i386, ppc64el, riscv64, s390x]
     build-for: [all]
 
-base: ubuntu@25.10
+base: ubuntu@26.04
 
 parts:
   illegal/part/name:

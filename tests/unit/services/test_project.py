@@ -1124,7 +1124,6 @@ def test_render_for_validates_pro_project(
 SAMPLE_VALID_PART_NAMES = ["my-part", "yourpart", "our_part", "a part name with spaces"]
 SAMPLE_INVALID_USER_PART_NAMES = ["a/part/name/with/slashes"]
 SAMPLE_STRICT_PART_NAME_BASES = [
-    "ubuntu@25.10",
     "ubuntu@26.04",
     "ubuntu@26.10",
     "debian@unstable",
