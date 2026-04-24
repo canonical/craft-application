@@ -11,8 +11,7 @@ execute: |
   lxc list --format csv -c n | grep "^testcraft-prune-instances-test-"
 
   # Prune instances.
-  testcraft prune-instances --all
-
+  testcraft prune-instances --all-providers
   # Verify the instance is gone.
   if lxc list --format csv -c n | grep "^testcraft-prune-instances-test-"; then
     echo "Instance was not pruned!"
