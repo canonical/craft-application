@@ -17,8 +17,12 @@ override :py:meth:`~BuildPlanService._gen_exhaustive_build_plan`.
 API documentation
 -----------------
 
+.. vale off
+
 .. autoclass:: BuildPlanService
     :member-order: bysource
     :members:
     :private-members: _gen_exhaustive_build_plan,_filter_plan
     :undoc-members:
+
+.. vale on

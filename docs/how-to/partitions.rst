@@ -159,8 +159,8 @@ will not be affected for the other partitions.)
 See also
 ^^^^^^^^
 
-* Craft parts: part properties: `organize`_
-* Craft parts: filesets: `specifying paths`_
+* Craft Parts: :external+craft-parts:ref:`reference-part-properties-organize`
+* Craft Parts: :external+craft-parts:ref:`filesets_explanation`
 
 In environment variables
 ------------------------
@@ -179,8 +179,8 @@ file.  For instance:
 See also
 ^^^^^^^^
 
-* Craft parts: parts and steps: `environment variables`_
-* Craft parts: part properties: `override-prime`_
+* Craft Parts: :external+craft-parts:doc:`reference/parts_steps`
+* Craft parts: :external+craft-parts:ref:`reference-part-properties-override-prime`
 
 In code
 -------
@@ -199,7 +199,4 @@ information from them:
   Path("/root/partitions/component/bar-baz/prime")
 
 
-.. _organize: https://canonical-craft-parts.readthedocs-hosted.com/en/latest/common/craft-parts/reference/part_properties.html#organize
-.. _specifying paths: https://canonical-craft-parts.readthedocs-hosted.com/en/latest/common/craft-parts/explanation/filesets.html#partitions
-.. _environment variables: https://canonical-craft-parts.readthedocs-hosted.com/en/latest/reference/parts_steps.html#partition-specific-output-directory-environment-variables
 .. _override-prime: https://canonical-craft-parts.readthedocs-hosted.com/en/latest/common/craft-parts/reference/part_properties.html#override-prime

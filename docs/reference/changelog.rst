@@ -199,7 +199,7 @@ Models
 - ``any`` and ``*`` are now reserved names for platforms.
 - Platform names may not contain '/' characters.
 - Ubuntu Questing is now a 'stable' base, and Resolute is added as the new 'devel' one.
-- Add a classmethod on the :py:class:`~craft_application.models.Project` class to let
+- Add a class method to :py:class:`~craft_application.models.Project` to let
   applications fine-tune which bases are considered 'devel'.
 
 Fetch Service
@@ -509,7 +509,7 @@ Fixes
 - ``InitService`` no longer leaves empty files if rendering template fails.
 - Enable terminal output when testing with ``--debug``, ``--shell``, or
   ``--shell-after`` parameters.
-- Don't repull sources on test files changes.
+- Don't re-pull sources on test files changes.
 - Generate artifacts for testing in the project root directory.
 - Normalize the list of artifacts packed in ``PackageService`` to be relative
   to the project root directory.
@@ -539,7 +539,7 @@ Commands
 Models
 ======
 
-- A new :doc:`how-to guide </how-to-guides/platforms>` describes how to implement
+- A new :ref:`how-to guide <how-to-customize-platforms>` describes how to implement
   application-specific ``platforms`` keys.
 
 Services

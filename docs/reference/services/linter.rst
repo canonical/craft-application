@@ -60,7 +60,7 @@ Service
    :undoc-members:
    :show-inheritance:
 
-For a step-by-step guide on adding linters, see :doc:`/how-to-guides/add-a-linter`.
+For a step-by-step guide on adding linters, see :ref:`how-to-create-linter`.
 
 Ignore configuration
 --------------------
