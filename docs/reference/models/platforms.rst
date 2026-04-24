@@ -55,9 +55,9 @@ Inheritance
 -----------
 
 Applications may override the default model for each platform by inheriting from the
-``craft_application.models.Platform`` class and modifying it as
-needed.:ref:`how-to-customize-platforms` contains implementation instructions. The class
-has several validators that may need to be modified.
+``craft_application.models.Platform`` class and modifying it as needed.
+:ref:`how-to-customize-platforms` contains implementation instructions. The class has
+several validators that may need to be modified.
 
 .. autoclass:: craft_application.models.Platform
    :private-members: _validate_architectures, _validate_build_on_real_arch
