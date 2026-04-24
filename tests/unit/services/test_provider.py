@@ -1188,6 +1188,18 @@ def test_prune_instances_single_provider(monkeypatch, provider_service):
     mock_lxd.prune.assert_called_once_with(prune_templates=True)
 
 
+def test_prune_instances_none_provider(monkeypatch, provider_service):
+    """Prune for a single provider."""
+    mock_lxd = mock.MagicMock()
+    mock_lxd.name = "lxd"
+
+    monkeypatch.setattr(provider_service, "get_provider", lambda name: mock_lxd)
+
+    provider_service.prune_instances(provider_name=None, prune_templates=True)
+
+    mock_lxd.prune.assert_called_once_with(prune_templates=True)
+
+
 def test_prune_instances_all_providers(monkeypatch, provider_service):
     """Prune for all supported providers."""
     mock_lxd = mock.MagicMock()

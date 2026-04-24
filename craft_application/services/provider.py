@@ -628,7 +628,7 @@ class ProviderService(base.AppService):
                 "Multipass provider not available, skipping multipass pruning.",
             )
         else:
-            providers.append(self.get_provider())
+            providers.append(self.get_provider(name=provider_name))
 
         for provider in providers:
             emit.progress(f"Pruning instances for provider {provider.name!r}...")
