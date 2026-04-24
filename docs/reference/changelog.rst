@@ -21,8 +21,8 @@ Changelog
 Services
 ========
 
-- In a user-written part, upcoming base names can no longer contain forward slashes
-  (/) for bases starting with Ubuntu 26.04.
+- Starting with the Ubuntu 26.04 LTS base, a user-written part name can no longer
+  contain a forward slash (/).
 - The FetchService now supports registering callbacks to provide secrets during fetch-service
   session creation.
 
