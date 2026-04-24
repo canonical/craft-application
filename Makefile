@@ -14,7 +14,7 @@ endif
 ifdef VERSION_CODENAME
 UV_TEST_GROUPS += "--group=dev-$(VERSION_CODENAME)"
 UV_DOCS_GROUPS += "--group=dev-$(VERSION_CODENAME)"
-UV_LINT_GROUPS += "--group=dev-$(VERSION_CODENAME)" "--group=types" $(UV_DOCS_GROUPS)
+UV_LINT_GROUPS += "--group=dev-$(VERSION_CODENAME)"
 UV_TICS_GROUPS += "--group=dev-$(VERSION_CODENAME)"
 endif
 
