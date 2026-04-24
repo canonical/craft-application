@@ -617,7 +617,7 @@ class ProviderService(base.AppService):
         providers: list[craft_providers.Provider] = []
 
         if provider_name:
-            providers.append(self.get_provider(name=provider_name))
+            providers.append(self._get_provider_by_name(name=provider_name))
         elif all_providers:
             self.add_provider_if_available(
                 providers, "lxd", "LXD provider not available, skipping LXD pruning."
