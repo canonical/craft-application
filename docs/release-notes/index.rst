@@ -3,9 +3,9 @@
 Release notes
 =============
 
-This page lists the notes for past releases of Starcraft, which summarise new features,
-bug fixes and backwards-incompatible changes in each version. It also contains the
-release and support policies for Starcraft.
+This page lists the notes for past releases of Craft Application, which summarise new
+features, bug fixes and backwards-incompatible changes in each version. It also contains
+the release and support policies for Craft Application.
 
 
 Current releases
@@ -49,7 +49,7 @@ Past releases
 Release versioning
 ------------------
 
-Starcraft version naming follows the Semantic Versioning 2.0.0 scheme with
+Craft Application version naming follows the Semantic Versioning 2.0.0 scheme with
 numbers for major, minor, and patch versions.
 
 .. list-table::
@@ -75,44 +75,40 @@ numbers for major, minor, and patch versions.
 Long-term support
 -----------------
 
-Starcraft doesn't have long-term support (LTS) releases. However, we typically
-deliver a compatibility release shortly after Ubuntu LTS releases to ensure
-continuity.
-
-<Apps: Starcraft software bases are derived from Ubuntu LTS releases, and their
-development keeps pace with the OS's new releases and support lifecycle.>
+Craft Application doesn't have long-term support (LTS) releases. However, we typically
+deliver a compatibility release shortly after Ubuntu LTS releases to ensure continuity.
 
 .. toctree::
-   :maxdepth: 1
+    :maxdepth: 1
 
 
 .. release note template:
 
-  Starcraft 2.0 release notes
-  ===========================
+  Craft Application 2.0 release notes
+  ===================================
 
   15 October 2024
 
-  Learn about the new features, changes, and fixes introduced in Starcraft 2.0.
+  Learn about the new features, changes, and fixes introduced in Craft Application 2.0.
 
 
   Requirements and compatibility
   ------------------------------
 
-  Starcraft 2.0 requires Python 3.11 or higher.
+  Craft Application 2.0 requires Python 3.11 or higher.
 
   <If there are multiple requirements, remove "Python 3.11 or higher" in the
   previous paragraph and add a separate list here, with the same format of
   "<package> or higher".>
 
-  For development and testing, Starcraft requires a <architecture> system or VM
+  For development and testing, Craft Application requires a <architecture> system or VM
   with a minimum of <number>GB RAM.
 
 
   What's new
   ----------
 
-  Starcraft 2.0 brings the following features, integrations, and improvements.
+  Craft Application 2.0 brings the following features, integrations, and improvements.
 
 
   <Important change>
@@ -154,7 +150,7 @@ development keeps pace with the OS's new releases and support lifecycle.>
   their locations more predictable.">
 
   <Paragraph 3, optional: Provide a call to action. This could take several
-  forms, such as a call to immediately perform a relevant action in Starcraft,
+  forms, such as a call to immediately perform a relevant action in Craft Application,
   solicititation of the reader's feedback on a form or forum, or a link to
   documentation, demo, blog post, and so on. For example, "See ``:ref:`Manage
   store profile``` to configure how the public can engage with your snap on the
@@ -164,7 +160,7 @@ development keeps pace with the OS's new releases and support lifecycle.>
   Minor features
   --------------
 
-  Starcraft 2.0 brings the following minor changes.
+  Craft Application 2.0 brings the following minor changes.
 
 
   <Feature A>
@@ -181,7 +177,7 @@ development keeps pace with the OS's new releases and support lifecycle.>
   Backwards-incompatible changes
   ------------------------------
 
-  The following changes are incompatible with previous versions of Starcraft.
+  The following changes are incompatible with previous versions of Craft application.
 
 
   <"Removed" or "Disabled"> <feature B>
@@ -196,7 +192,7 @@ development keeps pace with the OS's new releases and support lifecycle.>
   alternative solution, or state if no alternative exists. If necessary,
   describe the consequences of the reader's inaction. Link to relevant
   documentation, standards, or public discussion. For example, "In accordance
-  with the report, Starcraft 2.0 no longer supports encryption algorithm X. As
+  with the report, Craft application 2.0 no longer supports encryption algorithm X. As
   of this release, if you haven't already we highly recommend you immediately
   switch to encryption algorithm Y to ensure your data stays protected. For
   more details about this decision and our policy, see ```Security notice on
@@ -206,7 +202,7 @@ development keeps pace with the OS's new releases and support lifecycle.>
   Feature deprecations
   --------------------
 
-  The following features are deprecated in Starcraft 2.0:
+  The following features are deprecated in Craft Application 2.0:
 
   Deprecated <feature C>
   ~~~~~~~~~~~~~~~~~~~~~~
@@ -239,18 +235,18 @@ development keeps pace with the OS's new releases and support lifecycle.>
   Fixed bugs and issues
   ---------------------
 
-  The following issues have been resolved in Starcraft 2.0.
+  The following issues have been resolved in Craft Application 2.0.
 
 
-  Starcraft 2.0.0
-  ~~~~~~~~~~~~~~~
+  Craft Application 2.0.0
+  ~~~~~~~~~~~~~~~~~~~~~~~
 
   - `ID <link>`_ <Title>
   - `ID <link>`_ <Title>
 
 
-  Starcraft 2.0.1
-  ~~~~~~~~~~~~~~~
+  Craft Application 2.0.1
+  ~~~~~~~~~~~~~~~~~~~~~~~
 
   - `ID <link>`_ <Title>
   - `ID <link>`_ <Title>
