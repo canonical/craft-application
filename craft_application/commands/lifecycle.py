@@ -480,7 +480,13 @@ class PackCommand(LifecycleCommand):
         parsed_args.shell_after = False
 
         super()._run(parsed_args, step_name="prime")
-        self._run_post_prime_steps()
+        try:
+            self._run_post_prime_steps()
+        except Exception as err:
+            if debug:
+                handle_runtime_error(self._app, err)
+                _launch_shell()
+            raise
 
         if shell:
             _launch_shell()

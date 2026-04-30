@@ -856,6 +856,42 @@ def test_debug_pack(
     mock_subprocess_run.assert_called_once_with(["bash"], check=False)
 
 
+def test_debug_pack_post_prime_steps(
+    app_metadata: AppMetadata,
+    fake_services: ServiceFactory,
+    mocker: pytest_mock.MockFixture,
+    mock_subprocess_run: mock.MagicMock,
+) -> None:
+    """Check --debug behavior when _run_post_prime_steps raises."""
+    parsed_args = argparse.Namespace(
+        destructive_mode=True, debug=True, output=pathlib.Path()
+    )
+
+    mocker.patch.object(fake_services.lifecycle, "run")
+    mock_pack = mocker.patch.object(fake_services.package, "pack")
+    mocker.patch.object(
+        PackCommand,
+        "_run_post_prime_steps",
+        side_effect=RuntimeError("Post-prime steps failed!"),
+    )
+
+    command = PackCommand(
+        {
+            "app": app_metadata,
+            "services": fake_services,
+        }
+    )
+
+    with pytest.raises(RuntimeError, match="Post-prime steps failed!"):
+        command.run(parsed_args)
+
+    mock_subprocess_run.assert_called_once_with(["bash"], check=False)
+    assert not mock_pack.called
+
+    logs = craft_cli.emit.log_filepath.read_text()
+    assert re.search("RuntimeError: Post-prime steps failed!", logs)
+
+
 def test_run_post_prime(app_metadata, mock_services, mocker, fake_project_file):
     mock_services.get("project").configure(platform=None, build_for=None)
     command = PrimeCommand(
