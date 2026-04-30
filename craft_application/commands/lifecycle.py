@@ -426,7 +426,14 @@ class PrimeCommand(LifecyclePartsCommand):
             return
         # Only run the post prime steps in the process that
         # ran the lifecycle
-        self._run_post_prime_steps()
+        debug = getattr(parsed_args, "debug", False)
+        try:
+            self._run_post_prime_steps()
+        except Exception as err:
+            if debug:
+                handle_runtime_error(self._app, err)
+                _launch_shell()
+            raise
 
 
 class PackCommand(LifecycleCommand):
