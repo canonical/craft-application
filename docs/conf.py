@@ -1,104 +1,234 @@
-# Copyright 2023-2024 Canonical Ltd.
-#
-# This program is free software; you can redistribute it and/or
-# modify it under the terms of the GNU Lesser General Public
-# License version 3 as published by the Free Software Foundation.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-# Lesser General Public License for more details.
-#
-# You should have received a copy of the GNU Lesser General Public License
-# along with this program; if not, write to the Free Software Foundation,
-# Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
-#
-"""Configuration for craft-application documentation."""
-
 import datetime
+import os
 
+# Configuration for the Sphinx documentation builder.
+# All configuration specific to your project should be done in this file.
+#
+# A complete list of built-in Sphinx configuration values:
+# https://www.sphinx-doc.org/en/master/usage/configuration.html
+#
+# Our starter pack uses the custom Canonical Sphinx extension
+# to keep all documentation based on it consistent and on brand:
+# https://github.com/canonical/canonical-sphinx
+
+
+#######################
+# Project information #
+#######################
+
+# Project name
 project = "Craft Application"
 author = "Canonical"
 
+# Format the product name + version for the TOC and HTML title
+# When the product begins versioning, uncomment this block
+# release = <starcraft>.__version__
+# if ".post" in release:
+#     release = "dev"
+# else:
+#     major, minor, *_ = release.split(".")
+#     release = f"{major}.{minor}"
+
+# Copyright string; shown at the bottom of the page
 copyright = "2023-%s, %s" % (datetime.date.today().year, author)
 
-# region Configuration for canonical-sphinx
+# Documentation website URL
 ogp_site_url = "https://canonical-craft-application.readthedocs-hosted.com/"
+
+# Preview name of the documentation website
 ogp_site_name = project
+
+# Preview image URL
 ogp_image = "https://assets.ubuntu.com/v1/253da317-image-document-ubuntudocs.svg"
 
+# Product favicon; shown in bookmarks, browser tabs, etc.
+# html_favicon = '.sphinx/_static/favicon.png'
+
+# Dictionary of values to pass into the Sphinx context for all pages:
+# https://www.sphinx-doc.org/en/master/usage/configuration.html#confval-html_context
 html_context = {
+    # Product page URL; can be different from product docs URL
     "product_page": "github.com/canonical/craft-application",
+    # Product tag image; the orange part of your logo, shown in the page header
+    # 'product_tag': '_static/tag.png',
+    "discourse": "",
+    # Your Mattermost channel URL
+    "mattermost": "",
+    # Your Matrix channel URL
+    "matrix": "https://matrix.to/#/#starcraft-development:ubuntu.com",
+    # Your documentation GitHub repository URL
     "github_url": "https://github.com/canonical/craft-application",
+    # Docs branch in the repo; used in links for viewing the source files
+    'repo_default_branch': 'main',
+    # Docs location in the repo; used in links for viewing the source files
+    "repo_folder": "/docs/",
+    # List contributors on individual pages
+    "display_contributors": False,
+    # Required for feedback button
+    'github_issues': 'enabled',
 }
 
-# Target repository for the edit button on pages
+#html_extra_path = []
+
+# Enable the edit button on pages
 html_theme_options = {
-    "source_edit_link": "https://github.com/canonical/craft-application",
+  'source_edit_link': "https://github.com/canonical/craft-application",
 }
 
-# endregion
+# Project slug; see https://meta.discourse.org/t/what-is-category-slug/87897
+# slug = ''
 
+
+#########################
+# Sitemap configuration #
+#########################
+
+# Use RTD canonical URL to ensure duplicate pages have a specific canonical URL
+html_baseurl = os.environ.get("READTHEDOCS_CANONICAL_URL", "/")
+
+# sphinx-sitemap uses html_baseurl to generate the full URL for each page:
+sitemap_url_scheme = '{link}'
+
+# Include `lastmod` dates in the sitemap:
+# sitemap_show_lastmod = True
+
+# Exclude generated pages from the sitemap:
+sitemap_excludes = [
+    "404/",
+    "genindex/",
+    "search/",
+]
+
+
+################################
+# Template and asset locations #
+################################
+
+html_static_path = ["_static"]
+templates_path = ["_templates"]
+
+
+#############
+# Redirects #
+#############
+
+rediraffe_redirects = "redirects.txt"
+
+
+###########################
+# Link checker exceptions #
+###########################
+
+# A regex list of URLs that are ignored by 'make linkcheck'
+linkcheck_anchors_ignore = [
+    "#",
+    ":",
+    r"https://github\.com/.*",
+]
+linkcheck_ignore = [
+    # Ignore releases, since we'll include the next release before it exists.
+    r"^https://github.com/canonical/[a-z]*craft[a-z-]*/releases/.*",
+    # Entire domains to ignore due to flakiness or issues
+    r"^https://www.gnu.org/",
+    r"^https://crates.io/",
+    r"^https://([\w-]*\.)?npmjs.org",
+    r"^https://rsync.samba.org",
+    r"^https://ubuntu.com",
+]
+
+# Give linkcheck multiple tries on failure
+linkcheck_retries = 20
+
+
+########################
+# Configuration extras #
+########################
+
+# Custom Sphinx extensions; see
+# https://www.sphinx-doc.org/en/master/usage/extensions/index.html
+# NOTE: The canonical_sphinx extension is required for the starter pack.
+extensions = [
+    "canonical_sphinx",
+    "notfound.extension",
+    "sphinx_design",
+    # "sphinx_tabs.tabs",
+    # "sphinxcontrib.jquery"
+    "sphinxext.opengraph",
+    # "sphinx_config_options",
+    # "sphinx_contributor_listing",
+    # "sphinx_filtered_toctree",
+    "sphinx_related_links",
+    "sphinx_roles",
+    "sphinx_terminal",
+    # "sphinx_ubuntu_images",
+    # "sphinx_youtube_links",
+    # "sphinxcontrib.cairosvgconverter",
+    # "sphinx_last_updated_by_git",
+    "sphinx.ext.intersphinx",
+    "sphinx_sitemap",
+    # Custom Craft extensions
+    "pydantic_kitbash",
+    "sphinxext.rediraffe",
+    "sphinx.ext.autodoc",
+    "sphinx.ext.doctest",
+    "sphinx.ext.viewcode",
+    "sphinx_substitution_extensions",
+]
+
+# Excludes files or directories from processing
 exclude_patterns = [
-    "_build",
-    "Thumbs.db",
-    ".DS_Store",
-    "**venv",
-    "base",
-    "sphinx-resources",
+    "README.md",  # Docs README
+    # Common docs
     "common/README.md",
     "common/craft-application/how-to-guides/build-remotely.rst",
     "common/craft-application/how-to-guides/reuse-packages-between-builds.rst",
     "common/craft-application/reference/remote-builds.rst",
     "common/craft-application/reference/fetch-service.rst",
     "common/craft-application/reference/strict-platform-names.rst",
-    # There's no tutorials right now, so just hide the scaffolding
     "tutorials",
+    "release-notes",
 ]
 
-# links to ignore when checking links
-linkcheck_ignore = [
-    # Ignore releases, since we'll include the next release before it exists.
-    "https://github.com/canonical/[a-z]*craft[a-z-]*/releases/.*",
-]
-
-extensions = [
-    "canonical_sphinx",
-    "sphinx.ext.autodoc",
-    "sphinx.ext.intersphinx",
-    "sphinx_substitution_extensions",
-    "sphinxext.rediraffe",
-    "pydantic_kitbash",
-]
-
-templates_path = ["_templates"]
-
-show_authors = False
-
-# endregion
-# region Options for HTML output
-# https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
-
-html_theme = "furo"
-html_static_path = ["_static"]
+# Adds custom CSS files, located under 'html_static_path'
 html_css_files = [
-    "css/custom.css",
+    'css/cookie-banner.css'
 ]
 
-# endregion
-# region Options for extensions
-# Intersphinx extension
-# https://www.sphinx-doc.org/en/master/usage/extensions/intersphinx.html#configuration
+# Adds custom JavaScript files, located under 'html_static_path'
+html_js_files = [
+    'js/bundle.js',
+]
 
-# Type hints configuration
-set_type_checking_flag = True
-typehints_fully_qualified = False
-always_document_param_types = True
+# Specifies a reST snippet to be appended to each .rst file
+rst_epilog = """
+"""
 
-# Github config
-github_username = "canonical"
-github_repository = "craft-application"
+# Feedback button at the top; enabled by default
+# disable_feedback_button = True
 
+# Your manpage URL
+# manpages_url = 'https://manpages.ubuntu.com/manpages/{codename}/en/' + \
+#     'man{section}/{page}.{section}.html'
+
+# Specifies a reST snippet to be prepended to each .rst file
+# This defines a :center: role that centers table cell content.
+# This defines a :h2: role that styles content for use with PDF generation.
+rst_prolog = """
+.. role:: center
+   :class: align-center
+.. role:: h2
+    :class: hclass2
+.. role:: woke-ignore
+    :class: woke-ignore
+.. role:: vale-ignore
+    :class: vale-ignore
+"""
+
+# Workaround for https://github.com/canonical/canonical-sphinx/issues/34
+if "discourse_prefix" not in html_context and "discourse" in html_context:
+    html_context["discourse_prefix"] = f"{html_context['discourse']}/t/"
+
+# Add configuration for intersphinx mapping
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3", None),
     "craft-cli": (
@@ -117,14 +247,24 @@ intersphinx_mapping = {
     "craft-providers": (
         "https://canonical-craft-providers.readthedocs-hosted.com/en/latest", None
     ),
+    "starflow": (
+        "https://canonical-starflow.readthedocs-hosted.com", None
+    ),
 }
 
+# Block Intersphinx from looking up external sources with internal references. In other
+# words, only :external+<project>... will search in other projects.
+intersphinx_disabled_reftypes = ["std:*"]
+
+
+##############################
+# Custom Craft configuration #
+##############################
+
+# Type hints configuration
+set_type_checking_flag = True
+typehints_fully_qualified = False
+always_document_param_types = True
+
+# Autodoc config
 autodoc_class_signature = "separated"
-
-# Client-side page redirects.
-rediraffe_redirects = "redirects.txt"
-
-# Reuse epilog
-rst_epilog = """
-.. include:: /reuse/links.txt
-"""

@@ -2,6 +2,7 @@
    :description: How to implement and integrate a linter in a craft app.
 
 .. _how-to-add-a-new-linter:
+.. _how-to-create-linter:
 
 Create a linter
 ===============

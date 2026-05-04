@@ -11,19 +11,21 @@ These pages provide reference information for services provided by Craft Applica
 Service factory API documentation
 ---------------------------------
 
+.. vale off
+
 .. autoclass:: craft_application.services.ServiceFactory
     :members: register,reset,update_kwargs,get_class,get
     :member-order: bysource
     :exclude-members: __new__
 
 .. toctree::
-   :maxdepth: 1
-   :hidden:
+    :maxdepth: 1
+    :hidden:
 
-   app
-   buildplan
-   config
-   lifecycle
-   package
-   project
-   linter
+    app
+    buildplan
+    config
+    lifecycle
+    package
+    project
+    linter
