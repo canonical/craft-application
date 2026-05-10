@@ -557,7 +557,7 @@ class ProjectService(base.AppService):
             new_part = {
                 "plugin": "nil",
                 "override-build": dedent(f"""
-                chisel cut --release=ubuntu-bins-26.04 --root=. {" ".join(needed_slices)},
+                chisel cut --release=ubuntu-bins-26.04 --root=. {" ".join(needed_slices)}
                 """),
             }
             project["parts"]["craft/build-slices"] = new_part
