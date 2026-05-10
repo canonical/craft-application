@@ -20,6 +20,7 @@ import datetime
 import os
 import pathlib
 import warnings
+from textwrap import dedent
 from typing import TYPE_CHECKING, Any, Literal, cast, final
 
 import craft_parts
@@ -555,8 +556,9 @@ class ProjectService(base.AppService):
         if needed_slices:
             new_part = {
                 "plugin": "nil",
-                "stage-slices": sorted(needed_slices),
-                "prime": ["-*"],
+                "override-build": dedent(f"""
+                chisel cut --release=ubuntu-bins-26.04 --root=. {" ".join(needed_slices)},
+                """),
             }
             project["parts"]["craft/build-slices"] = new_part
 
