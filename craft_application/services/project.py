@@ -546,7 +546,7 @@ class ProjectService(base.AppService):
 
     def _preprocess_slices(self, project: dict[str, Any]) -> None:
         needed_slices = set()
-        for part in project.get("parts", []):
+        for _part_name, part in project.get("parts", {}):
             if slices := part.get("build-slices"):
                 needed_slices.update(slices)
                 part.pop("build-slices")
@@ -556,6 +556,7 @@ class ProjectService(base.AppService):
             new_part = {
                 "plugin": "nil",
                 "stage-slices": sorted(needed_slices),
+                "prime": ["-*"],
             }
             project["parts"]["craft/build-slices"] = new_part
 
