@@ -546,7 +546,7 @@ class ProjectService(base.AppService):
 
     def _preprocess_slices(self, project: dict[str, Any]) -> None:
         needed_slices = set()
-        for _part_name, part in project.get("parts", {}):
+        for part in project.get("parts", {}).values():
             if slices := part.get("build-slices"):
                 needed_slices.update(slices)
                 part.pop("build-slices")
