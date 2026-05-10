@@ -538,10 +538,26 @@ class ProjectService(base.AppService):
         project = self.get_raw()
         GrammarAwareProject.validate_grammar(project)
         self._validate_user_provided_part_names(project)
+        self._preprocess_slices(project)
         self._app_preprocess_project(
             project, build_on=build_on, build_for=build_for, platform=platform
         )
         return project
+
+    def _preprocess_slices(self, project: dict[str, Any]) -> None:
+        needed_slices = set()
+        for part in project.get("parts", []):
+            if slices := part.get("build-slices"):
+                needed_slices.update(slices)
+                part.pop("build-slices")
+                part.setdefault("after", []).append("craft/build-slices")
+
+        if needed_slices:
+            new_part = {
+                "plugin": "nil",
+                "stage-slices": sorted(needed_slices),
+            }
+            project["parts"]["craft/build-slices"] = new_part
 
     @final
     def render_for(
