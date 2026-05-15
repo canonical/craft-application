@@ -20,7 +20,7 @@ Handler Order
 -------------
 
 The application's configuration is retrieved from the handlers in the order in which
-they were registered to the config cervice. By default this order is:
+they were registered to the config service. By default this order is:
 
 1. :py:class:`AppEnvironmentHandler` gets app-specific environment variables.
 2. :py:class:`CraftEnvironmentHandler` gets general ``CRAFT_*`` environment variables.
@@ -48,6 +48,8 @@ in the configuration model.
 API documentation
 -----------------
 
+.. vale off
+
 .. autoclass:: ConfigHandler
     :members:
 
@@ -67,5 +69,7 @@ API documentation
     :member-order: bysource
     :members:
     :private-members:
+
+.. vale on
 
 .. _`snap configuration option`: https://snapcraft.io/docs/configuration-in-snaps

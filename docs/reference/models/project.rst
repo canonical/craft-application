@@ -69,7 +69,7 @@ Class documentation
 -------------------
 
 This class documentation shows the additional members of the class that are responsible
-for validation or provide extra utility outside of the pydantic model.
+for validation or provide extra utility outside of the Pydantic model.
 
 .. autoclass:: Project
     :members:

@@ -4,8 +4,9 @@ Explanation
 ===========
 
 .. toctree::
-   :maxdepth: 1
+    :hidden:
 
-   structure-of-a-craft-app
-   build-plans
-   Cryptographic technology <cryptography>
+    structure-of-a-craft-app
+    build-plans
+    Cryptographic technology <cryptography>
+    documentation

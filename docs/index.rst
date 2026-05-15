@@ -1,16 +1,17 @@
-.. Craft Application documentation root file
+.. meta::
+
+    :description: Craft Application is the base library for all Starcraft apps.
+
 
 Craft Application
 =================
 
-.. toctree::
-   :maxdepth: 1
-   :hidden:
+Craft Application is the base library for all Starcraft apps.
 
-   how-to-guides/index
-   reference/index
-   explanation/index
+Its purpose is to provide a single source of truth for the implementation of common
+Starcraft mechanisms, such as application services and project models.
 
+This library is most useful for app developers in the Starcraft family.
 
 .. list-table::
 
@@ -29,5 +30,13 @@ Craft Application is a member of the Canonical family. It's an open source proje
 warmly welcomes community projects, contributions, suggestions, fixes and constructive
 feedback.
 
-* `Ubuntu Code of Conduct <https://ubuntu.com/community/code-of-conduct>`_.
-* `Canonical contributor licenses agreement <https://ubuntu.com/legal/contributors>`_.
+- `Ubuntu Code of Conduct <https://ubuntu.com/community/docs/ethos/code-of-conduct>`__
+- `Canonical Contributor License Agreement <https://ubuntu.com/legal/contributors>`__
+
+
+.. toctree::
+    :hidden:
+
+    how-to/index
+    reference/index
+    explanation/index
