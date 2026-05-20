@@ -16,6 +16,7 @@
 from __future__ import annotations
 
 import argparse
+import re
 from unittest import mock
 
 import pytest
@@ -27,14 +28,14 @@ from typing_extensions import override
 @pytest.fixture
 def fake_command(app_metadata, fake_services):
     class FakeCommand(base.AppCommand):
-        _run_managed = True
+        _runs_managed = True
         name = "fake"
         help_msg = "Help!"
         overview = "It's an overview."
 
         @override
-        def run_managed(self, parsed_args: argparse.Namespace) -> bool:
-            return self._run_managed
+        def runs_managed(self, parsed_args: argparse.Namespace) -> bool:
+            return self._runs_managed
 
     return FakeCommand(
         {
@@ -45,7 +46,7 @@ def fake_command(app_metadata, fake_services):
 
 
 def test_get_managed_cmd_unmanaged(fake_command):
-    fake_command._run_managed = False
+    fake_command._runs_managed = False
 
     with pytest.raises(RuntimeError):
         fake_command.get_managed_cmd(argparse.Namespace())
@@ -62,6 +63,17 @@ def test_get_managed_cmd(fake_command, verbosity, app_metadata):
         f"--verbosity={verbosity.name.lower()}",
         "fake",
     ]
+
+
+def test_run_managed_deprecated(fake_command):
+    expected = re.escape(
+        "AppCommand.run_managed is deprecated. Use 'runs_managed' instead."
+    )
+
+    with pytest.deprecated_call(match=expected):
+        result = fake_command.run_managed(argparse.Namespace())
+
+    assert result is fake_command.runs_managed(argparse.Namespace())
 
 
 def test_without_config(emitter):

@@ -664,7 +664,7 @@ class Application:
         self._configure_services(provider_name)
 
         return_code = 1  # General error
-        if not command.run_managed(parsed_args):
+        if not command.runs_managed(parsed_args):
             # command runs in the outer instance
             craft_cli.emit.debug(f"Running {self.app.name} {command.name} on host")
             return_code = dispatcher.run() or os.EX_OK

@@ -91,7 +91,7 @@ class AppCommand(BaseCommand):
         """
         return self.always_load_project
 
-    def run_managed(
+    def runs_managed(
         self,
         parsed_args: argparse.Namespace,  # noqa: ARG002 (the unused argument is for subclasses)
     ) -> bool:
@@ -101,6 +101,21 @@ class AppCommand(BaseCommand):
         including by inspecting the arguments in ``parsed_args``.
         """
         return False
+
+    def run_managed(
+        self,
+        parsed_args: argparse.Namespace,
+    ) -> bool:
+        """Whether this command should run in managed mode.
+
+        Deprecated in favor of runs_managed.
+        """
+        warnings.warn(
+            "AppCommand.run_managed is deprecated. Use 'runs_managed' instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.runs_managed(parsed_args)
 
     def provider_name(
         self,
@@ -128,7 +143,7 @@ class AppCommand(BaseCommand):
 
         :deprecated: and unused.
         """
-        if not self.run_managed(parsed_args):
+        if not self.runs_managed(parsed_args):
             raise RuntimeError("Unmanaged commands should not be run in managed mode.")
         cmd_name = self._app.name
         verbosity = emit.get_mode().name.lower()

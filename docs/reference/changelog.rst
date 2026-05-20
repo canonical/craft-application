@@ -15,6 +15,19 @@ Changelog
 
     For a complete list of commits, check out the `1.2.3`_ release on GitHub.
 
+
+7.0.0 (unreleased)
+------------------
+
+Commands
+========
+
+- :py:meth:`~craft_application.commands.AppCommand.run_managed` is deprecated
+  in favor of :py:meth:`~craft_application.commands.AppCommand.runs_managed`.
+
+For a complete list of commits, check out the `7.0.0`_ release on GitHub.
+
+
 6.4.0 (2026-04-23)
 ------------------
 
@@ -1303,3 +1316,4 @@ For a complete list of commits, check out the `2.7.0`_ release on GitHub.
 .. _6.3.0: https://github.com/canonical/craft-application/releases/tag/6.3.0
 .. _6.3.1: https://github.com/canonical/craft-application/releases/tag/6.3.1
 .. _6.4.0: https://github.com/canonical/craft-application/releases/tag/6.4.0
+.. _7.0.0: https://github.com/canonical/craft-application/releases/tag/7.0.0
