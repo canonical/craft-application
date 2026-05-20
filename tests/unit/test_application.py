@@ -21,7 +21,6 @@ import importlib.metadata
 import logging
 import pathlib
 import re
-import subprocess
 import sys
 from textwrap import dedent
 from unittest import mock
@@ -53,7 +52,6 @@ from craft_application.util import (
 )
 from craft_cli import CraftError, emit
 from craft_parts.plugins.plugins import PluginType
-from craft_providers import lxd
 
 from tests.conftest import FakeApplication
 
@@ -281,53 +279,32 @@ def test_log_path(monkeypatch, app, provider_managed, expected):
 
 
 @pytest.mark.usefixtures("platform_independent_project")
-def test_run_managed_success(mocker, app, fake_host_architecture):
+def test_run_managed_success(app, fake_host_architecture):
     mock_provider = mock.MagicMock(spec_set=services.ProviderService)
     app.services._services["provider"] = mock_provider
-    mock_pause = mocker.spy(craft_cli.emit, "pause")
 
-    app.run_managed("platform-independent", None)
+    app._run_managed("platform-independent", None)
 
-    mock_provider.instance.assert_called_once_with(
+    mock_provider.run_managed.assert_called_once_with(
         craft_platforms.BuildInfo(
             platform="platform-independent",
             build_on=fake_host_architecture,
             build_for="all",
             build_base=mock.ANY,
         ),
-        work_dir=mock.ANY,
-        clean_existing=False,
-        use_base_instance=True,
+        enable_fetch_service=True,
     )
-    mock_pause.assert_called_once_with()
 
 
-def test_run_managed_failure(app, fake_project):
+def test_run_managed_failure(app):
     mock_provider = mock.MagicMock(spec_set=services.ProviderService)
-    instance = mock_provider.instance.return_value.__enter__.return_value
-    instance.execute_run.side_effect = subprocess.CalledProcessError(1, [])
+    mock_provider.run_managed.side_effect = craft_providers.ProviderError(
+        "Failed to run testcraft in instance"
+    )
     app.services._services["provider"] = mock_provider
-    app.project = fake_project
 
-    with pytest.raises(craft_providers.ProviderError) as exc_info:
-        app.run_managed(None, get_host_architecture())
-
-    assert exc_info.value.brief == "Failed to execute testcraft in instance."
-
-
-@pytest.mark.parametrize("app_metadata", [{"enable_pro_support": True}], indirect=True)
-def test_run_managed_configure_pro(mocker, app, fake_project):
-    """Ensure that configure_instance_with_pro is called during run_managed."""
-    mock_provider = mocker.MagicMock(spec_set=services.ProviderService)
-    app.services.provider = mock_provider
-    mock_instance = mocker.MagicMock(spec=lxd.LXDInstance)
-    mock_provider.instance.return_value.__enter__.return_value = mock_instance
-    app.project = fake_project
-    app._pro_services = ProServices(["esm-apps"])
-
-    app.run_managed(None, get_host_architecture())
-
-    mock_provider.configure_instance_with_pro.assert_called_once_with(mock_instance)
+    with pytest.raises(craft_providers.ProviderError):
+        app._run_managed(None, get_host_architecture())
 
 
 @pytest.mark.parametrize(
@@ -349,25 +326,36 @@ def test_configure_services_pro_services(
     assert calls["provider"]["pro_services"] is pro_services
 
 
-def test_run_managed_multiple(app, fake_host_architecture):
+def test_run_managed_multiple(mocker, app):
     mock_provider = mock.MagicMock(spec_set=services.ProviderService)
     app.services._services["provider"] = mock_provider
-
-    app.run_managed(None, None)
-
-    mock_provider.instance.assert_called_with(
+    fake_builds = [
         craft_platforms.BuildInfo(
-            platform=mock.ANY,
-            build_on=fake_host_architecture,
-            build_for=mock.ANY,
-            build_base=mock.ANY,
+            platform="platform-a",
+            build_on=craft_platforms.DebianArchitecture.AMD64,
+            build_for=craft_platforms.DebianArchitecture.AMD64,
+            build_base=craft_platforms.DistroBase("ubuntu", "26.04"),
         ),
-        work_dir=mock.ANY,
-        clean_existing=False,
-        use_base_instance=True,
+        craft_platforms.BuildInfo(
+            platform="platform-b",
+            build_on=craft_platforms.DebianArchitecture.AMD64,
+            build_for=craft_platforms.DebianArchitecture.RISCV64,
+            build_base=craft_platforms.DistroBase("ubuntu", "26.04"),
+        ),
+    ]
+    mocker.patch.object(
+        app.services.get("build_plan"), "plan", return_value=fake_builds
     )
 
-    assert len(mock_provider.instance.mock_calls) > 1
+    app._run_managed(None, None)
+
+    assert mock_provider.run_managed.call_count == 2
+    mock_provider.run_managed.assert_has_calls(
+        [
+            mock.call(fake_builds[0], enable_fetch_service=True),
+            mock.call(fake_builds[1], enable_fetch_service=True),
+        ]
+    )
 
 
 @pytest.mark.parametrize("build_for", craft_platforms.DebianArchitecture)
@@ -376,22 +364,20 @@ def test_run_managed_specified_arch(app, fake_host_architecture, build_for):
     app.services._services["provider"] = mock_provider
 
     try:
-        app.run_managed(None, build_for)
+        app._run_managed(None, build_for)
     except errors.EmptyBuildPlanError:
         pytest.skip(
             reason=f"build-for {build_for} has no build-on {fake_host_architecture}"
         )
 
-    mock_provider.instance.assert_called_with(
+    mock_provider.run_managed.assert_called_with(
         craft_platforms.BuildInfo(
             platform=mock.ANY,
             build_on=fake_host_architecture,
             build_for=build_for,
             build_base=mock.ANY,
         ),
-        work_dir=mock.ANY,
-        clean_existing=False,
-        use_base_instance=True,
+        enable_fetch_service=True,
     )
 
 
@@ -400,22 +386,20 @@ def test_run_managed_specified_platform(app, fake_platform, fake_host_architectu
     app.services._services["provider"] = mock_provider
 
     try:
-        app.run_managed(fake_platform, None)
+        app._run_managed(fake_platform, None)
     except errors.EmptyBuildPlanError:
         pytest.skip(
             reason=f"Platform {fake_platform} has no builds on {fake_host_architecture}"
         )
 
-    mock_provider.instance.assert_called_once_with(
+    mock_provider.run_managed.assert_called_once_with(
         craft_platforms.BuildInfo(
             platform=fake_platform,
             build_on=fake_host_architecture,
             build_for=mock.ANY,
             build_base=mock.ANY,
         ),
-        work_dir=mock.ANY,
-        clean_existing=False,
-        use_base_instance=True,
+        enable_fetch_service=True,
     )
 
 
@@ -424,7 +408,7 @@ def test_run_managed_empty_plan(mocker, app):
     mocker.patch.object(build_plan_service, "plan", return_value=[])
 
     with pytest.raises(errors.EmptyBuildPlanError):
-        app.run_managed(None, None)
+        app._run_managed(None, None)
 
 
 @pytest.mark.parametrize(
@@ -732,7 +716,9 @@ def test_run_success_managed_inside_managed(
     mocker.patch.object(
         mock_dispatcher, "parsed_args", return_value={"platform": "foo"}
     )
-    app.run_managed = mock.Mock()
+    mock_provider_run_managed = mocker.patch.object(
+        app.services.get("provider"), "run_managed"
+    )
     mock_dispatcher.run.return_value = return_code
     mock_dispatcher.pre_parse_args.return_value = {}
     monkeypatch.setattr(sys, "argv", ["testcraft", "pull"])
@@ -740,7 +726,7 @@ def test_run_success_managed_inside_managed(
 
     check.equal(app.run(), return_code or 0)
     with check:
-        app.run_managed.assert_not_called()
+        mock_provider_run_managed.assert_not_called()
     with check:
         mock_dispatcher.run.assert_called_once_with()
 

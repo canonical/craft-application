@@ -19,6 +19,18 @@ Changelog
 7.0.0 (unreleased)
 ------------------
 
+Application
+===========
+
+- ``Application.run_managed`` is now a private function,
+  :py:meth:`Application._run_managed <craft_application.Application._run_managed>`.
+  Apps that need to run a managed instance should use
+  :py:meth:`ProviderService.run_managed
+  <craft_application.services.ProviderService.run_managed>` instead.
+- :py:meth:`Application._run_managed <craft_application.Application._run_managed>`
+  now calls :py:meth:`ProviderService.run_managed
+  <craft_application.services.ProviderService.run_managed>`.
+
 Commands
 ========
 

@@ -21,7 +21,6 @@ import importlib
 import os
 import pathlib
 import signal
-import subprocess
 import sys
 import traceback
 import warnings
@@ -33,7 +32,6 @@ from typing import TYPE_CHECKING, Annotated, Any, Literal, cast, final
 import annotated_types
 import craft_cli
 import craft_platforms
-import craft_providers
 from platformdirs import user_cache_path
 
 from craft_application import _config, commands, errors, models, util
@@ -417,76 +415,25 @@ class Application:
         """Shortcut to tell whether we're running in managed mode."""
         return self.services.get_class("provider").is_managed()
 
-    def run_managed(self, platform: str | None, build_for: str | None) -> None:
-        """Run the application in a managed instance."""
-        build_planner = self.services.get("build_plan")
-        if platform:
-            build_planner.set_platforms(platform)
-        if build_for:
-            build_planner.set_build_fors(build_for)
-        plan = build_planner.plan()
-
-        if not plan:
-            raise errors.EmptyBuildPlanError
-
+    def _run_managed(self, platform: str | None, build_for: str | None) -> None:
+        """Run the each build in the build plan in managed mode."""
         if self._enable_fetch_service:
             self.services.get("fetch").set_policy(self._fetch_service_policy)
 
-        extra_args: dict[str, Any] = {}
+        build_plan_service = self.services.get("build_plan")
+        if platform:
+            build_plan_service.set_platforms(platform)
+        if build_for:
+            build_plan_service.set_build_fors(build_for)
+        plan = build_plan_service.plan()
+        if not plan:
+            raise errors.EmptyBuildPlanError
+
+        provider = self.services.get("provider")
         for build_info in plan:
-            env = {
-                "CRAFT_PLATFORM": build_info.platform,
-                "CRAFT_VERBOSITY_LEVEL": craft_cli.emit.get_mode().name,
-            }
-
-            extra_args["env"] = env
-
-            craft_cli.emit.debug(
-                f"Running {self.app.name}:{build_info.platform} in {build_info.build_for} instance..."
+            provider.run_managed(
+                build_info, enable_fetch_service=bool(self._fetch_service_policy)
             )
-            instance_path = pathlib.PosixPath("/root/project")
-            active_fetch_service = self.services.get("fetch").is_active(
-                enable_command_line=self._enable_fetch_service
-            )
-
-            with self.services.provider.instance(
-                build_info,
-                work_dir=self._work_dir,
-                clean_existing=self._enable_fetch_service,
-                use_base_instance=not active_fetch_service,
-            ) as instance:
-                if self._enable_fetch_service:
-                    fetch_env = self.services.fetch.create_session(instance)
-                    env.update(fetch_env)
-
-                if self.app.enable_pro_support:
-                    self.services.provider.configure_instance_with_pro(instance)
-
-                session_env = self.services.get("proxy").configure_instance(instance)
-                env.update(session_env)
-
-                cmd = [self.app.name, *sys.argv[1:]]
-                craft_cli.emit.debug(
-                    f"Executing {cmd} in instance location {instance_path} with {extra_args}."
-                )
-                try:
-                    with craft_cli.emit.pause():
-                        instance.execute_run(  # pyright: ignore[reportUnknownMemberType,reportUnknownVariableType]
-                            cmd,
-                            cwd=instance_path,
-                            check=True,
-                            **extra_args,
-                        )
-                except subprocess.CalledProcessError as exc:
-                    raise craft_providers.ProviderError(
-                        f"Failed to execute {self.app.name} in instance."
-                    ) from exc
-                finally:
-                    if self._enable_fetch_service:
-                        self.services.fetch.teardown_session()
-
-        if self._enable_fetch_service:
-            self.services.fetch.shutdown(force=True)
 
     def configure(self, global_args: dict[str, Any]) -> None:
         """Configure the application using any global arguments."""
@@ -670,7 +617,7 @@ class Application:
             return_code = dispatcher.run() or os.EX_OK
         elif not self.is_managed():
             # command runs in inner instance, but this is the outer instance
-            self.run_managed(platform, build_for)
+            self._run_managed(platform, build_for)
             return_code = os.EX_OK
         else:
             # command runs in inner instance
