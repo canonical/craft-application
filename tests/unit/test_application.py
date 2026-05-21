@@ -278,10 +278,20 @@ def test_log_path(monkeypatch, app, provider_managed, expected):
     assert actual == expected
 
 
+@pytest.mark.parametrize(
+    ("fetch_service_policy", "enable_fetch_service"),
+    [
+        ("strict", True),
+        (None, False),
+    ],
+)
 @pytest.mark.usefixtures("platform_independent_project")
-def test_run_managed_success(app, fake_host_architecture):
+def test_run_managed_success(
+    app, fake_host_architecture, fetch_service_policy, enable_fetch_service
+):
     mock_provider = mock.MagicMock(spec_set=services.ProviderService)
     app.services._services["provider"] = mock_provider
+    app._fetch_service_policy = fetch_service_policy
 
     app._run_managed("platform-independent", None)
 
@@ -292,7 +302,7 @@ def test_run_managed_success(app, fake_host_architecture):
             build_for="all",
             build_base=mock.ANY,
         ),
-        enable_fetch_service=True,
+        enable_fetch_service=enable_fetch_service,
     )
 
 
@@ -326,9 +336,17 @@ def test_configure_services_pro_services(
     assert calls["provider"]["pro_services"] is pro_services
 
 
-def test_run_managed_multiple(mocker, app):
+@pytest.mark.parametrize(
+    ("fetch_service_policy", "enable_fetch_service"),
+    [
+        ("strict", True),
+        (None, False),
+    ],
+)
+def test_run_managed_multiple(mocker, app, fetch_service_policy, enable_fetch_service):
     mock_provider = mock.MagicMock(spec_set=services.ProviderService)
     app.services._services["provider"] = mock_provider
+    app._fetch_service_policy = fetch_service_policy
     fake_builds = [
         craft_platforms.BuildInfo(
             platform="platform-a",
@@ -352,8 +370,8 @@ def test_run_managed_multiple(mocker, app):
     assert mock_provider.run_managed.call_count == 2
     mock_provider.run_managed.assert_has_calls(
         [
-            mock.call(fake_builds[0], enable_fetch_service=True),
-            mock.call(fake_builds[1], enable_fetch_service=True),
+            mock.call(fake_builds[0], enable_fetch_service=enable_fetch_service),
+            mock.call(fake_builds[1], enable_fetch_service=enable_fetch_service),
         ]
     )
 

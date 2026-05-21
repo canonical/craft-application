@@ -416,7 +416,7 @@ class Application:
         return self.services.get_class("provider").is_managed()
 
     def _run_managed(self, platform: str | None, build_for: str | None) -> None:
-        """Run the each build in the build plan in managed mode."""
+        """Run each build in the build plan in managed mode."""
         if self._enable_fetch_service:
             self.services.get("fetch").set_policy(self._fetch_service_policy)
 
