@@ -15,6 +15,26 @@ Changelog
 
     For a complete list of commits, check out the `1.2.3`_ release on GitHub.
 
+
+7.0.0 (unreleased)
+------------------
+
+Application
+===========
+
+- ``Application._enable_fetch_service`` and ``Application._fetch_service_policy``
+   are removed.
+
+Commands
+========
+
+- ``AppCommand.run_managed()``, ``AppCommand.get_managed_cmd()``, and
+  ``Application.run_managed()`` are removed. Commands that need to run in a
+  managed instance should call :py:meth:`ProviderService.run_managed
+  <craft_application.services.ProviderService.run_managed>`.
+
+For a complete list of commits, check out the `7.0.0`_ release on GitHub.
+
 6.4.0 (2026-04-23)
 ------------------
 
@@ -1303,3 +1323,4 @@ For a complete list of commits, check out the `2.7.0`_ release on GitHub.
 .. _6.3.0: https://github.com/canonical/craft-application/releases/tag/6.3.0
 .. _6.3.1: https://github.com/canonical/craft-application/releases/tag/6.3.1
 .. _6.4.0: https://github.com/canonical/craft-application/releases/tag/6.4.0
+.. _7.0.0: https://github.com/canonical/craft-application/releases/tag/7.0.0

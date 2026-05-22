@@ -91,17 +91,6 @@ class AppCommand(BaseCommand):
         """
         return self.always_load_project
 
-    def run_managed(
-        self,
-        parsed_args: argparse.Namespace,  # noqa: ARG002 (the unused argument is for subclasses)
-    ) -> bool:
-        """Whether this command should run in managed mode.
-
-        Returns ``False`` by default. Subclasses can override this method to change this,
-        including by inspecting the arguments in ``parsed_args``.
-        """
-        return False
-
     def provider_name(
         self,
         parsed_args: argparse.Namespace,  # noqa: ARG002 (the unused argument is for subclasses)
@@ -112,27 +101,6 @@ class AppCommand(BaseCommand):
         including by inspecting the arguments in ``parsed_args``.
         """
         return None
-
-    def get_managed_cmd(
-        self,
-        parsed_args: argparse.Namespace,  # - Used by subclasses
-    ) -> list[str]:
-        """Get the command to run in managed mode.
-
-        :param parsed_args: The parsed arguments used.
-        :returns: A list of strings ready to be passed into a craft-providers executor.
-        :raises: ``RuntimeError`` if this command is not supposed to run managed.
-
-        Commands that have additional parameters to pass in managed mode should
-        override this method to include those parameters.
-
-        :deprecated: and unused.
-        """
-        if not self.run_managed(parsed_args):
-            raise RuntimeError("Unmanaged commands should not be run in managed mode.")
-        cmd_name = self._app.name
-        verbosity = emit.get_mode().name.lower()
-        return [cmd_name, f"--verbosity={verbosity}", self.name]
 
     @property
     def _project(self) -> Project:

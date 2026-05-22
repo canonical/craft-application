@@ -39,8 +39,6 @@ Craft Application's commands.
 
     .. autoattribute:: AppCommand.always_load_project
 
-    .. automethod:: AppCommand.run_managed
-
     .. automethod:: AppCommand.provider_name
 
     **Execution**

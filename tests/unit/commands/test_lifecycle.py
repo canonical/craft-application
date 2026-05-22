@@ -95,17 +95,13 @@ NON_CLEAN_COMMANDS = (*MANAGED_LIFECYCLE_COMMANDS, PackCommand)
 # fmt: on
 
 
-def get_fake_command_class(parent_cls, managed):
+def get_fake_command_class(parent_cls):
     """Create a fully described fake command based on a partial class."""
 
     class FakeCommand(parent_cls):
-        _run_managed = managed
         name = "fake"
         help_msg = "help"
         overview = "overview"
-
-        def run_managed(self, parsed_args: argparse.Namespace) -> bool:
-            return self._run_managed
 
     return FakeCommand
 
@@ -159,7 +155,7 @@ def test_lifecycle_command_fill_parser(
     shell_dict,
     shell_args,
 ):
-    cls = get_fake_command_class(LifecycleCommand, managed=True)
+    cls = get_fake_command_class(LifecycleCommand)
     parser = argparse.ArgumentParser("parts_command")
     command = cls({"app": app_metadata, "services": fake_services})
     expected = {
@@ -202,7 +198,7 @@ def test_use_provider(
     build_env: str,
     expected: bool,
 ):
-    cls = get_fake_command_class(LifecycleCommand, managed=False)
+    cls = get_fake_command_class(LifecycleCommand)
     command = cls({"app": app_metadata, "services": fake_services})
 
     parsed_args = argparse.Namespace(destructive_mode=destructive)
@@ -219,7 +215,7 @@ def test_run_sets_platform_arg(
     fake_platform: str,
 ):
     build_planner = fake_services.get("build_plan")
-    cls = get_fake_command_class(LifecycleCommand, managed=False)
+    cls = get_fake_command_class(LifecycleCommand)
     command = cls({"app": app_metadata, "services": fake_services})
 
     mocker.patch.object(command, "_use_provider", return_value=False)
@@ -240,7 +236,7 @@ def test_run_sets_platform_from_env(
     fake_platform: str,
 ):
     build_planner = fake_services.get("build_plan")
-    cls = get_fake_command_class(LifecycleCommand, managed=False)
+    cls = get_fake_command_class(LifecycleCommand)
     command = cls({"app": app_metadata, "services": fake_services})
 
     mocker.patch.object(command, "_use_provider", return_value=False)
@@ -264,7 +260,7 @@ def test_run_sets_build_for_arg(
     arch: str,
 ):
     build_planner = fake_services.get("build_plan")
-    cls = get_fake_command_class(LifecycleCommand, managed=False)
+    cls = get_fake_command_class(LifecycleCommand)
     command = cls({"app": app_metadata, "services": fake_services})
 
     mocker.patch.object(command, "_use_provider", return_value=False)
@@ -288,7 +284,7 @@ def test_run_sets_build_for_from_env(
     arch: str,
 ):
     build_planner = fake_services.get("build_plan")
-    cls = get_fake_command_class(LifecycleCommand, managed=False)
+    cls = get_fake_command_class(LifecycleCommand)
     command = cls({"app": app_metadata, "services": fake_services})
 
     mocker.patch.object(command, "_use_provider", return_value=False)
@@ -317,7 +313,7 @@ def test_run_manager_for_build_plan(
     )
     mock_run_managed = mocker.patch.object(fake_services.get("provider"), "run_managed")
     mocker.patch.object(fake_services.get("build_plan"), "plan", return_value=[build])
-    cls = get_fake_command_class(LifecycleCommand, managed=False)
+    cls = get_fake_command_class(LifecycleCommand)
 
     command = cls({"app": app_metadata, "services": fake_services})
     command._run_manager_for_build_plan(fetch)
@@ -348,7 +344,7 @@ def test_step_command_fill_parser(
     shell_args,
     shell_dict,
 ):
-    cls = get_fake_command_class(LifecyclePartsCommand, managed=True)
+    cls = get_fake_command_class(LifecyclePartsCommand)
     parser = argparse.ArgumentParser("step_command")
     expected = {
         "parts": parts_args,
@@ -375,7 +371,7 @@ def test_step_command_fill_parser(
 @pytest.mark.parametrize("parts", PARTS_LISTS)
 @pytest.mark.usefixtures("managed_mode")
 def test_step_command_run_explicit_step(app_metadata, mock_services, parts, step_name):
-    cls = get_fake_command_class(LifecyclePartsCommand, managed=True)
+    cls = get_fake_command_class(LifecyclePartsCommand)
     mock_services.get("project").configure(platform=None, build_for=None)
 
     parsed_args = argparse.Namespace(destructive_mode=False, parts=parts)
@@ -1237,7 +1233,7 @@ def test_check_pro_features(
     pro_services: set[str],
 ) -> None:
     """Ensure that lifecycle commands will validate the pro context, even if it is not requested"""
-    command = get_fake_command_class(_BaseLifecycleCommand, managed=False)(
+    command = get_fake_command_class(_BaseLifecycleCommand)(
         {"app": app_metadata, "services": mock_services}
     )
     mocker.patch("craft_application.util.is_managed_mode", return_value=is_managed_mode)
