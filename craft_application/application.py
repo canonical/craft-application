@@ -457,27 +457,14 @@ class Application:
         """
         return {}
 
-    def register_plugins(self, plugins: dict[str, PluginType]) -> None:
-        """Register plugins for this application."""
-        if not plugins:
-            return
-
-        warnings.warn(
-            "Registering plugins through the Application is deprecated. Override "
-            "the Lifecycle service's get_plugin_group instead.",
-            DeprecationWarning,
-            stacklevel=0,
-        )
-        from craft_parts.plugins import register  # noqa: PLC0415
-
-        craft_cli.emit.trace("Registering plugins...")
-        craft_cli.emit.trace(f"Plugins: {', '.join(plugins.keys())}")
-        register(plugins)
-
     def _register_default_plugins(self) -> None:
         """Register per application plugins when initializing."""
-        with warnings.catch_warnings():
-            self.register_plugins(self._get_app_plugins())
+        if plugins := self._get_app_plugins():
+            from craft_parts.plugins import register  # noqa: PLC0415
+
+            craft_cli.emit.trace("Registering plugins...")
+            craft_cli.emit.trace(f"Plugins: {', '.join(plugins.keys())}")
+            register(plugins)
 
     def _pre_run(self, dispatcher: craft_cli.Dispatcher) -> None:
         """Do any final setup before running the command.

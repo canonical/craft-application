@@ -26,6 +26,8 @@ Application
    are removed.
 - ``Application.get_project()`` is removed. Get the project from the project service
   with ``services.get("project").get()``.
+- ``Application.register_plugins()`` is removed. Register plugins by overriding
+  ``LifecycleService.get_plugin_group()`` instead.
 
 Commands
 ========
