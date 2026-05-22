@@ -26,10 +26,6 @@ from craft_cli import emit
 if TYPE_CHECKING:
     import pathlib
 
-pytestmark = [
-    pytest.mark.filterwarnings("ignore:Registering services on service factory")
-]
-
 
 class FakeService(services.AppService):
     """A fake service for testing."""
@@ -39,7 +35,6 @@ class FakeService(services.AppService):
 def factory(
     tmp_path,
     app_metadata,
-    fake_project,
     fake_project_file,
     fake_package_service_class,
     fake_lifecycle_service_class,
@@ -100,22 +95,6 @@ def test_register_service_by_reference_with_module():
         services.ServiceFactory.register("testy", FakeService, module="__main__")
 
 
-def test_register_services_in_init(
-    app_metadata,
-    fake_package_service_class,
-    fake_lifecycle_service_class,
-    fake_provider_service_class,
-):
-    factory = services.ServiceFactory(
-        app_metadata,
-        PackageClass=fake_package_service_class,
-        ProviderClass=fake_provider_service_class,
-    )
-
-    pytest_check.is_instance(factory.package, fake_package_service_class)
-    pytest_check.is_instance(factory.provider, fake_provider_service_class)
-
-
 @pytest.mark.parametrize(
     "kwargs",
     [
@@ -163,7 +142,6 @@ def test_set_kwargs(
 )
 def test_update_kwargs(
     app_metadata,
-    fake_project,
     fake_package_service_class,
     first_kwargs,
     second_kwargs,
@@ -177,7 +155,7 @@ def test_update_kwargs(
             return cls.mock_class(*args, **kwargs)
 
     services.ServiceFactory.register("package", MockPackageService)
-    factory = services.ServiceFactory(app_metadata, project=fake_project)
+    factory = services.ServiceFactory(app_metadata)
 
     factory.update_kwargs("package", **first_kwargs)
     factory.update_kwargs("package", **second_kwargs)
@@ -272,29 +250,27 @@ def test_getattr_not_a_class(factory):
         _ = factory.invalid_name
 
 
-def test_getattr_not_a_service_class(app_metadata, fake_project):
+def test_getattr_not_a_service_class(app_metadata):
     class InvalidClass:
         pass
 
-    factory = services.ServiceFactory(
-        app_metadata,
-        project=fake_project,
-        # This incorrect type is intentional
-        PackageClass=InvalidClass,  # pyright: ignore[reportArgumentType]
+    services.ServiceFactory.register(
+        "package",
+        InvalidClass,  # pyright: ignore[reportArgumentType]
     )
+    factory = services.ServiceFactory(app_metadata)
 
     with pytest.raises(TypeError):
         _ = factory.package
 
 
-def test_service_setup(app_metadata, fake_project, fake_package_service_class, emitter):
+def test_service_setup(app_metadata, fake_package_service_class, emitter):
     class FakePackageService(fake_package_service_class):
         def setup(self) -> None:
             emit.debug("setting up package service")
 
-    factory = services.ServiceFactory(
-        app_metadata, project=fake_project, PackageClass=FakePackageService
-    )
+    services.ServiceFactory.register("package", FakePackageService)
+    factory = services.ServiceFactory(app_metadata)
     _ = factory.package
 
     assert emitter.assert_debug("setting up package service")
@@ -308,6 +284,8 @@ def test_mandatory_adoptable_field(
     fake_project_file: pathlib.Path,
 ):
     services.ServiceFactory.register("project", fake_project_service_class)
+    services.ServiceFactory.register("package", fake_package_service_class)
+    services.ServiceFactory.register("lifecycle", fake_lifecycle_service_class)
     app_metadata = AppMetadata(
         "testcraft",
         "A fake app for testing craft-application",
@@ -316,25 +294,9 @@ def test_mandatory_adoptable_field(
     fake_project.license = None
     fake_project.adopt_info = "partname"
 
-    factory = services.ServiceFactory(
-        app_metadata,
-        project=fake_project,
-        PackageClass=fake_package_service_class,
-        LifecycleClass=fake_lifecycle_service_class,
-    )
+    factory = services.ServiceFactory(app_metadata)
     factory.update_kwargs("project", project_dir=fake_project_file.parent)
     factory.get("project").configure(platform=None, build_for=None)
     factory.get("project").set(fake_project)  # type: ignore[reportAttributeAccessIssue]
 
     factory.get("lifecycle")
-
-
-@pytest.mark.parametrize(
-    ("name", "cls"),
-    [
-        ("PackageClass", services.PackageService),
-    ],
-)
-def test_services_on_instantiation_deprecated(app_metadata, name, cls):
-    with pytest.warns(DeprecationWarning, match="Use ServiceFactory.register"):
-        services.ServiceFactory(**{"app": app_metadata, name: cls})

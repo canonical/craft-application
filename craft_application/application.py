@@ -23,7 +23,6 @@ import pathlib
 import signal
 import sys
 import traceback
-import warnings
 from dataclasses import dataclass, field
 from functools import cached_property
 from importlib import metadata

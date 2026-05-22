@@ -91,28 +91,10 @@ class ServiceFactory:
         testing: services.TestingService
         linter: services.LinterService
 
-    def __init__(
-        self,
-        app: AppMetadata,
-        **kwargs: type[services.AppService] | None,
-    ) -> None:
+    def __init__(self, app: AppMetadata) -> None:
         self.app = app
         self._service_kwargs: dict[str, dict[str, Any]] = {}
         self._services: dict[str, services.AppService] = {}
-
-        for cls_name, value in kwargs.items():
-            if cls_name.endswith("Class"):
-                if value is not None:
-                    identifier = _CAMEL_TO_PYTHON_CASE_REGEX.sub(
-                        "_", cls_name[:-5]
-                    ).lower()
-                    warnings.warn(
-                        f'Registering services on service factory instantiation is deprecated. Use ServiceFactory.register("{identifier}", {value.__name__}) instead.',
-                        category=DeprecationWarning,
-                        stacklevel=3,
-                    )
-                    self.register(identifier, value)
-                setattr(self, cls_name, self.get_class(cls_name))
 
         if "package" not in self._service_classes:
             raise TypeError(

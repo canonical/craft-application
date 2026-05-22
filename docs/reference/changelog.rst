@@ -47,6 +47,8 @@ Services
 
 - ``ProjectService._get_project_vars()`` is removed. Use the
   ``ProjectService.project_vars`` property instead.
+- Registering services on ``ServiceFactory`` instantiation is removed. Use
+  ``ServiceFactory.register()`` instead.
 
 For a complete list of commits, check out the `7.0.0`_ release on GitHub.
 
