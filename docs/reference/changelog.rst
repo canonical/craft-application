@@ -42,6 +42,12 @@ Commands
   <craft_application.services.ProviderService.run_managed>`.
 - ``AppCommand(config=None)`` is removed. A config dict is now required.
 
+Services
+========
+
+- ``ProjectService._get_project_vars()`` is removed. Use the
+  ``ProjectService.project_vars`` property instead.
+
 For a complete list of commits, check out the `7.0.0`_ release on GitHub.
 
 6.4.0 (2026-04-23)

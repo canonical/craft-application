@@ -309,32 +309,6 @@ def test_get_platforms_bad_value(
 @pytest.mark.parametrize(
     ("data", "expected"),
     [
-        pytest.param({}, {"version": None}, id="empty"),
-        pytest.param(
-            {"version": "3.14", "unrelated": "pi"},
-            {"version": "3.14"},
-            id="version-set",
-        ),
-    ],
-)
-def test_get_project_vars(real_project_service: ProjectService, data, expected):
-    real_project_service._project_vars = real_project_service._create_project_vars(data)
-    expected_warning = re.escape(
-        "'ProjectService._get_project_vars' is deprecated. "
-        "Use 'project_vars' property instead."
-    )
-    with pytest.warns(DeprecationWarning, match=expected_warning):
-        project_vars = real_project_service._get_project_vars(data)
-
-    assert project_vars == expected | {
-        "summary": None,
-        "description": None,
-    }
-
-
-@pytest.mark.parametrize(
-    ("data", "expected"),
-    [
         pytest.param(
             {},
             ProjectVarInfo.unmarshal({"version": {}, "summary": {}, "description": {}}),

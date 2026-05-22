@@ -19,7 +19,6 @@ import copy
 import datetime
 import os
 import pathlib
-import warnings
 from typing import TYPE_CHECKING, Any, Literal, cast, final
 
 import craft_parts
@@ -326,24 +325,6 @@ class ProjectService(base.AppService):
                 logpath_report=False,
                 retcode=os.EX_DATAERR,
             )
-
-    @final
-    def _get_project_vars(
-        self,
-        yaml_data: dict[str, Any],  # noqa: ARG002 (unused-method-argument)
-    ) -> dict[str, Any]:
-        """Return a dict with project variables to be expanded.
-
-        DEPRECATED: This method is deprecated and is not called by default.
-        Use ``ProjectService.project_vars`` instead.
-        """
-        warnings.warn(
-            "'ProjectService._get_project_vars' is deprecated. "
-            "Use 'project_vars' property instead.",
-            category=DeprecationWarning,
-            stacklevel=1,
-        )
-        return self._project_vars.marshal("value") if self._project_vars else {}
 
     @final
     @property
