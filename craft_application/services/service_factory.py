@@ -17,7 +17,6 @@ from __future__ import annotations
 
 import importlib
 import re
-import warnings
 from typing import (
     TYPE_CHECKING,
     Annotated,
@@ -141,23 +140,6 @@ class ServiceFactory:
             cls.register(
                 name, class_name, module=f"craft_application.services.{module_name}"
             )
-
-    def set_kwargs(
-        self,
-        service: str,
-        **kwargs: Any,
-    ) -> None:
-        """Set up the keyword arguments to pass to a particular service class.
-
-        DEPRECATED: use update_kwargs instead
-        """
-        warnings.warn(
-            DeprecationWarning(
-                "ServiceFactory.set_kwargs is deprecated. Use update_kwargs instead."
-            ),
-            stacklevel=2,
-        )
-        self._service_kwargs[service] = kwargs
 
     def update_kwargs(
         self,
@@ -318,7 +300,7 @@ class ServiceFactory:
         treating them as attributes of our factory in a dynamic manner.
         For a service (e.g. ``package``, the PackageService instance) that has not
         been instantiated, this method finds the corresponding class, instantiates
-        it with defaults and any values set using ``set_kwargs``, and stores the
+        it with defaults and any values set using ``update_kwargs``, and stores the
         instantiated service as an instance attribute, allowing the same service
         instance to be reused for the entire run of the application.
         """

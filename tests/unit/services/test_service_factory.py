@@ -96,35 +96,6 @@ def test_register_service_by_reference_with_module():
 
 
 @pytest.mark.parametrize(
-    "kwargs",
-    [
-        {},
-        {"arg_1": None, "arg_b": "something"},
-    ],
-)
-def test_set_kwargs(
-    app_metadata, fake_project, check, fake_package_service_class, kwargs
-):
-    class MockPackageService(fake_package_service_class):
-        mock_class = mock.Mock(return_value=mock.Mock(spec_set=services.PackageService))
-
-        def __new__(cls, *args, **kwargs):
-            return cls.mock_class(*args, **kwargs)
-
-    services.ServiceFactory.register("package", MockPackageService)
-    factory = services.ServiceFactory(app_metadata, project=fake_project)
-
-    with pytest.warns(DeprecationWarning, match="set_kwargs is deprecated"):
-        factory.set_kwargs("package", **kwargs)
-
-    check.equal(factory.package, MockPackageService.mock_class.return_value)
-    with check:
-        MockPackageService.mock_class.assert_called_once_with(
-            app=app_metadata, services=factory, **kwargs
-        )
-
-
-@pytest.mark.parametrize(
     ("first_kwargs", "second_kwargs", "expected"),
     [
         ({}, {}, {}),
