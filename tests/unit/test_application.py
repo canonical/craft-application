@@ -46,9 +46,7 @@ from craft_application.commands import (
     get_lifecycle_command_group,
     get_other_command_group,
 )
-from craft_application.util import (
-    ProServices,  # pyright: ignore[reportGeneralTypeIssues]
-)
+from craft_application.util import ProServices
 from craft_cli import CraftError, emit
 from craft_parts.plugins.plugins import PluginType
 
