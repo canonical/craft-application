@@ -40,6 +40,7 @@ Commands
   ``Application.run_managed()`` are removed. Commands that need to run in a
   managed instance should call :py:meth:`ProviderService.run_managed
   <craft_application.services.ProviderService.run_managed>`.
+- ``AppCommand(config=None)`` is removed. A config dict is now required.
 
 For a complete list of commits, check out the `7.0.0`_ release on GitHub.
 
