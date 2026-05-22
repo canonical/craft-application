@@ -575,24 +575,6 @@ class Application:
 
         craft_cli.emit.error(error)
 
-    def _get_project_vars(self, yaml_data: dict[str, Any]) -> dict[str, str]:
-        """Return a dict with project variables to be expanded.
-
-        DEPRECATED: This method is deprecated and is not called by default.
-        Use ``ProjectService.project_vars`` instead.
-        """
-        warnings.warn(
-            "'Application._get_project_vars' is deprecated. "
-            "Use 'ProjectService.project_vars' instead.",
-            category=DeprecationWarning,
-            stacklevel=1,
-        )
-
-        pvars: dict[str, str] = {}
-        for var in self.app.project_variables:
-            pvars[var] = str(yaml_data.get(var, ""))
-        return pvars
-
     def _set_global_environment(self, info: ProjectInfo) -> None:
         """Populate the ProjectInfo's global environment.
 

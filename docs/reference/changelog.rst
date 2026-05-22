@@ -28,6 +28,8 @@ Application
   with ``services.get("project").get()``.
 - ``Application.register_plugins()`` is removed. Register plugins by overriding
   ``LifecycleService.get_plugin_group()`` instead.
+- ``Application._get_project_vars()`` is removed. Use ``ProjectService.project_vars``
+  instead.
 
 Commands
 ========
