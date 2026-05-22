@@ -30,6 +30,8 @@ Application
   ``LifecycleService.get_plugin_group()`` instead.
 - ``Application._get_project_vars()`` is removed. Use ``ProjectService.project_vars``
   instead.
+- ``Application._set_global_environment()`` is removed. Use
+  ``ProjectService.update_project_environment()`` instead.
 
 Commands
 ========

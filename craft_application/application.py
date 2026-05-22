@@ -42,7 +42,6 @@ if TYPE_CHECKING:
     import argparse
     from collections.abc import Iterable, Sequence
 
-    from craft_parts.infos import ProjectInfo
     from craft_parts.plugins.plugins import PluginType
 
     from craft_application.services import service_factory
@@ -574,24 +573,6 @@ class Application:
             error.logpath_report = False
 
         craft_cli.emit.error(error)
-
-    def _set_global_environment(self, info: ProjectInfo) -> None:
-        """Populate the ProjectInfo's global environment.
-
-        DEPRECATED: This method is deprecated and is not called by default.
-        Use ``ProjectService.update_project_environment`` instead.
-        """
-        warnings.warn(
-            "Application._set_global_environment is deprecated and not called by "
-            "default. Use ProjectService.update_project_environment instead.",
-            category=DeprecationWarning,
-            stacklevel=1,
-        )
-        info.global_environment.update(
-            {
-                "CRAFT_PROJECT_VERSION": info.get_project_var("version", raw_read=True),
-            }
-        )
 
     def _setup_logging(self) -> None:
         """Initialize the logging system."""
