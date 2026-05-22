@@ -18,10 +18,9 @@
 from __future__ import annotations
 
 import abc
-import warnings
 from typing import TYPE_CHECKING, Any, Protocol, final
 
-from craft_cli import BaseCommand, emit
+from craft_cli import BaseCommand
 from typing_extensions import Self
 
 from craft_application import application, util
@@ -62,16 +61,7 @@ class AppCommand(BaseCommand):
     :deprecated: override :meth:`needs_project` instead.
     """
 
-    def __init__(self, config: dict[str, Any] | None) -> None:
-        if config is None:
-            warnings.warn(
-                "Creating an AppCommand without a config dict is pending deprecation.",
-                PendingDeprecationWarning,
-                stacklevel=3,
-            )
-            emit.trace("Not completing command configuration")
-            return
-
+    def __init__(self, config: dict[str, Any]) -> None:
         super().__init__(config)
 
         self._app: application.AppMetadata = config["app"]

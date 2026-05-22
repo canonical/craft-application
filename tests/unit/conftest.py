@@ -79,7 +79,7 @@ def mock_services(monkeypatch, app_metadata, fake_project, project_path):
     monkeypatch.setattr(
         service_factory, "issubclass", forgiving_is_subclass, raising=False
     )
-    factory = services.ServiceFactory(app_metadata, project=fake_project)
+    factory = services.ServiceFactory(app_metadata)
     factory.update_kwargs("project", project_dir=project_path)
     return factory
 

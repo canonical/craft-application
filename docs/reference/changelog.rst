@@ -24,6 +24,14 @@ Application
 
 - ``Application._enable_fetch_service`` and ``Application._fetch_service_policy``
    are removed.
+- ``Application.get_project()`` is removed. Get the project from the project service
+  with ``services.get("project").get()``.
+- ``Application.register_plugins()`` is removed. Register plugins by overriding
+  ``LifecycleService.get_plugin_group()`` instead.
+- ``Application._get_project_vars()`` is removed. Use ``ProjectService.project_vars``
+  instead.
+- ``Application._set_global_environment()`` is removed. Use
+  ``ProjectService.update_project_environment()`` instead.
 
 Commands
 ========
@@ -32,6 +40,17 @@ Commands
   ``Application.run_managed()`` are removed. Commands that need to run in a
   managed instance should call :py:meth:`ProviderService.run_managed
   <craft_application.services.ProviderService.run_managed>`.
+- ``AppCommand(config=None)`` is removed. A config dict is now required.
+
+Services
+========
+
+- ``ProjectService._get_project_vars()`` is removed. Use the
+  ``ProjectService.project_vars`` property instead.
+- Registering services on ``ServiceFactory`` instantiation is removed. Use
+  ``ServiceFactory.register()`` instead.
+- ``ServiceFactory.set_kwargs()`` is removed. Use ``ServiceFactory.update_kwargs()``
+  instead.
 
 For a complete list of commits, check out the `7.0.0`_ release on GitHub.
 

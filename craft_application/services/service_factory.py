@@ -17,7 +17,6 @@ from __future__ import annotations
 
 import importlib
 import re
-import warnings
 from typing import (
     TYPE_CHECKING,
     Annotated,
@@ -91,28 +90,10 @@ class ServiceFactory:
         testing: services.TestingService
         linter: services.LinterService
 
-    def __init__(
-        self,
-        app: AppMetadata,
-        **kwargs: type[services.AppService] | None,
-    ) -> None:
+    def __init__(self, app: AppMetadata) -> None:
         self.app = app
         self._service_kwargs: dict[str, dict[str, Any]] = {}
         self._services: dict[str, services.AppService] = {}
-
-        for cls_name, value in kwargs.items():
-            if cls_name.endswith("Class"):
-                if value is not None:
-                    identifier = _CAMEL_TO_PYTHON_CASE_REGEX.sub(
-                        "_", cls_name[:-5]
-                    ).lower()
-                    warnings.warn(
-                        f'Registering services on service factory instantiation is deprecated. Use ServiceFactory.register("{identifier}", {value.__name__}) instead.',
-                        category=DeprecationWarning,
-                        stacklevel=3,
-                    )
-                    self.register(identifier, value)
-                setattr(self, cls_name, self.get_class(cls_name))
 
         if "package" not in self._service_classes:
             raise TypeError(
@@ -159,23 +140,6 @@ class ServiceFactory:
             cls.register(
                 name, class_name, module=f"craft_application.services.{module_name}"
             )
-
-    def set_kwargs(
-        self,
-        service: str,
-        **kwargs: Any,
-    ) -> None:
-        """Set up the keyword arguments to pass to a particular service class.
-
-        DEPRECATED: use update_kwargs instead
-        """
-        warnings.warn(
-            DeprecationWarning(
-                "ServiceFactory.set_kwargs is deprecated. Use update_kwargs instead."
-            ),
-            stacklevel=2,
-        )
-        self._service_kwargs[service] = kwargs
 
     def update_kwargs(
         self,
@@ -336,7 +300,7 @@ class ServiceFactory:
         treating them as attributes of our factory in a dynamic manner.
         For a service (e.g. ``package``, the PackageService instance) that has not
         been instantiated, this method finds the corresponding class, instantiates
-        it with defaults and any values set using ``set_kwargs``, and stores the
+        it with defaults and any values set using ``update_kwargs``, and stores the
         instantiated service as an instance attribute, allowing the same service
         instance to be reused for the entire run of the application.
         """
