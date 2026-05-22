@@ -374,38 +374,6 @@ class Application:
             pro_services=self._pro_services,
         )
 
-    def get_project(
-        self,
-        *,
-        platform: str | None = None,
-        build_for: str | None = None,
-    ) -> models.Project:
-        """Get the project model.
-
-        This only resolves and renders the project the first time it gets run.
-        After that, it merely uses a cached project model.
-
-        :param platform: the platform name listed in the build plan.
-        :param build_for: the architecture to build this project for.
-        :returns: A transformed, loaded project model.
-        """
-        warnings.warn(
-            DeprecationWarning(
-                "Do not get the project directly from the Application. "
-                "Get it from the project service."
-            ),
-            stacklevel=2,
-        )
-        project_service = self.services.get("project")
-        if not project_service.is_configured:
-            project_service.configure(platform=platform, build_for=build_for)
-        return project_service.get()
-
-    @cached_property
-    def project(self) -> models.Project:
-        """Get this application's Project metadata."""
-        return self.get_project()
-
     def is_managed(self) -> bool:
         """Shortcut to tell whether we're running in managed mode."""
         return self.services.get_class("provider").is_managed()

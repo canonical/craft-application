@@ -47,8 +47,7 @@ from craft_application.commands import (
     get_other_command_group,
 )
 from craft_application.util import (
-    ProServices,
-    get_host_architecture,  # pyright: ignore[reportGeneralTypeIssues]
+    ProServices,  # pyright: ignore[reportGeneralTypeIssues]
 )
 from craft_cli import CraftError, emit
 from craft_parts.plugins.plugins import PluginType
@@ -397,7 +396,6 @@ def test_gets_project(
     app.run()
 
     pytest_check.is_not_none(fake_services.project)
-    pytest_check.is_not_none(app.project)
 
 
 @pytest.mark.parametrize("app_metadata", [{"enable_pro_support": True}], indirect=True)
@@ -592,13 +590,11 @@ def test_run_success_managed_inside_managed(
     monkeypatch,
     check,
     app,
-    fake_project,
     mock_dispatcher,
     return_code,
     mocker,
     mock_pro_api_call,
 ):
-    mocker.patch.object(app, "get_project", return_value=fake_project)
     mocker.patch.object(
         mock_dispatcher, "parsed_args", return_value={"platform": "foo"}
     )
@@ -881,7 +877,7 @@ def test_work_dir_project_non_managed(monkeypatch, app_metadata, fake_services):
     app = application.Application(app_metadata, fake_services)
     assert app._work_dir == pathlib.Path.cwd()
 
-    project = app.get_project(build_for=get_host_architecture())
+    project = app.services.get("project").get()
 
     # Make sure the project is loaded correctly (from the cwd)
     assert project is not None
@@ -896,7 +892,7 @@ def test_work_dir_project_managed(monkeypatch, app_metadata, fake_services):
     app = application.Application(app_metadata, fake_services)
     assert app._work_dir == pathlib.PosixPath("/root")
 
-    project = app.get_project(build_for=get_host_architecture())
+    project = app.services.get("project").get()
 
     # Make sure the project is loaded correctly (from the cwd)
     assert project is not None
@@ -930,20 +926,6 @@ def environment_project(in_project_path):
     )
 
     return in_project_path
-
-
-@pytest.mark.usefixtures("fake_project_file")
-def test_get_project_current_dir(app):
-    # Load a project file from the current directory
-    project = app.get_project()
-
-    # Check that it caches that project.
-    assert app.get_project() is project, "Project file was not cached."
-
-
-@pytest.mark.usefixtures("fake_project_file")
-def test_get_project_all_platform(app):
-    app.get_project(platform="arm64")
 
 
 def test_get_cache_dir(tmp_path, app):

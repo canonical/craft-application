@@ -24,6 +24,8 @@ Application
 
 - ``Application._enable_fetch_service`` and ``Application._fetch_service_policy``
    are removed.
+- ``Application.get_project()`` is removed. Get the project from the project service
+  with ``services.get("project").get()``.
 
 Commands
 ========
