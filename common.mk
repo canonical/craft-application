@@ -18,7 +18,7 @@ else
 	APT := apt-get
 endif
 
-PRETTIER=npm exec --package=prettier -- prettier --log-level warn
+PRETTIER=npm exec --package=prettier@3.6.0 -- prettier --log-level warn # renovate: datasource=npm
 PRETTIER_FILES="**/*.{yaml,yml,json,json5,css,md}"
 
 # Cutoff (in seconds) before a test is considered slow by pytest
@@ -37,7 +37,7 @@ export UV_FROZEN := true
 help: ## Show this help.
 	@printf "\e[1m%-30s\e[0m | \e[1m%s\e[0m\n" "Target" "Description"
 	printf "\e[2m%-30s + %-41s\e[0m\n" "------------------------------" "------------------------------------------------"
-	egrep '^[^:]+\: [^#]*##' $$(echo $(MAKEFILE_LIST) | tac --separator=' ') | sed -e 's/^[^:]*://' -e 's/:[^#]*/ /' | sort -V| awk -F '[: ]*' \
+	egrep '^[^:]+\: [^#]*##' $$(echo $(MAKEFILE_LIST) | tac --separator=' ') | sed -e 's/:[^#]*/ /' | sort -V | awk -F '[: ]*' \
 	'{
 		if ($$2 == "##")
 		{
@@ -76,7 +76,7 @@ setup-lint: _setup-lint  ##- Set up a linting-only environment
 	uv sync $(UV_LINT_GROUPS)
 
 .PHONY: _setup-lint
-_setup-lint: install-uv install-shellcheck install-pyright install-lint-build-deps
+_setup-lint: install-uv install-shellcheck install-pyright install-lint-build-deps install-actionlint
 
 .PHONY: setup-tests
 setup-tests: _setup-tests ##- Set up a testing environment without linters
@@ -119,6 +119,10 @@ format-ruff: install-ruff  ##- Automatically format with ruff
 .PHONY: format-codespell
 format-codespell:  ##- Fix spelling issues with codespell
 	uv run codespell --toml pyproject.toml --write-changes $(SOURCES)
+
+.PHONY: format-pre-commit
+format-pre-commit:  ##- Format the entire repository using pre-commit
+	uv tool run pre-commit run
 
 .PHONY: format-prettier
 format-prettier: install-npm  ##- Format files with prettier
@@ -169,6 +173,16 @@ ifneq ($(CI),)
 	@echo ::endgroup::
 endif
 
+.PHONY: lint-ty
+lint-ty: install-ty  ##- Check types with Astral ty
+ifneq ($(CI),)
+	@echo ::group::$@
+endif
+	ty check --python .venv $(SOURCES)
+ifneq ($(CI),)
+	@echo ::endgroup::
+endif
+
 .PHONY: lint-uv-lockfile
 lint-uv-lockfile: install-uv  ##- Check that uv.lock matches expectations from pyproject.toml
 	unset UV_FROZEN
@@ -196,9 +210,19 @@ ifneq ($(CI),)
 	@echo ::endgroup::
 endif
 
+.PHONY: lint-actions
+lint-actions: install-actionlint  ##- Lint GitHub actions with actionlint
+ifneq ($(CI),)
+	@echo ::group::$@
+endif
+	actionlint
+ifneq ($(CI),)
+	@echo ::endgroup::
+endif
+
 # Legacy alias for linting docs
 .PHONY: lint-docs
-lint-docs: docs-lint  ##- Lint the documentation
+lint-docs: docs-lint  ##- Lint the documenation
 
 .PHONY: lint-twine
 lint-twine: pack-pip  ##- Lint Python packages with twine
@@ -277,7 +301,7 @@ docs-setup: setup-docs
 # we pass a null dir instead.
 .PHONY: docs-clean
 docs-clean:  ##- Clean the temporary files used in documentation
-	DOCS_VENVDIR=$(mktemp)
+	VENVDIR=$(mktemp)
 	$(MAKE) -C docs clean --no-print-directory
 
 # Override for `help` target in docs project
@@ -347,6 +371,17 @@ else
 	curl -LsSf https://astral.sh/uv/install.sh | sh
 endif
 
+.PHONY: install-actionlint
+install-actionlint:
+ifneq ($(shell which actionlint),)
+else ifneq ($(shell which snap),)
+	sudo snap install actionlint
+else ifneq ($(shell which brew),)
+	brew install actionlint
+else
+	$(warning Actionlint not installed. Please install it yourself.)
+endif
+
 .PHONY: install-codespell
 install-codespell:
 ifneq ($(shell which codespell),)
@@ -389,6 +424,17 @@ else ifneq ($(shell which brew),)
 	brew install shellcheck
 else
 	$(warning Shellcheck not installed. Please install it yourself.)
+endif
+
+.PHONY: install-ty
+install-ty:
+ifneq ($(shell which ty),)
+else ifneq ($(shell which snap),)
+	sudo snap install --beta astral-ty
+	sudo snap alias astral-ty.ty ty
+else
+	make install-uv
+	uv tool install ty
 endif
 
 .PHONY: install-npm
