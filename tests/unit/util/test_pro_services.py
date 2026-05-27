@@ -126,21 +126,21 @@ def test_from_csv(csv: str, expected: ProServices):
     assert ProServices.from_csv(csv) == expected
 
 
-def testpro_client_exists_no_executable(mocker):
+def test_pro_client_exists_no_executable(mocker):
     """Return false if there isn't a Pro executable."""
     mocker.patch.object(ProServices, "_pro_executable", None)
 
     assert ProServices.pro_client_exists() is False
 
 
-def testpro_client_exists_missing(mocker, tmp_path):
+def test_pro_client_exists_missing(mocker, tmp_path):
     """Return false if the class defines a Pro executable but it doesn't exist on disk."""
     mocker.patch.object(ProServices, "_pro_executable", tmp_path / "pro")
 
     assert ProServices.pro_client_exists() is False
 
 
-def testpro_client_exists(mocker, mock_pro_executable):
+def test_pro_client_exists(mocker, mock_pro_executable):
     """Return true if the Pro executable exists."""
     assert ProServices.pro_client_exists() is True
 
@@ -276,7 +276,7 @@ def test_is_pro_attached(mocker, attached):
         ),
     ],
 )
-def testget_pro_services(mocker, enabled_names, expected):
+def test_get_pro_services(mocker, enabled_names, expected):
     enabled_services = [
         {"name": name, "variant_enabled": False, "variant_name": None}
         for name in enabled_names
