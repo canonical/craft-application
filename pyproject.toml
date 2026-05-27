@@ -250,6 +250,11 @@ exclude_also = [
     "if (typing\\.)?TYPE_CHECKING:",
 ]
 
+[tool.ty.src]
+exclude = [
+    "tests/",
+]
+
 [tool.pyright]
 strict = ["craft_application"]
 pythonVersion = "3.10"
