@@ -160,7 +160,7 @@ class BuildPlanService(base.AppService):
             self._filter_plan(
                 self._gen_exhaustive_build_plan(project_data=raw_project),
                 platforms=platforms,
-                build_for=build_for_archs,  # type: ignore[arg-type]  # Literal "all"
+                build_for=build_for_archs,  # ty: ignore[invalid-argument-type]  # Literal "all"
                 build_on=build_on_archs,
             )
         )

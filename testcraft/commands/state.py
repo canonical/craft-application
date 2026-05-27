@@ -21,7 +21,7 @@ from typing import TYPE_CHECKING
 import craft_cli
 from craft_application import util
 from craft_application.commands import base
-from overrides import override
+from typing_extensions import override
 
 if TYPE_CHECKING:
     import argparse
@@ -41,7 +41,7 @@ class StateCommand(base.AppCommand):
     @override
     def needs_project(
         self,
-        parsed_args: argparse.Namespace,  # noqa: ARG002 (unused arg)
+        parsed_args: argparse.Namespace,
     ) -> bool:
         return True
 

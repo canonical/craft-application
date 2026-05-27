@@ -310,13 +310,13 @@ class ProviderService(base.AppService):
             # this only applies to our Buildd images (i.e.; Ubuntu)
             self.packages.extend(["gpg", "dirmngr"])
         return base_class(
-            alias=alias,  # type: ignore[arg-type]
+            alias=alias,  # ty: ignore[invalid-argument-type]
             compatibility_tag=f"{self._app.name}-{base_class.compatibility_tag}{self.compatibility_tag}",
             hostname=instance_name,
             snaps=self.snaps,
             environment=self.environment,
             packages=self.packages,
-            **kwargs,  # type: ignore[arg-type]
+            **kwargs,  # ty: ignore[invalid-argument-type]
         )
 
     def get_pack_state(self) -> models.PackState:

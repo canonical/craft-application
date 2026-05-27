@@ -337,7 +337,7 @@ def test_project_vars(real_project_service: ProjectService, data, expected):
     platform=strategies.text(),
 )
 def test_get_partitions_for(build_on, build_for, platform):
-    svc = ProjectService(None, None, project_dir=None)  # type: ignore[arg-type]
+    svc = ProjectService(None, None, project_dir=None)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
     assert (
         svc.get_partitions_for(
             platform=platform,

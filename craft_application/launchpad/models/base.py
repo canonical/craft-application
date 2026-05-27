@@ -89,7 +89,7 @@ class LaunchpadObject:
             raise TypeError(
                 f"Launchpadlib entry not a valid resource type for {self.__class__.__name__}. "
                 f"type: {resource_type!r}, "
-                f"valid: {[t.value for t in self._resource_types]}",  # type: ignore[var-annotated]
+                f"valid: {[t.value for t in self._resource_types]}",  # ty: ignore[unresolved-attribute]
             ) from None
 
     def delete(self) -> None:

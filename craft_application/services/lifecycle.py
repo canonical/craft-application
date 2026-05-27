@@ -142,7 +142,7 @@ class LifecycleService(base.AppService):
         self._work_dir = work_dir
         self._cache_dir = cache_dir
         self._manager_kwargs = lifecycle_kwargs
-        self._lcm: LifecycleManager = None  # type: ignore[assignment]
+        self._lcm: LifecycleManager = None  # ty: ignore[invalid-assignment]
 
     @override
     def setup(self) -> None:

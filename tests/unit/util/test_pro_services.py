@@ -41,7 +41,7 @@ def mock_pro_executable(mocker, tmp_path) -> Path:
 @pytest.fixture
 def mock_pro_api(mocker):
     """Mock attached and enabled services endpoints."""
-    state = {"is_attached": False, "enabled_services": []}
+    state: dict[str, Any] = {"is_attached": False, "enabled_services": []}
 
     def fake_api_call(endpoint):
         if endpoint == "u.pro.status.is_attached.v1":

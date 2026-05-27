@@ -167,7 +167,7 @@ class CraftValidationError(CraftError):
         :param kwargs: additional keyword arguments get passed to CraftError
         """
         message = format_pydantic_errors(error.errors(), file_name=file_name)
-        return cls(message, **kwargs)  # type: ignore[arg-type]
+        return cls(message, **kwargs)  # ty: ignore[invalid-argument-type]
 
 
 class PartsLifecycleError(CraftError):

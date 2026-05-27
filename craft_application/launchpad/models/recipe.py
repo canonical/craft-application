@@ -334,7 +334,7 @@ class SnapRecipe(_StoreRecipe):
         pocket: Pocket = Pocket.UPDATES,
         channels: BuildChannels | None = None,
         deadline: int | None = None,
-    ) -> Collection[build.Build]:
+    ) -> Collection[build.Build]:  # ty: ignore[unresolved-attribute]
         """Create a new set of builds for this recipe."""
         request_build_kwargs: dict[str, Any] = {
             "archive": archive,
@@ -487,7 +487,7 @@ class _StandardRecipe(_StoreRecipe):
         self,
         channels: BuildChannels | None = None,
         deadline: int | None = None,
-    ) -> Collection[build.Build]:
+    ) -> Collection[build.Build]:  # ty: ignore[unresolved-attribute]
         """Create a new set of builds for this recipe."""
         kwargs = {"channels": channels} if channels else {}
         return self._build(deadline, kwargs)

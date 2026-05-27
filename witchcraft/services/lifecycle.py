@@ -23,10 +23,10 @@ from craft_parts.plugins.python_plugin import PythonPlugin
 from craft_parts.plugins.rust_plugin import RustPlugin
 from typing_extensions import override
 
-MERLIN = PluginGroup.MINIMAL.value | {
+MERLIN: dict[str, type[Plugin]] = PluginGroup.MINIMAL.value | {
     "python": PythonPlugin,
 }
-MORGANA = PluginGroup.MINIMAL.value | {"rust": RustPlugin}
+MORGANA: dict[str, type[Plugin]] = PluginGroup.MINIMAL.value | {"rust": RustPlugin}
 
 
 class Lifecycle(lifecycle.LifecycleService):

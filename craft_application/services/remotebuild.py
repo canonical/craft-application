@@ -64,9 +64,9 @@ class RemoteBuildService(base.AppService):
         self._is_setup = False
         # Assigning these as None so they exist. They won't be accessed until they're
         # assigned the correct types though.
-        self._lp_project: launchpad.models.Project = None  # type: ignore[assignment]
-        self._repository: launchpad.models.GitRepository = None  # type: ignore[assignment]
-        self._recipe: launchpad.models.recipe.BaseRecipe = None  # type: ignore[assignment]
+        self._lp_project: launchpad.models.Project = None  # ty: ignore[invalid-assignment]
+        self._repository: launchpad.models.GitRepository = None  # ty: ignore[invalid-assignment]
+        self._recipe: launchpad.models.recipe.BaseRecipe = None  # ty: ignore[invalid-assignment]
         self._builds: Collection[launchpad.models.Build] = []
         self._project_name: str | None = None
 
