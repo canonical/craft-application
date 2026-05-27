@@ -21,19 +21,16 @@ import importlib
 import os
 import pathlib
 import signal
-import subprocess
 import sys
 import traceback
-import warnings
 from dataclasses import dataclass, field
 from functools import cached_property
 from importlib import metadata
-from typing import TYPE_CHECKING, Annotated, Any, Literal, cast, final
+from typing import TYPE_CHECKING, Annotated, Any, cast, final
 
 import annotated_types
 import craft_cli
 import craft_platforms
-import craft_providers
 from platformdirs import user_cache_path
 
 from craft_application import _config, commands, errors, models, util
@@ -44,7 +41,6 @@ if TYPE_CHECKING:
     import argparse
     from collections.abc import Iterable, Sequence
 
-    from craft_parts.infos import ProjectInfo
     from craft_parts.plugins.plugins import PluginType
 
     from craft_application.services import service_factory
@@ -195,11 +191,6 @@ class Application:
             self._work_dir = pathlib.Path("/root")
         else:
             self._work_dir = pathlib.Path.cwd()
-
-        # Whether the command execution should use the fetch-service
-        self._enable_fetch_service = False
-        # The kind of sessions that the fetch-service service should create
-        self._fetch_service_policy: Literal["strict", "permissive"] = "strict"
 
     @final
     def _load_plugins(self) -> None:
@@ -381,112 +372,9 @@ class Application:
             pro_services=self._pro_services,
         )
 
-    def get_project(
-        self,
-        *,
-        platform: str | None = None,
-        build_for: str | None = None,
-    ) -> models.Project:
-        """Get the project model.
-
-        This only resolves and renders the project the first time it gets run.
-        After that, it merely uses a cached project model.
-
-        :param platform: the platform name listed in the build plan.
-        :param build_for: the architecture to build this project for.
-        :returns: A transformed, loaded project model.
-        """
-        warnings.warn(
-            DeprecationWarning(
-                "Do not get the project directly from the Application. "
-                "Get it from the project service."
-            ),
-            stacklevel=2,
-        )
-        project_service = self.services.get("project")
-        if not project_service.is_configured:
-            project_service.configure(platform=platform, build_for=build_for)
-        return project_service.get()
-
-    @cached_property
-    def project(self) -> models.Project:
-        """Get this application's Project metadata."""
-        return self.get_project()
-
     def is_managed(self) -> bool:
         """Shortcut to tell whether we're running in managed mode."""
         return self.services.get_class("provider").is_managed()
-
-    def run_managed(self, platform: str | None, build_for: str | None) -> None:
-        """Run the application in a managed instance."""
-        build_planner = self.services.get("build_plan")
-        if platform:
-            build_planner.set_platforms(platform)
-        if build_for:
-            build_planner.set_build_fors(build_for)
-        plan = build_planner.plan()
-
-        if not plan:
-            raise errors.EmptyBuildPlanError
-
-        if self._enable_fetch_service:
-            self.services.get("fetch").set_policy(self._fetch_service_policy)
-
-        extra_args: dict[str, Any] = {}
-        for build_info in plan:
-            env = {
-                "CRAFT_PLATFORM": build_info.platform,
-                "CRAFT_VERBOSITY_LEVEL": craft_cli.emit.get_mode().name,
-            }
-
-            extra_args["env"] = env
-
-            craft_cli.emit.debug(
-                f"Running {self.app.name}:{build_info.platform} in {build_info.build_for} instance..."
-            )
-            instance_path = pathlib.PosixPath("/root/project")
-            active_fetch_service = self.services.get("fetch").is_active(
-                enable_command_line=self._enable_fetch_service
-            )
-
-            with self.services.provider.instance(
-                build_info,
-                work_dir=self._work_dir,
-                clean_existing=self._enable_fetch_service,
-                use_base_instance=not active_fetch_service,
-            ) as instance:
-                if self._enable_fetch_service:
-                    fetch_env = self.services.fetch.create_session(instance)
-                    env.update(fetch_env)
-
-                if self.app.enable_pro_support:
-                    self.services.provider.configure_instance_with_pro(instance)
-
-                session_env = self.services.get("proxy").configure_instance(instance)
-                env.update(session_env)
-
-                cmd = [self.app.name, *sys.argv[1:]]
-                craft_cli.emit.debug(
-                    f"Executing {cmd} in instance location {instance_path} with {extra_args}."
-                )
-                try:
-                    with craft_cli.emit.pause():
-                        instance.execute_run(  # pyright: ignore[reportUnknownMemberType,reportUnknownVariableType]
-                            cmd,
-                            cwd=instance_path,
-                            check=True,
-                            **extra_args,
-                        )
-                except subprocess.CalledProcessError as exc:
-                    raise craft_providers.ProviderError(
-                        f"Failed to execute {self.app.name} in instance."
-                    ) from exc
-                finally:
-                    if self._enable_fetch_service:
-                        self.services.fetch.teardown_session()
-
-        if self._enable_fetch_service:
-            self.services.fetch.shutdown(force=True)
 
     def configure(self, global_args: dict[str, Any]) -> None:
         """Configure the application using any global arguments."""
@@ -567,27 +455,14 @@ class Application:
         """
         return {}
 
-    def register_plugins(self, plugins: dict[str, PluginType]) -> None:
-        """Register plugins for this application."""
-        if not plugins:
-            return
-
-        warnings.warn(
-            "Registering plugins through the Application is deprecated. Override "
-            "the Lifecycle service's get_plugin_group instead.",
-            DeprecationWarning,
-            stacklevel=0,
-        )
-        from craft_parts.plugins import register  # noqa: PLC0415
-
-        craft_cli.emit.trace("Registering plugins...")
-        craft_cli.emit.trace(f"Plugins: {', '.join(plugins.keys())}")
-        register(plugins)
-
     def _register_default_plugins(self) -> None:
         """Register per application plugins when initializing."""
-        with warnings.catch_warnings():
-            self.register_plugins(self._get_app_plugins())
+        if plugins := self._get_app_plugins():
+            from craft_parts.plugins import register  # noqa: PLC0415
+
+            craft_cli.emit.trace("Registering plugins...")
+            craft_cli.emit.trace(f"Plugins: {', '.join(plugins.keys())}")
+            register(plugins)
 
     def _pre_run(self, dispatcher: craft_cli.Dispatcher) -> None:
         """Do any final setup before running the command.
@@ -610,11 +485,6 @@ class Application:
                     details=f"Not a directory: {project_dir}",
                     resolution="Ensure the path entered is correct.",
                 )
-
-        fetch_service_policy: str | None = getattr(args, "fetch_service_policy", None)
-        if fetch_service_policy:
-            self._enable_fetch_service = True
-            self._fetch_service_policy = fetch_service_policy  # type: ignore[assignment]
 
     def get_arg_or_config(self, parsed_args: argparse.Namespace, item: str) -> Any:  # noqa: ANN401
         """Get a configuration option that could be overridden by a command argument.
@@ -663,24 +533,9 @@ class Application:
         provider_name = command.provider_name(parsed_args)
         self._configure_services(provider_name)
 
-        return_code = 1  # General error
-        if not command.run_managed(parsed_args):
-            # command runs in the outer instance
-            craft_cli.emit.debug(f"Running {self.app.name} {command.name} on host")
-            dispatcher_return = dispatcher.run()
-            if dispatcher_return is not None:
-                return_code = dispatcher_return
-        elif not self.is_managed():
-            # command runs in inner instance, but this is the outer instance
-            self.run_managed(platform, build_for)
-            return_code = os.EX_OK
-        else:
-            # command runs in inner instance
-            dispatcher_return = dispatcher.run()
-            if dispatcher_return is not None:
-                return_code = dispatcher_return
-
-        return return_code
+        craft_cli.emit.debug(f"Running '{self.app.name} {command.name}'.")
+        dispatcher_return = dispatcher.run()
+        return 1 if dispatcher_return is None else dispatcher_return
 
     def run(self) -> int:
         """Bootstrap and run the application."""
@@ -718,42 +573,6 @@ class Application:
             error.logpath_report = False
 
         craft_cli.emit.error(error)
-
-    def _get_project_vars(self, yaml_data: dict[str, Any]) -> dict[str, str]:
-        """Return a dict with project variables to be expanded.
-
-        DEPRECATED: This method is deprecated and is not called by default.
-        Use ``ProjectService.project_vars`` instead.
-        """
-        warnings.warn(
-            "'Application._get_project_vars' is deprecated. "
-            "Use 'ProjectService.project_vars' instead.",
-            category=DeprecationWarning,
-            stacklevel=1,
-        )
-
-        pvars: dict[str, str] = {}
-        for var in self.app.project_variables:
-            pvars[var] = str(yaml_data.get(var, ""))
-        return pvars
-
-    def _set_global_environment(self, info: ProjectInfo) -> None:
-        """Populate the ProjectInfo's global environment.
-
-        DEPRECATED: This method is deprecated and is not called by default.
-        Use ``ProjectService.update_project_environment`` instead.
-        """
-        warnings.warn(
-            "Application._set_global_environment is deprecated and not called by "
-            "default. Use ProjectService.update_project_environment instead.",
-            category=DeprecationWarning,
-            stacklevel=1,
-        )
-        info.global_environment.update(
-            {
-                "CRAFT_PROJECT_VERSION": info.get_project_var("version", raw_read=True),
-            }
-        )
 
     def _setup_logging(self) -> None:
         """Initialize the logging system."""

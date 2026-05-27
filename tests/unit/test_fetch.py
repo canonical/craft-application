@@ -178,6 +178,36 @@ def test_create_session(strict, expected_policy):
 
 
 @assert_requests
+def test_create_session_secrets():
+    secrets = [
+        {
+            "type": "macaroon",
+            "url": "https://www.example-macaroon:443/**",
+            "macaroon-credentials": "deadbeef",
+        },
+        # For the git repo returned by the resolve API
+        {
+            "type": "basic-auth",
+            "url": "https://www.example-basic-auth.com:443/**",
+            "basic-credentials": "user:deadbeef",
+        },
+    ]
+
+    responses.add(
+        responses.POST,
+        f"http://localhost:{CONTROL}/session",
+        json={"id": "my-session-id", "token": "my-session-token"},
+        status=200,
+        match=[
+            matchers.json_params_matcher({"policy": "strict", "secrets": secrets}),
+        ],
+    )
+
+    session_data = fetch.create_session(strict=True, secrets=secrets)
+    assert session_data.session_id == "my-session-id"
+
+
+@assert_requests
 def test_teardown_session():
     session_data = fetch.SessionData(id="my-session-id", token="my-session-token")  # noqa: S106
     default_timeout = 10.0

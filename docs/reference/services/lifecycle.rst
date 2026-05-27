@@ -14,8 +14,12 @@ The ``LifecycleService`` handles interactions with :external+craft-parts:doc:`in
 API documentation
 -----------------
 
+.. vale off
+
 .. autoclass:: LifecycleService
     :member-order: bysource
     :members:
     :private-members: _get_build,_validate_build_plan,_get_build_for,_init_lifecycle_manager
     :undoc-members:
+
+.. vale on

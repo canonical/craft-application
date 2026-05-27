@@ -16,6 +16,10 @@ and must be implemented by the app.
 API documentation
 -----------------
 
+.. vale off
+
 .. autoclass:: PackageService
     :member-order: bysource
     :members:
+
+.. vale on

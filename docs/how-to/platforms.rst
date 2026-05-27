@@ -1,3 +1,5 @@
+.. _how-to-customize-platforms:
+
 Customize platforms in a project model
 ======================================
 
@@ -47,9 +49,9 @@ appropriate set of shorthand keys:
         _shorthand_keys = [craft_platforms.DebianArchitecture.RISCV64]
 
 If further customization is necessary, you may need to override
-:meth:`~craft_application.models.GenericPlatformsDict.__get_pydantic_json_schema__`.
-The
-`Pydantic documentation <get_pydantic_json_schema_>`_
+:meth:`~craft_application.models.GenericPlatformsDict.__get_pydantic_json_schema__`. The
+`Pydantic documentation
+<https://docs.pydantic.dev/latest/concepts/json_schema/#implementing-__get_pydantic_json_schema__>`__
 is a good place to start to understand this method.
 
 Override ``platforms`` on the ``Project`` model
@@ -81,7 +83,7 @@ pre-processes the ``platforms`` key before validating the model. The best way to
 audit is through a series of integration tests that compare the loading of valid files
 to validation from the schema, and the other way around.
 
-Craft Application does this with `a pair of integration tests
-<platforms_integration_tests_>`_
+Craft Application does this with a `pair of integration tests
+<https://github.com/canonical/craft-application/blob/7b5be5bd40682bba3840c520b6e89794014d5f9f/tests/integration/models/test_project_schema.py>`__
 that check both valid files and invalid files. It is recommended that you copy these
 tests into your application and modify them as needed.

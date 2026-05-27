@@ -20,21 +20,14 @@ from unittest import mock
 
 import pytest
 from craft_application.commands import base
-from craft_cli import EmitterMode, emit
-from typing_extensions import override
 
 
 @pytest.fixture
 def fake_command(app_metadata, fake_services):
     class FakeCommand(base.AppCommand):
-        _run_managed = True
         name = "fake"
         help_msg = "Help!"
         overview = "It's an overview."
-
-        @override
-        def run_managed(self, parsed_args: argparse.Namespace) -> bool:
-            return self._run_managed
 
     return FakeCommand(
         {
@@ -42,39 +35,6 @@ def fake_command(app_metadata, fake_services):
             "services": fake_services,
         }
     )
-
-
-def test_get_managed_cmd_unmanaged(fake_command):
-    fake_command._run_managed = False
-
-    with pytest.raises(RuntimeError):
-        fake_command.get_managed_cmd(argparse.Namespace())
-
-
-@pytest.mark.parametrize("verbosity", list(EmitterMode))
-def test_get_managed_cmd(fake_command, verbosity, app_metadata):
-    emit.set_mode(verbosity)
-
-    actual = fake_command.get_managed_cmd(argparse.Namespace())
-
-    assert actual == [
-        app_metadata.name,
-        f"--verbosity={verbosity.name.lower()}",
-        "fake",
-    ]
-
-
-def test_without_config(emitter):
-    """Test that a command can be initialised without a config.
-    This is pending deprecation but still supported.
-    """
-
-    with pytest.deprecated_call():
-        command = base.AppCommand(None)
-
-    emitter.assert_trace("Not completing command configuration")
-    assert not hasattr(command, "_app")
-    assert not hasattr(command, "_services")
 
 
 @pytest.mark.parametrize("always_load_project", [True, False])

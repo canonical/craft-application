@@ -20,3 +20,27 @@ CRAFT_DEBUG_ENV = "CRAFT_DEBUG"
 
 CRAFT_STATE_DIR_ENV = "CRAFT_STATE_DIR"
 """The environment variable for setting the state service's directory."""
+
+BASES_ALLOW_SLASH_IN_PART_NAME = (
+    "core",
+    "core18",
+    "core20",
+    "core22",
+    "core24",
+    "ubuntu@16.04",
+    "ubuntu@18.04",
+    "ubuntu@20.04",
+    "ubuntu@22.04",
+    "ubuntu@24.04",
+    "ubuntu@24.10",
+    "ubuntu@25.04",
+    "ubuntu@25.10",
+    "centos@7",
+    "almalinux@9",
+)
+"""Bases that allow the user to have a `/` character in part names.
+
+These are essentially the list of "legacy" bases from before we banned the / character
+in part names. Note that this does not apply to application-provided parts, but rather
+exclusively to user-provided parts.
+"""

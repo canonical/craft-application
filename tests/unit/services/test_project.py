@@ -26,8 +26,9 @@ import craft_platforms
 import freezegun
 import pytest
 import pytest_mock
-from craft_application import errors, models, util
+from craft_application import _const, errors, models, util
 from craft_application.application import AppMetadata
+from craft_application.errors import CraftValidationError
 from craft_application.services.project import ProjectService
 from craft_application.services.service_factory import ServiceFactory
 from craft_parts import ProjectVar, ProjectVarInfo
@@ -303,32 +304,6 @@ def test_get_platforms_bad_value(
 
     with pytest.raises(errors.CraftValidationError, match=match):
         real_project_service.get_platforms()
-
-
-@pytest.mark.parametrize(
-    ("data", "expected"),
-    [
-        pytest.param({}, {"version": None}, id="empty"),
-        pytest.param(
-            {"version": "3.14", "unrelated": "pi"},
-            {"version": "3.14"},
-            id="version-set",
-        ),
-    ],
-)
-def test_get_project_vars(real_project_service: ProjectService, data, expected):
-    real_project_service._project_vars = real_project_service._create_project_vars(data)
-    expected_warning = re.escape(
-        "'ProjectService._get_project_vars' is deprecated. "
-        "Use 'project_vars' property instead."
-    )
-    with pytest.warns(DeprecationWarning, match=expected_warning):
-        project_vars = real_project_service._get_project_vars(data)
-
-    assert project_vars == expected | {
-        "summary": None,
-        "description": None,
-    }
 
 
 @pytest.mark.parametrize(
@@ -1118,3 +1093,77 @@ def test_render_for_validates_pro_project(
         mock_validate.assert_called_once_with(pro_services, project)
     else:
         mock_validate.assert_not_called()
+
+
+SAMPLE_VALID_PART_NAMES = ["my-part", "yourpart", "our_part", "a part name with spaces"]
+SAMPLE_INVALID_USER_PART_NAMES = ["a/part/name/with/slashes"]
+SAMPLE_STRICT_PART_NAME_BASES = [
+    "ubuntu@26.04",
+    "ubuntu@26.10",
+    "debian@unstable",
+    "unknown-base@forever",
+]
+
+
+@pytest.mark.parametrize("base", _const.BASES_ALLOW_SLASH_IN_PART_NAME)
+@pytest.mark.parametrize(
+    "part_name", [*SAMPLE_VALID_PART_NAMES, *SAMPLE_INVALID_USER_PART_NAMES]
+)
+def test_part_names_on_legacy_base(
+    real_project_service: ProjectService, base: str | None, part_name: str
+):
+    """Test that bases such as Ubuntu 24.04 still allow a / in a part name."""
+
+    project_dict: dict[str, Any] = {
+        "base": base,
+        "parts": {part_name: {"plugin": "nil"}},
+    }
+
+    real_project_service._validate_user_provided_part_names(project_dict)
+
+    # And we expect the same with only a build-base
+    project_dict["build-base"] = project_dict.pop("base")
+
+    real_project_service._validate_user_provided_part_names(project_dict)
+
+
+@pytest.mark.parametrize("base", SAMPLE_STRICT_PART_NAME_BASES)
+@pytest.mark.parametrize("part_name", SAMPLE_VALID_PART_NAMES)
+def test_valid_part_names_on_future_base(
+    real_project_service: ProjectService, base: str | None, part_name: str
+):
+    """Test that future bases disallow the / character in user-provided part names."""
+
+    project_dict: dict[str, Any] = {
+        "base": base,
+        "parts": {part_name: {"plugin": "nil"}},
+    }
+
+    real_project_service._validate_user_provided_part_names(project_dict)
+
+    # And we expect the same with only a build-base
+    project_dict["build-base"] = project_dict.pop("base")
+
+    real_project_service._validate_user_provided_part_names(project_dict)
+
+
+@pytest.mark.parametrize("base", SAMPLE_STRICT_PART_NAME_BASES)
+@pytest.mark.parametrize("part_name", SAMPLE_INVALID_USER_PART_NAMES)
+def test_invalid_part_names_on_future_base(
+    real_project_service: ProjectService, base: str | None, part_name: str
+):
+    """Test that future bases disallow the / character in user-provided part names."""
+
+    project_dict: dict[str, Any] = {
+        "base": base,
+        "parts": {part_name: {"plugin": "nil"}},
+    }
+
+    with pytest.raises(CraftValidationError, match=re.escape(part_name)):
+        real_project_service._validate_user_provided_part_names(project_dict)
+
+    # And we expect the same with only a build-base
+    project_dict["build-base"] = project_dict.pop("base")
+
+    with pytest.raises(CraftValidationError, match=re.escape(part_name)):
+        real_project_service._validate_user_provided_part_names(project_dict)

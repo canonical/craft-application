@@ -65,3 +65,5 @@ parts:
         owner: 456
         group: 456
         mode: "666"
+  legacy/part/name:  # This part name should be allowed on Ubuntu 24.04 and older.
+    plugin: nil

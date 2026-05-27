@@ -15,6 +15,58 @@ Changelog
 
     For a complete list of commits, check out the `1.2.3`_ release on GitHub.
 
+
+7.0.0 (unreleased)
+------------------
+
+Application
+===========
+
+- ``Application._enable_fetch_service`` and ``Application._fetch_service_policy``
+   are removed.
+- ``Application.get_project()`` is removed. Get the project from the project service
+  with ``services.get("project").get()``.
+- ``Application.register_plugins()`` is removed. Register plugins by overriding
+  ``LifecycleService.get_plugin_group()`` instead.
+- ``Application._get_project_vars()`` is removed. Use ``ProjectService.project_vars``
+  instead.
+- ``Application._set_global_environment()`` is removed. Use
+  ``ProjectService.update_project_environment()`` instead.
+
+Commands
+========
+
+- ``AppCommand.run_managed()``, ``AppCommand.get_managed_cmd()``, and
+  ``Application.run_managed()`` are removed. Commands that need to run in a
+  managed instance should call :py:meth:`ProviderService.run_managed
+  <craft_application.services.ProviderService.run_managed>`.
+- ``AppCommand(config=None)`` is removed. A config dict is now required.
+
+Services
+========
+
+- ``ProjectService._get_project_vars()`` is removed. Use the
+  ``ProjectService.project_vars`` property instead.
+- Registering services on ``ServiceFactory`` instantiation is removed. Use
+  ``ServiceFactory.register()`` instead.
+- ``ServiceFactory.set_kwargs()`` is removed. Use ``ServiceFactory.update_kwargs()``
+  instead.
+
+For a complete list of commits, check out the `7.0.0`_ release on GitHub.
+
+6.4.0 (2026-04-23)
+------------------
+
+Services
+========
+
+- Starting with the Ubuntu 26.04 LTS base, a user-written part name can no longer
+  contain a forward slash (/).
+- The FetchService now supports registering callbacks to provide secrets during fetch-service
+  session creation.
+
+For a complete list of commits, check out the `6.4.0`_ release on GitHub.
+
 6.3.1 (2026-04-09)
 ------------------
 
@@ -186,7 +238,7 @@ Models
 - ``any`` and ``*`` are now reserved names for platforms.
 - Platform names may not contain '/' characters.
 - Ubuntu Questing is now a 'stable' base, and Resolute is added as the new 'devel' one.
-- Add a classmethod on the :py:class:`~craft_application.models.Project` class to let
+- Add a class method to :py:class:`~craft_application.models.Project` to let
   applications fine-tune which bases are considered 'devel'.
 
 Fetch Service
@@ -496,7 +548,7 @@ Fixes
 - ``InitService`` no longer leaves empty files if rendering template fails.
 - Enable terminal output when testing with ``--debug``, ``--shell``, or
   ``--shell-after`` parameters.
-- Don't repull sources on test files changes.
+- Don't re-pull sources on test files changes.
 - Generate artifacts for testing in the project root directory.
 - Normalize the list of artifacts packed in ``PackageService`` to be relative
   to the project root directory.
@@ -526,7 +578,7 @@ Commands
 Models
 ======
 
-- A new :doc:`how-to guide </how-to-guides/platforms>` describes how to implement
+- A new :ref:`how-to guide <how-to-customize-platforms>` describes how to implement
   application-specific ``platforms`` keys.
 
 Services
@@ -1289,3 +1341,5 @@ For a complete list of commits, check out the `2.7.0`_ release on GitHub.
 .. _6.2.2: https://github.com/canonical/craft-application/releases/tag/6.2.2
 .. _6.3.0: https://github.com/canonical/craft-application/releases/tag/6.3.0
 .. _6.3.1: https://github.com/canonical/craft-application/releases/tag/6.3.1
+.. _6.4.0: https://github.com/canonical/craft-application/releases/tag/6.4.0
+.. _7.0.0: https://github.com/canonical/craft-application/releases/tag/7.0.0
