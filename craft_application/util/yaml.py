@@ -23,6 +23,8 @@ from typing import TYPE_CHECKING, Any, TextIO, cast, overload
 
 import craft_platforms
 import yaml
+import yaml.constructor
+import yaml.resolver
 
 from craft_application import errors
 

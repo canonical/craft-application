@@ -212,7 +212,7 @@ class StateService(base.AppService):
         if not isinstance(data_at_key, dict):
             raise KeyError(f"can't traverse into node at {key!r}.")
 
-        return self._get(*remaining, data=data_at_key)  # ty: ignore[invalid-argument-type]
+        return self._get(*remaining, data=cast(dict[str, ValueType], data_at_key))
 
     @final
     def _set(
@@ -245,7 +245,12 @@ class StateService(base.AppService):
         if not isinstance(data_at_key, dict):
             raise KeyError(f"can't traverse into node at {key!r}.")
 
-        self._set(*remaining, data=data_at_key, value=value, overwrite=overwrite)  # ty: ignore[invalid-argument-type]
+        self._set(
+            *remaining,
+            data=cast(dict[str, ValueType], data_at_key),
+            value=value,
+            overwrite=overwrite,
+        )
 
     @final
     def _destroy_state_dir(self) -> None:

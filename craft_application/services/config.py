@@ -215,9 +215,9 @@ class ConfigService(base.AppService):
                 return cast(T, util.strtobool(value))
             if issubclass(field_type, enum.Enum):
                 with contextlib.suppress(KeyError):
-                    return field_type[value]  # ty: ignore[invalid-return-type]
+                    return cast(T, field_type[value])
                 with contextlib.suppress(KeyError):
-                    return field_type[value.upper()]
+                    return cast(T, field_type[value.upper()])
         field_adapter = pydantic.TypeAdapter(field_type)
         return field_adapter.validate_strings(value)
 

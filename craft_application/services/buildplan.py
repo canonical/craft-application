@@ -149,7 +149,9 @@ class BuildPlanService(base.AppService):
             build_on_archs = None
 
         if build_for:
-            build_for_archs = [
+            build_for_archs: list[
+                craft_platforms.DebianArchitecture | Literal["all"]
+            ] = [
                 "all" if fr == "all" else craft_platforms.DebianArchitecture(fr)
                 for fr in build_for
             ]
@@ -160,7 +162,7 @@ class BuildPlanService(base.AppService):
             self._filter_plan(
                 self._gen_exhaustive_build_plan(project_data=raw_project),
                 platforms=platforms,
-                build_for=build_for_archs,  # ty: ignore[invalid-argument-type]  # Literal "all"
+                build_for=build_for_archs,
                 build_on=build_on_archs,
             )
         )

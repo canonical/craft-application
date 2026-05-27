@@ -39,8 +39,8 @@ from typing_extensions import Any, Self, TypedDict, override
 from craft_application.launchpad import errors, models, util
 from craft_application.util import retry
 
-from . import build
 from .base import LaunchpadObject, Pocket
+from .build import Build
 
 if TYPE_CHECKING:
     from collections.abc import Collection, Iterable
@@ -120,11 +120,11 @@ class BaseRecipe(LaunchpadObject):
         if bzr_branch:
             kwargs["branch"] = bzr_branch
 
-    def get_builds(self) -> Collection[build.Build]:
+    def get_builds(self) -> Collection[Build]:
         """Get the existing builds for a Recipe."""
-        return [build.Build(self._lp, b) for b in self._obj.builds]
+        return [Build(self._lp, b) for b in self._obj.builds]
 
-    def _build(self, deadline: int | None, kwargs: dict[str, Any]) -> list[build.Build]:
+    def _build(self, deadline: int | None, kwargs: dict[str, Any]) -> list[Build]:
         """Get builds for this recipe.
 
         :param deadline: The time (on Python's `monotonic_ns` clock) after which we time out.
@@ -146,7 +146,7 @@ class BaseRecipe(LaunchpadObject):
         if build_request.status != "Completed":
             raise errors.BuildError("Build request failed")
 
-        return [build.Build(self._lp, obj) for obj in build_request.builds]
+        return [Build(self._lp, obj) for obj in build_request.builds]
 
 
 class _StoreRecipe(BaseRecipe):
@@ -329,7 +329,7 @@ class SnapRecipe(_StoreRecipe):
         pocket: Pocket = Pocket.UPDATES,
         channels: BuildChannels | None = None,
         deadline: int | None = None,
-    ) -> Collection[build.Build]:  # ty: ignore[unresolved-attribute]
+    ) -> Collection[Build]:
         """Create a new set of builds for this recipe."""
         request_build_kwargs: dict[str, Any] = {
             "archive": archive,
@@ -480,7 +480,7 @@ class _StandardRecipe(_StoreRecipe):
         self,
         channels: BuildChannels | None = None,
         deadline: int | None = None,
-    ) -> Collection[build.Build]:  # ty: ignore[unresolved-attribute]
+    ) -> Collection[Build]:
         """Create a new set of builds for this recipe."""
         kwargs = {"channels": channels} if channels else {}
         return self._build(deadline, kwargs)

@@ -21,7 +21,7 @@ All errors inherit from craft_cli.CraftError.
 from __future__ import annotations
 
 import os
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Any, Literal, cast
 
 import craft_platforms
 import yaml
@@ -167,7 +167,7 @@ class CraftValidationError(CraftError):
         :param kwargs: additional keyword arguments get passed to CraftError
         """
         message = format_pydantic_errors(error.errors(), file_name=file_name)
-        return cls(message, **kwargs)  # ty: ignore[invalid-argument-type]
+        return cls(message, **cast(dict[str, Any], kwargs))
 
 
 class PartsLifecycleError(CraftError):
