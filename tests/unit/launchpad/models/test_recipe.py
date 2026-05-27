@@ -31,7 +31,7 @@ def test_get_recipe_class():
 
 def test_get_recipe_class_invalid():
     with pytest.raises(TypeError):
-        get_recipe_class("invalid")  # pyright: ignore[reportArgumentType]  # ty: ignore[invalid-argument-type]
+        get_recipe_class("invalid")  # ty: ignore[invalid-argument-type]
 
 
 @pytest.mark.parametrize("recipe_type", list(RecipeType.__members__.values()))

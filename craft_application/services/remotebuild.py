@@ -229,9 +229,9 @@ class RemoteBuildService(base.AppService):
         """Clean up the recipe and repository."""
         # Pyright complains about these comparisons because we're doing hacky things to
         # the type system.
-        if self._recipe is not None:  # pyright: ignore[reportUnnecessaryComparison]
+        if self._recipe is not None:
             self._recipe.delete()
-        if self._repository is not None:  # pyright: ignore[reportUnnecessaryComparison]
+        if self._repository is not None:
             self._repository.delete()
 
     # endregion
@@ -307,13 +307,13 @@ class RemoteBuildService(base.AppService):
             # private repositories can only be accessed via ssh
             repo_url = parse.urlparse(str(lp_repository.git_ssh_url))
             push_url = repo_url._replace(
-                netloc=f"{self.lp.lp.me.name}@{repo_url.netloc}"  # pyright: ignore[reportOptionalMemberAccess,reportAttributeAccessIssue,reportUnknownMemberType]
+                netloc=f"{self.lp.lp.me.name}@{repo_url.netloc}"
             )
             craft_cli.emit.debug(f"Using ssh url for private repository: {push_url}")
         else:
             repo_url = parse.urlparse(str(lp_repository.git_https_url))
             push_url = repo_url._replace(
-                netloc=f"{self.lp.lp.me.name}:{token}@{repo_url.netloc}"  # pyright: ignore[reportOptionalMemberAccess,reportAttributeAccessIssue,reportUnknownMemberType]
+                netloc=f"{self.lp.lp.me.name}:{token}@{repo_url.netloc}"
             )
             craft_cli.emit.debug(f"Using https url for public repository: {push_url}")
 

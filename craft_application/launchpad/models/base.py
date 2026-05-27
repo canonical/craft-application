@@ -75,7 +75,7 @@ class LaunchpadObject:
     def __init__(self, lp: Launchpad, lp_obj: Entry) -> None:
         self._lp = lp
 
-        if not isinstance(lp_obj, Entry):  # pyright: ignore[reportUnnecessaryIsInstance]
+        if not isinstance(lp_obj, Entry):
             raise TypeError(
                 f"Cannot use type {lp_obj.__class__.__name__} for launchpad entries."
             )
@@ -133,9 +133,7 @@ class LaunchpadObject:
 
         if item in annotations:
             cls = annotations[item]
-            if isinstance(  # pyright: ignore[reportUnnecessaryIsInstance]
-                cls, type
-            ) and issubclass(cls, LaunchpadObject):
+            if isinstance(cls, type) and issubclass(cls, LaunchpadObject):
                 return cls(self._lp, lp_obj)
             # We expect that this class can take the object.
             return cls(lp_obj)  # type: ignore[call-arg]

@@ -208,7 +208,7 @@ class ConfigService(base.AppService):
 
     def _convert_type(self, value: str, field_type: type[T]) -> T:
         """Convert the value to the appropriate type."""
-        if isinstance(field_type, type):  # pyright: ignore[reportUnnecessaryIsInstance]
+        if isinstance(field_type, type):
             if issubclass(field_type, str):
                 return field_type(value)
             if issubclass(field_type, bool):

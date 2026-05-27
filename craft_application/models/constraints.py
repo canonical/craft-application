@@ -199,11 +199,7 @@ ideally they will retain this same constraint.
 
 def _parse_spdx_license(value: str) -> license_expression.LicenseExpression:
     licensing = license_expression.get_spdx_licensing()
-    if (
-        lic := licensing.parse(  # pyright: ignore[reportUnknownMemberType]
-            value, validate=True
-        )
-    ) is not None:
+    if (lic := licensing.parse(value, validate=True)) is not None:
         return lic
     raise ValueError
 

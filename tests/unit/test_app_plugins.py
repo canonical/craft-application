@@ -51,7 +51,7 @@ def entry_points_faker():
     og_modules = sys.modules
 
     def entry_points_faker(
-        entry_points: list[tuple[str, str, Callable]] | None = None,  # type: ignore[reportGeneralTypeIssues]
+        entry_points: list[tuple[str, str, Callable]] | None = None,
     ):
         # All go under this group for our purposes
         entry_points_txt = f"[{PLUGIN_GROUP_NAME}]\n"
@@ -69,7 +69,7 @@ def entry_points_faker():
         for entry_point_name, module_name, configure_func in entry_points:
             entry_points_txt += f"{entry_point_name} = {module_name}\n"
             module = ModuleType(module_name)
-            module.configure = configure_func  # type: ignore[reportAttributeAccessIssue]  # ty: ignore[unresolved-attribute]
+            module.configure = configure_func  # ty: ignore[unresolved-attribute]
             sys.modules[module_name] = module
 
         class FakeDistribution(Distribution):
@@ -92,7 +92,7 @@ def entry_points_faker():
                 return [FakeDistribution(entry_points_txt)]
 
         # Set up the fakery
-        sys.meta_path.append(FakeDistributionFinder)  # type: ignore[reportArgumentType]  # ty: ignore[invalid-argument-type]
+        sys.meta_path.append(FakeDistributionFinder)  # ty: ignore[invalid-argument-type]
 
     yield entry_points_faker
 

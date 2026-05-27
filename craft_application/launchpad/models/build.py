@@ -111,12 +111,12 @@ class Build(LaunchpadObject):
     distro_series: distro.DistroSeries
 
     @classmethod
-    def new(cls) -> Self:  # pyright: ignore[reportIncompatibleMethodOverride]
+    def new(cls) -> Self:
         """Do not create a build without a recipe."""
         raise NotImplementedError("Use a recipe's `build` method instead.")
 
     @classmethod
-    def get(cls) -> Self:  # pyright: ignore[reportIncompatibleMethodOverride]
+    def get(cls) -> Self:
         """Do not try to get builds without a recipe."""
         raise NotImplementedError("Use a recipe's `get_builds` method instead.")
 

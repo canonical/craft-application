@@ -38,7 +38,7 @@ def test_gets_registered_services(
     )
     factory.update_kwargs("project", project_dir=project_path)
     factory.get("project").configure(platform=None, build_for=None)
-    factory.get("project").set(fake_project)  # type: ignore[reportAttributeAccessIssue]  # ty: ignore[unresolved-attribute]
+    factory.get("project").set(fake_project)  # ty: ignore[unresolved-attribute]
 
     check.is_instance(factory.get("package"), services.PackageService)
     check.is_instance(factory.get("project"), services.ProjectService)

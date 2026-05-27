@@ -45,7 +45,7 @@ from craft_parts import (
     StepInfo,
 )
 from craft_parts.executor import (
-    ExecutionContext,  # pyright: ignore[reportPrivateImportUsage]
+    ExecutionContext,
 )
 
 if TYPE_CHECKING:

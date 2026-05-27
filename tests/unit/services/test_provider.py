@@ -1103,7 +1103,7 @@ def test_run_managed(
 ):
     mock_fetch = mock.MagicMock()
     fake_services.register("fetch", mock.Mock(return_value=mock_fetch))
-    fake_services.get_class("fetch").is_active.return_value = fetch  # pyright: ignore[reportFunctionMemberAccess]  # ty: ignore[unresolved-attribute]
+    fake_services.get_class("fetch").is_active.return_value = fetch  # ty: ignore[unresolved-attribute]
     monkeypatch.setattr("sys.argv", ["[unused]", "pack", "--verbose"])
     instance_context = (
         mock_provider.launched_environment.return_value.__enter__.return_value

@@ -217,7 +217,7 @@ def test_add_all(empty_working_directory):
 
     status = pygit2.Repository(empty_working_directory).status()
 
-    if pygit2.__version__.startswith("1.13."):  # pyright: ignore[reportPrivateImportUsage]
+    if pygit2.__version__.startswith("1.13."):
         expected = {
             "foo": pygit2.GIT_STATUS_INDEX_NEW,
             "bar": pygit2.GIT_STATUS_INDEX_NEW,

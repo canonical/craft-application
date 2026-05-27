@@ -259,7 +259,7 @@ def test_spdx_parser_with_none():
     with pytest.raises(
         ValueError, match=f"License '{val}' not valid. It must be in SPDX format."
     ):
-        _validate_spdx_license(val)  # pyright: ignore[reportArgumentType]  # ty: ignore[invalid-argument-type]
+        _validate_spdx_license(val)  # ty: ignore[invalid-argument-type]
 
 
 # endregion
@@ -276,7 +276,7 @@ def test_proprietary_str_valid():
 def test_proprietary_str_invalid():
     with pytest.raises(pydantic.ValidationError) as validation_error:
         _ = _ProprietaryLicenseStrModel(
-            license="non-proprietary"  # pyright: ignore[reportArgumentType]  # ty: ignore[invalid-argument-type]
+            license="non-proprietary"  # ty: ignore[invalid-argument-type]
         )
     assert validation_error.match("Input should be 'proprietary'")
 
@@ -307,9 +307,7 @@ def test_license_str_invalid(license_str):
 
 def test_license_str_invalid_literal():
     with pytest.raises(pydantic.ValidationError) as validation_error:
-        _ = _LicenseStrModel(
-            license="non-proprietary"  # pyright: ignore[reportArgumentType]
-        )
+        _ = _LicenseStrModel(license="non-proprietary")
     assert validation_error.match("Input should be 'proprietary'")
 
 

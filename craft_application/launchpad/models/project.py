@@ -71,7 +71,7 @@ class Project(LaunchpadObject):
     information_type: InformationType
 
     @classmethod
-    def new(  # pyright: ignore[reportIncompatibleMethodOverride]
+    def new(
         cls,
         lp: Launchpad,
         title: str,
@@ -100,9 +100,7 @@ class Project(LaunchpadObject):
         )
 
     @classmethod
-    def get(  # pyright: ignore[reportIncompatibleMethodOverride]
-        cls, lp: Launchpad, name: str
-    ) -> Self:
+    def get(cls, lp: Launchpad, name: str) -> Self:
         """Get an existing project."""
 
         def get_project(name: str) -> Entry:
@@ -114,7 +112,7 @@ class Project(LaunchpadObject):
                 retry(
                     f"get project {name}",
                     launchpadlib.errors.NotFound,
-                    get_project,  # pyright: ignore[reportArgumentType]
+                    get_project,
                     name,
                 ),
             )
@@ -122,9 +120,7 @@ class Project(LaunchpadObject):
             raise errors.NotFoundError(f"Could not find project {name}")
 
     @classmethod
-    def find(  # pyright: ignore[reportIncompatibleMethodOverride]
-        cls, lp: Launchpad, text: str
-    ) -> Iterable[Self]:
+    def find(cls, lp: Launchpad, text: str) -> Iterable[Self]:
         """Find projects by a search term."""
         for lp_project in lp.lp.projects.search(text):
             yield cls(lp, lp_project)

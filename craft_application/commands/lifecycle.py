@@ -270,9 +270,7 @@ class LifecycleCommand(_BaseLifecycleCommand):
         if self._use_provider(parsed_args):
             fetch_service_policy = getattr(parsed_args, "fetch_service_policy", None)
             if fetch_service_policy:
-                self._services.get("fetch").set_policy(
-                    fetch_service_policy  # type: ignore[reportArgumentType]
-                )
+                self._services.get("fetch").set_policy(fetch_service_policy)
             self._run_manager_for_build_plan(fetch_service_policy)
             return
 
@@ -754,9 +752,7 @@ class TestCommand(PackCommand):
             getattr(parsed_args, "fetch_service_policy", None),
         )
         if fetch_service_policy:
-            self._services.get("fetch").set_policy(
-                fetch_service_policy  # type: ignore[reportArgumentType]
-            )
+            self._services.get("fetch").set_policy(fetch_service_policy)
 
         # Don't enter a shell during the packing step, but save those values
         # for the testing service.

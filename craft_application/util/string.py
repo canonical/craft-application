@@ -25,7 +25,7 @@ def strtobool(value: str) -> bool:
     If the value is not a string, a TypeError is raised.
     If the value is not a valid boolean value, a ValueError is raised.
     """
-    if not isinstance(value, str):  # type: ignore[reportUnnecessaryIsInstance]
+    if not isinstance(value, str):
         raise TypeError(f"Invalid str value: {str(value)}")
 
     value = value.strip().lower()

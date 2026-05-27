@@ -38,9 +38,7 @@ def get_unique_callbacks(
 ) -> Iterable[RunCallback]: ...  # pragma: no cover
 
 
-def get_unique_callbacks(  # pyright: ignore[reportUnknownParameterType]
-    cls: type, callback_name: str
-) -> Iterable[Callable]:  # type: ignore[type-arg]
+def get_unique_callbacks(cls: type, callback_name: str) -> Iterable[Callable]:  # type: ignore[type-arg]
     """Get all unique callbacks in a class's inheritance tree.
 
     Guarantees order to be the reverse of the method resolution order (that is,
@@ -52,9 +50,9 @@ def get_unique_callbacks(  # pyright: ignore[reportUnknownParameterType]
     :param callback_name:  The name of the function
     :return: Ordered callbacks starting at the top of the class tree.
     """
-    callbacks = []  # pyright: ignore[reportUnknownVariableType]
+    callbacks = []
     for class_ in reversed(cls.mro()):
         callback = getattr(class_, callback_name, None)
         if callback is not None and callback not in callbacks:
-            callbacks.append(callback)  # pyright: ignore[reportUnknownMemberType]
-    return callbacks  # pyright: ignore[reportUnknownVariableType]
+            callbacks.append(callback)
+    return callbacks

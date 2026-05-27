@@ -66,7 +66,7 @@ def test_issue_then_ignore(
     LinterService.register(_FailingPreLinter)
 
     project_service = fake_services.get("project")
-    project_service.set(fake_project)  # type: ignore[reportAttributeAccessIssue]
+    project_service.set(fake_project)
     project_dir = project_service.resolve_project_file_path().parent
     project_dir.mkdir(parents=True, exist_ok=True)
 

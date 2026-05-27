@@ -108,7 +108,7 @@ class GitRepository(_BaseRepository):
         self._obj.information_type = value.value
 
     @classmethod
-    def get(  # pyright: ignore[reportIncompatibleMethodOverride]
+    def get(
         cls,
         lp: Launchpad,
         name: str | None = None,
@@ -136,7 +136,7 @@ class GitRepository(_BaseRepository):
         return cls(lp, lp_repo)
 
     @classmethod
-    def new(  # pyright: ignore[reportIncompatibleMethodOverride]
+    def new(
         cls,
         lp: Launchpad,
         name: str,

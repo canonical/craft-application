@@ -176,8 +176,8 @@ class GitRepo:
         logger.debug("Adding all changes.")
 
         try:
-            self._repo.index.add_all()  # pyright: ignore[reportUnknownMemberType]
-            self._repo.index.write()  # pyright: ignore[reportUnknownMemberType]
+            self._repo.index.add_all()
+            self._repo.index.write()
         except pygit2.GitError as error:
             raise GitError(
                 f"Could not add changes for the git repository in {str(self.path)!r}."
@@ -195,9 +195,7 @@ class GitRepo:
         logger.debug("Committing changes.")
 
         try:
-            tree = (
-                self._repo.index.write_tree()  # pyright: ignore[reportUnknownMemberType]
-            )
+            tree = self._repo.index.write_tree()
         except pygit2.GitError as error:
             raise GitError(
                 f"Could not create a tree for the git repository in {str(self.path)!r}."
@@ -293,9 +291,7 @@ class GitRepo:
         logger.debug("Initializing git repository in %r", str(self.path))
 
         try:
-            pygit2.init_repository(  # pyright: ignore[reportUnknownMemberType]
-                self.path
-            )
+            pygit2.init_repository(self.path)
         except pygit2.GitError as error:
             raise GitError(
                 f"Could not initialize a git repository in {str(self.path)!r}."

@@ -147,7 +147,7 @@ def test_format_pydantic_error_normalization():
 
     result = format_pydantic_errors(
         errors,
-        file_name="this.yaml",  # pyright: ignore[reportArgumentType]
+        file_name="this.yaml",
     )
     expected = textwrap.dedent(
         """

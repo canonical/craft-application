@@ -533,7 +533,7 @@ class ProviderService(base.AppService):
             emit.debug("Enabled Ubuntu Pro services.")
 
             # Cache the current Pro services, for prior checks in reentrant calls.
-            instance.pro_services = set(self._pro_services)  # type: ignore[reportAttributeAccessIssue]
+            instance.pro_services = set(self._pro_services)
 
     def run_managed(
         self,
@@ -584,7 +584,7 @@ class ProviderService(base.AppService):
             try:
                 with emit.pause():
                     # Pyright doesn't fully understand craft_providers's CompletedProcess.
-                    instance.execute_run(  # pyright: ignore[reportUnknownMemberType,reportUnknownVariableType]
+                    instance.execute_run(
                         list(command),
                         cwd=self._app.managed_instance_project_path,
                         check=True,
