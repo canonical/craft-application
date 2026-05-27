@@ -534,7 +534,8 @@ class Application:
         self._configure_services(provider_name)
 
         craft_cli.emit.debug(f"Running '{self.app.name} {command.name}'.")
-        return dispatcher.run() or os.EX_OK
+        dispatcher_return = dispatcher.run()
+        return dispatcher_return if dispatcher_return is not None else os.EX_OK
 
     def run(self) -> int:
         """Bootstrap and run the application."""
