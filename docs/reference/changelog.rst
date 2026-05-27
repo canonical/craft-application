@@ -52,6 +52,12 @@ Services
 - ``ServiceFactory.set_kwargs()`` is removed. Use ``ServiceFactory.update_kwargs()``
   instead.
 
+Utilities
+=========
+
+- :py:class:`~craft_application.util.pro_services.ProServices` now exposes
+  ``pro_client_exists()`` and ``get_pro_services()`` as public class methods.
+
 For a complete list of commits, check out the `7.0.0`_ release on GitHub.
 
 6.4.0 (2026-04-23)
