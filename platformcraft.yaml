@@ -1,0 +1,23 @@
+name: my-platform-thingy
+base: ubuntu@25.10
+version: "0"
+
+platforms:
+  mario:
+    build-on: [amd64, arm64]
+    build-for: [arm64]
+    extensions:
+      - player-1
+
+  luigi:
+    build-on: [amd64, riscv64]
+    build-for: [riscv64]
+    extensions:
+      - player-2
+
+
+parts:
+  thing:
+    plugin: nil
+    override-build: |
+      exit 0
