@@ -9,3 +9,17 @@ users:
     plain_text_passwd: spread
     lock_passwd: false
     sudo: ALL=(ALL) NOPASSWD:ALL
+
+chpasswd:
+  list: |
+    root:SPREAD_PASSWORD
+  expire: false
+
+runcmd:
+  - |
+    if [ -d /etc/ssh/sshd_config.d/ ]; then
+      echo 'PermitRootLogin yes' > /etc/ssh/sshd_config.d/00-spread.conf
+    else
+      sed -i 's/^#\?PermitRootLogin.*/PermitRootLogin yes/' /etc/ssh/sshd_config
+    fi
+    systemctl restart ssh || systemctl restart sshd
