@@ -130,19 +130,19 @@ def test_pro_client_exists_no_executable(mocker):
     """Return false if there isn't a Pro executable."""
     mocker.patch.object(ProServices, "_pro_executable", None)
 
-    assert ProServices._pro_client_exists() is False
+    assert ProServices.pro_client_exists() is False
 
 
 def test_pro_client_exists_missing(mocker, tmp_path):
     """Return false if the class defines a Pro executable but it doesn't exist on disk."""
     mocker.patch.object(ProServices, "_pro_executable", tmp_path / "pro")
 
-    assert ProServices._pro_client_exists() is False
+    assert ProServices.pro_client_exists() is False
 
 
 def test_pro_client_exists(mocker, mock_pro_executable):
     """Return true if the Pro executable exists."""
-    assert ProServices._pro_client_exists() is True
+    assert ProServices.pro_client_exists() is True
 
 
 def test_pro_api_call_client_missing_error(mocker, tmp_path):
@@ -287,7 +287,7 @@ def test_get_pro_services(mocker, enabled_names, expected):
         return_value={"data": {"attributes": {"enabled_services": enabled_services}}},
     )
 
-    services = ProServices._get_pro_services()
+    services = ProServices.get_pro_services()
 
     assert services == expected
 
