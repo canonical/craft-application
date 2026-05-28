@@ -232,7 +232,9 @@ def test_ensure_repository_wraps_git_error_on_pushing(
 def test_ensure_repository_wraps_git_error_during_init(
     tmp_path,
     remote_build_service,
+    mock_lp_project,
 ):
+    remote_build_service._lp_project = mock_lp_project
     with pytest.raises(RemoteBuildGitError, match="Fake _init_repo error during tests"):
         remote_build_service._ensure_repository(tmp_path)
 

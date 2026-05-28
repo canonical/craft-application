@@ -21,7 +21,7 @@ import pydantic
 import pytest
 from craft_application import errors, models
 from hypothesis import given, strategies
-from overrides import override
+from typing_extensions import override
 
 
 class MyBaseModel(models.CraftBaseModel):

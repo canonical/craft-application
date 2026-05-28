@@ -18,7 +18,7 @@ from pathlib import Path
 from shutil import copytree
 from typing import cast
 
-from xdg import BaseDirectory  # type: ignore[import-untyped]
+from xdg import BaseDirectory
 
 from craft_application.git import GitError, GitRepo
 

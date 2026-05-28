@@ -155,7 +155,7 @@ class ProServices(set[str]):
 
         # Ignore typing for this private method. The returned object is variable in type, but types are declared in the API docs:
         # https://canonical-ubuntu-pro-client.readthedocs-hosted.com/en/v32/references/api/
-        return result  # type: ignore [no-any-return]
+        return result
 
     @classmethod
     def _is_pro_attached(cls) -> bool:
@@ -164,7 +164,7 @@ class ProServices(set[str]):
 
         # Ignore typing here. This field's type is static according to:
         # https://canonical-ubuntu-pro-client.readthedocs-hosted.com/en/v32/references/api/#u-pro-status-is-attached-v1
-        return response["data"]["attributes"]["is_attached"]  # type: ignore [no-any-return]
+        return response["data"]["attributes"]["is_attached"]
 
     @classmethod
     def get_pro_services(cls) -> ProServices:

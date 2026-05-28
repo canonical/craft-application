@@ -147,8 +147,7 @@ class DefaultConfigHandler(ConfigHandler):
             self._cache[item] = field.default
             return field.default
         if field.default_factory is not None:
-            # Remove the type ignore after pydantic/pydantic#10945 is fixed
-            default = field.default_factory()  # type: ignore[call-arg]
+            default = field.default_factory()
             self._cache[item] = default
             return default
 
@@ -204,20 +203,20 @@ class ConfigService(base.AppService):
         else:
             return self._default_handler.get_raw(item)
 
-        return self._convert_type(value, field_info.annotation)  # type: ignore[arg-type,return-value]
+        return self._convert_type(value, field_info.annotation)
 
     def _convert_type(self, value: str, field_type: type[T]) -> T:
         """Convert the value to the appropriate type."""
-        if isinstance(field_type, type):  # pyright: ignore[reportUnnecessaryIsInstance]
+        if isinstance(field_type, type):
             if issubclass(field_type, str):
                 return field_type(value)
             if issubclass(field_type, bool):
                 return cast(T, util.strtobool(value))
             if issubclass(field_type, enum.Enum):
                 with contextlib.suppress(KeyError):
-                    return field_type[value]
+                    return cast(T, field_type[value])
                 with contextlib.suppress(KeyError):
-                    return field_type[value.upper()]
+                    return cast(T, field_type[value.upper()])
         field_adapter = pydantic.TypeAdapter(field_type)
         return field_adapter.validate_strings(value)
 

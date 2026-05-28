@@ -58,7 +58,7 @@ class CraftBaseModel(pydantic.BaseModel):
         :return: The newly created object.
         :raise TypeError: If data is not a dictionary.
         """
-        if not isinstance(data, dict):  # pyright: ignore[reportUnnecessaryIsInstance]
+        if not isinstance(data, dict):
             raise TypeError("Project data is not a dictionary")
 
         return cls.model_validate(data)

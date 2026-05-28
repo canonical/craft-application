@@ -75,7 +75,7 @@ def test_unmarshal():
 def test_unmarshal_not_a_dictionary():
     """Verify unmarshalling with data that is not a dictionary raises an error."""
     with pytest.raises(TypeError) as raised:
-        SnapConfig.unmarshal("provider=lxd")  # pyright: ignore[reportArgumentType]
+        SnapConfig.unmarshal("provider=lxd")  # ty: ignore[invalid-argument-type]
 
     assert str(raised.value) == "snap config data is not a dictionary"
 

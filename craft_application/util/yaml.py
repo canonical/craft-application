@@ -23,6 +23,8 @@ from typing import TYPE_CHECKING, Any, TextIO, cast, overload
 
 import craft_platforms
 import yaml
+import yaml.constructor
+import yaml.resolver
 
 from craft_application import errors
 
@@ -30,9 +32,6 @@ if TYPE_CHECKING:  # pragma: no cover
     from collections.abc import Hashable
 
 
-# pyright: reportUnknownMemberType=false
-# Type of "represent_scalar" is
-# (tag: str, value: Unknown, style: str | None = None) -> ScalarNode
 def _repr_str(dumper: yaml.Dumper, data: str) -> yaml.ScalarNode:
     """Multi-line string representer for the YAML dumper."""
     if "\n" in data:
@@ -152,6 +151,4 @@ def dump_yaml(data: Any, stream: TextIO | None = None, **kwargs: Any) -> str | N
     )
     kwargs.setdefault("sort_keys", False)
     kwargs.setdefault("allow_unicode", True)
-    return cast(  # This cast is needed for pyright but not mypy
-        str | None, yaml.dump(data, stream, Dumper=yaml.SafeDumper, **kwargs)
-    )
+    return cast(str | None, yaml.dump(data, stream, Dumper=yaml.SafeDumper, **kwargs))

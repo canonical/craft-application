@@ -31,7 +31,7 @@ from typing import TYPE_CHECKING, Any, cast
 
 import craft_platforms
 import craft_providers
-import snap_http  # type: ignore[import-untyped]
+import snap_http
 from craft_cli import CraftError, emit
 from craft_providers import bases
 from craft_providers.actions.snap_installer import Snap
@@ -275,7 +275,7 @@ class ProviderService(base.AppService):
                 host_source=work_dir,
                 # Ignore argument type until craft-providers accepts PurePosixPaths
                 # https://github.com/canonical/craft-providers/issues/315
-                target=self._app.managed_instance_project_path,  # type: ignore[arg-type]
+                target=self._app.managed_instance_project_path,
             )
             self._services.get("state").configure_instance(instance)
             emit.debug("Instance launched and working directory mounted")
@@ -310,13 +310,13 @@ class ProviderService(base.AppService):
             # this only applies to our Buildd images (i.e.; Ubuntu)
             self.packages.extend(["gpg", "dirmngr"])
         return base_class(
-            alias=alias,  # type: ignore[arg-type]
+            alias=alias,  # ty: ignore[invalid-argument-type]
             compatibility_tag=f"{self._app.name}-{base_class.compatibility_tag}{self.compatibility_tag}",
             hostname=instance_name,
             snaps=self.snaps,
             environment=self.environment,
             packages=self.packages,
-            **kwargs,  # type: ignore[arg-type]
+            **kwargs,  # ty: ignore[invalid-argument-type]
         )
 
     def get_pack_state(self) -> models.PackState:
@@ -533,7 +533,7 @@ class ProviderService(base.AppService):
             emit.debug("Enabled Ubuntu Pro services.")
 
             # Cache the current Pro services, for prior checks in reentrant calls.
-            instance.pro_services = set(self._pro_services)  # type: ignore[reportAttributeAccessIssue]
+            instance.pro_services = set(self._pro_services)
 
     def run_managed(
         self,
@@ -583,8 +583,7 @@ class ProviderService(base.AppService):
             self._services.get("proxy").finalize_instance_configuration(instance)
             try:
                 with emit.pause():
-                    # Pyright doesn't fully understand craft_providers's CompletedProcess.
-                    instance.execute_run(  # pyright: ignore[reportUnknownMemberType,reportUnknownVariableType]
+                    instance.execute_run(
                         list(command),
                         cwd=self._app.managed_instance_project_path,
                         check=True,

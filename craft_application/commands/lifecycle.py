@@ -51,11 +51,7 @@ def get_lifecycle_command_group() -> CommandGroup:
     if not Features().enable_overlay:
         commands.remove(OverlayCommand)
 
-    return CommandGroup(
-        "Lifecycle",
-        commands,  # type: ignore[arg-type] # https://github.com/canonical/craft-cli/pull/157
-        ordered=True,
-    )
+    return CommandGroup("Lifecycle", commands, ordered=True)
 
 
 class _BaseLifecycleCommand(base.ExtensibleCommand):
@@ -96,7 +92,7 @@ class _BaseLifecycleCommand(base.ExtensibleCommand):
 
     @override
     def _fill_parser(self, parser: argparse.ArgumentParser) -> None:
-        super()._fill_parser(parser)  # type: ignore[arg-type]
+        super()._fill_parser(parser)
 
         group = parser.add_mutually_exclusive_group()
         if self._allow_destructive:
@@ -270,9 +266,7 @@ class LifecycleCommand(_BaseLifecycleCommand):
         if self._use_provider(parsed_args):
             fetch_service_policy = getattr(parsed_args, "fetch_service_policy", None)
             if fetch_service_policy:
-                self._services.get("fetch").set_policy(
-                    fetch_service_policy  # type: ignore[reportArgumentType]
-                )
+                self._services.get("fetch").set_policy(fetch_service_policy)
             self._run_manager_for_build_plan(fetch_service_policy)
             return
 
@@ -336,7 +330,7 @@ class LifecyclePartsCommand(LifecycleCommand):
 
     @override
     def _fill_parser(self, parser: argparse.ArgumentParser) -> None:
-        super()._fill_parser(parser)  # type: ignore[arg-type]
+        super()._fill_parser(parser)
         parser.add_argument(
             "parts",
             metavar="part-name",
@@ -754,9 +748,7 @@ class TestCommand(PackCommand):
             getattr(parsed_args, "fetch_service_policy", None),
         )
         if fetch_service_policy:
-            self._services.get("fetch").set_policy(
-                fetch_service_policy  # type: ignore[reportArgumentType]
-            )
+            self._services.get("fetch").set_policy(fetch_service_policy)
 
         # Don't enter a shell during the packing step, but save those values
         # for the testing service.
@@ -805,7 +797,7 @@ class CleanCommand(_BaseLifecycleCommand):
 
     @override
     def _fill_parser(self, parser: argparse.ArgumentParser) -> None:
-        super()._fill_parser(parser)  # type: ignore[arg-type]
+        super()._fill_parser(parser)
         parser.add_argument(
             "parts",
             metavar="part-name",

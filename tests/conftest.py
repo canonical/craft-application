@@ -256,7 +256,7 @@ def app_metadata(request, fake_config_model) -> craft_application.AppMetadata:
         return craft_application.AppMetadata(
             "testcraft",
             "A fake app for testing craft-application",
-            **kwargs,
+            **kwargs,  # ty: ignore[invalid-argument-type]
         )
 
 
@@ -353,7 +353,7 @@ def fake_project_service_class(fake_project_dict) -> type[services.ProjectServic
         # This is a final method, but we're overriding it here for convenience when
         # doing internal testing.
         @override
-        def _load_raw_project(self):  # type: ignore[reportIncompatibleMethodOverride]
+        def _load_raw_project(self):  # ty: ignore[override-of-final-method]
             return fake_project_dict
 
         # Don't care if the project file exists during this testing.
@@ -366,7 +366,7 @@ def fake_project_service_class(fake_project_dict) -> type[services.ProjectServic
             """Set the project model. Only for use during testing!"""
             self._project_model = value
             self._platform = next(iter(value.platforms))
-            self._build_for = value.platforms[self._platform].build_for[0]  # type: ignore[reportOptionalSubscript]
+            self._build_for = value.platforms[self._platform].build_for[0]
             self._project_vars = craft_parts.ProjectVarInfo.unmarshal(
                 {"a": craft_parts.ProjectVar(value="foo").marshal()}
             )
@@ -627,7 +627,7 @@ def repository_with_unannotated_tag(
 @pytest.fixture
 def mock_pro_api_call(mocker):
 
-    mock_responses = {
+    mock_responses: dict[str, Any] = {
         "u.pro.status.is_attached.v1": {
             "data": {
                 "attributes": {"is_attached": False},

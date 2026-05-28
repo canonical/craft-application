@@ -15,25 +15,13 @@
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Base LaunchpadObject."""
 
-# This file relies heavily on dynamic features from launchpadlib that cause pyright
-# to complain a lot. As such, we're disabling several pyright checkers for this file
-# since in this case they generate more noise than utility.
-# pyright: reportUnknownMemberType=false
-# pyright: reportUnknownVariableType=false
-# pyright: reportUnknownArgumentType=false
-# pyright: reportOptionalMemberAccess=false
-# pyright: reportAttributeAccessIssue=false
-# pyright: reportOptionalCall=false
-# pyright: reportOptionalIterable=false
-# pyright: reportOptionalSubscript=false
-# pyright: reportIndexIssue=false
 from __future__ import annotations
 
 import enum
 from typing import TYPE_CHECKING
 
-import lazr.restfulclient.errors  # type: ignore[import-untyped]
-from lazr.restfulclient.resource import Entry  # type: ignore[import-untyped]
+import lazr.restfulclient.errors
+from lazr.restfulclient.resource import Entry
 from typing_extensions import Any
 
 from craft_application.launchpad import errors, util
@@ -75,7 +63,7 @@ class LaunchpadObject:
     def __init__(self, lp: Launchpad, lp_obj: Entry) -> None:
         self._lp = lp
 
-        if not isinstance(lp_obj, Entry):  # pyright: ignore[reportUnnecessaryIsInstance]
+        if not isinstance(lp_obj, Entry):
             raise TypeError(
                 f"Cannot use type {lp_obj.__class__.__name__} for launchpad entries."
             )
@@ -89,7 +77,7 @@ class LaunchpadObject:
             raise TypeError(
                 f"Launchpadlib entry not a valid resource type for {self.__class__.__name__}. "
                 f"type: {resource_type!r}, "
-                f"valid: {[t.value for t in self._resource_types]}",  # type: ignore[var-annotated]
+                f"valid: {[t.value for t in self._resource_types]}",  # ty: ignore[unresolved-attribute]
             ) from None
 
     def delete(self) -> None:
@@ -133,12 +121,10 @@ class LaunchpadObject:
 
         if item in annotations:
             cls = annotations[item]
-            if isinstance(  # pyright: ignore[reportUnnecessaryIsInstance]
-                cls, type
-            ) and issubclass(cls, LaunchpadObject):
+            if isinstance(cls, type) and issubclass(cls, LaunchpadObject):
                 return cls(self._lp, lp_obj)
             # We expect that this class can take the object.
-            return cls(lp_obj)  # type: ignore[call-arg]
+            return cls(lp_obj)
         return lp_obj
 
     def __setattr__(self, key: str, value: Any) -> None:  # noqa: ANN401

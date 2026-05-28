@@ -20,7 +20,7 @@ import re
 from collections.abc import Callable
 from typing import Annotated, Literal, TypeVar
 
-import license_expression  # type: ignore[import]
+import license_expression
 import pydantic
 from pydantic_core import PydanticCustomError
 
@@ -199,11 +199,7 @@ ideally they will retain this same constraint.
 
 def _parse_spdx_license(value: str) -> license_expression.LicenseExpression:
     licensing = license_expression.get_spdx_licensing()
-    if (
-        lic := licensing.parse(  # pyright: ignore[reportUnknownMemberType]
-            value, validate=True
-        )
-    ) is not None:
+    if (lic := licensing.parse(value, validate=True)) is not None:
         return lic
     raise ValueError
 

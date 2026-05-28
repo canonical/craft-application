@@ -19,8 +19,8 @@ import itertools
 from typing import Any, cast
 
 import craft_cli
-from craft_grammar import GrammarProcessor, Variant  # type: ignore[import-untyped]
-from craft_grammar.errors import GrammarSyntaxError  # type: ignore[import-untyped]
+from craft_grammar import GrammarProcessor, Variant
+from craft_grammar.errors import GrammarSyntaxError
 
 from craft_application.errors import CraftValidationError
 from craft_application.models import get_grammar_aware_part_keywords
@@ -67,14 +67,13 @@ def process_part(
         # grammar aware models can be strings or list of dicts and strings
         if isinstance(unprocessed_grammar, list):
             # all items in the list must be a dict or a string
-            if any(not isinstance(d, dict | str) for d in unprocessed_grammar):  # type: ignore[reportUnknownVariableType]
+            if any(not isinstance(d, dict | str) for d in unprocessed_grammar):
                 continue
 
             # all keys in the dictionary must be a string
-            for item in unprocessed_grammar:  # type: ignore[reportUnknownVariableType]
+            for item in unprocessed_grammar:
                 if isinstance(item, dict) and any(
-                    not isinstance(key, str)
-                    for key in item  # type: ignore[reportUnknownVariableType]
+                    not isinstance(key, str) for key in item
                 ):
                     continue
 

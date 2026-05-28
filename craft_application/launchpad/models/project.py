@@ -15,24 +15,11 @@
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Project class."""
 
-# This file relies heavily on dynamic features from launchpadlib that cause pyright
-# to complain a lot. As such, we're disabling several pyright checkers for this file
-# since in this case they generate more noise than utility.
-# pyright: reportUnknownMemberType=false
-# pyright: reportUnknownVariableType=false
-# pyright: reportUnknownArgumentType=false
-# pyright: reportOptionalMemberAccess=false
-# pyright: reportAttributeAccessIssue=false
-# pyright: reportOptionalCall=false
-# pyright: reportOptionalIterable=false
-# pyright: reportOptionalSubscript=false
-# pyright: reportIndexIssue=false
-
 from __future__ import annotations  # noqa: I001
 
 import enum
 
-import launchpadlib.errors  # type: ignore[import-untyped]
+import launchpadlib.errors
 from typing_extensions import Self, Any
 from typing import TYPE_CHECKING
 
@@ -43,7 +30,7 @@ from craft_application.util.retry import retry
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
-    from lazr.restfulclient.resource import Entry  # type: ignore[import-untyped]
+    from lazr.restfulclient.resource import Entry
 
     from craft_application.launchpad import Launchpad
 
@@ -71,7 +58,7 @@ class Project(LaunchpadObject):
     information_type: InformationType
 
     @classmethod
-    def new(  # pyright: ignore[reportIncompatibleMethodOverride]
+    def new(
         cls,
         lp: Launchpad,
         title: str,
@@ -100,9 +87,7 @@ class Project(LaunchpadObject):
         )
 
     @classmethod
-    def get(  # pyright: ignore[reportIncompatibleMethodOverride]
-        cls, lp: Launchpad, name: str
-    ) -> Self:
+    def get(cls, lp: Launchpad, name: str) -> Self:
         """Get an existing project."""
 
         def get_project(name: str) -> Entry:
@@ -114,7 +99,7 @@ class Project(LaunchpadObject):
                 retry(
                     f"get project {name}",
                     launchpadlib.errors.NotFound,
-                    get_project,  # pyright: ignore[reportArgumentType]
+                    get_project,
                     name,
                 ),
             )
@@ -122,9 +107,7 @@ class Project(LaunchpadObject):
             raise errors.NotFoundError(f"Could not find project {name}")
 
     @classmethod
-    def find(  # pyright: ignore[reportIncompatibleMethodOverride]
-        cls, lp: Launchpad, text: str
-    ) -> Iterable[Self]:
+    def find(cls, lp: Launchpad, text: str) -> Iterable[Self]:
         """Find projects by a search term."""
         for lp_project in lp.lp.projects.search(text):
             yield cls(lp, lp_project)

@@ -63,7 +63,7 @@ def test_lint_command_outputs_issues(
     command = lint_module.LintCommand({"app": app_metadata, "services": fake_services})
 
     project_service = fake_services.get("project")
-    project_service.set(fake_project)  # type: ignore[reportAttributeAccessIssue]
+    project_service.set(fake_project)
     project_file = project_service.resolve_project_file_path()
     project_dir = project_file.parent
     project_dir.mkdir(parents=True, exist_ok=True)

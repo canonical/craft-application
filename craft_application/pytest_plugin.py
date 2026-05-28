@@ -149,7 +149,7 @@ def project_path(request: pytest.FixtureRequest) -> pathlib.Path:
     """
     if fs := _optional_pyfakefs(request):
         project_path = pathlib.Path("/test/project")
-        fs.create_dir(project_path)  # type: ignore[reportUnknownMemberType]
+        fs.create_dir(project_path)
         return project_path
     tmp_path: pathlib.Path = request.getfixturevalue("tmp_path")
     path = tmp_path / "project"
@@ -171,7 +171,7 @@ def in_project_path(
 
 
 @pytest.fixture(autouse=True)
-def _reset_craft_parts_callbacks(request: pytest.FixtureRequest) -> Iterator[None]:  # pyright: ignore[reportUnusedFunction]
+def _reset_craft_parts_callbacks(request: pytest.FixtureRequest) -> Iterator[None]:
     """Reset craft-parts callbacks after running tests.
 
     This fixture resets the

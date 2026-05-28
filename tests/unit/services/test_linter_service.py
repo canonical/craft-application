@@ -45,7 +45,7 @@ def _seed_linter_registry(linter_registry_guard) -> Iterator[None]:
 
 def test_run_warning(fake_services, fake_project, tmp_path: Path) -> None:
     project_service = fake_services.get("project")
-    project_service.set(fake_project)  # type: ignore[reportAttributeAccessIssue]
+    project_service.set(fake_project)
     svc = fake_services.get("linter")
     ctx = _make_ctx(tmp_path, fake_project)
 
@@ -59,7 +59,7 @@ def test_run_warning(fake_services, fake_project, tmp_path: Path) -> None:
 
 def test_ignore_by_id_cli(fake_services, fake_project, tmp_path: Path) -> None:
     project_service = fake_services.get("project")
-    project_service.set(fake_project)  # type: ignore[reportAttributeAccessIssue]
+    project_service.set(fake_project)
     svc = fake_services.get("linter")
     ctx = _make_ctx(tmp_path, fake_project)
 
@@ -75,7 +75,7 @@ def test_ignore_by_id_cli(fake_services, fake_project, tmp_path: Path) -> None:
 
 def test_ignore_by_glob_cli(fake_services, fake_project, tmp_path: Path) -> None:
     project_service = fake_services.get("project")
-    project_service.set(fake_project)  # type: ignore[reportAttributeAccessIssue]
+    project_service.set(fake_project)
     svc = fake_services.get("linter")
     ctx = _make_ctx(tmp_path, fake_project)
 
@@ -93,11 +93,11 @@ def test_post_filter_hook_drops_issue(
     fake_services, fake_project, tmp_path: Path
 ) -> None:
     class Policy(LinterService):
-        def post_filter_issues(self, linter: AbstractLinter, issues, ctx):  # type: ignore[override]
+        def post_filter_issues(self, linter: AbstractLinter, issues, ctx):
             return (i for i in issues if i.id != "D001")
 
     project_service = fake_services.get("project")
-    project_service.set(fake_project)  # type: ignore[reportAttributeAccessIssue]
+    project_service.set(fake_project)
     svc = Policy(app=fake_services.app, services=fake_services)
     ctx = _make_ctx(tmp_path, fake_project)
 

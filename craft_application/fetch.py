@@ -205,7 +205,7 @@ def start_service() -> tuple[subprocess.Popen[str] | None, pathlib.Path]:
     status = retry(
         "wait for fetch-service to come online",
         errors.FetchServiceError,
-        get_service_status,  # pyright: ignore[reportArgumentType]
+        get_service_status,
     )
     if "uptime" not in status:
         stop_service(fetch_process)

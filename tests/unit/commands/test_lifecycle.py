@@ -225,7 +225,7 @@ def test_run_sets_platform_arg(
 
     command.run(parsed_args)
 
-    assert build_planner._BuildPlanService__platforms == [fake_platform]  # type: ignore[reportAttributeAccessIssue]
+    assert build_planner._BuildPlanService__platforms == [fake_platform]  # ty: ignore[unresolved-attribute]
 
 
 def test_run_sets_platform_from_env(
@@ -247,7 +247,7 @@ def test_run_sets_platform_from_env(
 
     command.run(parsed_args)
 
-    assert build_planner._BuildPlanService__platforms == [fake_platform]  # type: ignore[reportAttributeAccessIssue]
+    assert build_planner._BuildPlanService__platforms == [fake_platform]  # ty: ignore[unresolved-attribute]
 
 
 @pytest.mark.parametrize(
@@ -270,7 +270,7 @@ def test_run_sets_build_for_arg(
 
     command.run(parsed_args)
 
-    assert build_planner._BuildPlanService__build_for == [arch]  # type: ignore[reportAttributeAccessIssue]
+    assert build_planner._BuildPlanService__build_for == [arch]  # ty: ignore[unresolved-attribute]
 
 
 @pytest.mark.parametrize(
@@ -295,7 +295,7 @@ def test_run_sets_build_for_from_env(
 
     command.run(parsed_args)
 
-    assert build_planner._BuildPlanService__build_for == [arch]  # type: ignore[reportAttributeAccessIssue]
+    assert build_planner._BuildPlanService__build_for == [arch]  # ty: ignore[unresolved-attribute]
 
 
 @pytest.mark.parametrize("fetch", [False, True])
@@ -443,14 +443,13 @@ def test_clean_run_with_parts_unmanaged(app_metadata, parts, tmp_path, mock_serv
         parts=parts, output=tmp_path, destructive_mode=False
     )
     command = CleanCommand({"app": app_metadata, "services": mock_services})
-    command._run_manager_for_build_plan = mock.Mock()
+    mock_run = mock.Mock()
+    command._run_manager_for_build_plan = mock_run  # ty: ignore[invalid-assignment]
 
     command.run(parsed_args)
 
     assert not mock_services.get("provider").clean_instances.called
-    command._run_manager_for_build_plan.assert_called_once_with(
-        fetch_service_policy=None
-    )
+    mock_run.assert_called_once_with(fetch_service_policy=None)
 
 
 @pytest.mark.parametrize("parts", [("my-part",), ("my-part", "your-part")])
@@ -459,7 +458,7 @@ def test_clean_run_with_parts_destructive(app_metadata, parts, tmp_path, mock_se
         parts=parts, output=tmp_path, destructive_mode=True
     )
     command = CleanCommand({"app": app_metadata, "services": mock_services})
-    command._run_manager_for_build_plan = mock.Mock()
+    command._run_manager_for_build_plan = mock.Mock()  # ty: ignore[invalid-assignment]
 
     command.run(parsed_args)
 
@@ -579,7 +578,7 @@ def test_pack_run(
         }
     )
     mocker.patch.object(command._services.lifecycle.project_info, "work_dir", tmp_path)
-    command._services.package.resource_map = {p.stem: p for p in packages[1:]} or None  # pyright: ignore[reportAttributeAccessIssue]
+    command._services.package.resource_map = {p.stem: p for p in packages[1:]} or None  # ty: ignore[invalid-assignment]
 
     command.run(parsed_args)
 

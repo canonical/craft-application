@@ -92,7 +92,7 @@ class TestcraftLinterService(LinterService):
         Stage.POST: [EmptyArtifactLinter],
     }
 
-    def pre_filter_linters(  # type: ignore[override]
+    def pre_filter_linters(
         self,
         stage: Stage,
         ctx: LintContext,
@@ -106,7 +106,7 @@ class TestcraftLinterService(LinterService):
                 selected.append(extra)
         return selected
 
-    def run(  # type: ignore[override]
+    def run(
         self,
         stage: Stage,
         ctx: LintContext,
