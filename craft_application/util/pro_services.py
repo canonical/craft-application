@@ -99,7 +99,7 @@ class ProServices(set[str]):
         return cls(split)
 
     @classmethod
-    def _pro_client_exists(cls) -> bool:
+    def pro_client_exists(cls) -> bool:
         """Check if the Pro executable exists or not."""
         return cls._pro_executable is not None and cls._pro_executable.exists()
 
@@ -115,7 +115,7 @@ class ProServices(set[str]):
     @classmethod
     def _pro_api_call(cls, endpoint: str) -> dict[str, Any]:
         """Call Pro executable and parse response."""
-        if not cls._pro_client_exists():
+        if not cls.pro_client_exists():
             raise UbuntuProClientNotFoundError(str(cls._pro_executable))
 
         try:
@@ -167,7 +167,7 @@ class ProServices(set[str]):
         return response["data"]["attributes"]["is_attached"]
 
     @classmethod
-    def _get_pro_services(cls) -> ProServices:
+    def get_pro_services(cls) -> ProServices:
         """Return set of enabled Pro services in the environment.
 
         The returned set only includes services relevant to lifecycle commands.
@@ -236,14 +236,14 @@ class ProServices(set[str]):
             # second, check that the set of requested Pro services are all enabled in the
             # environment
             if _ValidatorOptions.ENABLEMENT in options and (
-                not self.issubset(enabled_services := self._get_pro_services())
+                not self.issubset(enabled_services := self.get_pro_services())
             ):
                 raise InvalidUbuntuProStatusError(self, enabled_services)
 
         except UbuntuProClientNotFoundError:
             # If the Pro client was not found, we may be on a non Ubuntu
             # system, but if Pro services were requested, re-raise error
-            if self and not self._pro_client_exists():
+            if self and not self.pro_client_exists():
                 raise
 
     def check_pro_context(self, *, run_managed: bool, is_managed: bool) -> None:
