@@ -51,11 +51,7 @@ def get_lifecycle_command_group() -> CommandGroup:
     if not Features().enable_overlay:
         commands.remove(OverlayCommand)
 
-    return CommandGroup(
-        "Lifecycle",
-        commands,  # type: ignore[arg-type] # https://github.com/canonical/craft-cli/pull/157
-        ordered=True,
-    )
+    return CommandGroup("Lifecycle", commands, ordered=True)
 
 
 class _BaseLifecycleCommand(base.ExtensibleCommand):
@@ -96,7 +92,7 @@ class _BaseLifecycleCommand(base.ExtensibleCommand):
 
     @override
     def _fill_parser(self, parser: argparse.ArgumentParser) -> None:
-        super()._fill_parser(parser)  # type: ignore[arg-type]
+        super()._fill_parser(parser)
 
         group = parser.add_mutually_exclusive_group()
         if self._allow_destructive:
@@ -334,7 +330,7 @@ class LifecyclePartsCommand(LifecycleCommand):
 
     @override
     def _fill_parser(self, parser: argparse.ArgumentParser) -> None:
-        super()._fill_parser(parser)  # type: ignore[arg-type]
+        super()._fill_parser(parser)
         parser.add_argument(
             "parts",
             metavar="part-name",
@@ -801,7 +797,7 @@ class CleanCommand(_BaseLifecycleCommand):
 
     @override
     def _fill_parser(self, parser: argparse.ArgumentParser) -> None:
-        super()._fill_parser(parser)  # type: ignore[arg-type]
+        super()._fill_parser(parser)
         parser.add_argument(
             "parts",
             metavar="part-name",

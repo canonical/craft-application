@@ -295,8 +295,7 @@ class FetchService(base.AppService):
         """
         # This can be called with a multi-item build plan, so just get the first.
         build = self._services.get("build_plan").plan()[0]
-        # mypy doesn't accept accept ignore[union-attr] for unknown reasons.
-        if not self._services.ProviderClass.is_managed():  # type: ignore  # noqa: PGH003
+        if not self._services.get_class("provider").is_managed():
             emit.debug("Unable to generate the project manifest on the host.")
             return
 

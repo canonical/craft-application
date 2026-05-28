@@ -261,7 +261,7 @@ class ProjectService(base.AppService):
         platforms_project_adapter = pydantic.TypeAdapter(
             dict[Literal["platforms"], dict[str, Platform]],
         )
-        return platforms_project_adapter.dump_python(  # type: ignore[no-any-return]
+        return platforms_project_adapter.dump_python(
             platforms_project_adapter.validate_python({"platforms": platforms}),
             mode="json",
             by_alias=True,

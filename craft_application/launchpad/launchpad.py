@@ -19,9 +19,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Literal, overload
 
-import launchpadlib.launchpad  # type: ignore[import-untyped]
-import launchpadlib.uris  # type: ignore[import-untyped]
-import lazr.restfulclient.errors  # type: ignore[import-untyped]
+import launchpadlib.launchpad
+import launchpadlib.uris
+import lazr.restfulclient.errors
 import platformdirs
 from typing_extensions import Self
 

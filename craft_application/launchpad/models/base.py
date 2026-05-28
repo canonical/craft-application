@@ -20,8 +20,8 @@ from __future__ import annotations
 import enum
 from typing import TYPE_CHECKING
 
-import lazr.restfulclient.errors  # type: ignore[import-untyped]
-from lazr.restfulclient.resource import Entry  # type: ignore[import-untyped]
+import lazr.restfulclient.errors
+from lazr.restfulclient.resource import Entry
 from typing_extensions import Any
 
 from craft_application.launchpad import errors, util
@@ -124,7 +124,7 @@ class LaunchpadObject:
             if isinstance(cls, type) and issubclass(cls, LaunchpadObject):
                 return cls(self._lp, lp_obj)
             # We expect that this class can take the object.
-            return cls(lp_obj)  # type: ignore[call-arg]
+            return cls(lp_obj)
         return lp_obj
 
     def __setattr__(self, key: str, value: Any) -> None:  # noqa: ANN401

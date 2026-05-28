@@ -20,7 +20,7 @@ import re
 from collections.abc import Callable
 from typing import Annotated, Literal, TypeVar
 
-import license_expression  # type: ignore[import]
+import license_expression
 import pydantic
 from pydantic_core import PydanticCustomError
 

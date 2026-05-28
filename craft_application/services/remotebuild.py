@@ -28,7 +28,7 @@ from typing import TYPE_CHECKING, Any, cast
 from urllib import parse
 
 import craft_cli
-import launchpadlib.errors  # type: ignore[import-untyped]
+import launchpadlib.errors
 import platformdirs
 
 from craft_application import errors, launchpad
@@ -273,7 +273,9 @@ class RemoteBuildService(base.AppService):
     ) -> tuple[WorkTree, launchpad.models.GitRepository]:
         """Create a repository on the local machine and ensure it's on Launchpad."""
         if self._lp_project is None:
-            raise RuntimeError("_lp_project must be set before calling _ensure_repository.")
+            raise RuntimeError(
+                "_lp_project must be set before calling _ensure_repository."
+            )
         work_tree = WorkTree(self._app.name, self._name, project_dir)
         work_tree.init_repo()
         try:

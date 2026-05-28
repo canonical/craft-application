@@ -33,7 +33,7 @@ from typing_extensions import Self
 # pygit2.Settings on import. We would ideally use pygit2.Settings
 # for this
 try:
-    import pygit2  # type: ignore[import-untyped]
+    import pygit2
 except Exception:  # noqa: BLE001 (narrower types are provided by the import)
     from ._utils import find_ssl_cert_dir
 
@@ -41,7 +41,7 @@ except Exception:  # noqa: BLE001 (narrower types are provided by the import)
     _old_env = os.getenv("SSL_CERT_DIR")
 
     os.environ["SSL_CERT_DIR"] = find_ssl_cert_dir()
-    import pygit2  # type: ignore[import-untyped]
+    import pygit2
 
     # Restore the environment in case the application shells out and the
     # environment that was setup is required.

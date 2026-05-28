@@ -17,7 +17,7 @@
 
 import enum
 
-import lazr.restfulclient.errors  # type: ignore[import-untyped]
+import lazr.restfulclient.errors
 from typing_extensions import Self
 
 from craft_application.launchpad import errors, util

@@ -89,7 +89,7 @@ def test_configure_success_self_select(
     platforms_dict: dict[str, Any],
     platform: str | None,
 ):
-    real_project_service._load_raw_project = lambda: {"platforms": platforms_dict}  # type: ignore  # noqa: PGH003
+    real_project_service._load_raw_project = lambda: {"platforms": platforms_dict}  # ty: ignore[invalid-assignment]
 
     real_project_service.configure(platform=platform, build_for=None)
 
@@ -230,7 +230,7 @@ def test_get_platforms(
     platforms: dict[str, dict[str, list[str] | None]],
     expected,
 ):
-    real_project_service._load_raw_project = lambda: {"platforms": platforms}  # type: ignore  # noqa: PGH003
+    real_project_service._load_raw_project = lambda: {"platforms": platforms}  # ty: ignore[invalid-assignment]
 
     first_platforms = real_project_service.get_platforms()
 
@@ -296,7 +296,7 @@ def test_get_platforms(
 def test_get_platforms_bad_value(
     real_project_service: ProjectService, platforms, match
 ):
-    real_project_service._load_raw_project = lambda: {"platforms": platforms}  # type: ignore  # noqa: PGH003
+    real_project_service._load_raw_project = lambda: {"platforms": platforms}  # ty: ignore[invalid-assignment]
     # We have extra checks if we don't support multi-base.
     real_project_service._app = dataclasses.replace(
         real_project_service._app, supports_multi_base=False

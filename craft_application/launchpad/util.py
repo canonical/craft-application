@@ -23,7 +23,7 @@ from collections.abc import Iterable, Sequence
 from types import MappingProxyType
 from typing import cast
 
-from lazr.restfulclient.resource import Entry  # type: ignore[import-untyped]
+from lazr.restfulclient.resource import Entry
 from typing_extensions import Any
 
 ARCHITECTURE_MAP = MappingProxyType({"x86_64": "amd64", "x64": "amd64", "x86": "i386"})

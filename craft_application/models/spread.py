@@ -30,7 +30,7 @@ class SpreadBase(CraftBaseModel):
     """Base model for spread.yaml, which can always take and ignore extra items."""
 
     model_config = pydantic.ConfigDict(
-        CraftBaseModel.model_config,  # type: ignore[misc]
+        CraftBaseModel.model_config,
         extra="allow",
     )
 
@@ -75,7 +75,7 @@ class CraftSpreadYaml(SpreadBase):
     """Simplified spread project configuration."""
 
     model_config = pydantic.ConfigDict(
-        SpreadBase.model_config,  # type: ignore[misc]
+        SpreadBase.model_config,
         extra="forbid",
     )
 

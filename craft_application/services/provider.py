@@ -31,7 +31,7 @@ from typing import TYPE_CHECKING, Any, cast
 
 import craft_platforms
 import craft_providers
-import snap_http  # type: ignore[import-untyped]
+import snap_http
 from craft_cli import CraftError, emit
 from craft_providers import bases
 from craft_providers.actions.snap_installer import Snap
@@ -275,7 +275,7 @@ class ProviderService(base.AppService):
                 host_source=work_dir,
                 # Ignore argument type until craft-providers accepts PurePosixPaths
                 # https://github.com/canonical/craft-providers/issues/315
-                target=self._app.managed_instance_project_path,  # type: ignore[arg-type]
+                target=self._app.managed_instance_project_path,
             )
             self._services.get("state").configure_instance(instance)
             emit.debug("Instance launched and working directory mounted")

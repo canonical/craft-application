@@ -19,8 +19,8 @@ import itertools
 from typing import Any, cast
 
 import craft_cli
-from craft_grammar import GrammarProcessor, Variant  # type: ignore[import-untyped]
-from craft_grammar.errors import GrammarSyntaxError  # type: ignore[import-untyped]
+from craft_grammar import GrammarProcessor, Variant
+from craft_grammar.errors import GrammarSyntaxError
 
 from craft_application.errors import CraftValidationError
 from craft_application.models import get_grammar_aware_part_keywords

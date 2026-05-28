@@ -93,7 +93,7 @@ def test_post_filter_hook_drops_issue(
     fake_services, fake_project, tmp_path: Path
 ) -> None:
     class Policy(LinterService):
-        def post_filter_issues(self, linter: AbstractLinter, issues, ctx):  # type: ignore[override]
+        def post_filter_issues(self, linter: AbstractLinter, issues, ctx):
             return (i for i in issues if i.id != "D001")
 
     project_service = fake_services.get("project")

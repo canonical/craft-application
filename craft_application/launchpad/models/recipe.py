@@ -22,7 +22,7 @@ import time
 from abc import abstractmethod
 from typing import TYPE_CHECKING, ClassVar, Literal
 
-import lazr.restfulclient.errors  # type: ignore[import-untyped]
+import lazr.restfulclient.errors
 from typing_extensions import Any, Self, TypedDict, override
 
 from craft_application.launchpad import errors, models, util

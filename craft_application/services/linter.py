@@ -174,7 +174,7 @@ class LinterService(base.AppService):
         ctx: LintContext,
     ) -> Iterator[LinterIssue]:
         """Run linters for a stage, streaming non-suppressed issues."""
-        if stage == Stage.PRE and ctx.project is None:  # type: ignore[union-attr]
+        if stage == Stage.PRE and ctx.project is None:
             project_service = self._services.get("project")
             if not project_service.is_configured:
                 project_service.configure(platform=None, build_for=None)
