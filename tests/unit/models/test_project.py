@@ -44,8 +44,7 @@ PARTS_DICT = {"my-part": {"plugin": "nil"}}
 
 @pytest.fixture
 def basic_project():
-    # pyright doesn't like these types and doesn't have a pydantic plugin like mypy.
-    # Because of this, we need to silence several errors in these constants.
+    # ty doesn't understand pydantic semantics (https://github.com/astral-sh/ty/issues/2403)
     return Project(
         name="project-name",
         version="1.0",
@@ -349,7 +348,7 @@ class FakeBuildBaseProject(Project):
 
 
 def test_effective_base_is_build_base():
-    # As above, we need to tell pyright to ignore several typing issues.
+    # ty doesn't understand pydantic semantics (https://github.com/astral-sh/ty/issues/2403)
     project = FakeBuildBaseProject(
         name="project-name",
         version="1.0",

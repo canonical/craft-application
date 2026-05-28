@@ -23,7 +23,7 @@ import textwrap
 from collections.abc import Callable
 from importlib.metadata import Distribution, DistributionFinder
 from types import ModuleType
-from typing import cast
+from typing import Any, cast
 
 import pytest
 from craft_application import (
@@ -51,7 +51,7 @@ def entry_points_faker():
     og_modules = sys.modules
 
     def entry_points_faker(
-        entry_points: list[tuple[str, str, Callable]] | None = None,
+        entry_points: list[tuple[str, str, Callable[..., Any]]] | None = None,
     ):
         # All go under this group for our purposes
         entry_points_txt = f"[{PLUGIN_GROUP_NAME}]\n"

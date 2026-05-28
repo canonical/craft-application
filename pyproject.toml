@@ -249,11 +249,6 @@ exclude_also = [
     "if (typing\\.)?TYPE_CHECKING:",
 ]
 
-[tool.ty.src]
-exclude = [
-    "tests/",
-]
-
 [tool.ruff]
 line-length = 88
 target-version = "py310"

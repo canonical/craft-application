@@ -17,18 +17,6 @@
 
 import enum
 
-# This file relies heavily on dynamic features from launchpadlib that cause pyright
-# to complain a lot. As such, we're disabling several pyright checkers for this file
-# since in this case they generate more noise than utility.
-# pyright: reportUnknownMemberType=false
-# pyright: reportUnknownVariableType=false
-# pyright: reportUnknownArgumentType=false
-# pyright: reportOptionalMemberAccess=false
-# pyright: reportAttributeAccessIssue=false
-# pyright: reportOptionalCall=false
-# pyright: reportOptionalIterable=false
-# pyright: reportOptionalSubscript=false
-# pyright: reportIndexIssue=false
 from .base import LaunchpadObject
 
 

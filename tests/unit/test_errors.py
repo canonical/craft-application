@@ -132,7 +132,7 @@ class Model(BaseModel):
 def test_validation_error_from_pydantic():
     data = {"gt_int": 21, "a_float": "not a float"}
     try:
-        Model(**data)  # ty: ignore[invalid-argument-type]
+        Model.model_validate(data)
     except pydantic.ValidationError as e:
         err = CraftValidationError.from_pydantic(e, file_name="myfile.yaml")
     else:  # pragma: no cover

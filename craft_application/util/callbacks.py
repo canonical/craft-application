@@ -17,7 +17,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal, overload
+from typing import TYPE_CHECKING, Any, Literal, overload
 
 if TYPE_CHECKING:  # pragma: no cover
     from collections.abc import Callable, Iterable
@@ -38,7 +38,7 @@ def get_unique_callbacks(
 ) -> Iterable[RunCallback]: ...  # pragma: no cover
 
 
-def get_unique_callbacks(cls: type, callback_name: str) -> Iterable[Callable]:  # type: ignore[type-arg]
+def get_unique_callbacks(cls: type, callback_name: str) -> Iterable[Callable[..., Any]]:
     """Get all unique callbacks in a class's inheritance tree.
 
     Guarantees order to be the reverse of the method resolution order (that is,

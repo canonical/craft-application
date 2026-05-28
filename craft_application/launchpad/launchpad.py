@@ -15,14 +15,6 @@
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Main Launchpad client."""
 
-# This file relies heavily on dynamic features from launchpadlib that cause pyright
-# to complain a lot. As such, we're disabling several pyright checkers for this file
-# since in this case they generate more noise than utility.
-# pyright: reportUnknownMemberType=false
-# pyright: reportAttributeAccessIssue=false
-# pyright: reportOptionalMemberAccess=false
-# pyright: reportUnknownArgumentType=false
-
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Literal, overload

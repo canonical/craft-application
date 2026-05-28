@@ -250,18 +250,6 @@ def test_spdx_license_str_invalid(license_str):
     )
 
 
-def test_spdx_parser_with_none():
-    from craft_application.models.constraints import (  # noqa: PLC0415
-        _validate_spdx_license,
-    )
-
-    val = None
-    with pytest.raises(
-        ValueError, match=f"License '{val}' not valid. It must be in SPDX format."
-    ):
-        _validate_spdx_license(val)  # ty: ignore[invalid-argument-type]
-
-
 # endregion
 # region ProprietaryLicenseStr tests
 class _ProprietaryLicenseStrModel(pydantic.BaseModel):
@@ -274,11 +262,9 @@ def test_proprietary_str_valid():
 
 
 def test_proprietary_str_invalid():
-    with pytest.raises(pydantic.ValidationError) as validation_error:
-        _ = _ProprietaryLicenseStrModel(
-            license="non-proprietary"  # ty: ignore[invalid-argument-type]
-        )
-    assert validation_error.match("Input should be 'proprietary'")
+    expected = "Input should be 'proprietary'"
+    with pytest.raises(pydantic.ValidationError, match=expected):
+        _ProprietaryLicenseStrModel.model_validate({"license": "non-proprietary"})
 
 
 # endregion

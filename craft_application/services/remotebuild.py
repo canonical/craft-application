@@ -64,9 +64,9 @@ class RemoteBuildService(base.AppService):
         self._is_setup = False
         # Assigning these as None so they exist. They won't be accessed until they're
         # assigned the correct types though.
-        self._lp_project: launchpad.models.Project = None  # ty: ignore[invalid-assignment]
-        self._repository: launchpad.models.GitRepository = None  # ty: ignore[invalid-assignment]
-        self._recipe: launchpad.models.recipe.BaseRecipe = None  # ty: ignore[invalid-assignment]
+        self._lp_project: launchpad.models.Project | None = None
+        self._repository: launchpad.models.GitRepository | None = None
+        self._recipe: launchpad.models.recipe.BaseRecipe | None = None
         self._builds: Collection[launchpad.models.Build] = []
         self._project_name: str | None = None
 
@@ -227,8 +227,6 @@ class RemoteBuildService(base.AppService):
 
     def cleanup(self) -> None:
         """Clean up the recipe and repository."""
-        # Pyright complains about these comparisons because we're doing hacky things to
-        # the type system.
         if self._recipe is not None:
             self._recipe.delete()
         if self._repository is not None:
@@ -274,6 +272,8 @@ class RemoteBuildService(base.AppService):
         self, project_dir: pathlib.Path
     ) -> tuple[WorkTree, launchpad.models.GitRepository]:
         """Create a repository on the local machine and ensure it's on Launchpad."""
+        if self._lp_project is None:
+            raise RuntimeError("_lp_project must be set before calling _ensure_repository.")
         work_tree = WorkTree(self._app.name, self._name, project_dir)
         work_tree.init_repo()
         try:
@@ -343,6 +343,8 @@ class RemoteBuildService(base.AppService):
         **kwargs: Any,
     ) -> launchpad.models.Recipe:
         """Create a new recipe for the given repository."""
+        if self._lp_project is None:
+            raise RuntimeError("_lp_project must be set before calling _new_recipe.")
         repository.lp_refresh()  # Prevents a race condition on new repositories.
 
         # public repos use https for backward compatibility
@@ -371,6 +373,8 @@ class RemoteBuildService(base.AppService):
         If an application's recipe class needs more than just the name and owner,
         this method and new_recipe should be overridden.
         """
+        if self._lp_project is None:
+            raise RuntimeError("_lp_project must be set before calling _get_recipe.")
         return self.RecipeClass.get(
             self.lp, self._name, self.lp.username, self._lp_project.name
         )
@@ -383,6 +387,8 @@ class RemoteBuildService(base.AppService):
 
     def _get_builds(self) -> Collection[launchpad.models.Build]:
         """Get the builds for a recipe by its name."""
+        if self._recipe is None:
+            raise RuntimeError("_recipe must be set before calling _get_builds.")
         return self._recipe.get_builds()
 
     def _get_build_states(self) -> Mapping[str, launchpad.models.BuildState]:

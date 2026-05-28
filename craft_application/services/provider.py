@@ -583,7 +583,6 @@ class ProviderService(base.AppService):
             self._services.get("proxy").finalize_instance_configuration(instance)
             try:
                 with emit.pause():
-                    # Pyright doesn't fully understand craft_providers's CompletedProcess.
                     instance.execute_run(
                         list(command),
                         cwd=self._app.managed_instance_project_path,
