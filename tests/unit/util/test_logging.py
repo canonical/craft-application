@@ -40,7 +40,7 @@ def test_handle_runtime_error_pydantic_is_user_config_error(app_metadata):
         base: int
 
     with pytest.raises(pydantic.ValidationError) as exc_info:
-        _Model(base="ubuntu@26.04")  # pyright: ignore[reportArgumentType]
+        _Model.model_validate({"base": "ubuntu@26.04"})
     error = exc_info.value
 
     captured = []
