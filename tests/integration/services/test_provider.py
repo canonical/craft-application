@@ -97,6 +97,7 @@ def test_provider_lifecycle(
     ],
 )
 @pytest.mark.parametrize("provider_name", [pytest.param("lxd", marks=pytest.mark.lxd)])
+@pytest.mark.flaky(reruns=3, reason="LXD/network integration can be flaky")
 @pytest.mark.slow
 def test_proxy_variables_forwarded(
     monkeypatch, snap_safe_tmp_path, provider_service, base, proxy_vars, provider_name
@@ -130,6 +131,7 @@ def test_proxy_variables_forwarded(
         assert instance_env.get(var) == content
 
 
+@pytest.mark.flaky(reruns=3, reason="LXD/network integration can be flaky")
 @pytest.mark.slow
 @pytest.mark.parametrize("fetch", [False, True])
 def test_run_managed(provider_service, fake_services, fetch, snap_safe_tmp_path):
@@ -194,6 +196,7 @@ def test_get_incompatible_instance_error(
             pass
 
 
+@pytest.mark.flaky(reruns=3, reason="LXD integration can be flaky")
 @pytest.mark.slow
 @pytest.mark.parametrize(
     "build_on",
