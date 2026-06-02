@@ -117,10 +117,10 @@ def handle_runtime_error(
             # ``ValueError("'26.04' is not a valid BuilddBaseAlias")``)
             # currently bubble up as a bare ValueError and are reported as an
             # "internal error". Surface them as a structured error instead.
-            # TODO: This is a shallow guard keyed off the exception  # noqa: FIX002
-            # message. The proper fix is to raise a typed CraftError at the
-            # base-alias lookup site (in craft_providers/craft_platforms) so
-            # this string match can be removed.
+            # This is a shallow guard keyed off the exception message; the
+            # proper fix is to raise a typed error at the base-alias lookup
+            # site in craft-providers. Tracked in #1086 (blocked by
+            # canonical/craft-providers#969).
             return_code = os.EX_CONFIG
             transformed = craft_cli.CraftError(
                 f"Unsupported base for this host: {error}",
