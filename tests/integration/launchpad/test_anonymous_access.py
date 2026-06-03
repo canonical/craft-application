@@ -8,13 +8,19 @@ from craft_application import launchpad
 def _ignore_staging() -> bool:
     """Check if we should ignore staging."""
     # If the base API page is up, run the tests as normal.
-    api_result = requests.get("https://api.staging.launchpad.net/devel/", timeout=4.0)
+    try:
+        api_result = requests.get(
+            "https://api.staging.launchpad.net/devel/", timeout=4.0
+        )
+    except requests.RequestException:
+        return True
     return api_result.status_code >= 500
 
 
 _IGNORE_STAGING = _ignore_staging()
 
 
+@pytest.mark.flaky(reruns=3, reason="Launchpad staging is often unreachable")
 @pytest.mark.parametrize(
     "root",
     [
@@ -54,6 +60,7 @@ def test_anonymous_login(tmp_path, root):
 #         assert recipe.owner_name == "lengau"
 
 
+@pytest.mark.flaky(reruns=3, reason="Launchpad can be flaky")
 @pytest.mark.parametrize(
     ("name", "path"),
     [
@@ -69,6 +76,7 @@ def test_get_real_repository_by_path(anonymous_lp, name, path):
     assert repo.name == name
 
 
+@pytest.mark.flaky(reruns=3, reason="Launchpad can be flaky")
 @pytest.mark.parametrize(
     ("name", "owner", "project"),
     [

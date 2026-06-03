@@ -37,6 +37,7 @@ import pytest_check
         )
     ],
 )
+@pytest.mark.flaky(reruns=3, reason="External downloads can be flaky")
 @pytest.mark.slow
 def test_get_real_file(tmp_path, emitter, request_service, url, checksum, size):
     result = request_service.download_with_progress(url, tmp_path)
@@ -65,6 +66,7 @@ def test_get_real_file(tmp_path, emitter, request_service, url, checksum, size):
         },
     ],
 )
+@pytest.mark.flaky(reruns=3, reason="External downloads can be flaky")
 @pytest.mark.slow
 def test_get_real_files(tmp_path, request_service, files):
     result = request_service.download_files_with_progress(

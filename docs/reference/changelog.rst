@@ -16,14 +16,28 @@ Changelog
     For a complete list of commits, check out the `1.2.3`_ release on GitHub.
 
 
-7.0.0 (unreleased)
+7.0.0 (2026-06-02)
 ------------------
 
+Commands
+========
+
+- ``--debug`` now shells into the build environment for post-prime failures.
+
+Utilities
+=========
+
+- :py:class:`~craft_application.util.pro_services.ProServices` now exposes
+  ``pro_client_exists()`` and ``get_pro_services()`` as public class methods.
+
+Breaking changes
+================
+
 Application
-===========
+~~~~~~~~~~~
 
 - ``Application._enable_fetch_service`` and ``Application._fetch_service_policy``
-   are removed.
+  are removed.
 - ``Application.get_project()`` is removed. Get the project from the project service
   with ``services.get("project").get()``.
 - ``Application.register_plugins()`` is removed. Register plugins by overriding
@@ -34,7 +48,7 @@ Application
   ``ProjectService.update_project_environment()`` instead.
 
 Commands
-========
+~~~~~~~~
 
 - ``AppCommand.run_managed()``, ``AppCommand.get_managed_cmd()``, and
   ``Application.run_managed()`` are removed. Commands that need to run in a
@@ -43,7 +57,7 @@ Commands
 - ``AppCommand(config=None)`` is removed. A config dict is now required.
 
 Services
-========
+~~~~~~~~
 
 - ``ProjectService._get_project_vars()`` is removed. Use the
   ``ProjectService.project_vars`` property instead.
@@ -52,11 +66,6 @@ Services
 - ``ServiceFactory.set_kwargs()`` is removed. Use ``ServiceFactory.update_kwargs()``
   instead.
 
-Utilities
-=========
-
-- :py:class:`~craft_application.util.pro_services.ProServices` now exposes
-  ``pro_client_exists()`` and ``get_pro_services()`` as public class methods.
 
 Fixes
 =====
