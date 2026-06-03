@@ -237,6 +237,7 @@ xfail_strict = true
 markers = [
     "enable_features: Tests that require specific features",
     "slow: Tests that take a long time",
+    "flaky: Tests that are known to be flaky and may need reruns (e.g. network-dependent)",
 ]
 
 [tool.coverage.run]

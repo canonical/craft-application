@@ -142,6 +142,10 @@ def test_lifecycle_messages_no_duplicates(
     assert expected_output in stderr
 
 
+@pytest.mark.flaky(
+    reruns=3,
+    reason="Overlay integration involves keyservers and repositories, which can be flaky",
+)
 @pytest.mark.slow
 @pytest.mark.usefixtures("enable_overlay")
 def test_package_repositories_in_overlay(

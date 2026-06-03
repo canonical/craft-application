@@ -281,6 +281,10 @@ def lxd_instance(snap_safe_tmp_path, provider_service):
     craft_platforms.DebianArchitecture.from_host() != "amd64",
     reason="https://github.com/canonical/craft-application/issues/1032",
 )
+@pytest.mark.flaky(
+    reruns=3,
+    reason="Fetch service integration tests involve network and LXD, which can be flaky",
+)
 @pytest.mark.slow
 def test_build_instance_integration_managed_fetch_service(
     app_service,
@@ -312,6 +316,10 @@ def test_build_instance_integration_managed_fetch_service(
     _check_log(capsys)
 
 
+@pytest.mark.flaky(
+    reruns=3,
+    reason="Fetch service integration tests involve network and LXD, which can be flaky",
+)
 @pytest.mark.slow
 def test_build_instance_integration_external_fetch_service(
     app_service,

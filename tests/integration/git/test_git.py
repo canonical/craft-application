@@ -27,6 +27,7 @@ def git_repo(empty_repository: pathlib.Path) -> GitRepo:
     return GitRepo(empty_repository)
 
 
+@pytest.mark.flaky(reruns=3, reason="Git fetching from Launchpad can be flaky")
 @pytest.mark.slow
 def test_fetching_hello_repository(
     empty_repository: pathlib.Path,
