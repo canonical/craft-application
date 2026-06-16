@@ -115,6 +115,7 @@ def test_remote_build_run(remote_build, mocker, fake_services, tmp_path, emitter
         "Artifacts: art1.zip, art2.zip, art3.zip, art4.zip"
     )
 
+
 @pytest.mark.slow
 def test_remote_build_no_duplicate_artifacts(
     remote_build, mocker, fake_services, tmp_path, emitter
@@ -134,9 +135,7 @@ def test_remote_build_no_duplicate_artifacts(
         },
     ]
 
-    mocker.patch.object(
-        builder, "start_builds", return_value=["amd64", "arm64"]
-    )
+    mocker.patch.object(builder, "start_builds", return_value=["amd64", "arm64"])
     mocker.patch.object(builder, "monitor_builds", side_effect=[build_states])
 
     logs = {
@@ -168,6 +167,7 @@ def test_remote_build_no_duplicate_artifacts(
         "Log files: log_amd64.txt, log_arm64.txt\n"
         "Artifacts: myapp_0.1_amd64.snap, myapp_0.1_arm64.snap"
     )
+
 
 @pytest.mark.parametrize(
     ("accept_public", "is_private", "project", "confirm"),
