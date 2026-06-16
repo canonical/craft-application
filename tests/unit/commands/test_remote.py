@@ -115,16 +115,6 @@ def test_remote_build_run(remote_build, mocker, fake_services, tmp_path, emitter
         "Artifacts: art1.zip, art2.zip, art3.zip, art4.zip"
     )
 
-
-@pytest.mark.parametrize(
-    ("accept_public", "is_private", "project", "confirm"),
-    [
-        pytest.param(True, False, None, False, id="accepted-public"),
-        pytest.param(False, False, None, True, id="accepted-cli"),
-        pytest.param(False, True, "my-project", False, id="named-priv-proj"),
-    ],
-)
-
 @pytest.mark.slow
 def test_remote_build_no_duplicate_artifacts(
     remote_build, mocker, fake_services, tmp_path, emitter
@@ -177,8 +167,16 @@ def test_remote_build_no_duplicate_artifacts(
         "Build completed.\n"
         "Log files: log_amd64.txt, log_arm64.txt\n"
         "Artifacts: myapp_0.1_amd64.snap, myapp_0.1_arm64.snap"
+    )
+
+@pytest.mark.parametrize(
+    ("accept_public", "is_private", "project", "confirm"),
+    [
+        pytest.param(True, False, None, False, id="accepted-public"),
+        pytest.param(False, False, None, True, id="accepted-cli"),
+        pytest.param(False, True, "my-project", False, id="named-priv-proj"),
+    ],
 )
-    
 @pytest.mark.slow
 def test_set_project_succeeds(
     mocker,
