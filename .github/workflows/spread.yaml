@@ -29,7 +29,7 @@ jobs:
           path: ${{ steps.snap.outputs.snap }}
 
   snap-tests:
-    runs-on: [self-hosted, spread-installed]
+    runs-on: [self-hosted, spread-enabled]
     needs: [snap-build]
     strategy:
       fail-fast: false
