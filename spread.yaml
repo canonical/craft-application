@@ -169,7 +169,7 @@ backends:
 
 prepare: |
   #shellcheck source=tests/spread/tools.sh
-  . $PROJECT_PATH/tests/spread/tools.sh
+  . "$PROJECT_PATH/tests/spread/tools.sh"
   if [ -n "$HTTP_PROXY" ]; then
     # The snapd daemon doesn't see the environment variables, so we must modify its config
     # to use a proxy with it. Came from:
@@ -217,6 +217,15 @@ prepare: |
 
   # Initialize LXD; some tests need it ready *before* testcraft is called
   lxd init --auto
+
+  if [ -n "$HTTP_PROXY" ]; then
+    # Lxd either can't access or doesn't fallback to the environment variables,
+    # so we must set them. This is needed to download remote images.
+    lxc config set core.proxy_http $HTTP_PROXY
+    lxc config set core.proxy_https $HTTPS_PROXY
+    lxc config set core.proxy_ignore_hosts $NO_PROXY
+  fi
+
 
   sudo apt-get --yes install jq
 
