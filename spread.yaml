@@ -226,6 +226,11 @@ prepare: |
     lxc config set core.proxy_ignore_hosts $NO_PROXY
   fi
 
+  tempfile="$(mktemp)"
+  if ! sudo apt-get update > "$tempfile" 2>&1; then
+      cat "$tempfile"
+      exit 1
+  fi
 
   sudo apt-get --yes install jq
 
