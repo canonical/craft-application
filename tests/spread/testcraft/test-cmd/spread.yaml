@@ -1,13 +1,5 @@
 project: test-cmd
 
-environment:
-  HTTP_PROXY: "$HTTP_PROXY"
-  http_proxy: "$http_proxy"
-  HTTPS_PROXY: "$HTTPS_PROXY"
-  https_proxy: "$https_proxy"
-  NO_PROXY: "$NO_PROXY"
-  no_proxy: "$no_proxy"
-
 backends:
   craft:
     type: craft
@@ -31,3 +23,11 @@ prepare: |
 suites:
   tests/spread/my-suite/:
     summary: A basic suite of spread tests.
+    environment:
+      HTTP_PROXY: '$(HOST: echo "$HTTP_PROXY")'
+      http_proxy: '$(HOST: echo "$http_proxy")'
+      HTTPS_PROXY: '$(HOST: echo "$HTTPS_PROXY")'
+      https_proxy: '$(HOST: echo "$https_proxy")'
+      NO_PROXY: '$(HOST: echo "$NO_PROXY")'
+      no_proxy: '$(HOST: echo "$no_proxy")'
+
