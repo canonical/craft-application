@@ -227,12 +227,12 @@ prepare: |
   fi
 
   tempfile="$(mktemp)"
-  if ! sudo apt-get update > "$tempfile" 2>&1; then
+  if ! apt-get update > "$tempfile" 2>&1; then
       cat "$tempfile"
       exit 1
   fi
 
-  sudo apt-get --yes install jq
+  apt-get --yes install jq
 
 restore-each: |
   testcraft clean || true
