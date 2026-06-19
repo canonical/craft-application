@@ -12,6 +12,8 @@ prepare: |
   git commit -m "initial commit"
 
 execute: |
+  . /etc/os-release
+  sed -i  "s/base: ubuntu@24.04/base: ubuntu@${VERSION_ID}/" testcraft.yaml
   testcraft pack
 
   # test files shouldn't create a dirty build environment (#942)

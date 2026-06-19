@@ -1,6 +1,8 @@
 summary: test testcraft pack with multiple platforms
 
 execute: |
+  . /etc/os-release
+  sed -i  "s/base: ubuntu@24.04/base: ubuntu@${VERSION_ID}/" testcraft.yaml
   testcraft pack
 
   count=$(find . -maxdepth 1 -name '*.testcraft' | wc -l)

@@ -1,6 +1,8 @@
 summary: test the state service
 
 execute: |
+  . /etc/os-release
+  sed -i  "s/base: ubuntu@24.04/base: ubuntu@${VERSION_ID}/" testcraft.yaml
   testcraft state > output.txt 2>&1
 
   # ensure testcraft is able to read and write data in and out of the instance
