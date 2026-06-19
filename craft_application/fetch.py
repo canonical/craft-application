@@ -145,9 +145,21 @@ def start_service() -> tuple[subprocess.Popen[str] | None, pathlib.Path]:
 
     env = {"FETCH_SERVICE_AUTH": _DEFAULT_CONFIG.auth}
 
-    for proxy_var in ["http_proxy", "https_proxy", "no_proxy"]:
-        if proxy_var in os.environ:
-            env[proxy_var] = os.environ[proxy_var]
+    proxy_vars = [
+        "http_proxy",
+        "https_proxy",
+        "no_proxy",
+        "HTTP_PROXY",
+        "HTTPS_PROXY",
+        "NO_PROXY",
+    ]
+    env.update(
+        {
+            proxy_var: os.environ[proxy_var]
+            for proxy_var in proxy_vars
+            if proxy_var in os.environ
+        }
+    )
 
     # Add the ports
     cmd.append(f"--control-port={_DEFAULT_CONFIG.control}")
