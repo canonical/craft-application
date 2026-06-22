@@ -1,4 +1,4 @@
-tools_setup_snapd_proxy() {
+tools.setup_snapd_proxy() {
   if [ "${SNAPD_USE_PROXY:-}" != true ]; then
     return
   fi

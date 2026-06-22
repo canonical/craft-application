@@ -174,7 +174,7 @@ prepare: |
     # The snapd daemon doesn't see the environment variables, so we must modify its config
     # to use a proxy with it. Came from:
     # https://github.com/canonical/snapd/blob/619cc925793591348db21bb45fa4af65288d2c42/tests/lib/prepare.sh#L90
-    tools_setup_snapd_proxy
+    tools.setup_snapd_proxy
   fi
 
   sudo snap wait system seed.loaded
