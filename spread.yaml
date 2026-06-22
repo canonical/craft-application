@@ -266,6 +266,8 @@ suites:
       sudo snap alias testcraft.witchcraft witchcraft
 
       # Enable Ubuntu Pro
+      sudo pro config set http_proxy="$http_proxy"
+      sudo pro config set https_proxy="$https_proxy"
       sudo pro attach --no-auto-enable $UBUNTU_PRO_TOKEN
 
       # Enable guest attachment so that Witchcraft can enable Pro on the instances
