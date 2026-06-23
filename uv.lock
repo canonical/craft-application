@@ -641,7 +641,7 @@ requires-dist = [
     { name = "craft-grammar", specifier = ">=2.3.0" },
     { name = "craft-parts", specifier = ">=2.30.0" },
     { name = "craft-platforms", specifier = ">=0.6.0" },
-    { name = "craft-providers", specifier = ">=3.5.0" },
+    { name = "craft-providers", git = "https://github.com/canonical/craft-providers?rev=work%2Fpro-services-with-env" },
     { name = "distro-support", specifier = ">=2025.12.16" },
     { name = "jinja2", specifier = ">=3.1.6,<4.0.0" },
     { name = "launchpadlib", marker = "extra == 'remote'", specifier = ">=1.10.16" },
@@ -811,8 +811,8 @@ wheels = [
 
 [[package]]
 name = "craft-providers"
-version = "3.6.0"
-source = { registry = "https://pypi.org/simple" }
+version = "3.6.0.post116+gcdd3d00"
+source = { git = "https://github.com/canonical/craft-providers?rev=work%2Fpro-services-with-env#cdd3d00326158528256389da73cdd1e416d691ce" }
 dependencies = [
     { name = "packaging" },
     { name = "pydantic" },
@@ -820,10 +820,6 @@ dependencies = [
     { name = "pyyaml" },
     { name = "requests" },
     { name = "requests-unixsocket2" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/47/bc/db06baf74ff9538282eb265f99b0147f3b8b775da583a9c6aa88a9d59227/craft_providers-3.6.0.tar.gz", hash = "sha256:dfffebb4a9f09f763b293fe396f9f4f17d917e18167d98b61f76cffd55556250", size = 325499, upload-time = "2026-04-30T17:43:56.728Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/ce/88/a8cebf86e8fda0c542e70c40374d3edc0bf4cf92ba55151e3a4f60695253/craft_providers-3.6.0-py3-none-any.whl", hash = "sha256:3b3ee87e535f1a29555012ba8d050ae6ca9afbc91fc2f273656d57052a307854", size = 121782, upload-time = "2026-04-30T17:43:54.567Z" },
 ]
 
 [[package]]
