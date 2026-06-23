@@ -444,7 +444,7 @@ def test_clean_run_with_parts_unmanaged(app_metadata, parts, tmp_path, mock_serv
     )
     command = CleanCommand({"app": app_metadata, "services": mock_services})
     mock_run = mock.Mock()
-    command._run_manager_for_build_plan = mock_run  # ty: ignore[invalid-assignment]
+    command._run_manager_for_build_plan = mock_run
 
     command.run(parsed_args)
 
@@ -458,7 +458,7 @@ def test_clean_run_with_parts_destructive(app_metadata, parts, tmp_path, mock_se
         parts=parts, output=tmp_path, destructive_mode=True
     )
     command = CleanCommand({"app": app_metadata, "services": mock_services})
-    command._run_manager_for_build_plan = mock.Mock()  # ty: ignore[invalid-assignment]
+    command._run_manager_for_build_plan = mock.Mock()
 
     command.run(parsed_args)
 
