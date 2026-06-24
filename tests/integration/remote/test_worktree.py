@@ -47,4 +47,4 @@ def test_init_repo_with_dangling_symlink(tmp_path):
     worktree.init_repo()
 
     assert (worktree.repo_dir / "testcraft.yaml").is_file()
-    assert not (worktree.repo_dir / "broken-link").exists()
+    assert not (worktree.repo_dir / "broken-link").is_symlink()

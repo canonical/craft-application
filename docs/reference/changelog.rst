@@ -1368,3 +1368,4 @@ For a complete list of commits, check out the `2.7.0`_ release on GitHub.
 .. _6.3.1: https://github.com/canonical/craft-application/releases/tag/6.3.1
 .. _6.4.0: https://github.com/canonical/craft-application/releases/tag/6.4.0
 .. _7.0.0: https://github.com/canonical/craft-application/releases/tag/7.0.0
+.. _7.0.1: https://github.com/canonical/craft-application/releases/tag/7.0.1
