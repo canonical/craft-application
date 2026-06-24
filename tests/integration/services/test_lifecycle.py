@@ -69,7 +69,7 @@ def test_setup_with_different_plugin_group(
             cache_dir=tmp_path / "cache",
         )
 
-        lifecycle_service.get_plugin_group = mock.Mock(return_value=plugin_group)  # ty: ignore[invalid-assignment]
+        lifecycle_service.get_plugin_group = mock.Mock(return_value=plugin_group)
 
         lifecycle_service.setup()
 
