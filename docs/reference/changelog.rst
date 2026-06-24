@@ -15,6 +15,16 @@ Changelog
 
     For a complete list of commits, check out the `1.2.3`_ release on GitHub.
 
+7.0.1 (unreleased)
+------------------
+
+Remote build
+============
+
+- Projects with dangling symlinks can now be built remotely.
+
+
+For a complete list of commits, check out the `7.0.1`_ release on GitHub.
 
 7.0.0 (2026-06-02)
 ------------------
