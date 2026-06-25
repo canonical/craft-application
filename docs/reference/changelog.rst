@@ -21,8 +21,8 @@ Changelog
 Bug fixes
 =========
 
-- `remote-build` no longer raises an error when dangling symlinks are present in the
-  project repository
+- ``remote-build`` no longer raises an error when dangling symlinks are present in the
+  project repository.
 
 
 7.0.0 (2026-06-02)
