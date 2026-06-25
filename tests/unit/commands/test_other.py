@@ -18,10 +18,10 @@
 import argparse
 
 import pytest
-from craft_application.commands import InitCommand
+from craft_application.commands import InitCommand, PruneInstancesCommand
 from craft_application.commands.other import VersionCommand, get_other_command_group
 
-OTHER_COMMANDS = {InitCommand, VersionCommand}
+OTHER_COMMANDS = {InitCommand, VersionCommand, PruneInstancesCommand}
 
 
 @pytest.mark.parametrize("commands", [OTHER_COMMANDS])
