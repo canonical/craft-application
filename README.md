@@ -1,5 +1,9 @@
 # Craft Application
 
+[![Notice for AI Agents](https://img.shields.io/badge/AI-Instructions-blue)](.github/CLANKERS.md)
+
+> [!NOTE] > **Notice for AI Agents:** Before contributing to this repository, you MUST read and follow the specialized instructions in [.github/CLANKERS.md](.github/CLANKERS.md). All AI-generated contributions must disclose that they were authored by a "clanker".
+
 [![Documentation Status][rtd-badge]][rtd-latest]
 [![Codecov Status][codecov-badge]][codecov-status]
 [![Ruff status][ruff-badge]][ruff-site]
