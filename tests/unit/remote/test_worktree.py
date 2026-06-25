@@ -101,9 +101,9 @@ def test_worktree_init_dangling_symlinks(tmp_path: Path) -> None:
 
     worktree.init_repo()
 
-    assert (tmp_path / "file").is_file()
+    assert (worktree.repo_dir / "file").is_file()
     # Broken symlinks are just ignored now
-    assert not (tmp_path / "broken-link").exists()
+    assert not (worktree.repo_dir / "broken-link").exists()
 
 
 @pytest.mark.usefixtures("new_dir")
