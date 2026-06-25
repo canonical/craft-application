@@ -38,7 +38,7 @@ def mock_base_directory(mocker, new_dir):
     return _mock_base_directory
 
 
-@pytest.fixture(autouse=True)
+@pytest.fixture
 def mock_copytree(mocker):
     """Returns a mocked `shutil.copytree()`."""
     return mocker.patch("craft_application.remote.worktree.copytree")
@@ -75,7 +75,7 @@ def test_worktree_init_clean_exception_wrapped(mock_git_repo):
 
 @pytest.mark.usefixtures("new_dir", "mock_copytree")
 def test_worktree_init_dirty(mock_base_directory, mock_git_repo):
-    """Test initialization of a WorkTree with a clean git repository."""
+    """Test initialization of a WorkTree with a dirty git repository."""
     mock_git_repo.return_value.is_clean.return_value = False
 
     worktree = WorkTree(app_name="test-app", build_id="test-id", project_dir=Path())
@@ -91,6 +91,19 @@ def test_worktree_init_dirty(mock_base_directory, mock_git_repo):
         call().add_all(),
         call().commit(),
     ]
+
+
+def test_worktree_init_dangling_symlinks(tmp_path: Path) -> None:
+    """Test that dangling symlinks don't break the repository init."""
+    (tmp_path / "file").touch()
+    (tmp_path / "broken-link").symlink_to("not-real")
+    worktree = WorkTree(app_name="test-app", build_id="test-id", project_dir=tmp_path)
+
+    worktree.init_repo()
+
+    assert (tmp_path / "file").is_file()
+    # Broken symlinks are just ignored now
+    assert not (tmp_path / "broken-link").exists()
 
 
 @pytest.mark.usefixtures("new_dir")
