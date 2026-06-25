@@ -15,6 +15,15 @@ Changelog
 
     For a complete list of commits, check out the `1.2.3`_ release on GitHub.
 
+7.0.1 (unreleased)
+------------------
+
+Bug fixes
+=========
+
+- ``remote-build`` no longer raises an error when dangling symlinks are present in the
+  project repository.
+
 
 7.0.0 (2026-06-02)
 ------------------
