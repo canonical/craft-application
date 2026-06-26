@@ -232,23 +232,23 @@ if "discourse_prefix" not in html_context and "discourse" in html_context:
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3", None),
     "craft-cli": (
-        "https://canonical-craft-cli.readthedocs-hosted.com/en/latest",
+        "https://documentation.ubuntu.com/craft-cli/latest",
         None,
     ),
     "craft-grammar": ("https://craft-grammar.readthedocs.io/en/latest", None),
     "craft-parts": (
-        "https://canonical-craft-parts.readthedocs-hosted.com/latest",
+        "https://documentation.ubuntu.com/craft-parts/latest",
         None,
     ),
     "craft-platforms": (
-        "https://canonical-craft-platforms.readthedocs-hosted.com/en/latest",
+        "https://documentation.ubuntu.com/craft-platforms/en/latest",
         None,
     ),
     "craft-providers": (
-        "https://canonical-craft-providers.readthedocs-hosted.com/en/latest", None
+        "https://documentation.ubuntu.com/craft-providers/en/latest", None
     ),
     "starflow": (
-        "https://canonical-starflow.readthedocs-hosted.com", None
+        "https://documentation.ubuntu.com/starflow/latest", None
     ),
 }
 
