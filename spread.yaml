@@ -1,5 +1,5 @@
 project: testcraft
-
+kill-timeout: 3h
 path: /testcraft
 environment:
   PROJECT_PATH: /testcraft
