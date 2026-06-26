@@ -32,7 +32,7 @@ backends:
       NTP_SERVER: "ntp.ps7.internal"
     systems: &openstack-systems
       - ubuntu-20.04-64:
-          image: snapd-spread/ubuntu-20.04-64
+          image: snapd-spread/ubuntu-20.04-64-hwe
           workers: 4
           memory: 4G
           storage: 20G

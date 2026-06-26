@@ -12,10 +12,6 @@ execute: |
   grep -q "Possible issues found in testcraft.yaml" lint_pre.log
 
   cp project-with-version.yaml testcraft.yaml
-
-  . /etc/os-release
-  sed -i  "s/base: ubuntu@24.04/base: ubuntu@${VERSION_ID}/" testcraft.yaml
-
   testcraft pack 2>&1 | tee pack.log
   artifact="$(ls *.testcraft | head -n1)"
   testcraft lint --post "${artifact}" 2>&1 | tee lint_post.log
