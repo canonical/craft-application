@@ -16,6 +16,24 @@ Changelog
     For a complete list of commits, check out the `1.2.3`_ release on GitHub.
 
 
+7.1.0 (unreleased)
+------------------
+
+Fixes
+=====
+
+- Unhandled ``pydantic.ValidationError`` is now reported as a structured
+  project configuration error (exit ``EX_DATAERR``) with a recommended
+  resolution, rather than as an "internal error" with a raw pydantic
+  traceback.
+- ``ValueError`` failures from a host base-alias lookup
+  (``'<release>' is not a valid BuilddBaseAlias``) are now reported as a
+  structured configuration error (exit ``EX_CONFIG``) instead of as an
+  "internal error".
+
+For a complete list of commits, check out the `7.1.0`_ release on GitHub.
+
+
 7.0.0 (2026-06-02)
 ------------------
 
@@ -65,7 +83,6 @@ Services
   ``ServiceFactory.register()`` instead.
 - ``ServiceFactory.set_kwargs()`` is removed. Use ``ServiceFactory.update_kwargs()``
   instead.
-
 
 For a complete list of commits, check out the `7.0.0`_ release on GitHub.
 
@@ -1358,3 +1375,4 @@ For a complete list of commits, check out the `2.7.0`_ release on GitHub.
 .. _6.3.1: https://github.com/canonical/craft-application/releases/tag/6.3.1
 .. _6.4.0: https://github.com/canonical/craft-application/releases/tag/6.4.0
 .. _7.0.0: https://github.com/canonical/craft-application/releases/tag/7.0.0
+.. _7.1.0: https://github.com/canonical/craft-application/releases/tag/7.1.0
