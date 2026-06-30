@@ -35,9 +35,6 @@ from craft_application.util.error_formatting import format_pydantic_errors
 from craft_application.util.logging import handle_runtime_error
 
 # Legacy-only compatibility file used by the pre-ST160 skip-repack logic.
-_PACKED_FILE_LIST_PATH = ".craft/packed-files"
-
-
 def get_lifecycle_command_group() -> CommandGroup:
     """Return the lifecycle related command group."""
     commands: list[type[_BaseLifecycleCommand]] = [
@@ -499,19 +496,6 @@ class PackCommand(LifecycleCommand):
             self._run_st160_pack(parsed_args, shell_after=shell_after, debug=debug)
             return
 
-        if self._is_already_packed():
-            emit.progress("Skipping pack (already ran)")
-            artifact, resources = self._load_packed_file_list()
-            self._services.package.write_state(artifact=artifact, resources=resources)
-
-            paths = (artifact, *list(resources.values())) if resources else (artifact,)
-            files = ", ".join(str(p) for p in paths)
-            emit.progress(f"Already packed: {files}", permanent=True)
-
-            if shell_after:
-                _launch_shell()
-            return
-
         emit.progress("Packing...")
         try:
             packages = self._services.package.pack(
@@ -539,7 +523,6 @@ class PackCommand(LifecycleCommand):
             emit.progress(f"Packed: {package_names}", permanent=True)
             artifact, resources = packages[0], self._services.package.resource_map
 
-        self._save_packed_file_list(artifact=artifact, resources=resources)
         self._services.package.write_state(artifact=artifact, resources=resources)
 
         if shell_after:
@@ -581,7 +564,6 @@ class PackCommand(LifecycleCommand):
         if getattr(parsed_args, "fetch_service_policy", None) and normalized_packed_paths:
             self._services.fetch.create_project_manifest(normalized_packed_paths)
 
-        self._save_packed_file_list_from_mapping(normalized_by_name)
         package_service.write_artifacts_state(normalized_by_name)
 
         if not normalized_by_name:
@@ -602,106 +584,6 @@ class PackCommand(LifecycleCommand):
 
         if shell_after:
             _launch_shell()
-
-    def _is_already_packed(self) -> bool:
-        """Verify whether the artifacts are already packed and up-to-date."""
-        # This decision path is retained only for compatibility with legacy repack
-        # behavior. ST160-capable services use PackageService.needs_packing().
-        # Gate the skip-repack feature.
-        if self._app.always_repack:
-            return False
-
-        # 1. A file containing the list of packed artifacts is created after
-        #    packing. Before packing, check if the list file exists. If not, we
-        #    never packed before and packing is necessary.
-        # 2. Check the most recent prime state timestamp. These are generated
-        #    when parts are primed. If this information can't be retrieved, we
-        #    repack.
-        # 3. If any part was primed after the artifacts were generated, we need
-        #    to pack again. Note that if there's any change in parts, the part
-        #    will be reprimed before the pack step and artifacts will be repacked.
-        # 4. If any previously packed file is missing, we repack everything.
-        # 5. Otherwise, the existing files are up-to-date and no repacking is
-        #    required.
-
-        pack_time = self._get_packed_file_list_timestamp()
-        if pack_time is None:
-            return False
-
-        prime_time = self.services.get("lifecycle").prime_state_timestamp
-        if prime_time is None:
-            # This should never happen under normal circumstances, but manual
-            # manipulation of state files is possible.
-            emit.debug("Could not find prime state timestamps.")
-            return False
-
-        if prime_time >= pack_time:
-            return False
-
-        artifact, resources = self._load_packed_file_list()
-        return not self._is_missing_packed_files(artifact, resources)
-
-    def _is_missing_packed_files(
-        self, artifact: pathlib.Path | None, resources: dict[str, pathlib.Path] | None
-    ) -> bool:
-        """Verify if the artifact and resource files exist."""
-        if artifact and not artifact.is_file():
-            return True
-        if not resources:
-            return False
-
-        for path in resources.values():  # noqa: SIM110 (improve readability)
-            if not path.is_file():
-                return True
-
-        return False
-
-    def _load_packed_file_list(
-        self,
-    ) -> tuple[pathlib.Path | None, dict[str, pathlib.Path] | None]:
-        """Load a list of artifact and resources."""
-        work_dir = self.services.get("lifecycle").project_info.work_dir
-        file_list_path = work_dir / _PACKED_FILE_LIST_PATH
-        if not file_list_path.is_file():
-            return (None, None)
-
-        data = models.PackState.from_yaml_file(file_list_path)
-        return (data.artifact, data.resources)
-
-    def _save_packed_file_list(
-        self, artifact: pathlib.Path | None, resources: dict[str, pathlib.Path] | None
-    ) -> None:
-        """Save the list of the given artifact and resources."""
-        artifacts: dict[str | None, pathlib.Path] = {}
-        if artifact:
-            artifacts[None] = artifact
-        if resources:
-            artifacts.update(resources)
-
-        self._save_packed_file_list_from_mapping(artifacts)
-
-    def _save_packed_file_list_from_mapping(
-        self, artifacts: dict[str | None, pathlib.Path]
-    ) -> None:
-        """Save the given artifact mapping to the packed-file list."""
-        work_dir = self.services.get("lifecycle").project_info.work_dir
-        file_list_path = work_dir / _PACKED_FILE_LIST_PATH
-        file_list_path.parent.mkdir(parents=True, exist_ok=True)
-        data = models.PackState(
-            artifacts=[
-                models.PackedArtifact(name=name, path=path)
-                for name, path in artifacts.items()
-            ]
-        )
-        data.to_yaml_file(file_list_path)
-
-    def _get_packed_file_list_timestamp(self) -> int | None:
-        work_dir = self.services.get("lifecycle").project_info.work_dir
-        file_list_path: pathlib.Path = work_dir / _PACKED_FILE_LIST_PATH
-        if not file_list_path.is_file():
-            return None
-        return file_list_path.stat().st_mtime_ns
-
 
     @staticmethod
     def _relativize_paths(
