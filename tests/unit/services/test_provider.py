@@ -31,6 +31,7 @@ import pytest
 import pytest_subprocess
 from craft_application import errors
 from craft_application.services import provider
+from craft_application.services.provider import _find_git_root, _get_build_root, _get_managed_cwd
 from craft_application.services.service_factory import ServiceFactory
 from craft_application.util import ProServices, snap_config
 from craft_cli import emit
@@ -1172,3 +1173,63 @@ def test_configure_instance_with_pro_skipped(mocker, provider_service):
     mock_instance.install_pro_client.assert_not_called()
     mock_instance.attach_pro_subscription.assert_not_called()
     mock_instance.enable_pro_service.assert_not_called()
+
+
+class TestFindGitRoot:
+    def test_returns_none_when_not_in_git_repo(self, tmp_path: pathlib.Path) -> None:
+        assert _find_git_root(tmp_path) is None
+
+    def test_returns_root_for_git_repo(self, tmp_path: pathlib.Path) -> None:
+        subprocess.run(["git", "init", str(tmp_path)], check=True, capture_output=True)
+        assert _find_git_root(tmp_path) == tmp_path
+
+    def test_returns_root_from_subdirectory(self, tmp_path: pathlib.Path) -> None:
+        subprocess.run(["git", "init", str(tmp_path)], check=True, capture_output=True)
+        subdir = tmp_path / "charm-a"
+        subdir.mkdir()
+        assert _find_git_root(subdir) == tmp_path
+
+
+class TestGetBuildRoot:
+    def test_returns_work_dir_when_disabled(self, tmp_path: pathlib.Path) -> None:
+        assert _get_build_root(tmp_path, use_git_root=False) == tmp_path
+
+    def test_returns_work_dir_when_not_in_git_repo(
+        self, tmp_path: pathlib.Path
+    ) -> None:
+        assert _get_build_root(tmp_path, use_git_root=True) == tmp_path
+
+    def test_returns_git_root_in_monorepo(self, tmp_path: pathlib.Path) -> None:
+        subprocess.run(["git", "init", str(tmp_path)], check=True, capture_output=True)
+        subdir = tmp_path / "charm-a"
+        subdir.mkdir()
+        assert _get_build_root(subdir, use_git_root=True) == tmp_path
+
+    def test_returns_work_dir_when_already_at_git_root(
+        self, tmp_path: pathlib.Path
+    ) -> None:
+        subprocess.run(["git", "init", str(tmp_path)], check=True, capture_output=True)
+        assert _get_build_root(tmp_path, use_git_root=True) == tmp_path
+
+
+class TestGetManagedCwd:
+    _default = pathlib.PurePosixPath("/root/project")
+
+    def test_returns_default_when_disabled(self, tmp_path: pathlib.Path) -> None:
+        assert _get_managed_cwd(tmp_path, self._default, use_git_root=False) == self._default
+
+    def test_returns_default_when_not_in_git_repo(
+        self, tmp_path: pathlib.Path
+    ) -> None:
+        assert _get_managed_cwd(tmp_path, self._default, use_git_root=True) == self._default
+
+    def test_returns_default_when_at_git_root(self, tmp_path: pathlib.Path) -> None:
+        subprocess.run(["git", "init", str(tmp_path)], check=True, capture_output=True)
+        assert _get_managed_cwd(tmp_path, self._default, use_git_root=True) == self._default
+
+    def test_returns_subdir_in_monorepo(self, tmp_path: pathlib.Path) -> None:
+        subprocess.run(["git", "init", str(tmp_path)], check=True, capture_output=True)
+        charm_dir = tmp_path / "charms" / "charm-a"
+        charm_dir.mkdir(parents=True)
+        expected = self._default / "charms" / "charm-a"
+        assert _get_managed_cwd(charm_dir, self._default, use_git_root=True) == expected
