@@ -1103,7 +1103,14 @@ def test_load_packed_file_list(
     command = PackCommand({"app": app_metadata, "services": fake_services})
     mocker.patch.object(command._services.lifecycle.project_info, "work_dir", tmp_path)
 
-    data = models.PackState(artifact=artifact, resources=resources)
+    artifacts = []
+    if artifact:
+        artifacts.append({"name": None, "path": artifact})
+    if resources:
+        artifacts.extend(
+            {"name": name, "path": path} for name, path in resources.items()
+        )
+    data = models.PackState(artifacts=artifacts)
     (tmp_path / ".craft").mkdir()
     data.to_yaml_file(tmp_path / ".craft" / "packed-files")
 

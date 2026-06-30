@@ -608,7 +608,14 @@ class PackCommand(LifecycleCommand):
         work_dir = self.services.get("lifecycle").project_info.work_dir
         file_list_path = work_dir / _PACKED_FILE_LIST_PATH
         file_list_path.parent.mkdir(parents=True, exist_ok=True)
-        data = models.PackState(artifact=artifact, resources=resources)
+        artifacts = []
+        if artifact:
+            artifacts.append({"name": None, "path": artifact})
+        if resources:
+            artifacts.extend(
+                {"name": name, "path": path} for name, path in resources.items()
+            )
+        data = models.PackState(artifacts=artifacts)
         data.to_yaml_file(file_list_path)
 
     def _get_packed_file_list_timestamp(self) -> int | None:

@@ -208,6 +208,32 @@ def test_package_files_override_base_registration(
     ]
 
 
+def test_pack_state_compatibility_views_from_canonical_shape():
+    state = models.PackState(
+        artifacts=[
+            models.PackedArtifact(name=None, path=pathlib.Path("package.tar.zst")),
+            models.PackedArtifact(
+                name="tools", path=pathlib.Path("tools.tar.zst")
+            ),
+        ]
+    )
+
+    assert state.artifact == pathlib.Path("package.tar.zst")
+    assert state.resources == {"tools": pathlib.Path("tools.tar.zst")}
+
+
+def test_pack_state_named_default_artifact_does_not_collide():
+    state = models.PackState(
+        artifacts=[
+            models.PackedArtifact(name=None, path=pathlib.Path("main.tar.zst")),
+            models.PackedArtifact(name="default", path=pathlib.Path("default.tar.zst")),
+        ]
+    )
+
+    assert state.artifact == pathlib.Path("main.tar.zst")
+    assert state.resources == {"default": pathlib.Path("default.tar.zst")}
+
+
 @pytest.mark.parametrize(
     ("app_metadata", "fake_project_dict", "result"),
     [

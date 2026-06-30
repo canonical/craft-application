@@ -104,15 +104,17 @@ class PackageService(base.AppService):
         """Write the packaging state."""
         platform = self._build_info.platform
         state_service = self._services.get("state")
+        artifacts: list[dict[str, str | None]] = []
 
-        state_service.set(
-            "artifact", platform, value=str(artifact) if artifact else None
-        )
-        state_service.set(
-            "resources",
-            platform,
-            value={k: str(v) for k, v in resources.items()} if resources else None,
-        )
+        if artifact:
+            artifacts.append({"name": None, "path": str(artifact)})
+        if resources:
+            artifacts.extend(
+                {"name": name, "path": str(path)}
+                for name, path in resources.items()
+            )
+
+        state_service.set("artifacts", platform, value=artifacts or None)
 
     def read_state(self, platform: str | None = None) -> models.PackState:
         """Read the packaging state.
@@ -125,16 +127,12 @@ class PackageService(base.AppService):
             platform = self._build_info.platform
         state_service = self._services.get("state")
 
-        artifact = cast(str | None, state_service.get("artifact", platform))
-        resources = cast(
-            dict[str, str] | None, state_service.get("resources", platform)
+        artifacts = cast(
+            list[dict[str, str | None]] | None,
+            state_service.get("artifacts", platform),
         )
-        return models.PackState(
-            artifact=pathlib.Path(artifact) if artifact else None,
-            resources={k: pathlib.Path(v) for k, v in resources.items()}
-            if resources
-            else None,
-        )
+
+        return models.PackState.unmarshal({"artifacts": artifacts or []})
 
     @property
     @abc.abstractmethod
