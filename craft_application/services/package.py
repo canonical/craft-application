@@ -35,6 +35,9 @@ if TYPE_CHECKING:  # pragma: no cover
     from craft_application.services import ServiceFactory
 
 
+_PACKAGE_FILE_ATTR = "_craft_application_package_file"
+
+
 @dataclass(frozen=True)
 class PackageFileEntry:
     """Metadata about a generated package file."""
@@ -58,7 +61,7 @@ def package_file(
     def decorator(method: Any) -> Any:
         setattr(
             method,
-            "_craft_application_package_file",
+            _PACKAGE_FILE_ATTR,
             PackageFileEntry(
                 relative_path=relative_path,
                 partition_re=partition_re,
@@ -72,8 +75,6 @@ def package_file(
 
 class PackageService(base.AppService):
     """The business logic for creating packages."""
-
-    _PACKAGE_FILE_ATTR = "_craft_application_package_file"
 
     def __init__(self, app: AppMetadata, services: ServiceFactory) -> None:
         super().__init__(app, services)
@@ -272,7 +273,7 @@ class PackageService(base.AppService):
 
         for cls in reversed(type(self).__mro__):
             for value in vars(cls).values():
-                entry = getattr(value, self._PACKAGE_FILE_ATTR, None)
+                entry = getattr(value, _PACKAGE_FILE_ATTR, None)
                 if entry is None:
                     continue
                 if self._package_file_matches(entry, partition_name):
