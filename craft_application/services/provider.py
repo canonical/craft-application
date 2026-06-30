@@ -259,7 +259,9 @@ class ProviderService(base.AppService):
 
         build_on = self._services.get("config").get("build_on")
 
-        build_root = _get_build_root(work_dir, use_git_root=self._app.use_git_build_root)
+        build_root = _get_build_root(
+            work_dir, use_git_root=self._app.use_git_build_root
+        )
 
         emit.progress(f"Launching managed {base_name[0]} {base_name[1]} instance...")
         with provider.launched_environment(
@@ -653,4 +655,8 @@ def _get_managed_cwd(
     git_root = _find_git_root(work_dir)
     if git_root is None or git_root == work_dir:
         return default_cwd
-    return default_cwd / work_dir.relative_to(git_root)
+    resolved_work_dir = work_dir.resolve()
+    resolved_git_root = git_root.resolve()
+    if not resolved_work_dir.is_relative_to(resolved_git_root):
+        return default_cwd
+    return default_cwd / resolved_work_dir.relative_to(resolved_git_root)

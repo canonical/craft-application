@@ -30,7 +30,8 @@ execute: |
 
   # Verify the artifact contains the file from outside the project directory.
   mkdir /tmp/monorepo/output
-  tar --extract --file my-project-1.0-amd64.witchcraft --directory /tmp/monorepo/output
+  arch=$(dpkg --print-architecture)
+  tar --extract --file my-project-1.0-${arch}.witchcraft --directory /tmp/monorepo/output
   grep "I am a shared library" /tmp/monorepo/output/shared-lib.txt
 
 restore: |

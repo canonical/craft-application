@@ -31,7 +31,11 @@ import pytest
 import pytest_subprocess
 from craft_application import errors
 from craft_application.services import provider
-from craft_application.services.provider import _find_git_root, _get_build_root, _get_managed_cwd
+from craft_application.services.provider import (
+    _find_git_root,
+    _get_build_root,
+    _get_managed_cwd,
+)
 from craft_application.services.service_factory import ServiceFactory
 from craft_application.util import ProServices, snap_config
 from craft_cli import emit
@@ -1216,12 +1220,14 @@ class TestGetManagedCwd:
     _default = pathlib.PurePosixPath("/root/project")
 
     def test_returns_default_when_disabled(self, tmp_path: pathlib.Path) -> None:
-        assert _get_managed_cwd(tmp_path, self._default, use_git_root=False) == self._default
+        result = _get_managed_cwd(tmp_path, self._default, use_git_root=False)
+        assert result == self._default
 
     def test_returns_default_when_not_in_git_repo(
         self, tmp_path: pathlib.Path
     ) -> None:
-        assert _get_managed_cwd(tmp_path, self._default, use_git_root=True) == self._default
+        result = _get_managed_cwd(tmp_path, self._default, use_git_root=True)
+        assert result == self._default
 
     def test_returns_default_when_at_git_root(self, tmp_path: pathlib.Path) -> None:
         subprocess.run(["git", "init", str(tmp_path)], check=True, capture_output=True)
@@ -1233,3 +1239,44 @@ class TestGetManagedCwd:
         charm_dir.mkdir(parents=True)
         expected = self._default / "charms" / "charm-a"
         assert _get_managed_cwd(charm_dir, self._default, use_git_root=True) == expected
+
+
+@pytest.mark.parametrize("fetch", [False, True])
+@pytest.mark.parametrize("app_metadata", [{"use_git_build_root": True}], indirect=True)
+def test_run_managed_git_build_root_sets_cwd(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: pathlib.Path,
+    fake_build_info: craft_platforms.BuildInfo,
+    fetch: bool,
+    provider_service: provider.ProviderService,
+    mock_provider,
+    fake_services: ServiceFactory,
+):
+    """ProviderService.run_managed uses the monorepo subdir as cwd when use_git_build_root=True."""
+    mock_fetch = mock.MagicMock()
+    fake_services.register("fetch", mock.Mock(return_value=mock_fetch))
+    fake_services.get_class("fetch").is_active.return_value = fetch  # ty: ignore[unresolved-attribute]
+
+    # Set up a monorepo: git root at tmp_path, project in a subdirectory.
+    subprocess.run(["git", "init", str(tmp_path)], check=True, capture_output=True)
+    charm_dir = tmp_path / "charms" / "charm-a"
+    charm_dir.mkdir(parents=True)
+
+    # Point the provider service's work_dir to the monorepo subdir.
+    monkeypatch.setattr(provider_service, "_work_dir", charm_dir)
+
+    monkeypatch.setattr("sys.argv", ["[unused]", "pack", "--verbose"])
+    instance_context = (
+        mock_provider.launched_environment.return_value.__enter__.return_value
+    )
+
+    provider_service.run_managed(fake_build_info, enable_fetch_service=fetch)
+
+    managed_project_path = provider_service._app.managed_instance_project_path
+    expected_cwd = managed_project_path / "charms" / "charm-a"
+    instance_context.execute_run.assert_called_once_with(
+        mock.ANY,
+        cwd=expected_cwd,
+        check=True,
+        env=mock.ANY,
+    )
