@@ -493,7 +493,7 @@ class PackCommand(LifecycleCommand):
             return
 
         if self._services.package.supports_conditional_repack is True:
-            self._run_st160_pack(parsed_args, shell_after=shell_after, debug=debug)
+            self._run_pack(parsed_args, shell_after=shell_after, debug=debug)
             return
 
         emit.progress("Packing...")
@@ -528,14 +528,14 @@ class PackCommand(LifecycleCommand):
         if shell_after:
             _launch_shell()
 
-    def _run_st160_pack(
+    def _run_pack(
         self,
         parsed_args: argparse.Namespace,
         *,
         shell_after: bool,
         debug: bool,
     ) -> None:
-        """Run the ST160-aware packing flow."""
+        """Run the artifact-aware packing flow."""
         emit.progress("Packing...")
         package_service = self._services.package
 
@@ -554,6 +554,10 @@ class PackCommand(LifecycleCommand):
         normalized_by_name = dict(
             zip(artifact_paths.keys(), normalized_all_paths, strict=True)
         )
+
+        # Split the declared artifacts into the subset that was packed in this run and
+        # the subset that was already current, while keeping the same artifact names
+        # used by get_artifacts() for state writes and user-facing messages.
         normalized_packed_paths = [
             normalized_by_name[name] for name, did_pack in packed.items() if did_pack
         ]
