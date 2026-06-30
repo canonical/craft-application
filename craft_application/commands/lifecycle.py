@@ -34,6 +34,7 @@ from craft_application.util import ProServices
 from craft_application.util.error_formatting import format_pydantic_errors
 from craft_application.util.logging import handle_runtime_error
 
+# Legacy-only compatibility file used by the pre-ST160 skip-repack logic.
 _PACKED_FILE_LIST_PATH = ".craft/packed-files"
 
 
@@ -604,6 +605,8 @@ class PackCommand(LifecycleCommand):
 
     def _is_already_packed(self) -> bool:
         """Verify whether the artifacts are already packed and up-to-date."""
+        # This decision path is retained only for compatibility with legacy repack
+        # behavior. ST160-capable services use PackageService.needs_packing().
         # Gate the skip-repack feature.
         if self._app.always_repack:
             return False

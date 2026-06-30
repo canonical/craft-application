@@ -80,7 +80,6 @@ class PackageService(base.AppService):
         self._resource_map: dict[str, pathlib.Path] | None = None
         self._output_dir = pathlib.Path()
 
-    @abc.abstractmethod
     def pack(self, prime_dir: pathlib.Path, dest: pathlib.Path) -> list[pathlib.Path]:
         """Create one or more packages.
 
@@ -91,6 +90,7 @@ class PackageService(base.AppService):
         :param dest: Directory into which to write the package(s).
         :returns: A list of paths to the created packages.
         """
+        raise NotImplementedError
 
     # This was implemented as a separate property to allow applications to
     # retrieve this information without changing the pack method to also
