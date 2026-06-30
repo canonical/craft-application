@@ -135,6 +135,24 @@ def test_needs_packing_true_when_lifecycle_requires_repack(
     assert service.needs_packing(None) is True
 
 
+@pytest.mark.parametrize(
+    "app_metadata",
+    [{"always_repack": True}],
+    indirect=True,
+)
+def test_needs_packing_true_when_always_repack_enabled(
+    app_metadata, fake_project, fake_services, mocker, tmp_path
+):
+    artifact_path = tmp_path / "artifact"
+    artifact_path.touch()
+    service = MultiArtifactPackageService(
+        app_metadata, fake_services, artifacts={None: artifact_path}
+    )
+    mocker.patch.object(type(service._services.lifecycle), "requires_repack", False)
+
+    assert service.needs_packing(None) is True
+
+
 def test_needs_packing_true_when_artifact_missing(
     app_metadata, fake_project, fake_services, mocker
 ):
@@ -184,6 +202,11 @@ def test_package_files_without_partition_filter(
             relative_path=pathlib.PurePosixPath("metadata.yaml"),
             method_name="_metadata",
             partition_re=None,
+        ),
+        package.PackageFileEntry(
+            relative_path=pathlib.PurePosixPath("meta/default.yaml"),
+            method_name="_default_only",
+            partition_re="default",
         )
     ]
 
@@ -194,6 +217,25 @@ def test_package_files_filtered_for_partition(
     service = DecoratedPackageService(app_metadata, fake_services)
 
     assert service._package_files("default") == [
+        package.PackageFileEntry(
+            relative_path=pathlib.PurePosixPath("metadata.yaml"),
+            method_name="_metadata",
+            partition_re=None,
+        ),
+        package.PackageFileEntry(
+            relative_path=pathlib.PurePosixPath("meta/default.yaml"),
+            method_name="_default_only",
+            partition_re="default",
+        ),
+    ]
+
+
+def test_package_files_match_default_partition_for_unnamed_artifact(
+    app_metadata, fake_project, fake_services
+):
+    service = DecoratedPackageService(app_metadata, fake_services)
+
+    assert service._package_files(None) == [
         package.PackageFileEntry(
             relative_path=pathlib.PurePosixPath("metadata.yaml"),
             method_name="_metadata",
@@ -293,6 +335,36 @@ def test_pack_state_named_default_artifact_does_not_collide():
 
     assert state.artifact == pathlib.Path("main.tar.zst")
     assert state.resources == {"default": pathlib.Path("default.tar.zst")}
+
+
+def test_read_state_accepts_legacy_artifact_and_resources(
+    app_metadata, fake_project, fake_services, fake_platform, mocker
+):
+    service = FakePackageService(app_metadata, fake_services)
+    fake_services.get("build_plan").set_platforms(fake_platform)
+    mocker.patch.object(
+        fake_services.get("build_plan"),
+        "plan",
+        return_value=fake_services.get("build_plan").create_build_plan(
+            platforms=fake_platform,
+            build_for=None,
+            build_on=None,
+        )[:1],
+    )
+    state_service = fake_services.get("state")
+    platform = service._build_info.platform
+
+    state_service.set("artifact", platform, value="package.tar.zst")
+    state_service.set(
+        "resources",
+        platform,
+        value={"tools": "tools.tar.zst"},
+    )
+
+    state = service.read_state()
+
+    assert state.artifact == pathlib.Path("package.tar.zst")
+    assert state.resources == {"tools": pathlib.Path("tools.tar.zst")}
 
 
 @pytest.mark.parametrize(

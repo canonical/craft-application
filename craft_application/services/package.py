@@ -146,10 +146,29 @@ class PackageService(base.AppService):
             platform = self._build_info.platform
         state_service = self._services.get("state")
 
-        artifacts = cast(
-            list[dict[str, str | None]] | None,
-            state_service.get("artifacts", platform),
-        )
+        # Consumers still use PackState's artifact/resources compatibility views
+        # while the storage format moves toward an all-artifacts model without
+        # the old artifact/resource split, in line with applications where there's
+        # no distinction between the generated packages such as Debcraft. This
+        # should be changed in the future to use only artifacts.
+        try:
+            artifacts = cast(
+                list[dict[str, str | None]] | None,
+                state_service.get("artifacts", platform),
+            )
+        except KeyError:
+            artifact = cast(str | None, state_service.get("artifact", platform))
+            resources = cast(
+                dict[str, str] | None, state_service.get("resources", platform)
+            )
+            artifact_entries: list[dict[str, str | None]] = []
+            if artifact:
+                artifact_entries.append({"name": None, "path": artifact})
+            if resources:
+                artifact_entries.extend(
+                    {"name": name, "path": path} for name, path in resources.items()
+                )
+            artifacts = artifact_entries
 
         return models.PackState.unmarshal({"artifacts": artifacts or []})
 
@@ -229,6 +248,9 @@ class PackageService(base.AppService):
 
     def needs_packing(self, partition: str | None = None) -> bool:
         """Determine whether the given artifact/partition requires packing."""
+        if self._app.always_repack:
+            return True
+
         lifecycle = self._services.get("lifecycle")
         if lifecycle.requires_repack:
             return True
@@ -292,9 +314,8 @@ class PackageService(base.AppService):
         """Check whether a package-file entry applies to a partition."""
         if entry.partition_re is None:
             return True
-        if partition_name is None:
-            return False
-        return re.fullmatch(entry.partition_re, partition_name) is not None
+        normalized_partition = "default" if partition_name is None else partition_name
+        return re.fullmatch(entry.partition_re, normalized_partition) is not None
 
     def _prime_dir_for(self, partition_name: str | None) -> pathlib.Path:
         """Return the prime directory corresponding to an artifact partition."""
