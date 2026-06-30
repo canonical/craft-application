@@ -34,7 +34,7 @@ from craft_application.util import ProServices
 from craft_application.util.error_formatting import format_pydantic_errors
 from craft_application.util.logging import handle_runtime_error
 
-# Legacy-only compatibility file used by the pre-ST160 skip-repack logic.
+
 def get_lifecycle_command_group() -> CommandGroup:
     """Return the lifecycle related command group."""
     commands: list[type[_BaseLifecycleCommand]] = [
