@@ -17,6 +17,7 @@
 
 from __future__ import annotations
 
+import pathlib
 from typing import TYPE_CHECKING
 
 import pytest
@@ -50,6 +51,40 @@ class FakePackageService(package.PackageService):
         return models.BaseMetadata()
 
 
+class ST160PackageService(FakePackageService):
+    def get_artifacts(self) -> dict[str | None, pathlib.Path]:
+        return {"default": pathlib.Path("artifact")}
+
+    def _pack(self, *, name: str | None = None, path: Path) -> None:
+        return None
+
+
+class DecoratedPackageService(FakePackageService):
+    @package.package_file("metadata.yaml")
+    def _metadata(self, partition: str | None = None) -> str:
+        return "metadata"
+
+    @package.package_file("meta/default.yaml", partition_re="default")
+    def _default_only(self, partition: str | None = None) -> str:
+        return f"default:{partition}"
+
+    @package.package_file("meta/other.yaml", partition_re="other")
+    def _other_only(self, partition: str | None = None) -> str:
+        return f"other:{partition}"
+
+
+class InheritedDecoratedPackageService(DecoratedPackageService):
+    @package.package_file("meta/inherited.yaml", partition_re="default")
+    def _inherited_only(self, partition: str | None = None) -> str:
+        return f"inherited:{partition}"
+
+
+class OverriddenDecoratedPackageService(DecoratedPackageService):
+    @package.package_file("meta/replaced.yaml", partition_re="default")
+    def _default_only(self, partition: str | None = None) -> str:
+        return f"replaced:{partition}"
+
+
 def test_write_metadata(tmp_path, app_metadata, fake_project, fake_services):
     service = FakePackageService(app_metadata, fake_services)
     metadata_file = tmp_path / "metadata.yaml"
@@ -60,6 +95,117 @@ def test_write_metadata(tmp_path, app_metadata, fake_project, fake_services):
     assert metadata_file.is_file()
     metadata = models.BaseMetadata.from_yaml_file(metadata_file)
     assert metadata == service.metadata
+
+
+def test_package_service_supports_conditional_repack_false(
+    app_metadata, fake_project, fake_services
+):
+    service = FakePackageService(app_metadata, fake_services)
+
+    assert service.supports_conditional_repack is False
+
+
+def test_package_service_supports_conditional_repack_true(
+    app_metadata, fake_project, fake_services
+):
+    service = ST160PackageService(app_metadata, fake_services)
+
+    assert service.supports_conditional_repack is True
+
+
+def test_package_files_without_partition_filter(
+    app_metadata, fake_project, fake_services
+):
+    service = DecoratedPackageService(app_metadata, fake_services)
+
+    assert service._package_files() == [
+        package.PackageFileEntry(
+            relative_path=pathlib.PurePosixPath("metadata.yaml"),
+            method_name="_metadata",
+            partition_re=None,
+        )
+    ]
+
+
+def test_package_files_filtered_for_partition(
+    app_metadata, fake_project, fake_services
+):
+    service = DecoratedPackageService(app_metadata, fake_services)
+
+    assert service._package_files("default") == [
+        package.PackageFileEntry(
+            relative_path=pathlib.PurePosixPath("metadata.yaml"),
+            method_name="_metadata",
+            partition_re=None,
+        ),
+        package.PackageFileEntry(
+            relative_path=pathlib.PurePosixPath("meta/default.yaml"),
+            method_name="_default_only",
+            partition_re="default",
+        ),
+    ]
+
+
+def test_package_files_filtered_for_different_partition(
+    app_metadata, fake_project, fake_services
+):
+    service = DecoratedPackageService(app_metadata, fake_services)
+
+    assert service._package_files("other") == [
+        package.PackageFileEntry(
+            relative_path=pathlib.PurePosixPath("metadata.yaml"),
+            method_name="_metadata",
+            partition_re=None,
+        ),
+        package.PackageFileEntry(
+            relative_path=pathlib.PurePosixPath("meta/other.yaml"),
+            method_name="_other_only",
+            partition_re="other",
+        ),
+    ]
+
+
+def test_package_files_include_inherited_entries(
+    app_metadata, fake_project, fake_services
+):
+    service = InheritedDecoratedPackageService(app_metadata, fake_services)
+
+    assert service._package_files("default") == [
+        package.PackageFileEntry(
+            relative_path=pathlib.PurePosixPath("metadata.yaml"),
+            method_name="_metadata",
+            partition_re=None,
+        ),
+        package.PackageFileEntry(
+            relative_path=pathlib.PurePosixPath("meta/default.yaml"),
+            method_name="_default_only",
+            partition_re="default",
+        ),
+        package.PackageFileEntry(
+            relative_path=pathlib.PurePosixPath("meta/inherited.yaml"),
+            method_name="_inherited_only",
+            partition_re="default",
+        ),
+    ]
+
+
+def test_package_files_override_base_registration(
+    app_metadata, fake_project, fake_services
+):
+    service = OverriddenDecoratedPackageService(app_metadata, fake_services)
+
+    assert service._package_files("default") == [
+        package.PackageFileEntry(
+            relative_path=pathlib.PurePosixPath("metadata.yaml"),
+            method_name="_metadata",
+            partition_re=None,
+        ),
+        package.PackageFileEntry(
+            relative_path=pathlib.PurePosixPath("meta/replaced.yaml"),
+            method_name="_default_only",
+            partition_re="default",
+        ),
+    ]
 
 
 @pytest.mark.parametrize(

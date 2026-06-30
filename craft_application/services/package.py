@@ -19,7 +19,9 @@ from __future__ import annotations
 
 import abc
 import pathlib
-from typing import TYPE_CHECKING, cast
+import re
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Any, cast
 
 from craft_cli import emit
 
@@ -31,8 +33,45 @@ if TYPE_CHECKING:  # pragma: no cover
     from craft_application.services import ServiceFactory
 
 
+@dataclass(frozen=True)
+class PackageFileEntry:
+    """Metadata about a generated package file."""
+
+    relative_path: pathlib.PurePosixPath
+    method_name: str
+    partition_re: str | None = None
+
+
+def package_file(
+    relative_path: str | pathlib.PurePath, partition_re: str | None = None
+) -> Any:
+    """Register a method as the generator for a package file.
+
+    The decorated method is discovered by :class:`PackageService` and may later be
+    used by ST160-aware packers to compare and materialize generated package files.
+    """
+
+    relative_path = pathlib.PurePosixPath(relative_path)
+
+    def decorator(method: Any) -> Any:
+        setattr(
+            method,
+            "_craft_application_package_file",
+            PackageFileEntry(
+                relative_path=relative_path,
+                partition_re=partition_re,
+                method_name=method.__name__,
+            ),
+        )
+        return method
+
+    return decorator
+
+
 class PackageService(base.AppService):
     """The business logic for creating packages."""
+
+    _PACKAGE_FILE_ATTR = "_craft_application_package_file"
 
     def __init__(self, app: AppMetadata, services: ServiceFactory) -> None:
         super().__init__(app, services)
@@ -102,6 +141,15 @@ class PackageService(base.AppService):
     def metadata(self) -> models.BaseMetadata:
         """The metadata model for this project."""
 
+    @property
+    def supports_conditional_repack(self) -> bool:
+        """Whether this service implements the ST160 package API."""
+        package_cls = type(self)
+        return (
+            package_cls.get_artifacts is not PackageService.get_artifacts
+            and package_cls._pack is not PackageService._pack
+        )
+
     def update_project(self) -> None:
         """Update project fields with dynamic values set during the lifecycle."""
         project_info = self._services.get("lifecycle").project_info
@@ -137,5 +185,59 @@ class PackageService(base.AppService):
         path.mkdir(parents=True, exist_ok=True)
         self.metadata.to_yaml_file(path / "metadata.yaml")
 
-    def _extra_project_updates(self) -> None:
+    def get_artifacts(self) -> dict[str | None, pathlib.Path]:
+        """Get the output artifacts for this application.
+
+        Subclasses must override this to opt in to ST160 conditional repacking.
+        """
+        raise NotImplementedError
+
+    def _gen_extra_assets(
+        self, partition_name: str | None = None
+    ) -> list[tuple[str | bytes | None | pathlib.Path, pathlib.Path]]:
+        """Generate any extra assets for the given artifact/prime partition."""
+        return []
+
+    def _app_needs_repack(self, partition: str | None = None) -> bool:
+        """Determine whether the application needs to repack a given artifact."""
+        return False
+
+    def _pack(self, *, name: str | None = None, path: pathlib.Path) -> None:
+        """Pack a specific artifact for ST160-aware package services."""
+        raise NotImplementedError
+
+    def _extra_project_updates(self) -> bool:
         """Perform domain-specific updates to the project before packing."""
+        return False
+
+    def _package_files(
+        self, partition_name: str | None = None
+    ) -> list[PackageFileEntry]:
+        """Return registered package-file generators for a given partition."""
+        package_files: list[PackageFileEntry] = []
+        package_file_indexes: dict[str, int] = {}
+
+        for cls in reversed(type(self).__mro__):
+            for value in vars(cls).values():
+                entry = getattr(value, self._PACKAGE_FILE_ATTR, None)
+                if entry is None:
+                    continue
+                if self._package_file_matches(entry, partition_name):
+                    if entry.method_name in package_file_indexes:
+                        package_files[package_file_indexes[entry.method_name]] = entry
+                    else:
+                        package_file_indexes[entry.method_name] = len(package_files)
+                        package_files.append(entry)
+
+        return package_files
+
+    @staticmethod
+    def _package_file_matches(
+        entry: PackageFileEntry, partition_name: str | None
+    ) -> bool:
+        """Check whether a package-file entry applies to a partition."""
+        if entry.partition_re is None:
+            return True
+        if partition_name is None:
+            return False
+        return re.fullmatch(entry.partition_re, partition_name) is not None
