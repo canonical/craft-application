@@ -585,7 +585,7 @@ class ProviderService(base.AppService):
                 with emit.pause():
                     instance.execute_run(
                         list(command),
-                        cwd=self._app.managed_instance_project_path,
+                        cwd=self._get_managed_working_dir(),
                         check=True,
                         env=env,
                     )
@@ -596,3 +596,12 @@ class ProviderService(base.AppService):
             finally:
                 if active_fetch_service:
                     self._services.get("fetch").teardown_instance()
+
+    def _get_managed_working_dir(self) -> pathlib.PurePosixPath:
+        """Return the working directory to use when running commands in a managed instance.
+
+        Override this to change the working directory for specific use cases,
+        such as when the project root inside the instance differs from the
+        mount point (e.g. monorepo builds where the git root is mounted).
+        """
+        return self._app.managed_instance_project_path
