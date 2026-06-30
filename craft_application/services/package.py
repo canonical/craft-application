@@ -29,6 +29,8 @@ from craft_application import errors, models, util
 from craft_application.services import base
 
 if TYPE_CHECKING:  # pragma: no cover
+    from collections.abc import Mapping
+
     from craft_application.application import AppMetadata
     from craft_application.services import ServiceFactory
 
@@ -76,6 +78,7 @@ class PackageService(base.AppService):
     def __init__(self, app: AppMetadata, services: ServiceFactory) -> None:
         super().__init__(app, services)
         self._resource_map: dict[str, pathlib.Path] | None = None
+        self._output_dir = pathlib.Path()
 
     @abc.abstractmethod
     def pack(self, prime_dir: pathlib.Path, dest: pathlib.Path) -> list[pathlib.Path]:
@@ -98,23 +101,38 @@ class PackageService(base.AppService):
         """Map resource name to artifact file name."""
         return self._resource_map
 
+    @property
+    def output_dir(self) -> pathlib.Path:
+        """The requested output directory for the current pack operation."""
+        return self._output_dir
+
+    def set_output_dir(self, path: pathlib.Path) -> None:
+        """Set the output directory for the current pack operation."""
+        self._output_dir = path
+
     def write_state(
         self, artifact: pathlib.Path | None, resources: dict[str, pathlib.Path] | None
     ) -> None:
         """Write the packaging state."""
+        artifacts: dict[str | None, pathlib.Path] = {}
+        if artifact:
+            artifacts[None] = artifact
+        if resources:
+            artifacts.update(resources)
+
+        self.write_artifacts_state(artifacts)
+
+    def write_artifacts_state(
+        self, artifacts: Mapping[str | None, pathlib.Path]
+    ) -> None:
+        """Write artifact-oriented packaging state."""
         platform = self._build_info.platform
         state_service = self._services.get("state")
-        artifacts: list[dict[str, str | None]] = []
+        state_entries = [
+            {"name": name, "path": str(path)} for name, path in artifacts.items()
+        ]
 
-        if artifact:
-            artifacts.append({"name": None, "path": str(artifact)})
-        if resources:
-            artifacts.extend(
-                {"name": name, "path": str(path)}
-                for name, path in resources.items()
-            )
-
-        state_service.set("artifacts", platform, value=artifacts or None)
+        state_service.set("artifacts", platform, value=state_entries or None)
 
     def read_state(self, platform: str | None = None) -> models.PackState:
         """Read the packaging state.
@@ -208,6 +226,43 @@ class PackageService(base.AppService):
         """Perform domain-specific updates to the project before packing."""
         return False
 
+    def needs_packing(self, partition: str | None = None) -> bool:
+        """Determine whether the given artifact/partition requires packing."""
+        lifecycle = self._services.get("lifecycle")
+        if lifecycle.requires_repack:
+            return True
+
+        artifact_path = self.get_artifacts()[partition]
+        if not artifact_path.is_file():
+            return True
+
+        for package_file in self._package_files(partition):
+            if self._package_file_changed(package_file, partition):
+                return True
+
+        for source, destination in self._gen_extra_assets(partition):
+            if self._asset_changed(source, destination, partition):
+                return True
+
+        return self._app_needs_repack(partition)
+
+    def pack_artifacts(self) -> Mapping[str | None, bool]:
+        """Pack all necessary artifacts for an ST160-aware package service."""
+        artifacts = self.get_artifacts()
+        packed: dict[str | None, bool] = {}
+
+        for name, path in artifacts.items():
+            if not self.needs_packing(name):
+                packed[name] = False
+                continue
+
+            self._materialize_package_files(name)
+            self._materialize_extra_assets(name)
+            self._pack(name=name, path=path)
+            packed[name] = True
+
+        return packed
+
     def _package_files(
         self, partition_name: str | None = None
     ) -> list[PackageFileEntry]:
@@ -239,3 +294,84 @@ class PackageService(base.AppService):
         if partition_name is None:
             return False
         return re.fullmatch(entry.partition_re, partition_name) is not None
+
+    def _prime_dir_for(self, partition_name: str | None) -> pathlib.Path:
+        """Return the prime directory corresponding to an artifact partition."""
+        lifecycle = self._services.get("lifecycle")
+        if partition_name in (None, "default"):
+            return lifecycle.prime_dir
+        return lifecycle.project_info.dirs.get_prime_dir(partition_name)
+
+    @staticmethod
+    def _partition_key(partition_name: str | None) -> str:
+        """Normalize artifact/partition names for internal lookups."""
+        return _DEFAULT_ARTIFACT_NAME if partition_name is None else partition_name
+
+    def _package_file_changed(
+        self, package_file: PackageFileEntry, partition_name: str | None
+    ) -> bool:
+        """Return whether a generated package file differs from prime contents."""
+        generator = getattr(self, package_file.method_name)
+        content = generator(partition_name)
+        if content is False:
+            return False
+
+        destination = self._prime_dir_for(partition_name) / package_file.relative_path
+        return self._asset_changed(content, destination, partition_name)
+
+    def _asset_changed(
+        self,
+        source: str | bytes | None | pathlib.Path,
+        destination: pathlib.Path,
+        partition_name: str | None,
+    ) -> bool:
+        """Return whether a package file or extra asset differs from prime contents."""
+        del partition_name
+        if isinstance(source, pathlib.Path):
+            if not destination.exists():
+                return True
+            return source.stat().st_mtime_ns > destination.stat().st_mtime_ns
+
+        if source is None:
+            return destination.exists()
+
+        if not destination.is_file():
+            return True
+
+        expected = source.encode() if isinstance(source, str) else source
+        return destination.read_bytes() != expected
+
+    def _materialize_package_files(self, partition_name: str | None) -> None:
+        """Write generated package files for a specific artifact partition."""
+        prime_dir = self._prime_dir_for(partition_name)
+
+        for package_file in self._package_files(partition_name):
+            generator = getattr(self, package_file.method_name)
+            content = generator(partition_name)
+            if content is False:
+                continue
+
+            destination = prime_dir / package_file.relative_path
+            self._write_asset(content, destination)
+
+    def _materialize_extra_assets(self, partition_name: str | None) -> None:
+        """Write extra assets for a specific artifact partition."""
+        for source, destination in self._gen_extra_assets(partition_name):
+            self._write_asset(source, destination)
+
+    def _write_asset(
+        self, source: str | bytes | None | pathlib.Path, destination: pathlib.Path
+    ) -> None:
+        """Write a generated package file or extra asset into prime."""
+        if source is None:
+            destination.unlink(missing_ok=True)
+            return
+
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        if isinstance(source, pathlib.Path):
+            destination.write_bytes(source.read_bytes())
+            return
+        if isinstance(source, str):
+            destination.write_text(source)
+            return
+        destination.write_bytes(source)

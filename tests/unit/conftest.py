@@ -60,7 +60,9 @@ def mock_services(monkeypatch, app_metadata, fake_project, project_path):
     services.ServiceFactory.register(
         "lifecycle", mock.Mock(spec=services.LifecycleService)
     )
-    services.ServiceFactory.register("package", mock.Mock(spec=services.PackageService))
+    mock_package = mock.Mock(spec=services.PackageService)
+    mock_package.supports_conditional_repack = False
+    services.ServiceFactory.register("package", mock_package)
     services.ServiceFactory.register(
         "provider", mock.Mock(spec=services.ProviderService)
     )

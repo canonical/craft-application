@@ -627,6 +627,79 @@ def test_pack_fetch_manifest(
     assert mock_services.fetch.create_project_manifest.called == expect_create_called
 
 
+def test_pack_run_st160(
+    mocker, emitter, mock_services, app_metadata, tmp_path
+):
+    mock_services.get("project").configure(platform=None, build_for=None)
+    mock_services.package.supports_conditional_repack = True
+    mock_services.package.pack_artifacts.return_value = {None: True, "tools": False}
+    mock_services.package.get_artifacts.return_value = {
+        None: pathlib.Path("package.zip"),
+        "tools": pathlib.Path("tools.tar.zst"),
+    }
+    parsed_args = argparse.Namespace(
+        destructive_mode=True, output=tmp_path, fetch_service_policy=None
+    )
+
+    command = PackCommand({"app": app_metadata, "services": mock_services})
+    mocker.patch.object(command._services.lifecycle.project_info, "work_dir", tmp_path)
+
+    command.run(parsed_args)
+
+    mock_services.package.pack_artifacts.assert_called_once_with()
+    assert not mock_services.package.pack.called
+    emitter.assert_progress("Packing...")
+    emitter.assert_progress("Packed: package.zip", permanent=True)
+    emitter.assert_progress("Already packed: tools.tar.zst", permanent=True)
+
+
+def test_pack_fetch_manifest_st160(
+    mocker, mock_services, app_metadata, tmp_path
+):
+    mock_services.get("project").configure(platform=None, build_for=None)
+    mock_services.package.supports_conditional_repack = True
+    mock_services.package.pack_artifacts.return_value = {None: True, "tools": False}
+    mock_services.package.get_artifacts.return_value = {
+        None: pathlib.Path("package.zip"),
+        "tools": pathlib.Path("tools.tar.zst"),
+    }
+    parsed_args = argparse.Namespace(
+        destructive_mode=True,
+        output=tmp_path,
+        fetch_service_policy="strict",
+    )
+
+    command = PackCommand({"app": app_metadata, "services": mock_services})
+    mocker.patch.object(command._services.lifecycle.project_info, "work_dir", tmp_path)
+
+    command.run(parsed_args)
+
+    mock_services.fetch.create_project_manifest.assert_called_once_with(
+        [pathlib.Path("package.zip")]
+    )
+
+
+def test_pack_run_st160_sets_output_dir(
+    mocker, mock_services, app_metadata, tmp_path
+):
+    mock_services.get("project").configure(platform=None, build_for=None)
+    mock_services.package.supports_conditional_repack = True
+    mock_services.package.pack_artifacts.return_value = {}
+    mock_services.package.get_artifacts.return_value = {}
+    parsed_args = argparse.Namespace(
+        destructive_mode=True,
+        output=tmp_path,
+        fetch_service_policy=None,
+    )
+
+    command = PackCommand({"app": app_metadata, "services": mock_services})
+    mocker.patch.object(command._services.lifecycle.project_info, "work_dir", tmp_path)
+
+    command.run(parsed_args)
+
+    mock_services.package.set_output_dir.assert_called_once_with(tmp_path)
+
+
 @pytest.mark.usefixtures("destructive_mode")
 def test_pack_run_wrong_step(app_metadata, fake_services):
     parsed_args = argparse.Namespace(

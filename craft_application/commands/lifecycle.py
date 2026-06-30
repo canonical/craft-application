@@ -484,12 +484,18 @@ class PackCommand(LifecycleCommand):
         # Prevent the steps in the prime command from using `--shell` or `--shell-after`
         parsed_args.shell = False
         parsed_args.shell_after = False
+        output_dir = getattr(parsed_args, "output", pathlib.Path())
 
         super()._run(parsed_args, step_name="prime")
         self._run_post_prime_steps_with_debug_handler(debug=debug)
+        self._services.package.set_output_dir(output_dir)
 
         if shell:
             _launch_shell()
+            return
+
+        if self._services.package.supports_conditional_repack is True:
+            self._run_st160_pack(parsed_args, shell_after=shell_after, debug=debug)
             return
 
         if self._is_already_packed():
@@ -534,6 +540,64 @@ class PackCommand(LifecycleCommand):
 
         self._save_packed_file_list(artifact=artifact, resources=resources)
         self._services.package.write_state(artifact=artifact, resources=resources)
+
+        if shell_after:
+            _launch_shell()
+
+    def _run_st160_pack(
+        self,
+        parsed_args: argparse.Namespace,
+        *,
+        shell_after: bool,
+        debug: bool,
+    ) -> None:
+        """Run the ST160-aware packing flow."""
+        emit.progress("Packing...")
+        package_service = self._services.package
+
+        try:
+            packed = package_service.pack_artifacts()
+        except Exception as err:
+            if debug:
+                emit.progress(str(err), permanent=True)
+                _launch_shell()
+            raise
+
+        artifact_paths = package_service.get_artifacts()
+        normalized_all_paths = self._relativize_paths(
+            list(artifact_paths.values()), root=pathlib.Path()
+        )
+        normalized_by_name = dict(
+            zip(artifact_paths.keys(), normalized_all_paths, strict=True)
+        )
+        normalized_packed_paths = [
+            normalized_by_name[name] for name, did_pack in packed.items() if did_pack
+        ]
+        normalized_skipped_paths = [
+            normalized_by_name[name] for name, did_pack in packed.items() if not did_pack
+        ]
+
+        if getattr(parsed_args, "fetch_service_policy", None) and normalized_packed_paths:
+            self._services.fetch.create_project_manifest(normalized_packed_paths)
+
+        self._save_packed_file_list_from_mapping(normalized_by_name)
+        package_service.write_artifacts_state(normalized_by_name)
+
+        if not normalized_by_name:
+            emit.progress("No packages created.", permanent=True)
+        elif not normalized_packed_paths:
+            emit.progress("Skipping pack (already ran)")
+            files = ", ".join(str(path) for path in normalized_skipped_paths)
+            emit.progress(f"Already packed: {files}", permanent=True)
+        elif len(normalized_packed_paths) == 1 and not normalized_skipped_paths:
+            emit.progress(f"Packed {normalized_packed_paths[0].name}", permanent=True)
+        else:
+            if normalized_packed_paths:
+                packed_names = ", ".join(path.name for path in normalized_packed_paths)
+                emit.progress(f"Packed: {packed_names}", permanent=True)
+            if normalized_skipped_paths:
+                skipped_names = ", ".join(str(path) for path in normalized_skipped_paths)
+                emit.progress(f"Already packed: {skipped_names}", permanent=True)
 
         if shell_after:
             _launch_shell()
@@ -605,17 +669,27 @@ class PackCommand(LifecycleCommand):
         self, artifact: pathlib.Path | None, resources: dict[str, pathlib.Path] | None
     ) -> None:
         """Save the list of the given artifact and resources."""
+        artifacts: dict[str | None, pathlib.Path] = {}
+        if artifact:
+            artifacts[None] = artifact
+        if resources:
+            artifacts.update(resources)
+
+        self._save_packed_file_list_from_mapping(artifacts)
+
+    def _save_packed_file_list_from_mapping(
+        self, artifacts: dict[str | None, pathlib.Path]
+    ) -> None:
+        """Save the given artifact mapping to the packed-file list."""
         work_dir = self.services.get("lifecycle").project_info.work_dir
         file_list_path = work_dir / _PACKED_FILE_LIST_PATH
         file_list_path.parent.mkdir(parents=True, exist_ok=True)
-        artifacts = []
-        if artifact:
-            artifacts.append({"name": None, "path": artifact})
-        if resources:
-            artifacts.extend(
-                {"name": name, "path": path} for name, path in resources.items()
-            )
-        data = models.PackState(artifacts=artifacts)
+        data = models.PackState(
+            artifacts=[
+                models.PackedArtifact(name=name, path=path)
+                for name, path in artifacts.items()
+            ]
+        )
         data.to_yaml_file(file_list_path)
 
     def _get_packed_file_list_timestamp(self) -> int | None:
@@ -624,6 +698,7 @@ class PackCommand(LifecycleCommand):
         if not file_list_path.is_file():
             return None
         return file_list_path.stat().st_mtime_ns
+
 
     @staticmethod
     def _relativize_paths(

@@ -53,10 +53,23 @@ class FakePackageService(package.PackageService):
 
 class ST160PackageService(FakePackageService):
     def get_artifacts(self) -> dict[str | None, pathlib.Path]:
-        return {"default": pathlib.Path("artifact")}
+        return {None: pathlib.Path("artifact")}
 
     def _pack(self, *, name: str | None = None, path: Path) -> None:
         return None
+
+
+class MultiArtifactPackageService(FakePackageService):
+    def __init__(self, app_metadata, fake_services, *, artifacts: dict[str | None, Path]):
+        super().__init__(app_metadata, fake_services)
+        self._artifacts = artifacts
+        self.packed: list[tuple[str | None, Path]] = []
+
+    def get_artifacts(self) -> dict[str | None, pathlib.Path]:
+        return self._artifacts
+
+    def _pack(self, *, name: str | None = None, path: Path) -> None:
+        self.packed.append((name, path))
 
 
 class DecoratedPackageService(FakePackageService):
@@ -111,6 +124,54 @@ def test_package_service_supports_conditional_repack_true(
     service = ST160PackageService(app_metadata, fake_services)
 
     assert service.supports_conditional_repack is True
+
+
+def test_needs_packing_true_when_lifecycle_requires_repack(
+    app_metadata, fake_project, fake_services, mocker
+):
+    service = ST160PackageService(app_metadata, fake_services)
+    mocker.patch.object(type(service._services.lifecycle), "requires_repack", True)
+
+    assert service.needs_packing(None) is True
+
+
+def test_needs_packing_true_when_artifact_missing(
+    app_metadata, fake_project, fake_services, mocker
+):
+    service = ST160PackageService(app_metadata, fake_services)
+    mocker.patch.object(type(service._services.lifecycle), "requires_repack", False)
+
+    assert service.needs_packing(None) is True
+
+
+def test_needs_packing_false_when_artifact_exists(
+    app_metadata, fake_project, fake_services, mocker, tmp_path
+):
+    artifact_path = tmp_path / "artifact"
+    artifact_path.touch()
+    service = MultiArtifactPackageService(
+        app_metadata, fake_services, artifacts={None: artifact_path}
+    )
+    mocker.patch.object(type(service._services.lifecycle), "requires_repack", False)
+
+    assert service.needs_packing(None) is False
+
+
+def test_pack_artifacts_only_packs_needed_artifacts(
+    app_metadata, fake_project, fake_services, mocker, tmp_path
+):
+    artifacts = {
+        None: tmp_path / "main.tar.zst",
+        "tools": tmp_path / "tools.tar.zst",
+    }
+    artifacts["tools"].touch()
+    service = MultiArtifactPackageService(app_metadata, fake_services, artifacts=artifacts)
+    mocker.patch.object(type(service._services.lifecycle), "requires_repack", False)
+
+    result = service.pack_artifacts()
+
+    assert result == {None: True, "tools": False}
+    assert service.packed == [(None, artifacts[None])]
 
 
 def test_package_files_without_partition_filter(
