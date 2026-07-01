@@ -224,7 +224,9 @@ def test_run_sets_platform_arg(
 
     command.run(parsed_args)
 
-    assert build_planner._BuildPlanService__platforms == [fake_platform]  # ty: ignore[unresolved-attribute]
+    assert build_planner._BuildPlanService__platforms == [
+        fake_platform
+    ]  # ty: ignore[unresolved-attribute]
 
 
 def test_run_sets_platform_from_env(
@@ -246,7 +248,9 @@ def test_run_sets_platform_from_env(
 
     command.run(parsed_args)
 
-    assert build_planner._BuildPlanService__platforms == [fake_platform]  # ty: ignore[unresolved-attribute]
+    assert build_planner._BuildPlanService__platforms == [
+        fake_platform
+    ]  # ty: ignore[unresolved-attribute]
 
 
 @pytest.mark.parametrize(
@@ -269,7 +273,9 @@ def test_run_sets_build_for_arg(
 
     command.run(parsed_args)
 
-    assert build_planner._BuildPlanService__build_for == [arch]  # ty: ignore[unresolved-attribute]
+    assert build_planner._BuildPlanService__build_for == [
+        arch
+    ]  # ty: ignore[unresolved-attribute]
 
 
 @pytest.mark.parametrize(
@@ -294,7 +300,9 @@ def test_run_sets_build_for_from_env(
 
     command.run(parsed_args)
 
-    assert build_planner._BuildPlanService__build_for == [arch]  # ty: ignore[unresolved-attribute]
+    assert build_planner._BuildPlanService__build_for == [
+        arch
+    ]  # ty: ignore[unresolved-attribute]
 
 
 @pytest.mark.parametrize("fetch", [False, True])
@@ -577,7 +585,9 @@ def test_pack_run(
         }
     )
     mocker.patch.object(command._services.lifecycle.project_info, "work_dir", tmp_path)
-    command._services.package.resource_map = {p.stem: p for p in packages[1:]} or None  # ty: ignore[invalid-assignment]
+    command._services.package.resource_map = {
+        p.stem: p for p in packages[1:]
+    } or None  # ty: ignore[invalid-assignment]
 
     command.run(parsed_args)
 
@@ -626,9 +636,7 @@ def test_pack_fetch_manifest(
     assert mock_services.fetch.create_project_manifest.called == expect_create_called
 
 
-def test_pack_run_st160(
-    mocker, emitter, mock_services, app_metadata, tmp_path
-):
+def test_pack_run_st160(mocker, emitter, mock_services, app_metadata, tmp_path):
     mock_services.get("project").configure(platform=None, build_for=None)
     mock_services.package.supports_conditional_repack = True
     mock_services.package.pack_artifacts.return_value = {None: True, "tools": False}
@@ -652,9 +660,7 @@ def test_pack_run_st160(
     emitter.assert_progress("Already packed: tools.tar.zst", permanent=True)
 
 
-def test_pack_fetch_manifest_st160(
-    mocker, mock_services, app_metadata, tmp_path
-):
+def test_pack_fetch_manifest_st160(mocker, mock_services, app_metadata, tmp_path):
     mock_services.get("project").configure(platform=None, build_for=None)
     mock_services.package.supports_conditional_repack = True
     mock_services.package.pack_artifacts.return_value = {None: True, "tools": False}
@@ -678,9 +684,7 @@ def test_pack_fetch_manifest_st160(
     )
 
 
-def test_pack_run_st160_sets_output_dir(
-    mocker, mock_services, app_metadata, tmp_path
-):
+def test_pack_run_st160_sets_output_dir(mocker, mock_services, app_metadata, tmp_path):
     mock_services.get("project").configure(platform=None, build_for=None)
     mock_services.package.supports_conditional_repack = True
     mock_services.package.pack_artifacts.return_value = {}
