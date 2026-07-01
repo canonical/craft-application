@@ -15,6 +15,14 @@ Changelog
 
     For a complete list of commits, check out the `1.2.3`_ release on GitHub.
 
+7.0.1 (unreleased)
+------------------
+
+Bug fixes
+=========
+
+- Pass proxy environment variables to the fetch-service
+
 
 7.0.0 (2026-06-02)
 ------------------

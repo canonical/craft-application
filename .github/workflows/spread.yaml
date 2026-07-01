@@ -29,13 +29,13 @@ jobs:
           path: ${{ steps.snap.outputs.snap }}
 
   snap-tests:
-    runs-on: spread-installed
+    runs-on: [self-hosted, spread-enabled]
     needs: [snap-build]
     strategy:
       fail-fast: false
       matrix:
         spread:
-          - "google:"
+          - "openstack:"
 
     steps:
       - name: Cleanup job workspace
@@ -72,7 +72,8 @@ jobs:
               exit 0
             fi
           fi
-          spread google:tests/spread/pro/
+          # uncomment once https://warthogs.atlassian.net/browse/CRAFT-5243 is unblocked
+          # spread google:tests/spread/pro/
 
       - name: Discard spread workers
         if: always()
