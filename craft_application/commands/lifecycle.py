@@ -492,10 +492,11 @@ class PackCommand(LifecycleCommand):
             _launch_shell()
             return
 
-        if self._services.package.supports_conditional_repack is True:
+        if self._services.package.supports_conditional_repack:
             self._run_pack(parsed_args, shell_after=shell_after, debug=debug)
             return
 
+        # Legacy packaging for applications not implementing ST160
         emit.progress("Packing...")
         try:
             packages = self._services.package.pack(
