@@ -224,9 +224,7 @@ def test_run_sets_platform_arg(
 
     command.run(parsed_args)
 
-    assert build_planner._BuildPlanService__platforms == [
-        fake_platform
-    ]  # ty: ignore[unresolved-attribute]
+    assert build_planner._BuildPlanService__platforms == [fake_platform]  # ty: ignore[unresolved-attribute]
 
 
 def test_run_sets_platform_from_env(
@@ -248,9 +246,7 @@ def test_run_sets_platform_from_env(
 
     command.run(parsed_args)
 
-    assert build_planner._BuildPlanService__platforms == [
-        fake_platform
-    ]  # ty: ignore[unresolved-attribute]
+    assert build_planner._BuildPlanService__platforms == [fake_platform]  # ty: ignore[unresolved-attribute]
 
 
 @pytest.mark.parametrize(
@@ -273,9 +269,7 @@ def test_run_sets_build_for_arg(
 
     command.run(parsed_args)
 
-    assert build_planner._BuildPlanService__build_for == [
-        arch
-    ]  # ty: ignore[unresolved-attribute]
+    assert build_planner._BuildPlanService__build_for == [arch]  # ty: ignore[unresolved-attribute]
 
 
 @pytest.mark.parametrize(
@@ -300,9 +294,7 @@ def test_run_sets_build_for_from_env(
 
     command.run(parsed_args)
 
-    assert build_planner._BuildPlanService__build_for == [
-        arch
-    ]  # ty: ignore[unresolved-attribute]
+    assert build_planner._BuildPlanService__build_for == [arch]  # ty: ignore[unresolved-attribute]
 
 
 @pytest.mark.parametrize("fetch", [False, True])
@@ -585,9 +577,7 @@ def test_pack_run(
         }
     )
     mocker.patch.object(command._services.lifecycle.project_info, "work_dir", tmp_path)
-    command._services.package.resource_map = {
-        p.stem: p for p in packages[1:]
-    } or None  # ty: ignore[invalid-assignment]
+    command._services.package.resource_map = {p.stem: p for p in packages[1:]} or None  # ty: ignore[invalid-assignment]
 
     command.run(parsed_args)
 

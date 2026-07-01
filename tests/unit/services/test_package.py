@@ -60,7 +60,9 @@ class ST160PackageService(FakePackageService):
 
 
 class MultiArtifactPackageService(FakePackageService):
-    def __init__(self, app_metadata, fake_services, *, artifacts: dict[str | None, Path]):
+    def __init__(
+        self, app_metadata, fake_services, *, artifacts: dict[str | None, Path]
+    ):
         super().__init__(app_metadata, fake_services)
         self._artifacts = artifacts
         self.packed: list[tuple[str | None, Path]] = []
@@ -245,7 +247,9 @@ def test_pack_artifacts_only_packs_needed_artifacts(
         "tools": tmp_path / "tools.tar.zst",
     }
     artifacts["tools"].touch()
-    service = MultiArtifactPackageService(app_metadata, fake_services, artifacts=artifacts)
+    service = MultiArtifactPackageService(
+        app_metadata, fake_services, artifacts=artifacts
+    )
     mocker.patch.object(type(service._services.lifecycle), "requires_repack", new=False)
 
     result = service.pack_artifacts()
@@ -269,7 +273,7 @@ def test_package_files_without_partition_filter(
             relative_path=pathlib.PurePosixPath("meta/default.yaml"),
             method_name="_default_only",
             partition_re="default",
-        )
+        ),
     ]
 
 
@@ -377,9 +381,7 @@ def test_pack_state_compatibility_views_from_canonical_shape():
     state = models.PackState(
         artifacts=[
             models.PackedArtifact(name=None, path=pathlib.Path("package.tar.zst")),
-            models.PackedArtifact(
-                name="tools", path=pathlib.Path("tools.tar.zst")
-            ),
+            models.PackedArtifact(name="tools", path=pathlib.Path("tools.tar.zst")),
         ]
     )
 
