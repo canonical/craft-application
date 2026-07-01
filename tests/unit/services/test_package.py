@@ -72,6 +72,22 @@ class MultiArtifactPackageService(FakePackageService):
         self.packed.append((name, path))
 
 
+class UpdatingPackageService(MultiArtifactPackageService):
+    def __init__(
+        self,
+        app_metadata,
+        fake_services,
+        *,
+        artifacts: dict[str | None, Path],
+        project_updated: bool,
+    ):
+        super().__init__(app_metadata, fake_services, artifacts=artifacts)
+        self._next_project_updated = project_updated
+
+    def _extra_project_updates(self) -> bool:
+        return self._next_project_updated
+
+
 class DecoratedPackageService(FakePackageService):
     @package.package_file("metadata.yaml")
     def _metadata(self, partition: str | None = None) -> str:
@@ -173,6 +189,34 @@ def test_needs_packing_false_when_artifact_exists(
     mocker.patch.object(type(service._services.lifecycle), "requires_repack", new=False)
 
     assert service.needs_packing(None) is False
+
+
+@pytest.mark.parametrize(
+    ("project_updated", "expected"),
+    [(True, True), (False, False)],
+)
+def test_needs_packing_uses_extra_project_updates_result(
+    app_metadata,
+    fake_project,
+    fake_services,
+    mocker,
+    tmp_path,
+    project_updated,
+    expected,
+):
+    artifact_path = tmp_path / "artifact"
+    artifact_path.touch()
+    service = UpdatingPackageService(
+        app_metadata,
+        fake_services,
+        artifacts={None: artifact_path},
+        project_updated=project_updated,
+    )
+    mocker.patch.object(type(service._services.lifecycle), "requires_repack", new=False)
+
+    service.update_project()
+
+    assert service.needs_packing(None) is expected
 
 
 def test_pack_artifacts_only_packs_needed_artifacts(

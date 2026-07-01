@@ -37,7 +37,6 @@ if TYPE_CHECKING:  # pragma: no cover
 
 
 _PACKAGE_FILE_ATTR = "_craft_application_package_file"
-_DEFAULT_ARTIFACT_NAME = "default"
 
 _MethodT = TypeVar("_MethodT", bound=Callable[..., Any])
 
@@ -103,6 +102,7 @@ class PackageService(base.AppService):
         super().__init__(app, services)
         self._resource_map: dict[str, pathlib.Path] | None = None
         self._output_dir = pathlib.Path()
+        self._project_was_updated = False
 
     def pack(self, prime_dir: pathlib.Path, dest: pathlib.Path) -> list[pathlib.Path]:
         """Create one or more packages.
@@ -211,6 +211,7 @@ class PackageService(base.AppService):
 
     def update_project(self) -> None:
         """Update project fields with dynamic values set during the lifecycle."""
+        self._project_was_updated = False
         project_info = self._services.get("lifecycle").project_info
         update_vars = project_info.project_vars.marshal("value")
         emit.debug(f"Project variable updates: {update_vars}")
@@ -220,7 +221,7 @@ class PackageService(base.AppService):
         project = project_service.get()
 
         # Give subclasses a chance to update the project with their own logic
-        self._extra_project_updates()
+        self._project_was_updated = self._extra_project_updates()
 
         unset_fields = [
             field
@@ -272,11 +273,12 @@ class PackageService(base.AppService):
 
     def needs_packing(self, partition: str | None = None) -> bool:
         """Determine whether the given artifact/partition requires packing."""
-        if self._app.always_repack:
-            return True
-
         lifecycle = self._services.get("lifecycle")
-        if lifecycle.requires_repack:
+        if (
+            self._app.always_repack
+            or lifecycle.requires_repack
+            or self._project_was_updated
+        ):
             return True
 
         artifact_path = self.get_artifacts()[partition]
@@ -336,11 +338,6 @@ class PackageService(base.AppService):
         if partition_name in (None, "default"):
             return lifecycle.prime_dir
         return lifecycle.project_info.dirs.get_prime_dir(partition_name)
-
-    @staticmethod
-    def _partition_key(partition_name: str | None) -> str:
-        """Normalize artifact/partition names for internal lookups."""
-        return _DEFAULT_ARTIFACT_NAME if partition_name is None else partition_name
 
     def _package_file_changed(
         self, package_file: PackageFileEntry, partition_name: str | None
