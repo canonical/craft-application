@@ -353,13 +353,11 @@ class PullCommand(LifecyclePartsCommand):
 
     name = "pull"
     help_msg = "Download or retrieve artifacts defined for a part"
-    overview = textwrap.dedent(
-        """
+    overview = textwrap.dedent("""
         Download or retrieve artifacts defined for a part. If part names
         are specified only those parts will be pulled, otherwise all parts
         will be pulled.
-        """
-    )
+        """)
 
 
 class OverlayCommand(LifecyclePartsCommand):
@@ -367,12 +365,10 @@ class OverlayCommand(LifecyclePartsCommand):
 
     name = "overlay"
     help_msg = "Create part layers over the base filesystem."
-    overview = textwrap.dedent(
-        """
+    overview = textwrap.dedent("""
         Execute operations defined for each part on a layer over the base
         filesystem, potentially modifying its contents.
-        """
-    )
+        """)
 
 
 class BuildCommand(LifecyclePartsCommand):
@@ -380,12 +376,10 @@ class BuildCommand(LifecyclePartsCommand):
 
     name = "build"
     help_msg = "Build artifacts defined for a part"
-    overview = textwrap.dedent(
-        """
+    overview = textwrap.dedent("""
         Build artifacts defined for a part. If part names are specified only
         those parts will be built, otherwise all parts will be built.
-        """
-    )
+        """)
 
 
 class StageCommand(LifecyclePartsCommand):
@@ -393,13 +387,11 @@ class StageCommand(LifecyclePartsCommand):
 
     name = "stage"
     help_msg = "Stage built artifacts into a common staging area"
-    overview = textwrap.dedent(
-        """
+    overview = textwrap.dedent("""
         Stage built artifacts into a common staging area. If part names are
         specified only those parts will be staged. The default is to stage
         all parts.
-        """
-    )
+        """)
 
 
 class PrimeCommand(LifecyclePartsCommand):
@@ -407,13 +399,11 @@ class PrimeCommand(LifecyclePartsCommand):
 
     name = "prime"
     help_msg = "Prime artifacts defined for a part"
-    overview = textwrap.dedent(
-        """
+    overview = textwrap.dedent("""
         Prepare the final payload to be packed, performing additional
         processing and adding metadata files. If part names are specified only
         those parts will be primed. The default is to prime all parts.
-        """
-    )
+        """)
 
     @override
     def _run(
@@ -440,11 +430,9 @@ class PackCommand(LifecycleCommand):
 
     name = "pack"
     help_msg = "Create the final artifact"
-    overview = textwrap.dedent(
-        """
+    overview = textwrap.dedent("""
         Process parts and create the final artifact.
-        """
-    )
+        """)
 
     @override
     def _fill_parser(self, parser: argparse.ArgumentParser) -> None:
@@ -563,10 +551,15 @@ class PackCommand(LifecycleCommand):
             normalized_by_name[name] for name, did_pack in packed.items() if did_pack
         ]
         normalized_skipped_paths = [
-            normalized_by_name[name] for name, did_pack in packed.items() if not did_pack
+            normalized_by_name[name]
+            for name, did_pack in packed.items()
+            if not did_pack
         ]
 
-        if getattr(parsed_args, "fetch_service_policy", None) and normalized_packed_paths:
+        if (
+            getattr(parsed_args, "fetch_service_policy", None)
+            and normalized_packed_paths
+        ):
             self._services.fetch.create_project_manifest(normalized_packed_paths)
 
         package_service.write_artifacts_state(normalized_by_name)
@@ -584,7 +577,9 @@ class PackCommand(LifecycleCommand):
                 packed_names = ", ".join(path.name for path in normalized_packed_paths)
                 emit.progress(f"Packed: {packed_names}", permanent=True)
             if normalized_skipped_paths:
-                skipped_names = ", ".join(str(path) for path in normalized_skipped_paths)
+                skipped_names = ", ".join(
+                    str(path) for path in normalized_skipped_paths
+                )
                 emit.progress(f"Already packed: {skipped_names}", permanent=True)
 
         if shell_after:
@@ -654,11 +649,9 @@ class TestCommand(PackCommand):
 
     name = "test"
     help_msg = "Run project tests"
-    overview = textwrap.dedent(
-        """
+    overview = textwrap.dedent("""
         Run spread tests for the project.
-        """
-    )
+        """)
     common = True
     _allow_destructive = False
     _show_lxd_arg = False
@@ -760,12 +753,10 @@ class CleanCommand(_BaseLifecycleCommand):
     always_load_project = True
     name = "clean"
     help_msg = "Remove a part's assets"
-    overview = textwrap.dedent(
-        """
+    overview = textwrap.dedent("""
         Clean up artifacts belonging to parts. If no parts are specified,
         remove the packing environment.
-        """
-    )
+        """)
 
     @override
     def _fill_parser(self, parser: argparse.ArgumentParser) -> None:
