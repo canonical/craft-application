@@ -61,7 +61,11 @@ def mock_services(monkeypatch, app_metadata, fake_project, project_path):
         "lifecycle", mock.Mock(spec=services.LifecycleService)
     )
     mock_package = mock.Mock(spec=services.PackageService)
+    # ServiceFactory treats registered values as callables and instantiates them.
+    # Keep both the registered mock and the instantiated mock pinned to legacy
+    # behavior unless a test explicitly opts into ST160.
     mock_package.supports_conditional_repack = False
+    mock_package.return_value.supports_conditional_repack = False
     services.ServiceFactory.register("package", mock_package)
     services.ServiceFactory.register(
         "provider", mock.Mock(spec=services.ProviderService)
