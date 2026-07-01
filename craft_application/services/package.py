@@ -36,6 +36,7 @@ if TYPE_CHECKING:  # pragma: no cover
 
 
 _PACKAGE_FILE_ATTR = "_craft_application_package_file"
+_DEFAULT_ARTIFACT_NAME = "default"
 
 
 @dataclass(frozen=True)
@@ -259,8 +260,8 @@ class PackageService(base.AppService):
         if not artifact_path.is_file():
             return True
 
-        for package_file in self._package_files(partition):
-            if self._package_file_changed(package_file, partition):
+        for file in self._package_files(partition):
+            if self._package_file_changed(file, partition):
                 return True
 
         for source, destination in self._gen_extra_assets(partition):
