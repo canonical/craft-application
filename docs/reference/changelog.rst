@@ -96,6 +96,7 @@ For a complete list of commits, check out the `6.4.0`_ release on GitHub.
 Bug fixes
 =========
 
+- Fixed duplicate artifact names in remote-build success message (`#1093`).
 - :py:class:`~craft_application.util.pro_services.ProServices` no longer raises an error
   if the requested set of pro features doesn't strictly match the set of enabled
   features on the host.
