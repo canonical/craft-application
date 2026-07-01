@@ -1,4 +1,5 @@
 summary: test testcraft pack/repack
+manual: true  # skip-repack now handled by ST160
 
 environment:
   CRAFT_BUILD_ENVIRONMENT/managed: ""
