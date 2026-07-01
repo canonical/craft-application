@@ -114,6 +114,24 @@ class OverriddenDecoratedPackageService(DecoratedPackageService):
         return f"replaced:{partition}"
 
 
+def test_package_file_rejects_absolute_paths():
+    with pytest.raises(ValueError, match="must be relative"):
+
+        class InvalidPackageService(FakePackageService):
+            @package.package_file("/metadata.yaml")
+            def _metadata(self, partition: str | None = None) -> str:
+                return "metadata"
+
+
+def test_package_file_rejects_parent_directory_traversals():
+    with pytest.raises(ValueError, match="must not contain parent directory"):
+
+        class InvalidPackageService(FakePackageService):
+            @package.package_file("../metadata.yaml")
+            def _metadata(self, partition: str | None = None) -> str:
+                return "metadata"
+
+
 def test_write_metadata(tmp_path, app_metadata, fake_project, fake_services):
     service = FakePackageService(app_metadata, fake_services)
     metadata_file = tmp_path / "metadata.yaml"

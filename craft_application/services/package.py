@@ -59,6 +59,15 @@ def package_file(
     used by ST160-aware packers to compare and materialize generated package files.
     """
     relative_path = pathlib.PurePosixPath(relative_path)
+    if relative_path.is_absolute():
+        raise ValueError(
+            f"Package file path must be relative: {relative_path.as_posix()!r}"
+        )
+    if ".." in relative_path.parts:
+        raise ValueError(
+            "Package file path must not contain parent directory traversals: "
+            f"{relative_path.as_posix()!r}"
+        )
 
     def decorator(method: _MethodT) -> _MethodT:
         setattr(
