@@ -130,7 +130,7 @@ def test_needs_packing_true_when_lifecycle_requires_repack(
     app_metadata, fake_project, fake_services, mocker
 ):
     service = ST160PackageService(app_metadata, fake_services)
-    mocker.patch.object(type(service._services.lifecycle), "requires_repack", True)
+    mocker.patch.object(type(service._services.lifecycle), "requires_repack", new=True)
 
     assert service.needs_packing(None) is True
 
@@ -148,7 +148,7 @@ def test_needs_packing_true_when_always_repack_enabled(
     service = MultiArtifactPackageService(
         app_metadata, fake_services, artifacts={None: artifact_path}
     )
-    mocker.patch.object(type(service._services.lifecycle), "requires_repack", False)
+    mocker.patch.object(type(service._services.lifecycle), "requires_repack", new=False)
 
     assert service.needs_packing(None) is True
 
@@ -157,7 +157,7 @@ def test_needs_packing_true_when_artifact_missing(
     app_metadata, fake_project, fake_services, mocker
 ):
     service = ST160PackageService(app_metadata, fake_services)
-    mocker.patch.object(type(service._services.lifecycle), "requires_repack", False)
+    mocker.patch.object(type(service._services.lifecycle), "requires_repack", new=False)
 
     assert service.needs_packing(None) is True
 
@@ -170,7 +170,7 @@ def test_needs_packing_false_when_artifact_exists(
     service = MultiArtifactPackageService(
         app_metadata, fake_services, artifacts={None: artifact_path}
     )
-    mocker.patch.object(type(service._services.lifecycle), "requires_repack", False)
+    mocker.patch.object(type(service._services.lifecycle), "requires_repack", new=False)
 
     assert service.needs_packing(None) is False
 
@@ -184,7 +184,7 @@ def test_pack_artifacts_only_packs_needed_artifacts(
     }
     artifacts["tools"].touch()
     service = MultiArtifactPackageService(app_metadata, fake_services, artifacts=artifacts)
-    mocker.patch.object(type(service._services.lifecycle), "requires_repack", False)
+    mocker.patch.object(type(service._services.lifecycle), "requires_repack", new=False)
 
     result = service.pack_artifacts()
 

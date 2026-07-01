@@ -27,7 +27,7 @@ from craft_cli import CommandGroup, CraftError, emit
 from craft_parts.features import Features
 from typing_extensions import override
 
-from craft_application import errors, models, util
+from craft_application import errors, util
 from craft_application.commands import base
 from craft_application.errors import TestFileError
 from craft_application.util import ProServices

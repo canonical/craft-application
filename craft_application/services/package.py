@@ -20,8 +20,9 @@ from __future__ import annotations
 import abc
 import pathlib
 import re
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, TypeVar, cast
 
 from craft_cli import emit
 
@@ -38,6 +39,8 @@ if TYPE_CHECKING:  # pragma: no cover
 _PACKAGE_FILE_ATTR = "_craft_application_package_file"
 _DEFAULT_ARTIFACT_NAME = "default"
 
+_MethodT = TypeVar("_MethodT", bound=Callable[..., Any])
+
 
 @dataclass(frozen=True)
 class PackageFileEntry:
@@ -50,16 +53,15 @@ class PackageFileEntry:
 
 def package_file(
     relative_path: str | pathlib.PurePath, partition_re: str | None = None
-) -> Any:
+) -> Callable[[_MethodT], _MethodT]:
     """Register a method as the generator for a package file.
 
     The decorated method is discovered by :class:`PackageService` and may later be
     used by ST160-aware packers to compare and materialize generated package files.
     """
-
     relative_path = pathlib.PurePosixPath(relative_path)
 
-    def decorator(method: Any) -> Any:
+    def decorator(method: _MethodT) -> _MethodT:
         setattr(
             method,
             _PACKAGE_FILE_ATTR,
@@ -204,7 +206,7 @@ class PackageService(base.AppService):
         package_cls = type(self)
         return (
             package_cls.get_artifacts is not PackageService.get_artifacts
-            and package_cls._pack is not PackageService._pack
+            and package_cls._pack is not PackageService._pack  # noqa: SLF001
         )
 
     def update_project(self) -> None:
@@ -250,12 +252,13 @@ class PackageService(base.AppService):
         raise NotImplementedError
 
     def _gen_extra_assets(
-        self, partition_name: str | None = None
+        self,
+        partition_name: str | None = None,  # noqa: ARG002
     ) -> list[tuple[str | bytes | None | pathlib.Path, pathlib.Path]]:
         """Generate any extra assets for the given artifact/prime partition."""
         return []
 
-    def _app_needs_repack(self, partition: str | None = None) -> bool:
+    def _app_needs_repack(self, partition: str | None = None) -> bool:  # noqa: ARG002
         """Determine whether the application needs to repack a given artifact."""
         return False
 

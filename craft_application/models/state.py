@@ -15,8 +15,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Models representing application states."""
 
-from __future__ import annotations
-
 import pathlib
 
 from craft_application.models import CraftBaseModel

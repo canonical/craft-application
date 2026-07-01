@@ -26,7 +26,7 @@ import craft_parts
 import craft_platforms
 import pytest
 import pytest_mock
-from craft_application import errors, models
+from craft_application import errors
 from craft_application.application import AppMetadata
 from craft_application.commands.base import AppCommand
 from craft_application.commands.lifecycle import (
@@ -43,7 +43,6 @@ from craft_application.commands.lifecycle import (
     _BaseLifecycleCommand,
     get_lifecycle_command_group,
 )
-from craft_application.services import LifecycleService
 from craft_application.services.service_factory import ServiceFactory
 from craft_application.util import ProServices
 from craft_cli.pytest_plugin import RecordingEmitter
