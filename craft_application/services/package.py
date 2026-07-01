@@ -77,6 +77,26 @@ def package_file(
 class PackageService(base.AppService):
     """The business logic for creating packages."""
 
+    _package_file_registry: list[PackageFileEntry] = []
+
+    def __init_subclass__(cls, **kwargs: Any) -> None:
+        super().__init_subclass__(**kwargs)
+        # Build registry: start with the parent's entries, then overlay this class's.
+        registry = list(cls._package_file_registry)
+        indexes = {entry.method_name: i for i, entry in enumerate(registry)}
+
+        for value in vars(cls).values():
+            entry = getattr(value, _PACKAGE_FILE_ATTR, None)
+            if entry is None:
+                continue
+            if entry.method_name in indexes:
+                registry[indexes[entry.method_name]] = entry
+            else:
+                indexes[entry.method_name] = len(registry)
+                registry.append(entry)
+
+        cls._package_file_registry = registry
+
     def __init__(self, app: AppMetadata, services: ServiceFactory) -> None:
         super().__init__(app, services)
         self._resource_map: dict[str, pathlib.Path] | None = None
@@ -291,22 +311,11 @@ class PackageService(base.AppService):
         self, partition_name: str | None = None
     ) -> list[PackageFileEntry]:
         """Return registered package-file generators for a given partition."""
-        package_files: list[PackageFileEntry] = []
-        package_file_indexes: dict[str, int] = {}
-
-        for cls in reversed(type(self).__mro__):
-            for value in vars(cls).values():
-                entry = getattr(value, _PACKAGE_FILE_ATTR, None)
-                if entry is None:
-                    continue
-                if self._package_file_matches(entry, partition_name):
-                    if entry.method_name in package_file_indexes:
-                        package_files[package_file_indexes[entry.method_name]] = entry
-                    else:
-                        package_file_indexes[entry.method_name] = len(package_files)
-                        package_files.append(entry)
-
-        return package_files
+        return [
+            entry
+            for entry in self._package_file_registry
+            if self._package_file_matches(entry, partition_name)
+        ]
 
     @staticmethod
     def _package_file_matches(
