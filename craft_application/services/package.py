@@ -76,7 +76,7 @@ def package_file(
             PackageFileEntry(
                 relative_path=relative_path,
                 partition_re=partition_re,
-                method_name=method.__name__,
+                method_name=method.__name__,  # ty: ignore[unresolved-attribute]
             ),
         )
         return method
