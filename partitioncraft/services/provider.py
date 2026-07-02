@@ -34,6 +34,7 @@ class PartitioncraftProviderService(provider.ProviderService):
 
     def setup(self) -> None:
         """Set up partitioncraft."""
+        super().setup()
         # Replace "partitoncraft" with the testcraft snap since we're packaged there.
         self.snaps = [Snap(name="testcraft", channel=None, classic=True)]
 
