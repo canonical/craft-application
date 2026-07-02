@@ -64,7 +64,7 @@ dev = [
     "coverage[toml]~=7.9",
     "hypothesis>=6.0",
     "pyfakefs~=6.1",
-    "pytest==9.0.3",
+    "pytest==9.1.1",
     "pytest-check==2.8.0",
     "pytest-cov==7.1.0",
     "pytest-freezer==0.4.9",
@@ -86,7 +86,7 @@ types = [
 ]
 docs = [
     "pydantic-kitbash~=1.0.1",
-    "pytest==9.0.3",  # Include pytest because autodoc needs it
+    "pytest==9.1.1",  # Include pytest because autodoc needs it
     "sphinx-lint~=1.0",
     "sphinx-substitution-extensions>=2025.1.2",
     "sphinxext-rediraffe==0.3.0",
