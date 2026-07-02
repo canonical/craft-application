@@ -161,8 +161,9 @@ backends:
       # Ubuntu 20.04 requires a newer kernel, so we prepare it with an HWE kernel and
       # reboot. Note that we're only doing this here because for OpenStack we
       # specifically request an HWE kernel.
-      if [[ "${SPREAD_SYSTEM}" == "ubuntu-20.04-64" ]] && [[ $SPREAD_REBOOT = 0 ]]; then
-        apt --yes install linux-image-generic-hwe-20.04
+      if [ "${SPREAD_SYSTEM}" = "ubuntu-20.04-64" ] && [ "${SPREAD_REBOOT:-0}" = "0" ]; then
+        apt-get update
+        DEBIAN_FRONTEND=noninteractive apt-get --yes install linux-image-generic-hwe-20.04
         REBOOT
       fi
   craft:
