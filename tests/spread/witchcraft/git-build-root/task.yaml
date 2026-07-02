@@ -1,0 +1,39 @@
+summary: Build a project that references files outside its directory via git build root
+
+execute: |
+  # Create a monorepo: git root at the top, shared library above the project directory.
+  mkdir -p /tmp/monorepo/shared
+  mkdir -p /tmp/monorepo/my-project
+  git -C /tmp/monorepo init
+
+  echo "I am a shared library" > /tmp/monorepo/shared/shared-lib.txt
+
+  . /etc/os-release
+  cat > /tmp/monorepo/my-project/witchcraft.yaml << EOF
+  name: my-project
+  version: "1.0"
+  summary: Test git-driven build root
+  description: |
+    Tests that a part can use source paths outside the project directory
+    when the git working tree root is mounted as the build root.
+  base: ubuntu@${VERSION_ID}
+  platforms:
+    amd64:
+  parts:
+    shared-lib:
+      plugin: dump
+      source: ../shared
+  EOF
+
+  cd /tmp/monorepo/my-project
+  witchcraft pack
+
+  # Verify the artifact contains the file from outside the project directory.
+  mkdir /tmp/monorepo/output
+  arch=$(dpkg --print-architecture)
+  tar --extract --file my-project-1.0-${arch}.witchcraft --directory /tmp/monorepo/output
+  grep "I am a shared library" /tmp/monorepo/output/shared-lib.txt
+
+restore: |
+  cd /tmp/monorepo/my-project 2>/dev/null && witchcraft clean || true
+  rm -rf /tmp/monorepo
