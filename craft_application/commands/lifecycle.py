@@ -27,14 +27,12 @@ from craft_cli import CommandGroup, CraftError, emit
 from craft_parts.features import Features
 from typing_extensions import override
 
-from craft_application import errors, models, util
+from craft_application import errors, util
 from craft_application.commands import base
 from craft_application.errors import TestFileError
 from craft_application.util import ProServices
 from craft_application.util.error_formatting import format_pydantic_errors
 from craft_application.util.logging import handle_runtime_error
-
-_PACKED_FILE_LIST_PATH = ".craft/packed-files"
 
 
 def get_lifecycle_command_group() -> CommandGroup:
@@ -355,13 +353,11 @@ class PullCommand(LifecyclePartsCommand):
 
     name = "pull"
     help_msg = "Download or retrieve artifacts defined for a part"
-    overview = textwrap.dedent(
-        """
+    overview = textwrap.dedent("""
         Download or retrieve artifacts defined for a part. If part names
         are specified only those parts will be pulled, otherwise all parts
         will be pulled.
-        """
-    )
+        """)
 
 
 class OverlayCommand(LifecyclePartsCommand):
@@ -369,12 +365,10 @@ class OverlayCommand(LifecyclePartsCommand):
 
     name = "overlay"
     help_msg = "Create part layers over the base filesystem."
-    overview = textwrap.dedent(
-        """
+    overview = textwrap.dedent("""
         Execute operations defined for each part on a layer over the base
         filesystem, potentially modifying its contents.
-        """
-    )
+        """)
 
 
 class BuildCommand(LifecyclePartsCommand):
@@ -382,12 +376,10 @@ class BuildCommand(LifecyclePartsCommand):
 
     name = "build"
     help_msg = "Build artifacts defined for a part"
-    overview = textwrap.dedent(
-        """
+    overview = textwrap.dedent("""
         Build artifacts defined for a part. If part names are specified only
         those parts will be built, otherwise all parts will be built.
-        """
-    )
+        """)
 
 
 class StageCommand(LifecyclePartsCommand):
@@ -395,13 +387,11 @@ class StageCommand(LifecyclePartsCommand):
 
     name = "stage"
     help_msg = "Stage built artifacts into a common staging area"
-    overview = textwrap.dedent(
-        """
+    overview = textwrap.dedent("""
         Stage built artifacts into a common staging area. If part names are
         specified only those parts will be staged. The default is to stage
         all parts.
-        """
-    )
+        """)
 
 
 class PrimeCommand(LifecyclePartsCommand):
@@ -409,13 +399,11 @@ class PrimeCommand(LifecyclePartsCommand):
 
     name = "prime"
     help_msg = "Prime artifacts defined for a part"
-    overview = textwrap.dedent(
-        """
+    overview = textwrap.dedent("""
         Prepare the final payload to be packed, performing additional
         processing and adding metadata files. If part names are specified only
         those parts will be primed. The default is to prime all parts.
-        """
-    )
+        """)
 
     @override
     def _run(
@@ -442,11 +430,9 @@ class PackCommand(LifecycleCommand):
 
     name = "pack"
     help_msg = "Create the final artifact"
-    overview = textwrap.dedent(
-        """
+    overview = textwrap.dedent("""
         Process parts and create the final artifact.
-        """
-    )
+        """)
 
     @override
     def _fill_parser(self, parser: argparse.ArgumentParser) -> None:
@@ -484,27 +470,21 @@ class PackCommand(LifecycleCommand):
         # Prevent the steps in the prime command from using `--shell` or `--shell-after`
         parsed_args.shell = False
         parsed_args.shell_after = False
+        output_dir = getattr(parsed_args, "output", pathlib.Path())
 
         super()._run(parsed_args, step_name="prime")
         self._run_post_prime_steps_with_debug_handler(debug=debug)
+        self._services.package.set_output_dir(output_dir)
 
         if shell:
             _launch_shell()
             return
 
-        if self._is_already_packed():
-            emit.progress("Skipping pack (already ran)")
-            artifact, resources = self._load_packed_file_list()
-            self._services.package.write_state(artifact=artifact, resources=resources)
-
-            paths = (artifact, *list(resources.values())) if resources else (artifact,)
-            files = ", ".join(str(p) for p in paths)
-            emit.progress(f"Already packed: {files}", permanent=True)
-
-            if shell_after:
-                _launch_shell()
+        if self._services.package.supports_conditional_repack:
+            self._run_pack(parsed_args, shell_after=shell_after, debug=debug)
             return
 
+        # Legacy packaging for applications not implementing ST160
         emit.progress("Packing...")
         try:
             packages = self._services.package.pack(
@@ -532,91 +512,78 @@ class PackCommand(LifecycleCommand):
             emit.progress(f"Packed: {package_names}", permanent=True)
             artifact, resources = packages[0], self._services.package.resource_map
 
-        self._save_packed_file_list(artifact=artifact, resources=resources)
         self._services.package.write_state(artifact=artifact, resources=resources)
 
         if shell_after:
             _launch_shell()
 
-    def _is_already_packed(self) -> bool:
-        """Verify whether the artifacts are already packed and up-to-date."""
-        # Gate the skip-repack feature.
-        if self._app.always_repack:
-            return False
-
-        # 1. A file containing the list of packed artifacts is created after
-        #    packing. Before packing, check if the list file exists. If not, we
-        #    never packed before and packing is necessary.
-        # 2. Check the most recent prime state timestamp. These are generated
-        #    when parts are primed. If this information can't be retrieved, we
-        #    repack.
-        # 3. If any part was primed after the artifacts were generated, we need
-        #    to pack again. Note that if there's any change in parts, the part
-        #    will be reprimed before the pack step and artifacts will be repacked.
-        # 4. If any previously packed file is missing, we repack everything.
-        # 5. Otherwise, the existing files are up-to-date and no repacking is
-        #    required.
-
-        pack_time = self._get_packed_file_list_timestamp()
-        if pack_time is None:
-            return False
-
-        prime_time = self.services.get("lifecycle").prime_state_timestamp
-        if prime_time is None:
-            # This should never happen under normal circumstances, but manual
-            # manipulation of state files is possible.
-            emit.debug("Could not find prime state timestamps.")
-            return False
-
-        if prime_time >= pack_time:
-            return False
-
-        artifact, resources = self._load_packed_file_list()
-        return not self._is_missing_packed_files(artifact, resources)
-
-    def _is_missing_packed_files(
-        self, artifact: pathlib.Path | None, resources: dict[str, pathlib.Path] | None
-    ) -> bool:
-        """Verify if the artifact and resource files exist."""
-        if artifact and not artifact.is_file():
-            return True
-        if not resources:
-            return False
-
-        for path in resources.values():  # noqa: SIM110 (improve readability)
-            if not path.is_file():
-                return True
-
-        return False
-
-    def _load_packed_file_list(
+    def _run_pack(
         self,
-    ) -> tuple[pathlib.Path | None, dict[str, pathlib.Path] | None]:
-        """Load a list of artifact and resources."""
-        work_dir = self.services.get("lifecycle").project_info.work_dir
-        file_list_path = work_dir / _PACKED_FILE_LIST_PATH
-        if not file_list_path.is_file():
-            return (None, None)
-
-        data = models.PackState.from_yaml_file(file_list_path)
-        return (data.artifact, data.resources)
-
-    def _save_packed_file_list(
-        self, artifact: pathlib.Path | None, resources: dict[str, pathlib.Path] | None
+        parsed_args: argparse.Namespace,
+        *,
+        shell_after: bool,
+        debug: bool,
     ) -> None:
-        """Save the list of the given artifact and resources."""
-        work_dir = self.services.get("lifecycle").project_info.work_dir
-        file_list_path = work_dir / _PACKED_FILE_LIST_PATH
-        file_list_path.parent.mkdir(parents=True, exist_ok=True)
-        data = models.PackState(artifact=artifact, resources=resources)
-        data.to_yaml_file(file_list_path)
+        """Run the artifact-aware packing flow."""
+        emit.progress("Packing...")
+        package_service = self._services.package
 
-    def _get_packed_file_list_timestamp(self) -> int | None:
-        work_dir = self.services.get("lifecycle").project_info.work_dir
-        file_list_path: pathlib.Path = work_dir / _PACKED_FILE_LIST_PATH
-        if not file_list_path.is_file():
-            return None
-        return file_list_path.stat().st_mtime_ns
+        try:
+            packed = package_service.pack_artifacts()
+        except Exception as err:
+            if debug:
+                emit.progress(str(err), permanent=True)
+                _launch_shell()
+            raise
+
+        artifact_paths = package_service.get_artifacts()
+        normalized_all_paths = self._relativize_paths(
+            list(artifact_paths.values()), root=pathlib.Path()
+        )
+        normalized_by_name = dict(
+            zip(artifact_paths.keys(), normalized_all_paths, strict=True)
+        )
+
+        # Split the declared artifacts into the subset that was packed in this run and
+        # the subset that was already current, while keeping the same artifact names
+        # used by get_artifacts() for state writes and user-facing messages.
+        normalized_packed_paths = [
+            normalized_by_name[name] for name, did_pack in packed.items() if did_pack
+        ]
+        normalized_skipped_paths = [
+            normalized_by_name[name]
+            for name, did_pack in packed.items()
+            if not did_pack
+        ]
+
+        if (
+            getattr(parsed_args, "fetch_service_policy", None)
+            and normalized_packed_paths
+        ):
+            self._services.fetch.create_project_manifest(normalized_packed_paths)
+
+        package_service.write_artifacts_state(normalized_by_name)
+
+        if not normalized_by_name:
+            emit.progress("No packages created.", permanent=True)
+        elif not normalized_packed_paths:
+            emit.progress("Skipping pack (already ran)")
+            files = ", ".join(str(path) for path in normalized_skipped_paths)
+            emit.progress(f"Already packed: {files}", permanent=True)
+        elif len(normalized_packed_paths) == 1 and not normalized_skipped_paths:
+            emit.progress(f"Packed {normalized_packed_paths[0].name}", permanent=True)
+        else:
+            if normalized_packed_paths:
+                packed_names = ", ".join(path.name for path in normalized_packed_paths)
+                emit.progress(f"Packed: {packed_names}", permanent=True)
+            if normalized_skipped_paths:
+                skipped_names = ", ".join(
+                    str(path) for path in normalized_skipped_paths
+                )
+                emit.progress(f"Already packed: {skipped_names}", permanent=True)
+
+        if shell_after:
+            _launch_shell()
 
     @staticmethod
     def _relativize_paths(
@@ -682,11 +649,9 @@ class TestCommand(PackCommand):
 
     name = "test"
     help_msg = "Run project tests"
-    overview = textwrap.dedent(
-        """
+    overview = textwrap.dedent("""
         Run spread tests for the project.
-        """
-    )
+        """)
     common = True
     _allow_destructive = False
     _show_lxd_arg = False
@@ -788,12 +753,10 @@ class CleanCommand(_BaseLifecycleCommand):
     always_load_project = True
     name = "clean"
     help_msg = "Remove a part's assets"
-    overview = textwrap.dedent(
-        """
+    overview = textwrap.dedent("""
         Clean up artifacts belonging to parts. If no parts are specified,
         remove the packing environment.
-        """
-    )
+        """)
 
     @override
     def _fill_parser(self, parser: argparse.ArgumentParser) -> None:

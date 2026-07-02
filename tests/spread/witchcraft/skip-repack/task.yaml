@@ -1,0 +1,49 @@
+summary: test witchcraft pack/repack with package-managed metadata
+
+environment:
+  CRAFT_BUILD_ENVIRONMENT/managed: ""
+  CRAFT_BUILD_ENVIRONMENT/destructive: host
+
+prepare: |
+  rm -rf repack-test
+
+execute: |
+  . /etc/os-release
+
+  mkdir repack-test
+  cd repack-test
+
+  cat > witchcraft.yaml <<'EOF'
+  name: repack-test
+  base: ubuntu@24.04
+  version: "0.1"
+  summary: Repack test
+  description: |
+    Repack test
+
+  platforms:
+    platform-independent:
+      build-on: [amd64, arm64, ppc64el, s390x, riscv64]
+      build-for: [all]
+
+  parts:
+    my-part:
+      plugin: nil
+  EOF
+
+  sed -i "s/base: ubuntu@24.04/base: ubuntu@${VERSION_ID}/" witchcraft.yaml
+
+  witchcraft pack --ignore=unmaintained --destructive-mode
+
+  # Nothing changed, so repacking should be skipped.
+  witchcraft pack --ignore=unmaintained --destructive-mode 2>&1 | MATCH "Skipping pack"
+
+  # Tamper with the ST160-managed package file in prime to force a repack.
+  printf 'tampered\n' > prime/witchcraft-metadata.yaml
+  witchcraft pack --ignore=unmaintained --destructive-mode 2>&1 | MATCH "Packing"
+
+  # Once repacked, the next run should skip again.
+  witchcraft pack --ignore=unmaintained --destructive-mode 2>&1 | MATCH "Skipping pack"
+
+restore: |
+  rm -rf repack-test

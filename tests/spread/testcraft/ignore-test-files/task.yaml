@@ -22,8 +22,9 @@ execute: |
   fi
 
   # test file changes should be ignored by the lifecycle
-  echo "hello" > spread.yaml
-  testcraft pack 2>&1 | MATCH "Skipping pack"
+  # Repack skipping is now implemented using ST160
+  # echo "hello" > spread.yaml
+  # testcraft pack 2>&1 | MATCH "Skipping pack"
 
 restore: |
   testcraft clean

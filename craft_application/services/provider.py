@@ -90,9 +90,7 @@ class ProviderService(base.AppService):
         # this is a private attribute because it may not reflect the actual
         # provider name. Instead, self._provider.name should be used.
         self.__provider_name: str | None = provider_name
-        self._pack_state: models.PackState = models.PackState(
-            artifact=None, resources=None
-        )
+        self._pack_state: models.PackState = models.PackState(artifacts=[])
         self._pro_services = pro_services
 
     @property
