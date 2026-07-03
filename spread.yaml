@@ -1,6 +1,5 @@
 project: testcraft
 path: /testcraft
-kill-timeout: 1h
 environment:
   PROJECT_PATH: /testcraft
   PATH: /snap/bin:$PATH
