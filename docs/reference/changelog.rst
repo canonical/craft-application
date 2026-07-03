@@ -15,14 +15,15 @@ Changelog
 
     For a complete list of commits, check out the `1.2.3`_ release on GitHub.
 
-7.0.1 (unreleased)
+7.0.1 (2026-07-03)
 ------------------
 
 Bug fixes
 =========
 
-- Pass proxy environment variables to the fetch-service
+- Pass proxy environment variables to the fetch-service.
 
+For a complete list of commits, check out the `7.0.1`_ release on GitHub.
 
 7.0.0 (2026-06-02)
 ------------------
@@ -1366,3 +1367,4 @@ For a complete list of commits, check out the `2.7.0`_ release on GitHub.
 .. _6.3.1: https://github.com/canonical/craft-application/releases/tag/6.3.1
 .. _6.4.0: https://github.com/canonical/craft-application/releases/tag/6.4.0
 .. _7.0.0: https://github.com/canonical/craft-application/releases/tag/7.0.0
+.. _7.0.1: https://github.com/canonical/craft-application/releases/tag/7.0.1
