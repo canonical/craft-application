@@ -364,10 +364,9 @@ class PackageService(base.AppService):
         self,
         source: str | bytes | None | pathlib.Path,
         destination: pathlib.Path,
-        partition_name: str | None,
+        partition_name: str | None,  # noqa: ARG002
     ) -> bool:
         """Return whether a package file or extra asset differs from prime contents."""
-        del partition_name
         if isinstance(source, pathlib.Path):
             if not destination.exists():
                 return True
