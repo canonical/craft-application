@@ -56,7 +56,7 @@ def package_file(
     """Register a method as the generator for a package file.
 
     The decorated method is discovered by :class:`PackageService` and may later be
-    used by ST160-aware packers to compare and materialize generated package files.
+    used by packers to compare and materialize generated package files.
     """
     relative_path = pathlib.PurePosixPath(relative_path)
     if relative_path.is_absolute():
@@ -211,7 +211,7 @@ class PackageService(base.AppService):
 
     @property
     def supports_conditional_repack(self) -> bool:
-        """Whether this service implements the ST160 package API."""
+        """Whether this service implements the metadata mediation API."""
         package_cls = type(self)
         return (
             package_cls.get_artifacts is not PackageService.get_artifacts
@@ -257,7 +257,7 @@ class PackageService(base.AppService):
     def get_artifacts(self) -> dict[str | None, pathlib.Path]:
         """Get the output artifacts for this application.
 
-        Subclasses must override this to opt in to ST160 conditional repacking.
+        Subclasses must override this to opt in to conditional repacking.
         """
         raise NotImplementedError
 
@@ -273,7 +273,7 @@ class PackageService(base.AppService):
         return False
 
     def _pack(self, *, name: str | None = None, path: pathlib.Path) -> None:
-        """Pack a specific artifact for ST160-aware package services."""
+        """Pack a specific artifact for package services with mediated metadata."""
         raise NotImplementedError
 
     def _extra_project_updates(self) -> bool:
@@ -305,7 +305,7 @@ class PackageService(base.AppService):
         return self._app_needs_repack(partition)
 
     def pack_artifacts(self) -> Mapping[str | None, bool]:
-        """Pack all necessary artifacts for an ST160-aware package service."""
+        """Pack all artifacts for a package service with mediated metadata."""
         artifacts = self.get_artifacts()
         packed: dict[str | None, bool] = {}
 
