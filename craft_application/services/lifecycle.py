@@ -270,12 +270,18 @@ class LifecycleService(base.AppService):
         )
 
         try:
+            root_dir: Path | None = None
+            if self._app.use_git_build_root:
+                from craft_application.services.provider import _find_git_root  # noqa: PLC0415
+                root_dir = _find_git_root(Path(self._work_dir).resolve())
+
             return LifecycleManager(
                 {"parts": self._project.parts},
                 application_name=self._app.name,
                 arch=build_for,
                 cache_dir=self._cache_dir,
                 work_dir=self._work_dir,
+                root_dir=root_dir,
                 ignore_local_sources=source_ignore_patterns,
                 ignore_outdated=ignore_outdated,
                 parallel_build_count=util.get_parallel_build_count(self._app.name),
