@@ -15,6 +15,17 @@ Changelog
 
     For a complete list of commits, check out the `1.2.3`_ release on GitHub.
 
+7.1.0 (2026-07-07)
+------------------
+
+Services
+========
+
+- Add the metadata mediator API to the package service to only repack artifacts
+  when the lifecycle or metadata files changed.
+
+For a complete list of commits, check out the `7.1.0`_ release on GitHub.
+
 7.0.1 (2026-07-03)
 ------------------
 
@@ -1368,3 +1379,4 @@ For a complete list of commits, check out the `2.7.0`_ release on GitHub.
 .. _6.4.0: https://github.com/canonical/craft-application/releases/tag/6.4.0
 .. _7.0.0: https://github.com/canonical/craft-application/releases/tag/7.0.0
 .. _7.0.1: https://github.com/canonical/craft-application/releases/tag/7.0.1
+.. _7.1.0: https://github.com/canonical/craft-application/releases/tag/7.1.0
