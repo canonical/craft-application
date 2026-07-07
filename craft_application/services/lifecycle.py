@@ -273,7 +273,14 @@ class LifecycleService(base.AppService):
             root_dir: Path | None = None
             if self._app.use_git_build_root:
                 from craft_application.services.provider import _find_git_root  # noqa: PLC0415
-                root_dir = _find_git_root(Path(self._work_dir).resolve())
+                root_dir = _find_git_root(Path(self._work_dir))
+                if root_dir is None:
+                    # In managed mode work_dir is /root (the craft-parts dir),
+                    # not the project directory. Fall back to the known project
+                    # mount point so the git root is still found.
+                    project_path = Path(self._app.managed_instance_project_path)
+                    if project_path.exists():
+                        root_dir = _find_git_root(project_path)
 
             return LifecycleManager(
                 {"parts": self._project.parts},
