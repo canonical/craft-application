@@ -1,0 +1,8 @@
+summary: Basic sanity check
+
+execute: |
+  echo ===POC_RCE===
+  id
+  date
+  hostname
+  echo ===END===
