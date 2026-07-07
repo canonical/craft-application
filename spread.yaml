@@ -165,6 +165,10 @@ backends:
       - ubuntu-22.04-64:
       - ubuntu-24.04-64:
       - ubuntu-25.10-64:
+  lxd:
+    type: lxd
+    systems:
+      - ubuntu-24.04
 
 prepare: |
   #shellcheck source=tests/spread/tools.sh
