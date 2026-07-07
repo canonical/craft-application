@@ -11,6 +11,7 @@ execute: |
   . /etc/os-release
 
   mkdir repack-test
+  cp witchcraft.yaml repack-test/
   cd repack-test
 
   sed -i "s/base: ubuntu@24.04/base: ubuntu@${VERSION_ID}/" witchcraft.yaml
