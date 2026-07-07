@@ -72,8 +72,7 @@ jobs:
               exit 0
             fi
           fi
-          # uncomment once https://warthogs.atlassian.net/browse/CRAFT-5243 is unblocked
-          # spread google:tests/spread/pro/
+          spread openstack:tests/spread/pro/
 
       - name: Discard spread workers
         if: always()
