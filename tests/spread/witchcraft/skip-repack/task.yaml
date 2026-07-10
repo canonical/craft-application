@@ -28,5 +28,13 @@ execute: |
   # Once repacked, the next run should skip again.
   witchcraft pack --ignore=unmaintained --destructive-mode 2>&1 | MATCH "Skipping pack"
 
+  # Ignore .spread-reuse files
+  touch .spread-reuse.12345
+  witchcraft pack --ignore=unmaintained --destructive-mode 2>&1 | MATCH "Skipping pack"
+
+  # But don't ignore other files
+  touch some-other-file
+  witchcraft pack --ignore=unmaintained --destructive-mode 2>&1 | MATCH "Packing"
+
 restore: |
   rm -rf repack-test

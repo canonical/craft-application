@@ -13,3 +13,4 @@ platforms:
 parts:
   my-part:
     plugin: nil
+    source: .
