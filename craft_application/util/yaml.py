@@ -103,16 +103,25 @@ def safe_yaml_load(stream: TextIO | str) -> Any:  # noqa: ANN401 - The YAML coul
     :param stream: Any text-like IO object.
     :returns: A dict object mapping the yaml.
     """
+    if isinstance(stream, str):
+        filename = "(unknown)"
+    else:
+        filename = pathlib.Path(stream.name).name
     try:
         # Silencing S506 ("probable use of unsafe loader") because we override it by
         # using our own safe loader.
         return yaml.load(stream, Loader=_SafeYamlLoader)  # noqa: S506
     except yaml.YAMLError as error:
-        if isinstance(stream, str):
-            filename = "(unknown)"
-        else:
-            filename = pathlib.Path(stream.name).name
         raise errors.YamlError.from_yaml_error(filename, error) from error
+    except UnicodeDecodeError as error:
+        # A non-UTF-8 file (e.g. UTF-16/UTF-32) makes the loader raise a builtin
+        # UnicodeDecodeError, which is not a yaml.YAMLError. Surface it as a
+        # friendly, actionable error rather than an uncaught internal error.
+        raise errors.YamlError(
+            f"error parsing {filename!r}: file is not valid UTF-8",
+            details=str(error),
+            resolution=f"Ensure {filename} is encoded in UTF-8",
+        ) from error
 
 
 @overload
