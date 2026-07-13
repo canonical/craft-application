@@ -23,3 +23,11 @@ prepare: |
 suites:
   tests/spread/my-suite/:
     summary: A basic suite of spread tests.
+    environment:
+      HTTP_PROXY: '$(HOST: echo "$HTTP_PROXY")'
+      http_proxy: '$(HOST: echo "$http_proxy")'
+      HTTPS_PROXY: '$(HOST: echo "$HTTPS_PROXY")'
+      https_proxy: '$(HOST: echo "$https_proxy")'
+      NO_PROXY: '$(HOST: echo "$NO_PROXY")'
+      no_proxy: '$(HOST: echo "$no_proxy")'
+
