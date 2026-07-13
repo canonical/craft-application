@@ -270,25 +270,12 @@ class LifecycleService(base.AppService):
         )
 
         try:
-            root_dir: Path | None = None
-            if self._app.use_git_build_root:
-                from craft_application.services.provider import _find_git_root  # noqa: PLC0415
-                root_dir = _find_git_root(Path(self._work_dir))
-                if root_dir is None:
-                    # In managed mode work_dir is /root (the craft-parts dir),
-                    # not the project directory. Fall back to the known project
-                    # mount point so the git root is still found.
-                    project_path = Path(self._app.managed_instance_project_path)
-                    if project_path.exists():
-                        root_dir = _find_git_root(project_path)
-
             return LifecycleManager(
                 {"parts": self._project.parts},
                 application_name=self._app.name,
                 arch=build_for,
                 cache_dir=self._cache_dir,
                 work_dir=self._work_dir,
-                root_dir=root_dir,
                 ignore_local_sources=source_ignore_patterns,
                 ignore_outdated=ignore_outdated,
                 parallel_build_count=util.get_parallel_build_count(self._app.name),
