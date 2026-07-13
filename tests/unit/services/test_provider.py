@@ -44,6 +44,12 @@ from craft_providers.actions.snap_installer import Snap
 from snap_http.types import SnapdResponse
 
 
+class _MonorepoConfigModel(craft_application.ConfigModel):
+    """ConfigModel that includes the experimental_monorepo option, enabled by default."""
+
+    experimental_monorepo: bool = True
+
+
 @pytest.fixture
 def mock_provider(monkeypatch, provider_service):
     mocked_provider = mock.MagicMock(spec=craft_providers.Provider)
@@ -1242,7 +1248,11 @@ class TestGetManagedCwd:
 
 
 @pytest.mark.parametrize("fetch", [False, True])
-@pytest.mark.parametrize("app_metadata", [{"use_git_build_root": True}], indirect=True)
+@pytest.mark.parametrize(
+    "app_metadata",
+    [{"allow_git_build_root": True, "ConfigModel": _MonorepoConfigModel}],
+    indirect=True,
+)
 def test_run_managed_git_build_root_sets_cwd(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: pathlib.Path,
@@ -1252,7 +1262,7 @@ def test_run_managed_git_build_root_sets_cwd(
     mock_provider,
     fake_services: ServiceFactory,
 ):
-    """ProviderService.run_managed uses the monorepo subdir as cwd when use_git_build_root=True."""
+    """ProviderService.run_managed uses the monorepo subdir as cwd when allow_git_build_root=True and experimental_monorepo is set."""
     mock_fetch = mock.MagicMock()
     fake_services.register("fetch", mock.Mock(return_value=mock_fetch))
     fake_services.get_class("fetch").is_active.return_value = fetch  # ty: ignore[unresolved-attribute]

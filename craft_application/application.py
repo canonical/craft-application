@@ -122,13 +122,13 @@ class AppMetadata:
     enable_pro_support: bool = False
     """Whether this application supports Ubuntu Pro services."""
 
-    use_git_build_root: bool = False
-    """Whether to mount the git working tree root as the build root.
+    allow_git_build_root: bool = False
+    """Whether to allow mounting the git working tree root as the build root.
 
-    When True and the project is inside a git repository, the git root is
-    mounted as /root/project in the managed instance rather than the project
-    directory. The working directory inside the instance is adjusted to the
-    project's subdirectory within the git root, giving the build access to
+    When True and the user enables the ``experimental_monorepo`` config option,
+    the git root is mounted as /root/project in the managed instance rather than
+    the project directory. The working directory inside the instance is adjusted
+    to the project's subdirectory within the git root, giving the build access to
     code outside the project directory (e.g. shared libraries in a monorepo).
 
     Has no effect when the project directory is not inside a git repository,

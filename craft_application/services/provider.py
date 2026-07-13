@@ -100,6 +100,18 @@ class ProviderService(base.AppService):
         """Get craft-application's suffix for the compatibility tag."""
         return ".1"
 
+    @property
+    def _use_git_build_root(self) -> bool:
+        """Whether to mount the git root as the build root for this run.
+
+        True when the application allows it *and* the user has enabled the
+        ``experimental_monorepo`` config option.
+        """
+        return bool(
+            self._app.allow_git_build_root
+            and self._services.get("config").get("experimental_monorepo")
+        )
+
     @classmethod
     def is_managed(cls) -> bool:
         """Determine whether we're running in managed mode."""
@@ -260,7 +272,7 @@ class ProviderService(base.AppService):
         build_on = self._services.get("config").get("build_on")
 
         build_root = _get_build_root(
-            work_dir, use_git_root=self._app.use_git_build_root
+            work_dir, use_git_root=self._use_git_build_root
         )
 
         emit.progress(f"Launching managed {base_name[0]} {base_name[1]} instance...")
@@ -592,7 +604,7 @@ class ProviderService(base.AppService):
                         cwd=_get_managed_cwd(
                             self._work_dir,
                             self._app.managed_instance_project_path,
-                            use_git_root=self._app.use_git_build_root,
+                            use_git_root=self._use_git_build_root,
                         ),
                         check=True,
                         env=env,

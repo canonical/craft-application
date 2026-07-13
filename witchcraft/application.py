@@ -33,7 +33,7 @@ WITCHCRAFT = craft_application.AppMetadata(
     check_supported_base=True,
     enable_for_grammar=True,
     enable_pro_support=True,
-    use_git_build_root=True,
+    allow_git_build_root=True,
     ProjectClass=Project,
 )
 
