@@ -1229,15 +1229,16 @@ class TestGetManagedCwd:
         result = _get_managed_cwd(tmp_path, self._default, use_git_root=False)
         assert result == self._default
 
-    def test_returns_default_when_not_in_git_repo(
-        self, tmp_path: pathlib.Path
-    ) -> None:
+    def test_returns_default_when_not_in_git_repo(self, tmp_path: pathlib.Path) -> None:
         result = _get_managed_cwd(tmp_path, self._default, use_git_root=True)
         assert result == self._default
 
     def test_returns_default_when_at_git_root(self, tmp_path: pathlib.Path) -> None:
         subprocess.run(["git", "init", str(tmp_path)], check=True, capture_output=True)
-        assert _get_managed_cwd(tmp_path, self._default, use_git_root=True) == self._default
+        assert (
+            _get_managed_cwd(tmp_path, self._default, use_git_root=True)
+            == self._default
+        )
 
     def test_returns_subdir_in_monorepo(self, tmp_path: pathlib.Path) -> None:
         subprocess.run(["git", "init", str(tmp_path)], check=True, capture_output=True)

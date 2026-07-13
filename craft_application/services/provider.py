@@ -269,9 +269,7 @@ class ProviderService(base.AppService):
 
         build_on = self._services.get("config").get("build_on")
 
-        build_root = _get_build_root(
-            work_dir, use_git_root=self._use_git_build_root
-        )
+        build_root = _get_build_root(work_dir, use_git_root=self._use_git_build_root)
 
         emit.progress(f"Launching managed {base_name[0]} {base_name[1]} instance...")
         with provider.launched_environment(
@@ -631,9 +629,7 @@ def _find_git_root(path: pathlib.Path) -> pathlib.Path | None:
         return None
 
 
-def _get_build_root(
-    work_dir: pathlib.Path, *, use_git_root: bool
-) -> pathlib.Path:
+def _get_build_root(work_dir: pathlib.Path, *, use_git_root: bool) -> pathlib.Path:
     """Return the directory to mount as the build root in a managed instance.
 
     When use_git_root is True and work_dir is inside a git repo, the git
