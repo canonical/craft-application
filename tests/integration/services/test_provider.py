@@ -144,14 +144,15 @@ def test_run_managed(provider_service, fake_services, fetch, snap_safe_tmp_path)
 
     provider_service._work_dir = snap_safe_tmp_path
 
-    try:
-        provider_service.run_managed(
-            build_info, enable_fetch_service=fetch, command=["echo", "hi"]
-        )
-    except craft_providers.lxd.errors.LXDError as error:
-        if "Failed to update apt cache." in str(error):
-            pytest.skip(f"Skipping transient apt cache update failure: {error}")
-        raise
+    for attempt in range(3):
+        try:
+            provider_service.run_managed(
+                build_info, enable_fetch_service=fetch, command=["echo", "hi"]
+            )
+            return
+        except craft_providers.lxd.errors.LXDError as error:
+            if "Failed to update apt cache." not in str(error) or attempt == 2:
+                raise
 
 
 @pytest.mark.slow
