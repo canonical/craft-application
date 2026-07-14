@@ -320,6 +320,7 @@ def test_init_parts_do_not_ignore_test_files(
         "*.snap",
         "*.charm",
         "*.starcraft",
+        ".spread-reuse.*",
     ]
 
 
@@ -354,6 +355,7 @@ def test_init_parts_ignore_test_files(
         "*.snap",
         "*.charm",
         "*.starcraft",
+        ".spread-reuse.*",
         "spread.yaml",
         "spread",
     ]
