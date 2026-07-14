@@ -21,6 +21,7 @@ Changelog
 Bug fixes
 =========
 
+- Ignore .spread-reuse files when deciding if a source is outdated.
 - Loading a project file that is not UTF-8 encoded now raises a clear error
   instead of failing with an uncaught internal error.
 
