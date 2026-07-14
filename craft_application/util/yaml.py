@@ -106,7 +106,10 @@ def safe_yaml_load(stream: TextIO | str) -> Any:  # noqa: ANN401 - The YAML coul
     if isinstance(stream, str):
         filename = "(unknown)"
     else:
-        filename = pathlib.Path(stream.name).name
+        # Not every text stream has a name (e.g. io.StringIO), so fall back
+        # rather than raising an AttributeError while building the filename.
+        stream_name = getattr(stream, "name", None)
+        filename = pathlib.Path(stream_name).name if stream_name else "(unknown)"
     try:
         # Silencing S506 ("probable use of unsafe loader") because we override it by
         # using our own safe loader.
