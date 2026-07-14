@@ -44,7 +44,6 @@ PARTS_DICT = {"my-part": {"plugin": "nil"}}
 
 @pytest.fixture
 def basic_project():
-    # ty doesn't understand pydantic semantics (https://github.com/astral-sh/ty/issues/2403)
     return Project(
         name="project-name",
         version="1.0",
@@ -348,7 +347,6 @@ class FakeBuildBaseProject(Project):
 
 
 def test_effective_base_is_build_base():
-    # ty doesn't understand pydantic semantics (https://github.com/astral-sh/ty/issues/2403)
     project = FakeBuildBaseProject(
         name="project-name",
         version="1.0",
