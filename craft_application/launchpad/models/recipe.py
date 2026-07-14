@@ -198,7 +198,7 @@ class SnapRecipe(_StoreRecipe):
         :param build_path: (Optional) The sub-directory containing the project file.
             The entire repo is uploaded, but Launchpad will set the cwd to the build
             path before building the snap. Files and directories outside of the build
-            path won't be accesible.
+            path won't be accessible.
         :param description: (Optional) A description of the recipe.
         :param project: (Optional) The project or name of the project to which to
             attach this recipe. Defines the information type of the repository if

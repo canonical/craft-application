@@ -497,7 +497,7 @@ def test_new_build(
     build_path,
 ):
     git.GitRepo(tmp_path)
-    remote_build_service.start_builds(tmp_path, architectures, build_path)
+    remote_build_service.start_builds(tmp_path, architectures, build_path=build_path)
     remote_build_service.monitor_builds()
     remote_build_service.fetch_logs(tmp_path)
     remote_build_service.fetch_artifacts(tmp_path)

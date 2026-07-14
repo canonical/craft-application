@@ -129,7 +129,7 @@ class RemoteBuildService(base.AppService):
         :param build_path: (Optional) The sub-directory containing the project file.
             The entire repo is uploaded, but Launchpad will set the cwd to the build
             path before building the artifact. Files and directories outside of the
-            build path won't be accesible.
+            build path won't be accessible.
         """
         if self._builds:
             raise ValueError("Cannot start builds if already running builds")
