@@ -171,6 +171,7 @@ class SnapRecipe(_StoreRecipe):
         owner: str,
         *,
         architectures: Collection[str] | None = None,
+        build_path: str | None = None,
         description: str | None = None,
         project: str | models.Project | None = None,
         information_type: models.InformationType | None = None,
@@ -194,6 +195,10 @@ class SnapRecipe(_StoreRecipe):
         :param owner: The username of the person or team who owns the recipe
         :param architectures: A collection of architecture names to build the recipe.
             If None, detects the architectures from `snapcraft.yaml`
+        :param build_path: (Optional) The sub-directory containing the project file.
+            The entire repo is uploaded, but Launchpad will set the cwd to the build
+            path before building the snap. Files and directories outside of the build
+            path won't be accesible.
         :param description: (Optional) A description of the recipe.
         :param project: (Optional) The project or name of the project to which to
             attach this recipe. Defines the information type of the repository if
@@ -220,6 +225,8 @@ class SnapRecipe(_StoreRecipe):
         kwargs: dict[str, Any] = {}
         if architectures:
             kwargs["processors"] = [util.get_processor(arch) for arch in architectures]
+        if build_path:
+            kwargs["build_path"] = build_path
         if description:
             kwargs["description"] = description
 

@@ -336,6 +336,27 @@ def test_create_new_recipe_archs(
     )
 
 
+def test_create_new_recipe_build_path(remote_build_service, mock_lp_project):
+    """Test that _new_recipe forwards build_path to the recipe."""
+    remote_build_service._lp_project = mock_lp_project
+    remote_build_service.RecipeClass = mock.Mock()
+    repo = mock.Mock(
+        git_https_url="https://localhost/~me/some-project/+git/my-repo",
+        private=False,
+    )
+
+    remote_build_service._new_recipe("test-recipe", repo, build_path="subdir")
+
+    remote_build_service.RecipeClass.new.assert_called_once_with(
+        remote_build_service.lp,
+        "test-recipe",
+        "craft_test_user",
+        git_ref="/~me/some-project/+git/my-repo/+ref/main",
+        project=mock_lp_project,
+        build_path="subdir",
+    )
+
+
 def test_not_setup(remote_build_service):
     with pytest.raises(RuntimeError):
         all(remote_build_service.monitor_builds())
@@ -467,14 +488,16 @@ def test_fetch_artifacts_url_decode(tmp_path, remote_build_service, mocker):
 
 
 @pytest.mark.parametrize("architectures", [["amd64"], None])
+@pytest.mark.parametrize("build_path", [None, "subdir"])
 @pytest.mark.usefixtures("mock_push_url")
 def test_new_build(
     tmp_path,
     remote_build_service,
     architectures,
+    build_path,
 ):
     git.GitRepo(tmp_path)
-    remote_build_service.start_builds(tmp_path, architectures)
+    remote_build_service.start_builds(tmp_path, architectures, build_path)
     remote_build_service.monitor_builds()
     remote_build_service.fetch_logs(tmp_path)
     remote_build_service.fetch_artifacts(tmp_path)
