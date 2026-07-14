@@ -320,6 +320,7 @@ def test_init_parts_do_not_ignore_test_files(
         "*.snap",
         "*.charm",
         "*.starcraft",
+        ".spread-reuse.*",
     ]
 
 
@@ -354,6 +355,7 @@ def test_init_parts_ignore_test_files(
         "*.snap",
         "*.charm",
         "*.starcraft",
+        ".spread-reuse.*",
         "spread.yaml",
         "spread",
     ]
@@ -537,6 +539,74 @@ def test_run_no_step(
 
     # No calls to execute actions
     assert executor.method_calls == []
+
+
+@pytest.mark.parametrize(
+    ("actions", "expected"),
+    [
+        ([], False),
+        ([Action("my-part", Step.PULL, action_type=ActionType.SKIP)], False),
+        ([Action("my-part", Step.PULL, action_type=ActionType.RUN)], True),
+        ([Action("my-part", Step.PULL, action_type=ActionType.RERUN)], True),
+        ([Action("my-part", Step.PULL, action_type=ActionType.UPDATE)], True),
+        ([Action("my-part", Step.OVERLAY, action_type=ActionType.REAPPLY)], True),
+    ],
+)
+def test_run_sets_requires_repack(
+    fake_parts_lifecycle,
+    fake_services,
+    fake_platform,
+    fake_host_architecture,
+    actions,
+    expected,
+):
+    fake_services.get("build_plan").set_platforms(fake_platform)
+    skip_if_build_plan_empty(fake_services.get("build_plan"))
+    fake_parts_lifecycle._lcm.plan.return_value = actions
+
+    fake_parts_lifecycle.run("prime")
+
+    assert fake_parts_lifecycle.requires_repack is expected
+
+
+def test_run_resets_requires_repack_between_runs(
+    fake_parts_lifecycle,
+    fake_services,
+    fake_platform,
+    fake_host_architecture,
+):
+    fake_services.get("build_plan").set_platforms(fake_platform)
+    skip_if_build_plan_empty(fake_services.get("build_plan"))
+    fake_parts_lifecycle._lcm.plan.side_effect = [
+        [Action("my-part", Step.PULL, action_type=ActionType.RUN)],
+        [Action("my-part", Step.PULL, action_type=ActionType.SKIP)],
+    ]
+
+    fake_parts_lifecycle.run("pull")
+    assert fake_parts_lifecycle.requires_repack is True
+
+    fake_parts_lifecycle.run("pull")
+    assert fake_parts_lifecycle.requires_repack is False
+
+
+def test_run_keeps_requires_repack_true_when_exec_fails(
+    fake_parts_lifecycle,
+    fake_services,
+    fake_platform,
+    fake_host_architecture,
+    mocker,
+):
+    fake_services.get("build_plan").set_platforms(fake_platform)
+    skip_if_build_plan_empty(fake_services.get("build_plan"))
+    fake_parts_lifecycle._lcm.plan.return_value = [
+        Action("my-part", Step.PULL, action_type=ActionType.RUN)
+    ]
+    mocker.patch.object(fake_parts_lifecycle, "_exec", side_effect=OSError("boom"))
+
+    with pytest.raises(PartsLifecycleError):
+        fake_parts_lifecycle.run("pull")
+
+    assert fake_parts_lifecycle.requires_repack is True
 
 
 @pytest.mark.parametrize(

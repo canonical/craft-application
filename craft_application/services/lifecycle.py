@@ -143,6 +143,7 @@ class LifecycleService(base.AppService):
         self._cache_dir = cache_dir
         self._manager_kwargs = lifecycle_kwargs
         self._lcm: LifecycleManager = None  # ty: ignore[invalid-assignment]
+        self._requires_repack = False
 
     @override
     def setup(self) -> None:
@@ -263,10 +264,12 @@ class LifecycleService(base.AppService):
             *self._app.source_ignore_patterns,
         ]
 
-        # Ignore spread.yaml and spread to prevent repulling sources
+        # Ignore spread.yaml, .spread-reuse.* and spread to prevent repulling sources
         # when test files are changed.
-        ignore_outdated = source_ignore_patterns + (
-            ["spread.yaml", "spread"] if Path("spread/.extension").exists() else []
+        ignore_outdated = (
+            source_ignore_patterns
+            + [".spread-reuse.*"]
+            + (["spread.yaml", "spread"] if Path("spread/.extension").exists() else [])
         )
 
         try:
@@ -302,6 +305,11 @@ class LifecycleService(base.AppService):
         """The lifecycle's ProjectInfo."""
         return self._lcm.project_info
 
+    @property
+    def requires_repack(self) -> bool:
+        """Whether the most recent lifecycle run planned any non-skipped work."""
+        return self._requires_repack
+
     def get_pull_assets(self, *, part_name: str) -> dict[str, Any] | None:
         """Obtain the part's pull state assets.
 
@@ -330,6 +338,7 @@ class LifecycleService(base.AppService):
         :param part_names: Which parts to build (defaults to all parts)
         """
         target_step = _get_step(step_name) if step_name else None
+        self._requires_repack = False
 
         self._validate_build_plan()
 
@@ -350,6 +359,10 @@ class LifecycleService(base.AppService):
                 actions = self._lcm.plan(target_step, part_names=part_names)
             else:
                 actions = []
+
+            self._requires_repack = any(
+                action.action_type != ActionType.SKIP for action in actions
+            )
 
             emit.progress("Initializing lifecycle")
             self._exec(actions)

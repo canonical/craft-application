@@ -9,7 +9,7 @@ dependencies = [
     "craft-grammar>=2.3.0",
     "craft-parts>=2.30.0",
     "craft-platforms>=0.6.0",
-    "craft-providers>=3.5.0",
+    "craft-providers>=3.7.1",
     "Jinja2>=3.1.6,<4.0.0",
     "snap-helpers>=0.4.2",
     "platformdirs>=3.10",
@@ -64,13 +64,13 @@ dev = [
     "coverage[toml]~=7.9",
     "hypothesis>=6.0",
     "pyfakefs~=6.1",
-    "pytest==9.0.3",
+    "pytest==9.1.1",
     "pytest-check==2.8.0",
     "pytest-cov==7.1.0",
     "pytest-freezer==0.4.9",
     "pytest-mock~=3.14",
-    "pytest-rerunfailures==16.1",
-    "pytest-subprocess~=1.5.2",
+    "pytest-rerunfailures==16.4",
+    "pytest-subprocess~=1.6.0",
     "pytest-time>=0.3.1",
     "responses~=0.26.0",
     "craft-application[remote]",
@@ -86,7 +86,7 @@ types = [
 ]
 docs = [
     "pydantic-kitbash~=1.0.1",
-    "pytest==9.0.3",  # Include pytest because autodoc needs it
+    "pytest==9.1.1",  # Include pytest because autodoc needs it
     "sphinx-lint~=1.0",
     "sphinx-substitution-extensions>=2025.1.2",
     "sphinxext-rediraffe==0.3.0",
@@ -181,7 +181,7 @@ python-apt = { index = "python-apt-wheels" }
 
 [build-system]
 requires = [
-    "setuptools==82.0.1",
+    "setuptools==83.0.0",
     "setuptools_scm[toml]>=8.1"
 ]
 build-backend = "setuptools.build_meta"

@@ -18,6 +18,7 @@
 import contextlib
 import io
 import logging
+import os
 import pathlib
 import shlex
 import subprocess
@@ -143,6 +144,22 @@ def start_service() -> tuple[subprocess.Popen[str] | None, pathlib.Path]:
     cmd = [_FETCH_BINARY]
 
     env = {"FETCH_SERVICE_AUTH": _DEFAULT_CONFIG.auth}
+
+    proxy_vars = [
+        "http_proxy",
+        "https_proxy",
+        "no_proxy",
+        "HTTP_PROXY",
+        "HTTPS_PROXY",
+        "NO_PROXY",
+    ]
+    env.update(
+        {
+            proxy_var: os.environ[proxy_var]
+            for proxy_var in proxy_vars
+            if proxy_var in os.environ
+        }
+    )
 
     # Add the ports
     cmd.append(f"--control-port={_DEFAULT_CONFIG.control}")

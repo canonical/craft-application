@@ -26,7 +26,7 @@ import craft_parts
 import craft_platforms
 import pytest
 import pytest_mock
-from craft_application import errors, models
+from craft_application import errors
 from craft_application.application import AppMetadata
 from craft_application.commands.base import AppCommand
 from craft_application.commands.lifecycle import (
@@ -43,7 +43,6 @@ from craft_application.commands.lifecycle import (
     _BaseLifecycleCommand,
     get_lifecycle_command_group,
 )
-from craft_application.services import LifecycleService
 from craft_application.services.service_factory import ServiceFactory
 from craft_application.util import ProServices
 from craft_cli.pytest_plugin import RecordingEmitter
@@ -627,6 +626,73 @@ def test_pack_fetch_manifest(
     assert mock_services.fetch.create_project_manifest.called == expect_create_called
 
 
+def test_pack_run_st160(mocker, emitter, mock_services, app_metadata, tmp_path):
+    mock_services.get("project").configure(platform=None, build_for=None)
+    mock_services.package.supports_conditional_repack = True
+    mock_services.package.pack_artifacts.return_value = {None: True, "tools": False}
+    mock_services.package.get_artifacts.return_value = {
+        None: pathlib.Path("package.zip"),
+        "tools": pathlib.Path("tools.tar.zst"),
+    }
+    parsed_args = argparse.Namespace(
+        destructive_mode=True, output=tmp_path, fetch_service_policy=None
+    )
+
+    command = PackCommand({"app": app_metadata, "services": mock_services})
+    mocker.patch.object(command._services.lifecycle.project_info, "work_dir", tmp_path)
+
+    command.run(parsed_args)
+
+    mock_services.package.pack_artifacts.assert_called_once_with()
+    assert not mock_services.package.pack.called
+    emitter.assert_progress("Packing...")
+    emitter.assert_progress("Packed: package.zip", permanent=True)
+    emitter.assert_progress("Already packed: tools.tar.zst", permanent=True)
+
+
+def test_pack_fetch_manifest_st160(mocker, mock_services, app_metadata, tmp_path):
+    mock_services.get("project").configure(platform=None, build_for=None)
+    mock_services.package.supports_conditional_repack = True
+    mock_services.package.pack_artifacts.return_value = {None: True, "tools": False}
+    mock_services.package.get_artifacts.return_value = {
+        None: pathlib.Path("package.zip"),
+        "tools": pathlib.Path("tools.tar.zst"),
+    }
+    parsed_args = argparse.Namespace(
+        destructive_mode=True,
+        output=tmp_path,
+        fetch_service_policy="strict",
+    )
+
+    command = PackCommand({"app": app_metadata, "services": mock_services})
+    mocker.patch.object(command._services.lifecycle.project_info, "work_dir", tmp_path)
+
+    command.run(parsed_args)
+
+    mock_services.fetch.create_project_manifest.assert_called_once_with(
+        [pathlib.Path("package.zip")]
+    )
+
+
+def test_pack_run_st160_sets_output_dir(mocker, mock_services, app_metadata, tmp_path):
+    mock_services.get("project").configure(platform=None, build_for=None)
+    mock_services.package.supports_conditional_repack = True
+    mock_services.package.pack_artifacts.return_value = {}
+    mock_services.package.get_artifacts.return_value = {}
+    parsed_args = argparse.Namespace(
+        destructive_mode=True,
+        output=tmp_path,
+        fetch_service_policy=None,
+    )
+
+    command = PackCommand({"app": app_metadata, "services": mock_services})
+    mocker.patch.object(command._services.lifecycle.project_info, "work_dir", tmp_path)
+
+    command.run(parsed_args)
+
+    mock_services.package.set_output_dir.assert_called_once_with(tmp_path)
+
+
 @pytest.mark.usefixtures("destructive_mode")
 def test_pack_run_wrong_step(app_metadata, fake_services):
     parsed_args = argparse.Namespace(
@@ -1045,141 +1111,6 @@ def test_test_run(
         debug=debug,
         test_expressions=tests,
     )
-
-
-def test_get_packed_file_list_timestamp(mocker, new_dir, app_metadata, fake_services):
-    command = PackCommand({"app": app_metadata, "services": fake_services})
-    mocker.patch.object(command._services.lifecycle.project_info, "work_dir", new_dir)
-
-    path = pathlib.Path(".craft/packed-files")
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.touch()
-    expected_time = path.stat().st_mtime_ns
-    actual_time = command._get_packed_file_list_timestamp()
-
-    assert actual_time == expected_time
-
-
-def test_get_packed_file_list_timestamp_no_file(
-    mocker, new_dir, app_metadata, fake_services
-):
-    command = PackCommand({"app": app_metadata, "services": fake_services})
-    mocker.patch.object(command._services.lifecycle.project_info, "work_dir", new_dir)
-    assert command._get_packed_file_list_timestamp() is None
-
-
-@pytest.mark.parametrize(
-    ("artifact", "resources"),
-    [
-        (None, None),
-        (pathlib.Path("foo"), None),
-        (pathlib.Path("foo"), {"bar": pathlib.Path("bar.tar.gz")}),
-    ],
-)
-def test_save_packed_file_list(
-    mocker, tmp_path, app_metadata, fake_services, artifact, resources
-):
-    command = PackCommand({"app": app_metadata, "services": fake_services})
-    mocker.patch.object(command._services.lifecycle.project_info, "work_dir", tmp_path)
-
-    command._save_packed_file_list(artifact, resources)
-
-    data = models.PackState.from_yaml_file(tmp_path / ".craft" / "packed-files")
-    assert data.artifact == artifact
-    assert data.resources == resources
-
-
-@pytest.mark.parametrize(
-    ("artifact", "resources"),
-    [
-        (None, None),
-        (pathlib.Path("foo"), None),
-        (pathlib.Path("foo"), {"bar": pathlib.Path("bar.gz")}),
-    ],
-)
-def test_load_packed_file_list(
-    mocker, tmp_path, app_metadata, fake_services, artifact, resources
-):
-    command = PackCommand({"app": app_metadata, "services": fake_services})
-    mocker.patch.object(command._services.lifecycle.project_info, "work_dir", tmp_path)
-
-    data = models.PackState(artifact=artifact, resources=resources)
-    (tmp_path / ".craft").mkdir()
-    data.to_yaml_file(tmp_path / ".craft" / "packed-files")
-
-    artifact, resources = command._load_packed_file_list()
-
-    assert artifact == data.artifact
-    assert resources == data.resources
-
-
-def test_load_packed_file_list_no_file(mocker, tmp_path, app_metadata, fake_services):
-    command = PackCommand({"app": app_metadata, "services": fake_services})
-    mocker.patch.object(command._services.lifecycle.project_info, "work_dir", tmp_path)
-
-    artifact, resources = command._load_packed_file_list()
-
-    assert artifact is None
-    assert resources is None
-
-
-@pytest.mark.parametrize(
-    ("artifact", "resources", "files", "result"),
-    [
-        (None, None, [], False),
-        (pathlib.Path("foo"), None, [], True),
-        (pathlib.Path("foo"), None, [pathlib.Path("foo")], False),
-        (
-            pathlib.Path("foo"),
-            {"bar": pathlib.Path("bar.gz")},
-            [pathlib.Path("foo")],
-            True,
-        ),
-        (
-            pathlib.Path("foo"),
-            {"bar": pathlib.Path("bar.gz")},
-            [pathlib.Path("foo"), pathlib.Path("bar.gz")],
-            False,
-        ),
-    ],
-)
-def test_is_missing_packed_files(
-    new_dir, app_metadata, fake_services, artifact, resources, files, result
-):
-    command = PackCommand({"app": app_metadata, "services": fake_services})
-
-    for f in files:
-        f.touch()
-
-    assert command._is_missing_packed_files(artifact, resources) == result
-
-
-@pytest.mark.parametrize(
-    ("pack_time", "prime_time", "is_missing", "result"),
-    [
-        (None, None, False, False),  # No times available
-        (None, 1000, False, False),  # Primed but pack time not available
-        (1500, 1000, False, True),  # Pack is more recent and files exist
-        (1500, 1000, True, False),  # No packed artifacts
-        (1500, None, False, False),  # No prime time (should never happen)
-        (1000, 1500, False, False),  # Prime time is more recent than pack
-    ],
-)
-def test_is_already_packed(
-    mocker, app_metadata, fake_services, pack_time, prime_time, is_missing, result
-):
-    command = PackCommand({"app": app_metadata, "services": fake_services})
-    mocker.patch(
-        "craft_application.commands.lifecycle.PackCommand._get_packed_file_list_timestamp",
-        return_value=pack_time,
-    )
-    mocker.patch.object(LifecycleService, "prime_state_timestamp", prime_time)
-    mocker.patch(
-        "craft_application.commands.lifecycle.PackCommand._is_missing_packed_files",
-        return_value=is_missing,
-    )
-
-    assert command._is_already_packed() == result
 
 
 @pytest.mark.parametrize(("as_root"), [True, False])
