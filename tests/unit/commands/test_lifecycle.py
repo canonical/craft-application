@@ -748,9 +748,9 @@ def test_shell(
 
     mock_lifecycle_run.assert_called_once_with(step_name=expected_step, part_names=None)
     bash_calls = [
-        call
-        for call in mock_subprocess_run.call_args_list
-        if call.args and call.args[0] == ["bash"]
+        c
+        for c in mock_subprocess_run.call_args_list
+        if c.args and c.args[0] == ["bash"] and c.kwargs.get("check", False) is False
     ]
     assert len(bash_calls) == 1
 
