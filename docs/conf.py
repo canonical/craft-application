@@ -235,6 +235,10 @@ intersphinx_mapping = {
         "https://documentation.ubuntu.com/craft-cli/latest",
         None,
     ),
+    "craft-archives": (
+        "https://documentation.ubuntu.com/craft-archives/latest",
+        None,
+    ),
     "craft-grammar": ("https://craft-grammar.readthedocs.io/en/latest", None),
     "craft-parts": (
         "https://documentation.ubuntu.com/craft-parts/latest",
@@ -245,7 +249,12 @@ intersphinx_mapping = {
         None,
     ),
     "craft-providers": (
-        "https://documentation.ubuntu.com/craft-providers/en/latest", None
+        "https://documentation.ubuntu.com/craft-providers/latest",
+        None,
+    ),
+    "craft-store": (
+        "https://documentation.ubuntu.com/craft-store/latest",
+        None,
     ),
     "starflow": (
         "https://documentation.ubuntu.com/starflow/latest", None
