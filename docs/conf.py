@@ -236,7 +236,8 @@ intersphinx_mapping = {
         None,
     ),
     "craft-archives": (
-        "https://documentation.ubuntu.com/craft-archives/latest", None
+        "https://documentation.ubuntu.com/craft-archives/latest",
+        None,
     ),
     "craft-grammar": ("https://craft-grammar.readthedocs.io/en/latest", None),
     "craft-parts": (
