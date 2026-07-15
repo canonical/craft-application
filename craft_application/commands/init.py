@@ -22,6 +22,7 @@ from typing import TYPE_CHECKING, cast
 
 import craft_cli
 
+from craft_application.errors import InitError
 from craft_application.util import humanize_list
 
 from . import base
@@ -38,8 +39,7 @@ class InitCommand(base.AppCommand):
 
     name = "init"
     help_msg = "Create an initial project filetree"
-    overview = dedent(
-        """
+    overview = dedent("""
         Initialise a project.
 
         If '<project-dir>' is provided, initialise in that directory,
@@ -50,10 +50,11 @@ class InitCommand(base.AppCommand):
 
         '--profile <profile>' is used to initialise the project for a specific use case.
 
+        '--base <basename>' selects a profile variant for the specified base.
+
         Init can work in an existing project directory. If there are any files in the
         directory that would be overwritten, then init command will fail.
-        """
-    )
+        """)
     common = True
 
     default_profile = "simple"
@@ -85,6 +86,13 @@ class InitCommand(base.AppCommand):
             ),
         )
 
+        parser.add_argument(
+            "--base",
+            type=str,
+            default=None,
+            help="The base to use when initializing a project.",
+        )
+
     @property
     def parent_template_dir(self) -> pathlib.Path:
         """Return the path to the directory that contains all templates."""
@@ -95,9 +103,17 @@ class InitCommand(base.AppCommand):
 
     @property
     def profiles(self) -> list[str]:
-        """A list of profile names generated from template directories."""
+        """A list of profile names generated from template directories.
+
+        Profiles may have base-specific variants. In this case, the profile is named
+        <profile>__<base-name>, and a symbolic link is created to point to the default
+        base-specific profile directory. Base-specific profile variants are excluded
+        from this list.
+        """
         template_dirs = [
-            path for path in self.parent_template_dir.iterdir() if path.is_dir()
+            path
+            for path in self.parent_template_dir.iterdir()
+            if path.is_dir() and "__" not in path.name
         ]
         return sorted([template.name for template in template_dirs])
 
@@ -115,7 +131,7 @@ class InitCommand(base.AppCommand):
         )
 
         project_dir = self._get_project_dir(parsed_args)
-        template_dir = pathlib.Path(self.parent_template_dir / parsed_args.profile)
+        template_dir = self._get_template_dir(parsed_args)
 
         craft_cli.emit.progress("Checking project directory.")
         self._services.init.check_for_existing_files(
@@ -129,6 +145,38 @@ class InitCommand(base.AppCommand):
             template_dir=template_dir,
         )
         craft_cli.emit.message("Successfully initialised project.")
+
+    def _get_template_dir(self, parsed_args: argparse.Namespace) -> pathlib.Path:
+        """Get the template directory for the selected profile and base."""
+        base = getattr(parsed_args, "base", None)
+        profile = parsed_args.profile
+        variants: list[str] = []
+        if base:
+            profile = f"{parsed_args.profile}__{base}"
+            variants = [
+                file.name.removeprefix(f"{parsed_args.profile}__")
+                for file in self.parent_template_dir.glob(f"{parsed_args.profile}__*")
+            ]
+
+        template_dir = pathlib.Path(self.parent_template_dir / profile)
+        if not base or template_dir.exists():
+            return template_dir
+
+        if not variants:
+            raise InitError(
+                message="Base selection is not available for this profile.",
+                resolution=(
+                    "Use this profile without --base, or choose a different " "profile."
+                ),
+            )
+
+        raise InitError(
+            message=f"Base variant '{base}' is not available for this profile.",
+            resolution=(
+                "Choose a different base for this profile.\n"
+                f"Available bases are: {humanize_list(variants, 'and')}"
+            ),
+        )
 
     def _get_name(self, parsed_args: argparse.Namespace) -> str:
         """Get name of the package that is about to be initialised.

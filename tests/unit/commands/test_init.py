@@ -148,3 +148,64 @@ def test_invalid_name_directory(init_command, mock_services):
         project_name="my-project",
         template_dir=init_command.parent_template_dir / "simple",
     )
+
+
+def test_invalid_base_variant(init_command, tmp_path, mock_services):
+    """Error if a requested base-specific variant does not exist."""
+    (init_command.parent_template_dir / "simple__ubuntu@22.04").mkdir(parents=True)
+    parsed_args = argparse.Namespace(
+        project_dir=tmp_path,
+        name="test-project-name",
+        profile="simple",
+        base="ubuntu@23.04",
+    )
+
+    with pytest.raises(InitError, match="Base variant 'ubuntu@23.04'") as exc_info:
+        init_command.run(parsed_args)
+
+    assert exc_info.value.resolution == (
+        "Choose a different base for this profile.\n"
+        "Available bases are: 'ubuntu@22.04'"
+    )
+    mock_services.init.initialise_project.assert_not_called()
+
+
+def test_base_not_available_for_profile(init_command, tmp_path, mock_services):
+    """Error if the selected profile has no base-specific variants."""
+    parsed_args = argparse.Namespace(
+        project_dir=tmp_path,
+        name="test-project-name",
+        profile="simple",
+        base="ubuntu@22.04",
+    )
+
+    with pytest.raises(
+        InitError, match="Base selection is not available for this profile."
+    ) as exc_info:
+        init_command.run(parsed_args)
+
+    assert exc_info.value.resolution == (
+        "Use this profile without --base, or choose a different profile."
+    )
+    mock_services.init.initialise_project.assert_not_called()
+
+
+def test_valid_base_variant(init_command, fake_template_dirs, mock_services, emitter):
+    """Use the base-specific template when the requested variant exists."""
+    (fake_template_dirs / "simple__ubuntu@22.04").mkdir()
+    parsed_args = argparse.Namespace(
+        project_dir=None,
+        name="test-project-name",
+        profile="simple",
+        base="ubuntu@22.04",
+    )
+    mock_services.init.validate_project_name.return_value = "test-project-name"
+
+    init_command.run(parsed_args)
+
+    mock_services.init.initialise_project.assert_called_once_with(
+        project_dir=pathlib.Path.cwd().resolve(),
+        project_name="test-project-name",
+        template_dir=init_command.parent_template_dir / "simple__ubuntu@22.04",
+    )
+    emitter.assert_message("Successfully initialised project.")

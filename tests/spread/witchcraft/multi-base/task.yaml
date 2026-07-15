@@ -1,0 +1,26 @@
+summary: test project initialization with --base
+
+environment:
+  CRAFT_BUILD_ENVIRONMENT/managed: ""
+  CRAFT_BUILD_ENVIRONMENT/destructive: host
+  BASE/none: ""
+  BASE/variant1: ubuntu@22.04
+  BASE/variant2: ubuntu@24.04
+
+prepare: |
+  rm -rf base-test
+
+execute: |
+  mkdir base-test
+  cd base-test
+
+  if [ -n "${BASE:-}" ]; then
+      witchcraft init --profile=multi-base --base="$BASE"
+      grep "^base: $BASE" witchcraft.yaml
+  else
+      witchcraft init --profile=multi-base
+      grep "^base: ubuntu@24.04" witchcraft.yaml
+  fi
+
+restore: |
+  rm -rf base-test
