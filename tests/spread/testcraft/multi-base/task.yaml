@@ -15,11 +15,11 @@ execute: |
   cd base-test
 
   if [ -n "${BASE:-}" ]; then
-      witchcraft init --profile=multi-base --base="$BASE"
-      grep "^base: $BASE" witchcraft.yaml
+      testcraft init --profile=multi-base --base="$BASE"
+      grep "^base: $BASE" testcraft.yaml
   else
-      witchcraft init --profile=multi-base
-      grep "^base: ubuntu@24.04" witchcraft.yaml
+      testcraft init --profile=multi-base
+      grep "^base: ubuntu@24.04" testcraft.yaml
   fi
 
 restore: |
