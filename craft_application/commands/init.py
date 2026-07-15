@@ -95,7 +95,7 @@ class InitCommand(base.AppCommand):
             "--base",
             type=str,
             default=None,
-            help="The base to use when initializing a project.",
+            help="The base variant of the init profile to use.",
         )
 
     @property
