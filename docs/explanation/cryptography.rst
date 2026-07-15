@@ -30,29 +30,29 @@ Public key signing
 
 Craft Application supports the adding and verification of arbitrary package
 repositories. For more information, see the cryptographic documentation for
-:external+craft-archives:doc:`Craft Archives <explanation/cryptography>`.
+:external+craft-archives:ref:`Craft Archives <explanation-cryptographic-technology>`.
 
 The parts system
 ~~~~~~~~~~~~~~~~
 
 Craft Application makes use of *parts* in project files for declarative builds. Parts
 specified by the user may download arbitrary files, install packages, and more. For more
-information, see the cryptographic documentation for :external+craft-parts:doc:`Craft
-Parts <explanation/cryptography>`.
+information, see the cryptographic documentation for :external+craft-parts:ref:`Craft
+Parts <explanation_cryptographic-technology>`.
 
 Creating virtual build environments
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Craft Application instantiates and executes builds on self-allocated virtual instances.
 For more information, see the cryptographic documentation for
-:external+craft-providers:doc:`Craft Providers <explanation/cryptography>`.
+:external+craft-providers:ref:`Craft Providers <explanation_cryptographic-technology>`.
 
 Interaction with storefronts
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Craft Application is able to interface with supported storefronts over the internet. For
 more information, see the cryptographic documentation for
-:external+craft-store:doc:`Craft Store <explanation/cryptography>`.
+:external+craft-store:ref:`Craft Store <explanation_cryptographic-technology>`.
 
 .. _launchpadlib: https://help.launchpad.net/API/launchpadlib
 .. _Launchpad: https://launchpad.net

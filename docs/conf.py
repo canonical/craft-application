@@ -249,10 +249,12 @@ intersphinx_mapping = {
         None,
     ),
     "craft-providers": (
-        "https://documentation.ubuntu.com/craft-providers/latest", None
+        "https://documentation.ubuntu.com/craft-providers/latest",
+        None,
     ),
     "craft-store": (
-        "https://documentation.ubuntu.com/craft-store/latest", None
+        "https://documentation.ubuntu.com/craft-store/latest",
+        None,
     ),
     "starflow": (
         "https://documentation.ubuntu.com/starflow/latest", None
