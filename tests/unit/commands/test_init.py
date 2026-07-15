@@ -197,6 +197,44 @@ def test_base_not_available_for_profile(init_command, tmp_path, mock_services):
     mock_services.init.initialise_project.assert_not_called()
 
 
+@pytest.mark.parametrize("base", ["ubuntu@22.04", "Ubuntu-22.04", "base-1.2@stable"])
+def test_valid_base_name(init_command, fake_template_dirs, mock_services, emitter, base):
+    """Allow supported characters in base-specific variant names."""
+    (fake_template_dirs / f"simple__{base}").mkdir()
+    parsed_args = argparse.Namespace(
+        project_dir=None,
+        name="test-project-name",
+        profile="simple",
+        base=base,
+    )
+    mock_services.init.validate_project_name.return_value = "test-project-name"
+
+    init_command.run(parsed_args)
+
+    mock_services.init.initialise_project.assert_called_once_with(
+        project_dir=pathlib.Path.cwd().resolve(),
+        project_name="test-project-name",
+        template_dir=init_command.parent_template_dir / f"simple__{base}",
+    )
+    emitter.assert_message("Successfully initialised project.")
+
+
+@pytest.mark.parametrize("base", ["ubuntu:22.04", "../../ubuntu@22.04"])
+def test_invalid_base_name(init_command, tmp_path, mock_services, base):
+    """Reject unsupported characters in base names."""
+    parsed_args = argparse.Namespace(
+        project_dir=tmp_path,
+        name="test-project-name",
+        profile="simple",
+        base=base,
+    )
+
+    with pytest.raises(InitError, match="invalid base name"):
+        init_command.run(parsed_args)
+
+    mock_services.init.initialise_project.assert_not_called()
+
+
 def test_valid_base_variant(init_command, fake_template_dirs, mock_services, emitter):
     """Use the base-specific template when the requested variant exists."""
     (fake_template_dirs / "simple__ubuntu@22.04").mkdir()

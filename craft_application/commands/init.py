@@ -23,6 +23,10 @@ from typing import TYPE_CHECKING, cast
 import craft_cli
 
 from craft_application.errors import InitError
+from craft_application.models.constraints import (
+    BASE_NAME_COMPILED_REGEX,
+    MESSAGE_INVALID_BASE_NAME,
+)
 from craft_application.util import humanize_list
 
 from . import base
@@ -152,6 +156,8 @@ class InitCommand(base.AppCommand):
         profile = parsed_args.profile
         variants: list[str] = []
         if base:
+            if not BASE_NAME_COMPILED_REGEX.match(base):
+                raise InitError(MESSAGE_INVALID_BASE_NAME)
             profile = f"{parsed_args.profile}__{base}"
             variants = [
                 file.name.removeprefix(f"{parsed_args.profile}__")
