@@ -172,7 +172,7 @@ class InitCommand(base.AppCommand):
             raise InitError(
                 message="Base selection is not available for this profile.",
                 resolution=(
-                    "Use this profile without --base, or choose a different profile."
+                    "Use this profile without '--base' or choose a different profile."
                 ),
             )
 
