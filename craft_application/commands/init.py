@@ -159,10 +159,10 @@ class InitCommand(base.AppCommand):
             if not BASE_NAME_COMPILED_REGEX.match(base):
                 raise InitError(MESSAGE_INVALID_BASE_NAME)
             profile = f"{parsed_args.profile}__{base}"
-            variants = [
+            variants = sorted([
                 file.name.removeprefix(f"{parsed_args.profile}__")
                 for file in self.parent_template_dir.glob(f"{parsed_args.profile}__*")
-            ]
+            ])
 
         template_dir = pathlib.Path(self.parent_template_dir / profile)
         if not base or template_dir.exists():
