@@ -102,6 +102,13 @@ def test_profiles(init_command):
     assert init_command.profiles == ["other-template", "simple"]
 
 
+def test_profiles_excludes_base_variants(init_command, fake_template_dirs):
+    """Base-specific template variants are not exposed as profiles."""
+    (fake_template_dirs / "simple__ubuntu@22.04").mkdir()
+
+    assert init_command.profiles == ["other-template", "simple"]
+
+
 def test_existing_files(init_command, tmp_path, mock_services):
     """Error if the check for existing files fails."""
     mock_services.init.check_for_existing_files.side_effect = InitError("test-error")
