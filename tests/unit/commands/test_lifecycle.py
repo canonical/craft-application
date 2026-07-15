@@ -780,9 +780,9 @@ def test_shell_pack(
 
     # Must call the shell instead of packing
     bash_calls = [
-        call
-        for call in mock_subprocess_run.call_args_list
-        if call.args and call.args[0] == ["bash"]
+        c
+        for c in mock_subprocess_run.call_args_list
+        if c.args and c.args[0] == ["bash"] and c.kwargs.get("check", False) is False
     ]
     assert len(bash_calls) == 1
     assert not mock_pack.called
