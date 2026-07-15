@@ -221,11 +221,26 @@ prepare: |
       # exit 1
       ;;
   esac
+  lxd_snap_command=(snap install --channel="${lxd_channel}" lxd)
   if snap list lxd; then
-    snap refresh --channel=${lxd_channel} lxd
-  else
-    snap install --channel=${lxd_channel} lxd
+    lxd_snap_command=(snap refresh --channel="${lxd_channel}" lxd)
   fi
+
+  lxd_retry_attempts=0
+  lxd_retry_limit=12
+  while true; do
+    lxd_output="$("${lxd_snap_command[@]}" 2>&1)" && break
+    echo "$lxd_output"
+    if ! echo "$lxd_output" | grep -q 'snap "lxd" has "auto-refresh" change in progress'; then
+      exit 1
+    fi
+    lxd_retry_attempts=$((lxd_retry_attempts + 1))
+    if [ "$lxd_retry_attempts" -ge "$lxd_retry_limit" ]; then
+      echo "Timed out waiting for the in-progress snap auto-refresh to finish." >&2
+      exit 1
+    fi
+    sleep 10
+  done
 
   # Initialize LXD; some tests need it ready *before* testcraft is called
   lxd init --auto
