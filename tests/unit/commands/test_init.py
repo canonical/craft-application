@@ -171,8 +171,7 @@ def test_invalid_base_variant(init_command, tmp_path, mock_services):
         init_command.run(parsed_args)
 
     assert exc_info.value.resolution == (
-        "Choose a different base for this profile.\n"
-        "Available bases are: 'ubuntu@22.04'"
+        "Choose a different base for this profile.\nAvailable bases are: 'ubuntu@22.04'"
     )
     mock_services.init.initialise_project.assert_not_called()
 
@@ -198,7 +197,9 @@ def test_base_not_available_for_profile(init_command, tmp_path, mock_services):
 
 
 @pytest.mark.parametrize("base", ["ubuntu@22.04", "Ubuntu-22.04", "base-1.2@stable"])
-def test_valid_base_name(init_command, fake_template_dirs, mock_services, emitter, base):
+def test_valid_base_name(
+    init_command, fake_template_dirs, mock_services, emitter, base
+):
     """Allow supported characters in base-specific variant names."""
     (fake_template_dirs / f"simple__{base}").mkdir()
     parsed_args = argparse.Namespace(
