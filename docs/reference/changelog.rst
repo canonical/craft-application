@@ -22,14 +22,7 @@ Services
 ========
 
 - Add experimental monorepo support for managed builds.
-
-7.1.1 (unreleased)
-------------------
-
-Bug fixes
-=========
-
-- Ignore .spread-reuse files when deciding if a source is outdated.
+- Also ignore outdated .spread-reuse files when deciding if a source is outdated.
 
 7.1.0 (2026-07-07)
 ------------------
