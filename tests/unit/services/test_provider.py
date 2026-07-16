@@ -1186,17 +1186,23 @@ def test_configure_instance_with_pro_skipped(mocker, provider_service):
 
 
 class TestFindGitRoot:
-    def test_returns_none_when_not_in_git_repo(self, tmp_path: pathlib.Path) -> None:
-        assert _find_git_root(tmp_path) is None
-
-    def test_returns_none_when_git_is_unavailable(
-        self, monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path
+    @pytest.mark.parametrize(
+        "git_is_available",
+        [True, False],
+        ids=["not-in-git-repo", "git-unavailable"],
+    )
+    def test_returns_none_without_git_repository(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: pathlib.Path,
+        git_is_available: bool,
     ) -> None:
-        monkeypatch.setattr(
-            provider.subprocess,
-            "run",
-            mock.Mock(side_effect=FileNotFoundError("git not found")),
-        )
+        if not git_is_available:
+            monkeypatch.setattr(
+                provider.subprocess,
+                "run",
+                mock.Mock(side_effect=FileNotFoundError("git not found")),
+            )
         assert _find_git_root(tmp_path) is None
 
     def test_returns_root_for_git_repo(self, tmp_path: pathlib.Path) -> None:
