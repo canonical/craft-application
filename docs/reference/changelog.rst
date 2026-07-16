@@ -26,8 +26,7 @@ Application
 Services
 ========
 
-- The lifecycle service now ignores .spread-reuse files when deciding if a source
-  is outdated.
+- Ignore .spread-reuse files when deciding if a source is outdated.
 
 For a complete list of commits, check out the `7.2.0`_ release on GitHub.
 
