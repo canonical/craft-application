@@ -463,8 +463,13 @@ def test_parse_test_config_app_test_yaml_rejects_legacy_keys(
 
 
 def test_process_spread_file(new_dir, monkeypatch, testing_service):
-    monkeypatch.delenv("LP_TEST_ACCOUNT", raising=False)
     monkeypatch.delenv("CI", raising=False)
+    monkeypatch.delenv("OS_AUTH_TYPE", raising=False)
+    monkeypatch.delenv("OS_AUTH_URL", raising=False)
+    monkeypatch.delenv("OS_REGION_NAME", raising=False)
+    monkeypatch.delenv("OS_TEST_FLAVOR", raising=False)
+    monkeypatch.delenv("OS_TEST_IMAGES", raising=False)
+    monkeypatch.delenv("OS_TEST_PROJECT_NAME", raising=False)
 
     pathlib.Path("spread.yaml").write_text(
         textwrap.dedent(
@@ -483,7 +488,9 @@ def test_process_spread_file(new_dir, monkeypatch, testing_service):
             """
         )
     )
-    state = models.PackState(artifact=pathlib.Path("foo"), resources=None)
+    state = models.PackState(
+        artifacts=[models.PackedArtifact(name=None, path=pathlib.Path("foo"))]
+    )
     testing_service.process_spread_yaml(new_dir / "processed", state)
 
     processed = pathlib.Path("processed").read_text()
@@ -525,8 +532,17 @@ def test_process_spread_file(new_dir, monkeypatch, testing_service):
 
 
 def test_process_lp_test_spread_file(new_dir, monkeypatch, testing_service):
-    monkeypatch.setenv("LP_TEST_ACCOUNT", "lp-test-account")
-    monkeypatch.setenv("LP_TEST_KEY", "lp-test-key")
+    monkeypatch.setenv("OS_AUTH_TYPE", "v3applicationcredential")
+    monkeypatch.setenv("OS_AUTH_URL", "https://lp-test-endpoint:5000/v3")
+    monkeypatch.setenv("OS_REGION_NAME", "prodstack7")
+    monkeypatch.setenv("OS_TEST_FLAVOR", "cpu4-ram8-disk10")
+    monkeypatch.setenv(
+        "OS_TEST_IMAGES",
+        '{"20.04": "ubuntu-focal-daily-amd64", '
+        '"22.04": "ubuntu-jammy-daily-amd64", '
+        '"24.04": "ubuntu-noble-daily-amd64"}',
+    )
+    monkeypatch.setenv("OS_TEST_PROJECT_NAME", "lp-test-project")
     pathlib.Path("spread.yaml").write_text(
         textwrap.dedent(
             """
@@ -544,7 +560,9 @@ def test_process_lp_test_spread_file(new_dir, monkeypatch, testing_service):
             """
         )
     )
-    state = models.PackState(artifact=pathlib.Path("foo"), resources=None)
+    state = models.PackState(
+        artifacts=[models.PackedArtifact(name=None, path=pathlib.Path("foo"))]
+    )
     testing_service.process_spread_yaml(new_dir / "processed", state)
 
     processed = pathlib.Path("processed").read_text()
@@ -576,11 +594,11 @@ def test_process_lp_test_spread_file(new_dir, monkeypatch, testing_service):
             prepare-each: '"$PROJECT_PATH"/spread/.extension backend-prepare-each lp-test'
             restore-each: '"$PROJECT_PATH"/spread/.extension backend-restore-each lp-test'
             endpoint: https://lp-test-endpoint:5000/v3
-            account: lp-test-account
-            key: lp-test-key
-            location: lp-test-project/lp-test-region
+            account: user
+            key: password
+            location: lp-test-project/prodstack7
             plan: cpu4-ram8-disk10
-            halt-timeout: 4h
+            halt-timeout: 6h
         suites:
           tests/general/:
             summary: Just a test
@@ -592,6 +610,86 @@ def test_process_lp_test_spread_file(new_dir, monkeypatch, testing_service):
         reroot: ..
         """
     )
+
+
+def test_process_lp_test_spread_file_invalid_images(
+    new_dir, monkeypatch, testing_service
+):
+    """A malformed OS_TEST_IMAGES value raises a CraftError."""
+    monkeypatch.setenv("OS_AUTH_TYPE", "v3applicationcredential")
+    monkeypatch.setenv("OS_AUTH_URL", "https://lp-test-endpoint:5000/v3")
+    monkeypatch.setenv("OS_REGION_NAME", "prodstack7")
+    monkeypatch.setenv("OS_TEST_FLAVOR", "cpu4-ram8-disk10")
+    monkeypatch.setenv("OS_TEST_IMAGES", "not-json")
+    monkeypatch.setenv("OS_TEST_PROJECT_NAME", "lp-test-project")
+    pathlib.Path("spread.yaml").write_text(
+        "backends:\n  craft:\n    systems: []\nsuites: {}\n"
+    )
+    state = models.PackState(
+        artifacts=[models.PackedArtifact(name=None, path=pathlib.Path("foo"))]
+    )
+
+    with pytest.raises(CraftError, match="Invalid OS_TEST_IMAGES"):
+        testing_service.process_spread_yaml(new_dir / "processed", state)
+
+
+def test_process_lp_test_spread_file_non_dict_images(
+    new_dir, monkeypatch, testing_service
+):
+    """A non-object OS_TEST_IMAGES value raises a CraftError."""
+    monkeypatch.setenv("OS_AUTH_TYPE", "v3applicationcredential")
+    monkeypatch.setenv("OS_AUTH_URL", "https://lp-test-endpoint:5000/v3")
+    monkeypatch.setenv("OS_REGION_NAME", "prodstack7")
+    monkeypatch.setenv("OS_TEST_FLAVOR", "cpu4-ram8-disk10")
+    monkeypatch.setenv("OS_TEST_IMAGES", '["a", "b"]')
+    monkeypatch.setenv("OS_TEST_PROJECT_NAME", "lp-test-project")
+    pathlib.Path("spread.yaml").write_text(
+        "backends:\n  craft:\n    systems: []\nsuites: {}\n"
+    )
+    state = models.PackState(
+        artifacts=[models.PackedArtifact(name=None, path=pathlib.Path("foo"))]
+    )
+
+    with pytest.raises(CraftError, match="Invalid OS_TEST_IMAGES"):
+        testing_service.process_spread_yaml(new_dir / "processed", state)
+
+
+def test_process_lp_test_spread_file_missing_required_vars(
+    new_dir, monkeypatch, testing_service
+):
+    """Missing OS_AUTH_URL or OS_TEST_FLAVOR raises a CraftError."""
+    monkeypatch.setenv("OS_AUTH_TYPE", "v3applicationcredential")
+    monkeypatch.setenv("OS_REGION_NAME", "prodstack7")
+    monkeypatch.setenv("OS_TEST_PROJECT_NAME", "lp-test-project")
+    monkeypatch.delenv("OS_AUTH_URL", raising=False)
+    monkeypatch.delenv("OS_TEST_FLAVOR", raising=False)
+    pathlib.Path("spread.yaml").write_text(
+        "backends:\n  craft:\n    systems: []\nsuites: {}\n"
+    )
+    state = models.PackState(
+        artifacts=[models.PackedArtifact(name=None, path=pathlib.Path("foo"))]
+    )
+
+    with pytest.raises(CraftError, match="Missing required environment"):
+        testing_service.process_spread_yaml(new_dir / "processed", state)
+
+
+def test_get_backend_type_requires_prodstack7_region(monkeypatch, testing_service):
+    """The lp-test backend is only selected on prodstack7."""
+    for var in ("OS_AUTH_TYPE", "OS_REGION_NAME", "OS_TEST_PROJECT_NAME"):
+        monkeypatch.delenv(var, raising=False)
+
+    assert testing_service._get_backend_type() == "lxd-vm"
+
+    monkeypatch.setenv("OS_AUTH_TYPE", "v3applicationcredential")
+    monkeypatch.setenv("OS_TEST_PROJECT_NAME", "lp-test-project")
+    monkeypatch.setenv("OS_REGION_NAME", "other-region")
+
+    assert testing_service._get_backend_type() == "lxd-vm"
+
+    monkeypatch.setenv("OS_REGION_NAME", "prodstack7")
+
+    assert testing_service._get_backend_type() == "lp-test"
 
 
 @pytest.mark.parametrize(
