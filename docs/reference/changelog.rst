@@ -18,11 +18,16 @@ Changelog
 7.2.0 (unreleased)
 ------------------
 
+Application
+===========
+
+- Add experimental monorepo support for managed builds.
+
 Services
 ========
 
-- Add experimental monorepo support for managed builds.
-- Ignore .spread-reuse files when deciding if a source is outdated.
+- The lifecycle service now ignores .spread-reuse files when deciding if a source
+  is outdated.
 
 For a complete list of commits, check out the `7.2.0`_ release on GitHub.
 
