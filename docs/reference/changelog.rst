@@ -15,6 +15,14 @@ Changelog
 
     For a complete list of commits, check out the `1.2.3`_ release on GitHub.
 
+7.2.0 (unreleased)
+------------------
+
+Services
+========
+
+- Add experimental monorepo support for managed builds.
+
 7.1.1 (unreleased)
 ------------------
 
