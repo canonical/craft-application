@@ -15,8 +15,14 @@ Changelog
 
     For a complete list of commits, check out the `1.2.3`_ release on GitHub.
 
-7.1.1 (unreleased)
+7.2.0 (unreleased)
 ------------------
+
+Commands
+========
+
+- The ``init`` command now accepts the ``--base`` option to choose profile
+  variants for specific bases.
 
 Bug fixes
 =========
