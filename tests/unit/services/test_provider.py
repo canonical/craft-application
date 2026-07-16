@@ -1189,6 +1189,16 @@ class TestFindGitRoot:
     def test_returns_none_when_not_in_git_repo(self, tmp_path: pathlib.Path) -> None:
         assert _find_git_root(tmp_path) is None
 
+    def test_returns_none_when_git_is_unavailable(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path
+    ) -> None:
+        monkeypatch.setattr(
+            provider.subprocess,
+            "run",
+            mock.Mock(side_effect=FileNotFoundError("git not found")),
+        )
+        assert _find_git_root(tmp_path) is None
+
     def test_returns_root_for_git_repo(self, tmp_path: pathlib.Path) -> None:
         subprocess.run(["git", "init", str(tmp_path)], check=True, capture_output=True)
         assert _find_git_root(tmp_path) == tmp_path
@@ -1246,6 +1256,19 @@ class TestGetManagedCwd:
         charm_dir.mkdir(parents=True)
         expected = self._default / "charms" / "charm-a"
         assert _get_managed_cwd(charm_dir, self._default, use_git_root=True) == expected
+
+    def test_returns_default_when_git_root_is_not_parent(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path
+    ) -> None:
+        charm_dir = tmp_path / "charms" / "charm-a"
+        charm_dir.mkdir(parents=True)
+        unrelated_root = tmp_path / "other-repo-root"
+        unrelated_root.mkdir()
+        monkeypatch.setattr(provider, "_find_git_root", lambda _path: unrelated_root)
+
+        result = _get_managed_cwd(charm_dir, self._default, use_git_root=True)
+
+        assert result == self._default
 
 
 @pytest.mark.parametrize("fetch", [False, True])
