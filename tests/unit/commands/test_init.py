@@ -191,7 +191,7 @@ def test_base_not_available_for_profile(init_command, tmp_path, mock_services):
         init_command.run(parsed_args)
 
     assert exc_info.value.resolution == (
-        "Use this profile without --base, or choose a different profile."
+        "Use this profile without '--base' or choose a different profile."
     )
     mock_services.init.initialise_project.assert_not_called()
 
