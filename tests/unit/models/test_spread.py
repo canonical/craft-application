@@ -42,6 +42,28 @@ def test_systems_from_craft(systems, expected):
     assert model.SpreadBackend.systems_from_craft(systems, {}) == expected
 
 
+@pytest.mark.parametrize(
+    ("systems", "expected"),
+    [
+        (
+            ["ubuntu-24.04-64"],
+            [
+            ],
+        ),
+    ],
+)
+def test_systems_from_craft_64_image_lookup(systems, expected):
+    assert model.SpreadBackend.systems_from_craft(
+        ["ubuntu-24.04-64"], {"ubuntu-24.04": "noble-image"}
+    ) == [
+        {
+            "ubuntu-24.04-64": model.SpreadSystem(
+                workers=1, image="noble-image"
+            )
+        }
+    ]
+
+
 _CRAFT_SPREAD = """
 project: project-name
 
@@ -123,7 +145,7 @@ def test_spread_yaml_from_craft_spread():
         craft_backend=backend,
         artifacts=[
             models.PackedArtifact(name=None, path=pathlib.Path("artifact")),
-            models.PackedArtifact(name="my-resource", path=pathlib.Path("resource")),
+            models.PackedArtifact(name="other", path=pathlib.Path("another-artifact")),
         ],
         images={},
     )
@@ -139,7 +161,7 @@ def test_spread_yaml_from_craft_spread():
                 "LANGUAGE": "en",
                 "PROJECT_PATH": "/root/proj",
                 "CRAFT_ARTIFACT": "$PROJECT_PATH/artifact",
-                "CRAFT_ARTIFACT_MY_RESOURCE": "$PROJECT_PATH/resource",
+                "CRAFT_ARTIFACT_OTHER": "$PROJECT_PATH/another-artifact",
             },
             backends={
                 "craft": model.SpreadBackend(
@@ -212,8 +234,10 @@ def test_spread_yaml_from_lp_test_craft_spread():
     spread = model.SpreadYaml.from_craft(
         craft_spread,
         craft_backend=backend,
-        artifact=pathlib.Path("artifact"),
-        resources={"my-resource": pathlib.Path("resource")},
+        artifacts=[
+            models.PackedArtifact(name=None, path=pathlib.Path("artifact")),
+            models.PackedArtifact(name="other", path=pathlib.Path("another-artifact")),
+        ],
         images={"ubuntu-24.04": "jammy-image"},
     )
 
@@ -227,8 +251,9 @@ def test_spread_yaml_from_lp_test_craft_spread():
                 "LANG": "C.UTF-8",
                 "LANGUAGE": "en",
                 "PROJECT_PATH": "/root/proj",
-                "CRAFT_ARTIFACT": "$PROJECT_PATH/artifact",
-                "CRAFT_RESOURCE_MY_RESOURCE": "$PROJECT_PATH/resource",
+                    "CRAFT_ARTIFACT": "$PROJECT_PATH/artifact",
+                    "CRAFT_ARTIFACT_OTHER": "$PROJECT_PATH/another-artifact",
+
             },
             backends={
                 "craft": model.SpreadBackend(
@@ -313,11 +338,12 @@ def test_spread_yaml_from_craft_named_artifacts_only():
         craft_spread,
         craft_backend=backend,
         artifacts=[
-            models.PackedArtifact(name="my-resource", path=pathlib.Path("resource")),
+            models.PackedArtifact(name="other", path=pathlib.Path("another-artifact")),
         ],
+        images={},
     )
 
-    assert spread.environment["CRAFT_ARTIFACT_MY_RESOURCE"] == "$PROJECT_PATH/resource"
+    assert spread.environment["CRAFT_ARTIFACT_OTHER"] == "$PROJECT_PATH/another-artifact"
     assert "CRAFT_ARTIFACT" not in spread.environment
 
 

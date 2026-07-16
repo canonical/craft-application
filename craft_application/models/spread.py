@@ -184,6 +184,11 @@ class SpreadBackend(SpreadBaseModel):
         )
 
     @staticmethod
+    def _get_system_image(name: str, images: dict[str, str]) -> str | None:
+        """Return an image for a system name, tolerating the legacy -64 suffix."""
+        return images.get(name) or images.get(name.removesuffix("-64"))
+
+    @staticmethod
     def systems_from_craft(
         simple: list[str | dict[str, CraftSpreadSystem | None]], images: dict[str, str]
     ) -> list[str | dict[str, SpreadSystem]]:
@@ -192,7 +197,7 @@ class SpreadBackend(SpreadBaseModel):
         for item in simple:
             entry: dict[str, SpreadSystem] = {}
             if isinstance(item, str):
-                image = images.get(item)
+                image = SpreadBackend._get_system_image(item, images)
                 if image:
                     entry[item] = SpreadSystem(workers=1, image=image)
                     systems.append(entry)
@@ -202,9 +207,9 @@ class SpreadBackend(SpreadBaseModel):
 
             for name, ssys in item.items():
                 if ssys:
-                    image = ssys.image if ssys.image else images.get(name)
+                    image = ssys.image or SpreadBackend._get_system_image(name, images)
                 else:
-                    image = images.get(name)
+                    image = SpreadBackend._get_system_image(name, images)
                 entry[name] = SpreadSystem.from_craft(ssys, image=image)
             systems.append(entry)
 
