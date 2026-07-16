@@ -15,6 +15,14 @@ Changelog
 
     For a complete list of commits, check out the `1.2.3`_ release on GitHub.
 
+7.1.1 (unreleased)
+------------------
+
+Bug fixes
+=========
+
+- Ignore .spread-reuse files when deciding if a source is outdated.
+
 7.1.0 (2026-07-07)
 ------------------
 
