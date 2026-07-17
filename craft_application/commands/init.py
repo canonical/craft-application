@@ -54,7 +54,7 @@ class InitCommand(base.AppCommand):
 
         '--profile <profile>' is used to initialise the project for a specific use case.
 
-        If '--base <base>' is provided, the project is initialized for that base. 
+        If '--base <base>' is provided, the project is initialized for that base.
         Only available for profiles that have base variants.
 
         Init can work in an existing project directory. If there are any files in the
