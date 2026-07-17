@@ -220,7 +220,7 @@ def test_valid_base_name(
     emitter.assert_message("Successfully initialised project.")
 
 
-@pytest.mark.parametrize("base", ["ubuntu:22.04", "../../ubuntu@22.04"])
+@pytest.mark.parametrize("base", ["/core24", "../../ubuntu@22.04"])
 def test_invalid_base_name(init_command, tmp_path, mock_services, base):
     """Reject unsupported characters in base names."""
     parsed_args = argparse.Namespace(
