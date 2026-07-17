@@ -22,6 +22,10 @@ Bug fixes
 =========
 
 - Ignore .spread-reuse files when deciding if a source is outdated.
+- Loading a project file that is not UTF-8 encoded now raises a clear error
+  instead of failing with an uncaught internal error.
+
+For a complete list of commits, check out the `7.1.1`_ release on GitHub.
 
 7.1.0 (2026-07-07)
 ------------------
@@ -1388,3 +1392,4 @@ For a complete list of commits, check out the `2.7.0`_ release on GitHub.
 .. _7.0.0: https://github.com/canonical/craft-application/releases/tag/7.0.0
 .. _7.0.1: https://github.com/canonical/craft-application/releases/tag/7.0.1
 .. _7.1.0: https://github.com/canonical/craft-application/releases/tag/7.1.0
+.. _7.1.1: https://github.com/canonical/craft-application/releases/tag/7.1.1
