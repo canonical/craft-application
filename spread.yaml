@@ -150,7 +150,7 @@ backends:
       multipass delete --purge "${instance_name}"
     systems:
       - ubuntu-20.04-64:
-          workers: 4
+          workers: 2
       - ubuntu-22.04-64:
           workers: 4
       - ubuntu-24.04-64:
