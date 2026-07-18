@@ -27,10 +27,10 @@ def render_doc_url(
     input URL containing ``{version}``, this function will return the URL with
     ``{version}`` formatted:
 
-    - The plain ``version`` as a fallback, or
-    - The major version, if ``major_only`` is set to `True`, or
     - ``latest``, if ``version`` is a development value like ``1.0+g115121``,
       ``1.0+git0293141``, or ``dev``.
+    - The major version, if ``major_only`` is set to ``True``.
+    - The plain ``version`` otherwise.
 
     :param url: A URL with a possible ``{version}`` placeholder.
     :param version: The app version
