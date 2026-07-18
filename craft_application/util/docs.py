@@ -19,7 +19,8 @@
 def render_doc_url(
     url: str,
     version: str,
-    major_only: bool = True,  # noqa: FBT001 FBT002
+    *,
+    major_only: bool = True,
 ) -> str:
     """Render a URL with the correct version for readthedocs.
 
