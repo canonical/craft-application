@@ -20,31 +20,34 @@ from craft_application.util import docs
 
 
 @pytest.mark.parametrize(
-    ("url", "version", "expected"),
+    ("url", "version", "major", "expected"),
     [
         # Cases with precise versions (must use the version)
-        ("www.doc.com/tool/en/{version}", "1.0.0", "www.doc.com/tool/en/1.0.0"),
-        ("www.doc.com/tool/{version}/a", "1.2.3", "www.doc.com/tool/1.2.3/a"),
+        ("www.doc.com/tool/{version}", "1.0.0", True, "www.doc.com/tool/1"),
+        ("www.doc.com/tool/{version}", "1.3.5", False, "www.doc.com/tool/1.3.5"),
+        ("www.doc.com/tool/{version}/a", "2.4.6", True, "www.doc.com/tool/2/a"),
         # Cases with interim versions (must use "latest")
         # craft-application style
         (
-            "www.doc.com/tool/en/{version}",
+            "www.doc.com/tool/{version}",
             "3.1.0.post1+gb99d1e8",
-            "www.doc.com/tool/en/latest",
+            True,
+            "www.doc.com/tool/latest",
         ),
         # Snapcraft style
         (
-            "www.doc.com/tool/en/{version}",
+            "www.doc.com/tool/{version}",
             "8.3.1.post5+gitfb1834ce",
-            "www.doc.com/tool/en/latest",
+            True,
+            "www.doc.com/tool/latest",
         ),
         # fallback "dev" version
-        ("www.doc.com/tool/{version}", "dev", "www.doc.com/tool/latest"),
+        ("www.doc.com/tool/{version}", "dev", True, "www.doc.com/tool/latest"),
         # Cases with no {version} variable (must be a passthrough)
-        ("www.doc.com/tool/en/latest", "1.0.0", "www.doc.com/tool/en/latest"),
-        ("www.doc.com/tool/en/stable", "1.0.0", "www.doc.com/tool/en/stable"),
+        ("www.doc.com/tool/latest", "1.0.0", True, "www.doc.com/tool/latest"),
+        ("www.doc.com/tool/stable", "1.0.0", True, "www.doc.com/tool/stable"),
     ],
 )
-def test_render_doc_url(url, version, expected):
-    obtained = docs.render_doc_url(url, version)
+def test_render_doc_url(url, version, major, expected):
+    obtained = docs.render_doc_url(url, version, major)
     assert obtained == expected

@@ -22,6 +22,7 @@ Bug fixes
 =========
 
 - Ignore .spread-reuse files when deciding if a source is outdated.
+- By default, trim documentation URLs so they display major version only.
 
 7.1.0 (2026-07-07)
 ------------------
