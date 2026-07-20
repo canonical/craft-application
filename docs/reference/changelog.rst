@@ -23,8 +23,14 @@ Application
 
 - Add experimental monorepo support for managed builds.
 
-Services
+Commands
 ========
+
+- The ``init`` command now accepts the ``--base`` option to choose profile
+  variants for specific bases.
+
+Bug fixes
+=========
 
 - Ignore .spread-reuse files when deciding if a source is outdated.
 
