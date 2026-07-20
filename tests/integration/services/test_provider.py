@@ -236,6 +236,27 @@ def test_instance_with_different_architecture(
     assert result.stdout.rstrip() == build_on
 
 
+@pytest.mark.parametrize(
+    "helper_name",
+    ["find_git_root", "get_build_root", "get_managed_cwd"],
+)
+def test_monorepo_helpers(tmp_path: pathlib.Path, helper_name: str) -> None:
+    subprocess.run(["git", "init", str(tmp_path)], check=True, capture_output=True)
+    work_dir = tmp_path / "charms" / "charm-a"
+    work_dir.mkdir(parents=True)
+
+    if helper_name == "find_git_root":
+        assert provider_module._find_git_root(work_dir) == tmp_path
+    elif helper_name == "get_build_root":
+        assert provider_module._get_build_root(work_dir, use_git_root=True) == tmp_path
+    elif helper_name == "get_managed_cwd":
+        non_normalized_work_dir = tmp_path / "charms" / ".." / "charms" / "charm-a"
+        default_cwd = pathlib.PurePosixPath("/root/project")
+        assert provider_module._get_managed_cwd(
+            non_normalized_work_dir, default_cwd, use_git_root=True
+        ) == (default_cwd / "charms" / "charm-a")
+
+
 def _get_store_revision(snap_name: str, channel: str) -> int:
     """Get the revision of a snap published in a specific channel from the store.
 
