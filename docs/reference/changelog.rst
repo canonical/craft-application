@@ -21,6 +21,8 @@ Changelog
 Bug fixes
 =========
 
+- ``remote-build`` no longer raises an error when dangling symlinks are present in the
+  project repository.
 - Ignore .spread-reuse files when deciding if a source is outdated.
 
 7.1.0 (2026-07-07)
