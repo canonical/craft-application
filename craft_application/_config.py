@@ -73,3 +73,11 @@ class ConfigModel(pydantic.BaseModel):
 
     If unset, this defaults to exiting synchronously before the app exits.
     """
+
+    experimental_monorepo: bool = False
+    """Enable monorepo support, mounting the git working tree root as the build root.
+
+    When True and the app sets ``allow_git_build_root``, the git root is mounted
+    in the managed instance instead of the project directory, giving the build
+    access to shared code outside the project directory.
+    """

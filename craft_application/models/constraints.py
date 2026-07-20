@@ -98,6 +98,10 @@ MESSAGE_INVALID_NAME = (
     "and may not have two hyphens in a row."
 )
 
+BASE_NAME_REGEX = r"^[^/]+$"
+BASE_NAME_COMPILED_REGEX = re.compile(BASE_NAME_REGEX)
+MESSAGE_INVALID_BASE_NAME = "invalid base name: Base names cannot contain '/'."
+
 ProjectName = Annotated[
     str,
     pydantic.BeforeValidator(
