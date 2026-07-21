@@ -23,28 +23,35 @@ from craft_application.util import docs
     ("url", "version", "expected"),
     [
         # Cases with precise versions (must use the version)
-        ("www.doc.com/tool/en/{version}", "1.0.0", "www.doc.com/tool/en/1.0.0"),
-        ("www.doc.com/tool/{version}/a", "1.2.3", "www.doc.com/tool/1.2.3/a"),
+        ("www.doc.com/tool/{version}", "1.0.0", "www.doc.com/tool/1"),
+        ("www.doc.com/tool/{version}/a", "2.4.6", "www.doc.com/tool/2/a"),
         # Cases with interim versions (must use "latest")
         # craft-application style
         (
-            "www.doc.com/tool/en/{version}",
+            "www.doc.com/tool/{version}",
             "3.1.0.post1+gb99d1e8",
-            "www.doc.com/tool/en/latest",
+            "www.doc.com/tool/latest",
         ),
         # Snapcraft style
         (
-            "www.doc.com/tool/en/{version}",
+            "www.doc.com/tool/{version}",
             "8.3.1.post5+gitfb1834ce",
-            "www.doc.com/tool/en/latest",
+            "www.doc.com/tool/latest",
         ),
         # fallback "dev" version
         ("www.doc.com/tool/{version}", "dev", "www.doc.com/tool/latest"),
         # Cases with no {version} variable (must be a passthrough)
-        ("www.doc.com/tool/en/latest", "1.0.0", "www.doc.com/tool/en/latest"),
-        ("www.doc.com/tool/en/stable", "1.0.0", "www.doc.com/tool/en/stable"),
+        ("www.doc.com/tool/latest", "1.0.0", "www.doc.com/tool/latest"),
+        ("www.doc.com/tool/stable", "1.0.0", "www.doc.com/tool/stable"),
     ],
 )
 def test_render_doc_url(url, version, expected):
     obtained = docs.render_doc_url(url, version)
     assert obtained == expected
+
+
+def test_render_doc_url_non_major():
+    obtained = docs.render_doc_url(
+        "www.doc.com/tool/{version}/foo", "1.3.5", major_only=False
+    )
+    assert obtained == "www.doc.com/tool/1.3.5/foo"

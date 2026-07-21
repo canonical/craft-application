@@ -33,6 +33,7 @@ Bug fixes
 =========
 
 - Ignore .spread-reuse files when deciding if a source is outdated.
+- By default, trim documentation URLs so they display major version only.
 
 For a complete list of commits, check out the `7.2.0`_ release on GitHub.
 

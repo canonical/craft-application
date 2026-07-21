@@ -16,18 +16,26 @@
 """Utility functions and helpers related to documentation."""
 
 
-def render_doc_url(url: str, version: str) -> str:
-    """Render ``url`` with the correct version for readthedocs.
+def render_doc_url(
+    url: str,
+    version: str,
+    *,
+    major_only: bool = True,
+) -> str:
+    """Render a URL with the correct version for readthedocs.
 
-    This function generates urls following the readthedocs standard. Given an
-    input url containing a "{version}" placeholder, this function will return
-    an url where "{version}" is replaced with:
-    - ``latest``, if ``version`` is a development value like "1.0+g115121",
-      "1.0+git0293141" or "dev,
-    - the value of ``version`` otherwise.
+    This function generates URLs for documentation hosted on Read the Docs. Given an
+    input URL containing ``{version}``, this function will return the URL with
+    ``{version}`` formatted:
 
-    :param url: an url with a possible {version} placeholder.
-    :param version: the application version.
+    - ``latest``, if ``version`` is a development value like ``1.0+g115121``,
+      ``1.0+git0293141``, or ``dev``.
+    - The major version, if ``major_only`` is set to ``True``.
+    - The plain ``version`` otherwise.
+
+    :param url: A URL with a possible ``{version}`` placeholder.
+    :param version: The app version
+    :param major_only: Whether to cut after the major number (default: True)
     """
     version_var = "{version}"
 
@@ -36,5 +44,7 @@ def render_doc_url(url: str, version: str) -> str:
 
     if version == "dev" or "+g" in version:
         version = "latest"
+    elif major_only:
+        version, *_ = version.split(".")
 
     return url.replace(version_var, version)
