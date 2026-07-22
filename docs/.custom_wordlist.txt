@@ -30,6 +30,7 @@ LaTeX
 latexmk
 Launchpadlib
 Makefile
+monorepo
 Multipass
 MyST
 namespaced
