@@ -1,6 +1,9 @@
 name: Spread
 on:
   pull_request:
+    paths-ignore:
+      - ".github/workflows/policy.yaml"
+      - ".osv-scanner.toml"
   merge_group:
   push:
     branches:
