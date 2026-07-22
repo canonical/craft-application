@@ -13,3 +13,5 @@ jobs:
   check-update:
     uses: canonical/copilot-collections/.github/workflows/auto_update_collections.yaml@main
     secrets: inherit
+    with:
+      branch_name: work/auto/update-copilot-collections
