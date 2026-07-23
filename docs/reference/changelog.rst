@@ -38,7 +38,7 @@ Bug fixes
 Documentation
 =============
 
-- Add a :ref:`how-to-pack-a-pro-artifact` how-to document.
+- Add a :ref:`how-to-pack-a-pro-artifact` how-to guide.
 
 For a complete list of commits, check out the `7.2.0`_ release on GitHub.
 

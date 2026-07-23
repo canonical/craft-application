@@ -1,13 +1,12 @@
-.. meta::
-    :description: Pack |an-artifact| that contains extended security patches or meets regulatory compliance needs, powered by Ubuntu Pro.
-
 Pack a Pro-compliant |artifact|
 ===============================
+
+.. Begin overview
 
 Follow this guide to pack |an-artifact| that contains extended security patches or meets
 regulatory compliance needs.
 
-.. Split point for downstream docs: Prerequisites onward
+.. End overview
 
 Prerequisites
 -------------

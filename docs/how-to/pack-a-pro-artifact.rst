@@ -1,3 +1,6 @@
+.. meta::
+    :description: Pack an artifact that contains extended security patches or meets regulatory compliance needs, powered by Ubuntu Pro.
+
 .. |app| replace:: Craft Application
 .. |app-command| replace:: <craft-app>
 .. |artifact| replace:: artifact
