@@ -75,6 +75,10 @@ def test_download_with_progress(
     emitter.assert_interactions(
         [
             call("progress_bar", "Downloading http://example/file", len(data)),
+            call(
+                "debug",
+                "Trying to download http://example/file (attempt 1/6)",
+            ),
             call("advance", len(data)),
         ]
     )
@@ -117,34 +121,27 @@ def test_download_files_with_progress(tmp_path, emitter, request_service, downlo
         assert path.read_bytes() == downloads[url]
 
 
-def failing_iter_content(chunk_size=None):  # pylint: disable=unused-argument
-    """Simulate a ChunkedEncodingError during iter_content()."""
-    # Yield some data first to simulate partial download
+def iter_content_then_raise_chunked_encoding_error(
+    chunk_size=None,  # pylint: disable=unused-argument
+):
+    """Yield partial data, then simulate an interrupted response."""
     yield b"partial"
-    # Then raise the error
     raise requests.exceptions.ChunkedEncodingError(
         "Connection broken: Invalid chunk encoding"
     )
 
 
 @responses.activate
-def test_download_chunks_with_chunked_encoding_error_retry(
-    tmp_path, emitter, request_service
+def test_download_with_progress_retries_chunked_encoding_error(
+    tmp_path, emitter, mocker, request_service
 ):
-    """Test that download_chunks retries on ChunkedEncodingError and eventually succeeds.
-
-    This test simulates a ChunkedEncodingError occurring during download.iter_content(),
-    verifies that the download is retried, and ensures the final download completes
-    successfully with the correct data and chunk count (not counting failed attempts).
-    """
+    """Retry an interrupted download and roll back its partial progress."""
     data = b"This is test data for download retry"
     output_file = tmp_path / "file"
-
-    # Patch the get method to simulate ChunkedEncodingError on first attempts
     original_get = request_service.get
-    call_count = {"count": 0}
+    attempts = 0
+    mocked_sleep = mocker.patch("time.sleep")
 
-    # Set up the mock response
     responses.add(
         responses.GET,
         "http://example/file",
@@ -153,52 +150,48 @@ def test_download_chunks_with_chunked_encoding_error_retry(
     )
 
     def patched_get(*args, **kwargs):
-        call_count["count"] += 1
+        nonlocal attempts
+        attempts += 1
         response = original_get(*args, **kwargs)
 
-        # Make iter_content raise ChunkedEncodingError on first two attempts
-        if call_count["count"] <= 2:
-            response.iter_content = failing_iter_content
+        if attempts <= 2:
+            response.iter_content = iter_content_then_raise_chunked_encoding_error
 
         return response
 
     with patch.object(request_service, "get", side_effect=patched_get):
-        downloader = request_service.download_chunks("http://example/file", output_file)
-        size = next(downloader)
-        dl_size = sum(downloader)
+        result = request_service.download_with_progress(
+            "http://example/file", output_file
+        )
 
-    # Verify that the download eventually succeeded
-    pytest_check.equal(int(size), len(data), "Downloaded size is incorrect")
-    pytest_check.equal(dl_size, len(data), "Downloaded size is incorrect")
-    pytest_check.equal(output_file.read_bytes(), data, "Download data is incorrect")
-
-    # Verify that retry messages were emitted
-    progress_calls = [
+    assert result == output_file
+    assert output_file.read_bytes() == data
+    assert attempts == 3
+    assert mocked_sleep.mock_calls == [call(2), call(4)]
+    assert [
         interaction
         for interaction in emitter.interactions
-        if len(interaction.args) > 0
-        and interaction.args[0] == "progress"
-        and len(interaction.args) > 1
-        and "retrying" in interaction.args[1]
+        if interaction.args[0] == "advance"
+    ] == [
+        call("advance", len(b"partial")),
+        call("advance", -len(b"partial")),
+        call("advance", len(b"partial")),
+        call("advance", -len(b"partial")),
+        call("advance", len(data)),
     ]
-    pytest_check.equal(len(progress_calls), 2, "Expected 2 retry progress messages")
-
-    # Verify that we made 3 attempts (2 failures + 1 success)
-    pytest_check.equal(call_count["count"], 3, "Expected 3 download attempts")
 
 
 @responses.activate
-def test_download_chunks_chunked_encoding_error_exhausted(tmp_path, request_service):
-    """Test that download_chunks raises ChunkedEncodingError after max retries.
-
-    This test simulates a persistent ChunkedEncodingError that occurs on every
-    download attempt, and verifies that after exhausting all retry attempts,
-    the error is properly raised to the caller.
-    """
+def test_download_with_progress_exhausts_chunked_encoding_error_retries(
+    tmp_path, emitter, mocker, request_service
+):
+    """Propagate ChunkedEncodingError after all retry attempts fail."""
     data = b"test data"
     output_file = tmp_path / "file"
+    original_get = request_service.get
+    attempts = 0
+    mocked_sleep = mocker.patch("time.sleep")
 
-    # Set up the mock response
     responses.add(
         responses.GET,
         "http://example/file",
@@ -206,19 +199,76 @@ def test_download_chunks_chunked_encoding_error_exhausted(tmp_path, request_serv
         headers={"Content-Length": str(len(data))},
     )
 
-    # Patch to always fail
-    original_get = request_service.get
-
     def patched_get(*args, **kwargs):
+        nonlocal attempts
+        attempts += 1
         response = original_get(*args, **kwargs)
-
-        response.iter_content = failing_iter_content
+        response.iter_content = iter_content_then_raise_chunked_encoding_error
         return response
 
     with patch.object(request_service, "get", side_effect=patched_get):
-        downloader = request_service.download_chunks("http://example/file", output_file)
-        next(downloader)  # Get the size
-
-        # The error should be raised after max_retries attempts
         with pytest.raises(requests.exceptions.ChunkedEncodingError):
-            list(downloader)  # Consume the iterator
+            request_service.download_with_progress("http://example/file", output_file)
+
+    assert attempts == 6
+    assert mocked_sleep.mock_calls == [call(2), call(4), call(8), call(16), call(32)]
+    assert output_file.read_bytes() == b"partial"
+    assert [
+        interaction
+        for interaction in emitter.interactions
+        if interaction.args[0] == "advance"
+    ] == [
+        call("advance", len(b"partial")),
+        call("advance", -len(b"partial")),
+    ] * 6
+
+
+@responses.activate
+def test_download_files_with_progress_retries_only_interrupted_file(
+    tmp_path, emitter, mocker, request_service
+):
+    """Do not repeat successful downloads when another download is retried."""
+    stable_data = b"stable data"
+    flaky_data = b"eventual data"
+    stable_url = "http://example/stable"
+    flaky_url = "http://example/flaky"
+    files = {
+        stable_url: tmp_path / "stable",
+        flaky_url: tmp_path / "flaky",
+    }
+    attempts = {stable_url: 0, flaky_url: 0}
+    original_get = request_service.get
+    mocked_sleep = mocker.patch("time.sleep")
+
+    responses.add(
+        responses.GET,
+        stable_url,
+        body=stable_data,
+        headers={"Content-Length": str(len(stable_data))},
+    )
+    responses.add(
+        responses.GET,
+        flaky_url,
+        body=flaky_data,
+        headers={"Content-Length": str(len(flaky_data))},
+    )
+
+    def patched_get(url, *args, **kwargs):
+        attempts[url] += 1
+        response = original_get(url, *args, **kwargs)
+        if url == flaky_url and attempts[url] == 1:
+            response.iter_content = iter_content_then_raise_chunked_encoding_error
+        return response
+
+    with patch.object(request_service, "get", side_effect=patched_get):
+        result = request_service.download_files_with_progress(files)
+
+    assert result == files
+    assert files[stable_url].read_bytes() == stable_data
+    assert files[flaky_url].read_bytes() == flaky_data
+    assert attempts == {stable_url: 1, flaky_url: 2}
+    assert mocked_sleep.mock_calls == [call(2)]
+    assert (
+        call("progress_bar", "Downloading 2 files", len(stable_data) + len(flaky_data))
+        in emitter.interactions
+    )

@@ -42,7 +42,6 @@ class RequestService(base.AppService):
         super().__init__(app, services)
         self._session = requests.Session()
         self._session.headers["User-Agent"] = f"{self._app.name}/{self._app.version}"
-        self._max_retries = 3
 
         # Passthroughs for requests methods so other services can use the session.
         self.request = self._session.request
@@ -66,35 +65,12 @@ class RequestService(base.AppService):
             filename = util.get_filename_from_url_path(url)
             dest = dest / filename
 
-        content_length_yielded = False
-
-        for attempt in range(self._max_retries):
-            downloaded_bytes = 0
-            try:
-                with self.get(url, stream=True) as download:
-                    with dest.open("wb") as file:
-                        if not content_length_yielded:
-                            content_length = int(
-                                download.headers.get("Content-Length", -1)
-                            )
-                            yield content_length
-                            content_length_yielded = True
-
-                        # Download and track chunks
-                        for chunk in download.iter_content(None):
-                            file.write(chunk)
-                            downloaded_bytes += len(chunk)
-                            yield len(chunk)
-                break
-            except requests.exceptions.ChunkedEncodingError:
-                if attempt < self._max_retries - 1:
-                    craft_cli.emit.progress(
-                        f"Download interrupted, retrying... (attempt {attempt + 1}/{self._max_retries})"
-                    )
-                    # Yield negative sum of chunk sizes to indicate rollback
-                    yield -downloaded_bytes
-                else:
-                    raise
+        with self.get(url, stream=True) as download:
+            with dest.open("wb") as file:
+                yield int(download.headers.get("Content-Length", -1))
+                for chunk in download.iter_content(None):
+                    file.write(chunk)
+                    yield len(chunk)
 
     def download_with_progress(self, url: str, dest: pathlib.Path) -> pathlib.Path:
         """Download a single file with a progress bar."""
@@ -111,27 +87,56 @@ class RequestService(base.AppService):
         if not files:
             return {}
         files = dict(files)
-        downloads: set[Iterator[int]] = set()
+        downloads: dict[str, Iterator[int]] = {}
 
         for url, path in files.items():
             filename = util.get_filename_from_url_path(url)
             if path.is_dir():
                 path = files[url] = path / filename  # noqa: PLW2901
-            downloads.add(self.download_chunks(url, path))
+            downloads[url] = self.download_chunks(url, path)
 
         if len(files) == 1:
             title = f"Downloading {next(iter(files))}"
         else:
             title = f"Downloading {len(files)} files"
 
-        sizes = [next(dl) for dl in downloads]
+        sizes = [next(download) for download in downloads.values()]
         total_size = sum(size for size in sizes if size > 0)
 
         with craft_cli.emit.progress_bar(title, total_size) as progress:
-            while downloads:
-                for dl in downloads.copy():
-                    for chunk_size in dl:
-                        progress.advance(chunk_size)
-                    downloads.remove(dl)
+
+            def download_file(
+                url: str, dest: pathlib.Path, initial_download: Iterator[int]
+            ) -> None:
+                use_initial_download = True
+
+                def consume_download() -> None:
+                    nonlocal use_initial_download
+
+                    if use_initial_download:
+                        download = initial_download
+                        use_initial_download = False
+                    else:
+                        download = self.download_chunks(url, dest)
+                        next(download)  # The total uses the initial content length.
+
+                    downloaded_bytes = 0
+                    try:
+                        for chunk_size in download:
+                            downloaded_bytes += chunk_size
+                            progress.advance(chunk_size)
+                    except requests.exceptions.ChunkedEncodingError:
+                        if downloaded_bytes:
+                            progress.advance(-downloaded_bytes)
+                        raise
+
+                util.retry(
+                    f"download {url}",
+                    requests.exceptions.ChunkedEncodingError,
+                    consume_download,
+                )
+
+            for url, download in downloads.items():
+                download_file(url, files[url], download)
 
         return files
