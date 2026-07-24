@@ -35,6 +35,11 @@ Bug fixes
 - Ignore .spread-reuse files when deciding if a source is outdated.
 - By default, trim documentation URLs so they display major version only.
 
+Documentation
+=============
+
+- Add a :ref:`how-to-pack-a-pro-artifact` how-to guide.
+
 For a complete list of commits, check out the `7.2.0`_ release on GitHub.
 
 7.1.0 (2026-07-07)
