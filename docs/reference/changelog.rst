@@ -34,6 +34,8 @@ Bug fixes
 
 - Ignore .spread-reuse files when deciding if a source is outdated.
 - By default, trim documentation URLs so they display major version only.
+- Downloads with progress now retry after transient connection interruptions,
+  and downloads that fail permanently no longer leave partial files behind.
 
 For a complete list of commits, check out the `7.2.0`_ release on GitHub.
 

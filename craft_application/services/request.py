@@ -27,7 +27,7 @@ from craft_application.services import base
 
 if TYPE_CHECKING:
     import pathlib
-    from collections.abc import Iterator, Mapping
+    from collections.abc import Callable, Iterator, Mapping
 
     from craft_application.application import AppMetadata
     from craft_application.services import service_factory
@@ -103,44 +103,54 @@ class RequestService(base.AppService):
         sizes = [next(download) for download in downloads.values()]
         total_size = sum(size for size in sizes if size > 0)
 
-        with craft_cli.emit.progress_bar(title, total_size) as progress:
+        retry_exceptions = (
+            requests.exceptions.ChunkedEncodingError,
+            requests.exceptions.ConnectionError,
+            requests.exceptions.ReadTimeout,
+        )
 
-            def download_file(
-                url: str, dest: pathlib.Path, initial_download: Iterator[int]
-            ) -> None:
-                use_initial_download = True
+        def consume_download(
+            url: str,
+            dest: pathlib.Path,
+            initial_downloads: Iterator[Iterator[int]],
+            completed_bytes: int,
+            advance: Callable[[float], None],
+        ) -> int:
+            downloaded_bytes = 0
+            try:
+                download = next(initial_downloads, None)
+                if download is None:
+                    download = self.download_chunks(url, dest)
+                    next(download)  # The total uses the initial content length.
 
-                def consume_download() -> None:
-                    nonlocal use_initial_download
+                for chunk_size in download:
+                    downloaded_bytes += chunk_size
+                    advance(completed_bytes + downloaded_bytes)
+            except retry_exceptions:
+                dest.unlink(missing_ok=True)
+                if downloaded_bytes:
+                    advance(completed_bytes)
+                raise
 
-                    if use_initial_download:
-                        download = initial_download
-                        use_initial_download = False
-                    else:
-                        download = self.download_chunks(url, dest)
-                        next(download)  # The total uses the initial content length.
+            return downloaded_bytes
 
-                    downloaded_bytes = 0
-                    try:
-                        for chunk_size in download:
-                            downloaded_bytes += chunk_size
-                            progress.advance(chunk_size)
-                    except (
-                        requests.exceptions.ChunkedEncodingError,
-                        requests.exceptions.ConnectionError,
-                        requests.exceptions.ReadTimeout,
-                    ):
-                        if downloaded_bytes:
-                            progress.advance(-downloaded_bytes)
-                        raise
-
-                util.retry(
-                    f"download {url}",
-                    requests.exceptions.ChunkedEncodingError,
-                    consume_download,
-                )
-
+        with craft_cli.emit.progress_bar(title, total_size, delta=False) as progress:
+            completed_bytes = 0
             for url, download in downloads.items():
-                download_file(url, files[url], download)
+                # The pre-created generator (whose size was already consumed
+                # above) is reused only on the first attempt; `consume_download`
+                # exhausts this one-shot iterator and creates a fresh download on
+                # each retry.
+                downloaded_bytes = util.retry(
+                    f"download {url}",
+                    retry_exceptions,
+                    consume_download,
+                    url,
+                    files[url],
+                    iter((download,)),
+                    completed_bytes,
+                    progress.advance,
+                )
+                completed_bytes += downloaded_bytes
 
         return files
