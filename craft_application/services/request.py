@@ -125,7 +125,11 @@ class RequestService(base.AppService):
                         for chunk_size in download:
                             downloaded_bytes += chunk_size
                             progress.advance(chunk_size)
-                    except requests.exceptions.ChunkedEncodingError:
+                    except (
+                        requests.exceptions.ChunkedEncodingError,
+                        requests.exceptions.ConnectionError,
+                        requests.exceptions.ReadTimeout,
+                    ):
                         if downloaded_bytes:
                             progress.advance(-downloaded_bytes)
                         raise
