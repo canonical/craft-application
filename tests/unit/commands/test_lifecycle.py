@@ -747,7 +747,12 @@ def test_shell(
     command.run(parsed_args)
 
     mock_lifecycle_run.assert_called_once_with(step_name=expected_step, part_names=None)
-    mock_subprocess_run.assert_called_once_with(["bash"], check=False)
+    bash_calls = [
+        c
+        for c in mock_subprocess_run.call_args_list
+        if c.args and c.args[0] == ["bash"] and c.kwargs.get("check", False) is False
+    ]
+    assert len(bash_calls) == 1
 
 
 def test_shell_pack(
@@ -774,7 +779,12 @@ def test_shell_pack(
     mock_lifecycle_run.assert_called_once_with(step_name="prime")
 
     # Must call the shell instead of packing
-    mock_subprocess_run.assert_called_once_with(["bash"], check=False)
+    bash_calls = [
+        c
+        for c in mock_subprocess_run.call_args_list
+        if c.args and c.args[0] == ["bash"] and c.kwargs.get("check", False) is False
+    ]
+    assert len(bash_calls) == 1
     assert not mock_pack.called
 
 

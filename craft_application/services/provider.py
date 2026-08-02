@@ -98,6 +98,18 @@ class ProviderService(base.AppService):
         """Get craft-application's suffix for the compatibility tag."""
         return ".1"
 
+    @property
+    def _use_git_build_root(self) -> bool:
+        """Whether to mount the git root as the build root for this run.
+
+        True when the application allows it *and* the user has enabled the
+        ``experimental_monorepo`` config option.
+        """
+        return bool(
+            self._app.allow_git_build_root
+            and self._services.get("config").get("experimental_monorepo")
+        )
+
     @classmethod
     def is_managed(cls) -> bool:
         """Determine whether we're running in managed mode."""
@@ -257,10 +269,12 @@ class ProviderService(base.AppService):
 
         build_on = self._services.get("config").get("build_on")
 
+        build_root = _get_build_root(work_dir, use_git_root=self._use_git_build_root)
+
         emit.progress(f"Launching managed {base_name[0]} {base_name[1]} instance...")
         with provider.launched_environment(
             project_name=project_name,
-            project_path=work_dir,
+            project_path=build_root,
             instance_name=instance_name,
             base_configuration=base,
             allow_unstable=allow_unstable,
@@ -270,7 +284,7 @@ class ProviderService(base.AppService):
             instance_architecture=build_on,
         ) as instance:
             instance.mount(
-                host_source=work_dir,
+                host_source=build_root,
                 # Ignore argument type until craft-providers accepts PurePosixPaths
                 # https://github.com/canonical/craft-providers/issues/315
                 target=self._app.managed_instance_project_path,
@@ -583,7 +597,11 @@ class ProviderService(base.AppService):
                 with emit.pause():
                     instance.execute_run(
                         list(command),
-                        cwd=self._app.managed_instance_project_path,
+                        cwd=_get_managed_cwd(
+                            self._work_dir,
+                            self._app.managed_instance_project_path,
+                            use_git_root=self._use_git_build_root,
+                        ),
                         check=True,
                         env=env,
                     )
@@ -594,3 +612,57 @@ class ProviderService(base.AppService):
             finally:
                 if active_fetch_service:
                     self._services.get("fetch").teardown_instance()
+
+
+def _find_git_root(path: pathlib.Path) -> pathlib.Path | None:
+    """Return the git working tree root containing path, or None if not in a git repo."""
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "--show-toplevel"],
+            capture_output=True,
+            text=True,
+            cwd=path,
+            check=True,
+        )
+        return pathlib.Path(result.stdout.strip())
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        return None
+
+
+def _get_build_root(work_dir: pathlib.Path, *, use_git_root: bool) -> pathlib.Path:
+    """Return the directory to mount as the build root in a managed instance.
+
+    When use_git_root is True and work_dir is inside a git repo, the git
+    working tree root is returned so that code outside the project directory
+    (e.g. shared libraries in a monorepo) is accessible in the build container.
+    """
+    if not use_git_root:
+        return work_dir
+    git_root = _find_git_root(work_dir)
+    if git_root is None:
+        return work_dir
+    emit.debug(f"Git-driven build root: mounting {str(git_root)!r} as /root/project")
+    return git_root
+
+
+def _get_managed_cwd(
+    work_dir: pathlib.Path,
+    default_cwd: pathlib.PurePosixPath,
+    *,
+    use_git_root: bool,
+) -> pathlib.PurePosixPath:
+    """Return the working directory to use when running commands in a managed instance.
+
+    When use_git_root is True and work_dir is a subdirectory of the git root,
+    the path inside the managed instance that corresponds to work_dir is returned.
+    """
+    if not use_git_root:
+        return default_cwd
+    git_root = _find_git_root(work_dir)
+    if git_root is None or git_root == work_dir:
+        return default_cwd
+    resolved_work_dir = work_dir.resolve()
+    resolved_git_root = git_root.resolve()
+    if not resolved_work_dir.is_relative_to(resolved_git_root):
+        return default_cwd
+    return default_cwd / resolved_work_dir.relative_to(resolved_git_root)

@@ -15,4 +15,9 @@ jobs:
     uses: canonical/starflow/.github/workflows/scan-python.yaml@main
     with:
       uv-export-extra-args: "--extra remote"
-      osv-extra-args: "--config=source/.osv-scanner.toml"
+      osv-extra-args: "--config=osv-scanner.toml"
+      osv-exclude-paths: |
+        docs
+      uv-export-no-groups: |
+        docs
+        docs-starter-pack
