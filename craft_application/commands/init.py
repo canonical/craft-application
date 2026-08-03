@@ -1,4 +1,4 @@
-# Copyright 2024 Canonical Ltd.
+# Copyright 2026 Canonical Ltd.
 #
 # This program is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Lesser General Public License version 3, as
@@ -90,7 +90,13 @@ class InitCommand(base.AppCommand):
                 f"choices are {humanize_list(self.profiles, 'and')})"
             ),
         )
-
+        parser.add_argument(
+            "--vcs",
+            type=str,
+            choices=["git", "none"],
+            default="git",
+            help="Initialize a version control system.",
+        )
         parser.add_argument(
             "--base",
             type=str,
@@ -122,6 +128,11 @@ class InitCommand(base.AppCommand):
         ]
         return sorted([template.name for template in template_dirs])
 
+    @property
+    def vcs_ignore_globs(self) -> list[str]:
+        """A list of globs that should be ignored when creating a .gitignore file."""
+        return []
+
     def run(self, parsed_args: argparse.Namespace) -> None:
         """Run the command."""
         # If the user provided a "name" and it's not valid, the command fails.
@@ -149,7 +160,58 @@ class InitCommand(base.AppCommand):
             project_name=project_name,
             template_dir=template_dir,
         )
+
+        self.initialize_vcs(parsed_args.vcs, project_dir)
+
         craft_cli.emit.message("Successfully initialised project.")
+
+    def initialize_vcs(
+        self,
+        vcs: str,
+        project_dir: pathlib.Path,
+    ) -> None:
+        """Initialize VCS features for a project.
+
+        Currently only supports Git.
+
+        If the Git repository already exists, it will be reused.
+
+        If a `.gitignore` file is already present, Craft-specific content will be
+        appended.
+        """
+        if vcs == "none":
+            return
+
+        craft_cli.emit.debug(f"Setting up VCS in {str(project_dir)!r}.")
+
+        from craft_application.git import GitRepo  # noqa: PLC0415
+
+        GitRepo(project_dir).init_repo()
+
+        self._create_git_ignore(project_dir)
+
+    def _create_git_ignore(self, project_dir: pathlib.Path) -> None:
+        ignore_lines = [
+            f"# Added by {self._app.name.capitalize()}",
+            *self.vcs_ignore_globs,
+        ]
+
+        # Nothing to ignore
+        if len(ignore_lines) == 1:
+            return
+
+        ignore_content = "\n".join(ignore_lines)
+
+        ignore = project_dir / ".gitignore"
+        ignore_existed = ignore.exists()
+
+        with ignore.open("at") as ignore_f:
+            # Assuming the user leaves a trailing newline on their files, this will give a cleanly
+            # separated "Added by Craft" section
+            if ignore_existed:
+                ignore_f.write("\n")
+
+            ignore_f.write(ignore_content)
 
     def _get_template_dir(self, parsed_args: argparse.Namespace) -> pathlib.Path:
         """Get the template directory for the selected profile and base."""

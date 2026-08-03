@@ -1,6 +1,6 @@
 #  This file is part of craft-application.
 #
-#  Copyright 2024 Canonical Ltd.
+#  Copyright 2026 Canonical Ltd.
 #
 #  This program is free software: you can redistribute it and/or modify it
 #  under the terms of the GNU Lesser General Public License version 3, as
@@ -54,9 +54,9 @@ def mock_push_url_raises_git_error(monkeypatch):
 @pytest.fixture
 def mock_init_raises_git_error(monkeypatch):
     git_repo_init = get_mock_callable(
-        side_effect=git.GitError("Fake _init_repo error during tests")
+        side_effect=git.GitError("Fake init_repo error during tests")
     )
-    monkeypatch.setattr(git.GitRepo, "_init_repo", git_repo_init)
+    monkeypatch.setattr(git.GitRepo, "init_repo", git_repo_init)
     return git_repo_init
 
 
@@ -235,7 +235,7 @@ def test_ensure_repository_wraps_git_error_during_init(
     mock_lp_project,
 ):
     remote_build_service._lp_project = mock_lp_project
-    with pytest.raises(RemoteBuildGitError, match="Fake _init_repo error during tests"):
+    with pytest.raises(RemoteBuildGitError, match="Fake init_repo error during tests"):
         remote_build_service._ensure_repository(tmp_path)
 
 

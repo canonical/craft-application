@@ -1,0 +1,20 @@
+summary: test testcraft init with VCS features
+
+environment:
+  VCS_STYLE/blank: ""
+  VCS_STYLE/git:   "git"
+  VCS_STYLE/none:  "none"
+
+execute: |
+  mkdir init-test
+  cd init-test
+
+  [ -n "$VCS_STYLE" ] && vcs_flag="--vcs $VCS_STYLE" || vcs_flag=""
+  testcraft init $vcs_flag
+
+  # Succeeds if $VCS_STYLE is set to "git", fails if it is "none".
+  test -d .git;       test $? -ne $([ "$VCS_STYLE" = "none" ]; echo $?)
+  test -f .gitignore; test $? -ne $([ "$VCS_STYLE" = "none" ]; echo $?)
+
+restore: |
+  rm -rf init-test

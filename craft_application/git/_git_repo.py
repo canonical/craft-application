@@ -164,7 +164,7 @@ class GitRepo:
             )
 
         if not is_repo(path):
-            self._init_repo()
+            self.init_repo()
 
         self._repo = pygit2.Repository(path.as_posix())
 
@@ -283,7 +283,7 @@ class GitRepo:
                 f"Could not check if the git repository in {str(self.path)!r} is clean."
             ) from error
 
-    def _init_repo(self) -> None:
+    def init_repo(self) -> None:
         """Initialize a git repo.
 
         :raises GitError: if the repo cannot be initialized

@@ -1,6 +1,4 @@
-# This file is part of craft_application.
-#
-# Copyright 2025 Canonical Ltd.
+# Copyright 2026 Canonical Ltd.
 #
 # This program is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Lesser General Public License version 3, as
@@ -13,14 +11,18 @@
 #
 # You should have received a copy of the GNU Lesser General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
-"""Testcraft CLI commands."""
+"""Command to initialize a project."""
 
-from .init import InitCommand
-from .lint import LintCommand
-from .state import StateCommand
+from __future__ import annotations
 
-__all__ = [
-    "InitCommand",
-    "LintCommand",
-    "StateCommand",
-]
+from craft_application.commands import InitCommand as BaseInitCommand
+from typing_extensions import override
+
+
+class InitCommand(BaseInitCommand):
+    """Init command override for Testcraft."""
+
+    @override
+    @property
+    def vcs_ignore_globs(self) -> list[str]:
+        return [*super().vcs_ignore_globs, "/*.test"]
