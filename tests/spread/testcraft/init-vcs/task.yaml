@@ -12,7 +12,7 @@ execute: |
   [ -n "$VCS_STYLE" ] && vcs_flag="--vcs $VCS_STYLE" || vcs_flag=""
   testcraft init $vcs_flag
 
-  # Succeeds if $VCS_STYLE is set to "git", fails if it is "none".
+  # Check that they do exist if using VCS, or that they _don't_ exist if VCS is "none"
   test -d .git;       test $? -ne $([ "$VCS_STYLE" = "none" ]; echo $?)
   test -f .gitignore; test $? -ne $([ "$VCS_STYLE" = "none" ]; echo $?)
 
