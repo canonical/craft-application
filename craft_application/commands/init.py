@@ -186,7 +186,7 @@ class InitCommand(base.AppCommand):
 
         from craft_application.git import GitRepo  # noqa: PLC0415
 
-        GitRepo(project_dir).init_repo()
+        _ = GitRepo(project_dir)
 
         self._create_git_ignore(project_dir)
 
