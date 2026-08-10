@@ -171,6 +171,8 @@ backends:
           workers: 4
       - ubuntu-25.10-64:
           workers: 4
+      - ubuntu-26.04-64:
+          workers: 4
       - ubuntu-26.10-64:
           workers: 4
     prepare: |
