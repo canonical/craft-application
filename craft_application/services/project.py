@@ -760,13 +760,9 @@ class ProjectService(base.AppService):
         """Determine whether the base on which to build is end-of-life."""
         base = craft_platforms.DistroBase.from_str(self.get().effective_base)
         if base.series == "devel":
+            # A devel series is never considered end-of-life.
             return False
-        try:
-            return not self._is_supported_on(base=base, date=datetime.date.today())
-        except (UnknownDistributionError, UnknownVersionError) as error:
-            # If distro-support doesn't know about this base, assume it's supported.
-            emit.debug(str(error))
-            return False
+        return not self._is_supported_on(base=base, date=datetime.date.today())
 
     def base_eol_soon_date(self) -> datetime.date | None:
         """Return the date of the base's EOL if it happens soon.

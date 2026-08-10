@@ -32,6 +32,7 @@ from craft_application.errors import CraftValidationError
 from craft_application.services.project import ProjectService
 from craft_application.services.service_factory import ServiceFactory
 from craft_parts import ProjectVar, ProjectVarInfo
+from distro_support.errors import UnknownDistributionError, UnknownVersionError
 from hypothesis import given, strategies
 
 
@@ -1010,7 +1011,7 @@ def test_check_base_eol_soon_date(
         pytest.param("ubuntu@16.04", None, True, id="eol-base"),
         pytest.param("bare", "ubuntu@16.04", True, id="eol-build-base"),
         pytest.param("ubuntu@22.04", "ubuntu@devel", False, id="devel-build-base"),
-        pytest.param("nonexistent@0.0", None, False, id="nonexistent-base"),
+        pytest.param("bare", "ubuntu@devel", False, id="devel-build-base-no-base"),
     ],
 )
 @pytest.mark.usefixtures("fake_project_file")
@@ -1018,7 +1019,7 @@ def test_is_effective_base_eol(
     real_project_service: ProjectService,
     base: str,
     build_base: str | None,
-    expected: bool,  # noqa: FBT001
+    expected: bool,
 ):
     real_project_service.configure(platform=None, build_for=None)
     raw_project = real_project_service._load_raw_project()
@@ -1027,6 +1028,30 @@ def test_is_effective_base_eol(
     raw_project["base"] = base
 
     assert real_project_service.is_effective_base_eol() is expected
+
+
+@freezegun.freeze_time("2027-01-01")
+@pytest.mark.parametrize(
+    ("base", "build_base"),
+    [
+        pytest.param("nonexistent@0.0", None, id="nonexistent-distribution"),
+        pytest.param("ubuntu@99.99", None, id="unknown-ubuntu-series"),
+    ],
+)
+@pytest.mark.usefixtures("fake_project_file")
+def test_is_effective_base_eol_unknown_base_raises(
+    real_project_service: ProjectService,
+    base: str,
+    build_base: str | None,
+):
+    real_project_service.configure(platform=None, build_for=None)
+    raw_project = real_project_service._load_raw_project()
+    if build_base:
+        raw_project["build-base"] = build_base
+    raw_project["base"] = base
+
+    with pytest.raises((UnknownDistributionError, UnknownVersionError)):
+        real_project_service.is_effective_base_eol()
 
 
 def test_deep_update(fake_project_file, real_project_service: ProjectService):
