@@ -75,7 +75,7 @@ html_theme_options = {
   'source_edit_link': "https://github.com/canonical/craft-application",
 }
 
-# Project slug; see https://meta.discourse.org/t/what-is-category-slug/87897
+# The version slug passed to the sphinx-notfound-page extenssion
 slug = "craft-application"
 
 
