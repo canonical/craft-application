@@ -1,12 +1,11 @@
 ---
-description: "Guidelines for GitHub Copilot to write comments to achieve self-explanatory code with fewer comments. Examples are in Python but it should work on any language that has comments."
-applyTo: "**"
+description: 'Guidelines for GitHub Copilot to write comments to achieve self-explanatory code with fewer comments. Examples are in Python but it should work on any language that has comments.'
+applyTo: '**'
 ---
 
 # Self-explanatory Code Commenting Instructions
 
 ## Core Principle
-
 **Write code that speaks for itself. Comment only when necessary to explain WHY, not WHAT.**
 We do not need comments most of the time.
 
@@ -15,7 +14,6 @@ We do not need comments most of the time.
 ### ❌ AVOID These Comment Types
 
 **Obvious Comments**
-
 ```python
 # Bad: States the obvious
 counter = 0  # Initialize counter to zero
@@ -23,7 +21,6 @@ counter += 1  # Increment counter by one
 ```
 
 **Redundant Comments**
-
 ```python
 # Bad: Comment repeats the code
 def get_user_name():
@@ -31,7 +28,6 @@ def get_user_name():
 ```
 
 **Outdated Comments**
-
 ```python
 # Bad: Comment doesn't match the code
 # Calculate tax at 5% rate
@@ -41,7 +37,6 @@ tax = price * 0.08  # Actually 8%
 ### ✅ WRITE These Comment Types
 
 **Complex Business Logic**
-
 ```python
 # Good: Explains WHY this specific calculation
 # Apply progressive tax brackets: 10% up to 10k, 20% above
@@ -49,7 +44,6 @@ tax = calculate_progressive_tax(income, [0.10, 0.20], [10_000])
 ```
 
 **Non-obvious Algorithms**
-
 ```python
 # Good: Explains the algorithm choice
 # Using Floyd–Warshall for all-pairs shortest paths
@@ -62,7 +56,6 @@ for k in range(vertices):
 ```
 
 **Regex Patterns**
-
 ```python
 # Good: Explains what the regex matches
 # Match email format: username@domain.extension
@@ -71,7 +64,6 @@ email_pattern = re.compile(r'^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$')
 ```
 
 **API Constraints or Gotchas**
-
 ```python
 # Good: Explains external constraint
 # GitHub API rate limit: 5000 requests/hour for authenticated users
@@ -82,16 +74,14 @@ response = await http_client.get(github_api_url)
 ## Decision Framework
 
 Before writing a comment, ask:
-
-1. **Is the code self-explanatory?** → No comment needed
-2. **Would a better variable/function name eliminate the need?** → Refactor instead
-3. **Does this explain WHY, not WHAT?** → Good comment
+1. **Is the code self-explanatory?** → No comment needed  
+2. **Would a better variable/function name eliminate the need?** → Refactor instead  
+3. **Does this explain WHY, not WHAT?** → Good comment  
 4. **Will this help future maintainers?** → Good comment
 
 ## Special Cases for Comments
 
 ### Public APIs
-
 ```python
 def calculate_compound_interest(principal: float, rate: float, time: float, compound_frequency: int = 1) -> float:
     """
@@ -111,7 +101,6 @@ def calculate_compound_interest(principal: float, rate: float, time: float, comp
 ```
 
 ### Configuration and Constants
-
 ```python
 # Good: Explains the source or reasoning
 MAX_RETRIES = 3  # Based on network reliability studies
@@ -119,7 +108,6 @@ API_TIMEOUT = 5.0  # AWS Lambda timeout is 15s, leaving buffer (seconds)
 ```
 
 ### Annotations
-
 ```python
 # TODO: Replace with proper user authentication after security review
 # FIXME: Memory leak in production - investigate connection pooling
@@ -136,7 +124,6 @@ API_TIMEOUT = 5.0  # AWS Lambda timeout is 15s, leaving buffer (seconds)
 ## Anti-Patterns to Avoid
 
 ### Dead Code Comments
-
 ```python
 # Bad: Don't comment out code
 # def old_function():
@@ -146,7 +133,6 @@ def new_function():
 ```
 
 ### Changelog Comments
-
 ```python
 # Bad: Don't maintain history in comments
 # Modified by John on 2023-01-15
@@ -157,7 +143,6 @@ def process_data():
 ```
 
 ### Divider Comments
-
 ```python
 # Bad: Don't use decorative comments
 # =====================================
@@ -168,7 +153,6 @@ def process_data():
 ## Quality Checklist
 
 Before committing, ensure your comments:
-
 - [ ] Explain WHY, not WHAT
 - [ ] Are grammatically correct and clear
 - [ ] Will remain accurate as code evolves
