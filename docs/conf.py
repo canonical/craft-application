@@ -181,6 +181,7 @@ exclude_patterns = [
     # Common docs
     "common/README.md",
     "common/craft-application/how-to-guides/build-remotely.rst",
+    "common/craft-application/how-to-guides/pack-a-pro-artifact.rst",
     "common/craft-application/how-to-guides/reuse-packages-between-builds.rst",
     "common/craft-application/reference/remote-builds.rst",
     "common/craft-application/reference/fetch-service.rst",
