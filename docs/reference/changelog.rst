@@ -15,6 +15,18 @@ Changelog
 
     For a complete list of commits, check out the `1.2.3`_ release on GitHub.
 
+7.1.1 (2026-08-11)
+------------------
+
+Bug fixes
+=========
+
+- `#1152 <https://github.com/canonical/craft-application/issues/1152>`__
+  ``is_effective_base_eol()`` crashes with ``UnknownVersionError`` when effective
+  base is ``devel``
+
+For a complete list of commits, check out the `7.1.1`_ release on GitHub.
+
 7.1.0 (2026-07-07)
 ------------------
 
@@ -1380,3 +1392,4 @@ For a complete list of commits, check out the `2.7.0`_ release on GitHub.
 .. _7.0.0: https://github.com/canonical/craft-application/releases/tag/7.0.0
 .. _7.0.1: https://github.com/canonical/craft-application/releases/tag/7.0.1
 .. _7.1.0: https://github.com/canonical/craft-application/releases/tag/7.1.0
+.. _7.1.1: https://github.com/canonical/craft-application/releases/tag/7.1.1
