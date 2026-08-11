@@ -46,7 +46,7 @@ def test_get_real_file(tmp_path, emitter, request_service, url, checksum, size):
     assert actual_hash == checksum
     emitter.assert_interactions(
         [
-            call("progress_bar", f"Downloading {url}", size),
+            call("progress_bar", f"Downloading {url}", size, delta=False),
         ]
     )
 
