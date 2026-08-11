@@ -19,18 +19,18 @@ Enable guest attachment
 -----------------------
 
 |app| makes use of Ubuntu Pro’s own support for LXD instances, but this support needs
-to be explicitly enabled and configured. On a terminal, run:
+to be explicitly enabled and configured. In a terminal, run:
 
-.. terminal::
+.. code-block:: bash
 
     sudo pro config set lxd_guest_attach=available
 
 This command lets |app| attach its LXD instances to the system’s Pro subscription,
 and only needs to be executed once.
 
-Next, restart LXD so that the new configuration takes effect:
+Restart LXD so the new configuration takes effect:
 
-.. terminal::
+.. code-block:: bash
 
     sudo snap restart lxd
 
@@ -45,16 +45,16 @@ Next, determine which Pro services fit your needs. |app| supports the following 
 - ``fips``, ``fips-updates`` or ``fips-preview``: If you need to deploy |an-artifact| in a
   highly regulated environment that processes sensitive data.
 
-The desired Pro services don’t need to be enabled on your system, but they do need to be
-available. Run ``pro status`` and check the ``ENTITLED`` column to check whether a service is
-available. The Ubuntu Pro Client documentation has
-`further information <https://documentation.ubuntu.com/pro-client/en/v32/explanations/which_services/>`__
-on each service.
+The desired Pro services must be available. On a system with your Pro token
+attached, run ``pro status`` and check the ``ENTITLED`` column for available
+services. The Ubuntu Pro Client documentation has `detailed information on each service
+<https://documentation.ubuntu.com/pro-client/en/v32/explanations/which_services/>`__.
 
 Pack the |artifact|
 -------------------
 
-Now you can pack the |artifact| with the desired services. Provide them to the ``--pro`` option:
+Pack your Pro-compliant |artifact| with the ``pack`` command, listing the desired
+services with the ``--pro`` option:
 
 .. code-block:: bash
     :substitutions:
