@@ -76,7 +76,7 @@ html_theme_options = {
 }
 
 # Project slug; see https://meta.discourse.org/t/what-is-category-slug/87897
-# slug = ''
+slug = "craft-application"
 
 
 #########################
