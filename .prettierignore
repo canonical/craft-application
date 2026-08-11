@@ -1,3 +1,4 @@
 tests/**/*.yaml
 docs/.sphinx
 .github/skills
+.github/instructions
