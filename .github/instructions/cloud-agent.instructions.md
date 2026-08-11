@@ -1,7 +1,7 @@
 ---
-applyTo: "**"
-excludeAgent: "code-review"
-description: "Guidelines for GitHub Copilot cloud agent when working in Starcraft."
+applyTo: '**'
+excludeAgent: 'code-review'
+description: 'Guidelines for GitHub Copilot cloud agent when working in Starcraft.'
 ---
 
 # GitHub Cloud Agent Instructions for Starcraft
@@ -56,6 +56,7 @@ Examples of requests that should trigger this behavior include:
 - "apply the fix"
 - "push what you suggested"
 - "land these changes"
+
 
 ### Combined implement and commit requests
 
