@@ -29,6 +29,7 @@ import pytest_mock
 from craft_application import errors, services
 from craft_application.git import GitRepo, short_commit_sha
 from craft_application.models.constraints import MESSAGE_INVALID_NAME
+from craft_application.services import InitService
 from craft_cli.pytest_plugin import RecordingEmitter
 
 
@@ -359,6 +360,7 @@ def test_initialise_project(
         project_dir=project_dir,
         project_name=project_name,
         template_dir=templates_dir,
+        vcs="none",
     )
     get_templates_mock.assert_called_once_with(templates_dir)
     create_project_dir_mock.assert_called_once_with(project_dir=project_dir)
@@ -388,3 +390,54 @@ def test_valid_name_invalid_use_default(init_service):
 
     obtained = init_service.validate_project_name(invalid_name, use_default=True)
     assert obtained == "my-default-name"
+
+
+def test_initialize_vcs(
+    init_service: InitService,
+    tmp_path: pathlib.Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        InitService, "_vcs_ignore_lines", property(lambda _: ["*.test"])
+    )
+    init_service._initialize_vcs("git", tmp_path)
+
+    assert pathlib.Path(".git").is_dir()
+    assert (tmp_path / ".gitignore").read_text() == "# Added by Testcraft\n*.test"
+
+
+def test_create_vcs_ignore_empty(
+    init_service: InitService,
+    tmp_path: pathlib.Path,
+) -> None:
+    init_service._initialize_vcs("git", tmp_path)
+
+    assert not (tmp_path / ".gitignore").exists()
+
+
+@pytest.mark.parametrize(
+    ("existing_content", "expected_content"),
+    [
+        (None, "# Added by Testcraft\n*.test\n*.testcomp"),
+        (
+            "existing_content\n",
+            "existing_content\n\n# Added by Testcraft\n*.test\n*.testcomp",
+        ),
+    ],
+)
+def test_create_vcs_ignore(
+    init_service: InitService,
+    tmp_path: pathlib.Path,
+    monkeypatch: pytest.MonkeyPatch,
+    existing_content: str | None,
+    expected_content: str,
+) -> None:
+    monkeypatch.setattr(
+        InitService, "_vcs_ignore_lines", property(lambda _: ["*.test", "*.testcomp"])
+    )
+    if existing_content is not None:
+        (tmp_path / ".gitignore").write_text(existing_content)
+
+    init_service._create_git_ignore(tmp_path)
+
+    assert (tmp_path / ".gitignore").read_text() == expected_content

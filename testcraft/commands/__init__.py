@@ -15,12 +15,10 @@
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Testcraft CLI commands."""
 
-from .init import InitCommand
 from .lint import LintCommand
 from .state import StateCommand
 
 __all__ = [
-    "InitCommand",
     "LintCommand",
     "StateCommand",
 ]

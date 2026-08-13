@@ -1,3 +1,5 @@
+# This file is part of craft_application.
+#
 # Copyright 2026 Canonical Ltd.
 #
 # This program is free software: you can redistribute it and/or modify it
@@ -11,18 +13,15 @@
 #
 # You should have received a copy of the GNU Lesser General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
-"""Command to initialize a project."""
+"""Init service override for Testcraft."""
 
-from __future__ import annotations
-
-from craft_application.commands import InitCommand as BaseInitCommand
+from craft_application.services import InitService as BaseInitService
 from typing_extensions import override
 
 
-class InitCommand(BaseInitCommand):
-    """Init command override for Testcraft."""
+class InitService(BaseInitService):
+    """Init service override for Testcraft."""
 
     @override
-    @property
-    def vcs_ignore_globs(self) -> list[str]:
-        return [*super().vcs_ignore_globs, "/*.test"]
+    def _vcs_ignore_lines(self) -> list[str]:
+        return [*super()._vcs_ignore_lines, "/*.test"]

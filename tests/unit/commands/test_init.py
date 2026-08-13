@@ -70,6 +70,7 @@ def test_init_in_cwd(init_command, name, new_dir, mock_services, emitter):
         project_dir=new_dir,
         project_name=expected_name,
         template_dir=init_command.parent_template_dir / "test-profile",
+        vcs="none",
     )
     emitter.assert_message("Successfully initialised project.")
 
@@ -93,6 +94,7 @@ def test_init_run_project_dir(init_command, name, mock_services, emitter):
         project_dir=project_dir.expanduser().resolve(),
         project_name=expected_name,
         template_dir=init_command.parent_template_dir / "test-profile",
+        vcs="none",
     )
     emitter.assert_message("Successfully initialised project.")
 
@@ -159,6 +161,7 @@ def test_invalid_name_directory(init_command, mock_services):
         project_dir=project_dir.expanduser().resolve(),
         project_name="my-project",
         template_dir=init_command.parent_template_dir / "simple",
+        vcs="none",
     )
 
 
@@ -224,6 +227,7 @@ def test_valid_base_name(
         project_dir=pathlib.Path.cwd().resolve(),
         project_name="test-project-name",
         template_dir=init_command.parent_template_dir / f"simple__{base}",
+        vcs="none",
     )
     emitter.assert_message("Successfully initialised project.")
 
@@ -263,64 +267,6 @@ def test_valid_base_variant(init_command, fake_template_dirs, mock_services, emi
         project_dir=pathlib.Path.cwd().resolve(),
         project_name="test-project-name",
         template_dir=init_command.parent_template_dir / "simple__ubuntu@22.04",
+        vcs="none",
     )
     emitter.assert_message("Successfully initialised project.")
-
-
-def test_initialize_vcs(
-    init_command,
-    tmp_path: pathlib.Path,
-    monkeypatch: pytest.MonkeyPatch,
-    emitter,
-    mocker,
-) -> None:
-    monkeypatch.chdir(tmp_path)
-    mocker.patch.object(InitCommand, "vcs_ignore_globs", ["*.test"])
-
-    init_command.initialize_vcs("git", tmp_path)
-
-    assert pathlib.Path(".git").is_dir()
-    emitter.assert_debug(f"Setting up VCS in {str(tmp_path)!r}.")
-    assert (tmp_path / ".gitignore").read_text() == "# Added by Testcraft\n*.test"
-
-
-def test_create_vcs_ignore_empty(
-    init_command,
-    tmp_path: pathlib.Path,
-    monkeypatch: pytest.MonkeyPatch,
-    mocker,
-) -> None:
-    monkeypatch.chdir(tmp_path)
-    mocker.patch.object(InitCommand, "vcs_ignore_globs", [])
-
-    init_command._create_git_ignore(tmp_path)
-
-    assert not (tmp_path / ".gitignore").exists()
-
-
-@pytest.mark.parametrize(
-    ("existing_content", "expected_content"),
-    [
-        (None, "# Added by Testcraft\n*.test\n*.testcomp"),
-        (
-            "existing_content\n",
-            "existing_content\n\n# Added by Testcraft\n*.test\n*.testcomp",
-        ),
-    ],
-)
-def test_create_vcs_ignore(
-    init_command,
-    tmp_path: pathlib.Path,
-    monkeypatch: pytest.MonkeyPatch,
-    existing_content: str | None,
-    expected_content: str,
-    mocker,
-) -> None:
-    monkeypatch.chdir(tmp_path)
-    mocker.patch.object(InitCommand, "vcs_ignore_globs", ["*.test", "*.testcomp"])
-    if existing_content is not None:
-        (tmp_path / ".gitignore").write_text(existing_content)
-
-    init_command._create_git_ignore(tmp_path)
-
-    assert (tmp_path / ".gitignore").read_text() == expected_content

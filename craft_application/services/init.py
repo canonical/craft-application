@@ -82,6 +82,7 @@ class InitService(base.AppService):
         project_dir: pathlib.Path,
         project_name: str,
         template_dir: pathlib.Path,
+        vcs: str,
     ) -> None:
         """Initialise a new project from a template.
 
@@ -97,10 +98,64 @@ class InitService(base.AppService):
             f"Initializing project {project_name!r} in {str(project_dir)!r} from "
             f"template in {str(template_dir)!r}."
         )
+        self._initialize_vcs(vcs, project_dir)
         environment = self._get_templates_environment(template_dir)
         self._create_project_dir(project_dir=project_dir)
         context = self._get_context(name=project_name, project_dir=project_dir)
         self._render_project(environment, project_dir, template_dir, context)
+
+    @property
+    def _vcs_ignore_lines(self) -> list[str]:
+        """A list of ignore lines to add when creating a .gitignore file."""
+        return []
+
+    def _initialize_vcs(
+        self,
+        vcs: str,
+        project_dir: pathlib.Path,
+    ) -> None:
+        """Initialize VCS features for a project.
+
+        Currently only supports Git.
+
+        If the Git repository already exists, it will be reused.
+
+        If a `.gitignore` file is already present, Craft-specific content will be
+        appended.
+        """
+        if vcs == "none":
+            return
+
+        emit.debug(f"Setting up VCS in {str(project_dir)!r}.")
+
+        from craft_application.git import GitRepo  # noqa: PLC0415
+
+        _ = GitRepo(project_dir)
+
+        self._create_git_ignore(project_dir)
+
+    def _create_git_ignore(self, project_dir: pathlib.Path) -> None:
+        ignore_lines = [
+            f"# Added by {self._app.name.capitalize()}",
+            *self._vcs_ignore_lines,
+        ]
+
+        # Nothing to ignore
+        if len(ignore_lines) == 1:
+            return
+
+        ignore_content = "\n".join(ignore_lines)
+
+        ignore = project_dir / ".gitignore"
+        ignore_existed = ignore.exists()
+
+        with ignore.open("at") as ignore_f:
+            # Assuming the user leaves a trailing newline on their files, this will give a cleanly
+            # separated "Added by Craft" section
+            if ignore_existed:
+                ignore_f.write("\n")
+
+            ignore_f.write(ignore_content)
 
     def check_for_existing_files(
         self,
