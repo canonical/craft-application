@@ -196,6 +196,7 @@ def test_init_works_with_empty_templates_dir(
         project_dir=fake_empty_project_dir,
         project_name="fake-project-dir",
         template_dir=fake_empty_template_dir,
+        vcs="none",
     )
 
     with check:
@@ -219,6 +220,7 @@ def test_init_works_with_simple_template(
         project_dir=fake_empty_project_dir,
         project_name="fake-project-dir",
         template_dir=template_dir_with_testcraft_yaml_j2,
+        vcs="none",
     )
 
     with check:
@@ -252,6 +254,7 @@ def test_init_works_with_single_template_and_custom_name(
         project_dir=fake_empty_project_dir,
         project_name=name,
         template_dir=template_dir_with_testcraft_yaml_j2,
+        vcs="none",
     )
 
     with check:
@@ -288,6 +291,7 @@ def test_init_works_with_non_jinja2_templates(
         project_dir=fake_empty_project_dir,
         project_name="fake-project-dir",
         template_dir=template_dir_with_multiple_non_ninja_files,
+        vcs="none",
     )
 
     with check:
@@ -314,6 +318,7 @@ def test_init_does_not_follow_symlinks_but_copies_them_as_is(
         project_dir=fake_empty_project_dir,
         project_name="fake-project-dir",
         template_dir=template_dir_with_symlinks,
+        vcs="none",
     )
 
     project = Project.from_yaml_file(fake_empty_project_dir / project_yaml_filename)
@@ -336,6 +341,7 @@ def test_init_copies_executables(
         project_dir=fake_empty_project_dir,
         project_name="fake-project-dir",
         template_dir=template_dir_with_executables,
+        vcs="none",
     )
 
     for filename in ["file.sh", "nested/file.sh", "template.sh", "nested/template.sh"]:
@@ -360,6 +366,7 @@ def test_init_does_not_fail_on_non_empty_dir(
         project_dir=non_empty_project_dir,
         project_name="fake-non-empty-project-dir",
         template_dir=template_dir_with_testcraft_yaml_j2,
+        vcs="none",
     )
 
     with check:
@@ -389,6 +396,7 @@ def test_init_does_not_override_existing_craft_yaml(
         project_dir=non_empty_project_dir,
         project_name="fake-project-dir",
         template_dir=template_dir_with_testcraft_yaml_j2,
+        vcs="none",
     )
 
     with check:
@@ -417,6 +425,7 @@ def test_init_with_different_name_and_directory(
         project_dir=fake_empty_project_dir,
         project_name=name,
         template_dir=template_dir_with_testcraft_yaml_j2,
+        vcs="none",
     )
 
     with check:
@@ -445,6 +454,7 @@ def test_init_with_default_arguments_uses_current_directory(
         project_dir=fake_empty_project_dir,
         project_name="fake-project-dir",
         template_dir=template_dir_with_testcraft_yaml_j2,
+        vcs="none",
     )
 
     with check:
@@ -507,6 +517,7 @@ def test_init_service_with_version_without_git_repository(
         project_dir=project_path,
         project_name=project_path.name,
         template_dir=template_dir_with_versioned_testcraft_yaml_j2,
+        vcs="none",
     )
     project_yaml_path = project_path / project_yaml_filename
 
@@ -528,6 +539,7 @@ def test_init_service_with_version_based_on_commit(
         project_dir=project_path,
         project_name=project_path.name,
         template_dir=template_dir_with_versioned_testcraft_yaml_j2,
+        vcs="none",
     )
     project_yaml_path = project_path / project_yaml_filename
 
@@ -549,6 +561,7 @@ def test_init_service_with_version_based_on_tag(
         project_dir=project_path,
         project_name=project_path.name,
         template_dir=template_dir_with_versioned_testcraft_yaml_j2,
+        vcs="none",
     )
     project_yaml_path = project_path / project_yaml_filename
 

@@ -699,7 +699,7 @@ def test_clone_repository_appends_correct_parameters_to_clone_command(
     """Test if GitRepo uses correct arguments in subprocess calls."""
     # it is not a repo before clone is triggered, but will be after fake pygit2.clone_repository is called
     mocker.patch("craft_application.git._git_repo.is_repo", side_effect=[False, True])
-    mocked_init = mocker.patch.object(GitRepo, "init_repo")
+    mocked_init = mocker.patch.object(GitRepo, "_init_repo")
     fake_repo_url = "fake-repository-url.localhost"
     from craft_application.git._git_repo import (  # noqa: PLC0415
         logger as git_repo_logger,
@@ -728,7 +728,7 @@ def test_clone_repository_returns_git_repo_on_succcess_clone(mocker, empty_repos
     """Test if GitRepo is return on clone success."""
     # it is not a repo before clone is triggered, but will be after fake pygit2.clone_repository is called
     mocker.patch("craft_application.git._git_repo.is_repo", side_effect=[False, True])
-    mocked_init = mocker.patch.object(GitRepo, "init_repo")
+    mocked_init = mocker.patch.object(GitRepo, "_init_repo")
     fake_repo_url = "fake-repository-url.localhost"
     fake_branch = "some-fake-branch"
 
