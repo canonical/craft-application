@@ -441,3 +441,38 @@ def test_create_vcs_ignore(
     init_service._create_git_ignore(tmp_path)
 
     assert (tmp_path / ".gitignore").read_text() == expected_content
+
+
+@pytest.mark.parametrize(
+    ("ignore_lines", "old_content", "expected_content"),
+    [
+        pytest.param(
+            ["*.test"], "*.test\n*.boop\n", "*.test\n*.boop\n", id="no-addition"
+        ),
+        pytest.param(["*.test"], "", "# Added by Testcraft\n*.test\n", id="empty"),
+        pytest.param(
+            ["*.test", "*.testcomp"],
+            "*.test\n*.boop\n",
+            "*.test\n*.boop\n\n# Added by Testcraft\n*.testcomp\n",
+            id="partial-skip",
+        ),
+    ],
+)
+def test_create_vcs_ignore_no_repeat(
+    init_service: InitService,
+    tmp_path: pathlib.Path,
+    monkeypatch: pytest.MonkeyPatch,
+    ignore_lines: list[str],
+    old_content: str,
+    expected_content: str,
+) -> None:
+    monkeypatch.setattr(
+        InitService, "_vcs_ignore_lines", property(lambda _: ignore_lines)
+    )
+    ignore = tmp_path / ".gitignore"
+    if old_content:
+        ignore.write_text(old_content)
+
+    init_service._create_git_ignore(tmp_path)
+
+    assert ignore.read_text() == expected_content

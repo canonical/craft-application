@@ -135,27 +135,32 @@ class InitService(base.AppService):
         self._create_git_ignore(project_dir)
 
     def _create_git_ignore(self, project_dir: pathlib.Path) -> None:
-        ignore_lines = [
-            f"# Added by {self._app.name.capitalize()}",
-            *self._vcs_ignore_lines,
+        ignore = project_dir / ".gitignore"
+        ignore_exists = ignore.exists()
+
+        # Don't ignore things that the user already had ignored
+        old_ignore = ignore.read_text().splitlines() if ignore_exists else ""
+        lines_to_add = [
+            line for line in self._vcs_ignore_lines if line not in old_ignore
         ]
 
-        # Nothing to ignore
-        if len(ignore_lines) == 1:
+        if len(lines_to_add) == 0:
             return
 
-        ignore_content = "\n".join(ignore_lines)
+        ignore_lines = [
+            f"# Added by {self._app.name.capitalize()}",
+            *lines_to_add,
+        ]
 
-        ignore = project_dir / ".gitignore"
-        ignore_existed = ignore.exists()
+        new_ignore_content = "\n".join(ignore_lines) + "\n"
 
         with ignore.open("at") as ignore_f:
             # Assuming the user leaves a trailing newline on their files, this will give a cleanly
             # separated "Added by Craft" section
-            if ignore_existed:
+            if ignore_exists:
                 ignore_f.write("\n")
 
-            ignore_f.write(ignore_content)
+            ignore_f.write(new_ignore_content)
 
     def check_for_existing_files(
         self,
