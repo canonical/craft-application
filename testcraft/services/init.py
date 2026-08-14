@@ -23,5 +23,6 @@ class InitService(BaseInitService):
     """Init service override for Testcraft."""
 
     @override
+    @property
     def _vcs_ignore_lines(self) -> list[str]:
         return [*super()._vcs_ignore_lines, "/*.test"]
