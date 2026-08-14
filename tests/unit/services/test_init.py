@@ -403,7 +403,7 @@ def test_initialize_vcs(
     init_service._initialize_vcs("git", tmp_path)
 
     assert pathlib.Path(".git").is_dir()
-    assert (tmp_path / ".gitignore").read_text() == "# Added by Testcraft\n*.test"
+    assert (tmp_path / ".gitignore").read_text() == "# Added by Testcraft\n*.test\n"
 
 
 def test_create_vcs_ignore_empty(
@@ -418,10 +418,10 @@ def test_create_vcs_ignore_empty(
 @pytest.mark.parametrize(
     ("existing_content", "expected_content"),
     [
-        (None, "# Added by Testcraft\n*.test\n*.testcomp"),
+        (None, "# Added by Testcraft\n*.test\n*.testcomp\n"),
         (
             "existing_content\n",
-            "existing_content\n\n# Added by Testcraft\n*.test\n*.testcomp",
+            "existing_content\n\n# Added by Testcraft\n*.test\n*.testcomp\n",
         ),
     ],
 )
