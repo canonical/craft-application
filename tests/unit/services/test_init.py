@@ -402,7 +402,7 @@ def test_initialize_vcs(
     )
     init_service._initialize_vcs("git", tmp_path)
 
-    assert pathlib.Path(".git").is_dir()
+    assert (tmp_path / ".git").is_dir()
     assert (tmp_path / ".gitignore").read_text() == "# Added by Testcraft\n*.test\n"
 
 
