@@ -27,12 +27,14 @@ Follow these stages sequentially. **Do not skip stages.**
 ### Execution Requirements
 
 **CRITICAL:** After completing each stage, you MUST:
+
 1. Confirm the skill was actually invoked (not just described)
 2. Capture the output and record findings
 3. State the completion status explicitly
 
 **Verification Pattern:**
 After each stage, state:
+
 - `✓ Stage [N] complete: [skill-name] generated [N] findings`
 - If no findings: `✓ Stage [N] complete: [skill-name] found no issues`
 
@@ -59,6 +61,7 @@ After each stage, state:
 **Execute:** Map the documentation structure before analyzing content.
 
 **Actions:**
+
 1. List all documentation files under `docs/` (or equivalent)
 2. Identify the documentation build system (Sphinx, MkDocs, Jekyll, etc.)
 3. Note the directory structure (flat vs. categorized)
@@ -67,6 +70,7 @@ After each stage, state:
 **Output:** Store this structural map internally for use in later stages.
 
 **Checkpoint:** Confirm you have identified:
+
 - [ ] Documentation root directory
 - [ ] Build system type
 - [ ] File organization pattern
@@ -134,15 +138,16 @@ Then state: `✓ Stage 2 complete: Structure mapped ([N] files in [system] with 
 
 For each skill output, extract findings and populate the corresponding report section:
 
-| Skill | Report Section | Format |
-|-------|----------------|--------|
-| documentation-build | Build Findings | List of errors/warnings or "No issues found" |
-| documentation-verify | Accuracy Findings | Grouped by classification (unsupported/outdated/incorrect/imprecise) |
-| documentation-diataxis | Diataxis Findings | Table of declared vs inferred categories, list misalignments |
-| documentation-structure | Structure Findings | List of violations or "No issues found" |
-| documentation-style | Style Findings | List of violations with quoted style guide passages |
+| Skill                   | Report Section     | Format                                                               |
+| ----------------------- | ------------------ | -------------------------------------------------------------------- |
+| documentation-build     | Build Findings     | List of errors/warnings or "No issues found"                         |
+| documentation-verify    | Accuracy Findings  | Grouped by classification (unsupported/outdated/incorrect/imprecise) |
+| documentation-diataxis  | Diataxis Findings  | Table of declared vs inferred categories, list misalignments         |
+| documentation-structure | Structure Findings | List of violations or "No issues found"                              |
+| documentation-style     | Style Findings     | List of violations with quoted style guide passages                  |
 
 **Handling Empty Results:**
+
 - If a skill produces no findings: Write "No issues found" in that section
 - If a skill is not applicable: Write "Not applicable - [reason]" (e.g., "Not applicable -- RTD artefacts not detected")
 
@@ -163,22 +168,27 @@ For each skill output, extract findings and populate the corresponding report se
 If a stage fails to complete, handle as follows:
 
 ### Build Validation Failure
+
 - Report build errors immediately
 - STOP the workflow - do not proceed to content analysis
 - Include build errors in the final report
 
 ### Skill Invocation Errors
+
 - Report the error in the corresponding report section
 - Continue with remaining stages
 - Note the failure in the Summary section
 
 ### Missing Dependencies
+
 - Report what's missing (e.g., "Style guide not found at docs/style-guide.md")
 - Mark that stage as "Incomplete" in the report
 - Continue with other stages
 
 ### Incomplete Stages
+
 If any stage could not be completed, add an "Incomplete Stages" section to the report listing:
+
 - Which stage failed
 - Why it failed
 - What's needed to complete it

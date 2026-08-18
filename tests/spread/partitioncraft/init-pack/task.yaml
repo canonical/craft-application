@@ -24,6 +24,5 @@ execute: |
     exit 1
   fi
 
-
 restore: |
   rm -rf init-test

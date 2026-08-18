@@ -29,14 +29,13 @@ parts:
       - on amd64 to s390x:
           hello-world-s390x.txt: hello-world.txt
 
-
     # grammar list (including non-grammar elements)
     build-environment:
       - HELLO: hello
       - on amd64 to riscv64:
-        - ARCH: riscv64
+          - ARCH: riscv64
       - on amd64 to s390x:
-        - ARCH: s390x
+          - ARCH: s390x
 
     override-build: |
       if [[ "$HELLO" != "hello" || "$ARCH" != "riscv64" ]]; then

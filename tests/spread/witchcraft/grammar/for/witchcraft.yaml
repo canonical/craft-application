@@ -29,14 +29,13 @@ parts:
       - for platform2:
           hello-world-platform2.txt: hello-world.txt
 
-
     # grammar list (including non-grammar elements)
     build-environment:
       - HELLO: hello
       - for platform1:
-        - ARCH: riscv64
+          - ARCH: riscv64
       - for platform2:
-        - ARCH: s390x
+          - ARCH: s390x
 
     override-build: |
       # test the grammar in 'build-environment'

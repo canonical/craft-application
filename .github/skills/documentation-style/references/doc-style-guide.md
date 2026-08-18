@@ -127,16 +127,16 @@ Examples: `tut_get_started`, `how_add_actions`, `exp_interface_concepts`, `ref_c
 
 Target audience is developers and technical professionals seeking to:
 
-* Achieve specific goals without much overhead and roundabout musings
-* Perform and conceive complex ad-hoc tasks and workflows that require precision and depth
-* Attain understanding of the project's key capabilities beneficial for their scenarios
+- Achieve specific goals without much overhead and roundabout musings
+- Perform and conceive complex ad-hoc tasks and workflows that require precision and depth
+- Attain understanding of the project's key capabilities beneficial for their scenarios
 
 Content follows the Diátaxis framework, providing:
 
-* Concise tutorials for common, starter-level actions and scenarios, eliminating the need to invent custom steps and allowing novice users to journey along the hot path effortlessly
-* Elaborate explanations of the thinking behind the project's design, including design decisions, related concepts, and how it should be used
-* Detailed how-to guides that address specific needs of advanced users and cover topics beyond basic entry-level operations
-* Comprehensive reference of all options, settings, and details available to customize the project's operation in any desirable manner
+- Concise tutorials for common, starter-level actions and scenarios, eliminating the need to invent custom steps and allowing novice users to journey along the hot path effortlessly
+- Elaborate explanations of the thinking behind the project's design, including design decisions, related concepts, and how it should be used
+- Detailed how-to guides that address specific needs of advanced users and cover topics beyond basic entry-level operations
+- Comprehensive reference of all options, settings, and details available to customize the project's operation in any desirable manner
 
 The tone is authoritative but relaxed, confident but approachable. Think water cooler conversation, not classroom session.
 
@@ -153,11 +153,13 @@ List your dependencies and components in YAML to define an environment. The key 
 Use active voice for user actions and cause-effect relationships. Use passive voice when the agent is unknown or the effect is the focus.
 
 Active voice examples (preferred for actions):
+
 - "The server hosts all files"
 - "You install apps with the App Center"
 - "The validate library checks the form for errors"
 
 Passive voice examples (appropriate for effects):
+
 - "Before upload, the form is checked for errors"
 - "The files are deleted every time the script runs"
 
@@ -229,20 +231,20 @@ In practice, simpler paragraphs may use just Topic-Example or Topic-Development,
 Avoid clichés, violent metaphors, and jargon. Replace them with simpler alternatives:
 
 - **Clichés**
-  - `the ability to`, `is able to` → `can`
-  - `in order to` → `to`
-  - Avoid: `allow`, `going forward`, `not only...but also`
+    - `the ability to`, `is able to` → `can`
+    - `in order to` → `to`
+    - Avoid: `allow`, `going forward`, `not only...but also`
 
 - **Violent metaphors**
-  - `kill`, `terminate` → `stop`
-  - `execute` → `run`
-  - `eliminate` → `remove`
+    - `kill`, `terminate` → `stop`
+    - `execute` → `run`
+    - `eliminate` → `remove`
 
 - **Jargon**
-  - `leverage` → `use`
-  - `end user` → `user`
-  - `use case` → `example` or `scenario`
-  - Avoid: `ecosystem`, `form factor`, `harness`, `next level`
+    - `leverage` → `use`
+    - `end user` → `user`
+    - `use case` → `example` or `scenario`
+    - Avoid: `ecosystem`, `form factor`, `harness`, `next level`
 
 This is not an exhaustive list; use your best judgment.
 
@@ -276,11 +278,13 @@ Avoid: "The `yaml` object is sourced from the `yamllib` library. This is only av
 Convention: Use US English spelling, grammar, and formatting conventions throughout the documentation.
 
 Common US/UK differences:
+
 - Patterns: `-ize` (not `-ise`), `-or` (not `-our`), `-able` (not `-eable`)
 - US: `license` (noun and verb), `defense`, `program`, `percent`, `skeptical`, `catalog`, `traveling`, `labeled`
 - UK: `licence` (noun), `defence`, `programme` (non-IT), `per cent`, `sceptical`, `catalogue`, `travelling`, `labelled`
 
 Common technology terms:
+
 - `email`, `online`, `website`, `internet`
 - `setup` (noun), `set up` (verb)
 - `backup` (noun), `back up` (verb)
@@ -289,6 +293,7 @@ Common technology terms:
 - `open source` (noun), `open-source` (adjective)
 
 Examples:
+
 - Good: `color`, `center`, `analyze`, `behavior`
 - Avoid: `colour`, `centre`, `analyse`, `behaviour`
 - Good: Use serial comma: "components, interfaces, and environments"
@@ -303,11 +308,13 @@ Forbidden: `ain't` (colloquial), `gonna`, `gotta`, `something's` (confusion with
 **Dates and numbers**
 
 Date format:
+
 - Single day: `1 January 2013`
 - Range within month: `1-2 January 2013`
 - Range across months: `1 January - 2 February 2013`
 
 Numbers:
+
 - Spell out below 10: `seven servers`
 - Use digits from 10 onwards: `15 containers`
 - Exception: Always use digits for units of measurement: `5 GB`, `3 seconds`
@@ -326,6 +333,7 @@ Rationale: Semantic breaks make git diffs more readable and help reviewers ident
 **Implementation**
 
 Break lines at natural semantic boundaries:
+
 - After each complete clause
 - Before coordinating conjunctions (and, but, or)
 - Before relative clauses (which, that, who)
@@ -342,22 +350,24 @@ of the essential |project_markup| activities.
 
 MyST equivalent:
 
-````markdown
+```markdown
 This is the first section of the {ref}`four-part series <tut_index>`;
 a practical introduction
 that takes you on a tour
 of the essential |project_markup| activities.
-````
+```
 
 **When to break**
 
 Break after:
+
 - Complete independent clauses
 - Introductory prepositional phrases
 - Transitional phrases
 - Items in a complex series
 
 Keep together:
+
 - Short phrases that form a single unit
 - Inline markup and its target word
 - Cross-reference markup
@@ -392,6 +402,7 @@ Exception: Product names and proper nouns maintain their capitalization.
 **How-to title pattern**
 
 How-to guides follow the pattern: "How to [action] [object]" and use imperatives, not gerunds:
+
 - Good: "How to create an instance" (imperative)
 - Avoid: "How to creating an instance" or "Creating an instance" (gerund)
 - How to forward ports with tunneling
@@ -532,6 +543,7 @@ juju download kubernetes-worker --channel=$CHANNEL
 ```
 
 This approach:
+
 - Separates user-supplied data from commands
 - Enables blocks to be copied without modification
 - Reduces the chance of user errors
@@ -544,11 +556,13 @@ Don't use UI elements as verbs or nouns in prose. Link them to actions:
 - Avoid: "**Save** your settings" (using button text as verb)
 
 **Interaction verbs**:
+
 - Use `Click` for buttons (or `Tap` for primarily mobile products)
 - Use `Select` for dropdowns, multiple options, or menu navigation
 - Use `Press` for keyboard shortcuts and keys (NOT `Click`)
 
 Examples:
+
 - Click **Settings** to open user settings
 - Select the machines you want to register, then click **Save**
 - Press `Ctrl + C` to copy
@@ -556,11 +570,13 @@ Examples:
 - Select **Preferences > Languages > English** (using `>` for navigation)
 
 **Formatting**:
+
 - Bold UI elements: **Save**, **File**, **Settings**
 - Use `>` for menu navigation: **File > New > Document**
 - Italics for quoted UI text: Click the link in _"You can register new computers..."_
 
 **Checkboxes**: Use `Select`/`Clear` or `Check`/`Uncheck` (consistent pairs):
+
 - Select the **Enable firewall** checkbox
 - Clear the **Add bookmark** checkbox
 
@@ -571,6 +587,7 @@ Examples:
 Always include caption when known.
 
 Indentation: Use commonly recognized formatting:
+
 - YAML files: 2-space indentation
 - JSON files: 4-space indentation
 

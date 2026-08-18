@@ -30,4 +30,3 @@ suites:
       https_proxy: '$(HOST: echo "$https_proxy")'
       NO_PROXY: '$(HOST: echo "$NO_PROXY")'
       no_proxy: '$(HOST: echo "$no_proxy")'
-

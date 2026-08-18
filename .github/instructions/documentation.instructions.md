@@ -1,6 +1,6 @@
 ---
-description: 'Core guidelines for documentation-related suggestions.'
-applyTo: 'docs/**/*.md'
+description: "Core guidelines for documentation-related suggestions."
+applyTo: "docs/**/*.md"
 ---
 
 # Documentation instructions for GitHub Copilot
@@ -22,9 +22,9 @@ This section outlines the absolute order of operations. These rules have the hig
 - **Direct and Concise**: Answers must be precise, to the point, and free from unnecessary filler or verbose explanations. Get straight to the solution without "beating around the bush".
 - **Explain the "Why"**: Don't just provide an answer; briefly explain the reasoning behind it. Why is this suggestion clearer, more concise, or easier to understand?
 
-## General Structure 
+## General Structure
 
-In this repository, the documentation is placed in a dedicated `docs` directory. The purpose of the files in this directory is to provide information, instructions, and conceptual understanding of the code for users. 
+In this repository, the documentation is placed in a dedicated `docs` directory. The purpose of the files in this directory is to provide information, instructions, and conceptual understanding of the code for users.
 
 The top-level `docs` directory should contain an overview or home page called `index.md`. This file should provide a brief description of the project, what needs it serves, and who the primary user base is.
 
@@ -49,10 +49,10 @@ The tutorial should contain the following pieces:
 - **An introduction**. In a couple of sentences, introduce the charm and
   what the tutorial aims to do. Avoid using a statement like "you will learn",
   as that makes an assumption about the user's prior knowledge. Focus
-  instead on what the user will do or accomplish. 
+  instead on what the user will do or accomplish.
 - **What you'll do**. This should be the first section in the tutorial. It
   aims to quickly and succinctly establish everything the user will do in the
-  tutorial. 
+  tutorial.
 - **What you'll need**. This section should contain a list of resources, software
   or other tools that the user will need before starting the tutorial. In this section,
   provide information on the supported architecture(s) like AMD64 or ARM64.
@@ -69,8 +69,8 @@ The tutorial should contain the following pieces:
   and why the steps are necessary. Split up important commands into separate
   command blocks, and provide explanations between each command.
 - **Check the deployment was successful**. Instruct the user to run
-  ``juju status`` and show example output. If appropriate, also instruct the
-  user to run ``kubectl get pods -n <juju model name>`` and show the output.
+  `juju status` and show example output. If appropriate, also instruct the
+  user to run `kubectl get pods -n <juju model name>` and show the output.
   Offer a brief explanation so that the user knows that the deployment was
   successful.
 - **Some final checkpoint**. Have the user visit a website, change a
@@ -85,11 +85,10 @@ The tutorial should contain the following pieces:
 ### Guidance on how-to guides
 
 - How-to guides should contain a title with the format `# How to...`. The title should
-concisely summarize the real-world problem addressed by the document.
+  concisely summarize the real-world problem addressed by the document.
 - How-to guides should contain at least one CLI command that user can run to address the
-problem or achieve the goal.
+  problem or achieve the goal.
 - Provide instructions or tasks that the user can take to achieve the goal. Avoid gerunds.
-
 
 ## Style guide pointers
 
@@ -97,7 +96,7 @@ problem or achieve the goal.
 - **Headings**: Use sentence case for headings. Avoid punctuation in headings. Do not skip levels in heading hierarchy. Do not use consecutive headings without intervening text, and suggest removing headings that don't enhance the understanding. Don't overuse `code` styling in headings.
 - **Code examples**: Do not use prompt marks (for example, `$` or `#`) in code examples. Do not use comments in code examples; instead, put any comments directly into the text. Whenever possible, split up multiple commands into separate code blocks and provide explanations in between the code blocks. Use Git-flavoured Markdown with fenced code blocks (```) and command examples as shell blocks.
 - **Lists**: Only use numbered lists when there is an inherent order to the items.
-- **Latin words and phrases**: We can't assume the reader is familiar with Latin words and phrases. Words such as "etc.", "i.e.", "e.g.", "per", "versus", and "via" should be avoided. 
+- **Latin words and phrases**: We can't assume the reader is familiar with Latin words and phrases. Words such as "etc.", "i.e.", "e.g.", "per", "versus", and "via" should be avoided.
 
 ## Small-edit rules for AI agents
 
@@ -105,12 +104,10 @@ problem or achieve the goal.
 - Preserve existing link targets and code samples formatting. If you change any heading filename or path, update all relative links in `docs/` accordingly.
 - Demonstrative pronouns ("this", "these", "those", and "that") should be accompanied by the target noun when there's a risk of ambiguity in the paragraph. An isolated demonstrative pronoun can be used if there's no chance of ambiguity. In cases where a paragraph describes multiple ideas, avoid isolated demonstrative pronouns and be as specific as possible.
 
-## Changelog guidance 
+## Changelog guidance
 
 If you modify a procedure (commands, required versions, prerequisites) and a `docs/changelog.md` exists, add a short note in `docs/changelog.md` summarizing the user-facing change.
 
 If you add a new file into `docs`, add a short note in `docs/changelog.md` summarizing the user-facing change.
 
 If there are no user-relevant changes, then the changelog does not need to be updated.
-
-

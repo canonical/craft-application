@@ -1,11 +1,11 @@
 name: project-name
-version: '1.0'
+version: "1.0"
 platforms:
   arm64:
     build-on:
-    - arm64
+      - arm64
     build-for:
-    - arm64
+      - arm64
 parts:
   my-part:
     plugin: nil

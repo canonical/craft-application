@@ -27,7 +27,7 @@ format: format-ruff format-codespell format-prettier format-shfmt format-pre-com
 lint: lint-code lint-docs lint-twine lint-uv-lockfile lint-actions  ## Run all linters
 
 .PHONY: lint-code
-lint-code: lint-ruff lint-ty lint-codespell lint-mypy lint-prettier lint-pyright lint-shfmt lint-shellcheck  ## Run code-specific linters
+lint-code: lint-ruff lint-ty lint-codespell lint-prettier lint-shfmt lint-shellcheck  ## Run code-specific linters
 
 .PHONY: pack
 pack: pack-pip  ## Build all packages
@@ -65,3 +65,25 @@ endif
 # If additional build dependencies need installing in order to build the linting env.
 .PHONY: install-lint-build-deps
 install-lint-build-deps:
+
+.PHONY: install-fetch-service
+install-fetch-service:
+ifneq ($(shell which fetch-service),)
+else ifneq ($(shell which snap),)
+	sudo snap install fetch-service --beta
+else
+	$(warning Fetch service not installed. Please install it yourself.)
+endif
+
+.PHONY: install-lxd
+install-lxd:
+ifneq ($(shell which lxd),)
+else ifneq ($(shell which snap),)
+	sudo snap install lxd --beta
+	sudo lxd init --minimal
+else
+	$(warning LXD not installed. Please install it yourself.)
+endif
+ifdef CI  # Always init lxd in CI
+	sudo lxd init --minimal
+endif

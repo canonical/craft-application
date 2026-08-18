@@ -3,7 +3,7 @@ summary: Verify base snap is injected with correct revision in managed mode
 priority: 100
 
 systems:
-  - ubuntu-22.04-64  # Test on 22.04 with a core24 snap
+  - ubuntu-22.04-64 # Test on 22.04 with a core24 snap
   - ubuntu-24.04-64
 
 prepare: |

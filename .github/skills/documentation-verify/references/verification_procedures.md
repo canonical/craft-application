@@ -115,12 +115,14 @@ Use **at least two distinct search strategies** per claim:
 ### For Claims Supported by Code
 
 Document:
+
 - File path, function or struct, and line range
 - Assessment: `Supported (verified at [file:line])`
 
 ### For Claims Not Supported by Code
 
 Document:
+
 - Searches performed (at least two strategies with specific search terms)
 - What was expected versus what was found
 - Assessment: `Unsupported (expected [X], found [Y] at [file:line])`
@@ -128,6 +130,7 @@ Document:
 ### For Inconclusive Claims
 
 Document:
+
 - Search attempts performed
 - What evidence is missing or ambiguous
 - Assessment: `Inconclusive (needs human review: [specific check])`
@@ -138,14 +141,14 @@ Document:
 
 Based on verification evidence, reclassify hypotheses using this decision matrix:
 
-| Original Hypothesis | Verification Outcome | Final Classification |
-|---------------------|----------------------|----------------------|
-| Unsupported | Found matching code | Retract claim (docs are correct) |
-| Unsupported | Found code with different default | Docs outdated (needs value update) |
-| Unsupported | No code evidence after thorough search | Confirmed unsupported (docs ahead of code) |
-| Supported | Code contradicts doc claim | Docs incorrect (needs correction) |
-| Ambiguous | Tests confirm behaviour | Supported (test-backed) |
-| Ambiguous | Cannot locate relevant code | Inconclusive (flag for human review) |
+| Original Hypothesis | Verification Outcome                   | Final Classification                       |
+| ------------------- | -------------------------------------- | ------------------------------------------ |
+| Unsupported         | Found matching code                    | Retract claim (docs are correct)           |
+| Unsupported         | Found code with different default      | Docs outdated (needs value update)         |
+| Unsupported         | No code evidence after thorough search | Confirmed unsupported (docs ahead of code) |
+| Supported           | Code contradicts doc claim             | Docs incorrect (needs correction)          |
+| Ambiguous           | Tests confirm behaviour                | Supported (test-backed)                    |
+| Ambiguous           | Cannot locate relevant code            | Inconclusive (flag for human review)       |
 
 ---
 
@@ -154,18 +157,18 @@ Based on verification evidence, reclassify hypotheses using this decision matrix
 Apply these rules to avoid false positives:
 
 1. **Do not claim "unsupported" without documented code search evidence**
-   - Must have at least two strategies with explicit search terms
+    - Must have at least two strategies with explicit search terms
 
 2. **Prefer conservative classifications**:
-   - Prefer "inconclusive" over "unsupported" when code is complex or evidence is indirect
-   - Prefer "outdated" over "unsupported" when code exists but with different behaviour or values
-   - Prefer "imprecise" over "incorrect" when docs are vague but not technically wrong
-   - Retract claim entirely if verification confirms docs are accurate
+    - Prefer "inconclusive" over "unsupported" when code is complex or evidence is indirect
+    - Prefer "outdated" over "unsupported" when code exists but with different behaviour or values
+    - Prefer "imprecise" over "incorrect" when docs are vague but not technically wrong
+    - Retract claim entirely if verification confirms docs are accurate
 
 3. **Cross-check documentation coverage**:
-   - Before claiming "unsupported", verify the entity is not documented elsewhere
-   - Search `docs/` for related terms, alternative phrasings, synonyms
-   - If claim is supported elsewhere, classify as "present but undiscoverable" instead
+    - Before claiming "unsupported", verify the entity is not documented elsewhere
+    - Search `docs/` for related terms, alternative phrasings, synonyms
+    - If claim is supported elsewhere, classify as "present but undiscoverable" instead
 
 ---
 

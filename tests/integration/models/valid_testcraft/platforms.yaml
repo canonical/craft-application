@@ -6,7 +6,7 @@ parts:
 adopt-info: my-part
 
 platforms:
-  amd64:  # Architecture-only shorthand
+  amd64: # Architecture-only shorthand
   raspi:
     build-on: [amd64, arm64]
     build-for: [arm64]

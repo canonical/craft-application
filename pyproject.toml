@@ -78,6 +78,7 @@ dev = [
 ]
 lint = [
     "codespell[toml]==2.4.3",
+    "mypy[reports]~=2.3.0",
 ]
 types = [
     "types-pyyaml",

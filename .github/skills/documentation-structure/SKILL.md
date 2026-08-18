@@ -22,49 +22,47 @@ file naming, metadata blocks, navigation, and cross-references.
 
 1. **File Naming**:
 
-   Verify files use lowercase with dashes
-   and the correct extension for their syntax
-   (for example, `connect-vscode.rst` for reST, `connect-vscode.md` for MyST).
+    Verify files use lowercase with dashes
+    and the correct extension for their syntax
+    (for example, `connect-vscode.rst` for reST, `connect-vscode.md` for MyST).
 
 2. **Metadata**:
 
-   Ensure every page has required metadata near the top
-   when the repository's docs conventions require it:
-   `.. meta::` after the anchor label for reST,
-   or the MyST equivalent (front matter or `meta` directive) for Markdown sources.
+    Ensure every page has required metadata near the top
+    when the repository's docs conventions require it:
+    `.. meta::` after the anchor label for reST,
+    or the MyST equivalent (front matter or `meta` directive) for Markdown sources.
 
 3. **Directory Placement**:
 
-   Confirm the file is located in the directory matching its intended
-   Diataxis category
-   (for example, tutorials in `tutorial/`, how-to guides in `how-to/`).
+    Confirm the file is located in the directory matching its intended
+    Diataxis category
+    (for example, tutorials in `tutorial/`, how-to guides in `how-to/`).
 
 4. **Navigation**:
 
-   Ensure new pages are added to the `toctree`.
+    Ensure new pages are added to the `toctree`.
 
 5. **Cross-References**:
-
-   - Prefer stable reference roles
-     (`:ref:` for reST, `{ref}`/`{numref}` for MyST) over page-level links.
-   - Flag uses of `:doc:`/`{doc}` (or equivalents)
-     except for index-like pages that are unlikely to be moved or renamed.
-   - Suggest adding links to improve documentation discoverability.
-   - Verify cross-references resolve correctly.
+    - Prefer stable reference roles
+      (`:ref:` for reST, `{ref}`/`{numref}` for MyST) over page-level links.
+    - Flag uses of `:doc:`/`{doc}` (or equivalents)
+      except for index-like pages that are unlikely to be moved or renamed.
+    - Suggest adding links to improve documentation discoverability.
+    - Verify cross-references resolve correctly.
 
 6. **Verification**:
 
-   Confirm the structural audit completed:
+    Confirm the structural audit completed:
+    - File naming checked for all files
+    - Metadata presence verified
+    - Directory placement validated (using Diataxis classification if available)
+    - Navigation structure checked (toctree entries)
+    - Cross-references validated
 
-   - File naming checked for all files
-   - Metadata presence verified
-   - Directory placement validated (using Diataxis classification if available)
-   - Navigation structure checked (toctree entries)
-   - Cross-references validated
-
-   State the completion status:
-   - `✓ Structure audit complete: [N] violations found`
-   - OR `✓ Structure audit complete: No violations found`
+    State the completion status:
+    - `✓ Structure audit complete: [N] violations found`
+    - OR `✓ Structure audit complete: No violations found`
 
 ## Constraints
 

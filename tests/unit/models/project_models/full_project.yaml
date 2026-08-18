@@ -9,9 +9,9 @@ base: ubuntu@24.04
 platforms:
   arm64:
     build-on:
-    - arm64
+      - arm64
     build-for:
-    - arm64
+      - arm64
 contact: author@project.org
 issues: https://github.com/canonical/craft-application/issues
 source-code: https://github.com/canonical/craft-application

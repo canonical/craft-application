@@ -7,7 +7,7 @@ platforms:
   amd64:
     build-on: [amd64, arm64, ppc64el, s390x, riscv64]
 
-adopt-info: my-test  # Check that adopt-info works.
+adopt-info: my-test # Check that adopt-info works.
 
 parts:
   my-test:

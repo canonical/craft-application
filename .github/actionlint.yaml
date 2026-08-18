@@ -25,3 +25,4 @@ self-hosted-runner:
     - tiobe
     - large-tiobe
     - 2xlarge-tiobe
+    - spread-enabled

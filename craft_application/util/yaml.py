@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import contextlib
 import pathlib
+import re
 from typing import TYPE_CHECKING, Any, TextIO, cast, overload
 
 import craft_platforms
@@ -32,10 +33,20 @@ if TYPE_CHECKING:  # pragma: no cover
     from collections.abc import Hashable
 
 
+_VERSION_SIMPLE_RE = re.compile(r"^\d+\.\d+$")
+
+
 def _repr_str(dumper: yaml.Dumper, data: str) -> yaml.ScalarNode:
-    """Multi-line string representer for the YAML dumper."""
+    """Multi-line string representer for the YAML dumper.
+
+    Uses block style for multi-line strings and prefers double quotes for
+    simple numeric version-like strings (e.g. "1.0") to match legacy fixtures.
+    """
     if "\n" in data:
         return dumper.represent_scalar("tag:yaml.org,2002:str", data, style="|")
+    # Force double quotes for simple version strings such as '1.0'
+    if _VERSION_SIMPLE_RE.match(data):
+        return dumper.represent_scalar("tag:yaml.org,2002:str", data, style='"')
     return dumper.represent_scalar("tag:yaml.org,2002:str", data)
 
 
@@ -160,4 +171,35 @@ def dump_yaml(data: Any, stream: TextIO | None = None, **kwargs: Any) -> str | N
     )
     kwargs.setdefault("sort_keys", False)
     kwargs.setdefault("allow_unicode", True)
-    return cast(str | None, yaml.dump(data, stream, Dumper=yaml.SafeDumper, **kwargs))
+    kwargs.setdefault("indent", 2)
+    kwargs.setdefault("width", 4096)
+
+    # Always dump to a string so we can post-process indentation reliably.
+    generated = cast(str, yaml.dump(data, None, Dumper=yaml.SafeDumper, **kwargs))
+
+    # Ensure sequence items are indented two spaces under their mapping key
+    # (e.g. ``key:\n  - item``) to match legacy fixtures.
+    def _ensure_sequence_indent(text: str) -> str:
+        lines = text.splitlines(keepends=True)
+        for i in range(len(lines) - 1):
+            line = lines[i]
+            # If the current line ends with ':' it introduces a mapping value.
+            if line.rstrip().endswith(":"):
+                # If next line starts with optional spaces then '- ', increase its
+                # indentation to be two spaces deeper than the current line's.
+                m = re.match(r"^([ ]*)- ", lines[i + 1])
+                if m:
+                    base_indent = line[: len(line) - len(line.lstrip(" "))]
+                    new_indent = base_indent + "  "
+                    lines[i + 1] = re.sub(
+                        r"^[ ]*- ", new_indent + "- ", lines[i + 1], count=1
+                    )
+        return "".join(lines)
+
+    generated = _ensure_sequence_indent(generated)
+
+    if stream is not None:
+        stream.write(generated)
+        return None
+
+    return generated

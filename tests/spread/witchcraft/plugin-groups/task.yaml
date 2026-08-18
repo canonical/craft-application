@@ -18,7 +18,6 @@ execute: |
   cd "invalid-${DISTRO}"
   witchcraft pack --destructive-mode |& MATCH "plugin not registered: '[a-z]+' \(in field 'parts.part1',"
 
-
 restore: |
   for path in $(find ./* -maxdepth 0 -type d); do
     cd "${path}"

@@ -5,7 +5,7 @@ description: |
   A project that includes a broadly-defined testcraft file.
 base: ubuntu@24.04
 platforms:
-  unlikely:  # A platform we probably won't run tests on.
+  unlikely: # A platform we probably won't run tests on.
     build-on: [i386]
     build-for: [all]
 parts:
@@ -65,5 +65,5 @@ parts:
         owner: 456
         group: 456
         mode: "666"
-  legacy/part/name:  # This part name should be allowed on Ubuntu 24.04 and older.
+  legacy/part/name: # This part name should be allowed on Ubuntu 24.04 and older.
     plugin: nil

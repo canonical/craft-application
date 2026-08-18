@@ -80,6 +80,6 @@ jobs:
           shopt -s nullglob
           for r in .spread-reuse.*.yaml; do
             pid="$(echo "$r" | grep -o -E '[0-9]+')"
-            kill -9 $pid
-            spread -discard -reuse-pid=$pid
+            kill -9 "$pid"
+            spread -discard -reuse-pid="$pid"
           done

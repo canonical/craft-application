@@ -16,8 +16,8 @@ and formatting conventions.
 - Documentation file(s) under review.
 - Normative style asset: `references/doc-style-guide.md`.
 - Syntax-specific style guides (fetched at runtime):
-  - MyST: `https://raw.githubusercontent.com/canonical/sphinx-docs-starter-pack/refs/heads/main/docs/reference/myst-syntax-reference.md`
-  - reST: `https://raw.githubusercontent.com/canonical/sphinx-docs-starter-pack/refs/heads/main/docs/reference/rst-syntax-reference.rst`
+    - MyST: `https://raw.githubusercontent.com/canonical/sphinx-docs-starter-pack/refs/heads/main/docs/reference/myst-syntax-reference.md`
+    - reST: `https://raw.githubusercontent.com/canonical/sphinx-docs-starter-pack/refs/heads/main/docs/reference/rst-syntax-reference.rst`
 
 ## Actions
 
@@ -44,22 +44,21 @@ and formatting conventions.
    (offline or network blocked), continue the review
    using `references/doc-style-guide.md`
    and the syntax patterns already present in the documentation set.
-   
-   If `references/doc-style-guide.md` is unavailable,
-   STOP the review and report that the style guide cannot be accessed.
+
+    If `references/doc-style-guide.md` is unavailable,
+    STOP the review and report that the style guide cannot be accessed.
 
 6. **Verification**:
 
-   Confirm the style review completed:
+    Confirm the style review completed:
+    - Style guides loaded (doc-style-guide.md and syntax-specific guide if available)
+    - Syntax compliance checked against applicable guide
+    - Style guide compliance checked against all rules in doc-style-guide.md
+    - All violations cited with quoted passages from style guides
 
-   - Style guides loaded (doc-style-guide.md and syntax-specific guide if available)
-   - Syntax compliance checked against applicable guide
-   - Style guide compliance checked against all rules in doc-style-guide.md
-   - All violations cited with quoted passages from style guides
-
-   State the completion status:
-   - `✓ Style review complete: [N] violations found`
-   - OR `✓ Style review complete: No violations found`
+    State the completion status:
+    - `✓ Style review complete: [N] violations found`
+    - OR `✓ Style review complete: No violations found`
 
 ## Constraints
 
