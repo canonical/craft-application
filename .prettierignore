@@ -1,4 +1,1 @@
-tests/**/*.yaml
-docs/.sphinx
-.github/skills
-.github/instructions
+docs/_dev

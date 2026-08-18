@@ -1,17 +1,17 @@
 .. meta::
 
-    :description: Craft Application is the base library for all Starcraft apps.
+    :description: Craft Application is the base library for all craft applications.
 
 
 Craft Application
 =================
 
-Craft Application is the base library for all Starcraft apps.
+Craft Application is the base library for all craft applications.
 
 Its purpose is to provide a single source of truth for the implementation of common
-Starcraft mechanisms, such as application services and project models.
+craft application mechanisms, such as application services and project models.
 
-This library is most useful for app developers in the Starcraft family.
+This library is most useful for app developers in the Craft Application family.
 
 .. list-table::
 
