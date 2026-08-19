@@ -406,6 +406,52 @@ def test_initialize_vcs(
     assert (tmp_path / ".gitignore").read_text() == "# Added by Testcraft\n*.test\n"
 
 
+def test_initialize_vcs_existing_repo(
+    init_service: InitService,
+    tmp_path: pathlib.Path,
+    monkeypatch: pytest.MonkeyPatch,
+    emitter: RecordingEmitter,
+) -> None:
+    """Test that an existing git repository is reused."""
+    monkeypatch.setattr(
+        InitService, "_vcs_ignore_lines", property(lambda _: ["*.test"])
+    )
+    _ = GitRepo(tmp_path)
+
+    init_service._initialize_vcs("git", tmp_path)
+
+    emitter.assert_debug(
+        f"Already in a git repository ('{str(tmp_path / '.git')}/'), skipping repository init."
+    )
+    assert (tmp_path / ".gitignore").read_text() == "# Added by Testcraft\n*.test\n"
+
+
+def test_initialize_vcs_dirs(
+    init_service: InitService,
+    tmp_path: pathlib.Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Ensure that initializing VCS in a subdirectory of a git repository will
+    not create a new git repository, but it will create a new gitignore folder
+    in that repository."""
+
+    sub_dir = tmp_path / "sub"
+    sub_dir.mkdir()
+
+    init_service._initialize_vcs("git", tmp_path)
+
+    monkeypatch.setattr(
+        InitService, "_vcs_ignore_lines", property(lambda _: ["*.test"])
+    )
+    init_service._initialize_vcs("git", sub_dir)
+
+    assert (tmp_path / ".git").is_dir()
+    assert not (sub_dir / ".git").is_dir()
+
+    assert not (tmp_path / ".gitignore").is_file()
+    assert (sub_dir / ".gitignore").is_file()
+
+
 def test_create_vcs_ignore_empty(
     init_service: InitService,
     tmp_path: pathlib.Path,

@@ -24,6 +24,7 @@ import typing
 from typing import Any
 
 import jinja2
+import pygit2
 from craft_cli import emit
 
 from craft_application.errors import InitError
@@ -128,9 +129,20 @@ class InitService(base.AppService):
 
         emit.debug(f"Setting up VCS in {str(project_dir)!r}.")
 
-        from craft_application.git import GitRepo  # noqa: PLC0415
+        # Initialize a git repository if we aren't already in one.
+        if not bool(
+            repo := pygit2.discover_repository(
+                project_dir,
+                False,  # noqa: FBT003, pygit2 does not accept kwargs here
+            )
+        ):
+            from craft_application.git import GitRepo  # noqa: PLC0415
 
-        _ = GitRepo(project_dir)
+            _ = GitRepo(project_dir)
+        else:
+            emit.debug(
+                f"Already in a git repository ({repo!r}), skipping repository init."
+            )
 
         self._create_git_ignore(project_dir)
 
