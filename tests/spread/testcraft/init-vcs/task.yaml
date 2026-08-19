@@ -16,5 +16,7 @@ execute: |
   test -d .git;       test $? -ne $([ "$VCS_STYLE" = "none" ]; echo $?)
   test -f .gitignore; test $? -ne $([ "$VCS_STYLE" = "none" ]; echo $?)
 
+  cd ../
+
 restore: |
   rm -rf init-test
