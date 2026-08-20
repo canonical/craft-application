@@ -45,6 +45,16 @@ backends:
           workers: 4
           memory: 4G
           storage: 20G
+      - ubuntu-26.04-64:
+          image: snapd-spread/ubuntu-26.04-64
+          workers: 4
+          memory: 4G
+          storage: 20G
+      - ubuntu-26.10-64:
+          image: snapd-spread/ubuntu-26.10-64
+          workers: 4
+          memory: 4G
+          storage: 20G
       # - ubuntu-24.04-arm-64:
       #     image: ubuntu-os-cloud/ubuntu-2404-lts-arm64
       #     workers: 4
@@ -121,6 +131,10 @@ backends:
         echo $(( $num + 1 )) > $counter_file')
 
       multipass_image=$(echo ${SPREAD_SYSTEM} | sed -e s/ubuntu-// -e s/-64//)
+      if [ "${multipass_image}" = "26.10" ]; then
+        # 26.10 has not been released yet, so it's only available as a daily build.
+        multipass_image="daily:26.10"
+      fi
 
       system=$(echo "${SPREAD_SYSTEM}" | tr . -)
       instance_name="spread-${SPREAD_BACKEND}-${instance_num}-${system}"
@@ -159,6 +173,8 @@ backends:
           workers: 4
       - ubuntu-26.04-64:
           workers: 4
+      - ubuntu-26.10-64:
+          workers: 4
     prepare: |
       # Ubuntu 20.04 requires a newer kernel, so we prepare it with an HWE kernel and
       # reboot. Note that we're only doing this here because for OpenStack we
@@ -176,10 +192,8 @@ backends:
       - ubuntu-22.04-64:
       - ubuntu-24.04-64:
       - ubuntu-25.10-64:
-  lxd:
-    type: lxd
-    systems:
-      - ubuntu-24.04
+      - ubuntu-26.04-64:
+      - ubuntu-26.10-64:
 
 prepare: |
   #shellcheck source=tests/spread/tools.sh
