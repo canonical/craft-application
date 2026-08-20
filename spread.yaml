@@ -157,6 +157,8 @@ backends:
           workers: 4
       - ubuntu-25.10-64:
           workers: 4
+      - ubuntu-26.04-64:
+          workers: 4
     prepare: |
       # Ubuntu 20.04 requires a newer kernel, so we prepare it with an HWE kernel and
       # reboot. Note that we're only doing this here because for OpenStack we

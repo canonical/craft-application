@@ -15,13 +15,39 @@ Changelog
 
     For a complete list of commits, check out the `1.2.3`_ release on GitHub.
 
-7.1.1 (unreleased)
+7.2.0 (2028-08-11)
 ------------------
+
+Application
+===========
+
+- Add experimental monorepo support for managed builds.
+
+Commands
+========
+
+- The ``init`` command now accepts the ``--base`` option to choose profile
+  variants for specific bases.
+
+Remote build
+============
+
+- Snap recipes now accept a build path.
 
 Bug fixes
 =========
 
 - Ignore .spread-reuse files when deciding if a source is outdated.
+- By default, trim documentation URLs so they display major version only.
+- Loading a project file that is not UTF-8 encoded now raises a clear error
+  instead of failing with an uncaught internal error.
+
+Documentation
+=============
+
+- Add a :ref:`how-to-pack-a-pro-artifact` how-to guide.
+
+For a complete list of commits, check out the `7.2.0`_ release on GitHub.
 
 7.1.0 (2026-07-07)
 ------------------
@@ -1388,3 +1414,4 @@ For a complete list of commits, check out the `2.7.0`_ release on GitHub.
 .. _7.0.0: https://github.com/canonical/craft-application/releases/tag/7.0.0
 .. _7.0.1: https://github.com/canonical/craft-application/releases/tag/7.0.1
 .. _7.1.0: https://github.com/canonical/craft-application/releases/tag/7.1.0
+.. _7.2.0: https://github.com/canonical/craft-application/releases/tag/7.2.0

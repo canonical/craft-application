@@ -31,12 +31,23 @@ import pytest
 import pytest_subprocess
 from craft_application import errors
 from craft_application.services import provider
+from craft_application.services.provider import (
+    _find_git_root,
+    _get_build_root,
+    _get_managed_cwd,
+)
 from craft_application.services.service_factory import ServiceFactory
 from craft_application.util import ProServices, snap_config
 from craft_cli import emit
 from craft_providers import bases, lxd, multipass
 from craft_providers.actions.snap_installer import Snap
 from snap_http.types import SnapdResponse
+
+
+class _MonorepoConfigModel(craft_application.ConfigModel):
+    """ConfigModel that includes the experimental_monorepo option, enabled by default."""
+
+    experimental_monorepo: bool = True
 
 
 @pytest.fixture
@@ -1172,3 +1183,140 @@ def test_configure_instance_with_pro_skipped(mocker, provider_service):
     mock_instance.install_pro_client.assert_not_called()
     mock_instance.attach_pro_subscription.assert_not_called()
     mock_instance.enable_pro_service.assert_not_called()
+
+
+class TestFindGitRoot:
+    @pytest.mark.parametrize(
+        "git_is_available",
+        [True, False],
+        ids=["not-in-git-repo", "git-unavailable"],
+    )
+    def test_returns_none_without_git_repository(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: pathlib.Path,
+        git_is_available: bool,
+    ) -> None:
+        if not git_is_available:
+            monkeypatch.setattr(
+                provider.subprocess,
+                "run",
+                mock.Mock(side_effect=FileNotFoundError("git not found")),
+            )
+        assert _find_git_root(tmp_path) is None
+
+    def test_returns_root_for_git_repo(self, tmp_path: pathlib.Path) -> None:
+        subprocess.run(["git", "init", str(tmp_path)], check=True, capture_output=True)
+        assert _find_git_root(tmp_path) == tmp_path
+
+    def test_returns_root_from_subdirectory(self, tmp_path: pathlib.Path) -> None:
+        subprocess.run(["git", "init", str(tmp_path)], check=True, capture_output=True)
+        subdir = tmp_path / "charm-a"
+        subdir.mkdir()
+        assert _find_git_root(subdir) == tmp_path
+
+
+class TestGetBuildRoot:
+    def test_returns_work_dir_when_disabled(self, tmp_path: pathlib.Path) -> None:
+        assert _get_build_root(tmp_path, use_git_root=False) == tmp_path
+
+    def test_returns_work_dir_when_not_in_git_repo(
+        self, tmp_path: pathlib.Path
+    ) -> None:
+        assert _get_build_root(tmp_path, use_git_root=True) == tmp_path
+
+    def test_returns_git_root_in_monorepo(self, tmp_path: pathlib.Path) -> None:
+        subprocess.run(["git", "init", str(tmp_path)], check=True, capture_output=True)
+        subdir = tmp_path / "charm-a"
+        subdir.mkdir()
+        assert _get_build_root(subdir, use_git_root=True) == tmp_path
+
+    def test_returns_work_dir_when_already_at_git_root(
+        self, tmp_path: pathlib.Path
+    ) -> None:
+        subprocess.run(["git", "init", str(tmp_path)], check=True, capture_output=True)
+        assert _get_build_root(tmp_path, use_git_root=True) == tmp_path
+
+
+class TestGetManagedCwd:
+    _default = pathlib.PurePosixPath("/root/project")
+
+    def test_returns_default_when_disabled(self, tmp_path: pathlib.Path) -> None:
+        result = _get_managed_cwd(tmp_path, self._default, use_git_root=False)
+        assert result == self._default
+
+    def test_returns_default_when_not_in_git_repo(self, tmp_path: pathlib.Path) -> None:
+        result = _get_managed_cwd(tmp_path, self._default, use_git_root=True)
+        assert result == self._default
+
+    def test_returns_default_when_at_git_root(self, tmp_path: pathlib.Path) -> None:
+        subprocess.run(["git", "init", str(tmp_path)], check=True, capture_output=True)
+        assert (
+            _get_managed_cwd(tmp_path, self._default, use_git_root=True)
+            == self._default
+        )
+
+    def test_returns_subdir_in_monorepo(self, tmp_path: pathlib.Path) -> None:
+        subprocess.run(["git", "init", str(tmp_path)], check=True, capture_output=True)
+        charm_dir = tmp_path / "charms" / "charm-a"
+        charm_dir.mkdir(parents=True)
+        expected = self._default / "charms" / "charm-a"
+        assert _get_managed_cwd(charm_dir, self._default, use_git_root=True) == expected
+
+    def test_returns_default_when_git_root_is_not_parent(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path
+    ) -> None:
+        charm_dir = tmp_path / "charms" / "charm-a"
+        charm_dir.mkdir(parents=True)
+        unrelated_root = tmp_path / "other-repo-root"
+        unrelated_root.mkdir()
+        monkeypatch.setattr(provider, "_find_git_root", lambda _path: unrelated_root)
+
+        result = _get_managed_cwd(charm_dir, self._default, use_git_root=True)
+
+        assert result == self._default
+
+
+@pytest.mark.parametrize("fetch", [False, True])
+@pytest.mark.parametrize(
+    "app_metadata",
+    [{"allow_git_build_root": True, "ConfigModel": _MonorepoConfigModel}],
+    indirect=True,
+)
+def test_run_managed_git_build_root_sets_cwd(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: pathlib.Path,
+    fake_build_info: craft_platforms.BuildInfo,
+    fetch: bool,
+    provider_service: provider.ProviderService,
+    mock_provider,
+    fake_services: ServiceFactory,
+):
+    """ProviderService.run_managed uses the monorepo subdir as cwd when allow_git_build_root=True and experimental_monorepo is set."""
+    mock_fetch = mock.MagicMock()
+    fake_services.register("fetch", mock.Mock(return_value=mock_fetch))
+    fake_services.get_class("fetch").is_active.return_value = fetch  # ty: ignore[unresolved-attribute]
+
+    # Set up a monorepo: git root at tmp_path, project in a subdirectory.
+    subprocess.run(["git", "init", str(tmp_path)], check=True, capture_output=True)
+    charm_dir = tmp_path / "charms" / "charm-a"
+    charm_dir.mkdir(parents=True)
+
+    # Point the provider service's work_dir to the monorepo subdir.
+    monkeypatch.setattr(provider_service, "_work_dir", charm_dir)
+
+    monkeypatch.setattr("sys.argv", ["[unused]", "pack", "--verbose"])
+    instance_context = (
+        mock_provider.launched_environment.return_value.__enter__.return_value
+    )
+
+    provider_service.run_managed(fake_build_info, enable_fetch_service=fetch)
+
+    managed_project_path = provider_service._app.managed_instance_project_path
+    expected_cwd = managed_project_path / "charms" / "charm-a"
+    instance_context.execute_run.assert_called_once_with(
+        mock.ANY,
+        cwd=expected_cwd,
+        check=True,
+        env=mock.ANY,
+    )
