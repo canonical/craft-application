@@ -13,8 +13,8 @@ execute: |
   testcraft init $vcs_flag
 
   # Check that they do exist if using VCS, or that they _don't_ exist if VCS is "none"
-  test -d .git;       test $? -ne $([ "$VCS_STYLE" = "none" ]; echo $?)
-  test -f .gitignore; test $? -ne $([ "$VCS_STYLE" = "none" ]; echo $?)
+  test -d .git ||       test $? -ne $([ "$VCS_STYLE" = "none" ]; echo $?)
+  test -f .gitignore || test $? -ne $([ "$VCS_STYLE" = "none" ]; echo $?)
 
   cd ../
 
