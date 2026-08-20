@@ -74,6 +74,19 @@ def test_safe_yaml_loader_specific_error(yaml_text: str, error_msg: str):
     assert exc_info.value.args[0] == error_msg
 
 
+def test_safe_yaml_loader_non_utf8(check, tmp_path):
+    """A non-UTF-8 file surfaces a friendly YamlError, not an uncaught UnicodeDecodeError."""
+    bad_file = tmp_path / "testcraft.yaml"
+    bad_file.write_bytes("name: test\n".encode("utf-32"))
+
+    with bad_file.open() as f:  # default UTF-8 text mode
+        with pytest.raises(errors.YamlError, match="is not valid UTF-8") as exc_info:
+            yaml.safe_yaml_load(f)
+
+    check.is_in(bad_file.name, exc_info.value.args[0])
+    check.is_true(str(exc_info.value.resolution).endswith("encoded in UTF-8"))
+
+
 @pytest.mark.parametrize(
     ("data", "kwargs", "expected"),
     [
