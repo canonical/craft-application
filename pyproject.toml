@@ -65,7 +65,7 @@ dev = [
     "hypothesis>=6.0",
     "pyfakefs~=6.1",
     "pytest==9.1.1",
-    "pytest-check==2.8.0",
+    "pytest-check==2.9.1",
     "pytest-cov==7.1.0",
     "pytest-freezer==0.4.9",
     "pytest-mock~=3.14",
