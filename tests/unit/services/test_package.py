@@ -211,6 +211,22 @@ def test_needs_packing_false_when_artifact_exists(
     assert service.needs_packing(None) is False
 
 
+def test_needs_packing_false_when_no_parts(
+    app_metadata, fake_project, fake_services, tmp_path, emitter
+):
+    """When the project has no parts, no artifact should require packing."""
+    artifact_path = tmp_path / "artifact"
+    artifact_path.touch()
+    service = MultiArtifactPackageService(
+        app_metadata, fake_services, artifacts={None: artifact_path}
+    )
+    fake_project.parts = {}
+    service._services.get("project").set(fake_project)
+
+    assert service.needs_packing(None) is False
+    emitter.assert_debug("No parts to pack, skipping.")
+
+
 @pytest.mark.parametrize(
     ("project_updated", "expected"),
     [(True, True), (False, False)],

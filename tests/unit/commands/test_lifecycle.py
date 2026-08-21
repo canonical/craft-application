@@ -626,6 +626,56 @@ def test_pack_fetch_manifest(
     assert mock_services.fetch.create_project_manifest.called == expect_create_called
 
 
+def test_pack_run_no_parts_legacy(
+    mocker, emitter, mock_services, app_metadata, tmp_path, fake_project
+):
+    """Legacy non-ST160 apps should skip packing when the project has no parts."""
+    mock_services.package.pack.return_value = [pathlib.Path("package.zip")]
+    project_service = mock_services.get("project")
+    project_service.configure(platform=None, build_for=None)
+    fake_project.parts = {}
+    mocker.patch.object(project_service, "get", return_value=fake_project)
+    command = PackCommand(
+        {
+            "app": app_metadata,
+            "services": mock_services,
+        }
+    )
+    mocker.patch.object(command._services.lifecycle.project_info, "work_dir", tmp_path)
+
+    parsed_args = argparse.Namespace(
+        destructive_mode=True, parts=None, output=tmp_path, fetch_service_policy=None
+    )
+    command.run(parsed_args)
+
+    mock_services.package.pack.assert_not_called()
+    emitter.assert_debug("No parts to pack, skipping.")
+    emitter.assert_progress("No packages created.", permanent=True)
+
+
+def test_pack_run_st160_no_parts(mocker, emitter, mock_services, app_metadata, tmp_path):
+    """ST160 apps should also skip packing when the project has no parts."""
+    mock_services.get("project").configure(platform=None, build_for=None)
+    mock_services.package.supports_conditional_repack = True
+    parsed_args = argparse.Namespace(
+        destructive_mode=True, output=tmp_path, fetch_service_policy=None
+    )
+    command = PackCommand(
+        {
+            "app": app_metadata,
+            "services": mock_services,
+        }
+    )
+    mocker.patch.object(command._services.lifecycle.project_info, "work_dir", tmp_path)
+    command._project.parts = {}
+
+    command.run(parsed_args)
+
+    mock_services.package.pack_artifacts.assert_not_called()
+    emitter.assert_debug("No parts to pack, skipping.")
+    emitter.assert_progress("No packages created.", permanent=True)
+
+
 def test_pack_run_st160(mocker, emitter, mock_services, app_metadata, tmp_path):
     mock_services.get("project").configure(platform=None, build_for=None)
     mock_services.package.supports_conditional_repack = True
