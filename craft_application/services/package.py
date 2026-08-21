@@ -282,6 +282,9 @@ class PackageService(base.AppService):
 
     def needs_packing(self, partition: str | None = None) -> bool:
         """Determine whether the given artifact/partition requires packing."""
+        if not self._project.parts:
+            emit.debug("No parts to pack, skipping.")
+            return False
         lifecycle = self._services.get("lifecycle")
         if (
             self._app.always_repack

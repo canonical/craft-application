@@ -485,16 +485,20 @@ class PackCommand(LifecycleCommand):
             return
 
         # Legacy packaging for applications not implementing ST160
-        emit.progress("Packing...")
-        try:
-            packages = self._services.package.pack(
-                self.services.get("lifecycle").prime_dir, parsed_args.output
-            )
-        except Exception as err:
-            if debug:
-                emit.progress(str(err), permanent=True)
-                _launch_shell()
-            raise
+        if not self._project.parts:
+            emit.debug("No parts to pack, skipping.")
+            packages: list[pathlib.Path] = []
+        else:
+            emit.progress("Packing...")
+            try:
+                packages = self._services.package.pack(
+                    self.services.get("lifecycle").prime_dir, parsed_args.output
+                )
+            except Exception as err:
+                if debug:
+                    emit.progress(str(err), permanent=True)
+                    _launch_shell()
+                raise
 
         packages = self._relativize_paths(packages, root=pathlib.Path())
 
@@ -525,6 +529,14 @@ class PackCommand(LifecycleCommand):
         debug: bool,
     ) -> None:
         """Run the artifact-aware packing flow."""
+        if not self._project.parts:
+            emit.debug("No parts to pack, skipping.")
+            emit.progress("No packages created.", permanent=True)
+            self._services.package.write_artifacts_state({})
+            if shell_after:
+                _launch_shell()
+            return
+
         emit.progress("Packing...")
         package_service = self._services.package
 
