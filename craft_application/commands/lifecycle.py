@@ -246,12 +246,12 @@ class LifecycleCommand(_BaseLifecycleCommand):
         **kwargs: Any,
     ) -> None:
         """Run a lifecycle step command."""
+        # If we check for supported bases, fail early for all unsupported bases.
+        self._check_supported_base(parsed_args)
+
         super()._run(parsed_args)
 
         build_planner = self.services.get("build_plan")
-
-        # If we check for supported bases, fail early for all unsupported bases.
-        self._check_supported_base(parsed_args)
 
         config = self.services.get("config")
         platform = getattr(parsed_args, "platform", None) or config.get("platform")
