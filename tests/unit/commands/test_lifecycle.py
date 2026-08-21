@@ -653,7 +653,9 @@ def test_pack_run_no_parts_legacy(
     emitter.assert_progress("No packages created.", permanent=True)
 
 
-def test_pack_run_st160_no_parts(mocker, emitter, mock_services, app_metadata, tmp_path):
+def test_pack_run_st160_no_parts(
+    mocker, emitter, mock_services, app_metadata, tmp_path
+):
     """ST160 apps should also skip packing when the project has no parts."""
     mock_services.get("project").configure(platform=None, build_for=None)
     mock_services.package.supports_conditional_repack = True
