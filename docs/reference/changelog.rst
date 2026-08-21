@@ -37,6 +37,8 @@ Remote build
 Bug fixes
 =========
 
+- ``remote-build`` no longer raises an error when dangling symlinks are present in the
+  project repository.
 - Ignore .spread-reuse files when deciding if a source is outdated.
 - By default, trim documentation URLs so they display major version only.
 - Loading a project file that is not UTF-8 encoded now raises a clear error
