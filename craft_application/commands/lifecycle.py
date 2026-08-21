@@ -532,6 +532,7 @@ class PackCommand(LifecycleCommand):
         if not self._project.parts:
             emit.debug("No parts to pack, skipping.")
             emit.progress("No packages created.", permanent=True)
+            self._services.package.write_artifacts_state({})
             if shell_after:
                 _launch_shell()
             return
