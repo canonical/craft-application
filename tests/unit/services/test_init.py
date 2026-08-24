@@ -1,6 +1,6 @@
 #  This file is part of craft-application.
 #
-#  Copyright 2024 Canonical Ltd.
+#  Copyright 2024-2026 Canonical Ltd.
 #
 #  This program is free software: you can redistribute it and/or modify it
 #  under the terms of the GNU Lesser General Public License version 3, as
@@ -29,6 +29,7 @@ import pytest_mock
 from craft_application import errors, services
 from craft_application.git import GitRepo, short_commit_sha
 from craft_application.models.constraints import MESSAGE_INVALID_NAME
+from craft_application.services import InitService
 from craft_cli.pytest_plugin import RecordingEmitter
 
 
@@ -359,6 +360,7 @@ def test_initialise_project(
         project_dir=project_dir,
         project_name=project_name,
         template_dir=templates_dir,
+        vcs="none",
     )
     get_templates_mock.assert_called_once_with(templates_dir)
     create_project_dir_mock.assert_called_once_with(project_dir=project_dir)
@@ -388,3 +390,135 @@ def test_valid_name_invalid_use_default(init_service):
 
     obtained = init_service.validate_project_name(invalid_name, use_default=True)
     assert obtained == "my-default-name"
+
+
+def test_initialize_vcs(
+    init_service: InitService,
+    tmp_path: pathlib.Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        InitService, "_vcs_ignore_lines", property(lambda _: ["*.test"])
+    )
+    init_service._initialize_vcs("git", tmp_path)
+
+    assert (tmp_path / ".git").is_dir()
+    assert (tmp_path / ".gitignore").read_text() == "# Added by Testcraft\n*.test\n"
+
+
+def test_initialize_vcs_existing_repo(
+    init_service: InitService,
+    tmp_path: pathlib.Path,
+    monkeypatch: pytest.MonkeyPatch,
+    emitter: RecordingEmitter,
+) -> None:
+    """Test that an existing git repository is reused."""
+    monkeypatch.setattr(
+        InitService, "_vcs_ignore_lines", property(lambda _: ["*.test"])
+    )
+    _ = GitRepo(tmp_path)
+
+    init_service._initialize_vcs("git", tmp_path)
+
+    emitter.assert_debug(
+        f"Already in a git repository ('{str(tmp_path / '.git')}/'), skipping repository init."
+    )
+    assert (tmp_path / ".gitignore").read_text() == "# Added by Testcraft\n*.test\n"
+
+
+def test_initialize_vcs_dirs(
+    init_service: InitService,
+    tmp_path: pathlib.Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Ensure that initializing VCS in a subdirectory of a git repository will
+    not create a new git repository, but it will create a new gitignore folder
+    in that repository."""
+
+    sub_dir = tmp_path / "sub"
+    sub_dir.mkdir()
+
+    init_service._initialize_vcs("git", tmp_path)
+
+    monkeypatch.setattr(
+        InitService, "_vcs_ignore_lines", property(lambda _: ["*.test"])
+    )
+    init_service._initialize_vcs("git", sub_dir)
+
+    assert (tmp_path / ".git").is_dir()
+    assert not (sub_dir / ".git").is_dir()
+
+    assert not (tmp_path / ".gitignore").is_file()
+    assert (sub_dir / ".gitignore").is_file()
+
+
+def test_create_vcs_ignore_empty(
+    init_service: InitService,
+    tmp_path: pathlib.Path,
+) -> None:
+    init_service._initialize_vcs("git", tmp_path)
+
+    assert not (tmp_path / ".gitignore").exists()
+
+
+@pytest.mark.parametrize(
+    ("existing_content", "expected_content"),
+    [
+        (None, "# Added by Testcraft\n*.test\n*.testcomp\n"),
+        (
+            "existing_content\n",
+            "existing_content\n\n# Added by Testcraft\n*.test\n*.testcomp\n",
+        ),
+    ],
+)
+def test_create_vcs_ignore(
+    init_service: InitService,
+    tmp_path: pathlib.Path,
+    monkeypatch: pytest.MonkeyPatch,
+    existing_content: str | None,
+    expected_content: str,
+) -> None:
+    monkeypatch.setattr(
+        InitService, "_vcs_ignore_lines", property(lambda _: ["*.test", "*.testcomp"])
+    )
+    if existing_content is not None:
+        (tmp_path / ".gitignore").write_text(existing_content)
+
+    init_service._create_git_ignore(tmp_path)
+
+    assert (tmp_path / ".gitignore").read_text() == expected_content
+
+
+@pytest.mark.parametrize(
+    ("ignore_lines", "old_content", "expected_content"),
+    [
+        pytest.param(
+            ["*.test"], "*.test\n*.boop\n", "*.test\n*.boop\n", id="no-addition"
+        ),
+        pytest.param(["*.test"], "", "# Added by Testcraft\n*.test\n", id="empty"),
+        pytest.param(
+            ["*.test", "*.testcomp"],
+            "*.test\n*.boop\n",
+            "*.test\n*.boop\n\n# Added by Testcraft\n*.testcomp\n",
+            id="partial-skip",
+        ),
+    ],
+)
+def test_create_vcs_ignore_no_repeat(
+    init_service: InitService,
+    tmp_path: pathlib.Path,
+    monkeypatch: pytest.MonkeyPatch,
+    ignore_lines: list[str],
+    old_content: str,
+    expected_content: str,
+) -> None:
+    monkeypatch.setattr(
+        InitService, "_vcs_ignore_lines", property(lambda _: ignore_lines)
+    )
+    ignore = tmp_path / ".gitignore"
+    if old_content:
+        ignore.write_text(old_content)
+
+    init_service._create_git_ignore(tmp_path)
+
+    assert ignore.read_text() == expected_content

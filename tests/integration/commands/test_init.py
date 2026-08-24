@@ -1,6 +1,6 @@
 # This file is part of craft-application.
 #
-# Copyright 2024 Canonical Ltd.
+# Copyright 2024-2026 Canonical Ltd.
 #
 # This program is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Lesser General Public License version 3, as
@@ -84,6 +84,7 @@ def test_init(
     if project_dir:
         command.append(project_dir)
         expected_file = pathlib.Path(project_dir) / expected_file
+        pathlib.Path(project_dir).mkdir(parents=True)
     monkeypatch.setattr("sys.argv", command)
 
     return_code = app.run()
@@ -110,6 +111,7 @@ def test_init_name(app, capsys, monkeypatch, project_dir, expected_file):
     command = ["testcraft", "init", "--name", "test-project-name"]
     if project_dir:
         command.append(project_dir)
+        pathlib.Path(project_dir).mkdir(parents=True)
     monkeypatch.setattr("sys.argv", command)
 
     return_code = app.run()
