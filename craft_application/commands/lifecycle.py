@@ -485,10 +485,7 @@ class PackCommand(LifecycleCommand):
             return
 
         # Legacy packaging for applications not implementing ST160
-        if not self._project.parts:
-            emit.debug("No parts to pack, skipping.")
-            packages: list[pathlib.Path] = []
-        else:
+        if self._project.parts:
             emit.progress("Packing...")
             try:
                 packages = self._services.package.pack(
@@ -499,6 +496,9 @@ class PackCommand(LifecycleCommand):
                     emit.progress(str(err), permanent=True)
                     _launch_shell()
                 raise
+        else:
+            emit.debug("No parts to pack, skipping.")
+            packages: list[pathlib.Path] = []
 
         packages = self._relativize_paths(packages, root=pathlib.Path())
 
