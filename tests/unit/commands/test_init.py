@@ -1,6 +1,6 @@
 # This file is part of craft-application.
 #
-# Copyright 2024 Canonical Ltd.
+# Copyright 2024-2026 Canonical Ltd.
 #
 # This program is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Lesser General Public License version 3, as
@@ -60,6 +60,7 @@ def test_init_in_cwd(init_command, name, new_dir, mock_services, emitter):
         project_dir=None,
         name=name,
         profile="test-profile",
+        vcs="none",
     )
     mock_services.init.validate_project_name.return_value = expected_name
 
@@ -69,6 +70,7 @@ def test_init_in_cwd(init_command, name, new_dir, mock_services, emitter):
         project_dir=new_dir,
         project_name=expected_name,
         template_dir=init_command.parent_template_dir / "test-profile",
+        vcs="none",
     )
     emitter.assert_message("Successfully initialised project.")
 
@@ -82,6 +84,7 @@ def test_init_run_project_dir(init_command, name, mock_services, emitter):
         project_dir=project_dir,
         name=name,
         profile="test-profile",
+        vcs="none",
     )
     mock_services.init.validate_project_name.return_value = expected_name
 
@@ -91,6 +94,7 @@ def test_init_run_project_dir(init_command, name, mock_services, emitter):
         project_dir=project_dir.expanduser().resolve(),
         project_name=expected_name,
         template_dir=init_command.parent_template_dir / "test-profile",
+        vcs="none",
     )
     emitter.assert_message("Successfully initialised project.")
 
@@ -116,6 +120,7 @@ def test_existing_files(init_command, tmp_path, mock_services):
         project_dir=tmp_path,
         name="test-project-name",
         profile="test-profile",
+        vcs="none",
     )
 
     with pytest.raises(InitError, match="test-error"):
@@ -128,6 +133,7 @@ def test_invalid_name(init_command, mock_services):
     mock_services.init.validate_project_name.side_effect = InitError("test-error")
     parsed_args = argparse.Namespace(
         name="invalid--name",
+        vcs="none",
     )
     with pytest.raises(InitError, match="test-error"):
         init_command.run(parsed_args)
@@ -146,6 +152,7 @@ def test_invalid_name_directory(init_command, mock_services):
         project_dir=project_dir,
         name=None,
         profile="simple",
+        vcs="none",
     )
 
     init_command.run(parsed_args)
@@ -154,6 +161,7 @@ def test_invalid_name_directory(init_command, mock_services):
         project_dir=project_dir.expanduser().resolve(),
         project_name="my-project",
         template_dir=init_command.parent_template_dir / "simple",
+        vcs="none",
     )
 
 
@@ -165,6 +173,7 @@ def test_invalid_base_variant(init_command, tmp_path, mock_services):
         name="test-project-name",
         profile="simple",
         base="ubuntu@23.04",
+        vcs="none",
     )
 
     with pytest.raises(InitError, match="Base variant 'ubuntu@23.04'") as exc_info:
@@ -183,6 +192,7 @@ def test_base_not_available_for_profile(init_command, tmp_path, mock_services):
         name="test-project-name",
         profile="simple",
         base="ubuntu@22.04",
+        vcs="none",
     )
 
     with pytest.raises(
@@ -207,6 +217,7 @@ def test_valid_base_name(
         name="test-project-name",
         profile="simple",
         base=base,
+        vcs="none",
     )
     mock_services.init.validate_project_name.return_value = "test-project-name"
 
@@ -216,6 +227,7 @@ def test_valid_base_name(
         project_dir=pathlib.Path.cwd().resolve(),
         project_name="test-project-name",
         template_dir=init_command.parent_template_dir / f"simple__{base}",
+        vcs="none",
     )
     emitter.assert_message("Successfully initialised project.")
 
@@ -228,6 +240,7 @@ def test_invalid_base_name(init_command, tmp_path, mock_services, base):
         name="test-project-name",
         profile="simple",
         base=base,
+        vcs="none",
     )
 
     with pytest.raises(InitError, match="invalid base name"):
@@ -244,6 +257,7 @@ def test_valid_base_variant(init_command, fake_template_dirs, mock_services, emi
         name="test-project-name",
         profile="simple",
         base="ubuntu@22.04",
+        vcs="none",
     )
     mock_services.init.validate_project_name.return_value = "test-project-name"
 
@@ -253,5 +267,6 @@ def test_valid_base_variant(init_command, fake_template_dirs, mock_services, emi
         project_dir=pathlib.Path.cwd().resolve(),
         project_name="test-project-name",
         template_dir=init_command.parent_template_dir / "simple__ubuntu@22.04",
+        vcs="none",
     )
     emitter.assert_message("Successfully initialised project.")
