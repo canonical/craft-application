@@ -19,8 +19,7 @@ import io
 import pathlib
 
 import pytest
-from craft_application import util
-from craft_application import models
+from craft_application import models, util
 from craft_application.models import spread as model
 
 
