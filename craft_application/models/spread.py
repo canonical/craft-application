@@ -17,9 +17,14 @@
 
 import pathlib
 import re
+from typing import TYPE_CHECKING
 
 import pydantic
 from typing_extensions import Any, Self
+
+if TYPE_CHECKING:
+    from .state import PackedArtifact
+
 
 from craft_application.models import CraftBaseModel
 
