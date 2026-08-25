@@ -106,7 +106,7 @@ class TestingService(base.AppService):
 
         craft_backend = self._get_backend()
 
-        if not pack_state.artifact:
+        if not pack_state.artifacts:
             raise CraftError(
                 f"No {self._app.artifact_type} files to test.",
                 resolution=f"Ensure that {self._app.artifact_type} files are generated before running the test.",
@@ -115,8 +115,7 @@ class TestingService(base.AppService):
         spread_yaml = models.SpreadYaml.from_craft(
             simple,
             craft_backend=craft_backend,
-            artifact=pack_state.artifact,
-            resources=pack_state.resources or {},
+            artifacts=pack_state.artifacts,
         )
 
         emit.trace(f"Writing processed spread file to {dest}")

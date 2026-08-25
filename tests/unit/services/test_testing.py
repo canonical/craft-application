@@ -208,6 +208,43 @@ def test_process_without_spread_file(new_dir, testing_service):
         testing_service.process_spread_yaml(new_dir / "wherever", state)
 
 
+def test_process_spread_yaml_accepts_named_artifacts_only(
+    testing_service: TestingService,
+    tmp_path: pathlib.Path,
+    mocker,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    spread_file = tmp_path / "spread.yaml"
+    spread_file.write_text("project: test-project\n")
+    state = models.PackState(
+        artifacts=[models.PackedArtifact(name="tools", path=pathlib.Path("tools.tar"))]
+    )
+    mocker.patch.object(testing_service, "_get_backend", return_value=mock.Mock())
+
+    dest = tmp_path / "processed-spread.yaml"
+    monkeypatch.chdir(tmp_path)
+    testing_service.process_spread_yaml(dest, state)
+
+    assert "CRAFT_ARTIFACT_TOOLS: $PROJECT_PATH/tools.tar" in dest.read_text()
+
+
+def test_process_spread_yaml_requires_any_artifact(
+    testing_service: TestingService,
+    tmp_path: pathlib.Path,
+    mocker,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    spread_file = tmp_path / "spread.yaml"
+    spread_file.write_text("project: test-project\n")
+    state = models.PackState(artifacts=[])
+    mocker.patch.object(testing_service, "_get_backend", return_value=mock.Mock())
+
+    dest = tmp_path / "processed-spread.yaml"
+    monkeypatch.chdir(tmp_path)
+    with pytest.raises(CraftError, match="No .* files to test"):
+        testing_service.process_spread_yaml(dest, state)
+
+
 @pytest.mark.parametrize(
     ("env_var", "value", "testspec"),
     [("", "", "craft"), ("CI", "1", "craft:id-1.0")],
