@@ -216,7 +216,8 @@ def test_process_spread_yaml_accepts_named_artifacts_only(
     monkeypatch: pytest.MonkeyPatch,
 ):
     spread_file = tmp_path / "spread.yaml"
-    spread_file.write_text(dedent("""
+    spread_file.write_text(
+        dedent("""
             project: test-project
             backends:
               craft:
@@ -225,7 +226,8 @@ def test_process_spread_yaml_accepts_named_artifacts_only(
             suites:
               spread/general/:
                 summary: General tests
-            """))
+            """)
+    )
     state = models.PackState(
         artifacts=[models.PackedArtifact(name="tools", path=pathlib.Path("tools.tar"))]
     )
@@ -245,7 +247,8 @@ def test_process_spread_yaml_requires_any_artifact(
     monkeypatch: pytest.MonkeyPatch,
 ):
     spread_file = tmp_path / "spread.yaml"
-    spread_file.write_text(dedent("""
+    spread_file.write_text(
+        dedent("""
             project: test-project
             backends:
               craft:
@@ -254,7 +257,8 @@ def test_process_spread_yaml_requires_any_artifact(
             suites:
               spread/general/:
                 summary: General tests
-            """))
+            """)
+    )
     state = models.PackState(artifacts=[])
     mocker.patch.object(testing_service, "_get_backend", return_value=mock.Mock())
 
