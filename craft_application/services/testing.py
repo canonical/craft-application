@@ -26,9 +26,12 @@ from collections.abc import Iterable
 
 import craft_platforms
 import distro
+import pydantic
 from craft_cli import CraftError, emit
 
 from craft_application import models, util
+from craft_application.errors import TestFileError
+from craft_application.util.error_formatting import format_pydantic_errors
 
 from . import base
 
@@ -37,6 +40,12 @@ class TestingService(base.AppService):
     """Service class for testing a project."""
 
     __test__ = False  # Tell pytest this service is not a test class.
+
+    _resolved_test_config_path: pathlib.Path | None = None
+    """The resolved test config path.
+
+    Cached for performance and to avoid re-emitting deprecation warnings.
+    """
 
     def test(
         self,
@@ -52,7 +61,8 @@ class TestingService(base.AppService):
 
         This method is likely the all you need to call.
 
-        :param project_path: The path to the project directory containing spread.yaml.
+        :param project_path: The path to the project directory containing the
+            test config file or the deprecated spread.yaml file.
         :param pack_state: An object containing the list of packed artifacts.
         :param test_expressions: A list of spread test expressions.
         :param shell: Whether to shell into the spread test instance.
@@ -76,31 +86,116 @@ class TestingService(base.AppService):
                 debug=debug,
             )
 
-    def parse_spread_yaml(self) -> models.CraftSpreadYaml:
-        """Read and parse the spread.yaml file for this project."""
-        spread_path = pathlib.Path("spread.yaml")
-        if not spread_path.is_file():
+    def parse_spread_yaml(self) -> models.CraftTestYaml:
+        """Read and parse the test config file for this project.
+
+        :raises TestFileError: if the test config file is invalid.
+        """
+        test_path = self._resolve_test_config_path()
+        with test_path.open() as file:
+            data = util.safe_yaml_load(file)
+
+        if test_path.name == "spread.yaml":
+            model = models.CraftSpreadYaml
+        else:
+            model = models.CraftTestYaml
+
+        try:
+            parsed = model.unmarshal(data)
+        except pydantic.ValidationError as exc:
+            raise TestFileError(
+                format_pydantic_errors(exc.errors(), file_name=test_path.name),
+                reportable=False,
+                retcode=os.EX_DATAERR,
+            ) from exc
+
+        return parsed
+
+    def _resolve_test_config_path(self) -> pathlib.Path:
+        """Locate the test config file.
+
+        :raises CraftError: if no usable test config file is found
+        """
+        if self._resolved_test_config_path is not None:
+            return self._resolved_test_config_path
+
+        # If '<app-name>-test.yaml' exists, parse it.
+        test_file_name = f"{self._app.name}-test.yaml"
+        test_path = pathlib.Path(test_file_name)
+        if test_path.is_file():
+            self._resolved_test_config_path = test_path
+            return test_path
+
+        # If '<app-name>-test.yaml' doesn't exist, check for a deprecated spread.yaml
+        # that contains a craft backend.
+        spread_yaml_path = pathlib.Path("spread.yaml")
+        if not (
+            spread_yaml_path.is_file() and self._is_craft_test_file(spread_yaml_path)
+        ):
             raise CraftError(
-                "Could not find 'spread.yaml' in the current directory.",
-                resolution="Ensure you are in the correct directory or create a spread.yaml file.",
+                f"Could not find {test_file_name!r}.",
+                resolution=(
+                    "Ensure you are in the correct directory or create a "
+                    f"{test_file_name!r} file with '{self._app.name} init --profile test'."
+                ),
                 reportable=False,
                 logpath_report=False,
                 retcode=os.EX_CONFIG,
             )
 
-        with spread_path.open() as file:
-            data = util.safe_yaml_load(file)
+        # If the app isn't allowed to parse spread files, raise an error.
+        if not self._app.allow_spread_yaml:
+            raise CraftError(
+                f"'spread.yaml' cannot be used for '{self._app.name} test'.",
+                resolution=(
+                    f"Rename 'spread.yaml' to '{test_file_name}' and "
+                    "remove the 'project' key, if defined."
+                ),
+                reportable=False,
+                logpath_report=False,
+                retcode=os.EX_CONFIG,
+            )
 
-        return models.CraftSpreadYaml.unmarshal(data)
+        # If the app is allowed to parse spread files, emit a deprecation warning and parse it.
+        if not util.is_managed_mode():
+            emit.warning(
+                f"'spread.yaml' is deprecated for '{self._app.name} test'. "
+                f"Rename it to '{test_file_name}' and remove the 'project' key, if defined."
+            )
+
+        self._resolved_test_config_path = spread_yaml_path
+        return spread_yaml_path
+
+    @staticmethod
+    def _is_craft_test_file(path: pathlib.Path) -> bool:
+        """Check whether a spread config file is used for craft tests.
+
+        This is a simple check that looks for a 'craft' backend.
+
+        The intent is to sort out projects that used spread.yaml for the 'test' command
+        versus projects that used spread and had their own spread.yaml
+        """
+        try:
+            with path.open() as file:
+                data = util.safe_yaml_load(file)
+        except (OSError, CraftError):
+            return False
+
+        if not isinstance(data, dict):
+            return False
+
+        backends = data.get("backends")
+        return isinstance(backends, dict) and "craft" in backends
 
     def process_spread_yaml(
         self, dest: pathlib.Path, pack_state: models.PackState
     ) -> None:
-        """Process the spread configuration file.
+        """Process the test config file into a spread config file.
 
-        :param dest: the output path for spread.yaml.
+        :param dest: the output path for the generated spread.yaml file.
         """
-        emit.debug("Processing spread.yaml.")
+        test_path = self._resolve_test_config_path()
+        emit.debug(f"Processing '{test_path.name}'.")
 
         simple = self.parse_spread_yaml()
 

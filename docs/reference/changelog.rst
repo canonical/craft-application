@@ -15,6 +15,22 @@ Changelog
 
     For a complete list of commits, check out the `1.2.3`_ release on GitHub.
 
+7.3.0 (unreleased)
+------------------
+
+Application
+===========
+
+- A new ``AppMetadata.allow_spread_yaml`` setting controls whether the ``test`` command
+  can fall back to the deprecated ``spread.yaml``.
+
+Commands
+========
+
+- The ``spread.yaml`` file for the ``test`` command has been deprecated in favor
+  of ``<app-name>-test.yaml``.
+
+
 7.2.0 (2028-08-11)
 ------------------
 

@@ -71,15 +71,14 @@ class CraftSpreadSuite(SpreadBase):
     kill_timeout: str | None = None
 
 
-class CraftSpreadYaml(SpreadBase):
-    """Simplified spread project configuration."""
+class CraftTestYaml(SpreadBase):
+    """Simplified spread project configuration for a craft test file."""
 
     model_config = pydantic.ConfigDict(
         SpreadBase.model_config,
         extra="forbid",
     )
 
-    project: str | None = None
     backends: dict[str, CraftSpreadBackend]
     suites: dict[str, CraftSpreadSuite]
     exclude: list[str] | None = None
@@ -90,6 +89,18 @@ class CraftSpreadYaml(SpreadBase):
     restore_each: str | None = None
     debug_each: str | None = None
     kill_timeout: str | None = None
+
+
+class CraftSpreadYaml(CraftTestYaml):
+    """Deprecated craft test spread.yaml.
+
+    This is different than a standard spread.yaml, which is used directly with spread.
+
+    The deprecated craft test spread.yaml is a subset of a standard spread.yaml. It
+    doesn't allow the 'path', 'environment', and 'include 'keys.
+    """
+
+    project: str | None = None
 
 
 # Processed full-form spread configuration
@@ -226,7 +237,7 @@ class SpreadYaml(SpreadBaseModel):
     @classmethod
     def from_craft(
         cls,
-        simple: CraftSpreadYaml,
+        simple: CraftTestYaml,
         *,
         craft_backend: SpreadBackend,
         artifact: pathlib.Path,
