@@ -122,9 +122,7 @@ def test_spread_yaml_from_craft_spread():
         craft_backend=backend,
         artifacts=[
             models.PackedArtifact(name=None, path=pathlib.Path("artifact")),
-            models.PackedArtifact(
-                name="my-resource", path=pathlib.Path("resource")
-            ),
+            models.PackedArtifact(name="my-resource", path=pathlib.Path("resource")),
         ],
     )
 

@@ -250,9 +250,7 @@ class SpreadYaml(SpreadBaseModel):
                 continue
 
             var_name = cls._translate_resource_name(artifact.name)
-            environment[f"CRAFT_ARTIFACT_{var_name}"] = (
-                f"$PROJECT_PATH/{artifact.path}"
-            )
+            environment[f"CRAFT_ARTIFACT_{var_name}"] = f"$PROJECT_PATH/{artifact.path}"
 
         return cls(
             project="craft-test",
