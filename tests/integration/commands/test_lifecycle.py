@@ -60,7 +60,7 @@ def test_test_with_bad_spread_yaml(
     """Initialise a project."""
     app.add_command_group("Lifecycle", [TestCommand], ordered=True)
     monkeypatch.setattr("sys.argv", ["testcraft", "test"])
-    spread_file = new_dir / "spread.yaml"
+    spread_file = new_dir / "testcraft-test.yaml"
     spread_file.write_text("summary: An incomplete test file.")
 
     retcode = app.run()
@@ -68,6 +68,6 @@ def test_test_with_bad_spread_yaml(
 
     assert retcode == os.EX_DATAERR
     assert re.match(
-        r"^Bad spread.yaml content:\n- field 'backends' required in top-level configuration",
+        r"^Bad testcraft-test.yaml content:\n- field 'backends' required in top-level configuration",
         stderr,
     )

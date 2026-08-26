@@ -692,7 +692,7 @@ class TestCommand(PackCommand):
 
         testing_service = self._services.get("testing")
         # Fail early if the test config file is invalid.
-        testing_service.parse_spread_yaml()
+        testing_service.parse_test_config()
 
         if util.is_managed_mode():
             # If we're in managed mode, we just need to pack.

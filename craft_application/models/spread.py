@@ -97,7 +97,7 @@ class CraftSpreadYaml(CraftTestYaml):
     This is different than a standard spread.yaml, which is used directly with spread.
 
     The deprecated craft test spread.yaml is a subset of a standard spread.yaml. It
-    doesn't allow the 'path', 'environment', and 'include 'keys.
+    doesn't allow the 'path', 'environment', and 'include' keys.
     """
 
     project: str | None = None

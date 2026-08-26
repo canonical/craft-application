@@ -210,10 +210,10 @@ def test_process_without_spread_file(new_dir, testing_service):
         testing_service.process_spread_yaml(new_dir / "wherever", state)
 
 
-def test_parse_spread_yaml_uses_craft_test_yaml(
+def test_parse_test_config_uses_craft_test_yaml(
     in_project_path: pathlib.Path, default_app_metadata, emitter
 ):
-    """Prefer a test config file is used and over a spread.yaml"""
+    """Prefer the test config file and over spread.yaml"""
     testing_service = TestingService(app=default_app_metadata, services=mock.Mock())
 
     (in_project_path / "testcraft-test.yaml").write_text(
@@ -225,12 +225,12 @@ def test_parse_spread_yaml_uses_craft_test_yaml(
         "backends:\n  craft:\n    systems: []\nsuites: {}\n"
     )
 
-    testing_service.parse_spread_yaml()
+    testing_service.parse_test_config()
 
     emitter.assert_interactions(None)
 
 
-def test_parse_spread_yaml_spread_yaml(
+def test_parse_test_config_spread_yaml(
     in_project_path: pathlib.Path, default_app_metadata, emitter
 ):
     """Warn when a spread.yaml is used."""
@@ -240,7 +240,7 @@ def test_parse_spread_yaml_spread_yaml(
         "backends:\n  craft:\n    systems: []\nsuites: {}\n"
     )
 
-    testing_service.parse_spread_yaml()
+    testing_service.parse_test_config()
 
     emitter.assert_warning(
         "'spread.yaml' is deprecated for 'testcraft test'. "
@@ -249,7 +249,7 @@ def test_parse_spread_yaml_spread_yaml(
     )
 
 
-def test_parse_spread_yaml_single_warning(
+def test_parse_test_config_single_warning(
     in_project_path: pathlib.Path, default_app_metadata, emitter
 ):
     """The deprecation warning is only emitted once."""
@@ -259,14 +259,14 @@ def test_parse_spread_yaml_single_warning(
         "backends:\n  craft:\n    systems: []\nsuites: {}\n"
     )
 
-    testing_service.parse_spread_yaml()
-    testing_service.parse_spread_yaml()
+    testing_service.parse_test_config()
+    testing_service.parse_test_config()
 
     warning_calls = [call for call in emitter.interactions if call.args[0] == "warning"]
     assert len(warning_calls) == 1
 
 
-def test_parse_spread_yaml_no_warning_in_managed_mode(
+def test_parse_test_config_no_warning_in_managed_mode(
     in_project_path: pathlib.Path, default_app_metadata, emitter, managed_mode
 ):
     """The deprecation warning is suppressed inside managed instances."""
@@ -276,12 +276,12 @@ def test_parse_spread_yaml_no_warning_in_managed_mode(
         "backends:\n  craft:\n    systems: []\nsuites: {}\n"
     )
 
-    testing_service.parse_spread_yaml()
+    testing_service.parse_test_config()
 
     emitter.assert_interactions(None)
 
 
-def test_parse_spread_yaml_ignores_non_craft_test_spread_yaml(
+def test_parse_test_config_ignores_non_craft_test_spread_yaml(
     in_project_path: pathlib.Path, default_app_metadata, emitter
 ):
     """Ignore spread.yaml if it lacks a craft backend."""
@@ -292,12 +292,12 @@ def test_parse_spread_yaml_ignores_non_craft_test_spread_yaml(
     )
 
     with pytest.raises(CraftError, match="Could not find 'testcraft-test.yaml'"):
-        testing_service.parse_spread_yaml()
+        testing_service.parse_test_config()
 
     emitter.assert_interactions(None)
 
 
-def test_parse_spread_yaml_fallback_disabled(
+def test_parse_test_config_fallback_disabled(
     in_project_path: pathlib.Path, default_app_metadata, emitter
 ):
     """Error on parsing spread.yaml if allow_spread is False."""
@@ -314,14 +314,14 @@ def test_parse_spread_yaml_fallback_disabled(
     )
 
     with pytest.raises(CraftError, match="'spread.yaml' cannot be used") as raised:
-        testing_service.parse_spread_yaml()
+        testing_service.parse_test_config()
 
     assert raised.value.resolution is not None
     assert "testcraft-test.yaml" in raised.value.resolution
     emitter.assert_interactions(None)
 
 
-def test_parse_spread_yaml_ignores_project_key(
+def test_parse_test_config_ignores_project_key(
     in_project_path: pathlib.Path, default_app_metadata
 ):
     """A 'project' key in a spread.yaml is silently unused."""
@@ -331,13 +331,13 @@ def test_parse_spread_yaml_ignores_project_key(
         "project: my-project\nbackends:\n  craft:\n    systems: []\nsuites: {}\n"
     )
 
-    parsed = testing_service.parse_spread_yaml()
+    parsed = testing_service.parse_test_config()
 
     assert isinstance(parsed, models.CraftSpreadYaml)
     assert parsed.project == "my-project"
 
 
-def test_parse_spread_yaml_app_test_yaml_rejects_legacy_keys(
+def test_parse_test_config_app_test_yaml_rejects_legacy_keys(
     in_project_path: pathlib.Path, default_app_metadata
 ):
     """Unsupported keys, like `project`, raise an error when parsing a craft test file."""
@@ -348,7 +348,7 @@ def test_parse_spread_yaml_app_test_yaml_rejects_legacy_keys(
     )
 
     with pytest.raises(TestFileError):
-        testing_service.parse_spread_yaml()
+        testing_service.parse_test_config()
 
 
 @pytest.mark.parametrize(

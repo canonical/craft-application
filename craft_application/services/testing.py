@@ -86,9 +86,10 @@ class TestingService(base.AppService):
                 debug=debug,
             )
 
-    def parse_spread_yaml(self) -> models.CraftTestYaml:
+    def parse_test_config(self) -> models.CraftTestYaml:
         """Read and parse the test config file for this project.
 
+        :raises CraftError: if no usable test config file is found.
         :raises TestFileError: if the test config file is invalid.
         """
         test_path = self._resolve_test_config_path()
@@ -197,7 +198,7 @@ class TestingService(base.AppService):
         test_path = self._resolve_test_config_path()
         emit.debug(f"Processing '{test_path.name}'.")
 
-        simple = self.parse_spread_yaml()
+        simple = self.parse_test_config()
 
         craft_backend = self._get_backend()
 
