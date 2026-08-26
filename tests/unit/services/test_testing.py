@@ -231,7 +231,11 @@ def test_process_spread_yaml_accepts_named_artifacts_only(
     state = models.PackState(
         artifacts=[models.PackedArtifact(name="tools", path=pathlib.Path("tools.tar"))]
     )
-    mocker.patch.object(testing_service, "_get_backend", return_value=mock.Mock())
+    mocker.patch.object(
+        testing_service,
+        "_get_backend",
+        return_value=models.SpreadBackend(type="adhoc"),
+    )
 
     dest = tmp_path / "processed-spread.yaml"
     monkeypatch.chdir(tmp_path)
@@ -260,7 +264,11 @@ def test_process_spread_yaml_requires_any_artifact(
             """)
     )
     state = models.PackState(artifacts=[])
-    mocker.patch.object(testing_service, "_get_backend", return_value=mock.Mock())
+    mocker.patch.object(
+        testing_service,
+        "_get_backend",
+        return_value=models.SpreadBackend(type="adhoc"),
+    )
 
     dest = tmp_path / "processed-spread.yaml"
     monkeypatch.chdir(tmp_path)
