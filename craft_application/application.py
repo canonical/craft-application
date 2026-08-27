@@ -122,6 +122,19 @@ class AppMetadata:
     enable_pro_support: bool = False
     """Whether this application supports Ubuntu Pro services."""
 
+    allow_git_build_root: bool = False
+    """Whether to allow mounting the git working tree root as the build root.
+
+    When True and the user enables the ``experimental_monorepo`` config option,
+    the git root is mounted as /root/project in the managed instance rather than
+    the project directory. The working directory inside the instance is adjusted
+    to the project's subdirectory within the git root, giving the build access to
+    code outside the project directory (e.g. shared libraries in a monorepo).
+
+    Has no effect when the project directory is not inside a git repository,
+    or when the project directory is the git root itself.
+    """
+
     def __post_init__(self) -> None:
         setter = super().__setattr__
 

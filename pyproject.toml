@@ -26,7 +26,7 @@ dependencies = [
     "PyYaml>=6.0",
     "requests",
     "typing_extensions>=4.4.0",
-    "distro-support>=2025.12.16",
+    "distro-support>=2026.8.10",
     "snap-http>=1.10.1",
 ]
 classifiers = [
@@ -69,7 +69,7 @@ dev = [
     "pytest-cov==7.1.0",
     "pytest-freezer==0.4.9",
     "pytest-mock~=3.14",
-    "pytest-rerunfailures==16.4",
+    "pytest-rerunfailures==16.6",
     "pytest-subprocess~=1.6.0",
     "pytest-time>=0.3.1",
     "responses~=0.26.0",
@@ -77,7 +77,7 @@ dev = [
     "jsonschema>=4.23.0",
 ]
 lint = [
-    "codespell[toml]==2.4.2",
+    "codespell[toml]==2.4.3",
 ]
 types = [
     "types-pyyaml",
@@ -133,6 +133,9 @@ dev-questing = [
 dev-resolute = [
     "python-apt~=3.0.0;sys_platform=='linux'",
 ]
+dev-stonking = [
+    "python-apt~=3.0.0;sys_platform=='linux'",
+]
 tics = ["flake8", "pylint"]
 
 [tool.uv]
@@ -167,6 +170,7 @@ conflicts = [
         { group = "dev-plucky" },
         { group = "dev-questing" },
         { group = "dev-resolute" },
+        { group = "dev-stonking" },
     ]
 ]
 
@@ -181,7 +185,7 @@ python-apt = { index = "python-apt-wheels" }
 
 [build-system]
 requires = [
-    "setuptools==83.0.0",
+    "setuptools==84.0.0",
     "setuptools_scm[toml]>=8.1"
 ]
 build-backend = "setuptools.build_meta"
@@ -399,6 +403,7 @@ classmethod-decorators = ["pydantic.validator", "pydantic.root_validator"]
     "S103",    # Allow `os.chmod` setting a permissive mask `0o555` on file or directory
     "S108",    # Allow Probable insecure usage of temporary file or directory
     "PLR0913", # Allow many arguments for test functions (useful if we need many fixtures)
+    "PLR0917", # Allow many positional arguments for test functions (same reason as PLR0913)
     "PLR2004", # Allow magic values in tests
     "SLF",     # Allow accessing private members from tests.
     "FBT001",  # Boolean-typed parametrized tests can be useful
