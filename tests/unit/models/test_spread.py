@@ -18,6 +18,7 @@
 import io
 import pathlib
 
+import pydantic
 import pytest
 from craft_application import models, util
 from craft_application.models import spread as model
@@ -216,3 +217,38 @@ def test_spread_yaml_from_craft_named_artifacts_only():
 
     assert spread.environment["CRAFT_ARTIFACT_MY_RESOURCE"] == "$PROJECT_PATH/resource"
     assert "CRAFT_ARTIFACT" not in spread.environment
+
+
+@pytest.mark.parametrize("key", ["project", "path", "environment", "include"])
+def test_craft_test_yaml_spread_keys_error(key):
+    """Error when using spread keys that aren't allowed in <app-name>-test.yaml."""
+    data = {
+        "backends": {"craft": {"systems": []}},
+        "suites": {},
+        key: "value",
+    }
+    with pytest.raises(pydantic.ValidationError):
+        model.CraftTestYaml.unmarshal(data)
+
+
+@pytest.mark.parametrize("key", ["path", "environment", "include"])
+def test_craft_spread_yaml_spread_keys_error(key):
+    """Error when using spread keys that aren't allowed in spread.yaml."""
+    data = {
+        "backends": {"craft": {"systems": []}},
+        "suites": {},
+        key: "value",
+    }
+    with pytest.raises(pydantic.ValidationError):
+        model.CraftSpreadYaml.unmarshal(data)
+
+
+def test_craft_spread_yaml_allows_project():
+    """'spread.yaml' allows the 'project' key."""
+    data = {
+        "backends": {"craft": {"systems": []}},
+        "suites": {},
+        "project": "my-project",
+    }
+    parsed = model.CraftSpreadYaml.unmarshal(data)
+    assert parsed.project == "my-project"
