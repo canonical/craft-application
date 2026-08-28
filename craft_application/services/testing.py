@@ -179,8 +179,8 @@ class TestingService(base.AppService):
         try:
             with path.open() as file:
                 data = util.safe_yaml_load(file)
-        except (OSError, CraftError):
-            return False
+        except OSError as err:
+            raise CraftError(f"Could not read {str(path)!r}.") from err
 
         if not isinstance(data, dict):
             return False

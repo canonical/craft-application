@@ -27,7 +27,7 @@ import craft_cli.messages
 import craft_platforms
 import pytest
 from craft_application import models
-from craft_application.errors import TestFileError
+from craft_application.errors import TestFileError, YamlError
 from craft_application.services.testing import TestingService
 from craft_cli import CraftError
 
@@ -210,10 +210,52 @@ def test_process_without_spread_file(new_dir, testing_service):
         testing_service.process_spread_yaml(new_dir / "wherever", state)
 
 
+@pytest.mark.parametrize(
+    ("content", "expected"),
+    [
+        pytest.param(
+            "backends:\n  craft:\n    systems: []\nsuites: {}\n",
+            True,
+            id="craft-test-file",
+        ),
+        pytest.param(
+            "backends:\n  other:\n    systems: []\nsuites: {}\n",
+            False,
+            id="not-a-craft-test-file",
+        ),
+        pytest.param("- item1\n- item2\n", False, id="not-a-dict"),
+    ],
+)
+def test_is_craft_test_file(tmp_path, content, expected):
+    """Return whether spread.yaml is a craft test file."""
+    spread_path = tmp_path / "spread.yaml"
+    spread_path.write_text(content)
+
+    assert TestingService._is_craft_test_file(spread_path) is expected
+
+
+def test_is_craft_test_file_read_error(tmp_path):
+    """Error if spread.yaml can't be read."""
+    spread_path = tmp_path / "spread.yaml"
+    spread_path.mkdir()
+
+    with pytest.raises(CraftError, match="Could not read"):
+        TestingService._is_craft_test_file(spread_path)
+
+
+def test_is_craft_test_file_invalid_yaml(tmp_path):
+    """Error if spread.yaml is invalid yaml."""
+    spread_path = tmp_path / "spread.yaml"
+    spread_path.write_text("backends: [unclosed")
+
+    with pytest.raises(YamlError):
+        TestingService._is_craft_test_file(spread_path)
+
+
 def test_parse_test_config_uses_craft_test_yaml(
     in_project_path: pathlib.Path, default_app_metadata, emitter
 ):
-    """Prefer the test config file and over spread.yaml"""
+    """Prefer the test config file over spread.yaml"""
     testing_service = TestingService(app=default_app_metadata, services=mock.Mock())
 
     (in_project_path / "testcraft-test.yaml").write_text(
