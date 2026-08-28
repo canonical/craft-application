@@ -30,6 +30,12 @@ Commands
 - The ``spread.yaml`` file for the ``test`` command has been deprecated in favor
   of ``<app-name>-test.yaml``.
 
+Services
+========
+
+- The testing service now handles multiple artifacts by defining variables
+  ``CRAFT_ARTIFACT_<name>`` in the Spread test environment.
+
 
 7.2.0 (2028-08-11)
 ------------------
