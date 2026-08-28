@@ -15,6 +15,15 @@ Changelog
 
     For a complete list of commits, check out the `1.2.3`_ release on GitHub.
 
+Unreleased
+----------
+
+Services
+========
+
+- The testing service now handles multiple artifacts by defining variables
+  ``CRAFT_ARTIFACT_<name>`` in the Spread test environment.
+
 7.2.0 (2028-08-11)
 ------------------
 
