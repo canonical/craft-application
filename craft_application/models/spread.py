@@ -15,11 +15,15 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Models representing spread projects."""
 
-import pathlib
 import re
+from typing import TYPE_CHECKING
 
 import pydantic
 from typing_extensions import Any, Self
+
+if TYPE_CHECKING:
+    from .state import PackedArtifact
+
 
 from craft_application.models import CraftBaseModel
 
@@ -71,15 +75,14 @@ class CraftSpreadSuite(SpreadBase):
     kill_timeout: str | None = None
 
 
-class CraftSpreadYaml(SpreadBase):
-    """Simplified spread project configuration."""
+class CraftTestYaml(SpreadBase):
+    """Simplified spread project configuration for a craft test file."""
 
     model_config = pydantic.ConfigDict(
         SpreadBase.model_config,
         extra="forbid",
     )
 
-    project: str | None = None
     backends: dict[str, CraftSpreadBackend]
     suites: dict[str, CraftSpreadSuite]
     exclude: list[str] | None = None
@@ -90,6 +93,18 @@ class CraftSpreadYaml(SpreadBase):
     restore_each: str | None = None
     debug_each: str | None = None
     kill_timeout: str | None = None
+
+
+class CraftSpreadYaml(CraftTestYaml):
+    """Deprecated craft test spread.yaml.
+
+    This is different than a standard spread.yaml, which is used directly with spread.
+
+    The deprecated craft test spread.yaml is a subset of a standard spread.yaml. It
+    doesn't allow the 'path', 'environment', and 'include' keys.
+    """
+
+    project: str | None = None
 
 
 # Processed full-form spread configuration
@@ -226,11 +241,10 @@ class SpreadYaml(SpreadBaseModel):
     @classmethod
     def from_craft(
         cls,
-        simple: CraftSpreadYaml,
+        simple: CraftTestYaml,
         *,
         craft_backend: SpreadBackend,
-        artifact: pathlib.Path,
-        resources: dict[str, pathlib.Path],
+        artifacts: list["PackedArtifact"],
     ) -> Self:
         """Create the spread configuration from the simplified version."""
         environment = {
@@ -239,12 +253,15 @@ class SpreadYaml(SpreadBaseModel):
             "LANG": "C.UTF-8",
             "LANGUAGE": "en",
             "PROJECT_PATH": "/root/proj",
-            "CRAFT_ARTIFACT": f"$PROJECT_PATH/{artifact}",
         }
 
-        for name, path in resources.items():
-            var_name = cls._translate_resource_name(name)
-            environment[f"CRAFT_RESOURCE_{var_name}"] = f"$PROJECT_PATH/{path}"
+        for artifact in artifacts:
+            if artifact.name is None:
+                environment["CRAFT_ARTIFACT"] = f"$PROJECT_PATH/{artifact.path}"
+                continue
+
+            var_name = cls._translate_resource_name(artifact.name)
+            environment[f"CRAFT_ARTIFACT_{var_name}"] = f"$PROJECT_PATH/{artifact.path}"
 
         return cls(
             project="craft-test",

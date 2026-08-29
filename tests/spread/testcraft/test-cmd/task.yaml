@@ -5,17 +5,22 @@ systems:
 
 environment:
   CI: "1"
+  CRAFT_VERBOSITY_LEVEL: TRACE
 
 execute: |
-  CRAFT_VERBOSITY_LEVEL=TRACE testcraft test 2>&1 | tee test_out.log
+  testcraft test 2>&1 | tee test_out.log
   grep -q "platform 'a'" test_out.log
   grep -q "platform 'b'" test_out.log
-  CRAFT_VERBOSITY_LEVEL=verbose testcraft test tests/spread/my-suite/my-task 2>&1 | tee retest_out.log
-  grep -q 'Already packed: test-test-0.1-a.testcraft' retest_out.log
-  grep -q 'Already packed: test-test-0.1-b.testcraft' retest_out.log
   testcraft test other:...:tests/spread/my-suite/my-task 2>&1 | MATCH "No matches"
+
+  # verify deprecated spread.yaml can be used
+  mv testcraft-test.yaml spread.yaml
+
+  testcraft test 2>&1 | tee deprecated_test_out.log
+  MATCH "'spread.yaml' is deprecated for 'testcraft test'" < deprecated_test_out.log
 
 restore: |
   rm -f *.testcraft
   testcraft clean
-  rm -f test_out.log retest_out.log
+  rm -f test_out.log deprecated_test_out.log retest_out.log
+  mv -f spread.yaml testcraft-test.yaml 2>/dev/null || true

@@ -759,6 +759,9 @@ class ProjectService(base.AppService):
     def is_effective_base_eol(self) -> bool:
         """Determine whether the base on which to build is end-of-life."""
         base = craft_platforms.DistroBase.from_str(self.get().effective_base)
+        if base.series == "devel":
+            # A devel series is never considered end-of-life.
+            return False
         return not self._is_supported_on(base=base, date=datetime.date.today())
 
     def base_eol_soon_date(self) -> datetime.date | None:

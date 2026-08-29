@@ -44,11 +44,10 @@ PARTS_DICT = {"my-part": {"plugin": "nil"}}
 
 @pytest.fixture
 def basic_project():
-    # ty doesn't understand pydantic semantics (https://github.com/astral-sh/ty/issues/2403)
     return Project(
         name="project-name",
         version="1.0",
-        platforms={"arm64": None},  # ty: ignore[invalid-argument-type]
+        platforms={"arm64": None},
         parts=PARTS_DICT,
     )
 
@@ -348,12 +347,11 @@ class FakeBuildBaseProject(Project):
 
 
 def test_effective_base_is_build_base():
-    # ty doesn't understand pydantic semantics (https://github.com/astral-sh/ty/issues/2403)
     project = FakeBuildBaseProject(
         name="project-name",
         version="1.0",
         parts={},
-        platforms={"arm64": None},  # ty: ignore[invalid-argument-type]
+        platforms={"arm64": None},
         base="ubuntu@22.04",
         build_base="ubuntu@24.04",
     )
@@ -366,7 +364,7 @@ def test_effective_base_unknown():
         name="project-name",
         version="1.0",
         parts={},
-        platforms={"arm64": None},  # ty: ignore[invalid-argument-type]
+        platforms={"arm64": None},
         base=None,
         build_base=None,
     )
@@ -384,7 +382,7 @@ def test_devel_base_devel_build_base(emitter, devel_info):
         name="project-name",
         version="1.0",
         parts={},
-        platforms={"arm64": None},  # ty: ignore[invalid-argument-type]
+        platforms={"arm64": None},
         base=f"ubuntu@{DEVEL_BASE_INFOS[0].current_devel_base.value}",
         build_base=f"ubuntu@{DEVEL_BASE_INFOS[0].devel_base.value}",
     )
@@ -402,7 +400,7 @@ def test_devel_base_wrong_build_base(devel_info):
             name="project-name",
             version="1.0",
             parts={},
-            platforms={"arm64": None},  # ty: ignore[invalid-argument-type]
+            platforms={"arm64": None},
             base=f"ubuntu@{DEVEL_BASE_INFOS[0].current_devel_base.value}",
             build_base=f"ubuntu@{DEVEL_BASE_INFOS[0].current_devel_base.value}",
         )
@@ -414,7 +412,7 @@ def test_devel_base_no_base():
         name="project-name",
         version="1.0",
         parts={},
-        platforms={"arm64": None},  # ty: ignore[invalid-argument-type]
+        platforms={"arm64": None},
     )
 
 
@@ -429,7 +427,7 @@ def test_devel_base_no_base_alias(mocker):
         name="project-name",
         version="1.0",
         parts={},
-        platforms={"arm64": None},  # ty: ignore[invalid-argument-type]
+        platforms={"arm64": None},
     )
 
 
@@ -442,7 +440,7 @@ def test_devel_base_no_build_base(devel_info):
             name="project-name",
             version="1.0",
             parts={},
-            platforms={"arm64": None},  # ty: ignore[invalid-argument-type]
+            platforms={"arm64": None},
             base=f"ubuntu@{DEVEL_BASE_INFOS[0].current_devel_base.value}",
             build_base=None,
         )

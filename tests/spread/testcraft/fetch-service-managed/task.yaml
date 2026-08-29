@@ -27,3 +27,6 @@ restore: |
   snap remove --purge fetch-service
   rm -f fetch-service*.json
   rm -f fetch-service*.testcraft
+
+debug: |
+  cat /root/snap/fetch-service/common/craft-logs/fetch-service.log 2>/dev/null || echo "No fetch-service log"

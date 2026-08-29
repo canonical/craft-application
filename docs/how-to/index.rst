@@ -7,6 +7,7 @@ How-to guides
    :maxdepth: 1
 
    build-remotely
+   pack-a-pro-artifact
    partitions
    platforms
    add-a-linter

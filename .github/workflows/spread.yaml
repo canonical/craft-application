@@ -1,6 +1,9 @@
 name: Spread
 on:
   pull_request:
+    paths-ignore:
+      - ".github/workflows/policy.yaml"
+      - ".osv-scanner.toml"
   merge_group:
   push:
     branches:
@@ -16,7 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - name: Build snap
@@ -29,13 +32,13 @@ jobs:
           path: ${{ steps.snap.outputs.snap }}
 
   snap-tests:
-    runs-on: spread-installed
+    runs-on: [self-hosted, spread-enabled]
     needs: [snap-build]
     strategy:
       fail-fast: false
       matrix:
         spread:
-          - "google:"
+          - "openstack:"
 
     steps:
       - name: Cleanup job workspace
@@ -44,7 +47,7 @@ jobs:
           mkdir "${{ github.workspace }}"
 
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 1
           submodules: true
@@ -72,7 +75,7 @@ jobs:
               exit 0
             fi
           fi
-          spread google:tests/spread/pro/
+          spread openstack:tests/spread/pro/
 
       - name: Discard spread workers
         if: always()

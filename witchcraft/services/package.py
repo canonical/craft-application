@@ -29,6 +29,13 @@ from witchcraft.models.project import Component, Project
 class PackageService(package.PackageService):
     """Package service for witchcraft."""
 
+    @package.package_file("witchcraft-metadata.yaml")
+    def _witchcraft_metadata(self, partition: str | None = None) -> str:
+        """Generate a package-managed metadata file for ST160 testing."""
+        if partition is not None:
+            raise ValueError(f"Unexpected witchcraft partition: {partition}")
+        return self.metadata.to_yaml_string()
+
     @property
     def metadata(self) -> Metadata:
         """Get the metadata for this model."""
@@ -44,14 +51,20 @@ class PackageService(package.PackageService):
             components=components,
         )
 
-    def pack(self, prime_dir: pathlib.Path, dest: pathlib.Path) -> list[pathlib.Path]:
-        """Pack a witchcraft artifact."""
+    def get_artifacts(self) -> dict[str | None, pathlib.Path]:
+        """Get the witchcraft artifact to pack."""
         project = self._project
         platform = self._build_info.platform
         tarball_name = f"{project.name}-{project.version}-{platform}.witchcraft"
-        with tarfile.open(dest / tarball_name, mode="w:xz") as tar:
-            tar.add(prime_dir, arcname=".")
-        return [dest / tarball_name]
+        return {None: self.output_dir / tarball_name}
+
+    def _pack(self, *, name: str | None = None, path: pathlib.Path) -> None:
+        """Pack a witchcraft artifact."""
+        if name is not None:
+            raise ValueError(f"Unexpected witchcraft artifact name: {name}")
+
+        with tarfile.open(path, mode="w:xz") as tar:
+            tar.add(self._services.get("lifecycle").prime_dir, arcname=".")
 
     def _process_components(
         self,

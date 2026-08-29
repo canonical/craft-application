@@ -342,3 +342,24 @@ def test_get_gateway_errors(config, expected_error, mocker):
 
     with pytest.raises(errors.FetchServiceError, match=expected_error):
         fetch._get_gateway(LXDInstance(name="test-instance"))
+
+
+def test_start_service_passes_proxy_env(mocker, tmp_path):
+    mocker.patch.dict("os.environ", {"http_proxy": "http://proxy"})
+    mocker.patch.object(fetch, "is_service_online", return_value=False)
+    mocker.patch.object(fetch, "_check_installed", return_value=True)
+    mocker.patch.object(fetch, "_get_service_base_dir", return_value=tmp_path)
+    mocker.patch.object(fetch, "get_service_status", return_value={"uptime": 10})
+    mocker.patch.object(
+        fetch,
+        "_obtain_certificate",
+        return_value=(tmp_path / "cert.crt", tmp_path / "key.pem"),
+    )
+
+    mock_popen = mocker.patch.object(subprocess, "Popen")
+    mock_popen.return_value.poll.return_value = None
+
+    fetch.start_service()
+
+    env = mock_popen.call_args.kwargs["env"]
+    assert env["http_proxy"] == "http://proxy"

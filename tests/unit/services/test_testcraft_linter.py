@@ -55,7 +55,9 @@ def test_post_stage_uses_packed_artifact(tmp_path, app_metadata):
 
     class StubPackage:
         def __init__(self, artifact_path: Path) -> None:
-            self._state = models.PackState(artifact=artifact_path, resources=None)
+            self._state = models.PackState(
+                artifacts=[models.PackedArtifact(name=None, path=artifact_path)]
+            )
 
         def read_state(self):
             return self._state

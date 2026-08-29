@@ -1103,7 +1103,7 @@ def test_emitter_docs_url(monkeypatch, mocker, app):
 
     assert app.app.docs_url == "www.testcraft.example/docs/{version}"
     assert app.app.version == "3.14159"
-    expected_url = "www.testcraft.example/docs/3.14159"
+    expected_url = "www.testcraft.example/docs/3"
 
     spied_init = mocker.spy(emit, "init")
 
@@ -1159,7 +1159,7 @@ def test_doc_url_in_general_help(help_args, monkeypatch, capsys, app):
     with pytest.raises(SystemExit):
         app.run()
 
-    expected = "For more information about testcraft, check out: www.testcraft.example/docs/3.14159\n\n"
+    expected = "For more information about testcraft, check out: www.testcraft.example/docs/3\n\n"
     _, err = capsys.readouterr()
     assert err.endswith(expected)
 
@@ -1173,6 +1173,6 @@ def test_doc_url_in_command_help(monkeypatch, capsys, app):
     with pytest.raises(SystemExit):
         app.run()
 
-    expected = "For more information, check out: www.testcraft.example/docs/3.14159/reference/commands/app-config\n\n"
+    expected = "For more information, check out: www.testcraft.example/docs/3/reference/commands/app-config\n\n"
     _, err = capsys.readouterr()
     assert err.endswith(expected)

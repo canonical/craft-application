@@ -115,11 +115,21 @@ class RemoteBuildService(base.AppService):
         self._deadline = time.monotonic_ns() + (seconds_in_future * 10**9)
 
     def start_builds(
-        self, project_dir: pathlib.Path, architectures: Collection[str] | None = None
+        self,
+        project_dir: pathlib.Path,
+        architectures: Collection[str] | None = None,
+        build_path: str | None = None,
     ) -> Collection[launchpad.models.Build]:
         """Start one or more builds for the project.
 
         This method requires a project to be loaded.
+
+        :param project_dir: The directory containing the project to build.
+        :param architectures: (Optional) A collection of architectures to build for.
+        :param build_path: (Optional) The sub-directory containing the project file.
+            The entire repo is uploaded, but Launchpad will set the cwd to the build
+            path before building the artifact. Files and directories outside of the
+            build path won't be accessible.
         """
         if self._builds:
             raise ValueError("Cannot start builds if already running builds")
@@ -132,7 +142,10 @@ class RemoteBuildService(base.AppService):
         self._lp_project = self._ensure_project()
         _, self._repository = self._ensure_repository(project_dir)
         self._recipe = self._ensure_recipe(
-            self._name, self._repository, architectures=architectures
+            self._name,
+            self._repository,
+            architectures=architectures,
+            build_path=build_path,
         )
         self._check_timeout()
         self._builds = list(self._new_builds(self._recipe))

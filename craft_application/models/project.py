@@ -180,7 +180,7 @@ class Project(base.CraftBaseModel):
 
     For “or later” and “with exception” license styles, refer to `Appendix V of the SPDX
     Specification 2.1
-    <https://web.archive.org/web/20230902152422/https://spdx.dev/spdx-specification-21-web-version/#h.twlc0ztnng3b>`_.
+    <https://spdx.dev/wp-content/uploads/sites/31/2023/09/spdxversion2.1.pdf#h.twlc0ztnng3b>`__.
     """
 
     adopt_info: str | None = pydantic.Field(

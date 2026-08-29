@@ -276,6 +276,48 @@ def test_recipe_new_info_type_in_project(
     )
 
 
+@pytest.mark.parametrize(
+    ("recipe", "recipe_name"),
+    [
+        (models.SnapRecipe, "snaps"),
+        (models.CharmRecipe, "charm_recipes"),
+        (models.RockRecipe, "rock_recipes"),
+    ],
+)
+@pytest.mark.parametrize("build_path", [None, "", "subdir"])
+def test_recipe_new_build_path(recipe, recipe_name, build_path):
+    """Pass build_path to the Launchpad API only when it's set."""
+    mock_launchpad = mock.Mock(spec=launchpad.Launchpad)
+    mock_launchpad.lp = mock.Mock(spec=launchpadlib.launchpad.Launchpad)
+    mock_recipe = mock.Mock()
+
+    mock_entry = mock.Mock(spec=Entry)
+    mock_entry.resource_type_link = "http://blah/#snap"
+    mock_entry.name = "test-recipe"
+
+    mock_recipe.new = mock.Mock(return_value=mock_entry)
+    setattr(mock_launchpad.lp, f"{recipe_name}", mock_recipe)
+
+    kwargs = {}
+    if recipe is not models.SnapRecipe:
+        kwargs["project"] = "test-project"
+
+    actual_recipe = recipe.new(
+        mock_launchpad,
+        "my_recipe",
+        "test_user",
+        git_ref="my_ref",
+        build_path=build_path,
+        **kwargs,
+    )
+
+    assert isinstance(actual_recipe, recipe)
+    if build_path:
+        assert mock_recipe.new.mock_calls[0].kwargs["build_path"] == build_path
+    else:
+        assert "build_path" not in mock_recipe.new.mock_calls[0].kwargs
+
+
 def test_recipe_snap_new_retry(emitter, mocker):
     """Test that a SnapRecipe is retried when it fails to create."""
     mocker.patch("time.sleep")

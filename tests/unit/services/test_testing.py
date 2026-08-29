@@ -15,9 +15,11 @@
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Unit tests for the TestingService."""
 
+import dataclasses
 import pathlib
 import stat
 from collections.abc import Iterable
+from textwrap import dedent
 from typing import Any
 from unittest import mock
 
@@ -26,6 +28,7 @@ import craft_cli.messages
 import craft_platforms
 import pytest
 from craft_application import models
+from craft_application.errors import TestFileError, YamlError
 from craft_application.services.testing import TestingService
 from craft_cli import CraftError
 
@@ -203,9 +206,259 @@ def test_get_app_spread_executable_error(
 
 
 def test_process_without_spread_file(new_dir, testing_service):
-    state = models.PackState(artifact=None, resources=None)
-    with pytest.raises(CraftError, match="Could not find 'spread.yaml'"):
+    state = models.PackState(artifacts=[])
+    with pytest.raises(CraftError, match="Could not find 'testcraft-test.yaml'"):
         testing_service.process_spread_yaml(new_dir / "wherever", state)
+
+
+def test_process_spread_yaml_accepts_named_artifacts_only(
+    testing_service: TestingService,
+    tmp_path: pathlib.Path,
+    mocker,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    spread_file = tmp_path / "spread.yaml"
+    spread_file.write_text(
+        dedent("""
+            project: test-project
+            backends:
+              craft:
+                systems:
+                  - ubuntu-24.04:
+            suites:
+              spread/general/:
+                summary: General tests
+            """)
+    )
+    state = models.PackState(
+        artifacts=[models.PackedArtifact(name="tools", path=pathlib.Path("tools.tar"))]
+    )
+    mocker.patch.object(
+        testing_service,
+        "_get_backend",
+        return_value=models.SpreadBackend(type="adhoc"),
+    )
+
+    dest = tmp_path / "processed-spread.yaml"
+    monkeypatch.chdir(tmp_path)
+    testing_service.process_spread_yaml(dest, state)
+
+    assert "CRAFT_ARTIFACT_TOOLS: $PROJECT_PATH/tools.tar" in dest.read_text()
+
+
+def test_process_spread_yaml_requires_any_artifact(
+    testing_service: TestingService,
+    tmp_path: pathlib.Path,
+    mocker,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    spread_file = tmp_path / "spread.yaml"
+    spread_file.write_text(
+        dedent("""
+            project: test-project
+            backends:
+              craft:
+                systems:
+                  - ubuntu-24.04:
+            suites:
+              spread/general/:
+                summary: General tests
+            """)
+    )
+    state = models.PackState(artifacts=[])
+    mocker.patch.object(
+        testing_service,
+        "_get_backend",
+        return_value=models.SpreadBackend(type="adhoc"),
+    )
+
+    dest = tmp_path / "processed-spread.yaml"
+    monkeypatch.chdir(tmp_path)
+    with pytest.raises(CraftError, match="No .* files to test"):
+        testing_service.process_spread_yaml(dest, state)
+
+
+@pytest.mark.parametrize(
+    ("content", "expected"),
+    [
+        pytest.param(
+            "backends:\n  craft:\n    systems: []\nsuites: {}\n",
+            True,
+            id="craft-test-file",
+        ),
+        pytest.param(
+            "backends:\n  other:\n    systems: []\nsuites: {}\n",
+            False,
+            id="not-a-craft-test-file",
+        ),
+        pytest.param("- item1\n- item2\n", False, id="not-a-dict"),
+    ],
+)
+def test_is_craft_test_file(tmp_path, content, expected):
+    """Return whether spread.yaml is a craft test file."""
+    spread_path = tmp_path / "spread.yaml"
+    spread_path.write_text(content)
+
+    assert TestingService._is_craft_test_file(spread_path) is expected
+
+
+def test_is_craft_test_file_read_error(tmp_path):
+    """Error if spread.yaml can't be read."""
+    spread_path = tmp_path / "spread.yaml"
+    spread_path.mkdir()
+
+    with pytest.raises(CraftError, match="Could not read"):
+        TestingService._is_craft_test_file(spread_path)
+
+
+def test_is_craft_test_file_invalid_yaml(tmp_path):
+    """Error if spread.yaml is invalid yaml."""
+    spread_path = tmp_path / "spread.yaml"
+    spread_path.write_text("backends: [unclosed")
+
+    with pytest.raises(YamlError):
+        TestingService._is_craft_test_file(spread_path)
+
+
+def test_parse_test_config_uses_craft_test_yaml(
+    in_project_path: pathlib.Path, default_app_metadata, emitter
+):
+    """Prefer the test config file over spread.yaml"""
+    testing_service = TestingService(app=default_app_metadata, services=mock.Mock())
+
+    (in_project_path / "testcraft-test.yaml").write_text(
+        "backends:\n  craft:\n    systems: []\nsuites: {}\n"
+    )
+    # A deprecated spread.yaml file with a craft backend should be ignored
+    # when the test config file is present.
+    (in_project_path / "spread.yaml").write_text(
+        "backends:\n  craft:\n    systems: []\nsuites: {}\n"
+    )
+
+    testing_service.parse_test_config()
+
+    emitter.assert_interactions(None)
+
+
+def test_parse_test_config_spread_yaml(
+    in_project_path: pathlib.Path, default_app_metadata, emitter
+):
+    """Warn when a spread.yaml is used."""
+    testing_service = TestingService(app=default_app_metadata, services=mock.Mock())
+
+    (in_project_path / "spread.yaml").write_text(
+        "backends:\n  craft:\n    systems: []\nsuites: {}\n"
+    )
+
+    testing_service.parse_test_config()
+
+    emitter.assert_warning(
+        "'spread.yaml' is deprecated for 'testcraft test'. "
+        "Rename it to 'testcraft-test.yaml' and "
+        "remove the 'project' key, if defined."
+    )
+
+
+def test_parse_test_config_single_warning(
+    in_project_path: pathlib.Path, default_app_metadata, emitter
+):
+    """The deprecation warning is only emitted once."""
+    testing_service = TestingService(app=default_app_metadata, services=mock.Mock())
+
+    (in_project_path / "spread.yaml").write_text(
+        "backends:\n  craft:\n    systems: []\nsuites: {}\n"
+    )
+
+    testing_service.parse_test_config()
+    testing_service.parse_test_config()
+
+    warning_calls = [call for call in emitter.interactions if call.args[0] == "warning"]
+    assert len(warning_calls) == 1
+
+
+def test_parse_test_config_no_warning_in_managed_mode(
+    in_project_path: pathlib.Path, default_app_metadata, emitter, managed_mode
+):
+    """The deprecation warning is suppressed inside managed instances."""
+    testing_service = TestingService(app=default_app_metadata, services=mock.Mock())
+
+    (in_project_path / "spread.yaml").write_text(
+        "backends:\n  craft:\n    systems: []\nsuites: {}\n"
+    )
+
+    testing_service.parse_test_config()
+
+    emitter.assert_interactions(None)
+
+
+def test_parse_test_config_ignores_non_craft_test_spread_yaml(
+    in_project_path: pathlib.Path, default_app_metadata, emitter
+):
+    """Ignore spread.yaml if it lacks a craft backend."""
+    testing_service = TestingService(app=default_app_metadata, services=mock.Mock())
+
+    (in_project_path / "spread.yaml").write_text(
+        "backends:\n  other:\n    systems: []\nsuites: {}\n"
+    )
+
+    with pytest.raises(CraftError, match="Could not find 'testcraft-test.yaml'"):
+        testing_service.parse_test_config()
+
+    emitter.assert_interactions(None)
+
+
+def test_parse_test_config_fallback_disabled(
+    in_project_path: pathlib.Path, default_app_metadata, emitter
+):
+    """Error on parsing spread.yaml if allow_spread is False."""
+    disabled_app_metadata = dataclasses.replace(
+        default_app_metadata, allow_spread_yaml=False
+    )
+    testing_service = TestingService(
+        app=disabled_app_metadata,
+        services=mock.Mock(),
+    )
+
+    (in_project_path / "spread.yaml").write_text(
+        "backends:\n  craft:\n    systems: []\nsuites: {}\n"
+    )
+
+    with pytest.raises(CraftError, match="'spread.yaml' cannot be used") as raised:
+        testing_service.parse_test_config()
+
+    assert raised.value.resolution is not None
+    assert "testcraft-test.yaml" in raised.value.resolution
+    emitter.assert_interactions(None)
+
+
+def test_parse_test_config_ignores_project_key(
+    in_project_path: pathlib.Path, default_app_metadata
+):
+    """A 'project' key in a spread.yaml is silently unused."""
+    testing_service = TestingService(app=default_app_metadata, services=mock.Mock())
+
+    (in_project_path / "spread.yaml").write_text(
+        "project: my-project\nbackends:\n  craft:\n    systems: []\nsuites: {}\n"
+    )
+
+    parsed = testing_service.parse_test_config()
+
+    assert isinstance(parsed, models.CraftSpreadYaml)
+    assert parsed.project == "my-project"
+
+
+def test_parse_test_config_app_test_yaml_rejects_legacy_keys(
+    in_project_path: pathlib.Path, default_app_metadata
+):
+    """Unsupported keys, like `project`, raise an error when parsing a craft test file."""
+    testing_service = TestingService(app=default_app_metadata, services=mock.Mock())
+
+    (in_project_path / "testcraft-test.yaml").write_text(
+        "project: my-project\nbackends:\n  craft:\n    systems: []\nsuites: {}\n"
+    )
+
+    with pytest.raises(TestFileError):
+        testing_service.parse_test_config()
 
 
 @pytest.mark.parametrize(

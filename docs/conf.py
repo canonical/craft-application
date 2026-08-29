@@ -75,8 +75,8 @@ html_theme_options = {
   'source_edit_link': "https://github.com/canonical/craft-application",
 }
 
-# Project slug; see https://meta.discourse.org/t/what-is-category-slug/87897
-# slug = ''
+# The project slug passed to the sphinx-notfound-page extension
+slug = "craft-application"
 
 
 #########################
@@ -181,6 +181,7 @@ exclude_patterns = [
     # Common docs
     "common/README.md",
     "common/craft-application/how-to-guides/build-remotely.rst",
+    "common/craft-application/how-to-guides/pack-a-pro-artifact.rst",
     "common/craft-application/how-to-guides/reuse-packages-between-builds.rst",
     "common/craft-application/reference/remote-builds.rst",
     "common/craft-application/reference/fetch-service.rst",
@@ -235,6 +236,10 @@ intersphinx_mapping = {
         "https://documentation.ubuntu.com/craft-cli/latest",
         None,
     ),
+    "craft-archives": (
+        "https://documentation.ubuntu.com/craft-archives/latest",
+        None,
+    ),
     "craft-grammar": ("https://craft-grammar.readthedocs.io/en/latest", None),
     "craft-parts": (
         "https://documentation.ubuntu.com/craft-parts/latest",
@@ -245,7 +250,12 @@ intersphinx_mapping = {
         None,
     ),
     "craft-providers": (
-        "https://documentation.ubuntu.com/craft-providers/en/latest", None
+        "https://documentation.ubuntu.com/craft-providers/latest",
+        None,
+    ),
+    "craft-store": (
+        "https://documentation.ubuntu.com/craft-store/latest",
+        None,
     ),
     "starflow": (
         "https://documentation.ubuntu.com/starflow/latest", None
