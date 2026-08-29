@@ -41,10 +41,11 @@ from craft_application.models.project import (
 )
 from craft_application.models.spread import (
     CraftSpreadYaml,
+    CraftTestYaml,
     SpreadBackend,
     SpreadYaml,
 )
-from craft_application.models.state import PackState
+from craft_application.models.state import PackState, PackedArtifact
 
 
 __all__ = [
@@ -55,6 +56,7 @@ __all__ = [
     "get_grammar_aware_part_keywords",
     "GrammarAwareProject",
     "GenericPlatformsDict",
+    "PackedArtifact",
     "PackState",
     "Platform",
     "PlatformsDict",
@@ -62,6 +64,7 @@ __all__ = [
     "ProjectName",
     "ProjectTitle",
     "CraftSpreadYaml",
+    "CraftTestYaml",
     "SpreadBackend",
     "SpreadYaml",
     "SummaryStr",

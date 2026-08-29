@@ -25,24 +25,35 @@ the FetchService class.
 
 import contextlib
 import json
+import os
 import pathlib
 import re
 import textwrap
 from datetime import datetime
+from typing import Any
 from unittest import mock
 from unittest.mock import MagicMock, call
 
+import craft_platforms
 import craft_providers
 import pytest
-from craft_application import fetch, services
+import pytest_subprocess
+from craft_application import AppMetadata, errors, fetch, services
 from craft_application.services import fetch as service_module
+from craft_application.services.fetch import (
+    EXTERNAL_FETCH_SERVICE_ENV_VAR,
+    PROVIDERS_SUPPRESS_UPGRADE_VAR,
+    PROXY_CERT_ENV_VAR,
+    FetchService,
+)
+from craft_providers.lxd import LXDInstance
 from freezegun import freeze_time
 
 
 @pytest.fixture
 def fetch_service(app, fake_services, fake_project):
     return services.FetchService(
-        app,
+        app.app,
         fake_services,
     )
 
@@ -66,6 +77,70 @@ def test_create_session_already_exists(fetch_service):
         fetch_service.create_session(instance=MagicMock())
 
 
+def test_create_session(fetch_service, mocker):
+    """Create a session and configure the proxy service."""
+    session_data = fetch.SessionData(id="id", token="token")  # noqa: S106
+    mocker.patch.object(fetch, "create_session", return_value=session_data)
+    mocker.patch.object(fetch, "_get_gateway", return_value="test-gateway")
+    mock_configure_proxy = mocker.patch.object(services.ProxyService, "configure")
+    proxy_cert = pathlib.Path("test-cert.pem")
+    fetch_service._proxy_cert = proxy_cert
+
+    env = fetch_service.create_session(instance=MagicMock())
+
+    mock_configure_proxy.assert_called_once_with(
+        proxy_cert, "http://id:token@test-gateway:13444/"
+    )
+    assert env == {"GOPROXY": "direct"}
+
+
+def test_create_session_with_secrets(fetch_service, mocker, request):
+    session_data = fetch.SessionData(id="id", token="token")  # noqa: S106
+    mocker.patch.object(fetch, "_get_gateway", return_value="test-gateway")
+    mocker.patch.object(services.ProxyService, "configure")
+    proxy_cert = pathlib.Path("test-cert.pem")
+    fetch_service._proxy_cert = proxy_cert
+
+    def create_secret(app: AppMetadata, **_kwargs: Any) -> list[fetch.SessionSecret]:
+        return [
+            {
+                "type": "basic-auth",
+                "url": "https://www.example-basic-auth.com:443/**",
+                "basic-credentials": f"{app.name}:deadbeef",
+            }
+        ]
+
+    request.addfinalizer(FetchService._secret_callbacks.clear)
+    FetchService.register_secret_callback(create_secret)
+
+    create_mock = mocker.patch.object(
+        fetch, "create_session", return_value=session_data
+    )
+
+    fetch_service.create_session(instance=MagicMock())
+
+    create_mock.assert_called_once_with(
+        strict=True,
+        secrets=[
+            {
+                "type": "basic-auth",
+                "url": "https://www.example-basic-auth.com:443/**",
+                "basic-credentials": "testcraft:deadbeef",
+            }
+        ],
+    )
+
+
+def test_create_session_not_setup(fetch_service):
+    """Error if the create_session is called before the fetch service is setup."""
+    expected_error = re.escape(
+        "create_session() was called before setting up the fetch service."
+    )
+
+    with pytest.raises(ValueError, match=expected_error):
+        fetch_service.create_session(instance=MagicMock())
+
+
 def test_teardown_session_no_session(fetch_service):
     expected = re.escape(
         "teardown_session() called with no live fetch-service session."
@@ -75,6 +150,10 @@ def test_teardown_session_no_session(fetch_service):
         fetch_service.teardown_session()
 
 
+@pytest.mark.skipif(
+    craft_platforms.DebianArchitecture.from_host() != "amd64",
+    reason="https://github.com/canonical/craft-application/issues/1032",
+)
 @freeze_time(datetime.fromisoformat("2024-09-16T01:02:03.456789"))
 def test_create_project_manifest(
     fetch_service, tmp_path, monkeypatch, manifest_data_dir
@@ -108,6 +187,10 @@ def test_create_project_manifest_not_managed(fetch_service, tmp_path, monkeypatc
     assert not manifest_path.exists()
 
 
+@pytest.mark.skipif(
+    craft_platforms.DebianArchitecture.from_host() != "amd64",
+    reason="https://github.com/canonical/craft-application/issues/1032",
+)
 def test_teardown_session_create_manifest(
     fetch_service,
     tmp_path,
@@ -174,9 +257,9 @@ def test_teardown_session_create_manifest(
 
 
 @pytest.mark.parametrize("run_on_host", [True, False])
-def test_warning_experimental(mocker, fetch_service, run_on_host, emitter):
+def test_warning_experimental(mocker, fetch_service, run_on_host, emitter, tmp_path):
     """The fetch-service warning should only be emitted when running on the host."""
-    mocker.patch.object(fetch, "start_service")
+    mocker.patch.object(fetch, "start_service", return_value=(None, tmp_path))
     mocker.patch.object(fetch, "verify_installed")
     mocker.patch.object(fetch, "_get_service_base_dir", return_value=pathlib.Path())
     mocker.patch("craft_application.util.is_managed_mode", return_value=not run_on_host)
@@ -201,3 +284,96 @@ def test_setup_managed(mocker, fetch_service):
     fetch_service.setup()
 
     assert not mock_start.called
+
+
+@pytest.mark.parametrize(
+    ("enable_command_line", "env_var_value", "expected_active"),
+    [
+        pytest.param(True, None, True, id="command line only"),
+        pytest.param(False, "1", True, id="env var only"),
+        pytest.param(False, None, False, id="neither"),
+    ],
+)
+def test_is_active(
+    fetch_service, monkeypatch, enable_command_line, env_var_value, expected_active
+):
+    monkeypatch.setenv(EXTERNAL_FETCH_SERVICE_ENV_VAR, env_var_value)
+    is_active = fetch_service.is_active(enable_command_line=enable_command_line)
+    assert is_active == expected_active
+
+
+def test_is_active_both(fetch_service, monkeypatch):
+    """Trying to set both CRAFT_USE_EXTERNAL_FETCH_SERVICE *and* --enable-fetch-service.
+
+    This is currently unsupported because the two code paths are too tied together.
+    """
+    monkeypatch.setenv(EXTERNAL_FETCH_SERVICE_ENV_VAR, "1")
+    with pytest.raises(errors.CraftError):
+        fetch_service.is_active(enable_command_line=True)
+
+
+def test_configure_session_external(
+    fetch_service, mocker, fake_services, monkeypatch, tmp_path
+):
+    fake_cert = tmp_path / "local-ca.crt"
+    fake_cert.touch()
+
+    proxy_service = fake_services.get("proxy")
+    spied_configure = mocker.spy(proxy_service, "configure")
+
+    monkeypatch.setenv(EXTERNAL_FETCH_SERVICE_ENV_VAR, "1")
+    monkeypatch.setenv(PROXY_CERT_ENV_VAR, str(fake_cert))
+    monkeypatch.setenv("http_proxy", "www.example.com")
+    fetch_service.setup()
+
+    env = fetch_service.configure_instance(instance=MagicMock())
+
+    assert env == fetch.NetInfo.env()
+    spied_configure.assert_called_once_with(fake_cert, "www.example.com")
+
+
+def test_setup_sets_suppress_upgrade(
+    fetch_service: FetchService, monkeypatch: pytest.MonkeyPatch
+):
+    fake_environ = {
+        EXTERNAL_FETCH_SERVICE_ENV_VAR: "1",
+        PROXY_CERT_ENV_VAR: "/etc/ssl/certs/ca-certificates.crt",
+    }
+    monkeypatch.setattr(os, "environ", fake_environ)
+
+    fetch_service.setup()
+
+    assert fake_environ[PROVIDERS_SUPPRESS_UPGRADE_VAR] == "1"
+
+
+def test_create_sets_suppress_upgrade(
+    fetch_service: FetchService,
+    monkeypatch: pytest.MonkeyPatch,
+    fp: pytest_subprocess.FakeProcess,
+):
+    fake_environ = {}
+    monkeypatch.setattr(os, "environ", fake_environ)
+    mock_instance = mock.MagicMock(
+        spec=LXDInstance,
+        instance_name="Fluffball",
+        project="testcraft",
+    )
+    fp.allow_unregistered(allow=True)
+    fp.register(
+        ["lxc", "--project", "testcraft", "config", "show", "Fluffball", "--expanded"],
+        stdout=textwrap.dedent(
+            """\
+            ephemeral: true
+            devices:
+              eth0:
+                name: eth0
+                network: lxdbr0
+                type: nic
+            """
+        ),
+    )
+
+    fetch_service.setup()
+    fetch_service.create_session(mock_instance)
+
+    assert fake_environ[PROVIDERS_SUPPRESS_UPGRADE_VAR] == "1"

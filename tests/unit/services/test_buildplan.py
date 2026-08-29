@@ -651,3 +651,33 @@ def test_create_build_plan_filters_to_empty(build_plan_service: BuildPlanService
         )
         == []
     )
+
+
+def test_set_platforms_resets_cached_plan(mocker, build_plan_service: BuildPlanService):
+    build_plan_service.plan()
+    mock_creator = mocker.patch.object(build_plan_service, "create_build_plan")
+    build_plan_service.set_platforms("zero", "mind the gap")
+    mock_creator.assert_not_called()
+    build_plan_service.plan()
+    build_plan_service.plan()  # This time it should keep the cache.
+    mock_creator.assert_called_once_with(
+        platforms=["zero", "mind the gap"],
+        build_for=None,
+        build_on=[craft_platforms.DebianArchitecture.from_host()],
+    )
+
+
+def test_set_build_fors_resets_cached_plan(
+    mocker, build_plan_service: BuildPlanService
+):
+    build_plan_service.plan()
+    mock_creator = mocker.patch.object(build_plan_service, "create_build_plan")
+    build_plan_service.set_build_fors("riscv64")
+    mock_creator.assert_not_called()
+    build_plan_service.plan()
+    build_plan_service.plan()  # This time it should keep the cache.
+    mock_creator.assert_called_once_with(
+        platforms=None,
+        build_for=["riscv64"],
+        build_on=[craft_platforms.DebianArchitecture.from_host()],
+    )

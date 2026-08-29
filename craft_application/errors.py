@@ -21,9 +21,7 @@ All errors inherit from craft_cli.CraftError.
 from __future__ import annotations
 
 import os
-import pathlib
-from collections.abc import Collection, Sequence
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Any, Literal, cast
 
 import craft_platforms
 import yaml
@@ -34,6 +32,9 @@ from craft_application.util.error_formatting import format_pydantic_errors
 from craft_application.util.string import humanize_list
 
 if TYPE_CHECKING:  # pragma: no cover
+    import pathlib
+    from collections.abc import Collection, Sequence
+
     import craft_parts
     import pydantic
     from typing_extensions import Self
@@ -45,6 +46,10 @@ class PathInvalidError(CraftError, OSError):
 
 class ProjectFileError(CraftError):
     """Errors to do with the project file or directory."""
+
+
+class TestFileError(CraftError):
+    """Errors to do with the test config file or the deprecated spread.yaml file."""
 
 
 class ProjectGenerationError(CraftError):
@@ -162,7 +167,7 @@ class CraftValidationError(CraftError):
         :param kwargs: additional keyword arguments get passed to CraftError
         """
         message = format_pydantic_errors(error.errors(), file_name=file_name)
-        return cls(message, **kwargs)  # type: ignore[arg-type]
+        return cls(message, **cast(dict[str, Any], kwargs))
 
 
 class PartsLifecycleError(CraftError):
@@ -297,6 +302,8 @@ class IncompatibleBaseError(CraftError):
         self,
         host_base: craft_platforms.DistroBase | bases.BaseName,
         build_base: craft_platforms.DistroBase | bases.BaseName,
+        *,
+        artifact_type: str = "artifact",
     ) -> None:
         if isinstance(host_base, bases.BaseName):
             host_base = craft_platforms.DistroBase(
@@ -314,8 +321,8 @@ class IncompatibleBaseError(CraftError):
         )
         details = (
             "Builds must be performed on a specific system to ensure that the "
-            "final artifact's binaries are compatible with the intended execution "
-            "environment."
+            f"final {artifact_type}'s binaries are compatible with the intended "
+            "execution environment."
         )
         resolution = "Run a managed build, or run on a compatible host."
         retcode = os.EX_CONFIG
@@ -374,8 +381,134 @@ class FetchServiceError(CraftError):
 
 
 class InitError(CraftError):
-    """Errors related to initialising a project."""
+    """Errors related to initializing a project."""
 
 
 class ArtifactCreationError(CraftError):
     """Errors to do with artifact file generation."""
+
+
+class StateServiceError(CraftError):
+    """Errors related to the state service."""
+
+
+class UbuntuProError(CraftError):
+    """Base Exception class for ProServices."""
+
+
+class UbuntuProApiError(UbuntuProError):
+    """Base class for exceptions raised during Ubuntu Pro Api calls."""
+
+
+class InvalidUbuntuProStateError(UbuntuProError):
+    """Base class for exceptions raised during Ubuntu Pro validation."""
+
+
+class UbuntuProNotSupportedError(UbuntuProError):
+    """Raised when Ubuntu Pro client is not supported on the base or build base."""
+
+
+class UbuntuProClientNotFoundError(UbuntuProApiError):
+    """Raised when Ubuntu Pro client was not found on the system."""
+
+    def __init__(self, path: str) -> None:
+        message = f"The Ubuntu Pro client was not found on the system at '{path}'"
+
+        super().__init__(message=message)
+
+
+class UbuntuProDetachedError(InvalidUbuntuProStateError):
+    """Raised when Ubuntu Pro is not attached, but Pro services were requested."""
+
+    def __init__(self) -> None:
+        message = "Ubuntu Pro is requested, but was found detached."
+        resolution = "Attach Ubuntu Pro to continue. See 'pro' command for details."
+
+        super().__init__(message=message, resolution=resolution)
+
+
+class UbuntuProAttachedError(InvalidUbuntuProStateError):
+    """Raised when Ubuntu Pro is attached, but Pro services were not requested."""
+
+    def __init__(self) -> None:
+        message = "Ubuntu Pro is not requested, but was found attached."
+        resolution = "Detach Ubuntu Pro to continue. See 'pro' command for details."
+
+        super().__init__(message=message, resolution=resolution)
+
+
+class InvalidUbuntuProServiceError(InvalidUbuntuProStateError):
+    """Raised when the requested Ubuntu Pro service is not supported or invalid."""
+
+    def __init__(self, invalid_services: set[str] | None) -> None:
+        invalid_services_str = ", ".join(sorted(invalid_services or set()))
+
+        message = "Invalid Ubuntu Pro Services were requested."
+        resolution = (
+            "The services listed are either not supported by this application "
+            "or are invalid Ubuntu Pro Services.\n"
+            f"Invalid Services: {invalid_services_str}\n"
+            "See '--pro' argument details for supported services."
+        )
+
+        super().__init__(message=message, resolution=resolution)
+
+
+class InvalidUbuntuProBaseError(InvalidUbuntuProStateError):
+    """Raised when the requested base, (or build_base) do not support Ubuntu Pro Builds."""
+
+    def __init__(self, base_type: str, base_name: str) -> None:
+        message = f"Ubuntu Pro builds are not supported on {base_name!r} {base_type}."
+        resolution = f"Remove '--pro' argument or set {base_type} to a supported base."
+
+        super().__init__(message=message, resolution=resolution)
+
+
+class InvalidUbuntuProStatusError(InvalidUbuntuProStateError):
+    """Raised when the incorrect set of Pro Services are enabled."""
+
+    def __init__(
+        self,
+        requested_services: set[str] | None,
+        available_services: set[str] | None,
+    ) -> None:
+        requested_services_set = requested_services or set()
+        available_services_set = available_services or set()
+
+        enable_services_str = ", ".join(
+            sorted(requested_services_set - available_services_set)
+        )
+        disable_services_str = ", ".join(
+            sorted(available_services_set - requested_services_set)
+        )
+        message = "Incorrect Ubuntu Pro services are enabled."
+        details = ""
+
+        if "container" in os.environ:
+            resolution = ""
+            if enable_services_str or disable_services_str:
+                resolution += "Enable or disable the following services.\n"
+            if enable_services_str:
+                resolution += f"Enable: {enable_services_str}\n"
+            if disable_services_str:
+                resolution += f"Disable: {disable_services_str}\n"
+            resolution += "See 'pro' command for details."
+        else:
+            if app_name := os.environ.get("SNAP_INSTANCE_NAME"):
+                resolution = f"Run '{app_name} clean' to reset Ubuntu Pro services."
+            else:
+                resolution = "Use the application's 'clean' command to reset Ubuntu Pro services."
+            if requested_services:
+                details += (
+                    f"Requested services: {', '.join(sorted(requested_services))}"
+                )
+            if available_services:
+                if details:
+                    details += "\n"
+                details += (
+                    f"Available services: {', '.join(sorted(available_services))}"
+                )
+
+        super().__init__(
+            message=message, details=details or None, resolution=resolution
+        )

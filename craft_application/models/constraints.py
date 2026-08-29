@@ -20,7 +20,7 @@ import re
 from collections.abc import Callable
 from typing import Annotated, Literal, TypeVar
 
-import license_expression  # type: ignore[import]
+import license_expression
 import pydantic
 from pydantic_core import PydanticCustomError
 
@@ -84,9 +84,9 @@ SingleEntryDict = Annotated[
 _PROJECT_NAME_DESCRIPTION = """\
 The name of the project. This is used when uploading, publishing, or installing.
 
-The project name must consist only of lower-case ASCII letters (``a-z``), numerals
-(``0-9``), and hyphens (``-``). It must contain at least one letter, not start or end
-with a hyphen, and not contain two consecutive hyphens. The maximum length is 40
+The project name must consist only of lower-case ASCII letters (``a``-``z``), numerals
+(``0``-``9``), and hyphens (``-``). It must contain at least one letter, not start or
+end with a hyphen, and not contain two consecutive hyphens. The maximum length is 40
 characters.
 """
 
@@ -97,6 +97,10 @@ MESSAGE_INVALID_NAME = (
     "They must have at least one letter, may not start or end with a hyphen, "
     "and may not have two hyphens in a row."
 )
+
+BASE_NAME_REGEX = r"^[^/]+$"
+BASE_NAME_COMPILED_REGEX = re.compile(BASE_NAME_REGEX)
+MESSAGE_INVALID_BASE_NAME = "invalid base name: Base names cannot contain '/'."
 
 ProjectName = Annotated[
     str,
@@ -145,7 +149,7 @@ SummaryStr = Annotated[
     pydantic.Field(
         max_length=78,
         title="Summary",
-        description="A short description of the project.",
+        description="A short description of the project. Maximum length 78 characters.",
         examples=[
             "Linux for Human Beings",
             "The cross-platform desktop application for JupyterLab",
@@ -199,11 +203,7 @@ ideally they will retain this same constraint.
 
 def _parse_spdx_license(value: str) -> license_expression.LicenseExpression:
     licensing = license_expression.get_spdx_licensing()
-    if (
-        lic := licensing.parse(  # pyright: ignore[reportUnknownMemberType]
-            value, validate=True
-        )
-    ) is not None:
+    if (lic := licensing.parse(value, validate=True)) is not None:
         return lic
     raise ValueError
 

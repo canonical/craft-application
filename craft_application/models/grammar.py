@@ -19,7 +19,7 @@
 from typing import Any
 
 import pydantic
-from craft_grammar.models import Grammar  # type: ignore[import-untyped]
+from craft_grammar.models import Grammar
 from pydantic import ConfigDict
 
 from craft_application.models.base import alias_generator

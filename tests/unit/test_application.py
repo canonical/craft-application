@@ -19,9 +19,9 @@ import argparse
 import importlib
 import importlib.metadata
 import logging
+import os
 import pathlib
 import re
-import subprocess
 import sys
 from textwrap import dedent
 from unittest import mock
@@ -35,6 +35,7 @@ import craft_platforms
 import craft_providers
 import pytest
 import pytest_check
+import pytest_mock
 from craft_application import (
     application,
     commands,
@@ -46,10 +47,8 @@ from craft_application.commands import (
     get_lifecycle_command_group,
     get_other_command_group,
 )
-from craft_application.util import (
-    get_host_architecture,  # pyright: ignore[reportGeneralTypeIssues]
-)
-from craft_cli import emit
+from craft_application.util import ProServices
+from craft_cli import CraftError, emit
 from craft_parts.plugins.plugins import PluginType
 
 from tests.conftest import FakeApplication
@@ -104,7 +103,7 @@ def test_app_metadata_default_project_variables():
         name="dummycraft_dev",
         summary="dummy craft",
     )
-    assert app.project_variables == ["version"]
+    assert app.project_variables == ["version", "summary", "description"]
 
 
 def test_app_metadata_default_mandatory_adoptable_fields():
@@ -112,7 +111,7 @@ def test_app_metadata_default_mandatory_adoptable_fields():
         name="dummycraft_dev",
         summary="dummy craft",
     )
-    assert app.mandatory_adoptable_fields == ["version"]
+    assert app.mandatory_adoptable_fields == ["version", "summary", "description"]
 
 
 class FakePlugin(craft_parts.plugins.Plugin):
@@ -262,113 +261,23 @@ def test_log_path(monkeypatch, app, provider_managed, expected):
     assert actual == expected
 
 
-@pytest.mark.usefixtures("platform_independent_project")
-def test_run_managed_success(mocker, app, fake_host_architecture):
-    mock_provider = mock.MagicMock(spec_set=services.ProviderService)
-    app.services._services["provider"] = mock_provider
-    mock_pause = mocker.spy(craft_cli.emit, "pause")
+@pytest.mark.parametrize(
+    "pro_services", [None, ProServices(), ProServices(["esm-apps"])]
+)
+@pytest.mark.usefixtures("fake_project_file")
+def test_configure_services_pro_services(
+    mocker, app_metadata, fake_services, pro_services
+):
+    """Configure services to use Pro."""
+    app = FakeApplication(app_metadata, fake_services)
+    app._pro_services = pro_services
+    mock_update = mocker.spy(app.services, "update_kwargs")
 
-    app.run_managed("platform-independent", None)
+    app._configure_services("lxd")
 
-    mock_provider.instance.assert_called_once_with(
-        craft_platforms.BuildInfo(
-            platform="platform-independent",
-            build_on=fake_host_architecture,
-            build_for="all",
-            build_base=mock.ANY,
-        ),
-        work_dir=mock.ANY,
-        clean_existing=False,
-    )
-    mock_pause.assert_called_once_with()
-
-
-def test_run_managed_failure(app, fake_project):
-    mock_provider = mock.MagicMock(spec_set=services.ProviderService)
-    instance = mock_provider.instance.return_value.__enter__.return_value
-    instance.execute_run.side_effect = subprocess.CalledProcessError(1, [])
-    app.services._services["provider"] = mock_provider
-    app.project = fake_project
-
-    with pytest.raises(craft_providers.ProviderError) as exc_info:
-        app.run_managed(None, get_host_architecture())
-
-    assert exc_info.value.brief == "Failed to execute testcraft in instance."
-
-
-def test_run_managed_multiple(app, fake_host_architecture):
-    mock_provider = mock.MagicMock(spec_set=services.ProviderService)
-    app.services._services["provider"] = mock_provider
-
-    app.run_managed(None, None)
-
-    mock_provider.instance.assert_called_with(
-        craft_platforms.BuildInfo(
-            platform=mock.ANY,
-            build_on=fake_host_architecture,
-            build_for=mock.ANY,
-            build_base=mock.ANY,
-        ),
-        work_dir=mock.ANY,
-        clean_existing=False,
-    )
-
-    assert len(mock_provider.instance.mock_calls) > 1
-
-
-@pytest.mark.parametrize("build_for", craft_platforms.DebianArchitecture)
-def test_run_managed_specified_arch(app, fake_host_architecture, build_for):
-    mock_provider = mock.MagicMock(spec_set=services.ProviderService)
-    app.services._services["provider"] = mock_provider
-
-    try:
-        app.run_managed(None, build_for)
-    except errors.EmptyBuildPlanError:
-        pytest.skip(
-            reason=f"build-for {build_for} has no build-on {fake_host_architecture}"
-        )
-
-    mock_provider.instance.assert_called_with(
-        craft_platforms.BuildInfo(
-            platform=mock.ANY,
-            build_on=fake_host_architecture,
-            build_for=build_for,
-            build_base=mock.ANY,
-        ),
-        work_dir=mock.ANY,
-        clean_existing=False,
-    )
-
-
-def test_run_managed_specified_platform(app, fake_platform, fake_host_architecture):
-    mock_provider = mock.MagicMock(spec_set=services.ProviderService)
-    app.services._services["provider"] = mock_provider
-
-    try:
-        app.run_managed(fake_platform, None)
-    except errors.EmptyBuildPlanError:
-        pytest.skip(
-            reason=f"Platform {fake_platform} has no builds on {fake_host_architecture}"
-        )
-
-    mock_provider.instance.assert_called_once_with(
-        craft_platforms.BuildInfo(
-            platform=fake_platform,
-            build_on=fake_host_architecture,
-            build_for=mock.ANY,
-            build_base=mock.ANY,
-        ),
-        work_dir=mock.ANY,
-        clean_existing=False,
-    )
-
-
-def test_run_managed_empty_plan(mocker, app):
-    build_plan_service = app.services.get("build_plan")
-    mocker.patch.object(build_plan_service, "plan", return_value=[])
-
-    with pytest.raises(errors.EmptyBuildPlanError):
-        app.run_managed(None, None)
+    calls = {call.args[0]: call.kwargs for call in mock_update.call_args_list}
+    assert calls["lifecycle"]["use_host_sources"] is bool(pro_services)
+    assert calls["provider"]["pro_services"] is pro_services
 
 
 @pytest.mark.parametrize(
@@ -458,7 +367,12 @@ def test_craft_lib_log_level(app_metadata, fake_services):
         assert logger.level == logging.DEBUG
 
 
-def test_gets_project(monkeypatch, fake_project_file, app_metadata, fake_services):
+def test_gets_project(
+    monkeypatch,
+    app_metadata,
+    fake_services,
+    mock_pro_api_call,
+):
     monkeypatch.setattr(sys, "argv", ["testcraft", "pull", "--destructive-mode"])
 
     app = FakeApplication(app_metadata, fake_services)
@@ -466,11 +380,66 @@ def test_gets_project(monkeypatch, fake_project_file, app_metadata, fake_service
     app.run()
 
     pytest_check.is_not_none(fake_services.project)
-    pytest_check.is_not_none(app.project)
+
+
+@pytest.mark.parametrize("app_metadata", [{"enable_pro_support": True}], indirect=True)
+@pytest.mark.parametrize(
+    ("pro_arg", "expected_pro_services"),
+    [
+        pytest.param(
+            [],
+            ProServices(),
+            id="no-pro",
+        ),
+        pytest.param(
+            ["--pro", "esm-apps"],
+            ProServices(["esm-apps"]),
+            id="one-service",
+        ),
+        pytest.param(
+            ["--pro", "esm-apps,fips-updates"],
+            ProServices(["esm-apps", "fips-updates"]),
+            id="multiple-services",
+        ),
+    ],
+)
+@pytest.mark.usefixtures("fake_project_file")
+def test_pass_pro_services_to_project(
+    monkeypatch,
+    mocker,
+    app_metadata,
+    fake_services,
+    mock_pro_api_call,
+    pro_arg,
+    expected_pro_services,
+):
+    """_run_inner passes Pro services to the project service using update_kwargs."""
+    set_is_attached, set_enabled_services = mock_pro_api_call
+    if expected_pro_services:
+        set_is_attached(True)
+        set_enabled_services(list(expected_pro_services))
+
+    monkeypatch.setattr(
+        sys, "argv", ["testcraft", "pull", "--destructive-mode", *pro_arg]
+    )
+
+    app = FakeApplication(app_metadata, fake_services)
+    mock_update = mocker.spy(app.services, "update_kwargs")
+
+    app.run()
+
+    mock_update.assert_any_call("project", pro_services=expected_pro_services)
 
 
 def test_fails_without_project(
-    monkeypatch, capsys, tmp_path, app_metadata, fake_services, app, debug_mode
+    monkeypatch,
+    capsys,
+    tmp_path,
+    app_metadata,
+    fake_services,
+    app,
+    debug_mode,
+    mock_pro_api_call,
 ):
     # Set up a real project service - the fake one for testing gets a fake project!
     del app.services._services["project"]
@@ -570,7 +539,14 @@ def test_pre_run_project_dir_not_a_directory(app, fs, project_dir):
 @pytest.mark.parametrize("load_project", [True, False])
 @pytest.mark.parametrize("return_code", [None, 0, 1])
 def test_run_success_unmanaged(
-    monkeypatch, emitter, check, app, fake_project, return_code, load_project
+    monkeypatch,
+    emitter,
+    check,
+    app,
+    fake_project,
+    return_code,
+    load_project,
+    mock_pro_api_call,
 ):
     class UnmanagedCommand(commands.AppCommand):
         name = "pass"
@@ -586,30 +562,37 @@ def test_run_success_unmanaged(
     app.add_command_group("test", [UnmanagedCommand])
     app.set_project(fake_project)
 
-    check.equal(app.run(), return_code or 0)
+    check.equal(app.run(), os.EX_OK if return_code is None else return_code)
     with check:
         emitter.assert_debug("Preparing application...")
     with check:
-        emitter.assert_debug("Running testcraft pass on host")
+        emitter.assert_debug("Running 'testcraft pass'.")
 
 
 @pytest.mark.parametrize("return_code", [None, 0, 1])
 def test_run_success_managed_inside_managed(
-    monkeypatch, check, app, fake_project, mock_dispatcher, return_code, mocker
+    monkeypatch,
+    check,
+    app,
+    mock_dispatcher,
+    return_code,
+    mocker,
+    mock_pro_api_call,
 ):
-    mocker.patch.object(app, "get_project", return_value=fake_project)
     mocker.patch.object(
         mock_dispatcher, "parsed_args", return_value={"platform": "foo"}
     )
-    app.run_managed = mock.Mock()
+    mock_provider_run_managed = mocker.patch.object(
+        app.services.get("provider"), "run_managed"
+    )
     mock_dispatcher.run.return_value = return_code
     mock_dispatcher.pre_parse_args.return_value = {}
     monkeypatch.setattr(sys, "argv", ["testcraft", "pull"])
     monkeypatch.setenv("CRAFT_MANAGED_MODE", "1")
 
-    check.equal(app.run(), return_code or 0)
+    check.equal(app.run(), os.EX_OK if return_code is None else return_code)
     with check:
-        app.run_managed.assert_not_called()
+        mock_provider_run_managed.assert_not_called()
     with check:
         mock_dispatcher.run.assert_called_once_with()
 
@@ -732,6 +715,33 @@ def test_run_exception_transforms(
     mock_error.assert_called_once_with(transformed)
 
 
+@pytest.mark.usefixtures("production_mode")
+@pytest.mark.parametrize(
+    "exception_cls", [Exception, KeyboardInterrupt, CraftError, ValueError]
+)
+def test_run_catches_exception(
+    mocker: pytest_mock.MockerFixture,
+    app: application.Application,
+    exception_cls: type[BaseException],
+):
+    mocker.patch.object(app, "_run_inner", side_effect=exception_cls("Boo hoo"))
+
+    # Check that it doesn't exit with success to know we caught an exception.
+    assert app.run() != 0
+
+
+@pytest.mark.parametrize("exception_cls", [BaseException, GeneratorExit, SystemExit])
+def test_run_doesnt_catch_baseexception(
+    mocker: pytest_mock.MockerFixture,
+    app: application.Application,
+    exception_cls: type[BaseException],
+):
+    mocker.patch.object(app, "_run_inner", side_effect=exception_cls("Boo hoo"))
+
+    with pytest.raises(exception_cls):
+        app.run()
+
+
 @pytest.mark.parametrize(
     ("error", "return_code", "error_msg"),
     [
@@ -851,7 +861,7 @@ def test_work_dir_project_non_managed(monkeypatch, app_metadata, fake_services):
     app = application.Application(app_metadata, fake_services)
     assert app._work_dir == pathlib.Path.cwd()
 
-    project = app.get_project(build_for=get_host_architecture())
+    project = app.services.get("project").get()
 
     # Make sure the project is loaded correctly (from the cwd)
     assert project is not None
@@ -866,7 +876,7 @@ def test_work_dir_project_managed(monkeypatch, app_metadata, fake_services):
     app = application.Application(app_metadata, fake_services)
     assert app._work_dir == pathlib.PosixPath("/root")
 
-    project = app.get_project(build_for=get_host_architecture())
+    project = app.services.get("project").get()
 
     # Make sure the project is loaded correctly (from the cwd)
     assert project is not None
@@ -900,20 +910,6 @@ def environment_project(in_project_path):
     )
 
     return in_project_path
-
-
-@pytest.mark.usefixtures("fake_project_file")
-def test_get_project_current_dir(app):
-    # Load a project file from the current directory
-    project = app.get_project()
-
-    # Check that it caches that project.
-    assert app.get_project() is project, "Project file was not cached."
-
-
-@pytest.mark.usefixtures("fake_project_file")
-def test_get_project_all_platform(app):
-    app.get_project(platform="arm64")
 
 
 def test_get_cache_dir(tmp_path, app):
@@ -978,6 +974,64 @@ def test_register_plugins_default(mocker, app_metadata, fake_services):
         app.run()
 
     assert reg.call_count == 0
+
+
+def test_set_plugin_group(mocker, app_metadata, fake_services):
+    """Test that we set the plugin group early."""
+    mock_set = mocker.patch("craft_parts.plugins.set_plugin_group")
+    mock_get_plugin_group = mocker.patch.object(
+        fake_services.get_class("lifecycle"), "get_plugin_group"
+    )
+
+    app = FakeApplication(app_metadata, fake_services)
+    with pytest.raises(SystemExit):
+        app.run()
+
+    mock_set.assert_called_once_with(mock_get_plugin_group.return_value)
+
+
+def test_set_plugin_group_empty(mocker, app_metadata, fake_services):
+    """Test that we set the plugin group early."""
+    mock_set = mocker.patch("craft_parts.plugins.set_plugin_group")
+    mock_get_plugin_group = mocker.patch.object(
+        fake_services.get_class("lifecycle"), "get_plugin_group", return_value=None
+    )
+
+    app = FakeApplication(app_metadata, fake_services)
+    with pytest.raises(SystemExit):
+        app.run()
+
+    mock_get_plugin_group.assert_called_once()
+    mock_set.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "planning_error",
+    [
+        craft_cli.CraftError("General craft error"),
+        craft_platforms.CraftPlatformsError("Platforms error"),
+        craft_application.errors.CraftValidationError("Validation!"),
+    ],
+)
+def test_set_plugin_group_ignores_errors(
+    mocker, app_metadata, fake_services, planning_error
+):
+    """Test that we set the plugin group early."""
+    mock_set = mocker.patch("craft_parts.plugins.set_plugin_group")
+    mock_get_plugin_group = mocker.patch.object(
+        fake_services.get_class("lifecycle"), "get_plugin_group", return_value=None
+    )
+    mock_planner = mocker.patch.object(
+        fake_services.get("build_plan"), "plan", side_effect=planning_error
+    )
+
+    app = FakeApplication(app_metadata, fake_services)
+    with pytest.raises(SystemExit):
+        app.run()
+
+    mock_planner.assert_called_once()
+    mock_get_plugin_group.assert_not_called()
+    mock_set.assert_not_called()
 
 
 @pytest.fixture
@@ -1049,7 +1103,7 @@ def test_emitter_docs_url(monkeypatch, mocker, app):
 
     assert app.app.docs_url == "www.testcraft.example/docs/{version}"
     assert app.app.version == "3.14159"
-    expected_url = "www.testcraft.example/docs/3.14159"
+    expected_url = "www.testcraft.example/docs/3"
 
     spied_init = mocker.spy(emit, "init")
 
@@ -1105,7 +1159,7 @@ def test_doc_url_in_general_help(help_args, monkeypatch, capsys, app):
     with pytest.raises(SystemExit):
         app.run()
 
-    expected = "For more information about testcraft, check out: www.testcraft.example/docs/3.14159\n\n"
+    expected = "For more information about testcraft, check out: www.testcraft.example/docs/3\n\n"
     _, err = capsys.readouterr()
     assert err.endswith(expected)
 
@@ -1119,6 +1173,6 @@ def test_doc_url_in_command_help(monkeypatch, capsys, app):
     with pytest.raises(SystemExit):
         app.run()
 
-    expected = "For more information, check out: www.testcraft.example/docs/3.14159/reference/commands/app-config\n\n"
+    expected = "For more information, check out: www.testcraft.example/docs/3/reference/commands/app-config\n\n"
     _, err = capsys.readouterr()
     assert err.endswith(expected)

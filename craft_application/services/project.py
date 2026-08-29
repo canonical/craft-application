@@ -16,18 +16,26 @@
 from __future__ import annotations
 
 import copy
+import datetime
 import os
 import pathlib
 from typing import TYPE_CHECKING, Any, Literal, cast, final
 
 import craft_parts
 import craft_platforms
+import distro_support
 import pydantic
 from craft_cli import emit
+from distro_support.errors import (
+    UnknownDistributionError,
+    UnknownVersionError,
+)
 
-from craft_application import errors, grammar, util
+from craft_application import _const, errors, grammar, util
+from craft_application.errors import CraftValidationError
 from craft_application.models import Platform
 from craft_application.models.grammar import GrammarAwareProject
+from craft_application.models.project import PartName
 
 from . import base
 
@@ -48,7 +56,12 @@ class ProjectService(base.AppService):
     _project_model: models.Project | None
 
     def __init__(
-        self, app: AppMetadata, services: ServiceFactory, *, project_dir: pathlib.Path
+        self,
+        app: AppMetadata,
+        services: ServiceFactory,
+        *,
+        project_dir: pathlib.Path,
+        pro_services: util.ProServices | None = None,
     ) -> None:
         super().__init__(app, services)
         self.__platforms = None
@@ -60,6 +73,8 @@ class ProjectService(base.AppService):
         self._build_on: craft_platforms.DebianArchitecture | None = None
         self._build_for: str | None = None
         self._platform: str | None = None
+        self._project_vars: craft_parts.ProjectVarInfo | None = None
+        self._pro_services = pro_services
 
     @final
     def configure(self, *, platform: str | None, build_for: str | None) -> None:
@@ -73,12 +88,16 @@ class ProjectService(base.AppService):
             raise RuntimeError("Project is already configured.")
 
         platforms = self.get_platforms()
+        # This is needed if a child class doesn't necessarily vectorise all platforms
+        # in get_platforms. This is needed for charmcraft's multi-platforms.
+        if None in platforms.values():
+            self._vectorise_platforms(platforms)
         if platform and platform not in platforms:
             raise errors.InvalidPlatformError(platform, list(platforms.keys()))
 
         if platform and build_for:
             self._platform = platform
-            self._build_for = _convert_build_for(build_for)
+            self._build_for = self._convert_build_for(build_for)
             self.__is_configured = True
             return
 
@@ -96,7 +115,7 @@ class ProjectService(base.AppService):
             else:
                 if build_for:
                     # Gives a clean error if the value of build_for is invalid.
-                    _convert_build_for(build_for)
+                    self._convert_build_for(build_for)
                     raise errors.ProjectGenerationError(
                         f"Cannot generate a project that builds on "
                         f"{self._build_on} and builds for {build_for}"
@@ -107,8 +126,8 @@ class ProjectService(base.AppService):
                 platform = next(iter(platforms))
                 self._platform = platform
                 build_for = platforms[platform]["build-for"][0]
-                self._build_for = _convert_build_for(build_for)
-                self._build_on = craft_platforms.DebianArchitecture(
+                self._build_for = self._convert_build_for(build_for)
+                self._build_on = self._convert_build_on(
                     platforms[platform]["build-on"][0]
                 )
                 self.__is_configured = True
@@ -119,11 +138,7 @@ class ProjectService(base.AppService):
             # Any build-for in the platform is fine. For most crafts this is the
             # only build-for in the platform.
             build_for = platforms[platform]["build-for"][0]
-        self._build_for = (
-            build_for
-            if build_for == "all"
-            else craft_platforms.DebianArchitecture(build_for)
-        )
+        self._build_for = self._convert_build_for(build_for)
         self.__is_configured = True
 
     @property
@@ -211,8 +226,11 @@ class ProjectService(base.AppService):
         """Vectorise the platforms dictionary in place."""
         for name, data in platforms.items():
             if data is None:
-                # list call is needed until we have python 3.12 as minimum
-                if name not in list(craft_platforms.DebianArchitecture):
+                try:
+                    _, arch = craft_platforms.parse_base_and_architecture(name)
+                except ValueError:
+                    continue
+                if arch == "all":
                     continue
                 platforms[name] = {
                     "build-on": [name],
@@ -243,7 +261,7 @@ class ProjectService(base.AppService):
         platforms_project_adapter = pydantic.TypeAdapter(
             dict[Literal["platforms"], dict[str, Platform]],
         )
-        return platforms_project_adapter.dump_python(  # type: ignore[no-any-return]
+        return platforms_project_adapter.dump_python(
             platforms_project_adapter.validate_python({"platforms": platforms}),
             mode="json",
             by_alias=True,
@@ -259,8 +277,8 @@ class ProjectService(base.AppService):
         be defined by extensions, etc.
         """
         if self.__platforms:
-            return self.__platforms.copy()
-        raw_project = self._load_raw_project()
+            return copy.deepcopy(self.__platforms)
+        raw_project = self.get_raw()
         if "platforms" not in raw_project:
             return self._app_render_legacy_platforms()
 
@@ -271,12 +289,75 @@ class ProjectService(base.AppService):
                 exc,
                 file_name=self.project_file_name,
             ) from None
-        return self.__platforms
+        self._validate_multi_base(self.__platforms)
+        return copy.deepcopy(self.__platforms)
+
+    def _validate_multi_base(
+        self, platforms: dict[str, craft_platforms.PlatformDict]
+    ) -> None:
+        """Ensure that the given platforms are not multi-base.
+
+        An application that supports multi-base platforms entries can override this
+        method to do any validation of multi-base platforms it may need.
+
+        :param platforms: The platforms mapping to ensure is multi-base.
+        :raises: CraftValidationError if the app does not support multi-base and one
+            or more platforms use multi-base structure.
+        """
+        if self._app.supports_multi_base:
+            return
+        multi_base_platforms: set[str] = set()
+        for name, data in platforms.items():
+            if not data:
+                base, _ = craft_platforms.parse_base_and_architecture(name)
+                if base:
+                    multi_base_platforms.add(name)
+            else:
+                for value in (*data.get("build-on", ()), *data.get("build-for", ())):
+                    base, _ = craft_platforms.parse_base_and_architecture(value)
+                    if base:
+                        multi_base_platforms.add(name)
+        if multi_base_platforms:
+            invalid_platforms_str = ", ".join(repr(p) for p in multi_base_platforms)
+            raise errors.CraftValidationError(
+                f"{self._app.name.title()} does not support multi-base platforms",
+                resolution=f"Remove multi-base structure from these platforms: {invalid_platforms_str}",
+                logpath_report=False,
+                retcode=os.EX_DATAERR,
+            )
 
     @final
-    def _get_project_vars(self, yaml_data: dict[str, Any]) -> dict[str, str]:
-        """Return a dict with project variables to be expanded."""
-        return {var: str(yaml_data.get(var, "")) for var in self._app.project_variables}
+    @property
+    def project_vars(self) -> craft_parts.ProjectVarInfo | None:
+        """Get the project vars."""
+        return self._project_vars
+
+    def _create_project_vars(
+        self, project: dict[str, Any]
+    ) -> craft_parts.ProjectVarInfo:
+        """Create the project variables.
+
+        By default, the project variables are created from
+        ``AppMetadata.project_variables`` and the project's ``adopt-info`` key.
+
+        Applications should override this method if they need to create project
+        variables dynamically from on project data.
+
+        :param project: The project data.
+
+        :returns: The project variables.
+        """
+        project_vars = craft_parts.ProjectVarInfo.unmarshal(
+            {
+                var: craft_parts.ProjectVar(
+                    value=project.get(var),
+                    part_name=project.get("adopt-info"),
+                ).marshal()
+                for var in self._app.project_variables
+            }
+        )
+        emit.trace(f"Created project variables {project_vars}.")
+        return project_vars
 
     def get_partitions_for(
         self,
@@ -361,7 +442,7 @@ class ProjectService(base.AppService):
                 "specified."
             )
 
-        environment_vars = self._get_project_vars(project_data)
+        self._project_vars = self._create_project_vars(project_data)
         partitions = self.get_partitions_for(
             platform=platform, build_for=build_for, build_on=build_on
         )
@@ -370,16 +451,49 @@ class ProjectService(base.AppService):
         info = craft_parts.ProjectInfo(
             application_name=self._app.name,  # not used in environment expansion
             cache_dir=pathlib.Path(),  # not used in environment expansion
-            arch=build_for,
+            arch=str(self._convert_build_for(build_for)),
             parallel_build_count=util.get_parallel_build_count(self._app.name),
             project_name=project_data.get("name", ""),
             project_dirs=project_dirs,
-            project_vars=environment_vars,
+            project_vars=self.project_vars,
             partitions=partitions,
         )
 
         self.update_project_environment(info)
         craft_parts.expand_environment(project_data, info=info)
+
+    def _validate_user_provided_part_names(self, project_dict: dict[str, Any]) -> None:
+        """Validate that user-provided part names meet our standards.
+
+        This must be done through the project service rather than through the model
+        because we allow the application to add app-provided part names in
+        ``_app_preprocess_project``.
+
+        Applications may override this if needed.
+        """
+        base = project_dict.get("build-base", project_dict.get("base"))
+        if base in _const.BASES_ALLOW_SLASH_IN_PART_NAME:
+            return
+
+        part_names = project_dict.get("parts", {}).keys()
+        name_adapter: pydantic.TypeAdapter[PartName] = pydantic.TypeAdapter(PartName)
+        invalid_part_names: list[str] = []
+        for name in part_names:
+            try:
+                name_adapter.validate_python(name)
+            except pydantic.ValidationError:  # noqa: PERF203 (More than 1 is unlikely)
+                invalid_part_names.append(name)
+
+        if invalid_part_names:
+            names_str = ", ".join(invalid_part_names)
+            raise CraftValidationError(
+                message=f"Invalid part names: {names_str}",
+                details="Part names may not contain the '/' character.",
+                resolution="Rename invalid parts.",
+                logpath_report=False,
+                reportable=False,
+                retcode=os.EX_DATAERR,
+            )
 
     @final
     def _preprocess(
@@ -404,6 +518,7 @@ class ProjectService(base.AppService):
         """
         project = self.get_raw()
         GrammarAwareProject.validate_grammar(project)
+        self._validate_user_provided_part_names(project)
         self._app_preprocess_project(
             project, build_on=build_on, build_for=build_for, platform=platform
         )
@@ -435,12 +550,19 @@ class ProjectService(base.AppService):
         project = self._preprocess(
             build_for=build_for, build_on=build_on, platform=platform
         )
+        project["platforms"] = platforms
         self._expand_environment(
             project,
             build_on=craft_platforms.DebianArchitecture(build_on),
             build_for=build_for,
             platform=platform,
         )
+
+        # only provide platform ids when the 'for' variant is enabled
+        if self._app.enable_for_grammar:
+            platform_ids: set[str] = self.get_platform_identfiers(platform)
+        else:
+            platform_ids = set()
 
         # Process grammar.
         if "parts" in project:
@@ -449,6 +571,7 @@ class ProjectService(base.AppService):
                 parts_yaml_data=project["parts"],
                 arch=build_on,
                 target_arch=build_for,
+                platform_ids=platform_ids,
             )
         project_model = self._app.ProjectClass.from_yaml_data(
             project, self.resolve_project_file_path()
@@ -465,7 +588,29 @@ class ProjectService(base.AppService):
                     f"'adopt-info' not set and required fields are missing: {missing}"
                 )
 
+        if self._pro_services:
+            self._pro_services.validate_project(project_model)
+
         return project_model
+
+    def get_platform_identfiers(self, platform: str) -> set[str]:
+        """Get a list of identifiers for the current platform to build.
+
+        These identifiers are used as selectors in advanced grammar. By default,
+        the current platform is the only identifier.
+
+        Applications should override this method to generate custom identifiers.
+        For example, an application may take the platform ``ubuntu@26.04:riscv64``
+        and generate the following identifiers:
+
+          - ``ubuntu``
+          - ``ubuntu@26.04``
+          - ``riscv64``
+          - ``ubuntu@26.04:riscv64``
+
+        :returns: A set of identifiers for the current platform to build.
+        """
+        return {platform}
 
     def update_project_environment(self, info: craft_parts.ProjectInfo) -> None:
         """Update a ProjectInfo's global environment."""
@@ -493,26 +638,184 @@ class ProjectService(base.AppService):
             )
         return self._project_model
 
+    @staticmethod
+    def _convert_build_for(
+        architecture: str,
+    ) -> craft_platforms.DebianArchitecture | Literal["all"]:
+        """Convert a build-for value to a valid internal value.
 
-def _convert_build_for(
-    architecture: str,
-) -> craft_platforms.DebianArchitecture | Literal["all"]:
-    """Convert a build-for value to a valid internal value.
+        :param architecture: A valid build-for architecture as a string
+        :returns: The architecture as a DebianArchitecture or the special case string "all"
+        :raises: CraftValidationError if the given value is not valid for build-for.
+        """
+        # Convert distro@series:architecture to just the architecture.
+        architecture = architecture.rpartition(":")[2]
+        try:
+            return (
+                "all"
+                if architecture == "all"
+                else craft_platforms.DebianArchitecture(architecture)
+            )
+        except ValueError:
+            raise errors.CraftValidationError(
+                f"{architecture!r} is not a valid Debian architecture",
+                resolution="Use a supported Debian architecture name.",
+                reportable=False,
+                logpath_report=False,
+            ) from None
 
-    :param architecture: A valid build-for architecture as a string
-    :returns: The architecture as a DebianArchitecture or the special case string "all"
-    :raises: CraftValidationError if the given value is not valid for build-for.
-    """
-    try:
-        return (
-            "all"
-            if architecture == "all"
-            else craft_platforms.DebianArchitecture(architecture)
+    @staticmethod
+    def _convert_build_on(
+        architecture: str,
+    ) -> craft_platforms.DebianArchitecture:
+        """Convert a build-on value to a valid internal value.
+
+        :param architecture: A valid build-for architecture as a string
+        :returns: The architecture as a DebianArchitecture
+        :raises: CraftValidationError if the given value is not valid for build-for.
+        """
+        # Convert distro@series:architecture to just the architecture.
+        architecture = architecture.rpartition(":")[2]
+        try:
+            return craft_platforms.DebianArchitecture(architecture)
+        except ValueError:
+            raise errors.CraftValidationError(
+                f"{architecture!r} is not a valid Debian architecture",
+                resolution="Use a supported Debian architecture name.",
+                reportable=False,
+                logpath_report=False,
+            ) from None
+
+    @staticmethod
+    def _is_supported_on(
+        *, base: craft_platforms.DistroBase, date: datetime.date
+    ) -> bool:
+        """Check if the given base is supported on a date."""
+        support_range = distro_support.get_support_range(base.distribution, base.series)
+        return support_range.is_supported_on(
+            date
+        ) or support_range.is_in_development_on(date)
+
+    def check_base_is_supported(self, verb: str = "pack") -> None:
+        """Check that this project's base and build-base are supported.
+
+        This method assumes a single-base project. Applications that use multi-base
+        projects must override this in order to use it.
+
+        :param verb: Which lifecycle verb to use in an error message (default: "pack")
+        :raises: CraftValidationError if either is unsupported.
+        """
+        project = self.get()
+        if project.base is None:
+            raise RuntimeError("No base detected when getting support range.")
+        if project.base == "bare":
+            base = None
+        else:
+            base = craft_platforms.DistroBase.from_str(project.base)
+        build_base: craft_platforms.DistroBase | None = None
+        if project.build_base:
+            build_base = craft_platforms.DistroBase.from_str(project.build_base)
+
+            if build_base.series == "devel":
+                build_base = None
+
+        today = datetime.date.today()
+
+        if base is not None:
+            try:
+                base_is_supported = self._is_supported_on(base=base, date=today)
+            except (UnknownDistributionError, UnknownVersionError) as error:
+                # If distro-support doesn't know about this base, assume it's supported.
+                emit.debug(str(error))
+                base_is_supported = True
+        else:
+            base_is_supported = True
+        if build_base is not None:
+            try:
+                build_base_is_supported = self._is_supported_on(
+                    base=build_base, date=today
+                )
+            except (UnknownDistributionError, UnknownVersionError) as error:
+                # Likewise assume unknown build bases are supported.
+                emit.debug(str(error))
+                build_base_is_supported = True
+        else:
+            build_base_is_supported = base_is_supported
+
+        if base_is_supported and build_base_is_supported:
+            return
+        message = (
+            f"Base '{base}' has reached end-of-life."
+            if not base_is_supported
+            else f"Build base '{build_base}' has reached end-of-life."
         )
-    except ValueError:
         raise errors.CraftValidationError(
-            f"{architecture!r} is not a valid Debian architecture",
-            resolution="Use a supported Debian architecture name.",
-            reportable=False,
+            f"Cannot {verb} {self._app.artifact_type}. {message}",
+            resolution="If you know the risks and want to continue, rerun with --ignore=unmaintained.",
+            retcode=os.EX_DATAERR,
             logpath_report=False,
-        ) from None
+        )
+
+    def is_effective_base_eol(self) -> bool:
+        """Determine whether the base on which to build is end-of-life."""
+        base = craft_platforms.DistroBase.from_str(self.get().effective_base)
+        if base.series == "devel":
+            # A devel series is never considered end-of-life.
+            return False
+        return not self._is_supported_on(base=base, date=datetime.date.today())
+
+    def base_eol_soon_date(self) -> datetime.date | None:
+        """Return the date of the base's EOL if it happens soon.
+
+        :returns: The EOL date if it happens in the next 90 days, or None otherwise.
+        """
+        ninety_days_out = datetime.date.today() + datetime.timedelta(days=90)
+        base = craft_platforms.DistroBase.from_str(self.get().effective_base)
+        try:
+            if self._is_supported_on(base=base, date=ninety_days_out):
+                return None
+        except (UnknownDistributionError, UnknownVersionError):
+            # If distro-support doesn't know about this base, assume it's supported.
+            return None
+        support_range = distro_support.get_support_range(base.distribution, base.series)
+        return support_range.end_support
+
+    @final
+    def deep_update(self, update: dict[str, Any]) -> None:
+        """Perform a deep update of data in the project.
+
+        This method marshals the project and performs a recursive update on the
+        project dict, then unmarshals the project.
+
+        :param update: The dict to merge into the project model.
+
+        :raises RuntimeError: If the project doesn't exist.
+        """
+        emit.trace(f"Updating project model with {update}.")
+
+        if not self._project_model:
+            raise RuntimeError("Project doesn't exist.")
+
+        project_dict = self._project_model.marshal()
+        new_data = self._deep_update(project_dict, update)
+        self._project_model = self._app.ProjectClass.unmarshal(new_data)
+
+    @final
+    @staticmethod
+    def _deep_update(base: dict[str, Any], update: dict[str, Any]) -> dict[str, Any]:
+        """Recursive helper to deep update a dict.
+
+        :param base: The base dict to update. This dict is modified in-place.
+        :param update: The dict to merge into the base dict.
+
+        :returns: The updated dict.
+        """
+        for key, new_value in update.items():
+            if isinstance(new_value, dict) and isinstance(base.get(key), dict):
+                base[key] = ProjectService._deep_update(
+                    cast(dict[str, Any], base[key]),
+                    cast(dict[str, Any], new_value),
+                )
+            else:
+                base[key] = new_value
+        return base

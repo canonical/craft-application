@@ -68,7 +68,7 @@ class SnapConfig(pydantic.BaseModel, extra="forbid"):
         :raise TypeError: If data is not a dictionary.
         :raise ValueError: If data is invalid.
         """
-        if not isinstance(data, dict):  # pyright: ignore[reportUnnecessaryIsInstance]
+        if not isinstance(data, dict):
             raise TypeError("snap config data is not a dictionary")
 
         try:

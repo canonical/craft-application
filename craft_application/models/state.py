@@ -20,8 +20,32 @@ import pathlib
 from craft_application.models import CraftBaseModel
 
 
-class PackState(CraftBaseModel):
-    """Information about the packaged artifact and resources."""
+class PackedArtifact(CraftBaseModel):
+    """A persisted packed artifact entry."""
 
-    artifact: pathlib.Path | None
-    resources: dict[str, pathlib.Path] | None
+    name: str | None = None
+    path: pathlib.Path
+
+
+class PackState(CraftBaseModel):
+    """Information about the packaged artifacts."""
+
+    artifacts: list[PackedArtifact]
+
+    @property
+    def artifact(self) -> pathlib.Path | None:
+        """Compatibility view for the primary artifact."""
+        for artifact in self.artifacts:
+            if artifact.name is None:
+                return artifact.path
+        return None
+
+    @property
+    def resources(self) -> dict[str, pathlib.Path] | None:
+        """Compatibility view for secondary artifacts from the legacy API."""
+        resources = {
+            artifact.name: artifact.path
+            for artifact in self.artifacts
+            if artifact.name is not None
+        }
+        return resources or None

@@ -1,6 +1,6 @@
 #  This file is part of craft-application.
 #
-#  Copyright 2024 Canonical Ltd.
+#  Copyright 2024-2026 Canonical Ltd.
 #
 #  This program is free software: you can redistribute it and/or modify it
 #  under the terms of the GNU Lesser General Public License version 3, as
@@ -19,13 +19,12 @@
 from __future__ import annotations
 
 import os
-import pathlib
 import shutil
 import typing
-from re import Pattern
 from typing import Any
 
 import jinja2
+import pygit2
 from craft_cli import emit
 
 from craft_application.errors import InitError
@@ -38,6 +37,9 @@ from craft_application.models.constraints import (
 from . import base
 
 if typing.TYPE_CHECKING:  # pragma: no cover
+    import pathlib
+    from re import Pattern
+
     from craft_application.application import AppMetadata
     from craft_application.services import ServiceFactory
 
@@ -81,11 +83,12 @@ class InitService(base.AppService):
         project_dir: pathlib.Path,
         project_name: str,
         template_dir: pathlib.Path,
+        vcs: str,
     ) -> None:
         """Initialise a new project from a template.
 
         If a file already exists in the project directory, it is not overwritten.
-        Use `check_for_existing_files()` to see if this will occur before initialising
+        Use `check_for_existing_files()` to see if this will occur before initializing
         the project.
 
         :param project_dir: The directory to initialise the project in.
@@ -93,13 +96,83 @@ class InitService(base.AppService):
         :param template_dir: The directory containing the templates.
         """
         emit.debug(
-            f"Initialising project {project_name!r} in {str(project_dir)!r} from "
+            f"Initializing project {project_name!r} in {str(project_dir)!r} from "
             f"template in {str(template_dir)!r}."
         )
+        self._initialize_vcs(vcs, project_dir)
         environment = self._get_templates_environment(template_dir)
         self._create_project_dir(project_dir=project_dir)
         context = self._get_context(name=project_name, project_dir=project_dir)
         self._render_project(environment, project_dir, template_dir, context)
+
+    @property
+    def _vcs_ignore_lines(self) -> list[str]:
+        """A list of ignore lines to add when creating a .gitignore file."""
+        return []
+
+    def _initialize_vcs(
+        self,
+        vcs: str,
+        project_dir: pathlib.Path,
+    ) -> None:
+        """Initialize VCS features for a project.
+
+        Currently only supports Git.
+
+        If the Git repository already exists, it will be reused.
+
+        If a `.gitignore` file is already present, Craft-specific content will be
+        appended.
+        """
+        if vcs == "none":
+            return
+
+        emit.debug(f"Setting up VCS in {str(project_dir)!r}.")
+
+        # Initialize a git repository if we aren't already in one.
+        if not bool(
+            repo := pygit2.discover_repository(
+                project_dir,
+                False,  # noqa: FBT003, pygit2 does not accept kwargs here
+            )
+        ):
+            from craft_application.git import GitRepo  # noqa: PLC0415
+
+            _ = GitRepo(project_dir)
+        else:
+            emit.debug(
+                f"Already in a git repository ({repo!r}), skipping repository init."
+            )
+
+        self._create_git_ignore(project_dir)
+
+    def _create_git_ignore(self, project_dir: pathlib.Path) -> None:
+        ignore = project_dir / ".gitignore"
+        ignore_exists = ignore.exists()
+
+        # Don't ignore things that the user already had ignored
+        old_ignore = ignore.read_text().splitlines() if ignore_exists else ""
+        lines_to_add = [
+            line for line in self._vcs_ignore_lines if line not in old_ignore
+        ]
+
+        if len(lines_to_add) == 0:
+            return
+
+        ignore_lines = [
+            f"# Added by {self._app.name.capitalize()}",
+            *lines_to_add,
+        ]
+
+        new_ignore_content = "\n".join(ignore_lines) + "\n"
+
+        with ignore.open("at") as ignore_f:
+            # Assuming the user leaves a trailing newline on their files, this will give a cleanly
+            # separated "Added by Craft" section
+            if ignore_exists:
+                ignore_f.write("\n")
+
+            ignore_f.write(new_ignore_content)
 
     def check_for_existing_files(
         self,

@@ -1,0 +1,45 @@
+name: grammar
+base: ubuntu@24.04
+version: "1.0"
+summary: test
+description: |
+  Exercise witchcraft's advanced grammar statements, `on` and `to`.
+
+platforms:
+  platform1:
+    build-on: amd64
+    build-for: riscv64
+  platform2:
+    build-on: amd64
+    build-for: s390x
+
+parts:
+  hello-world:
+    plugin: dump
+
+    # grammar-only string
+    source:
+      - on amd64 to riscv64: on-amd64-to-riscv64
+      - on amd64 to s390x: on-amd64-to-s390x
+
+    # grammar dictionary
+    organize:
+      - on amd64 to riscv64:
+          hello-world-riscv64.txt: hello-world.txt
+      - on amd64 to s390x:
+          hello-world-s390x.txt: hello-world.txt
+
+
+    # grammar list (including non-grammar elements)
+    build-environment:
+      - HELLO: hello
+      - on amd64 to riscv64:
+        - ARCH: riscv64
+      - on amd64 to s390x:
+        - ARCH: s390x
+
+    override-build: |
+      if [[ "$HELLO" != "hello" || "$ARCH" != "riscv64" ]]; then
+        exit 1
+      fi
+      craftctl default

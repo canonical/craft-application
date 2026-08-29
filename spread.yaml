@@ -1,5 +1,4 @@
 project: testcraft
-
 path: /testcraft
 environment:
   PROJECT_PATH: /testcraft
@@ -13,16 +12,68 @@ exclude:
   - .venv
 
 backends:
-  google:
-    key: '$(HOST: echo "$SPREAD_GOOGLE_KEY")'
-    location: snapd-spread/us-east1-b
+  openstack:
+    key: '$(HOST: echo "$OS_CREDENTIALS_AMD64_PS7")'
+    plan: shared.medium
     halt-timeout: 3h
-    systems:
-      - ubuntu-24.04-64:
-          image: ubuntu-2404-64
+    wait-timeout: 10m
+    proxy: ingress-haproxy.ps7.canonical.com
+    cidr-port-rel: [10.151.96.0/21:5000]
+    volume-auto-delete: true
+    environment: &openstack-env
+      SNAPD_USE_PROXY: "true"
+      HTTP_PROXY: "http://egress.ps7.internal:3128"
+      http_proxy: "http://egress.ps7.internal:3128"
+      HTTPS_PROXY: "http://egress.ps7.internal:3128"
+      https_proxy: "http://egress.ps7.internal:3128"
+      no_proxy: "127.0.0.1,127.0.0.53,localhost"
+      NO_PROXY: "127.0.0.1,127.0.0.53,localhost"
+      NTP_SERVER: "ntp.ps7.internal"
+    systems: &openstack-systems
+      - ubuntu-20.04-64:
+          image: snapd-spread/ubuntu-20.04-64-hwe
           workers: 4
-          memory: 2G
-          storage: 10G
+          memory: 4G
+          storage: 20G
+      - ubuntu-22.04-64:
+          image: snapd-spread/ubuntu-22.04-64
+          workers: 4
+          memory: 4G
+          storage: 20G
+      - ubuntu-24.04-64:
+          image: snapd-spread/ubuntu-24.04-64
+          workers: 4
+          memory: 4G
+          storage: 20G
+      - ubuntu-26.04-64:
+          image: snapd-spread/ubuntu-26.04-64
+          workers: 4
+          memory: 4G
+          storage: 20G
+      - ubuntu-26.10-64:
+          image: snapd-spread/ubuntu-26.10-64
+          workers: 4
+          memory: 4G
+          storage: 20G
+      # - ubuntu-24.04-arm-64:
+      #     image: ubuntu-os-cloud/ubuntu-2404-lts-arm64
+      #     workers: 4
+      #     memory: 4G
+      #     storage: 20G
+
+  openstack-dev:
+    type: openstack
+    key: '$(HOST: echo "$OS_CREDENTIALS_STG_AMD64_PS7")'
+    plan: shared.xsmall
+    halt-timeout: 3h
+    wait-timeout: 10m
+    groups: [default]
+    proxy: ingress-haproxy.ps7.canonical.com
+    cidr-port-rel: [10.151.54.0/24:4000]
+    volume-auto-delete: true
+    environment: *openstack-env
+    systems: *openstack-systems
+
   # lxd:  # Disabled due to https://github.com/canonical/spread/issues/215
   #   systems:
   #     - ubuntu-24.04
@@ -80,6 +131,10 @@ backends:
         echo $(( $num + 1 )) > $counter_file')
 
       multipass_image=$(echo ${SPREAD_SYSTEM} | sed -e s/ubuntu-// -e s/-64//)
+      if [ "${multipass_image}" = "26.10" ]; then
+        # 26.10 has not been released yet, so it's only available as a daily build.
+        multipass_image="daily:26.10"
+      fi
 
       system=$(echo "${SPREAD_SYSTEM}" | tr . -)
       instance_name="spread-${SPREAD_BACKEND}-${instance_num}-${system}"
@@ -108,15 +163,48 @@ backends:
       instance_name=$(multipass list --format csv | grep $SPREAD_SYSTEM_ADDRESS | cut -f1 -d\,)
       multipass delete --purge "${instance_name}"
     systems:
+      - ubuntu-20.04-64:
+          workers: 4
+      - ubuntu-22.04-64:
+          workers: 4
       - ubuntu-24.04-64:
           workers: 4
+      - ubuntu-25.10-64:
+          workers: 4
+      - ubuntu-26.04-64:
+          workers: 4
+      - ubuntu-26.10-64:
+          workers: 4
+    prepare: |
+      # Ubuntu 20.04 requires a newer kernel, so we prepare it with an HWE kernel and
+      # reboot. Note that we're only doing this here because for OpenStack we
+      # specifically request an HWE kernel.
+      if [ "${SPREAD_SYSTEM}" = "ubuntu-20.04-64" ] && [ "${SPREAD_REBOOT:-0}" = "0" ]; then
+        apt-get update
+        DEBIAN_FRONTEND=noninteractive apt-get --yes install linux-image-generic-hwe-20.04
+        REBOOT
+      fi
   craft:
     type: adhoc
     allocate: "false"
     systems:
+      - ubuntu-20.04-64:
+      - ubuntu-22.04-64:
       - ubuntu-24.04-64:
+      - ubuntu-25.10-64:
+      - ubuntu-26.04-64:
+      - ubuntu-26.10-64:
 
 prepare: |
+  #shellcheck source=tests/spread/tools.sh
+  . "$PROJECT_PATH/tests/spread/tools.sh"
+  if [ -n "${HTTP_PROXY:-}" ]; then
+    # The snapd daemon doesn't see the environment variables, so we must modify its config
+    # to use a proxy with it. Came from:
+    # https://github.com/canonical/snapd/blob/619cc925793591348db21bb45fa4af65288d2c42/tests/lib/prepare.sh#L90
+    tools.setup_snapd_proxy
+  fi
+
   sudo snap wait system seed.loaded
   # IDK why but if we don't sleep after this we get:
   # error: cannot install "snapd": Post "https://api.snapcraft.io/v2/snaps/refresh": context canceled
@@ -124,8 +212,58 @@ prepare: |
   sudo snap install snapd || sudo snap refresh snapd
   sudo snap wait system seed.loaded
 
-  sudo snap install --dangerous --classic tests/spread/*.snap
-  sudo snap alias testcraft.partitioncraft partitioncraft
+  sudo snap install --dangerous --classic tests/spread/*$(dpkg --print-architecture).snap
+
+  # Select older LXD channels for older bases.
+  . /etc/os-release
+  case "${VERSION_ID}" in
+    [0-9][24680].10 | [0-9][13579].*)  # Use the latest track for interim releases.
+      lxd_channel="latest/beta"
+      ;;
+    20.04)
+      lxd_channel="4.0/beta"
+      ;;
+    22.04)
+      lxd_channel="5.0/beta"
+      ;;
+    24.04)
+      lxd_channel="5.21/beta"
+      ;;
+    26.04)
+      lxd_channel="6/beta"
+      ;;
+    *)
+      echo "Please select an LXD channel for this LTS release!" >> /dev/stderr
+      # exit 1
+      ;;
+  esac
+  if snap list lxd; then
+    snap refresh --channel=${lxd_channel} lxd
+  else
+    snap install --channel=${lxd_channel} lxd
+  fi
+
+  # Initialize LXD; some tests need it ready *before* testcraft is called
+  lxd init --auto
+
+  if [ -n "${HTTP_PROXY:-}" ]; then
+    # Lxd either can't access or doesn't fallback to the environment variables,
+    # so we must set them. This is needed to download remote images.
+    lxc config set core.proxy_http $HTTP_PROXY
+    lxc config set core.proxy_https $HTTPS_PROXY
+    lxc config set core.proxy_ignore_hosts $NO_PROXY
+  fi
+
+  tempfile="$(mktemp)"
+  if ! apt-get update > "$tempfile" 2>&1; then
+      cat "$tempfile"
+      exit 1
+  fi
+
+  apt-get --yes install jq
+
+restore-each: |
+  testcraft clean || true
 
 suites:
   tests/spread/testcraft/:
@@ -133,3 +271,35 @@ suites:
 
   tests/spread/partitioncraft/:
     summary: Tests for partitioncraft (app with partitions enabled)
+    prepare: |
+      sudo snap alias testcraft.partitioncraft partitioncraft
+
+  tests/spread/witchcraft/:
+    summary: Tests for witchcraft (app with many features enabled)
+    prepare: |
+      sudo snap alias testcraft.witchcraft witchcraft
+
+  tests/spread/pro/:
+    summary: manually-triggered when Ubuntu Pro token is available
+    manual: true
+    # The ability to attach pro to a LXD instance is only present on LXD 5.21+
+    # These tests install older versions of LXD for systems lower than 24.04, so
+    # restrict tests just to the systems that we can expect to support this
+    # piece of the pro puzzle
+    systems:
+      - ubuntu-24.04*
+    environment:
+      UBUNTU_PRO_TOKEN: '$(HOST: echo "$UBUNTU_PRO_TOKEN")'
+    prepare: |
+      sudo snap alias testcraft.witchcraft witchcraft
+
+      # Enable Ubuntu Pro
+      sudo pro config set http_proxy="$http_proxy"
+      sudo pro config set https_proxy="$https_proxy"
+      sudo pro attach --no-auto-enable $UBUNTU_PRO_TOKEN
+
+      # Enable guest attachment so that Witchcraft can enable Pro on the instances
+      sudo pro config set lxd_guest_attach=available
+      sudo snap restart lxd
+    restore: |
+      sudo pro detach --assume-yes || true

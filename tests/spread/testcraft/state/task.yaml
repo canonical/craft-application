@@ -1,0 +1,12 @@
+summary: test the state service
+
+execute: |
+  testcraft state > output.txt 2>&1
+
+  # ensure testcraft is able to read and write data in and out of the instance
+  grep "Got value set by outer instance: test-value" output.txt
+  grep "Got value set by inner instance: test-platform1" output.txt
+  grep "Got value set by inner instance: test-platform2" output.txt
+
+restore: |
+  rm output.txt

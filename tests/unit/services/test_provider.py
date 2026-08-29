@@ -18,9 +18,10 @@
 import enum
 import pathlib
 import pkgutil
+import re
 import subprocess
 import uuid
-from typing import NamedTuple
+from typing import Any, NamedTuple
 from unittest import mock
 
 import craft_application
@@ -30,11 +31,23 @@ import pytest
 import pytest_subprocess
 from craft_application import errors
 from craft_application.services import provider
+from craft_application.services.provider import (
+    _find_git_root,
+    _get_build_root,
+    _get_managed_cwd,
+)
 from craft_application.services.service_factory import ServiceFactory
-from craft_application.util import snap_config
+from craft_application.util import ProServices, snap_config
 from craft_cli import emit
 from craft_providers import bases, lxd, multipass
 from craft_providers.actions.snap_installer import Snap
+from snap_http.types import SnapdResponse
+
+
+class _MonorepoConfigModel(craft_application.ConfigModel):
+    """ConfigModel that includes the experimental_monorepo option, enabled by default."""
+
+    experimental_monorepo: bool = True
 
 
 @pytest.fixture
@@ -62,13 +75,6 @@ def fake_build_info(fake_base):
         build_on=arch,
         build_for=arch,
         build_base=fake_base,
-    )
-
-
-@pytest.fixture
-def mock_capture_pack_state(mocker) -> None:
-    mocker.patch(
-        "craft_application.services.provider.ProviderService._capture_pack_state_from_instance"
     )
 
 
@@ -169,11 +175,26 @@ def test_setup_config_values(
         pytest.param(
             {
                 "SNAP_NAME": "testcraft",
+                "SNAP_INSTANCE_NAME": "testcraft",
+                "SNAP": "/snap/testcraft/x1",
+            },
+            [
+                Snap(name="core24", channel=None),
+                Snap(name="testcraft", channel=None, classic=True),
+            ],
+            id="inject-from-host",
+        ),
+        pytest.param(
+            {
+                "SNAP_NAME": "testcraft",
                 "SNAP_INSTANCE_NAME": "testcraft_1",
                 "SNAP": "/snap/testcraft/x1",
             },
-            [Snap(name="testcraft_1", channel=None, classic=True)],
-            id="inject-from-host",
+            [
+                Snap(name="core24", channel=None),
+                Snap(name="testcraft_1", channel=None, classic=True),
+            ],
+            id="inject-from-host-aliased",
         ),
         pytest.param(
             {
@@ -182,7 +203,10 @@ def test_setup_config_values(
                 "SNAP": "/snap/testcraft/x1",
                 "CRAFT_SNAP_CHANNEL": "something",
             },
-            [Snap(name="testcraft_1", channel=None, classic=True)],
+            [
+                Snap(name="core24", channel=None),
+                Snap(name="testcraft_1", channel=None, classic=True),
+            ],
             id="inject-from-host-ignore-channel",
         ),
         pytest.param(
@@ -191,7 +215,10 @@ def test_setup_config_values(
                 "SNAP_NAME": "testcraft",
                 "SNAP": "/snap/testcraft/x1",
             },
-            [Snap(name="testcraft", channel=None, classic=True)],
+            [
+                Snap(name="core24", channel=None),
+                Snap(name="testcraft", channel=None, classic=True),
+            ],
             id="missing-snap-instance-name",
         ),
         pytest.param(
@@ -202,7 +229,10 @@ def test_setup_config_values(
                 # CRAFT_SNAP_CHANNEL should be ignored
                 "CRAFT_SNAP_CHANNEL": "something",
             },
-            [Snap(name="testcraft", channel=None, classic=True)],
+            [
+                Snap(name="core24", channel=None),
+                Snap(name="testcraft", channel=None, classic=True),
+            ],
             id="missing-snap-instance-name-ignore-snap-channel",
         ),
         pytest.param(
@@ -229,6 +259,28 @@ def test_install_snap(
     snaps,
 ):
     monkeypatch.setattr("snaphelpers._ctl.Popen", subprocess.Popen)
+    monkeypatch.setattr(
+        "snap_http.http.get",
+        mock.Mock(
+            return_value=SnapdResponse(
+                type="fake",
+                status_code=200,
+                status="OK",
+                result=[
+                    {
+                        "name": environment.get("SNAP_INSTANCE_NAME")
+                        or environment.get("SNAP_NAME"),
+                        "confinement": "classic",
+                        "base": "core24",
+                    },
+                    {
+                        "name": "core24",
+                        "confinement": "strict",
+                    },
+                ],
+            )
+        ),
+    )
     fake_process.register(
         ["/usr/bin/snapctl", "get", "-d", fake_process.any()],
         stdout="{}",
@@ -253,6 +305,160 @@ def test_install_snap(
         assert service.snaps == snaps
     else:
         assert service.snaps == []
+
+
+@pytest.mark.parametrize(
+    ("build_on", "expect_injection"),
+    [
+        pytest.param(None, True, id="build_on-unset"),
+        pytest.param("riscv64", True, id="build_on-matches-host"),
+        pytest.param("amd64", False, id="build_on-differs-from-host"),
+    ],
+)
+def test_setup_snaps_skips_injection_on_arch_mismatch(
+    monkeypatch,
+    app_metadata,
+    fake_project,
+    fake_process: pytest_subprocess.FakeProcess,
+    fake_services,
+    build_on,
+    expect_injection,
+):
+    monkeypatch.setattr(
+        craft_platforms.DebianArchitecture,
+        "from_host",
+        lambda: craft_platforms.DebianArchitecture.RISCV64,
+    )
+    monkeypatch.setattr(
+        fake_services.get("config"),
+        "get",
+        lambda item: build_on if item == "build_on" else None,
+    )
+    monkeypatch.setattr("snaphelpers._ctl.Popen", subprocess.Popen)
+    monkeypatch.setattr(
+        "snap_http.http.get",
+        mock.Mock(
+            return_value=SnapdResponse(
+                type="fake",
+                status_code=200,
+                status="OK",
+                result=[
+                    {
+                        "name": "testcraft",
+                        "confinement": "classic",
+                        "base": "core24",
+                    },
+                    {"name": "core24", "confinement": "strict"},
+                ],
+            )
+        ),
+    )
+    fake_process.register(
+        ["/usr/bin/snapctl", "get", "-d", fake_process.any()],
+        stdout="{}",
+        occurrences=1000,
+    )
+    monkeypatch.setenv("SNAP_NAME", "testcraft")
+    monkeypatch.setenv("SNAP_INSTANCE_NAME", "testcraft")
+    monkeypatch.setenv("SNAP", "/snap/testcraft/x1")
+    monkeypatch.delenv("CRAFT_SNAP_CHANNEL", raising=False)
+
+    service = provider.ProviderService(
+        app_metadata,
+        fake_services,
+        work_dir=pathlib.Path(),
+        install_snap=True,
+    )
+    service.setup()
+
+    injected_snaps = [s for s in service.snaps if s.channel is None]
+    if expect_injection:
+        assert injected_snaps, "Expected snap injection but no injected snaps found"
+    else:
+        assert not injected_snaps, "Expected no snap injection but injected snaps found"
+        assert (
+            Snap(name="testcraft", channel="latest/stable", classic=True)
+            in service.snaps
+        )
+
+
+@pytest.mark.parametrize(
+    ("tracking_channel", "craft_snap_channel", "expected_channel"),
+    [
+        pytest.param("latest/edge", None, "latest/edge", id="uses-tracking-channel"),
+        pytest.param(
+            "latest/edge",
+            "latest/stable",
+            "latest/stable",
+            id="craft-snap-channel-overrides-tracking",
+        ),
+        pytest.param(None, None, "latest/stable", id="no-tracking-channel-fallback"),
+    ],
+)
+def test_setup_snaps_uses_tracking_channel(
+    monkeypatch,
+    app_metadata,
+    fake_project,
+    fake_process: pytest_subprocess.FakeProcess,
+    fake_services,
+    tracking_channel,
+    craft_snap_channel,
+    expected_channel,
+):
+    """When injection is skipped and CRAFT_SNAP_CHANNEL is unset, use the snap's tracking channel."""
+    monkeypatch.setattr(
+        craft_platforms.DebianArchitecture,
+        "from_host",
+        lambda: craft_platforms.DebianArchitecture.RISCV64,
+    )
+    monkeypatch.setattr(
+        fake_services.get("config"),
+        "get",
+        lambda item: "amd64" if item == "build_on" else None,
+    )
+    monkeypatch.setattr("snaphelpers._ctl.Popen", subprocess.Popen)
+    snap_result: dict[str, Any] = {
+        "name": "testcraft",
+        "confinement": "classic",
+        "base": "core24",
+    }
+    if tracking_channel is not None:
+        snap_result["tracking-channel"] = tracking_channel
+    monkeypatch.setattr(
+        "snap_http.http.get",
+        mock.Mock(
+            return_value=SnapdResponse(
+                type="fake",
+                status_code=200,
+                status="OK",
+                result=[snap_result, {"name": "core24", "confinement": "strict"}],
+            )
+        ),
+    )
+    fake_process.register(
+        ["/usr/bin/snapctl", "get", "-d", fake_process.any()],
+        stdout="{}",
+        occurrences=1000,
+    )
+    monkeypatch.setenv("SNAP_NAME", "testcraft")
+    monkeypatch.setenv("SNAP_INSTANCE_NAME", "testcraft")
+    monkeypatch.setenv("SNAP", "/snap/testcraft/x1")
+    if craft_snap_channel is not None:
+        monkeypatch.setenv("CRAFT_SNAP_CHANNEL", craft_snap_channel)
+    else:
+        monkeypatch.delenv("CRAFT_SNAP_CHANNEL", raising=False)
+
+    service = provider.ProviderService(
+        app_metadata,
+        fake_services,
+        work_dir=pathlib.Path(),
+        install_snap=True,
+    )
+    service.setup()
+
+    assert (
+        Snap(name="testcraft", channel=expected_channel, classic=True) in service.snaps
+    )
 
 
 @pytest.mark.parametrize(
@@ -587,7 +793,10 @@ def test_get_base_buildd(
 
     check.is_instance(base, base_class)
     check.equal(base.alias, alias)
-    check.equal(base.compatibility_tag, f"testcraft-{base_class.compatibility_tag}")
+    check.equal(
+        base.compatibility_tag,
+        f"testcraft-{base_class.compatibility_tag}{provider_service.compatibility_tag}",
+    )
     check.equal(base._environment, environment)
 
     # Verify that the two packages we care about in order to support Craft Archives
@@ -609,16 +818,21 @@ def test_get_base_packages(provider_service):
 @pytest.mark.parametrize("allow_unstable", [True, False])
 def test_instance(
     check,
+    monkeypatch: pytest.MonkeyPatch,
     emitter,
     tmp_path,
     app_metadata,
     fake_project,
     provider_service,
+    state_service,
     fake_build_info,
     allow_unstable,
     mock_provider,
-    mock_capture_pack_state,
 ):
+    # In case the user's system has these set.
+    monkeypatch.delenv("CRAFT_IDLE_MINS", raising=False)
+    monkeypatch.delenv("CRAFT_BUILD_ON", raising=False)
+    monkeypatch.delenv(f"{app_metadata.name.upper()}_BUILD_ON", raising=False)
     with provider_service.instance(
         fake_build_info, work_dir=tmp_path, allow_unstable=allow_unstable
     ) as instance:
@@ -628,14 +842,24 @@ def test_instance(
         mock_provider.launched_environment.assert_called_once_with(
             project_name=fake_project.name,
             project_path=tmp_path,
+            instance_architecture=None,
             instance_name=mock.ANY,
             base_configuration=mock.ANY,
             allow_unstable=allow_unstable,
+            prepare_instance=None,
+            use_base_instance=True,
+            shutdown_delay_mins=None,
         )
     with check:
-        instance.mount.assert_called_once_with(
-            host_source=tmp_path, target=app_metadata.managed_instance_project_path
-        )
+        assert instance.mount.mock_calls == [
+            mock.call(
+                host_source=tmp_path, target=app_metadata.managed_instance_project_path
+            ),
+            mock.call(
+                host_source=state_service._state_dir,
+                target=state_service._managed_state_dir,
+            ),
+        ]
         instance.push_file_io.assert_called_once_with(
             destination=pathlib.Path("/root/.bashrc"),
             content=mock.ANY,
@@ -651,7 +875,6 @@ def test_instance_clean_existing(
     provider_service,
     mock_provider,
     clean_existing,
-    mock_capture_pack_state,
 ):
     arch = craft_platforms.DebianArchitecture.from_host()
     base_name = craft_platforms.DistroBase("ubuntu", "24.04")
@@ -693,7 +916,6 @@ def test_load_bashrc_missing(
     fake_build_info,
     allow_unstable,
     mocker,
-    mock_capture_pack_state,
 ):
     """Test that we handle the case where the bashrc file is missing."""
     mock_provider = mock.MagicMock(spec=craft_providers.Provider)
@@ -714,9 +936,7 @@ def test_load_bashrc_missing(
 
 
 @pytest.fixture
-def setup_fetch_logs_provider(
-    monkeypatch, provider_service, mocker, tmp_path, mock_capture_pack_state
-):
+def setup_fetch_logs_provider(monkeypatch, provider_service, mocker, tmp_path):
     """Return a function that, when called, mocks the provider_service's instance()."""
 
     def _setup(*, should_have_logfile: bool):
@@ -889,12 +1109,202 @@ def test_run_managed(
     default_app_metadata: craft_application.AppMetadata,
     fake_services: ServiceFactory,
     fake_build_info: craft_platforms.BuildInfo,
-    fetch: bool,  # noqa: FBT001
+    fetch: bool,
     mock_provider,
-    mock_capture_pack_state,
 ):
     mock_fetch = mock.MagicMock()
     fake_services.register("fetch", mock.Mock(return_value=mock_fetch))
+    fake_services.get_class("fetch").is_active.return_value = fetch  # ty: ignore[unresolved-attribute]
+    monkeypatch.setattr("sys.argv", ["[unused]", "pack", "--verbose"])
+    instance_context = (
+        mock_provider.launched_environment.return_value.__enter__.return_value
+    )
+
+    provider_service.run_managed(fake_build_info, enable_fetch_service=fetch)
+    instance_context.prepare_instance(instance_context)
+
+    expected_env = {
+        "CRAFT_VERBOSITY_LEVEL": mock.ANY,
+        "CRAFT_PLATFORM": fake_build_info.platform,
+    }
+
+    instance_context.execute_run.assert_called_once_with(
+        ["testcraft", "pack", "--verbose"],
+        cwd=default_app_metadata.managed_instance_project_path,
+        check=True,
+        env=expected_env,
+    )
+
+    instance_context.prepare_instance.assert_called_once_with(mock.ANY)
+
+
+def test_configure_instance_with_pro(mocker, provider_service):
+    """Ensure Pro is installed and configured in the instance."""
+    mock_instance = mocker.MagicMock(spec=lxd.LXDInstance)
+    mock_instance.pro_services = None
+    provider_service._pro_services = ProServices(["esm-apps"])
+
+    provider_service.configure_instance_with_pro(mock_instance)
+
+    mock_instance.install_pro_client.assert_called_once()
+    mock_instance.attach_pro_subscription.assert_called_once()
+    mock_instance.enable_pro_service.assert_called_once()
+    assert mock_instance.pro_services == ProServices(["esm-apps"])
+
+
+def test_configure_instance_with_pro_reentry_guard(mocker, provider_service):
+    """Error if the instance was built with different Pro services."""
+    mock_instance = mocker.MagicMock(spec=lxd.LXDInstance)
+    mock_instance.pro_services = ProServices(["fips-updates"])
+    provider_service._pro_services = ProServices(["esm-apps"])
+
+    with pytest.raises(errors.InvalidUbuntuProStatusError):
+        provider_service.configure_instance_with_pro(mock_instance)
+
+
+def test_configure_instance_with_pro_not_supported(mocker, provider_service):
+    """Error when Pro services are requested on a non-LXD instance."""
+    mock_instance = mocker.MagicMock(spec=multipass.MultipassInstance)
+    provider_service._pro_services = ProServices(["esm-apps"])
+    expected = re.escape("Ubuntu Pro builds are only supported with LXD backend.")
+
+    with pytest.raises(errors.UbuntuProNotSupportedError, match=expected):
+        provider_service.configure_instance_with_pro(mock_instance)
+
+
+def test_configure_instance_with_pro_skipped(mocker, provider_service):
+    """Pro is not configured when no services are requested."""
+    mock_instance = mocker.MagicMock(spec=lxd.LXDInstance)
+    mock_instance.pro_services = None
+    provider_service._pro_services = ProServices()
+
+    provider_service.configure_instance_with_pro(mock_instance)
+
+    mock_instance.install_pro_client.assert_not_called()
+    mock_instance.attach_pro_subscription.assert_not_called()
+    mock_instance.enable_pro_service.assert_not_called()
+
+
+class TestFindGitRoot:
+    @pytest.mark.parametrize(
+        "git_is_available",
+        [True, False],
+        ids=["not-in-git-repo", "git-unavailable"],
+    )
+    def test_returns_none_without_git_repository(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: pathlib.Path,
+        git_is_available: bool,
+    ) -> None:
+        if not git_is_available:
+            monkeypatch.setattr(
+                provider.subprocess,
+                "run",
+                mock.Mock(side_effect=FileNotFoundError("git not found")),
+            )
+        assert _find_git_root(tmp_path) is None
+
+    def test_returns_root_for_git_repo(self, tmp_path: pathlib.Path) -> None:
+        subprocess.run(["git", "init", str(tmp_path)], check=True, capture_output=True)
+        assert _find_git_root(tmp_path) == tmp_path
+
+    def test_returns_root_from_subdirectory(self, tmp_path: pathlib.Path) -> None:
+        subprocess.run(["git", "init", str(tmp_path)], check=True, capture_output=True)
+        subdir = tmp_path / "charm-a"
+        subdir.mkdir()
+        assert _find_git_root(subdir) == tmp_path
+
+
+class TestGetBuildRoot:
+    def test_returns_work_dir_when_disabled(self, tmp_path: pathlib.Path) -> None:
+        assert _get_build_root(tmp_path, use_git_root=False) == tmp_path
+
+    def test_returns_work_dir_when_not_in_git_repo(
+        self, tmp_path: pathlib.Path
+    ) -> None:
+        assert _get_build_root(tmp_path, use_git_root=True) == tmp_path
+
+    def test_returns_git_root_in_monorepo(self, tmp_path: pathlib.Path) -> None:
+        subprocess.run(["git", "init", str(tmp_path)], check=True, capture_output=True)
+        subdir = tmp_path / "charm-a"
+        subdir.mkdir()
+        assert _get_build_root(subdir, use_git_root=True) == tmp_path
+
+    def test_returns_work_dir_when_already_at_git_root(
+        self, tmp_path: pathlib.Path
+    ) -> None:
+        subprocess.run(["git", "init", str(tmp_path)], check=True, capture_output=True)
+        assert _get_build_root(tmp_path, use_git_root=True) == tmp_path
+
+
+class TestGetManagedCwd:
+    _default = pathlib.PurePosixPath("/root/project")
+
+    def test_returns_default_when_disabled(self, tmp_path: pathlib.Path) -> None:
+        result = _get_managed_cwd(tmp_path, self._default, use_git_root=False)
+        assert result == self._default
+
+    def test_returns_default_when_not_in_git_repo(self, tmp_path: pathlib.Path) -> None:
+        result = _get_managed_cwd(tmp_path, self._default, use_git_root=True)
+        assert result == self._default
+
+    def test_returns_default_when_at_git_root(self, tmp_path: pathlib.Path) -> None:
+        subprocess.run(["git", "init", str(tmp_path)], check=True, capture_output=True)
+        assert (
+            _get_managed_cwd(tmp_path, self._default, use_git_root=True)
+            == self._default
+        )
+
+    def test_returns_subdir_in_monorepo(self, tmp_path: pathlib.Path) -> None:
+        subprocess.run(["git", "init", str(tmp_path)], check=True, capture_output=True)
+        charm_dir = tmp_path / "charms" / "charm-a"
+        charm_dir.mkdir(parents=True)
+        expected = self._default / "charms" / "charm-a"
+        assert _get_managed_cwd(charm_dir, self._default, use_git_root=True) == expected
+
+    def test_returns_default_when_git_root_is_not_parent(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path
+    ) -> None:
+        charm_dir = tmp_path / "charms" / "charm-a"
+        charm_dir.mkdir(parents=True)
+        unrelated_root = tmp_path / "other-repo-root"
+        unrelated_root.mkdir()
+        monkeypatch.setattr(provider, "_find_git_root", lambda _path: unrelated_root)
+
+        result = _get_managed_cwd(charm_dir, self._default, use_git_root=True)
+
+        assert result == self._default
+
+
+@pytest.mark.parametrize("fetch", [False, True])
+@pytest.mark.parametrize(
+    "app_metadata",
+    [{"allow_git_build_root": True, "ConfigModel": _MonorepoConfigModel}],
+    indirect=True,
+)
+def test_run_managed_git_build_root_sets_cwd(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: pathlib.Path,
+    fake_build_info: craft_platforms.BuildInfo,
+    fetch: bool,
+    provider_service: provider.ProviderService,
+    mock_provider,
+    fake_services: ServiceFactory,
+):
+    """ProviderService.run_managed uses the monorepo subdir as cwd when allow_git_build_root=True and experimental_monorepo is set."""
+    mock_fetch = mock.MagicMock()
+    fake_services.register("fetch", mock.Mock(return_value=mock_fetch))
+    fake_services.get_class("fetch").is_active.return_value = fetch  # ty: ignore[unresolved-attribute]
+
+    # Set up a monorepo: git root at tmp_path, project in a subdirectory.
+    subprocess.run(["git", "init", str(tmp_path)], check=True, capture_output=True)
+    charm_dir = tmp_path / "charms" / "charm-a"
+    charm_dir.mkdir(parents=True)
+
+    # Point the provider service's work_dir to the monorepo subdir.
+    monkeypatch.setattr(provider_service, "_work_dir", charm_dir)
+
     monkeypatch.setattr("sys.argv", ["[unused]", "pack", "--verbose"])
     instance_context = (
         mock_provider.launched_environment.return_value.__enter__.return_value
@@ -902,16 +1312,11 @@ def test_run_managed(
 
     provider_service.run_managed(fake_build_info, enable_fetch_service=fetch)
 
+    managed_project_path = provider_service._app.managed_instance_project_path
+    expected_cwd = managed_project_path / "charms" / "charm-a"
     instance_context.execute_run.assert_called_once_with(
-        ["testcraft", "pack", "--verbose"],
-        cwd=default_app_metadata.managed_instance_project_path,
+        mock.ANY,
+        cwd=expected_cwd,
         check=True,
-        env={
-            "CRAFT_VERBOSITY_LEVEL": mock.ANY,
-            "CRAFT_PLATFORM": fake_build_info.platform,
-        },
+        env=mock.ANY,
     )
-
-    if fetch:
-        mock_fetch.create_session.assert_called_once_with(instance_context)
-        mock_fetch.teardown_session.assert_called_once_with()

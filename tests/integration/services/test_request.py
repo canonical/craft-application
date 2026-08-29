@@ -27,7 +27,9 @@ import pytest_check
     [
         pytest.param(
             # A real build log.
-            "https://launchpad.net/~charmcraft-team/charmcraft/+snap/charmcraft-edge/+build/2377699/+files/buildlog_snap_ubuntu_jammy_armhf_charmcraft-edge_BUILDING.txt.gz",
+            # This is equivalent to:
+            # https://launchpad.net/~charmcraft-team/charmcraft/+snap/charmcraft-edge/+build/2377699/+files/buildlog_snap_ubuntu_jammy_armhf_charmcraft-edge_BUILDING.txt.gz
+            "https://launchpadlibrarian.net/712397735/buildlog_snap_ubuntu_jammy_armhf_charmcraft-edge_BUILDING.txt.gz",
             # The hash of the plain text file (uncompressed)
             "1f3b5ac763cf6885c26965f8d559bca6e8a6b2d2b2ce1f8935628647f57a0c0a",
             29595,  # Size of the compressed file.
@@ -35,6 +37,7 @@ import pytest_check
         )
     ],
 )
+@pytest.mark.flaky(reruns=3, reason="External downloads can be flaky")
 @pytest.mark.slow
 def test_get_real_file(tmp_path, emitter, request_service, url, checksum, size):
     result = request_service.download_with_progress(url, tmp_path)
@@ -63,6 +66,7 @@ def test_get_real_file(tmp_path, emitter, request_service, url, checksum, size):
         },
     ],
 )
+@pytest.mark.flaky(reruns=3, reason="External downloads can be flaky")
 @pytest.mark.slow
 def test_get_real_files(tmp_path, request_service, files):
     result = request_service.download_files_with_progress(

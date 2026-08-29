@@ -23,7 +23,7 @@ from collections.abc import Iterable, Sequence
 from types import MappingProxyType
 from typing import cast
 
-from lazr.restfulclient.resource import Entry  # type: ignore[import-untyped]
+from lazr.restfulclient.resource import Entry
 from typing_extensions import Any
 
 ARCHITECTURE_MAP = MappingProxyType({"x86_64": "amd64", "x64": "amd64", "x86": "i386"})
@@ -101,11 +101,7 @@ def set_innermost_attr(
 
 def get_resource_type(entry: Entry) -> str:
     """Get the resource type of a Launchpad entry object as a string."""
-    return urllib.parse.urlparse(
-        str(
-            entry.resource_type_link  # pyright: ignore[reportUnknownArgumentType,reportUnknownMemberType]
-        )
-    ).fragment
+    return urllib.parse.urlparse(str(entry.resource_type_link)).fragment
 
 
 def get_person_link(person: str | Entry) -> str:
@@ -121,7 +117,7 @@ def get_person_link(person: str | Entry) -> str:
     if isinstance(person, Entry):
         if (resource_type := get_resource_type(person)) not in ("person", "team"):
             raise TypeError(f"Invalid resource type {resource_type!r}")
-        person = cast(str, person.name)  # pyright: ignore[reportUnknownMemberType]
+        person = cast(str, person.name)
     person = person.lstrip("/~").split("/", maxsplit=1)[0]
     return f"/~{person}"
 
@@ -154,9 +150,7 @@ def get_annotations(obj: type) -> dict[str, type]:
     if hasattr(inspect, "get_annotations"):
         return cast(
             dict[str, type],
-            inspect.get_annotations(  # pyright: ignore[reportUnknownMemberType,reportAttributeAccessIssue]
-                obj, eval_str=True
-            ),
+            inspect.get_annotations(obj, eval_str=True),
         )
 
     annotations = obj.__annotations__.copy()

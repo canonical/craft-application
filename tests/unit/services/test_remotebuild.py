@@ -232,7 +232,9 @@ def test_ensure_repository_wraps_git_error_on_pushing(
 def test_ensure_repository_wraps_git_error_during_init(
     tmp_path,
     remote_build_service,
+    mock_lp_project,
 ):
+    remote_build_service._lp_project = mock_lp_project
     with pytest.raises(RemoteBuildGitError, match="Fake _init_repo error during tests"):
         remote_build_service._ensure_repository(tmp_path)
 
@@ -331,6 +333,27 @@ def test_create_new_recipe_archs(
         git_ref="/~me/some-project/+git/my-repo/+ref/main",
         project=mock_lp_project,
         architectures=expected_archs,
+    )
+
+
+def test_create_new_recipe_build_path(remote_build_service, mock_lp_project):
+    """Test that _new_recipe forwards build_path to the recipe."""
+    remote_build_service._lp_project = mock_lp_project
+    remote_build_service.RecipeClass = mock.Mock()
+    repo = mock.Mock(
+        git_https_url="https://localhost/~me/some-project/+git/my-repo",
+        private=False,
+    )
+
+    remote_build_service._new_recipe("test-recipe", repo, build_path="subdir")
+
+    remote_build_service.RecipeClass.new.assert_called_once_with(
+        remote_build_service.lp,
+        "test-recipe",
+        "craft_test_user",
+        git_ref="/~me/some-project/+git/my-repo/+ref/main",
+        project=mock_lp_project,
+        build_path="subdir",
     )
 
 
@@ -433,15 +456,48 @@ def test_fetch_logs(tmp_path, remote_build_service, logs, mocker):
     )
 
 
+def test_fetch_artifacts_url_decode(tmp_path, remote_build_service, mocker):
+    """Test that artifact filenames are URL-decoded (e.g., %40 -> @)."""
+    remote_build_service._name = "appname-project-checksum"
+    # Simulate artifact URLs with URL-encoded characters
+    mock_builds = [
+        mock.Mock(
+            get_artifact_urls=mock.Mock(
+                return_value=[
+                    "https://example.com/files/test_ubuntu%4020.04-amd64.charm",
+                    "https://example.com/files/test_ubuntu%4022.04-arm64.charm",
+                ]
+            )
+        )
+    ]
+    remote_build_service._builds = mock_builds
+    remote_build_service._is_setup = True
+    remote_build_service.request = mock.Mock()
+
+    remote_build_service.fetch_artifacts(tmp_path)
+
+    # Verify that the filenames are URL-decoded (@ instead of %40)
+    remote_build_service.request.download_files_with_progress.assert_called_once_with(
+        {
+            "https://example.com/files/test_ubuntu%4020.04-amd64.charm": tmp_path
+            / "test_ubuntu@20.04-amd64.charm",
+            "https://example.com/files/test_ubuntu%4022.04-arm64.charm": tmp_path
+            / "test_ubuntu@22.04-arm64.charm",
+        }
+    )
+
+
 @pytest.mark.parametrize("architectures", [["amd64"], None])
+@pytest.mark.parametrize("build_path", [None, "subdir"])
 @pytest.mark.usefixtures("mock_push_url")
 def test_new_build(
     tmp_path,
     remote_build_service,
     architectures,
+    build_path,
 ):
     git.GitRepo(tmp_path)
-    remote_build_service.start_builds(tmp_path, architectures)
+    remote_build_service.start_builds(tmp_path, architectures, build_path=build_path)
     remote_build_service.monitor_builds()
     remote_build_service.fetch_logs(tmp_path)
     remote_build_service.fetch_artifacts(tmp_path)

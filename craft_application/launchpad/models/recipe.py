@@ -15,35 +15,25 @@
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Recipe classes."""
 
-# This file relies heavily on dynamic features from launchpadlib that cause pyright
-# to complain a lot. As such, we're disabling several pyright checkers for this file
-# since in this case they generate more noise than utility.
-# pyright: reportUnknownMemberType=false
-# pyright: reportUnknownVariableType=false
-# pyright: reportUnknownArgumentType=false
-# pyright: reportOptionalMemberAccess=false
-# pyright: reportAttributeAccessIssue=false
-# pyright: reportOptionalCall=false
-# pyright: reportOptionalIterable=false
-
 from __future__ import annotations
 
 import enum
 import time
 from abc import abstractmethod
-from collections.abc import Collection, Iterable
 from typing import TYPE_CHECKING, ClassVar, Literal
 
-import lazr.restfulclient.errors  # type: ignore[import-untyped]
+import lazr.restfulclient.errors
 from typing_extensions import Any, Self, TypedDict, override
 
 from craft_application.launchpad import errors, models, util
 from craft_application.util import retry
 
-from . import build
 from .base import LaunchpadObject, Pocket
+from .build import Build
 
 if TYPE_CHECKING:
+    from collections.abc import Collection, Iterable
+
     from craft_application.launchpad import Launchpad
 
 
@@ -119,14 +109,11 @@ class BaseRecipe(LaunchpadObject):
         if bzr_branch:
             kwargs["branch"] = bzr_branch
 
-    def get_builds(self) -> Collection[build.Build]:
+    def get_builds(self) -> Collection[Build]:
         """Get the existing builds for a Recipe."""
-        return [
-            build.Build(self._lp, b)
-            for b in self._obj.builds  # pyright: ignore[reportGeneralTypeIssues]
-        ]
+        return [Build(self._lp, b) for b in self._obj.builds]
 
-    def _build(self, deadline: int | None, kwargs: dict[str, Any]) -> list[build.Build]:
+    def _build(self, deadline: int | None, kwargs: dict[str, Any]) -> list[Build]:
         """Get builds for this recipe.
 
         :param deadline: The time (on Python's `monotonic_ns` clock) after which we time out.
@@ -148,7 +135,7 @@ class BaseRecipe(LaunchpadObject):
         if build_request.status != "Completed":
             raise errors.BuildError("Build request failed")
 
-        return [build.Build(self._lp, obj) for obj in build_request.builds]
+        return [Build(self._lp, obj) for obj in build_request.builds]
 
 
 class _StoreRecipe(BaseRecipe):
@@ -184,6 +171,7 @@ class SnapRecipe(_StoreRecipe):
         owner: str,
         *,
         architectures: Collection[str] | None = None,
+        build_path: str | None = None,
         description: str | None = None,
         project: str | models.Project | None = None,
         information_type: models.InformationType | None = None,
@@ -207,6 +195,10 @@ class SnapRecipe(_StoreRecipe):
         :param owner: The username of the person or team who owns the recipe
         :param architectures: A collection of architecture names to build the recipe.
             If None, detects the architectures from `snapcraft.yaml`
+        :param build_path: (Optional) The sub-directory containing the project file.
+            The entire repo is uploaded, but Launchpad will set the cwd to the build
+            path before building the snap. Files and directories outside of the build
+            path won't be accessible.
         :param description: (Optional) A description of the recipe.
         :param project: (Optional) The project or name of the project to which to
             attach this recipe. Defines the information type of the repository if
@@ -233,6 +225,8 @@ class SnapRecipe(_StoreRecipe):
         kwargs: dict[str, Any] = {}
         if architectures:
             kwargs["processors"] = [util.get_processor(arch) for arch in architectures]
+        if build_path:
+            kwargs["build_path"] = build_path
         if description:
             kwargs["description"] = description
 
@@ -281,9 +275,7 @@ class SnapRecipe(_StoreRecipe):
 
     @classmethod
     @override
-    def get(  # pyright: ignore[reportIncompatibleMethodOverride]
-        cls, lp: Launchpad, name: str, owner: str, project: Any = None
-    ) -> Self:
+    def get(cls, lp: Launchpad, name: str, owner: str, project: Any = None) -> Self:
         """Get an existing Snap recipe."""
         _ = project  # project is unused, bot
         try:
@@ -303,7 +295,7 @@ class SnapRecipe(_StoreRecipe):
             ) from None
 
     @classmethod
-    def find(  # pyright: ignore[reportIncompatibleMethodOverride]
+    def find(
         cls,
         lp: Launchpad,
         owner: str | None = None,
@@ -333,7 +325,7 @@ class SnapRecipe(_StoreRecipe):
         pocket: Pocket = Pocket.UPDATES,
         channels: BuildChannels | None = None,
         deadline: int | None = None,
-    ) -> Collection[build.Build]:
+    ) -> Collection[Build]:
         """Create a new set of builds for this recipe."""
         request_build_kwargs: dict[str, Any] = {
             "archive": archive,
@@ -447,7 +439,7 @@ class _StandardRecipe(_StoreRecipe):
         return cls(lp, created_entry)
 
     @classmethod
-    def get(  # pyright: ignore[reportIncompatibleMethodOverride]
+    def get(
         cls, lp: Launchpad, name: str, owner: str, project: str | None = None
     ) -> Self:
         """Get a recipe."""
@@ -469,9 +461,7 @@ class _StandardRecipe(_StoreRecipe):
             ) from None
 
     @classmethod
-    def find(  # pyright: ignore[reportIncompatibleMethodOverride]
-        cls, lp: Launchpad, owner: str, *, name: str = ""
-    ) -> Iterable[Self]:
+    def find(cls, lp: Launchpad, owner: str, *, name: str = "") -> Iterable[Self]:
         """Find a recipe by the owner."""
         owner = util.get_person_link(owner)
         lp_recipes = cls._get_lp_recipe(lp).findByOwner(
@@ -486,7 +476,7 @@ class _StandardRecipe(_StoreRecipe):
         self,
         channels: BuildChannels | None = None,
         deadline: int | None = None,
-    ) -> Collection[build.Build]:
+    ) -> Collection[Build]:
         """Create a new set of builds for this recipe."""
         kwargs = {"channels": channels} if channels else {}
         return self._build(deadline, kwargs)
@@ -498,7 +488,7 @@ class CharmRecipe(_StandardRecipe):
     https://api.launchpad.net/devel.html#charm_recipe
     """
 
-    ARTIFACT: ClassVar[Literal["charm"]] = "charm"  # type: ignore[reportIncompatibleVariableOverride]
+    ARTIFACT: ClassVar[Literal["charm"]] = "charm"
 
     @override
     @classmethod
@@ -513,7 +503,7 @@ class RockRecipe(_StandardRecipe):
     https://api.launchpad.net/devel.html#rock_recipe
     """
 
-    ARTIFACT: ClassVar[Literal["rock"]] = "rock"  # type: ignore[reportIncompatibleVariableOverride]
+    ARTIFACT: ClassVar[Literal["rock"]] = "rock"
 
     @override
     @classmethod

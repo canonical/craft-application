@@ -17,7 +17,6 @@ from __future__ import annotations
 
 import importlib
 import re
-import warnings
 from typing import (
     TYPE_CHECKING,
     Annotated,
@@ -44,11 +43,15 @@ _DEFAULT_SERVICES = {
     "fetch": "FetchService",
     "init": "InitService",
     "lifecycle": "LifecycleService",
+    "package": "PackageService",
     "project": "ProjectService",
     "provider": "ProviderService",
+    "proxy": "ProxyService",
     "remote_build": "RemoteBuildService",
     "request": "RequestService",
+    "state": "StateService",
     "testing": "TestingService",
+    "linter": "LinterService",
 }
 _CAMEL_TO_PYTHON_CASE_REGEX = re.compile(r"(?<!^)(?=[A-Z])")
 
@@ -74,38 +77,23 @@ class ServiceFactory:
         # Cheeky hack that lets static type checkers report the correct types.
         # This does not need any new types added as the ``__getattr__`` method is
         # deprecated and we should encourage using ``get()`` instead.
-        package: services.PackageService
-        lifecycle: services.LifecycleService
-        provider: services.ProviderService
-        remote_build: services.RemoteBuildService
-        request: services.RequestService
         config: services.ConfigService
         fetch: services.FetchService
         init: services.InitService
+        lifecycle: services.LifecycleService
+        package: services.PackageService
+        provider: services.ProviderService
+        proxy: services.ProxyService
+        remote_build: services.RemoteBuildService
+        request: services.RequestService
+        state: services.StateService
         testing: services.TestingService
+        linter: services.LinterService
 
-    def __init__(
-        self,
-        app: AppMetadata,
-        **kwargs: type[services.AppService] | None,
-    ) -> None:
+    def __init__(self, app: AppMetadata) -> None:
         self.app = app
         self._service_kwargs: dict[str, dict[str, Any]] = {}
         self._services: dict[str, services.AppService] = {}
-
-        for cls_name, value in kwargs.items():
-            if cls_name.endswith("Class"):
-                if value is not None:
-                    identifier = _CAMEL_TO_PYTHON_CASE_REGEX.sub(
-                        "_", cls_name[:-5]
-                    ).lower()
-                    warnings.warn(
-                        f'Registering services on service factory instantiation is deprecated. Use ServiceFactory.register("{identifier}", {value.__name__}) instead.',
-                        category=DeprecationWarning,
-                        stacklevel=3,
-                    )
-                    self.register(identifier, value)
-                setattr(self, cls_name, self.get_class(cls_name))
 
         if "package" not in self._service_classes:
             raise TypeError(
@@ -153,23 +141,6 @@ class ServiceFactory:
                 name, class_name, module=f"craft_application.services.{module_name}"
             )
 
-    def set_kwargs(
-        self,
-        service: str,
-        **kwargs: Any,
-    ) -> None:
-        """Set up the keyword arguments to pass to a particular service class.
-
-        DEPRECATED: use update_kwargs instead
-        """
-        warnings.warn(
-            DeprecationWarning(
-                "ServiceFactory.set_kwargs is deprecated. Use update_kwargs instead."
-            ),
-            stacklevel=2,
-        )
-        self._service_kwargs[service] = kwargs
-
     def update_kwargs(
         self,
         service: str,
@@ -179,7 +150,7 @@ class ServiceFactory:
 
         This works like ``dict.update()``, overwriting already-set values.
 
-        :param service: the name of the service (e.g. "lifecycle")
+        :param service: the name of the service. For example,  "lifecycle".
         :param kwargs: keyword arguments to set.
         """
         self._service_kwargs.setdefault(service, {}).update(kwargs)
@@ -222,6 +193,11 @@ class ServiceFactory:
     @overload
     @classmethod
     def get_class(
+        cls, name: Literal["proxy", "ProxyService", "ProxyClass"]
+    ) -> type[services.ProxyService]: ...
+    @overload
+    @classmethod
+    def get_class(
         cls, name: Literal["remote_build", "RemoteBuildService", "RemoteBuildClass"]
     ) -> type[services.RemoteBuildService]: ...
     @overload
@@ -232,8 +208,18 @@ class ServiceFactory:
     @overload
     @classmethod
     def get_class(
+        cls, name: Literal["state", "StateService", "StateClass"]
+    ) -> type[services.StateService]: ...
+    @overload
+    @classmethod
+    def get_class(
         cls, name: Literal["testing", "TestingService", "TestingClass"]
     ) -> type[services.TestingService]: ...
+    @overload
+    @classmethod
+    def get_class(
+        cls, name: Literal["linter", "LinterService", "LinterClass"]
+    ) -> type[services.LinterService]: ...
     @overload
     @classmethod
     def get_class(cls, name: str) -> type[services.AppService]: ...
@@ -276,21 +262,27 @@ class ServiceFactory:
     @overload
     def get(self, service: Literal["provider"]) -> services.ProviderService: ...
     @overload
+    def get(self, service: Literal["proxy"]) -> services.ProxyService: ...
+    @overload
     def get(self, service: Literal["remote_build"]) -> services.RemoteBuildService: ...
     @overload
     def get(self, service: Literal["request"]) -> services.RequestService: ...
     @overload
+    def get(self, service: Literal["state"]) -> services.StateService: ...
+    @overload
     def get(self, service: Literal["testing"]) -> services.TestingService: ...
+    @overload
+    def get(self, service: Literal["linter"]) -> services.LinterService: ...
     @overload
     def get(self, service: str) -> services.AppService: ...
     def get(self, service: str) -> services.AppService:
         """Get a service by name.
 
-        :param service: the name of the service (e.g. "config")
-        :returns: An instantiated and set up service class.
-
         Also caches the service so as to provide a single service instance per
-        ServiceFactory.
+        ``ServiceFactory``.
+
+        :param service: the name of the service. For example, "config".
+        :returns: An instantiated and setup service class.
         """
         if service in self._services:
             return self._services[service]
@@ -308,7 +300,7 @@ class ServiceFactory:
         treating them as attributes of our factory in a dynamic manner.
         For a service (e.g. ``package``, the PackageService instance) that has not
         been instantiated, this method finds the corresponding class, instantiates
-        it with defaults and any values set using ``set_kwargs``, and stores the
+        it with defaults and any values set using ``update_kwargs``, and stores the
         instantiated service as an instance attribute, allowing the same service
         instance to be reused for the entire run of the application.
         """

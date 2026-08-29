@@ -29,32 +29,31 @@ Public key signing
 ~~~~~~~~~~~~~~~~~~
 
 Craft Application supports the adding and verification of arbitrary package
-repositories. For more information, see the cryptographic documentation for `Craft
-Archives`_.
+repositories. For more information, see the cryptographic documentation for
+:external+craft-archives:ref:`Craft Archives <explanation-cryptographic-technology>`.
 
 The parts system
 ~~~~~~~~~~~~~~~~
 
 Craft Application makes use of *parts* in project files for declarative builds. Parts
 specified by the user may download arbitrary files, install packages, and more. For more
-information, see the cryptographic documentation for `Craft Parts`_.
+information, see the cryptographic documentation for :external+craft-parts:ref:`Craft
+Parts <explanation_cryptographic-technology>`.
 
 Creating virtual build environments
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Craft Application instantiates and executes builds on self-allocated virtual instances.
-For more information, see `Craft Providers`_.
+For more information, see the cryptographic documentation for
+:external+craft-providers:ref:`Craft Providers <explanation_cryptographic-technology>`.
 
 Interaction with storefronts
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Craft Application is able to interface with supported storefronts over the internet. For
-more information, see `Craft Store`_.
+more information, see the cryptographic documentation for
+:external+craft-store:ref:`Craft Store <explanation_cryptographic-technology>`.
 
 .. _launchpadlib: https://help.launchpad.net/API/launchpadlib
 .. _Launchpad: https://launchpad.net
 .. _Requests: https://requests.readthedocs.io/
-.. _Craft Archives: https://canonical-craft-archives.readthedocs-hosted.com/en/latest/explanation/cryptography/
-.. _Craft Parts: https://canonical-craft-parts.readthedocs-hosted.com/en/latest/explanation/cryptography/
-.. _Craft Providers: https://canonical-craft-providers.readthedocs-hosted.com/en/latest/explanation/cryptography/
-.. _Craft Store: https://canonical-craft-store.readthedocs-hosted.com/en/latest/explanation/cryptography/

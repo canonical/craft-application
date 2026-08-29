@@ -18,15 +18,18 @@
 from __future__ import annotations
 
 import abc
-import argparse
-import warnings
-from typing import Any, Optional, Protocol, final
+from typing import TYPE_CHECKING, Any, Protocol, final
 
-from craft_cli import BaseCommand, emit
+from craft_cli import BaseCommand
 from typing_extensions import Self
 
 from craft_application import application, util
-from craft_application.services import service_factory
+
+if TYPE_CHECKING:
+    import argparse
+
+    from craft_application.models.project import Project
+    from craft_application.services import service_factory
 
 
 class ParserCallback(Protocol):
@@ -53,18 +56,12 @@ class AppCommand(BaseCommand):
     """Command for use with craft-application."""
 
     always_load_project: bool = False
-    """The project is also loaded in non-managed mode."""
+    """Whether to configure and load the project before starting the command.
 
-    def __init__(self, config: dict[str, Any] | None) -> None:
-        if config is None:
-            warnings.warn(
-                "Creating an AppCommand without a config dict is pending deprecation.",
-                PendingDeprecationWarning,
-                stacklevel=3,
-            )
-            emit.trace("Not completing command configuration")
-            return
+    :deprecated: override :meth:`needs_project` instead.
+    """
 
+    def __init__(self, config: dict[str, Any]) -> None:
         super().__init__(config)
 
         self._app: application.AppMetadata = config["app"]
@@ -76,24 +73,13 @@ class AppCommand(BaseCommand):
     ) -> bool:
         """Property to determine if the command needs a project loaded.
 
-        Defaults to `self.always_load_project`. Subclasses can override this property
+        Defaults to :attr:`always_load_project`. Subclasses can override this method.
 
         :param parsed_args: Parsed arguments for the command.
 
-        :returns: True if the command needs a project loaded, False otherwise.
+        :returns: ``True`` if the command needs a project loaded, ``False`` otherwise.
         """
         return self.always_load_project
-
-    def run_managed(
-        self,
-        parsed_args: argparse.Namespace,  # noqa: ARG002 (the unused argument is for subclasses)
-    ) -> bool:
-        """Whether this command should run in managed mode.
-
-        By default returns `False`. Subclasses can override this method to change this,
-        including by inspecting the arguments in `parsed_args`.
-        """
-        return False
 
     def provider_name(
         self,
@@ -101,33 +87,30 @@ class AppCommand(BaseCommand):
     ) -> str | None:
         """Name of the provider where the command should be run inside of.
 
-        By default returns None. Subclasses can override this method to change this,
-        including by inspecting the arguments in `parsed_args`.
+        Returns ``None`` by default. Subclasses can override this method to change this,
+        including by inspecting the arguments in ``parsed_args``.
         """
         return None
 
-    def get_managed_cmd(
-        self,
-        parsed_args: argparse.Namespace,  # - Used by subclasses
-    ) -> list[str]:
-        """Get the command to run in managed mode.
+    @property
+    def _project(self) -> Project:
+        """Get the current project.
 
-        :param parsed_args: The parsed arguments used.
-        :returns: A list of strings ready to be passed into a craft-providers executor.
-        :raises: RuntimeError if this command is not supposed to run managed.
-
-        Commands that have additional parameters to pass in managed mode should
-        override this method to include those parameters.
+        :raises: Any exception related to rendering the project if the project has
+            not yet been created.
         """
-        if not self.run_managed(parsed_args):
-            raise RuntimeError("Unmanaged commands should not be run in managed mode.")
-        cmd_name = self._app.name
-        verbosity = emit.get_mode().name.lower()
-        return [cmd_name, f"--verbosity={verbosity}", self.name]
+        return self._services.get("project").get()
 
 
 class ExtensibleCommand(AppCommand):
-    """A command that allows applications to register modifications."""
+    """Extensible application command.
+
+    An ``ExtensibleCommand`` is a special type of :py:class:`AppCommand` that can be
+    extended with the use of callback functions. It has all of the same attributes and
+    methods of the ``AppCommand``, except that ``fill_parser`` and ``run`` are marked
+    as final. When implementing or inheriting from an ``ExtensibleCommand``, the
+    equivalent protected methods are available.
+    """
 
     _parse_callback: ParserCallback | None
     _prologue: RunCallback | None
@@ -189,9 +172,7 @@ class ExtensibleCommand(AppCommand):
         """Run the real run method for an ExtensibleCommand."""
 
     @final
-    def run(
-        self: Self, parsed_args: argparse.Namespace, **kwargs: Any
-    ) -> Optional[int]:  # noqa: UP007
+    def run(self: Self, parsed_args: argparse.Namespace, **kwargs: Any) -> int | None:
         """Run any prologue callbacks, the main command, and any epilogue callbacks."""
         result = None
         for prologue in util.get_unique_callbacks(self.__class__, "_prologue"):

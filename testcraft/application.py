@@ -24,4 +24,5 @@ TESTCRAFT = craft_application.AppMetadata(
     source_ignore_patterns=["*.testcraft"],
     project_variables=["version"],
     mandatory_adoptable_fields=["version"],
+    always_repack=False,
 )

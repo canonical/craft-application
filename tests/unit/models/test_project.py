@@ -19,10 +19,12 @@ import copy
 import pathlib
 import re
 import textwrap
+from collections.abc import Iterable
 from textwrap import dedent
 
 import craft_platforms
 import craft_providers.bases
+import pydantic
 import pytest
 from craft_application import util
 from craft_application.errors import CraftValidationError
@@ -33,6 +35,8 @@ from craft_application.models import (
     Project,
     constraints,
 )
+from craft_application.models.project import DevelBaseInfo
+from typing_extensions import override
 
 PROJECTS_DIR = pathlib.Path(__file__).parent / "project_models"
 PARTS_DICT = {"my-part": {"plugin": "nil"}}
@@ -40,12 +44,10 @@ PARTS_DICT = {"my-part": {"plugin": "nil"}}
 
 @pytest.fixture
 def basic_project():
-    # pyright doesn't like these types and doesn't have a pydantic plugin like mypy.
-    # Because of this, we need to silence several errors in these constants.
     return Project(
         name="project-name",
         version="1.0",
-        platforms={"arm64": None},  # pyright: ignore[reportArgumentType]
+        platforms={"arm64": None},
         parts=PARTS_DICT,
     )
 
@@ -345,12 +347,11 @@ class FakeBuildBaseProject(Project):
 
 
 def test_effective_base_is_build_base():
-    # As above, we need to tell pyright to ignore several typing issues.
-    project = FakeBuildBaseProject(  # pyright: ignore[reportCallIssue]
-        name="project-name",  # pyright: ignore[reportGeneralTypeIssues]
-        version="1.0",  # pyright: ignore[reportGeneralTypeIssues]
+    project = FakeBuildBaseProject(
+        name="project-name",
+        version="1.0",
         parts={},
-        platforms={"arm64": None},  # pyright: ignore[reportArgumentType]
+        platforms={"arm64": None},
         base="ubuntu@22.04",
         build_base="ubuntu@24.04",
     )
@@ -363,7 +364,7 @@ def test_effective_base_unknown():
         name="project-name",
         version="1.0",
         parts={},
-        platforms={"arm64": None},  # pyright: ignore[reportArgumentType]
+        platforms={"arm64": None},
         base=None,
         build_base=None,
     )
@@ -374,18 +375,35 @@ def test_effective_base_unknown():
     assert exc_info.match("Could not determine effective base")
 
 
-def test_devel_base_devel_build_base(emitter):
-    """Base can be 'devel' when the build-base is 'devel'."""
+@pytest.mark.parametrize("devel_info", DEVEL_BASE_INFOS)
+def test_devel_base_devel_build_base(emitter, devel_info):
+    """Base can be a development base when the build-base is 'devel'."""
     _ = FakeBuildBaseProject(
         name="project-name",
         version="1.0",
         parts={},
-        platforms={"arm64": None},  # pyright: ignore[reportArgumentType]
+        platforms={"arm64": None},
         base=f"ubuntu@{DEVEL_BASE_INFOS[0].current_devel_base.value}",
-        build_base=f"ubuntu@{DEVEL_BASE_INFOS[0].current_devel_base.value}",
+        build_base=f"ubuntu@{DEVEL_BASE_INFOS[0].devel_base.value}",
     )
 
     emitter.assert_message(DEVEL_BASE_WARNING)
+
+
+@pytest.mark.parametrize("devel_info", DEVEL_BASE_INFOS)
+def test_devel_base_wrong_build_base(devel_info):
+    """Must set a build-base if the base is still in development."""
+    with pytest.raises(
+        ValueError, match="A development build-base must be used when base is"
+    ):
+        FakeBuildBaseProject(
+            name="project-name",
+            version="1.0",
+            parts={},
+            platforms={"arm64": None},
+            base=f"ubuntu@{DEVEL_BASE_INFOS[0].current_devel_base.value}",
+            build_base=f"ubuntu@{DEVEL_BASE_INFOS[0].current_devel_base.value}",
+        )
 
 
 def test_devel_base_no_base():
@@ -394,7 +412,7 @@ def test_devel_base_no_base():
         name="project-name",
         version="1.0",
         parts={},
-        platforms={"arm64": None},  # pyright: ignore[reportArgumentType]
+        platforms={"arm64": None},
     )
 
 
@@ -409,19 +427,23 @@ def test_devel_base_no_base_alias(mocker):
         name="project-name",
         version="1.0",
         parts={},
-        platforms={"arm64": None},  # pyright: ignore[reportArgumentType]
+        platforms={"arm64": None},
     )
 
 
-def test_devel_base_no_build_base():
-    """Base can be 'devel' if the build-base is not set."""
-    _ = FakeBuildBaseProject(
-        name="project-name",
-        version="1.0",
-        parts={},
-        base=f"ubuntu@{DEVEL_BASE_INFOS[0].current_devel_base.value}",
-        platforms={"arm64": None},  # pyright: ignore[reportArgumentType]
-    )
+@pytest.mark.parametrize("devel_info", DEVEL_BASE_INFOS)
+def test_devel_base_no_build_base(devel_info):
+    with pytest.raises(
+        ValueError, match="A development build-base must be used when base is"
+    ):
+        FakeBuildBaseProject(
+            name="project-name",
+            version="1.0",
+            parts={},
+            platforms={"arm64": None},
+            base=f"ubuntu@{DEVEL_BASE_INFOS[0].current_devel_base.value}",
+            build_base=None,
+        )
 
 
 def test_devel_base_error():
@@ -448,6 +470,48 @@ def test_devel_base_error():
     """
         ).strip()
     )
+
+
+class ProjectWithDevelNoble(Project):
+    """A project where Noble is a devel base."""
+
+    @classmethod
+    @override
+    def _get_devel_bases(cls) -> Iterable[DevelBaseInfo]:
+        return [
+            DevelBaseInfo(
+                current_devel_base=craft_providers.bases.ubuntu.BuilddBaseAlias.NOBLE,
+                devel_base=craft_providers.bases.ubuntu.BuilddBaseAlias.DEVEL,
+            )
+        ]
+
+
+def test_get_devel_bases_override():
+    yaml_data = {
+        "name": "project-name",
+        "version": "1.0",
+        "parts": {},
+        "platforms": {"arm64": None},
+        "base": "ubuntu@24.04",
+        "build_base": "ubuntu@24.04",
+    }
+
+    # Sanity check that this is good data for the default Project
+    _ = FakeBuildBaseProject.from_yaml_data(
+        yaml_data,
+        pathlib.Path("testcraft.yaml"),
+    )
+
+    expected = re.escape(
+        "a development build-base must be used when base is 'ubuntu@24.04'"
+    )
+
+    # Fails for ProjectWithDevelNoble as it overrides _get_devel_bases()
+    with pytest.raises(CraftValidationError, match=expected):
+        _ = ProjectWithDevelNoble.from_yaml_data(
+            yaml_data,
+            pathlib.Path("testcraft.yaml"),
+        )
 
 
 @pytest.mark.parametrize(
@@ -477,7 +541,7 @@ def test_invalid_field_message(
     full_expected_message = textwrap.dedent(
         f"""
         Bad myproject.yaml content:
-        - {expected_message} (in field '{field_name}')
+        - {expected_message} (in field '{field_name}', input: {invalid_value!r})
         """
     ).strip()
 
@@ -522,7 +586,7 @@ def test_unmarshal_undefined_repositories(full_project_dict):
         (
             [[]],
             [
-                "- input should be a valid dictionary (in field 'package-repositories[0]')"
+                "- input should be a valid dictionary (in field 'package-repositories[0]', input: [])"
             ],
         ),
         (
@@ -561,8 +625,8 @@ def test_platform_invalid_arch(model, platform_label, basic_project_dict):
 
     assert error.value.args[0] == (
         "Bad myproject.yaml content:\n"
-        f"- 'unknown' is not a valid Debian architecture. (in field 'platforms.{platform_label}.build-on')\n"
-        f"- 'unknown' is not a valid Debian architecture. (in field 'platforms.{platform_label}.build-for')"
+        f"- 'unknown' is not a valid Debian architecture. (in field 'platforms.{platform_label}.build-on', input: {[platform_label]})\n"
+        f"- 'unknown' is not a valid Debian architecture. (in field 'platforms.{platform_label}.build-for', input: {[platform_label]})"
     )
 
 
@@ -581,7 +645,7 @@ def test_platform_invalid_build_arch(model, arch, field_name, basic_project_dict
 
     error_lines = [
         "Bad myproject.yaml content:",
-        f"- 'unknown' is not a valid Debian architecture. (in field 'platforms.mine.{field_name}')",
+        f"- 'unknown' is not a valid Debian architecture. (in field 'platforms.mine.{field_name}', input: {[arch]!r})",
     ]
     assert error.value.args[0] == "\n".join(error_lines)
 
@@ -595,8 +659,38 @@ def test_invalid_part_error(basic_project_dict):
     expected = textwrap.dedent(
         """\
     Bad bla.yaml content:
-    - plugin not registered: 'badplugin' (in field 'parts.p1')
-    - extra inputs are not permitted (in field 'parts.p2.bad-key')"""
+    - plugin not registered: 'badplugin' (in field 'parts.p1', input: {'plugin': 'badplugin'})
+    - extra inputs are not permitted (in field 'parts.p2.bad-key', input: 1)"""
     )
     with pytest.raises(CraftValidationError, match=re.escape(expected)):
         Project.from_yaml_data(basic_project_dict, filepath=pathlib.Path("bla.yaml"))
+
+
+@pytest.mark.parametrize(
+    "updates",
+    [
+        pytest.param({}, id="unchanged"),
+        pytest.param({"base": "bare", "build-base": "ubuntu@24.04"}, id="bare-base"),
+    ],
+)
+def test_project_variants_validate_success(basic_project_dict, updates):
+    basic_project_dict.update(updates)
+
+    Project.model_validate(basic_project_dict)
+
+
+@pytest.mark.parametrize(
+    ("updates", "match"),
+    [
+        pytest.param(
+            {"base": "bare"},
+            "A build-base is required if base is 'bare'",
+            id="bare-base",
+        )
+    ],
+)
+def test_project_variants_validate_error(basic_project_dict, updates, match):
+    basic_project_dict.update(updates)
+
+    with pytest.raises(pydantic.ValidationError, match=match):
+        Project.model_validate(basic_project_dict)

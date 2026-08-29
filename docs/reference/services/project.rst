@@ -1,3 +1,5 @@
+:relatedlinks: https://yaml.org
+
 .. _ProjectService:
 
 .. py:currentmodule:: craft_application.services.project
@@ -40,7 +42,7 @@ project file at other locations.
 Parse the project file YAML
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Once the project file is found, it is parsed as a `YAML`_ file. The file has additional
+Once the project file is found, it is parsed as a YAML file. The file has additional
 requirements beyond being a valid YAML document:
 
 1. It must contain only a single document.
@@ -97,5 +99,5 @@ API documentation
 
 .. autoclass:: ProjectService
     :members:
-    :private-members: _app_preprocess_project,_app_render_legacy_platforms,_preprocess
+    :private-members: _app_preprocess_project,_app_render_legacy_platforms,_preprocess,_validate_user_provided_part_names
     :undoc-members:

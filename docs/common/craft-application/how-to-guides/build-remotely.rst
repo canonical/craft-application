@@ -56,6 +56,7 @@ If the Launchpad project is public, |Starcraft| will then ask you to acknowledge
 all remote builds are publicly available on Launchpad.
 
 .. terminal::
+    :output-only:
 
     remote-build is experimental and is subject to change. Use with caution.
     All data sent to remote builders will be publicly available. Are you sure you

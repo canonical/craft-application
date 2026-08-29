@@ -1,0 +1,13 @@
+name: unset-adopt-info
+summary: Test packing with adopt-info
+
+base: ubuntu@24.04
+platforms:
+  amd64:
+    build-on: [amd64, arm64, ppc64el, s390x, riscv64]
+
+adopt-info: my-test  # We need a version but don't supply it because we're evil!
+
+parts:
+  my-test:
+    plugin: nil

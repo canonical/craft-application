@@ -1,0 +1,18 @@
+name: ignore-test-files
+version: "0.1"
+adopt-info: part1
+
+base: ubuntu@24.04
+platforms:
+  platform-independent:
+    build-on: [amd64, arm64, ppc64el, s390x, riscv64]
+    build-for: [all]
+
+parts:
+  part1:
+    plugin: dump
+    source: .
+    build-packages: [git]
+    override-build: |
+      craftctl set version="$(git describe --always --dirty)"
+      craftctl default

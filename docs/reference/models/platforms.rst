@@ -4,7 +4,7 @@ Platforms
 A project's ``platforms`` key has a default schema as well as a way for
 applications to override it.
 
-The following mockup shows all the valid ways to create platform entries:
+The following mock-up shows all the valid ways to create platform entries:
 
 .. code-block:: yaml
 
@@ -28,6 +28,11 @@ The following mockup shows all the valid ways to create platform entries:
       build-on: [<arch 1>, <arch 2>]
       build-for: <arch 2>
 
+.. |star| replace:: package
+.. |Starcraft| replace:: Craft Application
+
+.. include:: /common/craft-application/reference/strict-platform-names.rst
+
 .. _platform-schema:
 
 ``Platform`` schema
@@ -39,7 +44,8 @@ Default ``PlatformsDict``
 -------------------------
 
 The ``platforms`` dictionary is implemented as a non-generic child class of
-:class:`~craft_application.models.GenericPlatformsDict`.
+:class:`~craft_application.models.GenericPlatformsDict`. Each key must be a unique,
+unreserved name. The name can't contain forward slashes (/).
 
 .. autoclass:: craft_application.models.PlatformsDict
    :show-inheritance:
@@ -49,9 +55,9 @@ Inheritance
 -----------
 
 Applications may override the default model for each platform by inheriting from the
-``craft_application.models.Platform`` class and modifying it as needed. There is a
-how-to guide to :doc:`/how-to-guides/platforms` with implementation instructions. The
-class has several validators that may need to be modified.
+``craft_application.models.Platform`` class and modifying it as needed.
+:ref:`how-to-customize-platforms` contains implementation instructions. The class has
+several validators that may need to be modified.
 
 .. autoclass:: craft_application.models.Platform
    :private-members: _validate_architectures, _validate_build_on_real_arch

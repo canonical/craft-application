@@ -17,33 +17,34 @@
 
 from __future__ import annotations
 
-import argparse
 import importlib
 import os
 import pathlib
 import signal
-import subprocess
 import sys
 import traceback
-import warnings
-from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
 from functools import cached_property
 from importlib import metadata
-from typing import TYPE_CHECKING, Any, Literal, cast, final
+from typing import TYPE_CHECKING, Annotated, Any, cast, final
 
+import annotated_types
 import craft_cli
-import craft_parts
 import craft_platforms
-import craft_providers
-from craft_parts.plugins.plugins import PluginType
 from platformdirs import user_cache_path
 
 from craft_application import _config, commands, errors, models, util
 from craft_application.errors import PathInvalidError
+from craft_application.util.logging import handle_runtime_error
 
 if TYPE_CHECKING:
+    import argparse
+    from collections.abc import Iterable, Sequence
+
+    from craft_parts.plugins.plugins import PluginType
+
     from craft_application.services import service_factory
+    from craft_application.util import ProServices
 
 GLOBAL_VERSION = craft_cli.GlobalArgument(
     "version", "flag", "-V", "--version", "Show the application version and exit"
@@ -64,19 +65,81 @@ DEFAULT_CLI_LOGGERS = frozenset(
 @final
 @dataclass(frozen=True)
 class AppMetadata:
-    """Metadata about a *craft application."""
+    """Metadata about a craft application."""
 
     name: str
+    """The name of the application."""
     summary: str | None = None
+    """A short summary of the application."""
     version: str = field(init=False)
     docs_url: str | None = None
+    """The root URL for the app's documentation."""
+    artifact_type: Annotated[
+        str,
+        annotated_types.IsAscii,
+        annotated_types.LowerCase,
+    ] = "artifact"
+    """The name to refer to the output artifact for this app.
+
+    This gets used in messages and should be an all lower-case single-word value, like
+    ``snap`` or ``rock``. Defaults to ``artifact``.
+    """
     source_ignore_patterns: list[str] = field(default_factory=list[str])
     managed_instance_project_path = pathlib.PurePosixPath("/root/project")
-    project_variables: list[str] = field(default_factory=lambda: ["version"])
-    mandatory_adoptable_fields: list[str] = field(default_factory=lambda: ["version"])
+    project_variables: list[str] = field(
+        default_factory=lambda: ["version", "summary", "description"]
+    )
+    """Fields that are adoptable using craftctl set."""
+    mandatory_adoptable_fields: list[str] = field(
+        default_factory=lambda: ["version", "summary", "description"]
+    )
+    """Fields that must either be in the YAML file or adopted with craftctl set."""
     ConfigModel: type[_config.ConfigModel] = _config.ConfigModel
 
     ProjectClass: type[models.Project] = models.Project
+    """The project model to use for this app.
+
+    Most applications will need to override this, but a very basic application could use
+    the default model without modification.
+    """
+    supports_multi_base: bool = False
+    always_repack: bool = (
+        True  # Gating for https://github.com/canonical/craft-application/pull/810
+    )
+    check_supported_base: bool = False
+    """Whether this application allows building on unsupported bases.
+
+    When True, the app can build on a base even if it is end-of-life. Relevant apt
+    repositories will be migrated to ``old-releases.ubuntu.com``. Currently only
+    supports EOL Ubuntu releases.
+
+    When False, the repositories are not migrated and base support is not checked.
+    """
+
+    enable_for_grammar: bool = False
+    """Whether this application supports the 'for' variant of advanced grammar."""
+
+    enable_pro_support: bool = False
+    """Whether this application supports Ubuntu Pro services."""
+
+    allow_spread_yaml: bool = True
+    """Whether the 'test' command can use the deprecated spread.yaml file.
+
+    Defaults to True for backward compatibility but new apps should set this to False.
+    """
+
+    allow_git_build_root: bool = False
+    """Whether to allow mounting the git working tree root as the build root.
+
+    When True and the user enables the ``experimental_monorepo`` config option,
+    the git root is mounted as /root/project in the managed instance rather than
+    the project directory. The working directory inside the instance is adjusted
+    to the project's subdirectory within the git root, giving the build access to
+    code outside the project directory (e.g. shared libraries in a monorepo).
+
+    Has no effect when the project directory is not inside a git repository,
+    or when the project directory is the git root itself.
+    """
 
     def __post_init__(self) -> None:
         setter = super().__setattr__
@@ -138,16 +201,15 @@ class Application:
         # Set a globally usable project directory for the application.
         # This may be overridden by specific application implementations.
         self.project_dir = pathlib.Path.cwd()
+        # ProServices instance containing relevant Pro services specified by the user.
+        # Storage of this instance may change in the future as we migrate Pro operations towards
+        # an application service.
+        self._pro_services: ProServices | None = None
 
         if self.is_managed():
             self._work_dir = pathlib.Path("/root")
         else:
             self._work_dir = pathlib.Path.cwd()
-
-        # Whether the command execution should use the fetch-service
-        self._enable_fetch_service = False
-        # The kind of sessions that the fetch-service service should create
-        self._fetch_service_policy: Literal["strict", "permissive"] = "strict"
 
     @final
     def _load_plugins(self) -> None:
@@ -320,110 +382,18 @@ class Application:
             "lifecycle",
             cache_dir=self.cache_dir,
             work_dir=self._work_dir,
+            use_host_sources=bool(self._pro_services),
         )
         self.services.update_kwargs(
             "provider",
             work_dir=self._work_dir,
             provider_name=provider_name,
+            pro_services=self._pro_services,
         )
-
-    def get_project(
-        self,
-        *,
-        platform: str | None = None,
-        build_for: str | None = None,
-    ) -> models.Project:
-        """Get the project model.
-
-        This only resolves and renders the project the first time it gets run.
-        After that, it merely uses a cached project model.
-
-        :param platform: the platform name listed in the build plan.
-        :param build_for: the architecture to build this project for.
-        :returns: A transformed, loaded project model.
-        """
-        warnings.warn(
-            DeprecationWarning(
-                "Do not get the project directly from the Application. "
-                "Get it from the project service."
-            ),
-            stacklevel=2,
-        )
-        project_service = self.services.get("project")
-        if not project_service.is_configured:
-            project_service.configure(platform=platform, build_for=build_for)
-        return project_service.get()
-
-    @cached_property
-    def project(self) -> models.Project:
-        """Get this application's Project metadata."""
-        return self.get_project()
 
     def is_managed(self) -> bool:
         """Shortcut to tell whether we're running in managed mode."""
         return self.services.get_class("provider").is_managed()
-
-    def run_managed(self, platform: str | None, build_for: str | None) -> None:
-        """Run the application in a managed instance."""
-        build_planner = self.services.get("build_plan")
-        if platform:
-            build_planner.set_platforms(platform)
-        if build_for:
-            build_planner.set_build_fors(build_for)
-        plan = build_planner.plan()
-
-        if not plan:
-            raise errors.EmptyBuildPlanError
-
-        if self._enable_fetch_service:
-            self.services.get("fetch").set_policy(self._fetch_service_policy)
-
-        extra_args: dict[str, Any] = {}
-        for build_info in plan:
-            env = {
-                "CRAFT_PLATFORM": build_info.platform,
-                "CRAFT_VERBOSITY_LEVEL": craft_cli.emit.get_mode().name,
-            }
-
-            extra_args["env"] = env
-
-            craft_cli.emit.debug(
-                f"Running {self.app.name}:{build_info.platform} in {build_info.build_for} instance..."
-            )
-            instance_path = pathlib.PosixPath("/root/project")
-
-            with self.services.provider.instance(
-                build_info,
-                work_dir=self._work_dir,
-                clean_existing=self._enable_fetch_service,
-            ) as instance:
-                if self._enable_fetch_service:
-                    session_env = self.services.fetch.create_session(instance)
-                    env.update(session_env)
-
-                cmd = [self.app.name, *sys.argv[1:]]
-                craft_cli.emit.debug(
-                    f"Executing {cmd} in instance location {instance_path} with {extra_args}."
-                )
-                try:
-                    with craft_cli.emit.pause():
-                        # Pyright doesn't fully understand craft_providers's CompletedProcess.
-                        instance.execute_run(  # pyright: ignore[reportUnknownMemberType,reportUnknownVariableType]
-                            cmd,
-                            cwd=instance_path,
-                            check=True,
-                            **extra_args,
-                        )
-                except subprocess.CalledProcessError as exc:
-                    raise craft_providers.ProviderError(
-                        f"Failed to execute {self.app.name} in instance."
-                    ) from exc
-                finally:
-                    if self._enable_fetch_service:
-                        self.services.fetch.teardown_session()
-
-        if self._enable_fetch_service:
-            self.services.fetch.shutdown(force=True)
 
     def configure(self, global_args: dict[str, Any]) -> None:
         """Configure the application using any global arguments."""
@@ -504,18 +474,14 @@ class Application:
         """
         return {}
 
-    def register_plugins(self, plugins: dict[str, PluginType]) -> None:
-        """Register plugins for this application."""
-        if not plugins:
-            return
-
-        craft_cli.emit.trace("Registering plugins...")
-        craft_cli.emit.trace(f"Plugins: {', '.join(plugins.keys())}")
-        craft_parts.plugins.register(plugins)
-
     def _register_default_plugins(self) -> None:
         """Register per application plugins when initializing."""
-        self.register_plugins(self._get_app_plugins())
+        if plugins := self._get_app_plugins():
+            from craft_parts.plugins import register  # noqa: PLC0415
+
+            craft_cli.emit.trace("Registering plugins...")
+            craft_cli.emit.trace(f"Plugins: {', '.join(plugins.keys())}")
+            register(plugins)
 
     def _pre_run(self, dispatcher: craft_cli.Dispatcher) -> None:
         """Do any final setup before running the command.
@@ -538,11 +504,6 @@ class Application:
                     details=f"Not a directory: {project_dir}",
                     resolution="Ensure the path entered is correct.",
                 )
-
-        fetch_service_policy: str | None = getattr(args, "fetch_service_policy", None)
-        if fetch_service_policy:
-            self._enable_fetch_service = True
-            self._fetch_service_policy = fetch_service_policy  # type: ignore[assignment]
 
     def get_arg_or_config(self, parsed_args: argparse.Namespace, item: str) -> Any:  # noqa: ANN401
         """Get a configuration option that could be overridden by a command argument.
@@ -574,33 +535,26 @@ class Application:
             platform = platform.split(",", maxsplit=1)[0]
         if build_for and "," in build_for:
             build_for = build_for.split(",", maxsplit=1)[0]
-        if command.needs_project(dispatcher.parsed_args()):
+
+        if self.app.enable_pro_support:
+            self._pro_services = getattr(parsed_args, "pro", None)
+
+        craft_cli.emit.debug(f"Build plan: platform={platform}, build_for={build_for}")
+        self._pre_run(dispatcher)
+
+        if command.needs_project(parsed_args):
+            self.services.update_kwargs("project", pro_services=self._pro_services)
             project_service = self.services.get("project")
             # This branch always runs, except during testing.
             if not project_service.is_configured:
                 project_service.configure(platform=platform, build_for=build_for)
 
-        craft_cli.emit.debug(f"Build plan: platform={platform}, build_for={build_for}")
-        self._pre_run(dispatcher)
-
-        managed_mode = command.run_managed(dispatcher.parsed_args())
-        provider_name = command.provider_name(dispatcher.parsed_args())
+        provider_name = command.provider_name(parsed_args)
         self._configure_services(provider_name)
 
-        return_code = 1  # General error
-        if not managed_mode:
-            # command runs in the outer instance
-            craft_cli.emit.debug(f"Running {self.app.name} {command.name} on host")
-            return_code = dispatcher.run() or os.EX_OK
-        elif not self.is_managed():
-            # command runs in inner instance, but this is the outer instance
-            self.run_managed(platform, build_for)
-            return_code = os.EX_OK
-        else:
-            # command runs in inner instance
-            return_code = dispatcher.run() or 0
-
-        return return_code
+        craft_cli.emit.debug(f"Running '{self.app.name} {command.name}'.")
+        dispatcher_return = dispatcher.run()
+        return dispatcher_return if dispatcher_return is not None else os.EX_OK
 
     def run(self) -> int:
         """Bootstrap and run the application."""
@@ -611,70 +565,15 @@ class Application:
 
         craft_cli.emit.debug("Preparing application...")
 
+        debug_mode = self.services.get("config").get("debug")
+
         try:
             return_code = self._run_inner()
-        except craft_cli.ArgumentParsingError as err:
-            print(err, file=sys.stderr)  # to stderr, as argparse normally does
-            craft_cli.emit.ended_ok()
-            return_code = os.EX_USAGE
-        except KeyboardInterrupt as err:
-            return_code = 128 + signal.SIGINT
-            self._emit_error(
-                craft_cli.CraftError("Interrupted.", retcode=return_code), cause=err
+        # Other BaseException classes should be passed through, not caught.
+        except (Exception, KeyboardInterrupt) as error:  # noqa: BLE001, this is not blind due to the handler code
+            return_code = handle_runtime_error(
+                self.app, error, print_error=self._emit_error, debug_mode=debug_mode
             )
-        except craft_cli.CraftError as err:
-            self._emit_error(err)
-            return_code = err.retcode
-        except craft_parts.PartsError as err:
-            self._emit_error(
-                errors.PartsLifecycleError.from_parts_error(err),
-                cause=err,
-            )
-            return_code = 1
-        except craft_providers.ProviderError as err:
-            self._emit_error(
-                craft_cli.CraftError(
-                    err.brief, details=err.details, resolution=err.resolution
-                ),
-                cause=err,
-            )
-            return_code = 1
-        except craft_platforms.CraftPlatformsError as err:
-            self._emit_error(
-                craft_cli.CraftError(
-                    err.args[0],
-                    details=err.details,
-                    resolution=err.resolution,
-                    reportable=err.reportable,
-                    docs_url=err.docs_url,
-                    doc_slug=err.doc_slug,
-                    logpath_report=err.logpath_report,
-                    retcode=err.retcode,
-                ),
-                cause=err,
-            )
-            return_code = err.retcode
-        except Exception as err:
-            if isinstance(err, craft_platforms.CraftError):
-                transformed = craft_cli.CraftError(
-                    err.args[0],
-                    details=err.details,
-                    resolution=err.resolution,
-                    docs_url=getattr(err, "docs_url", None),
-                    doc_slug=getattr(err, "doc_slug", None),
-                    logpath_report=getattr(err, "logpath_report", True),
-                    reportable=getattr(err, "reportable", True),
-                    retcode=getattr(err, "retcode", 1),
-                )
-                return_code = transformed.retcode
-            else:
-                transformed = craft_cli.CraftError(
-                    f"{self.app.name} internal error: {err!r}"
-                )
-                return_code = os.EX_SOFTWARE
-            self._emit_error(transformed, cause=err)
-            if self.services.get("config").get("debug"):
-                raise
         else:
             craft_cli.emit.ended_ok()
 
@@ -693,31 +592,6 @@ class Application:
             error.logpath_report = False
 
         craft_cli.emit.error(error)
-
-    def _get_project_vars(self, yaml_data: dict[str, Any]) -> dict[str, str]:
-        """Return a dict with project variables to be expanded."""
-        pvars: dict[str, str] = {}
-        for var in self.app.project_variables:
-            pvars[var] = str(yaml_data.get(var, ""))
-        return pvars
-
-    def _set_global_environment(self, info: craft_parts.ProjectInfo) -> None:
-        """Populate the ProjectInfo's global environment.
-
-        DEPRECATED: This method is deprecated and is not called by default.
-        Use ``ProjectService.update_project_environment`` instead.
-        """
-        warnings.warn(
-            "Application._set_global_environment is deprecated and not called by "
-            "default. Use ProjectService.update_project_environment instead.",
-            category=DeprecationWarning,
-            stacklevel=1,
-        )
-        info.global_environment.update(
-            {
-                "CRAFT_PROJECT_VERSION": info.get_project_var("version", raw_read=True),
-            }
-        )
 
     def _setup_logging(self) -> None:
         """Initialize the logging system."""
@@ -760,7 +634,30 @@ class Application:
     def _enable_craft_parts_features(self) -> None:
         """Enable any specific craft-parts Feature that the application will need."""
 
+    @final
+    def _set_plugin_group(self) -> None:
+        """Set the plugin group from the lifecycle service.
+
+        If no plugin group is provided or an error occurs while determining
+        the build info, no plugin group is registered.
+        """
+        try:
+            build_plan = self.services.get("build_plan").plan()
+        except (craft_cli.CraftError, craft_platforms.CraftPlatformsError):
+            # We can do this here because when we start the lifecycle
+            # we actually exit the app if there's an error.
+            craft_cli.emit.debug("No plugin group registered due to error.")
+            return
+        group = self.services.get_class("lifecycle").get_plugin_group(build_plan[0])
+
+        # We don't need to import this unless we have a group to set.
+        from craft_parts.plugins import set_plugin_group  # noqa: PLC0415
+
+        if group:
+            set_plugin_group(group)
+
     def _initialize_craft_parts(self) -> None:
         """Perform craft-parts-specific initialization, like features and plugins."""
         self._enable_craft_parts_features()
         self._register_default_plugins()
+        self._set_plugin_group()

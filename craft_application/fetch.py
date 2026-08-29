@@ -18,6 +18,7 @@
 import contextlib
 import io
 import logging
+import os
 import pathlib
 import shlex
 import subprocess
@@ -39,6 +40,12 @@ from craft_application.util import retry
 logger = logging.getLogger(__name__)
 
 
+SessionSecret = dict[str, Any]
+"""Type representing a secret for a fetch-service session. We could use concrete models
+ here but we want to be able to support new, arbitrary secret types without needing
+ to update this code and re-release craft-application and any craft tools using this."""
+
+
 @dataclass(frozen=True)
 class FetchServiceConfig:
     """Dataclass for the ports that a fetch-service instance uses."""
@@ -58,6 +65,9 @@ class FetchServiceConfig:
         return f"{self.username}:{self.password}"
 
 
+_CERT_FILE_NAME = "local-ca.pem"
+_KEY_FILE_NAME = "local-ca.key.pem"
+
 _FETCH_BINARY = "/snap/bin/fetch-service"
 
 _DEFAULT_CONFIG = FetchServiceConfig(
@@ -65,11 +75,6 @@ _DEFAULT_CONFIG = FetchServiceConfig(
     control=13555,
     username="craft",
     password="craft",  # noqa: S106 (hardcoded-password-func-arg)
-)
-
-# The path to the fetch-service's certificate inside the build instance.
-_FETCH_CERT_INSTANCE_PATH = pathlib.Path(
-    "/usr/local/share/ca-certificates/local-ca.crt"
 )
 
 
@@ -97,16 +102,10 @@ class NetInfo:
         gw = self._gateway
         return f"http://{session.session_id}:{session.token}@{gw}:{port}/"
 
-    @property
-    def env(self) -> dict[str, str]:
+    @staticmethod
+    def env() -> dict[str, str]:
         """Environment variables to use for the proxy."""
         return {
-            "http_proxy": self.http_proxy,
-            "https_proxy": self.http_proxy,
-            # This makes the requests lib take our cert into account.
-            "REQUESTS_CA_BUNDLE": str(_FETCH_CERT_INSTANCE_PATH),
-            # Same, but for cargo.
-            "CARGO_HTTP_CAINFO": str(_FETCH_CERT_INSTANCE_PATH),
             # Have go download directly from repositories
             "GOPROXY": "direct",
         }
@@ -130,11 +129,14 @@ def get_service_status() -> dict[str, Any]:
     return cast(dict[str, Any], response.json())
 
 
-def start_service() -> subprocess.Popen[str] | None:
-    """Start the fetch-service with default ports and auth."""
+def start_service() -> tuple[subprocess.Popen[str] | None, pathlib.Path]:
+    """Start the fetch-service with default ports and auth.
+
+    :returns: A tuple containing the fetch-service subprocess and a path to the proxy certificate.
+    """
     if is_service_online():
         # Nothing to do, service is already up.
-        return None
+        return None, _get_certificate_dir() / _CERT_FILE_NAME
 
     # Check that the fetch service is actually installed
     verify_installed()
@@ -142,6 +144,22 @@ def start_service() -> subprocess.Popen[str] | None:
     cmd = [_FETCH_BINARY]
 
     env = {"FETCH_SERVICE_AUTH": _DEFAULT_CONFIG.auth}
+
+    proxy_vars = [
+        "http_proxy",
+        "https_proxy",
+        "no_proxy",
+        "HTTP_PROXY",
+        "HTTPS_PROXY",
+        "NO_PROXY",
+    ]
+    env.update(
+        {
+            proxy_var: os.environ[proxy_var]
+            for proxy_var in proxy_vars
+            if proxy_var in os.environ
+        }
+    )
 
     # Add the ports
     cmd.append(f"--control-port={_DEFAULT_CONFIG.control}")
@@ -204,7 +222,7 @@ def start_service() -> subprocess.Popen[str] | None:
     status = retry(
         "wait for fetch-service to come online",
         errors.FetchServiceError,
-        get_service_status,  # pyright: ignore[reportArgumentType]
+        get_service_status,
     )
     if "uptime" not in status:
         stop_service(fetch_process)
@@ -212,7 +230,7 @@ def start_service() -> subprocess.Popen[str] | None:
             f"Fetch service did not start correctly: {status}"
         )
 
-    return fetch_process
+    return fetch_process, cert
 
 
 def stop_service(fetch_process: subprocess.Popen[str]) -> None:
@@ -227,14 +245,22 @@ def stop_service(fetch_process: subprocess.Popen[str]) -> None:
         fetch_process.kill()
 
 
-def create_session(*, strict: bool, timeout: float = 5.0) -> SessionData:
+def create_session(
+    *, strict: bool, timeout: float = 5.0, secrets: list[SessionSecret] | None = None
+) -> SessionData:
     """Create a new fetch-service session.
 
     :param strict: Whether the created session should be strict.
     :param timeout: Maximum time to wait for the response from the fetch-service
+    :param secrets: Any secrets to be added to the session.
     :return: a SessionData object containing the session's id and token.
     """
-    json = {"policy": "strict" if strict else "permissive"}
+    json: dict[str, Any] = {"policy": "strict" if strict else "permissive"}
+
+    if secrets:
+        emit.debug(f"Adding {len(secrets)} secret(s) to session creation request.")
+        json["secrets"] = secrets
+
     data = _service_request("post", "session", json=json, timeout=timeout).json()
 
     return SessionData.unmarshal(data=data)
@@ -276,20 +302,6 @@ def teardown_session(
     _service_request("delete", f"resources/{session_id}", timeout=timeout)
 
     return cast(dict[str, Any], session_report)
-
-
-def configure_instance(
-    instance: craft_providers.Executor, session_data: SessionData
-) -> dict[str, str]:
-    """Configure a build instance to use a given fetch-service session."""
-    net_info = NetInfo(instance, session_data)
-
-    _install_certificate(instance)
-    _configure_pip(instance)
-    _configure_snapd(instance, net_info)
-    _configure_apt(instance, net_info)
-
-    return net_info.env
 
 
 def get_log_filepath() -> pathlib.Path:
@@ -349,62 +361,6 @@ def _get_service_base_dir() -> pathlib.Path:
         ["snap", "run", "--shell", "fetch-service"], text=True, input=input_line
     )
     return pathlib.Path(output.strip())
-
-
-def _install_certificate(instance: craft_providers.Executor) -> None:
-    logger.info("Installing certificate")
-    # Push the local certificate
-    cert, _key = _obtain_certificate()
-    instance.push_file(
-        source=cert,
-        destination=_FETCH_CERT_INSTANCE_PATH,
-    )
-    # Update the certificates db
-    _execute_run(
-        instance, ["/bin/sh", "-c", "/usr/sbin/update-ca-certificates > /dev/null"]
-    )
-
-
-def _configure_pip(instance: craft_providers.Executor) -> None:
-    logger.info("Configuring pip")
-
-    _execute_run(instance, ["mkdir", "-p", "/root/.pip"])
-    pip_config = b"[global]\ncert=/usr/local/share/ca-certificates/local-ca.crt"
-    instance.push_file_io(
-        destination=pathlib.Path("/root/.pip/pip.conf"),
-        content=io.BytesIO(pip_config),
-        file_mode="0644",
-    )
-
-
-def _configure_snapd(instance: craft_providers.Executor, net_info: NetInfo) -> None:
-    """Configure snapd to use the proxy and see our certificate.
-
-    Note: This *must* be called *after* _install_certificate(), to ensure that
-    when the snapd restart happens the new cert is there.
-    """
-    logger.info("Configuring snapd")
-    _execute_run(instance, ["systemctl", "restart", "snapd"])
-    for config in ("proxy.http", "proxy.https"):
-        _execute_run(
-            instance, ["snap", "set", "system", f"{config}={net_info.http_proxy}"]
-        )
-
-
-def _configure_apt(instance: craft_providers.Executor, net_info: NetInfo) -> None:
-    logger.info("Configuring Apt")
-    apt_config = f'Acquire::http::Proxy "{net_info.http_proxy}";\n'
-    apt_config += f'Acquire::https::Proxy "{net_info.http_proxy}";\n'
-
-    instance.push_file_io(
-        destination=pathlib.Path("/etc/apt/apt.conf.d/99proxy"),
-        content=io.BytesIO(apt_config.encode("utf-8")),
-        file_mode="0644",
-    )
-    _execute_run(instance, ["/bin/rm", "-Rf", "/var/lib/apt/lists"])
-
-    logger.info("Refreshing Apt package listings")
-    _execute_run(instance, ["apt", "update"])
 
 
 def _get_gateway(instance: craft_providers.Executor) -> str:
@@ -485,8 +441,8 @@ def _obtain_certificate() -> tuple[pathlib.Path, pathlib.Path]:
 
     cert_dir.mkdir(parents=True, exist_ok=True)
 
-    cert = cert_dir / "local-ca.pem"
-    key = cert_dir / "local-ca.key.pem"
+    cert = cert_dir / _CERT_FILE_NAME
+    key = cert_dir / _KEY_FILE_NAME
 
     if cert.is_file() and key.is_file():
         # Certificate and key already generated
@@ -567,11 +523,3 @@ def _get_certificate_dir() -> pathlib.Path:
 def _check_installed() -> bool:
     """Check whether the fetch-service is installed."""
     return pathlib.Path(_FETCH_BINARY).is_file()
-
-
-def _execute_run(
-    instance: craft_providers.Executor, cmd: list[str]
-) -> subprocess.CompletedProcess[str]:
-    return instance.execute_run(  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]
-        cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE
-    )

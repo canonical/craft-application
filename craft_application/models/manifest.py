@@ -37,13 +37,17 @@ class Hashes(CraftBaseModel):
     @classmethod
     def from_path(cls, path: pathlib.Path) -> Self:
         """Compute digests for a given path."""
-        read_bytes = path.read_bytes()
+        sha1 = hashlib.sha1()  # noqa: S324 (insecure hash function)
+        sha256 = hashlib.sha256()
+
+        with path.open("rb") as f:
+            while chunk := f.read(65536):
+                sha1.update(chunk)
+                sha256.update(chunk)
 
         return cls(
-            sha1=hashlib.sha1(  # noqa: S324 (insecure hash function)
-                read_bytes
-            ).hexdigest(),
-            sha256=hashlib.sha256(read_bytes).hexdigest(),
+            sha1=sha1.hexdigest(),
+            sha256=sha256.hexdigest(),
         )
 
 

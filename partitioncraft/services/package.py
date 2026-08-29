@@ -29,24 +29,26 @@ class PackageService(package.PackageService):
     @property
     def metadata(self) -> Metadata:
         """Get the metadata for this model."""
-        project = self._services.get("project").get()
-        if project.version is None:
+        if self._project.version is None:
             raise ValueError("Unknown version")
         return Metadata(
-            name=project.name,
-            version=project.version,
+            name=self._project.name,
+            version=self._project.version,
             craft_application_version=craft_application.__version__,
         )
 
     def pack(self, prime_dir: pathlib.Path, dest: pathlib.Path) -> list[pathlib.Path]:
         """Pack a partitioncraft artifact set."""
-        project = self._services.get("project").get()
         lifecycle = self._services.get("lifecycle")
-        tarball_name = f"{project.name}-{project.version}-default.partitioncraft"
+        tarball_name = (
+            f"{self._project.name}-{self._project.version}-default.partitioncraft"
+        )
         with tarfile.open(dest / tarball_name, mode="w:xz") as tar:
             tar.add(prime_dir, arcname=".")
 
-        mushroom_name = f"{project.name}-{project.version}-mushroom.partitioncraft"
+        mushroom_name = (
+            f"{self._project.name}-{self._project.version}-mushroom.partitioncraft"
+        )
         with tarfile.open(dest / mushroom_name, mode="w:xz") as tar:
             tar.add(lifecycle.project_info.dirs.get_prime_dir("mushroom"), arcname=".")
         return [dest / tarball_name, dest / mushroom_name]

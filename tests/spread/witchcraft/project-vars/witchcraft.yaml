@@ -1,0 +1,30 @@
+name: project-vars
+base: ubuntu@24.04
+platforms:
+  platform-independent:
+    build-on: [amd64, arm64, ppc64el, s390x, riscv64]
+    build-for: [all]
+
+adopt-info: part1
+version: "0.1"
+
+components:
+  component1:
+    summary: test component 1
+    adopt-info: part2
+    version: "0.2"
+  component2:
+    summary: test component 2
+    version: "0.3"
+
+parts:
+  part1:
+    plugin: nil
+    override-build: |
+      craftctl set version="0.4"
+      craftctl default
+  part2:
+    plugin: nil
+    override-build: |
+      craftctl set components.component1.version="0.5"
+      craftctl default

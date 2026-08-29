@@ -1,0 +1,17 @@
+name: bare-base
+version: "0.1"
+summary: Test packing in witchcraft with a bare base.
+description: |
+  This tests that witchcraft, which has check_supported_base enabled, can still
+  build with a bare base.
+
+base: bare
+build-base: ubuntu@24.04
+platforms:
+  platform-independent:
+    build-on: [amd64, arm64, ppc64el, s390x, riscv64]
+    build-for: [all]
+
+parts:
+  my-test:
+    plugin: nil

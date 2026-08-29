@@ -20,6 +20,7 @@ from __future__ import annotations
 import dataclasses
 import re
 from pathlib import Path
+from typing import TYPE_CHECKING
 from unittest import mock
 
 import craft_parts
@@ -31,8 +32,8 @@ import pytest_check
 from craft_application import errors, models, util
 from craft_application.errors import EmptyBuildPlanError, PartsLifecycleError
 from craft_application.services import lifecycle
-from craft_application.services.buildplan import BuildPlanService
 from craft_application.util import repositories
+from craft_cli import CraftError
 from craft_parts import (
     Action,
     ActionType,
@@ -44,8 +45,11 @@ from craft_parts import (
     StepInfo,
 )
 from craft_parts.executor import (
-    ExecutionContext,  # pyright: ignore[reportPrivateImportUsage]
+    ExecutionContext,
 )
+
+if TYPE_CHECKING:
+    from craft_application.services.buildplan import BuildPlanService
 
 
 def skip_if_build_plan_empty(build_planner: BuildPlanService):
@@ -287,16 +291,43 @@ def test_init_parts_error(
         service.setup()
 
     assert exc_info.value.args == expected.args
-    assert mock_lifecycle.mock_calls[0].kwargs["ignore_local_sources"] == [
+
+
+def test_init_parts_do_not_ignore_test_files(
+    app_metadata, fake_project, fake_services, monkeypatch, new_dir
+):
+    """Don't ignore spread if the directory doesn't exist."""
+    mock_lifecycle = mock.Mock()
+    monkeypatch.setattr(lifecycle, "LifecycleManager", mock_lifecycle)
+
+    service = lifecycle.LifecycleService(
+        app_metadata,
+        fake_services,
+        work_dir=new_dir,
+        cache_dir=new_dir,
+    )
+
+    service.setup()
+
+    assert mock_lifecycle.call_args.kwargs["ignore_local_sources"] == [
+        ".craft",
         "*.snap",
         "*.charm",
         "*.starcraft",
     ]
+    assert mock_lifecycle.call_args.kwargs["ignore_outdated"] == [
+        ".craft",
+        "*.snap",
+        "*.charm",
+        "*.starcraft",
+        ".spread-reuse.*",
+    ]
 
 
-def test_init_parts_ignore_spread(
+def test_init_parts_ignore_test_files(
     app_metadata, fake_project, fake_services, monkeypatch, new_dir
 ):
+    """Ignore spread if the directory exists."""
     mock_lifecycle = mock.Mock()
     monkeypatch.setattr(lifecycle, "LifecycleManager", mock_lifecycle)
 
@@ -313,10 +344,19 @@ def test_init_parts_ignore_spread(
 
     service.setup()
 
-    assert mock_lifecycle.mock_calls[0].kwargs["ignore_local_sources"] == [
+    assert mock_lifecycle.call_args.kwargs["ignore_local_sources"] == [
+        ".craft",
         "*.snap",
         "*.charm",
         "*.starcraft",
+    ]
+    assert mock_lifecycle.call_args.kwargs["ignore_outdated"] == [
+        ".craft",
+        "*.snap",
+        "*.charm",
+        "*.starcraft",
+        ".spread-reuse.*",
+        "testcraft-test.yaml",
         "spread.yaml",
         "spread",
     ]
@@ -503,12 +543,81 @@ def test_run_no_step(
 
 
 @pytest.mark.parametrize(
+    ("actions", "expected"),
+    [
+        ([], False),
+        ([Action("my-part", Step.PULL, action_type=ActionType.SKIP)], False),
+        ([Action("my-part", Step.PULL, action_type=ActionType.RUN)], True),
+        ([Action("my-part", Step.PULL, action_type=ActionType.RERUN)], True),
+        ([Action("my-part", Step.PULL, action_type=ActionType.UPDATE)], True),
+        ([Action("my-part", Step.OVERLAY, action_type=ActionType.REAPPLY)], True),
+    ],
+)
+def test_run_sets_requires_repack(
+    fake_parts_lifecycle,
+    fake_services,
+    fake_platform,
+    fake_host_architecture,
+    actions,
+    expected,
+):
+    fake_services.get("build_plan").set_platforms(fake_platform)
+    skip_if_build_plan_empty(fake_services.get("build_plan"))
+    fake_parts_lifecycle._lcm.plan.return_value = actions
+
+    fake_parts_lifecycle.run("prime")
+
+    assert fake_parts_lifecycle.requires_repack is expected
+
+
+def test_run_resets_requires_repack_between_runs(
+    fake_parts_lifecycle,
+    fake_services,
+    fake_platform,
+    fake_host_architecture,
+):
+    fake_services.get("build_plan").set_platforms(fake_platform)
+    skip_if_build_plan_empty(fake_services.get("build_plan"))
+    fake_parts_lifecycle._lcm.plan.side_effect = [
+        [Action("my-part", Step.PULL, action_type=ActionType.RUN)],
+        [Action("my-part", Step.PULL, action_type=ActionType.SKIP)],
+    ]
+
+    fake_parts_lifecycle.run("pull")
+    assert fake_parts_lifecycle.requires_repack is True
+
+    fake_parts_lifecycle.run("pull")
+    assert fake_parts_lifecycle.requires_repack is False
+
+
+def test_run_keeps_requires_repack_true_when_exec_fails(
+    fake_parts_lifecycle,
+    fake_services,
+    fake_platform,
+    fake_host_architecture,
+    mocker,
+):
+    fake_services.get("build_plan").set_platforms(fake_platform)
+    skip_if_build_plan_empty(fake_services.get("build_plan"))
+    fake_parts_lifecycle._lcm.plan.return_value = [
+        Action("my-part", Step.PULL, action_type=ActionType.RUN)
+    ]
+    mocker.patch.object(fake_parts_lifecycle, "_exec", side_effect=OSError("boom"))
+
+    with pytest.raises(PartsLifecycleError):
+        fake_parts_lifecycle.run("pull")
+
+    assert fake_parts_lifecycle.requires_repack is True
+
+
+@pytest.mark.parametrize(
     ("err", "exc_class", "message_regex"),
     [
         (RuntimeError("yolo"), RuntimeError, "^Parts processing internal error: yolo$"),
         (OSError(0, "Hi"), PartsLifecycleError, "^Hi$"),
         (Exception("u wot m8"), PartsLifecycleError, "^Unknown error: u wot m8$"),
         (craft_parts.PartsError("parts error"), PartsLifecycleError, "^parts error$"),
+        (CraftError("parts error"), CraftError, "^parts error$"),
     ],
 )
 def test_run_failure(
@@ -713,7 +822,7 @@ def test_lifecycle_project_variables(
         cache_dir=tmp_path / "cache",
         platform=None,
     )
-    service._project = fake_project
+    fake_services.get("project")._project_model = fake_project
     service._lcm = mock.MagicMock(spec=LifecycleManager)
     service._lcm.project_info = mock.MagicMock(spec=ProjectInfo)
     service._lcm.project_info.get_project_var = lambda _: "foo"
@@ -803,3 +912,36 @@ def test_devel_base_no_error(fake_parts_lifecycle, build_plan_service, mocker):
 
     # Pass None as the step to ensure validation but skip the actual lifecycle run
     _ = fake_parts_lifecycle.run(None)
+
+
+class FooError(CraftError):
+    """Error to test CraftError pass through."""
+
+
+def test_override_exec(
+    tmp_path, app_metadata, fake_project, fake_services, fake_platform, mocker
+):
+    """Override LifecycleService _exec method."""
+
+    fake_services.get("build_plan").set_platforms(fake_platform)
+    skip_if_build_plan_empty(fake_services.get("build_plan"))
+
+    class LifecycleOverridingExec(lifecycle.LifecycleService):
+        def _exec(self, actions: list[Action]) -> None:
+            super()._exec(actions)
+            raise FooError("foo")
+
+    work_dir = tmp_path / "work"
+    cache_dir = tmp_path / "cache"
+    fake_lifecycle_service = LifecycleOverridingExec(
+        app_metadata,
+        fake_services,
+        work_dir=work_dir,
+        cache_dir=cache_dir,
+    )
+
+    fake_lifecycle_service.setup()
+
+    # Pass None as the step to ensure validation but skip the actual lifecycle run
+    with pytest.raises(FooError):
+        fake_lifecycle_service.run("prime")

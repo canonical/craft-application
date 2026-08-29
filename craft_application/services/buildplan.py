@@ -17,8 +17,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Collection, Iterable, Sequence
-from typing import Any, Literal, final
+from typing import TYPE_CHECKING, Any, Literal, final
 
 import craft_platforms
 from craft_cli import emit
@@ -26,6 +25,9 @@ from craft_cli import emit
 from craft_application.errors import EmptyBuildPlanError
 
 from . import base
+
+if TYPE_CHECKING:
+    from collections.abc import Collection, Iterable, Sequence
 
 
 class BuildPlanService(base.AppService):
@@ -41,6 +43,8 @@ class BuildPlanService(base.AppService):
     def set_platforms(self, *platform: str) -> None:
         """Set the platforms for the build plan."""
         self.__platforms = list(platform)
+        # Reset cached plan
+        self.__plan = None
 
     def set_build_fors(
         self, *build_for: craft_platforms.DebianArchitecture | str
@@ -50,6 +54,8 @@ class BuildPlanService(base.AppService):
             "all" if target == "all" else craft_platforms.DebianArchitecture(target)
             for target in build_for
         ]
+        # Reset cached plan
+        self.__plan = None
 
     @final
     def plan(self) -> Sequence[craft_platforms.BuildInfo]:
@@ -89,7 +95,7 @@ class BuildPlanService(base.AppService):
         """Filter the build plan.
 
         This method filters the given build plan based on the provided filter values.
-        An application may override this if in needs to filter the build plan in
+        An application may override this if it needs to filter the build plan in
         non-default ways. It exists to allow applications to only change the build plan
         filter and should only be used by :meth:`get_build_plan` except in testing.
 
@@ -143,7 +149,9 @@ class BuildPlanService(base.AppService):
             build_on_archs = None
 
         if build_for:
-            build_for_archs = [
+            build_for_archs: list[
+                craft_platforms.DebianArchitecture | Literal["all"]
+            ] = [
                 "all" if fr == "all" else craft_platforms.DebianArchitecture(fr)
                 for fr in build_for
             ]
@@ -154,7 +162,7 @@ class BuildPlanService(base.AppService):
             self._filter_plan(
                 self._gen_exhaustive_build_plan(project_data=raw_project),
                 platforms=platforms,
-                build_for=build_for_archs,  # type: ignore[arg-type]  # Literal "all"
+                build_for=build_for_archs,
                 build_on=build_on_archs,
             )
         )

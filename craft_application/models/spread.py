@@ -15,11 +15,15 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Models representing spread projects."""
 
-import pathlib
 import re
+from typing import TYPE_CHECKING
 
 import pydantic
 from typing_extensions import Any, Self
+
+if TYPE_CHECKING:
+    from .state import PackedArtifact
+
 
 from craft_application.models import CraftBaseModel
 
@@ -30,7 +34,7 @@ class SpreadBase(CraftBaseModel):
     """Base model for spread.yaml, which can always take and ignore extra items."""
 
     model_config = pydantic.ConfigDict(
-        CraftBaseModel.model_config,  # type: ignore[misc]
+        CraftBaseModel.model_config,
         extra="allow",
     )
 
@@ -50,8 +54,10 @@ class CraftSpreadBackend(SpreadBase):
     systems: list[str | dict[str, CraftSpreadSystem | None]]
     prepare: str | None = None
     restore: str | None = None
+    debug: str | None = None
     prepare_each: str | None = None
     restore_each: str | None = None
+    debug_each: str | None = None
 
 
 class CraftSpreadSuite(SpreadBase):
@@ -62,28 +68,43 @@ class CraftSpreadSuite(SpreadBase):
     environment: dict[str, str] | None = None
     prepare: str | None = None
     restore: str | None = None
+    debug: str | None = None
     prepare_each: str | None = None
     restore_each: str | None = None
+    debug_each: str | None = None
     kill_timeout: str | None = None
 
 
-class CraftSpreadYaml(SpreadBase):
-    """Simplified spread project configuration."""
+class CraftTestYaml(SpreadBase):
+    """Simplified spread project configuration for a craft test file."""
 
     model_config = pydantic.ConfigDict(
-        SpreadBase.model_config,  # type: ignore[misc]
+        SpreadBase.model_config,
         extra="forbid",
     )
 
-    project: str | None = None
     backends: dict[str, CraftSpreadBackend]
     suites: dict[str, CraftSpreadSuite]
     exclude: list[str] | None = None
     prepare: str | None = None
     restore: str | None = None
+    debug: str | None = None
     prepare_each: str | None = None
     restore_each: str | None = None
+    debug_each: str | None = None
     kill_timeout: str | None = None
+
+
+class CraftSpreadYaml(CraftTestYaml):
+    """Deprecated craft test spread.yaml.
+
+    This is different than a standard spread.yaml, which is used directly with spread.
+
+    The deprecated craft test spread.yaml is a subset of a standard spread.yaml. It
+    doesn't allow the 'path', 'environment', and 'include' keys.
+    """
+
+    project: str | None = None
 
 
 # Processed full-form spread configuration
@@ -129,8 +150,10 @@ class SpreadBackend(SpreadBaseModel):
     )
     prepare: str | None = None
     restore: str | None = None
+    debug: str | None = None
     prepare_each: str | None = None
     restore_each: str | None = None
+    debug_each: str | None = None
 
     @classmethod
     def from_craft(cls, simple: CraftSpreadBackend) -> Self:
@@ -142,8 +165,10 @@ class SpreadBackend(SpreadBaseModel):
             systems=cls.systems_from_craft(simple.systems),
             prepare=simple.prepare,
             restore=simple.restore,
+            debug=simple.debug,
             prepare_each=simple.prepare_each,
             restore_each=simple.restore_each,
+            debug_each=simple.debug_each,
         )
 
     @staticmethod
@@ -174,6 +199,8 @@ class SpreadSuite(SpreadBaseModel):
     restore: str | None
     prepare_each: str | None
     restore_each: str | None
+    debug: str | None = None
+    debug_each: str | None = None
     kill_timeout: str | None = None
 
     @classmethod
@@ -188,6 +215,8 @@ class SpreadSuite(SpreadBaseModel):
             prepare_each=simple.prepare_each,
             restore_each=simple.restore_each,
             kill_timeout=simple.kill_timeout,
+            debug=simple.debug,
+            debug_each=simple.debug_each,
         )
 
 
@@ -204,17 +233,18 @@ class SpreadYaml(SpreadBaseModel):
     restore: str | None
     prepare_each: str | None
     restore_each: str | None
+    debug: str | None = None
+    debug_each: str | None = None
     kill_timeout: str | None = None
     reroot: str | None = None
 
     @classmethod
     def from_craft(
         cls,
-        simple: CraftSpreadYaml,
+        simple: CraftTestYaml,
         *,
         craft_backend: SpreadBackend,
-        artifact: pathlib.Path,
-        resources: dict[str, pathlib.Path],
+        artifacts: list["PackedArtifact"],
     ) -> Self:
         """Create the spread configuration from the simplified version."""
         environment = {
@@ -223,12 +253,15 @@ class SpreadYaml(SpreadBaseModel):
             "LANG": "C.UTF-8",
             "LANGUAGE": "en",
             "PROJECT_PATH": "/root/proj",
-            "CRAFT_ARTIFACT": f"$PROJECT_PATH/{artifact}",
         }
 
-        for name, path in resources.items():
-            var_name = cls._translate_resource_name(name)
-            environment[f"CRAFT_RESOURCE_{var_name}"] = f"$PROJECT_PATH/{path}"
+        for artifact in artifacts:
+            if artifact.name is None:
+                environment["CRAFT_ARTIFACT"] = f"$PROJECT_PATH/{artifact.path}"
+                continue
+
+            var_name = cls._translate_resource_name(artifact.name)
+            environment[f"CRAFT_ARTIFACT_{var_name}"] = f"$PROJECT_PATH/{artifact.path}"
 
         return cls(
             project="craft-test",
@@ -242,6 +275,8 @@ class SpreadYaml(SpreadBaseModel):
             prepare_each=simple.prepare_each,
             restore_each=simple.restore_each,
             kill_timeout=simple.kill_timeout or None,
+            debug=simple.debug,
+            debug_each=simple.debug_each,
             reroot="..",
         )
 
@@ -255,7 +290,8 @@ class SpreadYaml(SpreadBaseModel):
     ) -> dict[str, SpreadBackend]:
         backends: dict[str, SpreadBackend] = {}
         for name, backend in simple.items():
-            if name == "craft":
+            # Spread assumes the backend name as the type when it's not explicitly declared.
+            if name == "craft" and (not backend.type or backend.type == "craft"):
                 craft_backend.systems = SpreadBackend.systems_from_craft(
                     backend.systems
                 )

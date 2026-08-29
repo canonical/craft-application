@@ -219,13 +219,13 @@ def test_add_all(empty_working_directory):
 
     if pygit2.__version__.startswith("1.13."):
         expected = {
-            "foo": pygit2.GIT_STATUS_INDEX_NEW,  # pyright: ignore[reportAttributeAccessIssue]
-            "bar": pygit2.GIT_STATUS_INDEX_NEW,  # pyright: ignore[reportAttributeAccessIssue]
+            "foo": pygit2.GIT_STATUS_INDEX_NEW,
+            "bar": pygit2.GIT_STATUS_INDEX_NEW,
         }
     else:
         expected = {
-            "foo": pygit2.enums.FileStatus.INDEX_NEW,  # pyright: ignore[reportAttributeAccessIssue]
-            "bar": pygit2.enums.FileStatus.INDEX_NEW,  # pyright: ignore[reportAttributeAccessIssue]
+            "foo": pygit2.enums.FileStatus.INDEX_NEW,
+            "bar": pygit2.enums.FileStatus.INDEX_NEW,
         }
 
     assert status == expected
@@ -262,7 +262,7 @@ def test_commit(empty_working_directory):
 
     repo.commit()
 
-    # verify commit (the `isinstance` checks are to satisfy pyright)
+    # verify commit
     commit = pygit2.Repository(empty_working_directory).revparse_single("HEAD")
     assert isinstance(commit, pygit2.Commit)
     assert commit.message == "auto commit"
@@ -352,7 +352,7 @@ def test_push_url():
         remote_branch="test-branch",
     )
 
-    # verify commit in remote (the `isinstance` checks are to satisfy pyright)
+    # verify commit in remote
     commit = remote.revparse_single("test-branch")
     assert isinstance(commit, pygit2.Commit)
     assert commit.message == "auto commit"
@@ -433,7 +433,7 @@ def test_push_url_detached_head():
         remote_branch="test-branch",
     )
 
-    # verify commit in remote (the `isinstance` checks are to satisfy pyright)
+    # verify commit in remote
     commit = remote.revparse_single("test-branch")
     assert isinstance(commit, pygit2.Commit)
     assert commit.message == "auto commit"
@@ -469,7 +469,7 @@ def test_push_url_branch():
         ref=repo._repo.head.shorthand,
     )
 
-    # verify commit in remote (the `isinstance` checks are to satisfy pyright)
+    # verify commit in remote
     commit = remote.revparse_single("test-branch")
     assert isinstance(commit, pygit2.Commit)
     assert commit.message == "auto commit"
@@ -506,7 +506,7 @@ def test_push_tags():
         push_tags=True,
     )
 
-    # verify commit through tag in remote (the `isinstance` checks are to satisfy pyright)
+    # verify commit through tag in remote
     commit = remote.revparse_single(tag)
     assert isinstance(commit, pygit2.Commit)
     assert commit.message == "auto commit"
@@ -701,7 +701,9 @@ def test_clone_repository_appends_correct_parameters_to_clone_command(
     mocker.patch("craft_application.git._git_repo.is_repo", side_effect=[False, True])
     mocked_init = mocker.patch.object(GitRepo, "_init_repo")
     fake_repo_url = "fake-repository-url.localhost"
-    from craft_application.git._git_repo import logger as git_repo_logger
+    from craft_application.git._git_repo import (  # noqa: PLC0415
+        logger as git_repo_logger,
+    )
 
     _ = GitRepo.clone_repository(
         url=fake_repo_url,

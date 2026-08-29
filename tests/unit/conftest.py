@@ -17,10 +17,14 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
 from unittest import mock
 
 import pytest
-import pytest_mock
+
+if TYPE_CHECKING:
+    import pytest_mock
+
 from craft_application import git, services
 from craft_application.services import service_factory
 
@@ -56,7 +60,13 @@ def mock_services(monkeypatch, app_metadata, fake_project, project_path):
     services.ServiceFactory.register(
         "lifecycle", mock.Mock(spec=services.LifecycleService)
     )
-    services.ServiceFactory.register("package", mock.Mock(spec=services.PackageService))
+    mock_package = mock.Mock(spec=services.PackageService)
+    # ServiceFactory treats registered values as callables and instantiates them.
+    # Keep both the registered mock and the instantiated mock pinned to legacy
+    # behavior unless a test explicitly opts into ST160.
+    mock_package.supports_conditional_repack = False
+    mock_package.return_value.supports_conditional_repack = False
+    services.ServiceFactory.register("package", mock_package)
     services.ServiceFactory.register(
         "provider", mock.Mock(spec=services.ProviderService)
     )
@@ -75,16 +85,14 @@ def mock_services(monkeypatch, app_metadata, fake_project, project_path):
     monkeypatch.setattr(
         service_factory, "issubclass", forgiving_is_subclass, raising=False
     )
-    factory = services.ServiceFactory(app_metadata, project=fake_project)
+    factory = services.ServiceFactory(app_metadata)
     factory.update_kwargs("project", project_dir=project_path)
     return factory
 
 
 @pytest.fixture
 def clear_git_binary_name_cache() -> None:
-    from craft_application.git import GitRepo
-
-    GitRepo.get_git_command.cache_clear()
+    git.GitRepo.get_git_command.cache_clear()
 
 
 @pytest.fixture(

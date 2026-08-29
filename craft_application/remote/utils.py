@@ -18,13 +18,15 @@ from __future__ import annotations
 
 import shutil
 import stat
-from collections.abc import Callable
 from functools import partial
 from hashlib import md5
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from .errors import UnsupportedArchitectureError
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 _SUPPORTED_ARCHS = ["amd64", "arm64", "armhf", "i386", "ppc64el", "riscv64", "s390x"]
 

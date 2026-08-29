@@ -51,6 +51,10 @@ def session_report(manifest_data_dir):
     return json.loads(report_path.read_text())
 
 
+@pytest.mark.skipif(
+    craft_platforms.DebianArchitecture.from_host() != "amd64",
+    reason="https://github.com/canonical/craft-application/issues/1032",
+)
 def test_from_packed_artifact(project_manifest, manifest_data_dir):
     expected = (manifest_data_dir / "project-expected.yaml").read_text()
     obtained = project_manifest.to_yaml_string()
@@ -66,6 +70,10 @@ def test_from_session_report(session_report, manifest_data_dir):
     assert obtained == expected
 
 
+@pytest.mark.skipif(
+    craft_platforms.DebianArchitecture.from_host() != "amd64",
+    reason="https://github.com/canonical/craft-application/issues/1032",
+)
 def test_create_craft_manifest(
     tmp_path, project_manifest, session_report, manifest_data_dir
 ):

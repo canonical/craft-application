@@ -18,7 +18,7 @@
 import enum
 import re
 from collections.abc import Iterable, Mapping
-from typing import ClassVar, get_args
+from typing import Annotated, ClassVar, cast, get_args
 
 import craft_platforms
 import pydantic
@@ -28,6 +28,38 @@ from typing_extensions import Any, Self, TypeVar
 from craft_application import errors
 from craft_application.models import base
 from craft_application.models.constraints import SingleEntryList, UniqueList
+
+RESERVED_PLATFORM_NAMES = frozenset(
+    # Adding a reserved platform name is a breaking change and requires a major release.
+    (
+        "any",  # "any" is used for `for` grammar.
+        "*",  # This could be confused for "all".
+    )
+)
+
+
+def _validate_platform_name(name: str) -> str:
+    """Validate that the given platform name is not reserved."""
+    if name in RESERVED_PLATFORM_NAMES:
+        raise ValueError(f"Reserved platform name: {name!r}")
+    if "/" in name:
+        raise ValueError("Platform names cannot contain the '/' character.")
+    return name
+
+
+PlatformName = Annotated[
+    str,
+    pydantic.BeforeValidator(_validate_platform_name),
+    pydantic.Field(
+        title="Platform name",
+        description="The name of this platform. May not contain '/'",
+        examples=["riscv64", "my-special-platform"],
+        json_schema_extra={
+            "not": {"enum": cast(pydantic.JsonValue, sorted(RESERVED_PLATFORM_NAMES))}
+        },
+    ),
+]
+PlatformNameAdapter = pydantic.TypeAdapter[str](PlatformName)
 
 
 class Platform(base.CraftBaseModel):
@@ -51,7 +83,7 @@ class Platform(base.CraftBaseModel):
     build_for: SingleEntryList[str] | str = pydantic.Field(
         examples=[
             "amd64",
-            ["arm64", "riscv64"],
+            ["riscv64"],
         ]
     )
     """Target architecture for the build.
@@ -124,7 +156,7 @@ class Platform(base.CraftBaseModel):
 PT = TypeVar("PT", bound=Platform)
 
 
-class GenericPlatformsDict(dict[str, PT]):
+class GenericPlatformsDict(dict[PlatformName, PT]):
     """A generic dictionary describing the contents of the platforms key.
 
     This class exists to generate Pydantic and JSON schemas for the platforms key on
@@ -171,14 +203,16 @@ class GenericPlatformsDict(dict[str, PT]):
         """
         try:
             (value_type,) = get_args(
-                cls.__orig_bases__[0]  # type: ignore[attr-defined]
+                cls.__orig_bases__[0]  # ty: ignore[unresolved-attribute]
             )
         except (ValueError, AttributeError):
             raise RuntimeError(
                 "Cannot get value type. This likely means the application is using "
                 "GenericPlatformsDict directly rather than creating a child class."
             )
-        return cs.dict_schema(cs.str_schema(), value_type.__pydantic_core_schema__)
+        return cs.dict_schema(
+            PlatformNameAdapter.core_schema, value_type.__pydantic_core_schema__
+        )
 
     @classmethod
     def __get_pydantic_json_schema__(

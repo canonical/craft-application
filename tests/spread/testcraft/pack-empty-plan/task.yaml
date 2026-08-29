@@ -4,4 +4,5 @@ execute: |
   (! testcraft pack) |& MATCH "No build matches"
 
 restore: |
-  rm -rf *.testcraft
+  rm -f *.testcraft
+  testcraft clean

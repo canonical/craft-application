@@ -21,7 +21,6 @@ import abc
 import contextlib
 import enum
 import os
-from collections.abc import Iterable
 from typing import TYPE_CHECKING, Any, TypeVar, cast, final
 
 import pydantic
@@ -34,6 +33,8 @@ from craft_application import _config, application, util
 from craft_application.services import base
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable
+
     from craft_application.services.service_factory import ServiceFactory
 
 
@@ -41,9 +42,10 @@ T = TypeVar("T")
 
 
 class ConfigHandler(abc.ABC):
-    """An abstract class for configuration handlers."""
+    """The abstract class that is the parent of all configuration handlers."""
 
     def __init__(self, app: application.AppMetadata) -> None:
+        """Create the configuration handler with the relevant application metadata."""
         self._app = app
 
     @abc.abstractmethod
@@ -58,7 +60,11 @@ class ConfigHandler(abc.ABC):
 
 @final
 class AppEnvironmentHandler(ConfigHandler):
-    """Configuration handler to get values from app-specific environment variables."""
+    """Configuration handler to get values from app-specific environment variables.
+
+    Environment variables used for this are prefixed with a fully upper-case form
+    of the application name. For example, ``TESTCRAFT_DEBUG``.
+    """
 
     def __init__(self, app: application.AppMetadata) -> None:
         super().__init__(app)
@@ -88,7 +94,12 @@ class CraftEnvironmentHandler(ConfigHandler):
 
 
 class SnapConfigHandler(ConfigHandler):
-    """Configuration handler that gets values from snap."""
+    """Configuration handler that gets values from snapd.
+
+    Snap configuration values are set with kebab case, so the ``verbosity_level``
+    configuration value can be set to ``verbose`` using the command
+    ``snap set <snap-name> verbosity-level=verbose``
+    """
 
     def __init__(self, app: application.AppMetadata) -> None:
         super().__init__(app)
@@ -136,8 +147,7 @@ class DefaultConfigHandler(ConfigHandler):
             self._cache[item] = field.default
             return field.default
         if field.default_factory is not None:
-            # Remove the type ignore after pydantic/pydantic#10945 is fixed
-            default = field.default_factory()  # type: ignore[call-arg]
+            default = field.default_factory()
             self._cache[item] = default
             return default
 
@@ -180,7 +190,7 @@ class ConfigService(base.AppService):
     def get(self, item: str) -> Any:  # noqa: ANN401
         """Get the given configuration item."""
         if item not in self._app.ConfigModel.model_fields:
-            raise KeyError(r"unknown config item: {item!r}")
+            raise KeyError(f"unknown config item: {item!r}")
         field_info = self._app.ConfigModel.model_fields[item]
 
         for handler in self._handlers:
@@ -193,13 +203,13 @@ class ConfigService(base.AppService):
         else:
             return self._default_handler.get_raw(item)
 
-        return self._convert_type(value, field_info.annotation)  # type: ignore[arg-type,return-value]
+        return self._convert_type(value, field_info.annotation)
 
     def _convert_type(self, value: str, field_type: type[T]) -> T:
         """Convert the value to the appropriate type."""
-        if isinstance(field_type, type):  # pyright: ignore[reportUnnecessaryIsInstance]
+        if isinstance(field_type, type):
             if issubclass(field_type, str):
-                return cast(T, field_type(value))
+                return field_type(value)
             if issubclass(field_type, bool):
                 return cast(T, util.strtobool(value))
             if issubclass(field_type, enum.Enum):

@@ -1,0 +1,13 @@
+summary: Pack arbitrary witchcraft files
+
+environment:
+  PROJECT/bare_base: bare-base
+
+prepare: |
+  cd "${PROJECT}"
+  . /etc/os-release
+  sed -i  "s/base: ubuntu@24.04/base: ubuntu@${VERSION_ID}/" witchcraft.yaml
+
+execute: |
+  cd "${PROJECT}"
+  witchcraft pack --ignore=unmaintained --destructive-mode

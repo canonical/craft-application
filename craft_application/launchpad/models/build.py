@@ -15,21 +15,9 @@
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Launchpad builds."""
 
-# This file relies heavily on dynamic features from launchpadlib that cause pyright
-# to complain a lot. As such, we're disabling several pyright checkers for this file
-# since in this case they generate more noise than utility.
-# pyright: reportUnknownMemberType=false
-# pyright: reportUnknownVariableType=false
-# pyright: reportUnknownArgumentType=false
-# pyright: reportOptionalMemberAccess=false
-# pyright: reportAttributeAccessIssue=false
-# pyright: reportOptionalCall=false
-# pyright: reportOptionalIterable=false
-# pyright: reportOptionalSubscript=false
-# pyright: reportIndexIssue=false
 import enum
 
-import lazr.restfulclient.errors  # type: ignore[import-untyped]
+import lazr.restfulclient.errors
 from typing_extensions import Self
 
 from craft_application.launchpad import errors, util
@@ -111,12 +99,12 @@ class Build(LaunchpadObject):
     distro_series: distro.DistroSeries
 
     @classmethod
-    def new(cls) -> Self:  # pyright: ignore[reportIncompatibleMethodOverride]
+    def new(cls) -> Self:
         """Do not create a build without a recipe."""
         raise NotImplementedError("Use a recipe's `build` method instead.")
 
     @classmethod
-    def get(cls) -> Self:  # pyright: ignore[reportIncompatibleMethodOverride]
+    def get(cls) -> Self:
         """Do not try to get builds without a recipe."""
         raise NotImplementedError("Use a recipe's `get_builds` method instead.")
 

@@ -4,9 +4,12 @@ version: "0.1"
 
 base: ubuntu@24.04
 platforms:
-  platform-independent:
+  a:
     build-on: [amd64, arm64, ppc64el, s390x, riscv64]
-    build-for: [all]
+    build-for: [amd64]
+  b:
+    build-on: [amd64, arm64, ppc64el, s390x, riscv64]
+    build-for: [amd64]
 
 parts:
   my-test:

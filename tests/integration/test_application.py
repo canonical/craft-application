@@ -17,6 +17,7 @@ import argparse
 import pathlib
 import shutil
 import textwrap
+from typing import TYPE_CHECKING
 
 import craft_application
 import craft_application.commands
@@ -24,8 +25,13 @@ import craft_cli
 import pytest
 import pytest_check
 from craft_application import util
+from craft_application.commands.base import AppCommand
 from craft_application.util import yaml
+from craft_parts import callbacks
 from typing_extensions import override
+
+if TYPE_CHECKING:
+    from craft_application.application import Application
 
 
 class FakeApplication(craft_application.Application):
@@ -83,7 +89,7 @@ Commands can be classified as follows:
 
 For more information about a command, run 'testcraft help <command>'.
 For a summary of all commands, run 'testcraft help --all'.
-For more information about testcraft, check out: www.testcraft.example/docs/3.14159
+For more information about testcraft, check out: www.testcraft.example/docs/3
 
 """
 INVALID_COMMAND = """\
@@ -182,15 +188,23 @@ def test_project_managed(capsys, monkeypatch, tmp_path, project, create_app):
 
     app = create_app()
     app._work_dir = tmp_path
+    # manually manage the state dir since there is no manager here
+    state_dir = app.services.get("state")._state_dir
+    if state_dir.exists():
+        shutil.rmtree(state_dir)
+    state_dir.mkdir(parents=True)
 
-    assert app.run() == 0
+    try:
+        assert app.run() == 0
 
-    assert (tmp_path / "package_1.0.tar.zst").exists()
-    captured = capsys.readouterr()
-    assert (
-        captured.err.splitlines()[-1]
-        == (VALID_PROJECTS_DIR / project / "stderr").read_text()
-    )
+        assert (tmp_path / "package_1.0.tar.zst").exists()
+        captured = capsys.readouterr()
+        assert (
+            captured.err.splitlines()[-1]
+            == (VALID_PROJECTS_DIR / project / "stderr").read_text()
+        )
+    finally:
+        shutil.rmtree(state_dir)
 
 
 @pytest.mark.slow
@@ -223,6 +237,9 @@ def test_project_destructive(
 
     for dirname in ("parts", "stage", "prime"):
         assert (tmp_path / dirname).is_dir()
+
+    # Reset craft-parts hooks
+    callbacks.unregister_all()
 
     # Now run clean in destructive mode
     monkeypatch.setattr("sys.argv", ["testcraft", "clean", "--destructive-mode"])
@@ -291,7 +308,7 @@ def test_get_command_help(monkeypatch, emitter, capsys, app, cmd, help_param):
     assert f"testcraft {cmd} [options]" in stderr
     assert stderr.endswith(
         "For more information, check out: "
-        f"www.testcraft.example/docs/3.14159/reference/commands/{cmd}\n\n"
+        f"www.testcraft.example/docs/3/reference/commands/{cmd}\n\n"
     )
 
 
@@ -434,3 +451,24 @@ def test_verbosity_greeting(monkeypatch, create_app, capsys):
 
     # Exactly one greeting
     assert len(greetings) == 1
+
+
+def test_project_dir(monkeypatch, tmp_path, create_app):
+    class ProjectDirCommand(AppCommand):
+        name = "sir-testington"
+        always_load_project = True
+        help_msg = ""
+        overview = ""
+
+        def fill_parser(self, parser) -> None:
+            parser.add_argument("--project-dir")
+
+    app: Application = create_app()
+    app.add_command_group("testeroni", [ProjectDirCommand])
+
+    monkeypatch.setattr(
+        "sys.argv", ["testcraft", "sir-testington", "--project-dir", "/"]
+    )
+    app.run()
+
+    assert app.project_dir == pathlib.Path("/")

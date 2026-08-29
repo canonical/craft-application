@@ -26,23 +26,29 @@ import pkgutil
 import subprocess
 import sys
 import urllib.request
-from collections.abc import Generator, Iterable, Sequence
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, cast
 
 import craft_platforms
 import craft_providers
+import snap_http
 from craft_cli import CraftError, emit
 from craft_providers import bases
 from craft_providers.actions.snap_installer import Snap
-from craft_providers.lxd import LXDProvider
+from craft_providers.lxd import LXDInstance, LXDProvider
 from craft_providers.multipass import MultipassProvider
 
 from craft_application import models, util
+from craft_application.errors import (
+    InvalidUbuntuProStatusError,
+    UbuntuProNotSupportedError,
+)
 from craft_application.services import base
-from craft_application.util import platforms, snap_config
+from craft_application.util import ProServices, platforms, snap_config
 
 if TYPE_CHECKING:  # pragma: no cover
+    from collections.abc import Callable, Generator, Iterable, Sequence
+
     from craft_application.application import AppMetadata
     from craft_application.services import ServiceFactory
 
@@ -78,6 +84,7 @@ class ProviderService(base.AppService):
         provider_name: str | None = None,
         install_snap: bool = True,
         intercept_mknod: bool = True,
+        pro_services: ProServices | None = None,
     ) -> None:
         super().__init__(app, services)
         self._provider: craft_providers.Provider | None = None
@@ -91,8 +98,24 @@ class ProviderService(base.AppService):
         # this is a private attribute because it may not reflect the actual
         # provider name. Instead, self._provider.name should be used.
         self.__provider_name: str | None = provider_name
-        self._pack_state: models.PackState = models.PackState(
-            artifact=None, resources=None
+        self._pack_state: models.PackState = models.PackState(artifacts=[])
+        self._pro_services = pro_services
+
+    @property
+    def compatibility_tag(self) -> str:
+        """Get craft-application's suffix for the compatibility tag."""
+        return ".1"
+
+    @property
+    def _use_git_build_root(self) -> bool:
+        """Whether to mount the git root as the build root for this run.
+
+        True when the application allows it *and* the user has enabled the
+        ``experimental_monorepo`` config option.
+        """
+        return bool(
+            self._app.allow_git_build_root
+            and self._services.get("config").get("experimental_monorepo")
         )
 
     @classmethod
@@ -119,28 +142,97 @@ class ProviderService(base.AppService):
             self.environment[f"{scheme.upper()}_PROXY"] = value
 
         if self._install_snap:
-            self.snaps.extend(_REQUESTED_SNAPS.values())
+            self._setup_snaps()
 
-            if util.is_running_from_snap(self._app.name):
-                # use the aliased name of the snap when injecting
-                name = os.getenv("SNAP_INSTANCE_NAME", self._app.name)
-                channel = None
-                emit.debug(
-                    f"Setting {self._app.name} to be injected from the "
-                    "host into the build environment because it is running "
-                    "as a snap."
+    def _setup_snaps(self) -> None:
+        """Set up the app snap to be installed in the build environment."""
+        self.snaps.extend(_REQUESTED_SNAPS.values())
+
+        snap_injected = False
+        is_snappy = util.is_running_from_snap(self._app.name)
+
+        build_on = self._services.get("config").get("build_on")
+        host_arch_matches = not build_on or (
+            build_on == craft_platforms.DebianArchitecture.from_host().value
+        )
+
+        if is_snappy and host_arch_matches:
+            # use the aliased name of the snap when injecting
+            snap_injected = self.enqueue_snap_injection(
+                os.getenv("SNAP_INSTANCE_NAME", self._app.name)
+            )
+        if not is_snappy or not snap_injected:
+            # use the snap name when installing from the store
+            name = self._app.name
+            channel = os.getenv("CRAFT_SNAP_CHANNEL")
+            if channel is None and is_snappy:
+                instance_name = os.getenv("SNAP_INSTANCE_NAME", self._app.name)
+                channel = self._get_snap_store_channel(instance_name)
+            channel = channel or "latest/stable"
+            if not is_snappy:
+                reason = "the application is not running as a snap"
+            elif not host_arch_matches:
+                reason = (
+                    "the snap cannot be injected because the host architecture "
+                    "does not match the build-on architecture"
                 )
             else:
-                # use the snap name when installing from the store
-                name = self._app.name
-                channel = os.getenv("CRAFT_SNAP_CHANNEL", "latest/stable")
-                emit.debug(
-                    f"Setting {self._app.name} to be installed from the {channel} "
-                    "channel in the build environment because it is not running "
-                    "as a snap."
-                )
-
+                reason = "snap injection was not performed successfully"
+            emit.debug(
+                f"Setting {self._app.name} to be installed from the {channel} "
+                f"channel in the build environment because {reason}."
+            )
             self.snaps.append(Snap(name=name, channel=channel, classic=True))
+
+    def _get_snap_store_channel(self, name: str) -> str | None:
+        """Get the tracking channel of a snap on the host, if installed from the store.
+
+        :param name: The name or instance name of the snap to look up.
+        :returns: The tracking channel string, or None if the snap is not
+          installed from a store channel (e.g. side-loaded).
+        """
+        snap_list = cast(list[dict[str, Any]], snap_http.list().result)
+        matching = [s for s in snap_list if s["name"] == name]
+        if matching:
+            return matching[0].get("tracking-channel")
+        return None
+
+    def enqueue_snap_injection(self, name: str, *, include_base: bool = True) -> bool:
+        """Try to inject a snap from the host system.
+
+        :param name: The name of the host snap to try to inject.
+        :include_base: Whether to inject the base snap (defaults to True).
+        :returns: True if the snap can be injected, False otherwise.
+        """
+        emit.debug(
+            f"Setting {name} to be injected from the host into the build environment."
+        )
+        # NOTE: A future version of snap-http will allow a smaller response.
+        # https://github.com/canonical/snap-http/pull/30
+        snap_list = cast(list[dict[str, Any]], snap_http.list().result)
+        matching_snaps = [s for s in snap_list if s["name"] == name]
+        for snap in matching_snaps:
+            # Must inject the base before the app or snapd will download the base.
+            if include_base:
+                matching_base_snaps = [
+                    s for s in snap_list if s["name"] == snap.get("base")
+                ]
+                installing_base = [
+                    base for base in self.snaps if base.name == snap.get("base")
+                ]
+                if matching_base_snaps and not installing_base:
+                    self.snaps.append(Snap(name=snap["base"], channel=None))
+
+            self.snaps.append(
+                Snap(
+                    name=snap["name"],
+                    channel=None,
+                    classic=snap["confinement"] == "classic",
+                )
+            )
+        if not matching_snaps:
+            emit.debug(f"Snap {name} not installed on the system, not injecting.")
+        return len(matching_snaps) >= 1
 
     @contextlib.contextmanager
     def instance(
@@ -150,7 +242,9 @@ class ProviderService(base.AppService):
         work_dir: pathlib.Path,
         allow_unstable: bool = True,
         clean_existing: bool = False,
+        use_base_instance: bool = True,
         project_name: str | None = None,
+        prepare_instance: Callable[[craft_providers.Executor], None] | None = None,
         **kwargs: bool | str | None,
     ) -> Generator[craft_providers.Executor, None, None]:
         """Context manager for getting a provider instance.
@@ -160,10 +254,12 @@ class ProviderService(base.AppService):
         :param allow_unstable: Whether to allow the use of unstable images.
         :param clean_existing: Whether pre-existing instances should be wiped
           and re-created.
+        :param use_base_instance: Whether we should copy the instance from a
+          base instance, if the provider offers that possibility.
         :returns: a context manager of the provider instance.
         """
         if not project_name:
-            project_name = self._services.get("project").get().name
+            project_name = self._project.name
         instance_name = self._get_instance_name(work_dir, build_info, project_name)
         emit.debug(f"Preparing managed instance {instance_name!r}")
         base_name = bases.BaseName(
@@ -174,31 +270,40 @@ class ProviderService(base.AppService):
         provider = self.get_provider(name=self.__provider_name)
 
         provider.ensure_provider_is_available()
+        shutdown_delay = self._services.get("config").get("idle_mins")
 
         if clean_existing:
             self._clean_instance(provider, work_dir, build_info, project_name)
 
+        build_on = self._services.get("config").get("build_on")
+
+        build_root = _get_build_root(work_dir, use_git_root=self._use_git_build_root)
+
         emit.progress(f"Launching managed {base_name[0]} {base_name[1]} instance...")
         with provider.launched_environment(
             project_name=project_name,
-            project_path=work_dir,
+            project_path=build_root,
             instance_name=instance_name,
             base_configuration=base,
             allow_unstable=allow_unstable,
+            use_base_instance=use_base_instance,
+            prepare_instance=prepare_instance,
+            shutdown_delay_mins=shutdown_delay,
+            instance_architecture=build_on,
         ) as instance:
             instance.mount(
-                host_source=work_dir,
+                host_source=build_root,
                 # Ignore argument type until craft-providers accepts PurePosixPaths
                 # https://github.com/canonical/craft-providers/issues/315
-                target=self._app.managed_instance_project_path,  # type: ignore[arg-type]
+                target=self._app.managed_instance_project_path,
             )
+            self._services.get("state").configure_instance(instance)
             emit.debug("Instance launched and working directory mounted")
             self._setup_instance_bashrc(instance)
             try:
                 yield instance
             finally:
                 self._capture_logs_from_instance(instance)
-                self._capture_pack_state_from_instance(instance)
 
     def get_base(
         self,
@@ -206,7 +311,7 @@ class ProviderService(base.AppService):
         *,
         instance_name: str,
         **kwargs: bool | str | pathlib.Path | None,
-    ) -> craft_providers.Base:
+    ) -> craft_providers.Base[enum.Enum]:
         """Get the base configuration from a base name.
 
         :param base_name: The base to lookup.
@@ -225,13 +330,13 @@ class ProviderService(base.AppService):
             # this only applies to our Buildd images (i.e.; Ubuntu)
             self.packages.extend(["gpg", "dirmngr"])
         return base_class(
-            alias=alias,  # type: ignore[arg-type]
-            compatibility_tag=f"{self._app.name}-{base_class.compatibility_tag}",
+            alias=alias,  # ty: ignore[invalid-argument-type]
+            compatibility_tag=f"{self._app.name}-{base_class.compatibility_tag}{self.compatibility_tag}",
             hostname=instance_name,
             snaps=self.snaps,
             environment=self.environment,
             packages=self.packages,
-            **kwargs,  # type: ignore[arg-type]
+            **kwargs,  # ty: ignore[invalid-argument-type]
         )
 
     def get_pack_state(self) -> models.PackState:
@@ -318,10 +423,8 @@ class ProviderService(base.AppService):
             target = "environments" if len(build_plan) > 1 else "environment"
             emit.progress(f"Cleaning build {target}")
 
-        project_name = self._services.get("project").get().name
-
         for info in build_plan:
-            self._clean_instance(provider, self._work_dir, info, project_name)
+            self._clean_instance(provider, self._work_dir, info, self._project.name)
 
     def _get_instance_name(
         self,
@@ -376,19 +479,6 @@ class ProviderService(base.AppService):
                     f"Could not find log file {source_log_path.as_posix()} in instance."
                 )
 
-    def _capture_pack_state_from_instance(
-        self, instance: craft_providers.Executor
-    ) -> None:
-        """Fetch the pack state from inside `instance`."""
-        state_path = util.get_managed_pack_state_path(self._app)
-        with instance.temporarily_pull_file(source=state_path, missing_ok=True) as temp:
-            if temp:
-                self._pack_state = models.PackState.from_yaml_file(temp)
-            else:
-                emit.debug(
-                    f"Could not find state file {state_path.as_posix()} in instance."
-                )
-
     def _setup_instance_bashrc(self, instance: craft_providers.Executor) -> None:
         """Set up the instance's bashrc to export environment."""
         bashrc = pkgutil.get_data("craft_application", "misc/instance_bashrc")
@@ -431,6 +521,44 @@ class ProviderService(base.AppService):
         except KeyError:
             raise ValueError(f"Snap not registered: {name!r}")
 
+    def configure_instance_with_pro(self, instance: craft_providers.Executor) -> None:
+        """Configure Ubuntu Pro services in a managed instance.
+
+        :param instance: The instance to configure.
+
+        :raises InvalidUbuntuProStatusError: If the enabled Pro services in the instance
+            don't match the requested services.
+        :raises UbuntuProNotSupportedError: If Pro services are enabled for a provider
+            that lacks Pro support.
+        :raises LXDError: If configuring Pro for an LXD instance fails.
+        """
+        # Check if the instance has Pro services enabled and if they match the requested services.
+        # If not, raise an error and bail out.
+        if (
+            isinstance(instance, LXDInstance)
+            and instance.pro_services
+            and instance.pro_services != self._pro_services
+        ):
+            raise InvalidUbuntuProStatusError(self._pro_services, instance.pro_services)
+
+        # if Pro services are required, ensure the Pro client is
+        # installed, attached, and the correct services are enabled
+        if self._pro_services:
+            if not isinstance(instance, LXDInstance):
+                raise UbuntuProNotSupportedError(
+                    "Ubuntu Pro builds are only supported with LXD backend."
+                )
+
+            emit.debug(f"Enabling Ubuntu Pro services: {self._pro_services}")
+            emit.progress("Enabling Ubuntu Pro services.")
+            instance.install_pro_client()
+            instance.attach_pro_subscription()
+            instance.enable_pro_service(self._pro_services)
+            emit.debug("Enabled Ubuntu Pro services.")
+
+            # Cache the current Pro services, for prior checks in reentrant calls.
+            instance.pro_services = set(self._pro_services)
+
     def run_managed(
         self,
         build_info: craft_platforms.BuildInfo,
@@ -453,22 +581,39 @@ class ProviderService(base.AppService):
             f"Running managed {self._app.name} in managed {build_info.build_base} instance for platform {build_info.platform!r}"
         )
 
+        active_fetch_service = self._services.get_class("fetch").is_active(
+            enable_command_line=enable_fetch_service
+        )
+        emit.debug(f"active_fetch_service={active_fetch_service}")
+
+        def prepare_instance(instance: craft_providers.Executor) -> None:
+            emit.debug("Preparing instance")
+            if active_fetch_service:
+                fetch_env = self._services.get("fetch").configure_instance(instance)
+                env.update(fetch_env)
+
+            session_env = self._services.get("proxy").configure_instance(instance)
+            env.update(session_env)
+
         with self.instance(
             build_info=build_info,
             work_dir=self._work_dir,
-            clean_existing=enable_fetch_service,
+            clean_existing=active_fetch_service,
+            prepare_instance=prepare_instance,
+            use_base_instance=not active_fetch_service,
         ) as instance:
-            if enable_fetch_service:
-                session_env = self._services.get("fetch").create_session(instance)
-                env.update(session_env)
-
+            self.configure_instance_with_pro(instance)
             emit.debug(f"Running in instance: {command}")
+            self._services.get("proxy").finalize_instance_configuration(instance)
             try:
                 with emit.pause():
-                    # Pyright doesn't fully understand craft_providers's CompletedProcess.
-                    instance.execute_run(  # pyright: ignore[reportUnknownMemberType,reportUnknownVariableType]
+                    instance.execute_run(
                         list(command),
-                        cwd=self._app.managed_instance_project_path,
+                        cwd=_get_managed_cwd(
+                            self._work_dir,
+                            self._app.managed_instance_project_path,
+                            use_git_root=self._use_git_build_root,
+                        ),
                         check=True,
                         env=env,
                     )
@@ -477,5 +622,59 @@ class ProviderService(base.AppService):
                     f"Failed to run {self._app.name} in instance"
                 ) from exc
             finally:
-                if enable_fetch_service:
-                    self._services.get("fetch").teardown_session()
+                if active_fetch_service:
+                    self._services.get("fetch").teardown_instance()
+
+
+def _find_git_root(path: pathlib.Path) -> pathlib.Path | None:
+    """Return the git working tree root containing path, or None if not in a git repo."""
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "--show-toplevel"],
+            capture_output=True,
+            text=True,
+            cwd=path,
+            check=True,
+        )
+        return pathlib.Path(result.stdout.strip())
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        return None
+
+
+def _get_build_root(work_dir: pathlib.Path, *, use_git_root: bool) -> pathlib.Path:
+    """Return the directory to mount as the build root in a managed instance.
+
+    When use_git_root is True and work_dir is inside a git repo, the git
+    working tree root is returned so that code outside the project directory
+    (e.g. shared libraries in a monorepo) is accessible in the build container.
+    """
+    if not use_git_root:
+        return work_dir
+    git_root = _find_git_root(work_dir)
+    if git_root is None:
+        return work_dir
+    emit.debug(f"Git-driven build root: mounting {str(git_root)!r} as /root/project")
+    return git_root
+
+
+def _get_managed_cwd(
+    work_dir: pathlib.Path,
+    default_cwd: pathlib.PurePosixPath,
+    *,
+    use_git_root: bool,
+) -> pathlib.PurePosixPath:
+    """Return the working directory to use when running commands in a managed instance.
+
+    When use_git_root is True and work_dir is a subdirectory of the git root,
+    the path inside the managed instance that corresponds to work_dir is returned.
+    """
+    if not use_git_root:
+        return default_cwd
+    git_root = _find_git_root(work_dir)
+    if git_root is None or git_root == work_dir:
+        return default_cwd
+    resolved_work_dir = work_dir.resolve()
+    resolved_git_root = git_root.resolve()
+    if not resolved_work_dir.is_relative_to(resolved_git_root):
+        return default_cwd
+    return default_cwd / resolved_work_dir.relative_to(resolved_git_root)

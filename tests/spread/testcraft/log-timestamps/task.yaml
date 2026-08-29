@@ -1,5 +1,9 @@
 summary: Test for craft-application's inner instance log handling
 
+restore: |
+  rm -f *.testcraft
+  testcraft clean
+
 execute: |
   # Clear out the logs directory to make sure there's just one log in there after packing
   rm -rf /root/.local/state/testcraft/log/*

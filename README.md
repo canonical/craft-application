@@ -29,7 +29,7 @@ Conduct](https://ubuntu.com/community/ethos/code-of-conduct).
 Craft Application is open source and part of the Canonical family. We would love
 your help.
 
-If you're interested, start with the [contribution guide](HACKING.md).
+If you're interested, start with the [contribution guide](CONTRIBUTING.md).
 
 We welcome any suggestions and help with the docs. The [Canonical Open
 Documentation Academy](https://github.com/canonical/open-documentation-academy)
@@ -46,5 +46,5 @@ Craft Application is released under the [GPL-3.0 license](LICENSE).
 [rtd-latest]: https://canonical-craft-application.readthedocs-hosted.com/en/latest/
 [ruff-badge]: https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json
 [ruff-site]: https://github.com/astral-sh/ruff
-[codecov-badge]: https://codecov.io/github/canonical/craft-application/coverage.svg?branch=master
-[codecov-status]: https://codecov.io/github/canonical/craft-application?branch=master
+[codecov-badge]: https://codecov.io/github/canonical/craft-application/coverage.svg?branch=main
+[codecov-status]: https://codecov.io/github/canonical/craft-application?branch=main

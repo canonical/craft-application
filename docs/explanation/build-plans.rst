@@ -73,4 +73,4 @@ the build plan match the host environment, the application will fail to run.
 The build plan must be filtered to a single item with the ``--build-for`` and
 ``-platform`` arguments.
 
-The host OS much match the build plan's ``base``.
+The host OS must match the build plan's ``base``.

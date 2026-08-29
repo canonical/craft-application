@@ -1,0 +1,10 @@
+summary: Pack arbitrary witchcraft files
+
+prepare: |
+  witchcraft init
+  sed -i "s/base: ubuntu@.*/base: ubuntu@24.04/" witchcraft.yaml
+
+execute: |
+  witchcraft pack --pro esm-apps
+  witchcraft clean
+  witchcraft pack

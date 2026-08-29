@@ -10,4 +10,5 @@ execute: |
   fi
 
 restore: |
-  rm -rf *.testcraft
+  rm -f *.testcraft
+  testcraft clean

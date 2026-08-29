@@ -1,6 +1,6 @@
 # This file is part of craft-application.
 #
-# Copyright 2024 Canonical Ltd.
+# Copyright 2024-2026 Canonical Ltd.
 #
 # This program is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Lesser General Public License version 3, as
@@ -60,6 +60,7 @@ def test_init_in_cwd(init_command, name, new_dir, mock_services, emitter):
         project_dir=None,
         name=name,
         profile="test-profile",
+        vcs="none",
     )
     mock_services.init.validate_project_name.return_value = expected_name
 
@@ -69,6 +70,7 @@ def test_init_in_cwd(init_command, name, new_dir, mock_services, emitter):
         project_dir=new_dir,
         project_name=expected_name,
         template_dir=init_command.parent_template_dir / "test-profile",
+        vcs="none",
     )
     emitter.assert_message("Successfully initialised project.")
 
@@ -82,6 +84,7 @@ def test_init_run_project_dir(init_command, name, mock_services, emitter):
         project_dir=project_dir,
         name=name,
         profile="test-profile",
+        vcs="none",
     )
     mock_services.init.validate_project_name.return_value = expected_name
 
@@ -91,6 +94,7 @@ def test_init_run_project_dir(init_command, name, mock_services, emitter):
         project_dir=project_dir.expanduser().resolve(),
         project_name=expected_name,
         template_dir=init_command.parent_template_dir / "test-profile",
+        vcs="none",
     )
     emitter.assert_message("Successfully initialised project.")
 
@@ -102,6 +106,13 @@ def test_profiles(init_command):
     assert init_command.profiles == ["other-template", "simple"]
 
 
+def test_profiles_excludes_base_variants(init_command, fake_template_dirs):
+    """Base-specific template variants are not exposed as profiles."""
+    (fake_template_dirs / "simple__ubuntu@22.04").mkdir()
+
+    assert init_command.profiles == ["other-template", "simple"]
+
+
 def test_existing_files(init_command, tmp_path, mock_services):
     """Error if the check for existing files fails."""
     mock_services.init.check_for_existing_files.side_effect = InitError("test-error")
@@ -109,6 +120,7 @@ def test_existing_files(init_command, tmp_path, mock_services):
         project_dir=tmp_path,
         name="test-project-name",
         profile="test-profile",
+        vcs="none",
     )
 
     with pytest.raises(InitError, match="test-error"):
@@ -121,6 +133,7 @@ def test_invalid_name(init_command, mock_services):
     mock_services.init.validate_project_name.side_effect = InitError("test-error")
     parsed_args = argparse.Namespace(
         name="invalid--name",
+        vcs="none",
     )
     with pytest.raises(InitError, match="test-error"):
         init_command.run(parsed_args)
@@ -139,6 +152,7 @@ def test_invalid_name_directory(init_command, mock_services):
         project_dir=project_dir,
         name=None,
         profile="simple",
+        vcs="none",
     )
 
     init_command.run(parsed_args)
@@ -147,4 +161,112 @@ def test_invalid_name_directory(init_command, mock_services):
         project_dir=project_dir.expanduser().resolve(),
         project_name="my-project",
         template_dir=init_command.parent_template_dir / "simple",
+        vcs="none",
     )
+
+
+def test_invalid_base_variant(init_command, tmp_path, mock_services):
+    """Error if a requested base-specific variant does not exist."""
+    (init_command.parent_template_dir / "simple__ubuntu@22.04").mkdir(parents=True)
+    parsed_args = argparse.Namespace(
+        project_dir=tmp_path,
+        name="test-project-name",
+        profile="simple",
+        base="ubuntu@23.04",
+        vcs="none",
+    )
+
+    with pytest.raises(InitError, match="Base variant 'ubuntu@23.04'") as exc_info:
+        init_command.run(parsed_args)
+
+    assert exc_info.value.resolution == (
+        "Choose a different base for this profile.\nAvailable bases are: 'ubuntu@22.04'"
+    )
+    mock_services.init.initialise_project.assert_not_called()
+
+
+def test_base_not_available_for_profile(init_command, tmp_path, mock_services):
+    """Error if the selected profile has no base-specific variants."""
+    parsed_args = argparse.Namespace(
+        project_dir=tmp_path,
+        name="test-project-name",
+        profile="simple",
+        base="ubuntu@22.04",
+        vcs="none",
+    )
+
+    with pytest.raises(
+        InitError, match="Base selection is not available for this profile."
+    ) as exc_info:
+        init_command.run(parsed_args)
+
+    assert exc_info.value.resolution == (
+        "Use this profile without '--base' or choose a different profile."
+    )
+    mock_services.init.initialise_project.assert_not_called()
+
+
+@pytest.mark.parametrize("base", ["ubuntu@22.04", "Ubuntu-22.04", "base-1.2@stable"])
+def test_valid_base_name(
+    init_command, fake_template_dirs, mock_services, emitter, base
+):
+    """Allow supported characters in base-specific variant names."""
+    (fake_template_dirs / f"simple__{base}").mkdir()
+    parsed_args = argparse.Namespace(
+        project_dir=None,
+        name="test-project-name",
+        profile="simple",
+        base=base,
+        vcs="none",
+    )
+    mock_services.init.validate_project_name.return_value = "test-project-name"
+
+    init_command.run(parsed_args)
+
+    mock_services.init.initialise_project.assert_called_once_with(
+        project_dir=pathlib.Path.cwd().resolve(),
+        project_name="test-project-name",
+        template_dir=init_command.parent_template_dir / f"simple__{base}",
+        vcs="none",
+    )
+    emitter.assert_message("Successfully initialised project.")
+
+
+@pytest.mark.parametrize("base", ["/core24", "../../ubuntu@22.04"])
+def test_invalid_base_name(init_command, tmp_path, mock_services, base):
+    """Reject unsupported characters in base names."""
+    parsed_args = argparse.Namespace(
+        project_dir=tmp_path,
+        name="test-project-name",
+        profile="simple",
+        base=base,
+        vcs="none",
+    )
+
+    with pytest.raises(InitError, match="invalid base name"):
+        init_command.run(parsed_args)
+
+    mock_services.init.initialise_project.assert_not_called()
+
+
+def test_valid_base_variant(init_command, fake_template_dirs, mock_services, emitter):
+    """Use the base-specific template when the requested variant exists."""
+    (fake_template_dirs / "simple__ubuntu@22.04").mkdir()
+    parsed_args = argparse.Namespace(
+        project_dir=None,
+        name="test-project-name",
+        profile="simple",
+        base="ubuntu@22.04",
+        vcs="none",
+    )
+    mock_services.init.validate_project_name.return_value = "test-project-name"
+
+    init_command.run(parsed_args)
+
+    mock_services.init.initialise_project.assert_called_once_with(
+        project_dir=pathlib.Path.cwd().resolve(),
+        project_name="test-project-name",
+        template_dir=init_command.parent_template_dir / "simple__ubuntu@22.04",
+        vcs="none",
+    )
+    emitter.assert_message("Successfully initialised project.")
