@@ -122,6 +122,12 @@ class AppMetadata:
     enable_pro_support: bool = False
     """Whether this application supports Ubuntu Pro services."""
 
+    allow_spread_yaml: bool = True
+    """Whether the 'test' command can use the deprecated spread.yaml file.
+
+    Defaults to True for backward compatibility but new apps should set this to False.
+    """
+
     allow_git_build_root: bool = False
     """Whether to allow mounting the git working tree root as the build root.
 
