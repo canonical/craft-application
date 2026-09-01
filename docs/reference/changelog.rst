@@ -36,6 +36,12 @@ Services
 - The testing service now handles multiple artifacts by defining variables
   ``CRAFT_ARTIFACT_<name>`` in the Spread test environment.
 
+Bug fixes
+=========
+
+- Hosts reporting ``armv8l`` (an ARMv8 processor running a 32-bit userland) are
+  now correctly identified as ``armhf``.
+
 
 7.2.0 (2028-08-11)
 ------------------
