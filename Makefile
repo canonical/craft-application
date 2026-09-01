@@ -20,6 +20,10 @@ endif
 
 include common.mk
 
+.PHONY: test-launchpad
+test-launchpad:  ##- Run Launchpad network tests (isolated, slow+flaky)
+	uv run pytest -m 'launchpad'
+
 .PHONY: format
 format: format-ruff format-codespell format-prettier  ## Run all automatic formatters
 

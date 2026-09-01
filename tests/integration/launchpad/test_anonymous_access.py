@@ -35,6 +35,7 @@ _IGNORE_STAGING = _ignore_staging()
     ],
 )
 @pytest.mark.slow
+@pytest.mark.launchpad
 def test_anonymous_login(tmp_path, root):
     cache_dir = tmp_path / "cache"
     assert not cache_dir.exists()
@@ -69,6 +70,7 @@ def test_anonymous_login(tmp_path, root):
     ],
 )
 @pytest.mark.slow
+@pytest.mark.launchpad
 def test_get_real_repository_by_path(anonymous_lp, name, path):
     repo = anonymous_lp.get_repository(path=path)
 
@@ -86,6 +88,7 @@ def test_get_real_repository_by_path(anonymous_lp, name, path):
     ],
 )
 @pytest.mark.slow
+@pytest.mark.launchpad
 def test_get_real_repository_by_name(anonymous_lp, name, owner, project):
     repo = anonymous_lp.get_repository(name=name, owner=owner, project=project)
 
