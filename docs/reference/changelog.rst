@@ -39,7 +39,7 @@ Services
 Bug fixes
 =========
 
-- Hosts reporting ``armv8l`` (an ARMv8 processor running a 32-bit userland) are
+- Hosts reporting ``armv8l`` (an ARMv8 processor running a 32-bit user space) are
   now correctly identified as ``armhf``.
 
 
