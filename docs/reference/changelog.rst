@@ -15,7 +15,19 @@ Changelog
 
     For a complete list of commits, check out the `1.2.3`_ release on GitHub.
 
-7.2.0 (2028-08-11)
+7.2.1 (2026-09-01)
+------------------
+
+Bug fixes
+=========
+
+- Hosts reporting ``armv8l`` (an ARMv8 processor running a 32-bit user space) are
+  now correctly identified as ``armhf``.
+
+For a complete list of commits, check out the `7.2.1`_ release on GitHub.
+
+
+7.2.0 (2026-08-11)
 ------------------
 
 Application
@@ -1413,3 +1425,4 @@ For a complete list of commits, check out the `2.7.0`_ release on GitHub.
 .. _7.0.1: https://github.com/canonical/craft-application/releases/tag/7.0.1
 .. _7.1.0: https://github.com/canonical/craft-application/releases/tag/7.1.0
 .. _7.2.0: https://github.com/canonical/craft-application/releases/tag/7.2.0
+.. _7.2.1: https://github.com/canonical/craft-application/releases/tag/7.2.1
