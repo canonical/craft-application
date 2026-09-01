@@ -17,26 +17,14 @@ def _ignore_staging() -> bool:
     return api_result.status_code >= 500
 
 
-_IGNORE_STAGING = _ignore_staging()
-
-
 @pytest.mark.flaky(reruns=3, reason="Launchpad staging is often unreachable")
-@pytest.mark.parametrize(
-    "root",
-    [
-        pytest.param(
-            "staging",
-            marks=pytest.mark.skipif(
-                _IGNORE_STAGING,
-                reason="staging endpoint is offline",
-            ),
-        ),
-        "production",
-    ],
-)
+@pytest.mark.parametrize("root", ["staging", "production"])
 @pytest.mark.slow
 @pytest.mark.launchpad
 def test_anonymous_login(tmp_path, root):
+    if root == "staging" and _ignore_staging():
+        pytest.skip("staging endpoint is offline")
+
     cache_dir = tmp_path / "cache"
     assert not cache_dir.exists()
 
