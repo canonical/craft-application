@@ -153,6 +153,14 @@ def iter_content_raise_before_chunk(
     raise requests.exceptions.ChunkedEncodingError("Connection broken")
 
 
+def iter_content_then_raise_os_error(
+    chunk_size=None,  # pylint: disable=unused-argument
+):
+    """Yield partial data, then raise a non-retryable error (e.g. disk full)."""
+    yield b"partial"
+    raise OSError("No space left on device")
+
+
 @responses.activate
 @pytest.mark.parametrize(
     "retry_exception",
@@ -277,6 +285,41 @@ def test_download_with_progress_exhausts_connection_error_retries(
 
 
 @responses.activate
+def test_download_with_progress_removes_partial_on_nonretryable_error(
+    tmp_path, mocker, request_service
+):
+    """Remove the partial file when a download fails with a non-retryable error."""
+    data = b"test data"
+    output_file = tmp_path / "file"
+    original_get = request_service.get
+    attempts = 0
+    mocked_sleep = mocker.patch("time.sleep")
+
+    responses.add(
+        responses.GET,
+        "http://example/file",
+        body=data,
+        headers={"Content-Length": str(len(data))},
+    )
+
+    def patched_get(*args, **kwargs):
+        nonlocal attempts
+        attempts += 1
+        response = original_get(*args, **kwargs)
+        response.iter_content = iter_content_then_raise_os_error
+        return response
+
+    with patch.object(request_service, "get", side_effect=patched_get):
+        with pytest.raises(OSError):  # noqa: PT011
+            request_service.download_with_progress("http://example/file", output_file)
+
+    # A non-retryable error is not retried and leaves no partial file behind.
+    assert attempts == 1
+    assert mocked_sleep.mock_calls == []
+    assert not output_file.exists()
+
+
+@responses.activate
 def test_download_with_progress_removes_empty_failed_download(
     tmp_path, mocker, request_service
 ):
@@ -381,3 +424,39 @@ def test_download_files_with_progress_retries_only_interrupted_file(
         call("advance", len(stable_data)),
         call("advance", len(stable_data) + len(flaky_data)),
     ]
+
+
+@responses.activate
+def test_download_files_with_progress_leaves_no_empty_files_on_failure(
+    tmp_path, mocker, request_service
+):
+    """A permanent failure does not leave empty files for un-attempted downloads."""
+    failing_url = "http://example/failing"
+    pending_url = "http://example/pending"
+    files = {
+        failing_url: tmp_path / "failing",
+        pending_url: tmp_path / "pending",
+    }
+    original_get = request_service.get
+    mocker.patch("time.sleep")
+
+    responses.add(
+        responses.GET, failing_url, body=b"data", headers={"Content-Length": "4"}
+    )
+    responses.add(
+        responses.GET, pending_url, body=b"data", headers={"Content-Length": "4"}
+    )
+
+    def patched_get(url, *args, **kwargs):
+        response = original_get(url, *args, **kwargs)
+        if url == failing_url:
+            response.iter_content = iter_content_then_raise_chunked_encoding_error
+        return response
+
+    with patch.object(request_service, "get", side_effect=patched_get):
+        with pytest.raises(requests.exceptions.ChunkedEncodingError):
+            request_service.download_files_with_progress(files)
+
+    # The failing file is cleaned up and the un-attempted file is never created.
+    assert not files[failing_url].exists()
+    assert not files[pending_url].exists()

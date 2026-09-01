@@ -66,8 +66,11 @@ class RequestService(base.AppService):
             dest = dest / filename
 
         with self.get(url, stream=True) as download:
+            # Yield the size before opening the file so that the eager
+            # size-probe in download_files_with_progress does not create a
+            # (potentially never-downloaded) empty file on disk.
+            yield int(download.headers.get("Content-Length", -1))
             with dest.open("wb") as file:
-                yield int(download.headers.get("Content-Length", -1))
                 for chunk in download.iter_content(None):
                     file.write(chunk)
                     yield len(chunk)
@@ -126,7 +129,10 @@ class RequestService(base.AppService):
                 for chunk_size in download:
                     downloaded_bytes += chunk_size
                     advance(completed_bytes + downloaded_bytes)
-            except retry_exceptions:
+            except Exception:
+                # Remove the partial file on any failure, whether or not the
+                # error is retryable. Retry semantics are unaffected: this
+                # re-raises and util.retry decides whether to retry.
                 dest.unlink(missing_ok=True)
                 if downloaded_bytes:
                     advance(completed_bytes)
