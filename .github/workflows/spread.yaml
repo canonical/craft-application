@@ -31,14 +31,26 @@ jobs:
           name: snap
           path: ${{ steps.snap.outputs.snap }}
 
-  snap-tests:
+  spread-select:
     runs-on: [self-hosted, spread-enabled]
-    needs: [snap-build]
+    outputs:
+      systems: ${{ steps.select.outputs.systems }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+      - name: Find spread systems
+        id: select
+        run: |
+          echo systems=$(spread -list openstack: | cut -d: -f2 | sort | uniq | jq --raw-input . | jq --slurp --compact-output) | tee -a "${GITHUB_OUTPUT}"
+
+  snap-tests:
+    name: snap-tests (${{ matrix.system }})
+    runs-on: [self-hosted, spread-enabled]
+    needs: [snap-build, spread-select]
     strategy:
       fail-fast: false
       matrix:
-        spread:
-          - "openstack:"
+        system: ${{ fromJSON(needs.spread-select.outputs.systems) }}
 
     steps:
       - name: Cleanup job workspace
@@ -60,9 +72,11 @@ jobs:
 
       - name: Run spread
         run: |
-          spread ${{ matrix.spread }}
+          spread openstack:${{ matrix.system }}
 
       - name: Run Ubuntu Pro spread tests
+        # The pro suite is restricted to ubuntu-24.04* in spread.yaml
+        if: matrix.system == 'ubuntu-24.04-64'
         env:
           UBUNTU_PRO_TOKEN: ${{ secrets.UBUNTU_PRO_TOKEN }}
         run: |
@@ -75,7 +89,7 @@ jobs:
               exit 0
             fi
           fi
-          spread openstack:tests/spread/pro/
+          spread openstack:${{ matrix.system }}:tests/spread/pro/
 
       - name: Discard spread workers
         if: always()
