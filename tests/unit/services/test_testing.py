@@ -607,7 +607,7 @@ def test_process_lp_test_spread_file_missing_required_vars(
 
 def test_get_backend_type_requires_prodstack7_region(monkeypatch, testing_service):
     """The lp-test backend is only selected on prodstack7."""
-    for var in ("OS_AUTH_TYPE", "OS_REGION_NAME", "OS_TEST_PROJECT_NAME"):
+    for var in ("CI", "OS_AUTH_TYPE", "OS_REGION_NAME", "OS_TEST_PROJECT_NAME"):
         monkeypatch.delenv(var, raising=False)
 
     assert testing_service._get_backend_type() == "lxd-vm"
