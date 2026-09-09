@@ -432,7 +432,7 @@ class TestingService(base.AppService):
         )
 
         # Example of variables set by Launchpad:
-        #   OS_AUTH_URL=https://keystone.prodstack7.example.com:5000/v3"
+        #   OS_AUTH_URL="https://keystone.prodstack7.example.com:5000/v3"
         #   OS_AUTH_TYPE="v3applicationcredential"
         #   OS_IDENTITY_API_VERSION="3"
         #   OS_TEST_PROJECT_NAME="tenant-01_project"

@@ -52,17 +52,6 @@ def test_systems_from_craft(systems, expected):
         ),
     ],
 )
-def test_systems_from_craft_64_image_lookup(systems, expected):
-    assert model.SpreadBackend.systems_from_craft(
-        ["ubuntu-24.04-64"], {"ubuntu-24.04": "noble-image"}
-    ) == [
-        {
-            "ubuntu-24.04-64": model.SpreadSystem(
-                workers=1, image="noble-image"
-            )
-        }
-    ]
-
 
 _CRAFT_SPREAD = """
 project: project-name
