@@ -42,17 +42,6 @@ def test_systems_from_craft(systems, expected):
     assert model.SpreadBackend.systems_from_craft(systems, {}) == expected
 
 
-@pytest.mark.parametrize(
-    ("systems", "expected"),
-    [
-        (
-            ["ubuntu-24.04-64"],
-            [
-            ],
-        ),
-    ],
-)
-
 _CRAFT_SPREAD = """
 project: project-name
 
@@ -242,7 +231,6 @@ def test_spread_yaml_from_lp_test_craft_spread():
                 "PROJECT_PATH": "/root/proj",
                 "CRAFT_ARTIFACT": "$PROJECT_PATH/artifact",
                 "CRAFT_ARTIFACT_OTHER": "$PROJECT_PATH/another-artifact",
-
             },
             backends={
                 "craft": model.SpreadBackend(
@@ -332,7 +320,9 @@ def test_spread_yaml_from_craft_named_artifacts_only():
         images={},
     )
 
-    assert spread.environment["CRAFT_ARTIFACT_OTHER"] == "$PROJECT_PATH/another-artifact"
+    assert (
+        spread.environment["CRAFT_ARTIFACT_OTHER"] == "$PROJECT_PATH/another-artifact"
+    )
     assert "CRAFT_ARTIFACT" not in spread.environment
 
 

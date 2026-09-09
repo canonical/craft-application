@@ -261,7 +261,7 @@ class TestingService(base.AppService):
                 "mapping system names to image names.",
                 resolution=(
                     "Ensure OS_TEST_IMAGES is a JSON object, "
-                    "e.g. '{\"24.04\": \"my-image\"}'."
+                    'e.g. \'{"24.04": "my-image"}\'.'
                 ),
                 reportable=False,
                 retcode=os.EX_DATAERR,
@@ -432,14 +432,14 @@ class TestingService(base.AppService):
         )
 
         # Example of variables set by Launchpad:
-        #   OS_AUTH_URL="https://keystone.prodstack7.example.com:5000/v3"
-        #   OS_AUTH_TYPE="v3applicationcredential"
-        #   OS_IDENTITY_API_VERSION="3"
-        #   OS_TEST_PROJECT_NAME="tenant-01_project"
-        #   OS_TEST_PROJECT_DOMAIN_NAME="Default"
-        #   OS_REGION_NAME="prodstack7"
-        #   OS_TEST_FLAVOR="m1.small"
-        #   OS_TEST_IMAGES="{\"focal\": \"ubuntu-20.04-server-prodstack7\", ...}"
+        #   - OS_AUTH_URL: https://keystone.prodstack7.example.com:5000/v3
+        #   - OS_AUTH_TYPE: v3applicationcredential
+        #   - OS_IDENTITY_API_VERSION: 3
+        #   - OS_TEST_PROJECT_NAME: tenant-01_project
+        #   - OS_TEST_PROJECT_DOMAIN_NAME: Default
+        #   - OS_REGION_NAME: prodstack7
+        #   - OS_TEST_FLAVOR: m1.small
+        #   - OS_TEST_IMAGES: { "focal": "ubuntu-20.04-server-prodstack7", ... }
 
         if name == "lp-test":
             auth_url = os.getenv("OS_AUTH_URL")
