@@ -240,8 +240,8 @@ def test_spread_yaml_from_lp_test_craft_spread():
                 "LANG": "C.UTF-8",
                 "LANGUAGE": "en",
                 "PROJECT_PATH": "/root/proj",
-                    "CRAFT_ARTIFACT": "$PROJECT_PATH/artifact",
-                    "CRAFT_ARTIFACT_OTHER": "$PROJECT_PATH/another-artifact",
+                "CRAFT_ARTIFACT": "$PROJECT_PATH/artifact",
+                "CRAFT_ARTIFACT_OTHER": "$PROJECT_PATH/another-artifact",
 
             },
             backends={
