@@ -16,6 +16,7 @@
 
 """Service for testing a project."""
 
+import json
 import os
 import pathlib
 import shlex
@@ -34,6 +35,14 @@ from craft_application.errors import TestFileError
 from craft_application.util.error_formatting import format_pydantic_errors
 
 from . import base
+
+_SYSTEM_IMAGES = {
+    "lp-test": {
+        "ubuntu-20.04": "ubuntu-focal-daily-amd64",
+        "ubuntu-22.04": "ubuntu-jammy-daily-amd64",
+        "ubuntu-24.04": "ubuntu-noble-daily-amd64",
+    },
+}
 
 
 class TestingService(base.AppService):
@@ -200,7 +209,9 @@ class TestingService(base.AppService):
 
         simple = self.parse_test_config()
 
-        craft_backend = self._get_backend()
+        backend_type = self._get_backend_type()
+        craft_backend = self._get_backend(backend_type)
+        images = self._get_system_images(backend_type)
 
         if not pack_state.artifacts:
             raise CraftError(
@@ -212,10 +223,58 @@ class TestingService(base.AppService):
             simple,
             craft_backend=craft_backend,
             artifacts=pack_state.artifacts,
+            images=images,
         )
 
         emit.trace(f"Writing processed spread file to {dest}")
         spread_yaml.to_yaml_file(dest)
+
+    def _get_system_images(self, backend_type: str) -> dict[str, str]:
+        """Obtain the mapping from system name to image name.
+
+        :param backend_type: the backend used for testing
+        :return: a dictionary mapping each system to an image.
+        """
+        if backend_type != "lp-test":
+            return {}
+
+        os_test_images = os.getenv("OS_TEST_IMAGES")
+        if not os_test_images:
+            return dict(_SYSTEM_IMAGES[backend_type])
+
+        try:
+            images = json.loads(os_test_images)
+        except json.JSONDecodeError as err:
+            raise CraftError(
+                f"Invalid OS_TEST_IMAGES value: {err}.",
+                resolution=(
+                    "Ensure OS_TEST_IMAGES is a JSON object mapping "
+                    "system names to image names."
+                ),
+                reportable=False,
+                retcode=os.EX_DATAERR,
+            ) from err
+
+        if not isinstance(images, dict):
+            raise CraftError(
+                "Invalid OS_TEST_IMAGES value: expected a JSON object "
+                "mapping system names to image names.",
+                resolution=(
+                    "Ensure OS_TEST_IMAGES is a JSON object, "
+                    'e.g. \'{"24.04": "my-image"}\'.'
+                ),
+                reportable=False,
+                retcode=os.EX_DATAERR,
+            )
+
+        system_images = dict(_SYSTEM_IMAGES[backend_type])
+        system_images.update(
+            {
+                key if key.startswith("ubuntu-") else f"ubuntu-{key}": value
+                for key, value in images.items()
+            }
+        )
+        return system_images
 
     def _get_spread_command(
         self,
@@ -308,8 +367,8 @@ class TestingService(base.AppService):
         is_interactive = shell or shell_after or debug
 
         try:
+            # Don't pipe output into stream if spread runs in interactive
             if is_interactive:
-                # Don't pipe output into stream if spread runs in interactive
                 # mode. This allows spread to run with proper terminal management
                 # until we implement a protocol to pause the emitter and handle
                 # terminal input and output inside an open_stream context. See
@@ -334,7 +393,17 @@ class TestingService(base.AppService):
             )
 
     def _get_backend_type(self) -> str:
-        return "ci" if os.environ.get("CI") else "lxd-vm"
+        if (
+            os.getenv("OS_TEST_PROJECT_NAME")
+            and os.getenv("OS_REGION_NAME") == "prodstack7"
+            and os.getenv("OS_AUTH_TYPE") == "v3applicationcredential"
+        ):
+            return "lp-test"
+
+        if os.getenv("CI"):
+            return "ci"
+
+        return "lxd-vm"
 
     def _running_on_ci(self) -> bool:
         return self._get_backend_type() == "ci"
@@ -353,20 +422,64 @@ class TestingService(base.AppService):
 
         return system
 
-    def _get_backend(self) -> models.SpreadBackend:
-        name = self._get_backend_type()
-
-        return models.SpreadBackend(
+    def _get_backend(self, name: str) -> models.SpreadBackend:
+        backend = models.SpreadBackend(
             type="adhoc",
-            # Allocate and discard occur on the host.
-            allocate=f"ADDRESS $(./spread/.extension allocate {name})",
-            discard=f"./spread/.extension discard {name}",
-            # Each of these occur within the spread runner.
             prepare=f'"$PROJECT_PATH"/spread/.extension backend-prepare {name}',
             restore=f'"$PROJECT_PATH"/spread/.extension backend-restore {name}',
             prepare_each=f'"$PROJECT_PATH"/spread/.extension backend-prepare-each {name}',
             restore_each=f'"$PROJECT_PATH"/spread/.extension backend-restore-each {name}',
         )
+
+        # Example of variables set by Launchpad:
+        #   - OS_AUTH_URL: https://keystone.prodstack7.example.com:5000/v3
+        #   - OS_AUTH_TYPE: v3applicationcredential
+        #   - OS_IDENTITY_API_VERSION: 3
+        #   - OS_TEST_PROJECT_NAME: tenant-01_project
+        #   - OS_TEST_PROJECT_DOMAIN_NAME: Default
+        #   - OS_REGION_NAME: prodstack7
+        #   - OS_TEST_FLAVOR: m1.small
+        #   - OS_TEST_IMAGES: { "focal": "ubuntu-20.04-server-prodstack7", ... }
+
+        if name == "lp-test":
+            auth_url = os.getenv("OS_AUTH_URL")
+            project = os.getenv("OS_TEST_PROJECT_NAME")
+            region = os.getenv("OS_REGION_NAME")
+            flavor = os.getenv("OS_TEST_FLAVOR")
+
+            missing = [
+                var
+                for var, value in (
+                    ("OS_AUTH_URL", auth_url),
+                    ("OS_TEST_FLAVOR", flavor),
+                )
+                if not value
+            ]
+            if missing:
+                raise CraftError(
+                    f"Missing required environment variable(s) for the "
+                    f"lp-test backend: {', '.join(missing)}.",
+                    resolution=(
+                        "Ensure all OpenStack test variables provided by "
+                        "Launchpad are set."
+                    ),
+                    reportable=False,
+                    retcode=os.EX_CONFIG,
+                )
+
+            backend.type = "openstack"
+            backend.endpoint = auth_url
+            backend.account = "user"  # user name placeholder
+            backend.key = "password"  # password placeholder
+            backend.location = f"{project}/{region}"
+            backend.plan = flavor
+            backend.halt_timeout = "6h"
+        else:
+            backend.type = "adhoc"
+            backend.allocate = f"ADDRESS $(./spread/.extension allocate {name})"
+            backend.discard = f"./spread/.extension discard {name}"
+
+        return backend
 
     def _get_spread_executable(self) -> str:
         """Get the executable to run for spread.
