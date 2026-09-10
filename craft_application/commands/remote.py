@@ -227,7 +227,7 @@ class RemoteBuild(ExtensibleCommand):
         logs = builder.fetch_logs(pathlib.Path.cwd())
 
         log_names = sorted(path.name for path in logs.values() if path)
-        artifact_names = sorted(path.name for path in artifacts)
+        artifact_names = sorted({path.name for path in artifacts})
 
         emit.message(
             "Build completed.\n"
