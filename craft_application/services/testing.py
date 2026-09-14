@@ -401,8 +401,8 @@ class TestingService(base.AppService):
         is_interactive = shell or shell_after or debug
 
         try:
-            # Don't pipe output into stream if spread runs in interactive
             if is_interactive:
+                # Don't pipe output into stream if spread runs in interactive
                 # mode. This allows spread to run with proper terminal management
                 # until we implement a protocol to pause the emitter and handle
                 # terminal input and output inside an open_stream context. See
