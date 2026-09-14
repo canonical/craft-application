@@ -216,7 +216,7 @@ def test_spread_yaml_from_lp_test_craft_spread():
             models.PackedArtifact(name=None, path=pathlib.Path("artifact")),
             models.PackedArtifact(name="other", path=pathlib.Path("another-artifact")),
         ],
-        images={"ubuntu-24.04": "jammy-image"},
+        images={"ubuntu-24.04": "my-favourite-numbat"},
     )
 
     assert (
