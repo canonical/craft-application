@@ -240,7 +240,7 @@ def test_spread_yaml_from_lp_test_craft_spread():
                     systems=[
                         {
                             "ubuntu-24.04": model.SpreadSystem(
-                                workers=1, image="jammy-image"
+                                workers=1, image="my-favourite-numbat"
                             )
                         }
                     ],
