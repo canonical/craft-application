@@ -261,7 +261,7 @@ class TestingService(base.AppService):
                 "mapping system names to image names.",
                 resolution=(
                     "Ensure OS_TEST_IMAGES is a JSON object, "
-                    'e.g. \'{"24.04": "my-image"}\'.'
+                    'for example: \'{"24.04": "my-image"}\'.'
                 ),
                 reportable=False,
                 retcode=os.EX_DATAERR,
