@@ -192,7 +192,11 @@ class SpreadBackend(SpreadBaseModel):
     def systems_from_craft(
         simple: list[str | dict[str, CraftSpreadSystem | None]], images: dict[str, str]
     ) -> list[str | dict[str, SpreadSystem]]:
-        """Create spread systems from the simplified version."""
+        """Create spread systems from the simplified version.
+
+        :param simple: List of system definitions as strings or name-to-system dicts.
+        :param images: Mapping of system names to their container image URLs.
+        """
         systems: list[str | dict[str, SpreadSystem]] = []
         for item in simple:
             entry: dict[str, SpreadSystem] = {}
