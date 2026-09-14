@@ -605,6 +605,64 @@ def test_process_lp_test_spread_file_missing_required_vars(
         testing_service.process_spread_yaml(new_dir / "processed", state)
 
 
+def test_process_lp_test_spread_file_missing_images(
+    new_dir, monkeypatch, testing_service
+):
+    """A missing OS_TEST_IMAGES value raises a CraftError."""
+    monkeypatch.setenv("OS_AUTH_TYPE", "v3applicationcredential")
+    monkeypatch.setenv("OS_AUTH_URL", "https://lp-test-endpoint:5000/v3")
+    monkeypatch.setenv("OS_REGION_NAME", "prodstack7")
+    monkeypatch.setenv("OS_TEST_FLAVOR", "cpu4-ram8-disk10")
+    monkeypatch.delenv("OS_TEST_IMAGES", raising=False)
+    monkeypatch.setenv("OS_TEST_PROJECT_NAME", "lp-test-project")
+    pathlib.Path("spread.yaml").write_text(
+        "backends:\n  craft:\n    systems: []\nsuites: {}\n"
+    )
+    state = models.PackState(
+        artifacts=[models.PackedArtifact(name=None, path=pathlib.Path("foo"))]
+    )
+
+    with pytest.raises(CraftError, match="OS_TEST_IMAGES is not set"):
+        testing_service.process_spread_yaml(new_dir / "processed", state)
+
+
+def test_process_lp_test_spread_file_partial_images(
+    new_dir, monkeypatch, testing_service
+):
+    """A partial OS_TEST_IMAGES value raises a CraftError."""
+    monkeypatch.setenv("OS_AUTH_TYPE", "v3applicationcredential")
+    monkeypatch.setenv("OS_AUTH_URL", "https://lp-test-endpoint:5000/v3")
+    monkeypatch.setenv("OS_REGION_NAME", "prodstack7")
+    monkeypatch.setenv("OS_TEST_FLAVOR", "cpu4-ram8-disk10")
+    monkeypatch.setenv("OS_TEST_IMAGES", '{"24.04": "ubuntu-noble-daily-amd64"}')
+    monkeypatch.setenv("OS_TEST_PROJECT_NAME", "lp-test-project")
+    pathlib.Path("spread.yaml").write_text(
+        textwrap.dedent(
+            """
+            backends:
+              craft:
+                systems:
+                  - ubuntu-24.04:
+                  - ubuntu-22.04
+                  - ubuntu-20.04
+            suites: {}
+            """
+        )
+    )
+    state = models.PackState(
+        artifacts=[models.PackedArtifact(name=None, path=pathlib.Path("foo"))]
+    )
+
+    with pytest.raises(
+        CraftError,
+        match=(
+            "OS_TEST_IMAGES is missing image mappings for: "
+            "ubuntu-20\\.04, ubuntu-22\\.04"
+        ),
+    ):
+        testing_service.process_spread_yaml(new_dir / "processed", state)
+
+
 def test_get_backend_type_requires_prodstack7_region(monkeypatch, testing_service):
     """The lp-test backend is only selected on prodstack7."""
     for var in ("CI", "OS_AUTH_TYPE", "OS_REGION_NAME", "OS_TEST_PROJECT_NAME"):

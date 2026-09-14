@@ -36,14 +36,6 @@ from craft_application.util.error_formatting import format_pydantic_errors
 
 from . import base
 
-_SYSTEM_IMAGES = {
-    "lp-test": {
-        "ubuntu-20.04": "ubuntu-focal-daily-amd64",
-        "ubuntu-22.04": "ubuntu-jammy-daily-amd64",
-        "ubuntu-24.04": "ubuntu-noble-daily-amd64",
-    },
-}
-
 
 class TestingService(base.AppService):
     """Service class for testing a project."""
@@ -212,6 +204,7 @@ class TestingService(base.AppService):
         backend_type = self._get_backend_type()
         craft_backend = self._get_backend(backend_type)
         images = self._get_system_images(backend_type)
+        self._validate_system_images(simple, backend_type=backend_type, images=images)
 
         if not pack_state.artifacts:
             raise CraftError(
@@ -229,6 +222,43 @@ class TestingService(base.AppService):
         emit.trace(f"Writing processed spread file to {dest}")
         spread_yaml.to_yaml_file(dest)
 
+    def _validate_system_images(
+        self,
+        simple: models.CraftTestYaml,
+        *,
+        backend_type: str,
+        images: dict[str, str],
+    ) -> None:
+        """Ensure lp-test systems all have an image mapping."""
+        if backend_type != "lp-test":
+            return
+
+        system_names: list[str] = []
+        for item in simple.backends["craft"].systems:
+            if isinstance(item, str):
+                system_names.append(item)
+            else:
+                system_names.extend(item)
+
+        missing_images = [
+            system_name
+            for system_name in system_names
+            if not images.get(system_name)
+            and not images.get(system_name.removesuffix("-64"))
+        ]
+
+        if missing_images:
+            missing_systems = ", ".join(sorted(set(missing_images)))
+            raise CraftError(
+                f"OS_TEST_IMAGES is missing image mappings for: {missing_systems}.",
+                resolution=(
+                    "Ensure OS_TEST_IMAGES is set to a JSON object mapping "
+                    "every configured system name to an image name."
+                ),
+                reportable=False,
+                retcode=os.EX_DATAERR,
+            )
+
     def _get_system_images(self, backend_type: str) -> dict[str, str]:
         """Obtain the mapping from system name to image name.
 
@@ -240,7 +270,15 @@ class TestingService(base.AppService):
 
         os_test_images = os.getenv("OS_TEST_IMAGES")
         if not os_test_images:
-            return dict(_SYSTEM_IMAGES[backend_type])
+            raise CraftError(
+                "OS_TEST_IMAGES is not set.",
+                resolution=(
+                    "Ensure OS_TEST_IMAGES is set to a JSON object mapping "
+                    "system names to image names."
+                ),
+                reportable=False,
+                retcode=os.EX_DATAERR,
+            )
 
         try:
             images = json.loads(os_test_images)
@@ -267,14 +305,10 @@ class TestingService(base.AppService):
                 retcode=os.EX_DATAERR,
             )
 
-        system_images = dict(_SYSTEM_IMAGES[backend_type])
-        system_images.update(
-            {
-                key if key.startswith("ubuntu-") else f"ubuntu-{key}": value
-                for key, value in images.items()
-            }
-        )
-        return system_images
+        return {
+            key if key.startswith("ubuntu-") else f"ubuntu-{key}": value
+            for key, value in images.items()
+        }
 
     def _get_spread_command(
         self,
