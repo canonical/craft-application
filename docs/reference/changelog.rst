@@ -36,6 +36,8 @@ Services
 - The testing service now handles multiple artifacts by defining variables
   ``CRAFT_ARTIFACT_<name>`` in the Spread test environment.
 
+- Add the Launchpad testing farm back-end to the testing service.
+
 Bug fixes
 =========
 
