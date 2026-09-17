@@ -38,12 +38,13 @@ External sessions
 -----------------
 
 Alternatively, |app| can be configured to use a pre-existing Fetch Service
-session in its builds. In this mode of operation, |app| configures all
+session for builds and tests. In this mode of operation, |app| configures all
 traffic filtering for the session, but you are responsible for opening and closing
 the session itself, and otherwise managing Fetch Service.
 
 In order to make use of this mode, users must create a Fetch Service session and
-configure the following environment variables before invoking the ``pack`` command:
+configure the following environment variables before invoking the ``pack`` or
+``test`` command:
 
 .. list-table::
     :header-rows: 1
@@ -56,7 +57,15 @@ configure the following environment variables before invoking the ``pack`` comma
       - Must point to the Fetch Service's CA certificate. This file must be locally
         accessible by |app|.
     * - ``CRAFT_USE_EXTERNAL_FETCH_SERVICE``
-      - Must be ``1``.
+      - Must be ``1`` to use the session while building the artifact.
+    * - ``CRAFT_USE_EXTERNAL_FETCH_SERVICE_FOR_TEST``
+      - Must be ``1`` to use the session in spread test runners.
+
+The two ``CRAFT_USE_EXTERNAL_FETCH_SERVICE`` variables are independent. Set both
+to ``1`` to use the external session while building the artifact and running its
+tests. When ``CRAFT_USE_EXTERNAL_FETCH_SERVICE_FOR_TEST`` is set, |app| copies
+the certificate specified by ``CRAFT_PROXY_CERT``, if set, to each spread runner
+and configures its package managers, snapd, and LXD to use the proxy.
 
 Because |app| has no control over the Fetch Service session in this mode, it
 can't create a session report.

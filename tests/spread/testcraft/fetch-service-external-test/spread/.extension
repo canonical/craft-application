@@ -1,0 +1,31 @@
+#!/bin/bash
+
+allocate_ci() {
+    exec 3>&1
+    exec 1>&2
+
+    sudo sed -i 's/^\s*#\?\s*\(PermitRootLogin\|PasswordAuthentication\)\>.*/\1 yes/' /etc/ssh/sshd_config
+    if [ -d /etc/ssh/sshd_config.d ]; then
+        echo -e 'PermitRootLogin yes\nPasswordAuthentication yes' | sudo tee /etc/ssh/sshd_config.d/00-spread.conf
+    fi
+    sudo systemctl restart ssh
+    echo "root:${SPREAD_PASSWORD}" | sudo chpasswd
+    echo localhost >&3
+}
+
+case "$1" in
+allocate)
+    if [ "$2" != "ci" ]; then
+        echo "unsupported backend $2" >&2
+        exit 1
+    fi
+    allocate_ci
+    ;;
+discard | backend-prepare | backend-restore | backend-prepare-each | backend-restore-each)
+    true
+    ;;
+*)
+    echo "unknown command $1" >&2
+    exit 1
+    ;;
+esac

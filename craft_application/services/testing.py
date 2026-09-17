@@ -36,6 +36,23 @@ from craft_application.util.error_formatting import format_pydantic_errors
 
 from . import base
 
+USE_EXTERNAL_FETCH_SERVICE_FOR_TEST_ENV_VAR = (
+    "CRAFT_USE_EXTERNAL_FETCH_SERVICE_FOR_TEST"
+)
+_PROXY_CERT_ENV_VAR = "CRAFT_PROXY_CERT"
+_PROXY_CERT_FILENAME = "fetch-service-ca.crt"
+_PROXY_CERT_RUNNER_PATH = pathlib.PurePosixPath(
+    "/usr/local/share/ca-certificates/local-ca.crt"
+)
+_PROXY_ENVIRONMENT_VARIABLES = (
+    "HTTP_PROXY",
+    "http_proxy",
+    "HTTPS_PROXY",
+    "https_proxy",
+    "NO_PROXY",
+    "no_proxy",
+)
+
 
 class TestingService(base.AppService):
     """Service class for testing a project."""
@@ -218,9 +235,98 @@ class TestingService(base.AppService):
             artifacts=pack_state.artifacts,
             images=images,
         )
+        if os.getenv(USE_EXTERNAL_FETCH_SERVICE_FOR_TEST_ENV_VAR) == "1":
+            self._configure_external_fetch_service(spread_yaml, dest.parent)
 
         emit.trace(f"Writing processed spread file to {dest}")
         spread_yaml.to_yaml_file(dest)
+
+    def _configure_external_fetch_service(
+        self,
+        spread_yaml: models.SpreadYaml,
+        spread_dir: pathlib.Path,
+    ) -> None:
+        """Configure spread runners to use an external fetch-service session."""
+        spread_yaml.environment.update(
+            {
+                variable: f'$(HOST: echo "${variable}")'
+                for variable in _PROXY_ENVIRONMENT_VARIABLES
+            }
+        )
+        spread_yaml.environment["GOPROXY"] = "direct"
+
+        cert_setup = ""
+        if cert_str := os.getenv(_PROXY_CERT_ENV_VAR):
+            cert_path = pathlib.Path(cert_str)
+            if not cert_path.is_file():
+                raise CraftError(f"{cert_path} is not a valid certificate file.")
+
+            staged_cert = spread_dir / _PROXY_CERT_FILENAME
+            shutil.copyfile(cert_path, staged_cert)
+            runner_cert_source = (
+                pathlib.PurePosixPath("$PROJECT_PATH")
+                / spread_dir.relative_to(pathlib.Path.cwd())
+                / _PROXY_CERT_FILENAME
+            )
+            spread_yaml.environment.update(
+                {
+                    "REQUESTS_CA_BUNDLE": str(_PROXY_CERT_RUNNER_PATH),
+                    "CARGO_HTTP_CAINFO": str(_PROXY_CERT_RUNNER_PATH),
+                }
+            )
+            cert_setup = "\n".join(
+                (
+                    (
+                        f'install -D -m 0644 "{runner_cert_source}" '
+                        f"{_PROXY_CERT_RUNNER_PATH}"
+                    ),
+                    "/usr/sbin/update-ca-certificates > /dev/null",
+                    "mkdir -p /root/.pip",
+                    (
+                        f"printf '[global]\\ncert={_PROXY_CERT_RUNNER_PATH}\\n' "
+                        "> /root/.pip/pip.conf"
+                    ),
+                )
+            )
+
+        apt_setup = (
+            "if [ -d /etc/apt ]; then\n"
+            '  printf \'Acquire::http::Proxy "%s";\\n'
+            'Acquire::https::Proxy "%s";\\n\' '
+            '"$http_proxy" "$https_proxy" '
+            "> /etc/apt/apt.conf.d/99proxy\n"
+            "  rm -Rf /var/lib/apt/lists\n"
+            "  apt update\n"
+            "fi"
+        )
+        early_setup = "\n".join(
+            filter(
+                None,
+                (
+                    cert_setup,
+                    apt_setup,
+                ),
+            )
+        )
+        late_setup = (
+            "if command -v snap > /dev/null; then\n"
+            "  systemctl restart snapd\n"
+            '  snap set system proxy.http="$http_proxy"\n'
+            '  snap set system proxy.https="$https_proxy"\n'
+            "fi\n"
+            "if command -v lxc > /dev/null; then\n"
+            '  lxc config set core.proxy_http "$http_proxy"\n'
+            '  lxc config set core.proxy_https "$https_proxy"\n'
+            '  lxc config set core.proxy_ignore_hosts "$no_proxy"\n'
+            "fi"
+        )
+
+        for backend in spread_yaml.backends.values():
+            backend.prepare = "\n".join(
+                filter(
+                    None, (early_setup, getattr(backend, "prepare", None), late_setup)
+                )
+            )
 
     def _validate_system_images(
         self,
