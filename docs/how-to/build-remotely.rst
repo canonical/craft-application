@@ -1,5 +1,6 @@
 
 .. |star| replace:: package
+.. |lp-remote-build-guide| replace:: :external+launchpad:ref:`build-charms-in-launchpad`
 .. |app-command| replace:: <craft-app>
 .. |Starcraft| replace:: Craft Application
 

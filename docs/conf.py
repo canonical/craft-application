@@ -257,6 +257,10 @@ intersphinx_mapping = {
         "https://documentation.ubuntu.com/craft-store/latest",
         None,
     ),
+    "launchpad": (
+        "https://ubuntu.com/docs/launchpad",
+        None,
+    ),
     "starflow": (
         "https://documentation.ubuntu.com/starflow/latest", None
     ),
