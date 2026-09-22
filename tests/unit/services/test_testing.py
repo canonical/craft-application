@@ -178,6 +178,31 @@ def test_get_spread_command_ci_expression(
     assert command == cmdline
 
 
+def test_get_spread_command_ci_expression_generator(
+    mocker,
+    monkeypatch: pytest.MonkeyPatch,
+    testing_service: TestingService,
+):
+    monkeypatch.setenv("CI", "1")
+    mocker.patch("shutil.which", return_value="spread")
+    mock_run = mocker.patch("subprocess.run")
+
+    fake_distro = mocker.Mock()
+    fake_distro.distribution = "mydistro"
+    fake_distro.series = "100"
+
+    mocker.patch(
+        "craft_platforms.DistroBase.from_linux_distribution", return_value=fake_distro
+    )
+
+    expressions = (expression for expression in ["craft"])
+
+    command = testing_service._get_spread_command(test_expressions=expressions)
+
+    mock_run.assert_not_called()
+    assert command == ["spread", "craft:mydistro-100"]
+
+
 @pytest.mark.parametrize("spread_name", ["craft.spread"])
 def test_get_app_spread_executable_success(
     monkeypatch: pytest.MonkeyPatch,
