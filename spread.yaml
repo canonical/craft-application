@@ -237,6 +237,9 @@ prepare: |
       # exit 1
       ;;
   esac
+  # Avoid racing with snapd's own auto-refresh, which can leave an "auto-refresh"
+  # change in progress and make the snap refresh/install below fail.
+  snap watch --last=auto-refresh
   if snap list lxd; then
     snap refresh --channel=${lxd_channel} lxd
   else
