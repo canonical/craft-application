@@ -19,7 +19,7 @@ import dataclasses
 import pathlib
 import stat
 import textwrap
-from collections.abc import Iterable
+from collections.abc import Collection
 from textwrap import dedent
 from typing import Any
 from unittest import mock
@@ -56,7 +56,7 @@ def test_get_spread_command(
     shell: bool,
     shell_after: bool,
     debug: bool,
-    test_expressions: Iterable[str],
+    test_expressions: Collection[str],
     is_ci: bool,
 ):
     # Set the CI environment variable to 1 if is_ci, or empty otherwise.
