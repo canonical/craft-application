@@ -1,4 +1,10 @@
+# OSV Scanner configuration
 [[IgnoredVulns]]
-id = "CVE-2026-4539"
+id = "GHSA-pj65-3pf6-c5q4"
 ignoreUntil = 2027-01-01
-reason = "Low severity and only applies to docs & tests"
+reason = "python-apt is a transitive dependency pulled in as Ubuntu system tooling; not exploitable in this library's usage."
+
+[[IgnoredVulns]]
+id = "GHSA-rp8m-h266-53jh"
+ignoreUntil = 2027-01-01
+reason = "python-apt is a transitive dependency pulled in as Ubuntu system tooling; not exploitable in this library's usage."

@@ -1,7 +1,6 @@
 .. meta::
   :description: An explanation of the documentation system, process, and writing style and conventions in Craft Application.
 
-
 .. _explanation-documentation:
 
 About this documentation
@@ -11,7 +10,6 @@ The documentation is an essential part of Craft Application. We make documentati
 disciplined and principled part of engineering with its own architecture and quality
 standards.
 
-
 Documentation system and process
 --------------------------------
 
@@ -19,7 +17,6 @@ Craft Application practices docs-as-code. The document source files are written 
 reStructuredText markup and kept inside the Craft Application source code. Like the rest
 of the code, the documents are version-controlled in a Git repository and hosted on
 GitHub.
-
 The project uses Sphinx to compile the document sources into a static website of HTML
 web pages. The published documentation is hosted on the Read the Docs platform.
 
@@ -33,7 +30,6 @@ The Craft Application maintainers try and review every PR in a timely manner, ty
 within a week for PRs that complete an assigned issue. They aim to ensure that all
 contributions are reviewed thoroughly and thoughtfully.
 
-
 Writing styles and conventions
 ------------------------------
 
@@ -44,4 +40,4 @@ Application documents follow:
 - :external+starflow:ref:`how-to-starcraft-style-guide`
 - `Canonical Style Guide <https://docs.ubuntu.com/styleguide>`__
 - `reStructuredText syntax reference
-  <https://canonical-starter-pack.readthedocs-hosted.com/stable/reference/rst-syntax-reference>`__
+  <https://documentation.ubuntu.com/sphinx-stack/latest/reference/rst-syntax-reference>`__
