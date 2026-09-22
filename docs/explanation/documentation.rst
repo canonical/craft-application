@@ -35,6 +35,7 @@ Writing styles and conventions
 
 There is no single way to write, but there are guidelines and patterns that Craft
 Application documents follow:
+
 - `Diátaxis <https://diataxis.fr>`__
 - :external+starflow:ref:`how-to-starcraft-style-guide`
 - `Canonical Style Guide <https://docs.ubuntu.com/styleguide>`__

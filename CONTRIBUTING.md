@@ -114,7 +114,6 @@ labels. A Craft Application maintainer will then review the issue and assign it 
 
 #### Major changes
 
-
 If there's a large feature or fix you'd like to work on, contact us and the rest of the
 community in the [Starcraft Development Matrix
 space](https://matrix.to/#/#starcraft-development:ubuntu.com). It's possible that work
