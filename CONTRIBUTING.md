@@ -114,6 +114,7 @@ labels. A Craft Application maintainer will then review the issue and assign it 
 
 #### Major changes
 
+
 If there's a large feature or fix you'd like to work on, contact us and the rest of the
 community in the [Starcraft Development Matrix
 space](https://matrix.to/#/#starcraft-development:ubuntu.com). It's possible that work
@@ -291,10 +292,14 @@ Once your work is committed to your branch, push it to your fork:
 git push -u origin <branch-name>
 ```
 
-Finally, [open a PR](https://github.com/canonical/craft-application/compare) for it on
-GitHub. If your branch has one commit, GitHub will title the PR after it. If your branch
-has more than one commit, name the PR after the most significant. Once open, reviewers
-are assigned automatically to your work.
+On GitHub, [open a PR](https://github.com/canonical/craft-application/compare) for your
+branch in Craft Application.
+
+Format the PR title as a conventional commit. If your branch has only one commit, GitHub
+handles this automatically. If your branch has multiple commits, copy the title of the
+most important one.
+
+Once open, reviewers are assigned automatically to your work.
 
 ### Follow up for the review
 

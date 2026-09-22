@@ -21,10 +21,14 @@ endif
 include common.mk
 
 .PHONY: format
-format: format-ruff format-codespell format-prettier  ## Run all automatic formatters
+format: format-ruff format-codespell format-prettier format-shfmt format-tombi format-pre-commit  ## Run all automatic formatters
 
 .PHONY: lint
-lint: lint-ruff lint-ty lint-codespell lint-prettier lint-shellcheck lint-docs lint-twine lint-uv-lockfile  ## Run all linters
+.PHONY: lint
+lint: lint-code lint-docs lint-twine lint-uv-lockfile lint-actions  ## Run all linters
+
+.PHONY: lint-code
+lint-code: lint-ruff lint-ty lint-codespell lint-prettier lint-shellcheck lint-shfmt lint-tombi  ## Run code-specific linters
 
 .PHONY: pack
 pack: pack-pip  ## Build all packages
