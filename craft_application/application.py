@@ -123,9 +123,6 @@ class AppMetadata:
     enable_pro_support: bool = False
     """Whether this application supports Ubuntu Pro services."""
 
-    enable_build_slices: bool = False
-    """Whether this application supports build-slices."""
-
     allow_spread_yaml: bool = True
     """Whether the 'test' command can use the deprecated spread.yaml file.
 
@@ -144,6 +141,9 @@ class AppMetadata:
     Has no effect when the project directory is not inside a git repository,
     or when the project directory is the git root itself.
     """
+
+    enable_build_slices: bool = False
+    """Whether this application supports build-slices."""
 
     def __post_init__(self) -> None:
         setter = super().__setattr__

@@ -79,4 +79,4 @@ for validation or provide extra utility outside of the Pydantic model.
     :private-members:
     :show-inheritance:
     :exclude-members: name,title,version,summary,description,base,build_base,platforms,
-        license,package_repositories,parts
+        license,package_repositories,parts,build_parts

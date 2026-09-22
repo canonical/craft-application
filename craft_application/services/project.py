@@ -517,6 +517,15 @@ class ProjectService(base.AppService):
         project.setdefault("parts", {})
         part_name = f"{self._app.name}/build-slices"
         slices = project.get("build-slices", [])
+
+        if part_name in project["parts"]:
+            raise CraftValidationError(
+                f"{part_name!r} is reserved for top-level 'build-slices'.",
+                resolution=f"Rename the existing {part_name!r} part.",
+                logpath_report=False,
+                retcode=os.EX_DATAERR,
+            )
+
         # update dict in-place
         project["parts"][part_name] = {
             "plugin": "nil",

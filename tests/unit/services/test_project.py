@@ -1248,6 +1248,30 @@ def test_apply_build_slices(real_project_service: ProjectService, build_slices):
     }
 
 
+@pytest.mark.usefixtures("enable_build_slices")
+@pytest.mark.parametrize("app_metadata", [{"enable_build_slices": True}], indirect=True)
+def test_apply_build_slices_part_already_exists(real_project_service: ProjectService):
+    """Error when the build-slices part name already exists."""
+    part_name = f"{real_project_service._app.name}/build-slices"
+    project_dict: dict[str, Any] = {
+        "build-slices": ["bash_bins"],
+        "parts": {part_name: {"plugin": "nil"}},
+    }
+
+    with pytest.raises(
+        CraftValidationError, match=re.escape(f"{part_name!r} is reserved")
+    ):
+        real_project_service._apply_build_slices(project_dict)
+
+
+@pytest.mark.parametrize(
+    "app_metadata",
+    [
+        pytest.param({"enable_build_slices": True}, id="enabled"),
+        pytest.param({"enable_build_slices": False}, id="disabled"),
+    ],
+    indirect=True,
+)
 def test_apply_build_slices_no_slices(real_project_service: ProjectService):
     """No-op when build-slices aren't present."""
     project_dict: dict[str, Any] = {
