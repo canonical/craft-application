@@ -308,7 +308,7 @@ class ProjectService(base.AppService):
             return
         multi_base_platforms: set[str] = set()
         for name, data in platforms.items():
-            if not data:
+            if len(data) == 0:
                 base, _ = craft_platforms.parse_base_and_architecture(name)
                 if base:
                     multi_base_platforms.add(name)

@@ -36,8 +36,28 @@ Services
 - The testing service now handles multiple artifacts by defining variables
   ``CRAFT_ARTIFACT_<name>`` in the Spread test environment.
 
+- Add the Launchpad testing farm back-end to the testing service.
 
-7.2.0 (2028-08-11)
+Bug fixes
+=========
+
+- Hosts reporting ``armv8l`` (an ARMv8 processor running a 32-bit user space) are
+  now correctly identified as ``armhf``.
+
+
+7.2.1 (2026-09-01)
+------------------
+
+Bug fixes
+=========
+
+- Hosts reporting ``armv8l`` (an ARMv8 processor running a 32-bit user space) are
+  now correctly identified as ``armhf``.
+
+For a complete list of commits, check out the `7.2.1`_ release on GitHub.
+
+
+7.2.0 (2026-08-11)
 ------------------
 
 Application
@@ -59,6 +79,8 @@ Remote build
 Bug fixes
 =========
 
+- ``remote-build`` no longer raises an error when dangling symlinks are present in the
+  project repository.
 - Ignore .spread-reuse files when deciding if a source is outdated.
 - By default, trim documentation URLs so they display major version only.
 - Loading a project file that is not UTF-8 encoded now raises a clear error
@@ -1437,3 +1459,4 @@ For a complete list of commits, check out the `2.7.0`_ release on GitHub.
 .. _7.0.1: https://github.com/canonical/craft-application/releases/tag/7.0.1
 .. _7.1.0: https://github.com/canonical/craft-application/releases/tag/7.1.0
 .. _7.2.0: https://github.com/canonical/craft-application/releases/tag/7.2.0
+.. _7.2.1: https://github.com/canonical/craft-application/releases/tag/7.2.1

@@ -25,6 +25,25 @@ from craft_application.util.platforms import (
 )
 
 
+@pytest.mark.parametrize(
+    ("machine", "expected"),
+    [
+        ("aarch64", "arm64"),
+        ("armv7l", "armhf"),
+        # ARMv8 processor running in 32-bit LE mode
+        ("armv8l", "armhf"),
+        ("x86_64", "amd64"),
+    ],
+)
+def test_get_host_architecture(
+    monkeypatch: pytest.MonkeyPatch, machine: str, expected: str
+) -> None:
+    monkeypatch.setattr("platform.machine", lambda: machine)
+    util.get_host_architecture.cache_clear()
+    assert util.get_host_architecture() == expected
+    util.get_host_architecture.cache_clear()
+
+
 @pytest.mark.parametrize("arch", _ARCH_TRANSLATIONS_DEB_TO_PLATFORM.keys())
 def test_is_valid_architecture_true(arch):
     assert util.is_valid_architecture(arch)

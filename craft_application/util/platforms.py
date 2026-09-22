@@ -82,6 +82,7 @@ def is_managed_mode() -> bool:
 _ARCH_TRANSLATIONS_PLATFORM_TO_DEB = {
     "aarch64": "arm64",
     "armv7l": "armhf",
+    "armv8l": "armhf",  # ARMv8 processor running in 32-bit LE mode
     "i686": "i386",
     "ppc": "powerpc",
     "ppc64le": "ppc64el",
