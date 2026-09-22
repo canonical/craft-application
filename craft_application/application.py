@@ -30,6 +30,7 @@ from typing import TYPE_CHECKING, Annotated, Any, cast, final
 
 import annotated_types
 import craft_cli
+import craft_parts
 import craft_platforms
 from platformdirs import user_cache_path
 
@@ -121,6 +122,9 @@ class AppMetadata:
 
     enable_pro_support: bool = False
     """Whether this application supports Ubuntu Pro services."""
+
+    enable_build_slices: bool = False
+    """Whether this application supports build-slices."""
 
     allow_spread_yaml: bool = True
     """Whether the 'test' command can use the deprecated spread.yaml file.
@@ -632,7 +636,21 @@ class Application:
             )
 
     def _enable_craft_parts_features(self) -> None:
-        """Enable any specific craft-parts Feature that the application will need."""
+        """Enable any specific craft-parts Feature that the application will need.
+
+        Applications who override this should call `super()._enable_craft_parts_features()`
+        at the end of their override.
+        """
+        if self.app.enable_build_slices:
+            # enable build_slices while retaining features enabled by the application
+            current = craft_parts.Features()
+            if not current.enable_build_slices:
+                craft_parts.Features.reset()
+                craft_parts.Features(
+                    enable_overlay=current.enable_overlay,
+                    enable_partitions=current.enable_partitions,
+                    enable_build_slices=True,
+                )
 
     @final
     def _set_plugin_group(self) -> None:

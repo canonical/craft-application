@@ -64,6 +64,9 @@ This key determines the project's build environment.
 .. kitbash-field:: Project package_repositories
     :override-type: list[dict[str, Any]]
 
+.. kitbash-field:: Project build_slices
+    :override-type: list[str]
+
 
 Class documentation
 -------------------

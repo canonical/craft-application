@@ -1219,3 +1219,53 @@ def test_invalid_part_names_on_future_base(
 
     with pytest.raises(CraftValidationError, match=re.escape(part_name)):
         real_project_service._validate_user_provided_part_names(project_dict)
+
+
+@pytest.mark.usefixtures("enable_build_slices")
+@pytest.mark.parametrize("app_metadata", [{"enable_build_slices": True}], indirect=True)
+@pytest.mark.parametrize(
+    "build_slices",
+    [
+        pytest.param(["bash_bins", "base-files_base"], id="with-slices"),
+        pytest.param([], id="empty-slices"),
+    ],
+)
+def test_apply_build_slices(real_project_service: ProjectService, build_slices):
+    """Create a part for top-level build-slices."""
+    project_dict: dict[str, Any] = {
+        "build-slices": build_slices,
+        "parts": {"my-part": {"plugin": "nil"}},
+    }
+
+    real_project_service._apply_build_slices(project_dict)
+
+    assert project_dict["parts"] == {
+        "my-part": {"plugin": "nil"},
+        f"{real_project_service._app.name}/build-slices": {
+            "plugin": "nil",
+            "build-slices": build_slices,
+        },
+    }
+
+
+def test_apply_build_slices_no_slices(real_project_service: ProjectService):
+    """No-op when build-slices aren't present."""
+    project_dict: dict[str, Any] = {
+        "parts": {"my-part": {"plugin": "nil"}},
+    }
+
+    real_project_service._apply_build_slices(project_dict)
+
+    assert project_dict == {"parts": {"my-part": {"plugin": "nil"}}}
+
+
+# enable_build_slices fixture is *not* used
+def test_apply_build_slices_unsupported(real_project_service: ProjectService):
+    """Error when build-slices are unsupported."""
+    project_dict: dict[str, Any] = {
+        "build-slices": ["bash_bins", "base-files_base"],
+        "parts": {"my-part": {"plugin": "nil"}},
+    }
+
+    with pytest.raises(CraftValidationError, match="does not support 'build-slices'"):
+        real_project_service._apply_build_slices(project_dict)

@@ -39,6 +39,7 @@ def test_get_grammar_aware_part_keywords():
         "stage-packages",
         "build-snaps",
         "build-packages",
+        "build-slices",
         "build-environment",
         "build-attributes",
         "organize",

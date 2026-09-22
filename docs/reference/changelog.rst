@@ -23,12 +23,19 @@ Application
 
 - A new ``AppMetadata.allow_spread_yaml`` setting controls whether the ``test`` command
   can fall back to the deprecated ``spread.yaml``.
+- A new ``AppMetadata.enable_build_slices`` setting enables support for build slices.
 
 Commands
 ========
 
 - The ``spread.yaml`` file for the ``test`` command has been deprecated in favor
   of ``<app-name>-test.yaml``.
+
+Project
+=======
+
+- A new top-level ``build-slices`` key can be used to define build slices that are
+  used by many parts, to avoid repetition.
 
 Services
 ========
@@ -37,12 +44,6 @@ Services
   ``CRAFT_ARTIFACT_<name>`` in the Spread test environment.
 
 - Add the Launchpad testing farm back-end to the testing service.
-
-Bug fixes
-=========
-
-- Hosts reporting ``armv8l`` (an ARMv8 processor running a 32-bit user space) are
-  now correctly identified as ``armhf``.
 
 
 7.2.1 (2026-09-01)

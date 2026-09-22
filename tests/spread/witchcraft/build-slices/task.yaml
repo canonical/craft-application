@@ -1,0 +1,8 @@
+summary: test top-level and part-level build-slices
+
+execute: |
+  witchcraft pack
+
+restore: |
+  witchcraft clean
+  rm -f *.witchcraft

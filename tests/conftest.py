@@ -276,9 +276,29 @@ def app_metadata_docs() -> craft_application.AppMetadata:
 def enable_partitions() -> Iterator[craft_parts.Features]:
     """Enable the partitions feature in craft_parts for the relevant test."""
     enable_overlay = craft_parts.Features().enable_overlay
+    enable_build_slices = craft_parts.Features().enable_build_slices
 
     craft_parts.Features.reset()
-    yield craft_parts.Features(enable_overlay=enable_overlay, enable_partitions=True)
+    yield craft_parts.Features(
+        enable_overlay=enable_overlay,
+        enable_partitions=True,
+        enable_build_slices=enable_build_slices,
+    )
+    craft_parts.Features.reset()
+
+
+@pytest.fixture
+def enable_build_slices() -> Iterator[craft_parts.Features]:
+    """Enable the build_slices feature in craft_parts for the relevant test."""
+    enable_overlay = craft_parts.Features().enable_overlay
+    enable_partitions = craft_parts.Features().enable_partitions
+
+    craft_parts.Features.reset()
+    yield craft_parts.Features(
+        enable_overlay=enable_overlay,
+        enable_partitions=enable_partitions,
+        enable_build_slices=True,
+    )
     craft_parts.Features.reset()
 
 
@@ -289,8 +309,14 @@ def enable_overlay() -> Iterator[craft_parts.Features]:
         pytest.skip("fuse-overlayfs not installed, skipping overlay tests.")
 
     enable_partitions = craft_parts.Features().enable_partitions
+    enable_build_slices = craft_parts.Features().enable_build_slices
+
     craft_parts.Features.reset()
-    yield craft_parts.Features(enable_overlay=True, enable_partitions=enable_partitions)
+    yield craft_parts.Features(
+        enable_overlay=True,
+        enable_partitions=enable_partitions,
+        enable_build_slices=enable_build_slices,
+    )
     craft_parts.Features.reset()
 
 

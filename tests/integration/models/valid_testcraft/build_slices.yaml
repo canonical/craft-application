@@ -1,0 +1,13 @@
+name: build-slices-project
+version: "0.0"
+adopt-info: my-part
+build-slices:
+  - bash_bins
+  - base-files_base
+platforms:
+  amd64:
+    build-on: [amd64]
+    build-for: [amd64]
+parts:
+  my-part:
+    plugin: nil

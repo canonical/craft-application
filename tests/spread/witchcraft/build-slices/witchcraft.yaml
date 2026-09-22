@@ -1,0 +1,28 @@
+name: build-slices
+base: ubuntu@26.04
+version: "1.0"
+summary: test
+description: Exercise build-slices.
+
+platforms:
+  platform-independent:
+    build-on: [amd64]
+    build-for: [amd64]
+
+# declare top-level build slices
+build-slices:
+  - bash_bins
+  - base-files_base
+
+parts:
+  my-part:
+    plugin: nil
+    # also declare build-slices in a part
+    build-slices:
+      - coreutils_bins
+    override-build: |
+      # call a program from a top-level build-slice
+      /usr/bin/bash --version
+
+      # call a program from a part-level build-slice
+      /usr/bin/ls --version

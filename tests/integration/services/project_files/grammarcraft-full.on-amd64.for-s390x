@@ -72,3 +72,8 @@ parts:
         owner: 456
         group: 456
         mode: "777"
+  myslicepart:
+    plugin: nil
+    build-slices:
+      - s390x-package_s390x-slice-1
+      - s390x-package_s390x-slice-2
