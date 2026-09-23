@@ -59,6 +59,7 @@ def test_get_spread_command(
     test_expressions: Iterable[str],
     is_ci: bool,
 ):
+    test_expressions = list(test_expressions)
     # Set the CI environment variable to 1 if is_ci, or empty otherwise.
     monkeypatch.setenv("CI", "1" * int(is_ci))
     mocker.patch("shutil.which", return_value="/usr/local/bin/craft.spread")
@@ -176,6 +177,46 @@ def test_get_spread_command_ci_expression(
             )
         ]
     assert command == cmdline
+
+
+def test_get_spread_command_ci_expression_generator(
+    mocker,
+    monkeypatch: pytest.MonkeyPatch,
+    testing_service: TestingService,
+):
+    fake_proc = mock.Mock()
+    fake_proc.stdout = (
+        "backend:system:my/suite/\n"
+        "craft:mydistro-100:my/suite/\n"
+        "craft:mydistro-101:my/suite/"
+    )
+
+    monkeypatch.setenv("CI", "1")
+    mocker.patch("shutil.which", return_value="spread")
+    mock_run = mocker.patch("subprocess.run", return_value=fake_proc)
+
+    fake_distro = mocker.Mock()
+    fake_distro.distribution = "mydistro"
+    fake_distro.series = "100"
+
+    mocker.patch(
+        "craft_platforms.DistroBase.from_linux_distribution", return_value=fake_distro
+    )
+
+    command = testing_service._get_spread_command(
+        test_expressions=(expression for expression in ["exp1", "exp2"])
+    )
+
+    assert mock_run.mock_calls == [
+        mock.call(
+            ["spread", "-list", "exp1", "exp2"],
+            capture_output=True,
+            text=True,
+            check=True,
+            cwd=pathlib.Path.cwd(),
+        )
+    ]
+    assert command == ["spread", "craft:mydistro-100:my/suite/"]
 
 
 @pytest.mark.parametrize("spread_name", ["craft.spread"])
