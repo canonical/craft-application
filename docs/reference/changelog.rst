@@ -47,8 +47,8 @@ Services
 
 - Add the Launchpad testing farm back-end to the testing service.
 
-- The ``test`` command can proxy runner traffic through a fetch-service session
-  when ``CRAFT_USE_EXTERNAL_FETCH_SERVICE_FOR_TEST`` is set.
+- The testing service will proxy runner traffic through a fetch-service session
+  when ``CRAFT_USE_EXTERNAL_FETCH_SERVICE`` is set.
 
 For a complete list of commits, check out the `7.3.0`_ release on GitHub.
 
