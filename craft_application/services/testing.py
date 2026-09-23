@@ -23,6 +23,7 @@ import shlex
 import shutil
 import subprocess
 import tempfile
+import textwrap
 from collections.abc import Iterable
 
 import craft_platforms
@@ -50,6 +51,32 @@ _PROXY_ENVIRONMENT_VARIABLES = (
     "NO_PROXY",
     "no_proxy",
 )
+
+
+# Base snippets to configure a proxy inside spread runners
+_APT_SETUP = textwrap.dedent("""
+    if [ -d /etc/apt ]; then
+      printf 'Acquire::http::Proxy "%s";\\nAcquire::https::Proxy "%s";\\n' "$http_proxy" "$https_proxy" > /etc/apt/apt.conf.d/99proxy
+      rm -Rf /var/lib/apt/lists
+      apt update
+    fi
+    """).strip()
+
+_SNAPD_SETUP = textwrap.dedent("""
+    if command -v snap > /dev/null; then
+      systemctl restart snapd
+      snap set system proxy.http="$http_proxy"
+      snap set system proxy.https="$https_proxy"
+    fi
+    """).strip()
+
+_LXD_SETUP = textwrap.dedent("""
+    if command -v lxc > /dev/null; then
+      lxc config set core.proxy_http "$http_proxy"
+      lxc config set core.proxy_https "$https_proxy"
+      lxc config set core.proxy_ignore_hosts "$no_proxy"
+    fi
+    """).strip()
 
 
 class TestingService(base.AppService):
@@ -287,34 +314,9 @@ class TestingService(base.AppService):
                 )
             )
 
-        apt_setup = (
-            "if [ -d /etc/apt ]; then\n"
-            '  printf \'Acquire::http::Proxy "%s";\\n'
-            'Acquire::https::Proxy "%s";\\n\' '
-            '"$http_proxy" "$https_proxy" '
-            "> /etc/apt/apt.conf.d/99proxy\n"
-            "  rm -Rf /var/lib/apt/lists\n"
-            "  apt update\n"
-            "fi"
-        )
-        snapd_setup = (
-            "if command -v snap > /dev/null; then\n"
-            "  systemctl restart snapd\n"
-            '  snap set system proxy.http="$http_proxy"\n'
-            '  snap set system proxy.https="$https_proxy"\n'
-            "fi\n"
-        )
-        lxd_setup = (
-            "if command -v lxc > /dev/null; then\n"
-            '  lxc config set core.proxy_http "$http_proxy"\n'
-            '  lxc config set core.proxy_https "$https_proxy"\n'
-            '  lxc config set core.proxy_ignore_hosts "$no_proxy"\n'
-            "fi"
-        )
-
         for backend in spread_yaml.backends.values():
             existing_prepare = str(getattr(backend, "prepare", ""))
-            session_setup = f"{cert_setup}\n{apt_setup}\n{snapd_setup}\n{lxd_setup}"
+            session_setup = f"{cert_setup}\n{_APT_SETUP}\n{_SNAPD_SETUP}\n{_LXD_SETUP}"
             backend.prepare = f"{session_setup}\n{existing_prepare}"
 
     def _validate_system_images(
