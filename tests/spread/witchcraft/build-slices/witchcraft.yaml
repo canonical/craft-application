@@ -29,4 +29,4 @@ parts:
 
     # workaround for https://github.com/canonical/craft-parts/pull/1737
     stage-slices:
-      - base-files_bins
+      - base-files_base
