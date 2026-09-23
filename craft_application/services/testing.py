@@ -32,13 +32,11 @@ from craft_cli import CraftError, emit
 
 from craft_application import models, util
 from craft_application.errors import TestFileError
+from craft_application.services.fetch import EXTERNAL_FETCH_SERVICE_ENV_VAR
 from craft_application.util.error_formatting import format_pydantic_errors
 
 from . import base
 
-USE_EXTERNAL_FETCH_SERVICE_FOR_TEST_ENV_VAR = (
-    "CRAFT_USE_EXTERNAL_FETCH_SERVICE_FOR_TEST"
-)
 _PROXY_CERT_ENV_VAR = "CRAFT_PROXY_CERT"
 _PROXY_CERT_FILENAME = "fetch-service-ca.crt"
 _PROXY_CERT_RUNNER_PATH = pathlib.PurePosixPath(
@@ -235,7 +233,7 @@ class TestingService(base.AppService):
             artifacts=pack_state.artifacts,
             images=images,
         )
-        if os.getenv(USE_EXTERNAL_FETCH_SERVICE_FOR_TEST_ENV_VAR) == "1":
+        if os.getenv(EXTERNAL_FETCH_SERVICE_ENV_VAR) == "1":
             self._configure_external_fetch_service(spread_yaml, dest.parent)
 
         emit.trace(f"Writing processed spread file to {dest}")

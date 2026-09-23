@@ -39,19 +39,14 @@ prepare: |
 execute: |
   proxy_url=$(cat session_proxy_url.txt)
 
-  testcraft pack
-
   # Configure "testcraft test" to set up the spread runners to use the external
   # fetch-service session.
-  export CRAFT_USE_EXTERNAL_FETCH_SERVICE_FOR_TEST=1
+  export CRAFT_USE_EXTERNAL_FETCH_SERVICE=1
   export CRAFT_PROXY_CERT=/var/snap/fetch-service/current/local-ca.crt
   export HTTP_PROXY="$proxy_url"
   export http_proxy="$proxy_url"
   export HTTPS_PROXY="$proxy_url"
   export https_proxy="$proxy_url"
-  # This needs to be set because 'testcraft test' will start up the lxd instance, which
-  # will pick up the HTTP_PROXY variables.
-  export CRAFT_USE_EXTERNAL_FETCH_SERVICE=1
 
   testcraft test --verbosity=debug
   test -f fetch-service-test*.testcraft

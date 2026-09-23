@@ -30,10 +30,8 @@ import craft_platforms
 import pytest
 from craft_application import models, util
 from craft_application.errors import TestFileError, YamlError
-from craft_application.services.testing import (
-    USE_EXTERNAL_FETCH_SERVICE_FOR_TEST_ENV_VAR,
-    TestingService,
-)
+from craft_application.services.fetch import EXTERNAL_FETCH_SERVICE_ENV_VAR
+from craft_application.services.testing import TestingService
 from craft_cli import CraftError
 
 
@@ -318,7 +316,7 @@ def test_process_spread_yaml_external_fetch_service(
         "_get_backend",
         return_value=models.SpreadBackend(type="adhoc", prepare="existing setup"),
     )
-    monkeypatch.setenv(USE_EXTERNAL_FETCH_SERVICE_FOR_TEST_ENV_VAR, "1")
+    monkeypatch.setenv(EXTERNAL_FETCH_SERVICE_ENV_VAR, "1")
     proxy_cert = tmp_path / "proxy-cert"
     proxy_cert.touch()
     monkeypatch.setenv("CRAFT_PROXY_CERT", str(proxy_cert))
@@ -388,7 +386,7 @@ def test_process_spread_yaml_external_fetch_service_invalid_certificate(
         "_get_backend",
         return_value=models.SpreadBackend(type="adhoc"),
     )
-    monkeypatch.setenv(USE_EXTERNAL_FETCH_SERVICE_FOR_TEST_ENV_VAR, "1")
+    monkeypatch.setenv(EXTERNAL_FETCH_SERVICE_ENV_VAR, "1")
     monkeypatch.setenv("CRAFT_PROXY_CERT", str(tmp_path / "missing-cert"))
     monkeypatch.chdir(tmp_path)
 
@@ -420,7 +418,7 @@ def test_process_spread_yaml_external_fetch_service_without_backend_prepare(
         "_get_backend",
         return_value=models.SpreadBackend(type="adhoc"),
     )
-    monkeypatch.setenv(USE_EXTERNAL_FETCH_SERVICE_FOR_TEST_ENV_VAR, "1")
+    monkeypatch.setenv(EXTERNAL_FETCH_SERVICE_ENV_VAR, "1")
     monkeypatch.chdir(tmp_path)
 
     dest = tmp_path / "processed-spread.yaml"

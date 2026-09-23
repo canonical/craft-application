@@ -58,14 +58,10 @@ configure the following environment variables before invoking the ``pack`` or
         accessible by |app|.
     * - ``CRAFT_USE_EXTERNAL_FETCH_SERVICE``
       - Must be ``1`` to use the session while building the artifact.
-    * - ``CRAFT_USE_EXTERNAL_FETCH_SERVICE_FOR_TEST``
-      - Must be ``1`` to use the session while running the tests.
 
-The two ``CRAFT_USE_EXTERNAL_FETCH_SERVICE`` variables are independent. Set both
-to ``1`` to use the external session while building the artifact and running its
-tests. When ``CRAFT_USE_EXTERNAL_FETCH_SERVICE_FOR_TEST`` is set, |app| copies
-the certificate specified by ``CRAFT_PROXY_CERT``, if set, to each spread runner
-and configures its package managers, snapd, and LXD to use the proxy.
+If ``CRAFT_USE_EXTERNAL_FETCH_SERVICE`` is set when running the ``test``command, |app|
+will copy the certificate specified by ``CRAFT_PROXY_CERT``, if set, to each spread runner
+and configure its package managers, snapd, and LXD to use the proxy.
 
 Because |app| has no control over the Fetch Service session in this mode, it
 can't create a session report.
