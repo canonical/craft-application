@@ -118,3 +118,16 @@ def test_humanize_list_sorted():
     assert string.humanize_list(input_list, "and") == expected_list_sorted
     assert string.humanize_list(input_list, "and", sort=True) == expected_list_sorted
     assert string.humanize_list(input_list, "and", sort=False) == expected_list_unsorted
+
+
+def test_humanize_list_empty_generator():
+    """Verify empty generators return an empty string."""
+    assert string.humanize_list((item for item in ()), "and") == ""
+
+
+def test_humanize_list_generator():
+    """Verify generators are handled without forcing list callers."""
+    assert (
+        string.humanize_list((item for item in ("foo", "bar")), "and")
+        == "'bar' and 'foo'"
+    )
