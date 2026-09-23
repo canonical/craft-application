@@ -59,6 +59,7 @@ def test_get_spread_command(
     test_expressions: Iterable[str],
     is_ci: bool,
 ):
+    test_expressions = list(test_expressions)
     # Set the CI environment variable to 1 if is_ci, or empty otherwise.
     monkeypatch.setenv("CI", "1" * int(is_ci))
     mocker.patch("shutil.which", return_value="/usr/local/bin/craft.spread")
