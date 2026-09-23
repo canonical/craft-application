@@ -26,3 +26,7 @@ parts:
 
       # call a program from a part-level build-slice
       /usr/bin/ls --version
+
+    # workaround for https://github.com/canonical/craft-parts/pull/1737
+    stage-slices:
+      - base-files_bins
