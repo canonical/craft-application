@@ -1,0 +1,10 @@
+backends:
+  craft:
+    type: craft
+    allocate: "false"
+    systems:
+      - ubuntu-24.04:
+
+suites:
+  tests/spread/my-suite/:
+    summary: Verify the external fetch service proxy in a spread runner.
