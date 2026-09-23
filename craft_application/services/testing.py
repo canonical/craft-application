@@ -320,6 +320,7 @@ class TestingService(base.AppService):
         cwd: pathlib.Path | None = None,
     ) -> list[str]:
         """Get the full spread command to run."""
+        test_expressions = list(test_expressions)
         cmd = [self._get_spread_executable()]
         if shell:
             cmd.append("-shell")
@@ -332,7 +333,7 @@ class TestingService(base.AppService):
         craft_prefix = f"craft:{ci_system}" if ci_system else "craft"
         spread_dir = cwd or pathlib.Path.cwd()
 
-        if self._running_on_ci() and list(test_expressions) in (["craft"], ["craft:"]):
+        if self._running_on_ci() and test_expressions in (["craft"], ["craft:"]):
             # Set craft backend and host system to avoid job expansion.
             cmd.append(craft_prefix)
         elif test_expressions:
@@ -350,7 +351,7 @@ class TestingService(base.AppService):
                     )
 
             # User provided test expressions are passed to spread.
-            cmd.extend(list(test_expressions))
+            cmd.extend(test_expressions)
         else:
             # Use the craft backend. If running on CI, also set the system.
             cmd.append(craft_prefix)
