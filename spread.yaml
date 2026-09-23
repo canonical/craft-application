@@ -212,6 +212,16 @@ prepare: |
   sudo snap install snapd || sudo snap refresh snapd
   sudo snap wait system seed.loaded
 
+  # Prevent snapd from auto-refreshing snaps while we work, then wait for any
+  # auto-refresh already in progress to finish. Without this, installs and
+  # refreshes below can fail with:
+  # error: snap "lxd" has "auto-refresh" change in progress
+  sudo snap refresh --hold
+  # Don't let a failed watch abort prepare; just dump the journal for debugging.
+  if ! sudo snap watch --last=auto-refresh?; then
+    journalctl -xe
+  fi
+
   sudo snap install --dangerous --classic tests/spread/*$(dpkg --print-architecture).snap
 
   # Select older LXD channels for older bases.
