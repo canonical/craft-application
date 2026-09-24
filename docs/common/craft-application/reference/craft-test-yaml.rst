@@ -260,7 +260,7 @@ instances for tests. Other backends can be manually specified.
     :skip-examples:
 
     A shell script executed on the backend system after all tests finish. This should
-    only be used to run backend-specific preparation. It is *not compatible* with the
+    only be used for backend-specific cleanup or restoration. It is *not compatible* with the
     ``craft`` backend.
 
     **Examples**
