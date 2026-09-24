@@ -16,7 +16,7 @@ In contrast to native Spread files, :substitution-code:`|app-command|-test.yaml`
 that are managed directly by |Starcraft|:
 
 - ``path``: Managed exclusively by |Starcraft| to point to the workspace directory.
-- ``project``: Inferred automatically from the project name in your craft configuration.
+- ``project``: Set to ``craft-test`` in the generated Spread configuration.
 - Top-level ``environment``: Injected dynamically by |Starcraft| with runtime variables
   such as ``CRAFT_ARTIFACT`` and ``PROJECT_PATH``.
 - ``include``: Not supported.
