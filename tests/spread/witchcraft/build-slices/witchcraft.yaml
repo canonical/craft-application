@@ -16,8 +16,13 @@ build-slices:
 parts:
   my-part:
     plugin: nil
+
     # declare a part-level build slice
     build-slices:
       - base-files_release-info # for /etc/os-release
     override-build: |
       cp /etc/os-release ${CRAFT_PART_INSTALL}/os-release
+
+    # workaround for https://github.com/canonical/craft-parts/pull/1737
+    stage-slices:
+      - bash_bins
