@@ -250,7 +250,7 @@ instances for tests. Other backends can be manually specified.
     .. code-block:: yaml
 
         backends:
-          craft:
+          openstack:
             prepare: |
               apt-get update
 
@@ -268,7 +268,7 @@ instances for tests. Other backends can be manually specified.
     .. code-block:: yaml
 
         backends:
-          craft:
+          openstack:
             restore: |
               apt-get clean
 
@@ -284,7 +284,7 @@ instances for tests. Other backends can be manually specified.
     .. code-block:: yaml
 
         backends:
-          craft:
+          openstack:
             debug: |
               cat /var/log/syslog
 
@@ -300,7 +300,7 @@ instances for tests. Other backends can be manually specified.
     .. code-block:: yaml
 
         backends:
-          craft:
+          openstack:
             prepare-each: |
               systemctl restart test-service
 
@@ -316,7 +316,7 @@ instances for tests. Other backends can be manually specified.
     .. code-block:: yaml
 
         backends:
-          craft:
+          openstack:
             restore-each: |
               systemctl stop test-service
 
@@ -332,7 +332,7 @@ instances for tests. Other backends can be manually specified.
     .. code-block:: yaml
 
         backends:
-          craft:
+          openstack:
             debug-each: |
               systemctl status test-service
 
