@@ -10,7 +10,7 @@ This reference describes the usage of and provides examples for every key in a
 |Starcraft| test configuration file, :substitution-code:`|app-command|-test.yaml`.
 
 When you run :substitution-code:`|app-command| test`, |Starcraft| reads this file and generates a
-temporary configuration file for Spread to execute integration and functional tests.
+temporary configuration file for Spread to run integration and functional tests.
 
 In contrast to native Spread files, :substitution-code:`|app-command|-test.yaml` disallows several keys
 that are managed directly by |Starcraft|:
