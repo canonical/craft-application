@@ -369,7 +369,8 @@ settings, it is specified as a mapping under the backend ``systems`` list.
 
     A custom container or virtual machine image to use for this system on non-``craft``
     backends.
-    For the ``craft`` backend, this value overrides the image selected by |Starcraft| for the system.
+    In |app-command|\ -test.yaml, the ``craft`` backend uses this value to override the
+    image selected by |Starcraft| for the system.
 
     **Examples**
 
