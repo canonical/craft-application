@@ -29,6 +29,7 @@ import pydantic
 from craft_cli import emit
 from craft_parts.constraints import ChiselSliceStr
 from craft_providers.errors import BaseConfigurationError
+from pydantic.json_schema import SkipJsonSchema
 from typing_extensions import Self
 
 from craft_application.models import base
@@ -234,12 +235,12 @@ class Project(base.CraftBaseModel):
     formats are supported.
     """
 
-    build_slices: Annotated[
-        list[ChiselSliceStr] | None, pydantic.json_schema.SkipJsonSchema
-    ] = pydantic.Field(
-        default=None,
-        description="The list of Chisel slices to make available during the build.",
-        examples=["[bash_bins, base-files_base]"],
+    build_slices: Annotated[list[ChiselSliceStr] | None, SkipJsonSchema()] = (
+        pydantic.Field(
+            default=None,
+            description="The list of Chisel slices to make available during the build.",
+            examples=["[bash_bins, base-files_base]"],
+        )
     )
     """The list of Chisel slices to make available during the build.
 
