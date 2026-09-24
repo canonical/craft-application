@@ -15,21 +15,13 @@ Changelog
 
     For a complete list of commits, check out the `1.2.3`_ release on GitHub.
 
-7.3.0 (unreleased)
+7.4.0 (unreleased)
 ------------------
 
 Application
 ===========
 
-- A new ``AppMetadata.allow_spread_yaml`` setting controls whether the ``test`` command
-  can fall back to the deprecated ``spread.yaml``.
 - A new ``AppMetadata.enable_build_slices`` setting enables support for build slices.
-
-Commands
-========
-
-- The ``spread.yaml`` file for the ``test`` command has been deprecated in favor
-  of ``<app-name>-test.yaml``.
 
 Project
 =======
@@ -37,13 +29,45 @@ Project
 - A new top-level ``build-slices`` key can be used to define build slices that are
   used by many parts, to avoid repetition.
 
+..  For a complete list of commits, check out the `1.2.3`_ release on GitHub.
+
+
+7.3.0 (2026-09-23)
+------------------
+
+Application
+===========
+
+- A new ``AppMetadata.allow_spread_yaml`` setting controls whether the ``test`` command
+  can fall back to the deprecated ``spread.yaml``.
+
+- Artifact digests are now computed by reading files in chunks instead of
+  loading them entirely into memory.
+
+Commands
+========
+
+- The ``spread.yaml`` file for the ``test`` command has been deprecated in favor
+  of ``<app-name>-test.yaml``.
+
+- The ``init`` command now supports Git features.
+
+- The ``pack`` command no longer packages projects that define no parts.
+
 Services
 ========
 
 - The testing service now handles multiple artifacts by defining variables
   ``CRAFT_ARTIFACT_<name>`` in the Spread test environment.
 
+- The testing service generates the Launchpad test back-end.
+
 - Add the Launchpad testing farm back-end to the testing service.
+
+- The testing service will proxy runner traffic through a fetch-service session
+  when ``CRAFT_USE_EXTERNAL_FETCH_SERVICE`` is set.
+
+For a complete list of commits, check out the `7.3.0`_ release on GitHub.
 
 
 7.2.1 (2026-09-01)
@@ -1461,3 +1485,4 @@ For a complete list of commits, check out the `2.7.0`_ release on GitHub.
 .. _7.1.0: https://github.com/canonical/craft-application/releases/tag/7.1.0
 .. _7.2.0: https://github.com/canonical/craft-application/releases/tag/7.2.0
 .. _7.2.1: https://github.com/canonical/craft-application/releases/tag/7.2.1
+.. _7.3.0: https://github.com/canonical/craft-application/releases/tag/7.3.0
