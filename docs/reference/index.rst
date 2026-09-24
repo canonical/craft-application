@@ -15,3 +15,4 @@ Reference
    remote-builds
    services/index
    fetch-service
+   craft-test-yaml
