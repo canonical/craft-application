@@ -21,7 +21,7 @@ that are managed directly by |Starcraft|:
   such as ``CRAFT_ARTIFACT`` and ``PROJECT_PATH``.
 - ``include``: Not supported.
 
-In addition, some subkeys of ``backend`` are allowed for other backends, but not for
+In addition, some child keys of ``backend`` are allowed for other backends, but not for
 the ``craft`` backend.
 
 .. _reference-craft-test-yaml-top-level-keys:
@@ -29,7 +29,7 @@ the ``craft`` backend.
 Top-level keys
 --------------
 
-Top-level keys define global exclusion patterns, setup and teardown scripts, and
+Top-level keys define global exclusion patterns, prepare and restore scripts, and
 execution timeouts.
 
 .. py:currentmodule:: craft_application.models.spread
@@ -496,7 +496,7 @@ directory containing the tests and end with a trailing forward slash (/).
     :override-description:
     :skip-examples:
 
-    A shell script executed if a suite setup or teardown step encounters an error.
+    A shell script executed if a suite prepare or restore step encounters an error.
 
     **Examples**
 
