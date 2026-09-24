@@ -23,7 +23,7 @@ import pathlib
 import signal
 import sys
 import traceback
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from functools import cached_property
 from importlib import metadata
 from typing import TYPE_CHECKING, Annotated, Any, cast, final
@@ -645,12 +645,10 @@ class Application:
             # enable build_slices while retaining features enabled by the application
             current = craft_parts.Features()
             if not current.enable_build_slices:
+                features = asdict(current)
+                features["enable_build_slices"] = True
                 craft_parts.Features.reset()
-                craft_parts.Features(
-                    enable_overlay=current.enable_overlay,
-                    enable_partitions=current.enable_partitions,
-                    enable_build_slices=True,
-                )
+                craft_parts.Features(**features)
 
     @final
     def _set_plugin_group(self) -> None:
