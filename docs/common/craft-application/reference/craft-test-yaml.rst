@@ -380,6 +380,10 @@ settings, it is specified as a mapping under the backend ``systems`` list.
             systems:
               - ubuntu-24.04:
                   image: ubuntu:24.04
+          craft:
+            systems:
+              - ubuntu-24.04:
+                  image: custom-ubuntu-24.04
 
 
 .. _reference-craft-test-yaml-suite-keys:
