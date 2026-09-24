@@ -11,6 +11,7 @@ platforms:
 
 # declare a top-level build slice
 build-slices:
+  - bash_bins      # for build.sh to work
   - coreutils_bins # for 'cp'
 
 parts:
@@ -25,4 +26,4 @@ parts:
 
     # workaround for https://github.com/canonical/craft-parts/pull/1737
     stage-slices:
-      - bash_bins
+      - base-files_copyright
