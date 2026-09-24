@@ -505,7 +505,7 @@ class ProjectService(base.AppService):
             return
 
         # Craft parts will also error on this, but the error would be confusing because
-        # the user won't have an `<app-name>/build-slices` part in their project file.
+        # the user won't have a `craft/build-slices` part in their project file.
         if not self._app.enable_build_slices:
             raise CraftValidationError(
                 f"{self._app.name.title()} does not support 'build-slices'.",
@@ -515,7 +515,7 @@ class ProjectService(base.AppService):
             )
 
         project.setdefault("parts", {})
-        part_name = f"{self._app.name}/build-slices"
+        part_name = "craft/build-slices"
         slices = project.get("build-slices", [])
 
         if part_name in project["parts"]:

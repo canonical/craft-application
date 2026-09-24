@@ -644,13 +644,10 @@ class Application:
         if self.app.enable_build_slices:
             # enable build_slices while retaining features enabled by the application
             current = craft_parts.Features()
-            if not current.enable_build_slices:
+            if not current["enable_build_slices"]:
+                current["enable_build_slices"] = True
                 craft_parts.Features.reset()
-                craft_parts.Features(
-                    enable_overlay=current.enable_overlay,
-                    enable_partitions=current.enable_partitions,
-                    enable_build_slices=True,
-                )
+                craft_parts.Features(**current)
 
     @final
     def _set_plugin_group(self) -> None:

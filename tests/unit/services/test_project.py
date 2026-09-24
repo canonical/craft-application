@@ -1241,7 +1241,7 @@ def test_apply_build_slices(real_project_service: ProjectService, build_slices):
 
     assert project_dict["parts"] == {
         "my-part": {"plugin": "nil"},
-        f"{real_project_service._app.name}/build-slices": {
+        "craft/build-slices": {
             "plugin": "nil",
             "build-slices": build_slices,
         },
@@ -1252,7 +1252,7 @@ def test_apply_build_slices(real_project_service: ProjectService, build_slices):
 @pytest.mark.parametrize("app_metadata", [{"enable_build_slices": True}], indirect=True)
 def test_apply_build_slices_part_already_exists(real_project_service: ProjectService):
     """Error when the build-slices part name already exists."""
-    part_name = f"{real_project_service._app.name}/build-slices"
+    part_name = "craft/build-slices"
     project_dict: dict[str, Any] = {
         "build-slices": ["bash_bins"],
         "parts": {part_name: {"plugin": "nil"}},

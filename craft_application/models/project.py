@@ -234,7 +234,9 @@ class Project(base.CraftBaseModel):
     formats are supported.
     """
 
-    build_slices: list[ChiselSliceStr] | None = pydantic.Field(
+    build_slices: Annotated[
+        list[ChiselSliceStr] | None, pydantic.json_schema.SkipJsonSchema
+    ] = pydantic.Field(
         default=None,
         description="The list of Chisel slices to make available during the build.",
         examples=["[bash_bins, base-files_base]"],

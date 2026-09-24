@@ -8,6 +8,13 @@ systems:
 execute: |
   witchcraft pack
 
+  # verify the build slices produced something
+  mkdir output
+  tar --extract --file build-slices-1.0-platform-independent.witchcraft --directory output
+  test -f output/os-release
+  grep '^NAME="Ubuntu"' output/os-release
+
 restore: |
   witchcraft clean
   rm -f *.witchcraft
+  rm -rf output
