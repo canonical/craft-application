@@ -367,6 +367,7 @@ settings, it is specified as a mapping under the backend ``systems`` list.
     :override-description:
     :skip-examples:
 
+    A custom container or virtual machine image to use for this system.
     For the ``craft`` backend, this value overrides the image selected by |Starcraft| for the system.
 
     **Examples**
