@@ -235,12 +235,10 @@ class Project(base.CraftBaseModel):
     formats are supported.
     """
 
-    build_slices: Annotated[list[ChiselSliceStr] | None, SkipJsonSchema()] = (
-        pydantic.Field(
-            default=None,
-            description="The list of Chisel slices to make available during the build.",
-            examples=["[bash_bins, base-files_base]"],
-        )
+    build_slices: SkipJsonSchema[list[ChiselSliceStr] | None] = pydantic.Field(
+        default=None,
+        description="The list of Chisel slices to make available during the build.",
+        examples=["[bash_bins, base-files_base]"],
     )
     """The list of Chisel slices to make available during the build.
 
