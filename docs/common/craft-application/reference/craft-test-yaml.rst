@@ -369,8 +369,8 @@ settings, it is specified as a mapping under the backend ``systems`` list.
 
     A custom container or virtual machine image to use for this system on non-``craft``
     backends.
-    In |app-command|\ -test.yaml, the ``craft`` backend uses this value to override the
-    image selected by |Starcraft| for the system.
+    In |app-command|\ -test.yaml, the ``craft`` backend uses the backend's image
+    identifier format to override the image selected by |Starcraft| for the system.
 
     **Examples**
 
@@ -384,7 +384,7 @@ settings, it is specified as a mapping under the backend ``systems`` list.
           craft:
             systems:
               - ubuntu-24.04:
-                  image: custom-ubuntu-24.04
+                  image: ubuntu-noble-daily-amd64
 
 
 .. _reference-craft-test-yaml-suite-keys:
