@@ -11,6 +11,7 @@ platforms:
 
 # declare a top-level build slice
 build-slices:
+  - base-files_bin # for build.sh to work
   - bash_bins      # for build.sh to work
   - coreutils_bins # for 'cp'
 
