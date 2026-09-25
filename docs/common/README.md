@@ -6,6 +6,7 @@ appropriate terms for your product. For example:
 
 ```
 .. |star| replace:: charm
+.. |lp-remote-build-guide| replace:: :external+launchpad:ref:`build-charms-in-launchpad`
 .. |app-command| replace:: charmcraft
 .. |Starcraft| replace:: Charmcraft
 
