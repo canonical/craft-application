@@ -1231,7 +1231,7 @@ def test_invalid_part_names_on_future_base(
     ],
 )
 def test_apply_build_slices(real_project_service: ProjectService, build_slices):
-    """Create a part for top-level build-slices."""
+    """Create a part for root-level build-slices."""
     project_dict: dict[str, Any] = {
         "build-slices": build_slices,
         "parts": {"my-part": {"plugin": "nil"}},
@@ -1291,5 +1291,7 @@ def test_apply_build_slices_unsupported(real_project_service: ProjectService):
         "parts": {"my-part": {"plugin": "nil"}},
     }
 
-    with pytest.raises(CraftValidationError, match="does not support 'build-slices'"):
+    with pytest.raises(
+        CraftValidationError, match="does not support the 'build-slices' key"
+    ):
         real_project_service._apply_build_slices(project_dict)

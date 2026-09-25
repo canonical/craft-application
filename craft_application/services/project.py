@@ -501,15 +501,15 @@ class ProjectService(base.AppService):
         :param project: The project to apply build-slices to, modified in-place.
         """
         if "build-slices" not in project:
-            emit.debug("No top-level build-slices to apply.")
+            emit.debug("No root-level build-slices to apply.")
             return
 
         # Craft parts will also error on this, but the error would be confusing because
         # the user won't have a `craft/build-slices` part in their project file.
         if not self._app.enable_build_slices:
             raise CraftValidationError(
-                f"{self._app.name.title()} does not support 'build-slices'.",
-                resolution="Remove the top-level 'build-slices' key from the project file.",
+                f"{self._app.name.title()} does not support the 'build-slices' key.",
+                resolution="Remove the 'build-slices' key at the root of the project file.",
                 logpath_report=False,
                 retcode=os.EX_DATAERR,
             )
@@ -520,8 +520,9 @@ class ProjectService(base.AppService):
 
         if part_name in project["parts"]:
             raise CraftValidationError(
-                f"{part_name!r} is reserved for top-level 'build-slices'.",
-                resolution=f"Rename the existing {part_name!r} part.",
+                f"Part name {part_name!r} is reserved for the 'build-slices' key at the "
+                "root of the project file.",
+                resolution=f"Rename the {part_name!r} part.",
                 logpath_report=False,
                 retcode=os.EX_DATAERR,
             )
@@ -532,7 +533,7 @@ class ProjectService(base.AppService):
             "build-slices": slices,
         }
 
-        emit.debug(f"Adding part {part_name!r} with build-slices: {slices}")
+        emit.debug(f"Adding part {part_name!r} with 'build-slices: {slices}'.")
 
     @final
     def _preprocess(

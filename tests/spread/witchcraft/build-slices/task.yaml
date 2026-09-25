@@ -1,4 +1,4 @@
-summary: test top-level and part-level build-slices
+summary: test root-level and part-level build-slices
 
 systems:
   # 20.04 and 22.04 fail when doing a read-only bind mount of the stage dir for the build-slice chroot

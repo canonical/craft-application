@@ -9,7 +9,7 @@ platforms:
     build-on: [amd64]
     build-for: [amd64]
 
-# declare a top-level build slice
+# declare a root-level build slice
 build-slices:
   - base-files_bin # for build.sh to work
   - bash_bins      # for build.sh to work
