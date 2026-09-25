@@ -1,0 +1,20 @@
+summary: test root-level and part-level build-slices
+
+systems:
+  # 20.04 and 22.04 fail when doing a read-only bind mount of the stage dir for the build-slice chroot
+  - ubuntu-24.04-64
+  - ubuntu-26.04-64
+
+execute: |
+  witchcraft pack
+
+  # verify the build slices produced something
+  mkdir output
+  tar --extract --file build-slices-1.0-platform-independent.witchcraft --directory output
+  test -f output/os-release
+  grep '^NAME="Ubuntu"' output/os-release
+
+restore: |
+  witchcraft clean
+  rm -f *.witchcraft
+  rm -rf output

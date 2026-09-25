@@ -57,6 +57,11 @@ from craft_application.models.grammar import (
         ),
         (
             {
+                "build-slices": ["A", "B"],
+            }
+        ),
+        (
+            {
                 "source": ".",
                 "build-environment": [{"MESSAGE": "A"}, {"NAME": "B"}],
                 "build-packages": ["C", "D"],
