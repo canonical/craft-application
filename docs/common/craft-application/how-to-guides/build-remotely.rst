@@ -7,7 +7,7 @@ Build |star|\s remotely
 =======================
 
 By building remotely, you can concurrently pack |star|\s for all of your project's
-supported architectures.
+supported architectures and keep your local machine free for other work.
 
 Remote builds can be started from the Launchpad web interface or the command line. If
 you're interested in automating builds or releases and your environment allows for it,
