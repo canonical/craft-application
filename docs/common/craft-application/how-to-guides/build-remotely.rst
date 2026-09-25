@@ -48,7 +48,7 @@ In the directory containing your |star|\'s project file, start a remote build wi
 
     |app-command| remote-build
 
-If no project is specified, a temporary public project is created. If you wish to upload
+By default, a temporary public project is created for the build. If you wish to upload
 the project to an existing Launchpad project instead, append the project's name to the
 ``remote-build`` command with the ``--project`` option.
 
