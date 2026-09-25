@@ -343,6 +343,11 @@ def test_to_yaml(project_fixture, expected_file, tmp_path, request):
     ("build_slices", "expectation"),
     [
         pytest.param(
+            None,
+            nullcontext(),
+            id="null-slices",
+        ),
+        pytest.param(
             [],
             nullcontext(),
             id="no-slices",

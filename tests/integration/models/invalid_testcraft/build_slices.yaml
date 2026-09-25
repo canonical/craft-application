@@ -6,7 +6,7 @@ platforms:
     build-on: [amd64]
     build-for: [amd64]
 
-# these slices are valid, but build-slices aren't part of the json schema
+# these slices are valid, but top-level build-slices aren't part of the json schema
 build-slices:
   - bash_bins
   - base-files_base
@@ -14,6 +14,3 @@ build-slices:
 parts:
   my-part:
     plugin: nil
-    # these slices are valid, but build-slices aren't part of the json schema
-    build-slices:
-      - coreutils_bins

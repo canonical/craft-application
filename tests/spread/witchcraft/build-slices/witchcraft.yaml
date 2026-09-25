@@ -9,7 +9,7 @@ platforms:
     build-on: [amd64]
     build-for: [amd64]
 
-# declare a root-level build slice
+# declare root-level build slices
 build-slices:
   - base-files_bin # for build.sh to work
   - bash_bins      # for build.sh to work
@@ -22,9 +22,6 @@ parts:
     # declare a part-level build slice
     build-slices:
       - base-files_release-info # for /etc/os-release
+
     override-build: |
       cp /etc/os-release ${CRAFT_PART_INSTALL}/os-release
-
-    # workaround for https://github.com/canonical/craft-parts/pull/1737
-    stage-slices:
-      - base-files_copyright

@@ -516,7 +516,7 @@ class ProjectService(base.AppService):
 
         project.setdefault("parts", {})
         part_name = "craft/build-slices"
-        slices = project.get("build-slices", [])
+        slices = project.get("build-slices")
 
         if part_name in project["parts"]:
             raise CraftValidationError(
@@ -526,6 +526,12 @@ class ProjectService(base.AppService):
                 logpath_report=False,
                 retcode=os.EX_DATAERR,
             )
+
+        # if a root-level 'build-slices' was defined but null or an empty list, we still
+        # need to verify the feature and part name before no-op'ing.
+        if not slices:
+            emit.debug("No root-level build-slices to apply.")
+            return
 
         # update dict in-place
         project["parts"][part_name] = {
