@@ -15,7 +15,7 @@ Changelog
 
     For a complete list of commits, check out the `1.2.3`_ release on GitHub.
 
-7.4.0 (unreleased)
+7.4.0 (2026-09-25)
 ------------------
 
 Application
@@ -29,7 +29,7 @@ Project
 - A new top-level ``build-slices`` key can be used to define build slices that are
   used by many parts, to avoid repetition.
 
-..  For a complete list of commits, check out the `1.2.3`_ release on GitHub.
+For a complete list of commits, check out the `7.4.0`_ release on GitHub.
 
 
 7.3.0 (2026-09-23)
@@ -1486,3 +1486,4 @@ For a complete list of commits, check out the `2.7.0`_ release on GitHub.
 .. _7.2.0: https://github.com/canonical/craft-application/releases/tag/7.2.0
 .. _7.2.1: https://github.com/canonical/craft-application/releases/tag/7.2.1
 .. _7.3.0: https://github.com/canonical/craft-application/releases/tag/7.3.0
+.. _7.4.0: https://github.com/canonical/craft-application/releases/tag/7.4.0
