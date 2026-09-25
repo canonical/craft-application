@@ -54,8 +54,8 @@ the project to an existing Launchpad project instead, append the project's name 
 
 Remote build queues can get quite long, so you likely won't want to monitor the entire
 build from your terminal. If you stop running the command, be sure not to cancel the
-build on Launchpad when prompted. You can continue monitoring the build or retrieve the
-packed |star|\s at any time by running:
+build when prompted. You can continue monitoring the build or retrieve the packed
+|star|\s at any time by running:
 
 .. code-block:: bash
     :substitutions:
