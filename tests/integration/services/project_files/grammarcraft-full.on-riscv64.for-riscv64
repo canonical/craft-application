@@ -72,3 +72,8 @@ parts:
         owner: 456
         group: 456
         mode: "666"
+  myslicepart:
+    plugin: nil
+    build-slices:
+      - riscv64-package_riscv64-slice-1
+      - riscv64-package_riscv64-slice-2

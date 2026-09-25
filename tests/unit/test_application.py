@@ -1098,6 +1098,32 @@ def test_enable_features(app, mocker):
     assert calls == ["enable-features", "register-plugins"]
 
 
+@pytest.mark.parametrize(
+    ("app_metadata", "expected"),
+    [
+        pytest.param(
+            {"enable_build_slices": False},
+            False,
+            id="disabled",
+        ),
+        pytest.param(
+            {"enable_build_slices": True},
+            True,
+            id="enabled",
+        ),
+    ],
+    indirect=["app_metadata"],
+)
+def test_enable_craft_parts_features(app, expected):
+    """'enable_build_slices' enables craft-parts' build-slice feature."""
+    craft_parts.Features.reset()
+    try:
+        app._enable_craft_parts_features()
+        assert craft_parts.Features().enable_build_slices is expected
+    finally:
+        craft_parts.Features.reset()
+
+
 def test_emitter_docs_url(monkeypatch, mocker, app):
     """Test that the emitter is initialized with the correct url."""
 

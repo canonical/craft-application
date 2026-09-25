@@ -152,3 +152,12 @@ parts:
           owner: 456
           group: 456
           mode: "777"
+  myslicepart:
+    plugin: nil
+    build-slices:
+      - to riscv64:
+        - riscv64-package_riscv64-slice-1
+        - riscv64-package_riscv64-slice-2
+      - to s390x:
+        - s390x-package_s390x-slice-1
+        - s390x-package_s390x-slice-2

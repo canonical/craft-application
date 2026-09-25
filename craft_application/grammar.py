@@ -34,6 +34,7 @@ _NON_SCALAR_VALUES = [
     "permissions",
     "build-environment",
     "build-packages",
+    "build-slices",
     "stage-packages",
     "build-snaps",
     "stage-snaps",

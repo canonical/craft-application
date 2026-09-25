@@ -34,6 +34,7 @@ WITCHCRAFT = craft_application.AppMetadata(
     enable_for_grammar=True,
     enable_pro_support=True,
     allow_git_build_root=True,
+    enable_build_slices=True,
     ProjectClass=Project,
 )
 
@@ -48,3 +49,4 @@ class Witchcraft(Application):
         # enable the craft-parts Features that we use here, right before
         # loading the project and validating its parts.
         Features(enable_overlay=True)
+        super()._enable_craft_parts_features()
