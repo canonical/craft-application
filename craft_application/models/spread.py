@@ -42,38 +42,71 @@ class SpreadBase(CraftBaseModel):
 class CraftSpreadSystem(SpreadBase):
     """Simplified spread system configuration."""
 
-    workers: int | None = None
-    image: str | None = None
+    workers: int | None = pydantic.Field(default=None, examples=[2])
+    image: str | None = pydantic.Field(
+        default=None,
+        examples=["ubuntu:24.04", "ubuntu-noble-daily-amd64"],
+    )
 
 
 class CraftSpreadBackend(SpreadBase):
     """Simplified spread backend configuration."""
 
-    type: str | None = None
-    allocate: str | None = None
-    discard: str | None = None
-    systems: list[str | dict[str, CraftSpreadSystem | None]]
-    prepare: str | None = None
-    restore: str | None = None
-    debug: str | None = None
-    prepare_each: str | None = None
-    restore_each: str | None = None
-    debug_each: str | None = None
+    type: str | None = pydantic.Field(default=None, examples=["craft"])
+    allocate: str | None = pydantic.Field(
+        default=None, examples=["allocate-cloud-instance"]
+    )
+    discard: str | None = pydantic.Field(
+        default=None, examples=["release-cloud-instance"]
+    )
+    systems: list[str | dict[str, CraftSpreadSystem | None]] = pydantic.Field(
+        examples=[["ubuntu-24.04", {"ubuntu-22.04": {"workers": 2}}]]
+    )
+    prepare: str | None = pydantic.Field(default=None, examples=["apt-get update"])
+    restore: str | None = pydantic.Field(default=None, examples=["apt-get clean"])
+    debug: str | None = pydantic.Field(
+        default=None, examples=["cat /var/log/syslog"]
+    )
+    prepare_each: str | None = pydantic.Field(
+        default=None, examples=["systemctl restart test-service"]
+    )
+    restore_each: str | None = pydantic.Field(
+        default=None, examples=["systemctl stop test-service"]
+    )
+    debug_each: str | None = pydantic.Field(
+        default=None, examples=["systemctl status test-service"]
+    )
 
 
 class CraftSpreadSuite(SpreadBase):
     """Simplified spread suite configuration."""
 
-    summary: str
-    systems: list[str] | None = None
-    environment: dict[str, str] | None = None
-    prepare: str | None = None
-    restore: str | None = None
-    debug: str | None = None
-    prepare_each: str | None = None
-    restore_each: str | None = None
-    debug_each: str | None = None
-    kill_timeout: str | None = None
+    summary: str = pydantic.Field(examples=["General integration test suite"])
+    systems: list[str] | None = pydantic.Field(
+        default=None, examples=[["ubuntu-24.04"]]
+    )
+    environment: dict[str, str] | None = pydantic.Field(
+        default=None, examples=[{"TEST_MODE": "production", "VERBOSE": "1"}]
+    )
+    prepare: str | None = pydantic.Field(
+        default=None, examples=['echo "Preparing suite"']
+    )
+    restore: str | None = pydantic.Field(
+        default=None, examples=['echo "Restoring suite"']
+    )
+    debug: str | None = pydantic.Field(
+        default=None, examples=["cat /tmp/suite-error.log"]
+    )
+    prepare_each: str | None = pydantic.Field(
+        default=None, examples=['test -f "${CRAFT_ARTIFACT}"']
+    )
+    restore_each: str | None = pydantic.Field(
+        default=None, examples=["rm -rf /tmp/task-cache"]
+    )
+    debug_each: str | None = pydantic.Field(
+        default=None, examples=['echo "Task failed: $SPREAD_TASK"']
+    )
+    kill_timeout: str | None = pydantic.Field(default=None, examples=["15m"])
 
 
 class CraftTestYaml(SpreadBase):
@@ -84,16 +117,34 @@ class CraftTestYaml(SpreadBase):
         extra="forbid",
     )
 
-    backends: dict[str, CraftSpreadBackend]
-    suites: dict[str, CraftSpreadSuite]
-    exclude: list[str] | None = None
-    prepare: str | None = None
-    restore: str | None = None
-    debug: str | None = None
-    prepare_each: str | None = None
-    restore_each: str | None = None
-    debug_each: str | None = None
-    kill_timeout: str | None = None
+    backends: dict[str, CraftSpreadBackend] = pydantic.Field(
+        examples=[{"craft": {"systems": ["ubuntu-24.04"]}}]
+    )
+    suites: dict[str, CraftSpreadSuite] = pydantic.Field(
+        examples=[{"tests/spread/general/": {"summary": "General integration tests"}}]
+    )
+    exclude: list[str] | None = pydantic.Field(
+        default=None, examples=[[".git", ".tox", "docs/"]]
+    )
+    prepare: str | None = pydantic.Field(
+        default=None,
+        examples=['echo "Setting up global test prerequisites"'],
+    )
+    restore: str | None = pydantic.Field(
+        default=None,
+        examples=['echo "Tearing down global test environment"'],
+    )
+    debug: str | None = pydantic.Field(default=None, examples=["journalctl -xe"])
+    prepare_each: str | None = pydantic.Field(
+        default=None, examples=["rm -rf /tmp/test-output"]
+    )
+    restore_each: str | None = pydantic.Field(
+        default=None, examples=["rm -rf /tmp/test-output"]
+    )
+    debug_each: str | None = pydantic.Field(
+        default=None, examples=["dmesg | tail -n 50"]
+    )
+    kill_timeout: str | None = pydantic.Field(default=None, examples=["30m"])
 
 
 class CraftSpreadYaml(CraftTestYaml):
