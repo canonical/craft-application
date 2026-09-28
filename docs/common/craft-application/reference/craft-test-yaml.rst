@@ -8,20 +8,22 @@
 This reference describes the usage of and provides examples for every key in a
 |Starcraft| test configuration file, :substitution-code:`|app-command|-test.yaml`.
 
-When you run :substitution-code:`|app-command| test`, |Starcraft| reads this file and generates a
-temporary configuration file for Spread to run integration and functional tests.
+.. This should be moved to an explanation text at some point:
 
-In contrast to native Spread files, :substitution-code:`|app-command|-test.yaml` disallows several keys
-that are managed directly by |Starcraft|:
+    When you run :substitution-code:`|app-command| test`, |Starcraft| reads this file and generates a
+    temporary configuration file for Spread to run integration and functional tests.
 
-- ``path``: Managed exclusively by |Starcraft| to point to the workspace directory.
-- ``project``: Set to ``craft-test`` in the generated Spread configuration.
-- Top-level ``environment``: Injected dynamically by |Starcraft| with runtime variables
-  such as ``CRAFT_ARTIFACT`` and ``PROJECT_PATH``.
-- ``include``: Not supported.
+    In contrast to native Spread files, :substitution-code:`|app-command|-test.yaml` disallows several keys
+    that are managed directly by |Starcraft|:
 
-In addition, some child keys of ``backend`` are allowed for other backends, but not for
-the ``craft`` backend.
+    - ``path``: Managed exclusively by |Starcraft| to point to the workspace directory.
+    - ``project``: Set to ``craft-test`` in the generated Spread configuration.
+    - Top-level ``environment``: Injected dynamically by |Starcraft| with runtime variables
+    such as ``CRAFT_ARTIFACT`` and ``PROJECT_PATH``.
+    - ``include``: Not supported.
+
+    In addition, some child keys of ``backend`` are allowed for other backends, but not for
+    the ``craft`` backend.
 
 .. _reference-craft-test-yaml-top-level-keys:
 
