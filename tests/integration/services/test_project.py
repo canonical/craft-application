@@ -99,6 +99,7 @@ def grammar_project_file(
     return request.param
 
 
+@pytest.mark.usefixtures("enable_build_slices")
 @pytest.mark.parametrize("build_for", ["riscv64", "s390x"])
 @pytest.mark.parametrize("build_on", ["amd64", "riscv64"])
 def test_load_grammar_project(

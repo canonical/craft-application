@@ -1,0 +1,27 @@
+name: build-slices
+base: ubuntu@26.04
+version: "1.0"
+summary: test
+description: Exercise build-slices.
+
+platforms:
+  platform-independent:
+    build-on: [amd64]
+    build-for: [amd64]
+
+# declare root-level build slices
+build-slices:
+  - base-files_bin # for build.sh to work
+  - bash_bins      # for build.sh to work
+  - coreutils_bins # for 'cp'
+
+parts:
+  my-part:
+    plugin: nil
+
+    # declare a part-level build slice
+    build-slices:
+      - base-files_release-info # for /etc/os-release
+
+    override-build: |
+      cp /etc/os-release ${CRAFT_PART_INSTALL}/os-release

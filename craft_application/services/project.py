@@ -495,6 +495,52 @@ class ProjectService(base.AppService):
                 retcode=os.EX_DATAERR,
             )
 
+    def _apply_build_slices(self, project: dict[str, Any]) -> None:
+        """Create a new part with root-level build-slices.
+
+        :param project: The project to apply build-slices to, modified in-place.
+        """
+        if "build-slices" not in project:
+            emit.debug("No root-level build-slices to apply.")
+            return
+
+        # Craft parts will also error on this, but the error would be confusing because
+        # the user won't have a `craft/build-slices` part in their project file.
+        if not self._app.enable_build_slices:
+            raise CraftValidationError(
+                f"{self._app.name.title()} does not support the 'build-slices' key.",
+                resolution="Remove the 'build-slices' key at the root of the project file.",
+                logpath_report=False,
+                retcode=os.EX_DATAERR,
+            )
+
+        project.setdefault("parts", {})
+        part_name = "craft/build-slices"
+        slices = project.get("build-slices")
+
+        if part_name in project["parts"]:
+            raise CraftValidationError(
+                f"Part name {part_name!r} is reserved for the 'build-slices' key at the "
+                "root of the project file.",
+                resolution=f"Rename the {part_name!r} part.",
+                logpath_report=False,
+                retcode=os.EX_DATAERR,
+            )
+
+        # if a root-level 'build-slices' was defined but null or an empty list, we still
+        # need to verify the feature and part name before no-op'ing.
+        if not slices:
+            emit.debug("No root-level build-slices to apply.")
+            return
+
+        # update dict in-place
+        project["parts"][part_name] = {
+            "plugin": "nil",
+            "build-slices": slices,
+        }
+
+        emit.debug(f"Adding part {part_name!r} with 'build-slices: {slices}'.")
+
     @final
     def _preprocess(
         self,
@@ -519,6 +565,8 @@ class ProjectService(base.AppService):
         project = self.get_raw()
         GrammarAwareProject.validate_grammar(project)
         self._validate_user_provided_part_names(project)
+        # adds a part with a `/`, so this must be called after `_validate_user_provided_part_names()`
+        self._apply_build_slices(project)
         self._app_preprocess_project(
             project, build_on=build_on, build_for=build_for, platform=platform
         )

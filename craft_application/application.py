@@ -23,13 +23,14 @@ import pathlib
 import signal
 import sys
 import traceback
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from functools import cached_property
 from importlib import metadata
 from typing import TYPE_CHECKING, Annotated, Any, cast, final
 
 import annotated_types
 import craft_cli
+import craft_parts
 import craft_platforms
 from platformdirs import user_cache_path
 
@@ -140,6 +141,9 @@ class AppMetadata:
     Has no effect when the project directory is not inside a git repository,
     or when the project directory is the git root itself.
     """
+
+    enable_build_slices: bool = False
+    """Whether this application supports build-slices."""
 
     def __post_init__(self) -> None:
         setter = super().__setattr__
@@ -632,7 +636,19 @@ class Application:
             )
 
     def _enable_craft_parts_features(self) -> None:
-        """Enable any specific craft-parts Feature that the application will need."""
+        """Enable any specific craft-parts Feature that the application will need.
+
+        Applications who override this should call `super()._enable_craft_parts_features()`
+        at the end of their override.
+        """
+        if self.app.enable_build_slices:
+            # enable build_slices while retaining features enabled by the application
+            current = craft_parts.Features()
+            if not current.enable_build_slices:
+                features = asdict(current)
+                features["enable_build_slices"] = True
+                craft_parts.Features.reset()
+                craft_parts.Features(**features)
 
     @final
     def _set_plugin_group(self) -> None:

@@ -20,6 +20,7 @@ import pathlib
 import re
 import textwrap
 from collections.abc import Iterable
+from contextlib import nullcontext
 from textwrap import dedent
 
 import craft_platforms
@@ -336,6 +337,40 @@ def test_to_yaml(project_fixture, expected_file, tmp_path, request):
 
     assert actual_file.read_text() == expected_file.read_text()
     assert actual_file.read_text() == project.to_yaml_string()
+
+
+@pytest.mark.parametrize(
+    ("build_slices", "expectation"),
+    [
+        pytest.param(
+            None,
+            nullcontext(),
+            id="null-slices",
+        ),
+        pytest.param(
+            [],
+            nullcontext(),
+            id="no-slices",
+        ),
+        pytest.param(
+            ["bash_bins", "base-files_base"],
+            nullcontext(),
+            id="valid-slices",
+        ),
+        pytest.param(
+            ["bash", "base-files"],
+            pytest.raises(pydantic.ValidationError, match="invalid Chisel slice"),
+            id="invalid-slice",
+        ),
+    ],
+)
+def test_project_build_slices(basic_project_dict, build_slices, expectation):
+    """Test Project unmarshaling with build-slices."""
+    basic_project_dict["build-slices"] = build_slices
+
+    with expectation:
+        project = Project.unmarshal(basic_project_dict)
+        assert project.build_slices == build_slices
 
 
 def test_effective_base_is_base(full_project):
