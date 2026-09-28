@@ -49,10 +49,7 @@ class CraftSpreadSystem(SpreadBase):
     )
     image: str | None = pydantic.Field(
         default=None,
-        description=(
-            "A custom container or virtual machine image to use for this system on non-``craft``"
-            " backends."
-        ),
+        description="A custom container or virtual machine image to use for this system.",
         examples=["ubuntu:24.04", "ubuntu-noble-daily-amd64"],
     )
 
@@ -63,14 +60,15 @@ class CraftSpreadBackend(SpreadBase):
     type: str | None = pydantic.Field(
         default=None,
         description=(
-            "The backend driver type, such as 'craft', 'lxd', or 'adhoc'. If not"
-            " specified, the backend name is used as the type."
+            "The backend driver type, such as ``craft``, ``lxd``, or ``adhoc``. For"
+            " backends other than ``craft``, Spread uses the backend name as the type"
+            " when this key is omitted."
         ),
         examples=["craft"],
     )
     allocate: str | None = pydantic.Field(
         default=None,
-        description="A command or script to allocate a remote instance for ad-hoc backends.",
+        description="A command or script to allocate a remote instance for an ``adhoc`` backend.",
         examples=["allocate-cloud-instance"],
     )
     discard: str | None = pydantic.Field(

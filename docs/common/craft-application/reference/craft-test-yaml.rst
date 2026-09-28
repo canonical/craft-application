@@ -22,8 +22,9 @@ This reference describes the usage of and provides examples for every key in a
     such as ``CRAFT_ARTIFACT`` and ``PROJECT_PATH``.
     - ``include``: Not supported.
 
-    In addition, some child keys of ``backend`` are allowed for other backends, but not for
-    the ``craft`` backend.
+    When the ``craft`` backend's ``type`` is omitted or set to ``craft``, |Starcraft|
+    only reads its ``systems`` key. All other child keys are replaced by backend
+    configuration managed by |Starcraft|.
 
 .. _reference-craft-test-yaml-top-level-keys:
 
