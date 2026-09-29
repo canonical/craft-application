@@ -99,9 +99,9 @@ class InitService(base.AppService):
             f"Initializing project {project_name!r} in {str(project_dir)!r} from "
             f"template in {str(template_dir)!r}."
         )
-        self._initialize_vcs(vcs, project_dir)
         environment = self._get_templates_environment(template_dir)
         self._create_project_dir(project_dir=project_dir)
+        self._initialize_vcs(vcs, project_dir)
         context = self._get_context(name=project_name, project_dir=project_dir)
         self._render_project(environment, project_dir, template_dir, context)
 

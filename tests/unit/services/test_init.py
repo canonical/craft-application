@@ -370,6 +370,28 @@ def test_initialise_project(
     )
 
 
+def test_initialise_project_create_project_dir(
+    init_service: services.InitService,
+    tmp_path: pathlib.Path,
+) -> None:
+    """Create the project dir before initializing the VCS."""
+    project_dir = tmp_path / "nested" / "project-dir"
+    templates_dir = tmp_path / "templates"
+    templates_dir.mkdir()
+    (templates_dir / "test.yaml.j2").write_text("name: {{ name }}\n")
+
+    init_service.initialise_project(
+        project_dir=project_dir,
+        project_name="my-project",
+        template_dir=templates_dir,
+        vcs="git",
+    )
+
+    assert project_dir.is_dir()
+    assert (project_dir / ".git").is_dir()
+    assert (project_dir / "test.yaml").read_text() == "name: my-project\n"
+
+
 @pytest.mark.parametrize(
     "invalid_name", ["invalid--name", "-invalid-name", "invalid-name-", "0", "0-0", ""]
 )
