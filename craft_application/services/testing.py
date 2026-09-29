@@ -278,6 +278,23 @@ class TestingService(base.AppService):
                 for variable in _PROXY_ENVIRONMENT_VARIABLES
             }
         )
+        if test_sessions := os.getenv("CRAFT_TEST_FETCH_SERVICE_SESSIONS"):
+            if len(test_sessions.split(",")) != 1:
+                raise CraftError(
+                    "CRAFT_TEST_FETCH_SERVICE_SESSIONS must contain exactly one session URL.",
+                    resolution=(
+                        "Set CRAFT_TEST_FETCH_SERVICE_SESSIONS to a single session URL "
+                        "to use an external fetch-service session."
+                    ),
+                    reportable=False,
+                    retcode=os.EX_CONFIG,
+                )
+            spread_yaml.environment.update(
+                dict.fromkeys(
+                    ("HTTP_PROXY", "http_proxy", "HTTPS_PROXY", "https_proxy"),
+                    test_sessions,
+                )
+            )
         spread_yaml.environment["GOPROXY"] = "direct"
 
         cert_setup = ""
