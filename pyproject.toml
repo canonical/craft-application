@@ -182,7 +182,6 @@ explicit = true
 [tool.uv.sources]
 python-apt = { index = "python-apt-wheels" }
 
-
 [build-system]
 requires = [
     "setuptools==84.0.0",
