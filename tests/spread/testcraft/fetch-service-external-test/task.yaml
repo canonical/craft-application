@@ -10,34 +10,17 @@ environment:
   CRAFT_VERBOSITY_LEVEL: DEBUG
 
 prepare: |
+  . "$PROJECT_PATH/tests/spread/tools.sh"
+
   # This test runs "testcraft test" with an external session; this "prepare"
   # section installs the fetch-service and creates a session.
-  snap install --candidate fetch-service
-
-  fetch_service_auth="testcraft:testcraft"
-
-  snap set fetch-service control.auth=${fetch_service_auth}
-  snap set fetch-service control.port=9999
-  snap set fetch-service proxy.port=9988
-  snap set fetch-service permissive=true
-  snap set fetch-service log.file="from-testcraft-test.log"
-  snap set fetch-service upstream-proxy.http=${http_proxy:-}
-  snap set fetch-service upstream-proxy.https=${https_proxy:-}
-  snap set fetch-service upstream-proxy.no-proxy=${no_proxy:-}
-
-  snap start fetch-service
-
-  sleep 5
-  curl -f http://localhost:9999/status
-
-  curl -f --user "$fetch_service_auth" -X POST -d '{"policy": "permissive"}' http://localhost:9999/session --output session.json
-  session_id=$(jq -r .id session.json)
-  token=$(jq -r .token session.json)
-  host_ip=$(ip -f inet addr show lxdbr0 | sed -En -e 's/.*inet ([0-9.]+).*/\1/p')
-  echo "http://${session_id}:${token}@${host_ip}:9988" > session_proxy_url.txt
+  fetch_service.setup --log-file "from-testcraft-test.log"
+  fetch_service.create_session
 
 execute: |
-  proxy_url=$(cat session_proxy_url.txt)
+  . "$PROJECT_PATH/tests/spread/tools.sh"
+
+  proxy_url=$(cat session_url.txt)
 
   # Configure "testcraft test" to set up the spread runners to use the external
   # fetch-service session.
@@ -51,15 +34,9 @@ execute: |
   testcraft test --verbosity=debug
   test -f fetch-service-test*.testcraft
 
-  # Tear down the and check that the "hello" package download went through the
-  # fetch-service
-  session_id=$(jq -r .id session.json)
-  token=$(jq -r .token session.json)
-  fetch_service_auth=$(snap get fetch-service control.auth)
-  curl -sf --user "$fetch_service_auth" -X DELETE -d "{\"token\": \"${token}\"}" "http://localhost:9999/session/${session_id}/token"
-  curl -sf --user "$fetch_service_auth" "http://localhost:9999/session/${session_id}" | tee session_report.json
-  curl -sf --user "$fetch_service_auth" -X DELETE "http://localhost:9999/session/${session_id}"
-  curl -sf --user "$fetch_service_auth" -X DELETE "http://localhost:9999/resources/${session_id}"
+  # Tear down the session and check that the "hello" package download went
+  # through the fetch-service.
+  fetch_service.teardown_session
 
   jq -r '(.artifacts[].metadata | select(.name=="hello")).type' session_report.json | MATCH "application/vnd.debian.binary-package"
 
@@ -75,7 +52,7 @@ restore: |
   lxc config unset core.proxy_http || true
   lxc config unset core.proxy_https || true
   lxc config unset core.proxy_ignore_hosts || true
-  rm -f fetch-service-test*.testcraft session.json session_proxy_url.txt session_report.json
+  rm -f fetch-service-test*.testcraft session.json session_url.txt session_report.json
   snap remove --purge fetch-service
 
 debug: |
