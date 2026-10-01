@@ -30,7 +30,7 @@ Start a build on Launchpad
 --------------------------
 
 The Launchpad documentation provides instructions for setting up your project, building
-your charm, and automating builds and releases in |lp-remote-build-guide|.
+your |star|, and automating builds and releases in |lp-remote-build-guide|.
 
 
 Start a build from the command line
