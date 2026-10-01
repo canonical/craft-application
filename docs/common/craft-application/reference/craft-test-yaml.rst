@@ -3,7 +3,7 @@
 |app-command|\ -test.yaml
 =========================
 
-This reference describes the usage of and provides examples for every key in the
+This reference describes the usage of and provides examples for every key in a
 configuration file for a |star|'s tests, :substitution-code:`|app-command|-test.yaml`.
 
 .. This should be moved to an explanation text at some point:
