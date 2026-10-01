@@ -49,7 +49,7 @@ class CraftSpreadSystem(SpreadBase):
     )
     image: str | None = pydantic.Field(
         default=None,
-        description="A custom container or virtual machine image to use for this system.",
+        description="The custom container or virtual machine image to use for this system.",
         examples=["ubuntu:24.04", "ubuntu-noble-daily-amd64"],
     )
 
@@ -68,51 +68,51 @@ class CraftSpreadBackend(SpreadBase):
     )
     allocate: str | None = pydantic.Field(
         default=None,
-        description="A command or script to allocate a remote instance for an ``adhoc`` backend.",
+        description="The command or script to allocate a remote instance for an ``adhoc`` backend.",
         examples=["allocate-cloud-instance"],
     )
     discard: str | None = pydantic.Field(
         default=None,
-        description="A command or script to release an allocated ad-hoc instance when finished.",
+        description="The command or script to release an allocated remote instance for an ``adhoc`` backend when finished.",
         examples=["release-cloud-instance"],
     )
     systems: list[str | dict[str, CraftSpreadSystem | None]] = pydantic.Field(
         examples=[["ubuntu-24.04", {"ubuntu-22.04": {"workers": 2}}]],
     )
-    """A list of systems (operating system distributions or architectures) available for running tests.
+    """The list of systems (operating system distributions or architectures) available for running tests.
 
     Can be specified as system names or mappings of system names to system configurations.
     """
     prepare: str | None = pydantic.Field(default=None, examples=["apt-get update"])
-    """A shell script executed on the backend system before running any tests.
+    """The shell script executed on the backend system before running any tests.
 
     This should only be used to run backend-specific preparation. It is *not compatible*
     with the ``craft`` backend.
     """
     restore: str | None = pydantic.Field(default=None, examples=["apt-get clean"])
-    """A shell script executed on the backend system after all tests finish.
+    """The shell script executed on the backend system after all tests finish.
 
     This should only be used for backend-specific cleanup or restoration. It is *not
     compatible* with the ``craft`` backend.
     """
     debug: str | None = pydantic.Field(
         default=None,
-        description="A shell script executed on the backend system if a test task encounters a failure.",
+        description="The shell script executed on the backend system if a backend prepare or restore step encounters an error.",
         examples=["cat /var/log/syslog"],
     )
     prepare_each: str | None = pydantic.Field(
         default=None,
-        description="A shell script executed on the backend system before each test task.",
+        description="The shell script executed on the backend system before each test task.",
         examples=["systemctl restart test-service"],
     )
     restore_each: str | None = pydantic.Field(
         default=None,
-        description="A shell script executed on the backend system after each test task completes.",
+        description="The shell script executed on the backend system after each test task completes.",
         examples=["systemctl stop test-service"],
     )
     debug_each: str | None = pydantic.Field(
         default=None,
-        description="A shell script executed on the backend system if an individual test task fails.",
+        description="The shell script executed on the backend system if an individual test task fails.",
         examples=["systemctl status test-service"],
     )
 
@@ -127,7 +127,7 @@ class CraftSpreadSuite(SpreadBase):
     systems: list[str] | None = pydantic.Field(
         default=None,
         description=(
-            "A list of systems on which to run this suite. If omitted, the suite"
+            "The list of systems on which to run this suite. If omitted, the suite"
             " runs on all systems defined in the backend."
         ),
         examples=[["ubuntu-24.04"]],
@@ -135,39 +135,39 @@ class CraftSpreadSuite(SpreadBase):
     environment: dict[str, str] | None = pydantic.Field(
         default=None,
         description=(
-            "Environment variables defined for all tests in this suite, expressed"
+            "The environment variables defined for all tests in this suite, expressed"
             " as key-value pairs."
         ),
         examples=[{"TEST_MODE": "production", "VERBOSE": "1"}],
     )
     prepare: str | None = pydantic.Field(
         default=None,
-        description="A shell script executed once before executing any tests in this suite.",
+        description="The shell script executed once before executing any tests in this suite.",
         examples=['echo "Preparing suite"'],
     )
     restore: str | None = pydantic.Field(
         default=None,
-        description="A shell script executed once after all tests in this suite complete.",
+        description="The shell script executed once after all tests in this suite complete.",
         examples=['echo "Restoring suite"'],
     )
     debug: str | None = pydantic.Field(
         default=None,
-        description="A shell script executed if a suite prepare or restore step encounters an error.",
+        description="The shell script executed if a suite prepare or restore step encounters an error.",
         examples=["cat /tmp/suite-error.log"],
     )
     prepare_each: str | None = pydantic.Field(
         default=None,
-        description="A shell script executed before each individual test task in this suite.",
+        description="The shell script executed before each individual test task in this suite.",
         examples=['test -f "${CRAFT_ARTIFACT}"'],
     )
     restore_each: str | None = pydantic.Field(
         default=None,
-        description="A shell script executed after each individual test task in this suite completes.",
+        description="The shell script executed after each individual test task in this suite completes.",
         examples=["rm -rf /tmp/task-cache"],
     )
     debug_each: str | None = pydantic.Field(
         default=None,
-        description="A shell script executed if an individual test task in this suite fails.",
+        description="The shell script executed if an individual test task in this suite fails.",
         examples=['echo "Task failed: $SPREAD_TASK"'],
     )
     kill_timeout: str | None = pydantic.Field(default=None, examples=["15m"])
@@ -186,52 +186,52 @@ class CraftTestYaml(SpreadBase):
     )
 
     backends: dict[str, CraftSpreadBackend] = pydantic.Field(
-        description="A mapping of backend configurations used to execute tests.",
+        description="The mapping of backend configurations used to execute tests.",
         examples=[{"craft": {"systems": ["ubuntu-24.04"]}}],
     )
     suites: dict[str, CraftSpreadSuite] = pydantic.Field(
         examples=[{"tests/spread/general/": {"summary": "General integration tests"}}],
     )
-    """A mapping of test suite directories relative to the project root to their suite configurations.
+    """The mapping of test suite directories relative to the project root to their suite configurations.
 
     Each suite directory key must end with a trailing forward slash (/).
     """
     exclude: list[str] | None = pydantic.Field(
         default=None,
         description=(
-            "A list of file and directory patterns relative to the project root to exclude"
+            "The list of file and directory patterns relative to the project root to exclude"
             " from the test environment. Defaults to ['.git', '.tox']."
         ),
         examples=[[".git", ".tox", "docs/"]],
     )
     prepare: str | None = pydantic.Field(
         default=None,
-        description="A shell script executed once on the test host before running any test suite.",
+        description="The shell script executed once on the test host before running any test suite.",
         examples=['echo "Setting up global test prerequisites"'],
     )
     restore: str | None = pydantic.Field(
         default=None,
-        description="A shell script executed once after all test suites complete, regardless of outcome.",
+        description="The shell script executed once after all test suites complete, regardless of outcome.",
         examples=['echo "Tearing down global test environment"'],
     )
     debug: str | None = pydantic.Field(
         default=None,
-        description="A shell script executed if any step fails during the test run.",
+        description="The shell script executed if any step fails during the test run.",
         examples=["journalctl -xe"],
     )
     prepare_each: str | None = pydantic.Field(
         default=None,
-        description="A shell script executed before each individual test task in every suite.",
+        description="The shell script executed before each individual test task in every suite.",
         examples=["rm -rf /tmp/test-output"],
     )
     restore_each: str | None = pydantic.Field(
         default=None,
-        description="A shell script executed after each individual test task in every suite completes.",
+        description="The shell script executed after each individual test task in every suite completes.",
         examples=["rm -rf /tmp/test-output"],
     )
     debug_each: str | None = pydantic.Field(
         default=None,
-        description="A shell script executed if an individual test task fails.",
+        description="The shell script executed if an individual test task fails.",
         examples=["dmesg | tail -n 50"],
     )
     kill_timeout: str | None = pydantic.Field(

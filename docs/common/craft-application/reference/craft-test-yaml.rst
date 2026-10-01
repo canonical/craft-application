@@ -3,8 +3,8 @@
 |app-command|\ -test.yaml
 =========================
 
-This reference describes the usage of and provides examples for every key in a
-|Starcraft| test configuration file, :substitution-code:`|app-command|-test.yaml`.
+This reference describes the usage of and provides examples for every key in the
+configuration file for a |star|'s tests, :substitution-code:`|app-command|-test.yaml`.
 
 .. This should be moved to an explanation text at some point:
 
@@ -40,16 +40,16 @@ execution timeouts.
 .. kitbash-field:: CraftTestYaml prepare
 
 
-.. kitbash-field:: CraftTestYaml restore
-
-
-.. kitbash-field:: CraftTestYaml debug
-
-
 .. kitbash-field:: CraftTestYaml prepare_each
 
 
+.. kitbash-field:: CraftTestYaml restore
+
+
 .. kitbash-field:: CraftTestYaml restore_each
+
+
+.. kitbash-field:: CraftTestYaml debug
 
 
 .. kitbash-field:: CraftTestYaml debug_each
@@ -93,19 +93,19 @@ instances for tests. Other backends can be manually specified.
     :prepend-name: backends.<backend-name>
 
 
-.. kitbash-field:: CraftSpreadBackend restore
-    :prepend-name: backends.<backend-name>
-
-
-.. kitbash-field:: CraftSpreadBackend debug
-    :prepend-name: backends.<backend-name>
-
-
 .. kitbash-field:: CraftSpreadBackend prepare_each
     :prepend-name: backends.<backend-name>
 
 
+.. kitbash-field:: CraftSpreadBackend restore
+    :prepend-name: backends.<backend-name>
+
+
 .. kitbash-field:: CraftSpreadBackend restore_each
+    :prepend-name: backends.<backend-name>
+
+
+.. kitbash-field:: CraftSpreadBackend debug
     :prepend-name: backends.<backend-name>
 
 
@@ -159,19 +159,19 @@ directory containing the tests and end with a trailing forward slash (/).
     :prepend-name: suites.<suite-path>
 
 
-.. kitbash-field:: CraftSpreadSuite restore
-    :prepend-name: suites.<suite-path>
-
-
-.. kitbash-field:: CraftSpreadSuite debug
-    :prepend-name: suites.<suite-path>
-
-
 .. kitbash-field:: CraftSpreadSuite prepare_each
     :prepend-name: suites.<suite-path>
 
 
+.. kitbash-field:: CraftSpreadSuite restore
+    :prepend-name: suites.<suite-path>
+
+
 .. kitbash-field:: CraftSpreadSuite restore_each
+    :prepend-name: suites.<suite-path>
+
+
+.. kitbash-field:: CraftSpreadSuite debug
     :prepend-name: suites.<suite-path>
 
 
