@@ -1,5 +1,3 @@
-.. Add an application-specific meta description in the document including this file,
-.. for example using the ``.. meta::`` directive with a ``:description:`` option.
 
 
 |app-command|\ -test.yaml
