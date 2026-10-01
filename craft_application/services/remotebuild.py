@@ -141,14 +141,18 @@ class RemoteBuildService(base.AppService):
         self._name = utils.get_build_id(self._app.name, project.name, project_dir)
         self._lp_project = self._ensure_project()
         _, self._repository = self._ensure_repository(project_dir)
-        self._recipe = self._ensure_recipe(
-            self._name,
-            self._repository,
-            architectures=architectures,
-            build_path=build_path,
-        )
-        self._check_timeout()
-        self._builds = list(self._new_builds(self._recipe))
+        try:
+            self._recipe = self._ensure_recipe(
+                self._name,
+                self._repository,
+                architectures=architectures,
+                build_path=build_path,
+            )
+            self._check_timeout()
+            self._builds = list(self._new_builds(self._recipe))
+        except BaseException:
+            self._cleanup_after_failed_start()
+            raise
         self._is_setup = True
         return self._builds
 
@@ -249,6 +253,14 @@ class RemoteBuildService(base.AppService):
             if self._repository is not None:
                 self._repository.delete()
 
+    def _cleanup_after_failed_start(self) -> None:
+        """Best-effort removal of Launchpad resources when builds couldn't start."""
+        try:
+            self.cleanup()
+        except Exception as exc:  # noqa: BLE001
+            # Don't mask the error that made the build fail to start.
+            craft_cli.emit.debug(f"Could not clean up after failed start: {exc}")
+
     # endregion
     # region Launchpad interaction wrappers
 
@@ -313,11 +325,19 @@ class RemoteBuildService(base.AppService):
             local_repository = GitRepo(work_tree.repo_dir)
             local_repository.push_url(push_url.geturl(), "main", push_tags=True)
         except GitError as git_error:
+            self._delete_quietly(lp_repository)
             raise RemoteBuildGitError(
                 cast(str, git_error.details),
             ) from git_error
         else:
             return work_tree, lp_repository
+
+    @staticmethod
+    def _delete_quietly(lp_object: launchpad.models.GitRepository) -> None:
+        try:
+            lp_object.delete()
+        except launchpad.errors.LaunchpadError as exc:
+            craft_cli.emit.debug(f"Could not delete {lp_object!r}: {exc}")
 
     def _get_push_url(
         self, lp_repository: launchpad.models.GitRepository, token: str
