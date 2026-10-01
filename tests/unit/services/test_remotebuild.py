@@ -29,6 +29,7 @@ from craft_application.remote.errors import (
     RemoteBuildGitError,
     RemoteBuildInvalidGitRepoError,
 )
+from craft_application.services import remotebuild
 
 from tests.unit.services.conftest import (
     get_mock_callable,
@@ -583,3 +584,107 @@ def test_credentials_filepath(app_metadata, fake_services):
         credentials_filepath
         == platformdirs.user_data_path(app_metadata.name) / "launchpad-credentials"
     )
+
+
+def _stale_repo(name, age_days, owner="craft_test_user"):
+    repo = mock.Mock(
+        date_created=datetime.datetime.now(tz=datetime.timezone.utc)
+        - datetime.timedelta(days=age_days),
+        owner_name=owner,
+    )
+    repo.name = name
+    return repo
+
+
+@pytest.fixture
+def stale_sweep_service(remote_build_service, mock_lp_project, monkeypatch):
+    remote_build_service._lp_project = mock_lp_project
+    remote_build_service._name = "testcraft-current-hash"
+    recipe = mock.Mock()
+    recipe.get_builds.return_value = []
+    monkeypatch.setattr(
+        remote_build_service.RecipeClass, "get", mock.Mock(return_value=recipe)
+    )
+    remote_build_service.lp.find_repositories = mock.Mock(return_value=iter([]))
+    remote_build_service.test_recipe = recipe
+    return remote_build_service
+
+
+def test_cleanup_stale_repositories_deletes_old(stale_sweep_service):
+    old = _stale_repo("testcraft-old-hash", 30)
+    recent = _stale_repo("testcraft-recent-hash", 1)
+    stale_sweep_service.lp.find_repositories.return_value = iter([old, recent])
+
+    stale_sweep_service._cleanup_stale_repositories()
+
+    old.delete.assert_called_once()
+    stale_sweep_service.test_recipe.delete.assert_called_once()
+    recent.delete.assert_not_called()
+
+
+def test_cleanup_stale_repositories_skips_current_and_other_apps(stale_sweep_service):
+    current = _stale_repo("testcraft-current-hash", 30)
+    other_app = _stale_repo("othercraft-old-hash", 30)
+    stale_sweep_service.lp.find_repositories.return_value = iter([current, other_app])
+
+    stale_sweep_service._cleanup_stale_repositories()
+
+    current.delete.assert_not_called()
+    other_app.delete.assert_not_called()
+
+
+def test_cleanup_stale_repositories_skips_active_builds(stale_sweep_service):
+    repo = _stale_repo("testcraft-old-hash", 30)
+    build = mock.Mock()
+    build.get_state.return_value = launchpad.models.BuildState.BUILDING
+    stale_sweep_service.test_recipe.get_builds.return_value = [build]
+    stale_sweep_service.lp.find_repositories.return_value = iter([repo])
+
+    stale_sweep_service._cleanup_stale_repositories()
+
+    repo.delete.assert_not_called()
+    stale_sweep_service.test_recipe.delete.assert_not_called()
+
+
+def test_cleanup_stale_repositories_without_recipe(stale_sweep_service, monkeypatch):
+    repo = _stale_repo("testcraft-old-hash", 30)
+    monkeypatch.setattr(
+        stale_sweep_service.RecipeClass, "get", mock.Mock(side_effect=ValueError)
+    )
+    stale_sweep_service.lp.find_repositories.return_value = iter([repo])
+
+    stale_sweep_service._cleanup_stale_repositories()
+
+    repo.delete.assert_called_once()
+
+
+def test_cleanup_stale_repositories_is_capped(stale_sweep_service):
+    repos = [
+        _stale_repo(f"testcraft-old-{i}", 30)
+        for i in range(remotebuild.MAX_STALE_REPOSITORIES_PER_RUN + 5)
+    ]
+    stale_sweep_service.lp.find_repositories.return_value = iter(repos)
+
+    stale_sweep_service._cleanup_stale_repositories()
+
+    deleted = [r for r in repos if r.delete.called]
+    assert len(deleted) == remotebuild.MAX_STALE_REPOSITORIES_PER_RUN
+
+
+def test_cleanup_stale_repositories_never_raises(stale_sweep_service):
+    stale_sweep_service.lp.find_repositories.side_effect = RuntimeError("boom")
+
+    stale_sweep_service._cleanup_stale_repositories()
+
+
+def test_cleanup_stale_repositories_continues_after_delete_error(
+    stale_sweep_service,
+):
+    failing = _stale_repo("testcraft-fail-hash", 30)
+    failing.delete.side_effect = launchpad.errors.LaunchpadError("nope")
+    ok = _stale_repo("testcraft-ok-hash", 29)
+    stale_sweep_service.lp.find_repositories.return_value = iter([failing, ok])
+
+    stale_sweep_service._cleanup_stale_repositories()
+
+    ok.delete.assert_called_once()
