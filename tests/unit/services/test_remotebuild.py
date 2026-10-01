@@ -688,3 +688,16 @@ def test_cleanup_stale_repositories_continues_after_delete_error(
     stale_sweep_service._cleanup_stale_repositories()
 
     ok.delete.assert_called_once()
+
+
+@pytest.mark.usefixtures("mock_push_url")
+def test_start_builds_cleans_up_stale_repositories(
+    tmp_path, remote_build_service, monkeypatch
+):
+    git.GitRepo(tmp_path)
+    cleanup = mock.Mock()
+    monkeypatch.setattr(remote_build_service, "_cleanup_stale_repositories", cleanup)
+
+    remote_build_service.start_builds(tmp_path)
+
+    cleanup.assert_called_once_with()
