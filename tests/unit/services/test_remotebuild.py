@@ -227,6 +227,8 @@ def test_ensure_repository_wraps_git_error_on_pushing(
     with pytest.raises(RemoteBuildGitError, match="Fake push_url error during tests"):
         remote_build_service._ensure_repository(tmp_path)
 
+    wrapped_repository.delete.assert_called_once()
+
 
 @pytest.mark.usefixtures("mock_init_raises_git_error")
 def test_ensure_repository_wraps_git_error_during_init(
@@ -515,6 +517,52 @@ def test_cleanup_deletes_repository_if_recipe_deletion_fails(remote_build_servic
         remote_build_service.cleanup()
 
     repository.delete.assert_called_once()
+
+
+@pytest.mark.usefixtures("mock_push_url")
+def test_start_builds_cleans_up_on_failure(tmp_path, remote_build_service, monkeypatch):
+    git.GitRepo(tmp_path)
+    repository = mock.Mock(spec=launchpad.models.GitRepository)
+    monkeypatch.setattr(
+        remote_build_service,
+        "_ensure_repository",
+        mock.Mock(return_value=(mock.Mock(), repository)),
+    )
+    recipe = mock.Mock()
+    monkeypatch.setattr(
+        remote_build_service, "_ensure_recipe", mock.Mock(return_value=recipe)
+    )
+    monkeypatch.setattr(
+        remote_build_service, "_new_builds", mock.Mock(side_effect=RuntimeError("boom"))
+    )
+
+    with pytest.raises(RuntimeError, match="boom"):
+        remote_build_service.start_builds(tmp_path)
+
+    recipe.delete.assert_called_once()
+    repository.delete.assert_called_once()
+
+
+@pytest.mark.usefixtures("mock_push_url")
+def test_start_builds_failure_not_masked_by_cleanup_error(
+    tmp_path, remote_build_service, monkeypatch
+):
+    git.GitRepo(tmp_path)
+    repository = mock.Mock(spec=launchpad.models.GitRepository)
+    repository.delete.side_effect = ConnectionError("network down")
+    monkeypatch.setattr(
+        remote_build_service,
+        "_ensure_repository",
+        mock.Mock(return_value=(mock.Mock(), repository)),
+    )
+    monkeypatch.setattr(
+        remote_build_service,
+        "_ensure_recipe",
+        mock.Mock(side_effect=RuntimeError("boom")),
+    )
+
+    with pytest.raises(RuntimeError, match="boom"):
+        remote_build_service.start_builds(tmp_path)
 
 
 def test_new_build_not_git_repo(
