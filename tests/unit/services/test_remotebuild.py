@@ -504,6 +504,19 @@ def test_new_build(
     remote_build_service.cleanup()
 
 
+def test_cleanup_deletes_repository_if_recipe_deletion_fails(remote_build_service):
+    recipe = mock.Mock()
+    recipe.delete.side_effect = launchpad.errors.LaunchpadError("nope")
+    repository = mock.Mock()
+    remote_build_service._recipe = recipe
+    remote_build_service._repository = repository
+
+    with pytest.raises(launchpad.errors.LaunchpadError):
+        remote_build_service.cleanup()
+
+    repository.delete.assert_called_once()
+
+
 def test_new_build_not_git_repo(
     tmp_path,
     remote_build_service,

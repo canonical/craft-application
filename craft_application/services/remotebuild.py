@@ -240,10 +240,14 @@ class RemoteBuildService(base.AppService):
 
     def cleanup(self) -> None:
         """Clean up the recipe and repository."""
-        if self._recipe is not None:
-            self._recipe.delete()
-        if self._repository is not None:
-            self._repository.delete()
+        try:
+            if self._recipe is not None:
+                self._recipe.delete()
+        finally:
+            # Always attempt to delete the repository, even if the recipe couldn't
+            # be deleted, so it isn't left behind on Launchpad.
+            if self._repository is not None:
+                self._repository.delete()
 
     # endregion
     # region Launchpad interaction wrappers
