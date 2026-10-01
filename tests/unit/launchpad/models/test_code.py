@@ -77,3 +77,15 @@ def test_new_repository_without_target(
     fake_launchpad.lp.git_repositories.new.assert_called_once_with(
         name=name, owner=owner_path, information_type=information_type.value
     )
+
+
+def test_find_repositories(fake_launchpad, mock_lplib_entry):
+    mock_lplib_entry.resource_type_link = "http://localhost#git_repository"
+    fake_launchpad.lp.git_repositories.getRepositories.return_value = [mock_lplib_entry]
+
+    repositories = list(code.GitRepository.find(fake_launchpad, "project"))
+
+    assert [r._obj for r in repositories] == [mock_lplib_entry]
+    fake_launchpad.lp.git_repositories.getRepositories.assert_called_once_with(
+        target="/project", order_by="oldest first"
+    )
