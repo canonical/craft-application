@@ -144,6 +144,7 @@ class RemoteBuildService(base.AppService):
 
         self._name = utils.get_build_id(self._app.name, project.name, project_dir)
         self._lp_project = self._ensure_project()
+        self._cleanup_stale_repositories()
         _, self._repository = self._ensure_repository(project_dir)
         try:
             self._recipe = self._ensure_recipe(
