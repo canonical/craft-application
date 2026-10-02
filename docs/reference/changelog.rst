@@ -15,7 +15,7 @@ Changelog
 
     For a complete list of commits, check out the `1.2.3`_ release on GitHub.
 
-7.5.0 (2026-10-01)
+7.5.0 (2026-10-02)
 ------------------
 
 Services
