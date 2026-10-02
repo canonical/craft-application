@@ -278,8 +278,8 @@ class TestingService(base.AppService):
                 for variable in _PROXY_ENVIRONMENT_VARIABLES
             }
         )
-        if test_sessions := os.getenv("CRAFT_TEST_FETCH_SERVICE_SESSIONS"):
-            if len(test_sessions.split(",")) != 1:
+        if proxy_urls := os.getenv("CRAFT_TEST_FETCH_SERVICE_SESSIONS"):
+            if len(proxy_urls.split(",")) != 1:
                 raise CraftError(
                     "CRAFT_TEST_FETCH_SERVICE_SESSIONS must contain exactly one session URL.",
                     resolution=(
@@ -292,7 +292,7 @@ class TestingService(base.AppService):
             spread_yaml.environment.update(
                 dict.fromkeys(
                     ("HTTP_PROXY", "http_proxy", "HTTPS_PROXY", "https_proxy"),
-                    test_sessions,
+                    proxy_urls,
                 )
             )
         spread_yaml.environment["GOPROXY"] = "direct"

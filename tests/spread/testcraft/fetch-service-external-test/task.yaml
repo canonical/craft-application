@@ -65,7 +65,7 @@ restore: |
   lxc config unset core.proxy_http || true
   lxc config unset core.proxy_https || true
   lxc config unset core.proxy_ignore_hosts || true
-  rm -f fetch-service-test*.testcraft session.json build_session_url.txt test_session_url build_session_report.json test_session_report.json
+  rm -f fetch-service-test*.testcraft session.json build_session_url.txt test_session_url.txt build_session_report.json test_session_report.json
   snap remove --purge fetch-service
 
 debug: |
