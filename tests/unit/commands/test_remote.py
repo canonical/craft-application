@@ -116,6 +116,59 @@ def test_remote_build_run(remote_build, mocker, fake_services, tmp_path, emitter
     )
 
 
+@pytest.mark.slow
+def test_remote_build_no_duplicate_artifacts(
+    remote_build, mocker, fake_services, tmp_path, emitter
+):
+    """Regression test: artifact list should not contain duplicates.
+
+    Regression test for https://github.com/canonical/snapcraft/issues/6230
+    When remote-build is run multiple times, historical builds with different
+    URLs but same filenames should not appear multiple times in the output.
+    """
+    builder = fake_services.remote_build
+
+    build_states = [
+        {
+            "amd64": BuildState.SUCCESS,
+            "arm64": BuildState.SUCCESS,
+        },
+    ]
+
+    mocker.patch.object(builder, "start_builds", return_value=["amd64", "arm64"])
+    mocker.patch.object(builder, "monitor_builds", side_effect=[build_states])
+
+    logs = {
+        "amd64": tmp_path / "log_amd64.txt",
+        "arm64": tmp_path / "log_arm64.txt",
+    }
+    mocker.patch.object(builder, "fetch_logs", return_value=logs)
+
+    # Same filenames from two different build runs (different URLs, same output)
+    # simulates the bug where running remote-build twice duplicates artifacts
+    artifacts = [
+        tmp_path / "myapp_0.1_amd64.snap",
+        tmp_path / "myapp_0.1_arm64.snap",
+        tmp_path / "myapp_0.1_amd64.snap",  # duplicate from previous run
+        tmp_path / "myapp_0.1_arm64.snap",  # duplicate from previous run
+    ]
+    mocker.patch.object(builder, "fetch_artifacts", return_value=artifacts)
+
+    parsed_args = argparse.Namespace(
+        launchpad_accept_public_upload=True,
+        launchpad_timeout=None,
+        recover=False,
+        project=None,
+    )
+    assert remote_build.run(parsed_args) is None
+
+    emitter.assert_message(
+        "Build completed.\n"
+        "Log files: log_amd64.txt, log_arm64.txt\n"
+        "Artifacts: myapp_0.1_amd64.snap, myapp_0.1_arm64.snap"
+    )
+
+
 @pytest.mark.parametrize(
     ("accept_public", "is_private", "project", "confirm"),
     [
