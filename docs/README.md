@@ -25,7 +25,7 @@ git log --grep "sphinx stack" -i
 Copy the commit SHA. Then, collect the list of Sphinx Stack files that were changed between that commit and now:
 
 ```bash
-git --no-pager diff <commit>~1 --name-only -- docs/ .readthedocs.yaml common.mk Makefile
+git --no-pager diff <COMMIT>~1 --name-only -- docs/ .readthedocs.yaml common.mk Makefile
 ```
 
 ### Apply the changes
