@@ -59,6 +59,8 @@ remote = [
   "pysocks>=1.7.1",
 ]
 
+# Applications should avoid CVEs in optional, direct dependencies by setting a minimum
+# version in 'dependency-groups'.
 [dependency-groups]
 dev = [
   "coverage[toml]~=7.9",
@@ -99,34 +101,36 @@ docs = [
   "pytest==9.1.1",  # Include pytest because autodoc needs it
   "sphinx-lint~=1.0",
   "sphinx-substitution-extensions>=2025.1.2",
-  "sphinxext-rediraffe==0.3.0",
-  { include-group = "docs-starter-pack" },
+  { include-group = "docs-sphinx-stack" },
 ]
 # We disable the unused but default SP dependencies slated for removal
 # https://warthogs.atlassian.net/browse/DOCPR-2387
-docs-starter-pack = [
+docs-sphinx-stack = [
   "canonical-sphinx~=0.6",
-  "myst-parser>=4.0.1",
-  "packaging>=25.0",
+  "myst-parser~=4.0",
+  "packaging~=26.1",
   "rst2html>=2020.7.4",
   "sphinx-autobuild>=2024.10.3",
-  # "sphinx-config-options>=0.1.0",
-  # "sphinx-contributor-listing>=0.1.0",
-  "sphinx-design>=0.6.1",
-  # "sphinx-filtered-toctree>=0.1.0",
-  # "sphinx-last-updated-by-git>=0.3.8",
-  "sphinx-notfound-page>=1.1.0",
-  "sphinx-related-links>=0.1.2",
-  "sphinx-roles>=0.1.0",
-  "sphinx-sitemap==2.9.0",
-  # "sphinx-tabs>=3.4.5",
-  "sphinx-terminal>=1.0.2",
-  # "sphinx-ubuntu-images>=0.1.0",
-  # "sphinx-youtube-links>=0.1.0",
-  "sphinxcontrib-jquery>=4.1",
-  # "sphinxcontrib-svg2pdfconverter[cairosvg]>=2.0.0",
-  "sphinxext-opengraph>=0.13.0",
-  "vale>=3.13.0.0",
+  # "sphinx-config-options~=0.1",
+  # "sphinx-contributor-listing~=0.1",
+  "sphinx-design==0.6.1",
+  # "sphinx-filtered-toctree~=0.1",
+  # "sphinx-last-updated-by-git~=0.3",
+  "sphinx-llm~=0.4",
+  "sphinx-notfound-page~=1.1",
+  "sphinx-related-links~=0.1",
+  # "sphinx-reredirects==0.1.6",
+  "sphinx-rerediraffe>=0.0.3,<1.0.0",
+  "sphinx-roles~=0.1",
+  "sphinx-sitemap~=2.9",
+  # "sphinx-tabs~=3.5",
+  "sphinx-terminal~=1.0",
+  # "sphinx-ubuntu-images~=0.1",
+  # "sphinx-youtube-links~=0.1",
+  "sphinxcontrib-jquery~=4.1",
+  # "sphinxcontrib-svg2pdfconverter[cairosvg]~=2.1",
+  "sphinxext-opengraph~=0.13",
+  "vale~=3.13",
 ]
 lint = [
   "codespell[toml]==2.4.3",
@@ -274,6 +278,7 @@ select = [  # Base linting rule selections.
   "RUF200",  # If ruff fails to parse pyproject.toml...
 ]
 ignore = [
+  # "E203",  # Whitespace before ":"  -- Commented because ruff doesn't currently check E203
   "E501",  # Line too long (reason: ruff will automatically fix this for us)
   "D105",  # Missing docstring in magic method (reason: magic methods already have definitions)
   "D107",  # Missing docstring in __init__ (reason: documented in class docstring)
@@ -283,6 +288,7 @@ ignore = [
   "A003",  # Class attribute shadowing built-in (reason: Class attributes don't often get bare references)
   "SIM117",  # Use a single `with` statement with multiple contexts instead of nested `with` statements
   # (reason: this creates long lines that get wrapped and reduces readability)
+  "PLW1641",  # eq-without-hash (most of our classes should be unhashable)
 
   # Ignored due to conflicts with ruff's formatter:
   # https://docs.astral.sh/ruff/formatter/#conflicting-lint-rules
@@ -329,6 +335,7 @@ classmethod-decorators = ["pydantic.validator", "pydantic.root_validator"]
   "PLR2004",  # Allow magic values in tests
   "SLF",  # Allow accessing private members from tests.
   "FBT001",  # Boolean-typed parametrized tests can be useful
+  "FBT002",  # Boolean default values are common in test helper functions
 ]
 "__init__.py" = [
   "I001",  # isort leaves init files alone by default, this makes ruff ignore them too.
@@ -395,6 +402,7 @@ constraint-dependencies = [
   "regex>=2021.11.10",
   "setuptools>=50",
   "sphinx-basic-ng>=1.0.0b1",
+  "starlette>=1.0.1",
   "tornado>=4.0",
   "urllib3>=2.8",
   "webencodings>=0.4.0",
