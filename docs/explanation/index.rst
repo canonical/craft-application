@@ -10,7 +10,7 @@ Explanations provide a wider perspective of Craft Application. They aid in under
 concepts and relationships of Craft Application as a complete system.
 
 .. toctree::
-    :hidden:
+    :maxdepth: 1
 
     structure-of-a-craft-app
     build-plans
