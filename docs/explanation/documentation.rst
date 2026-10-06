@@ -30,7 +30,7 @@ for each release.
 Writing and editing in the docs-as-code style follows a write-build-preview loop.
 
 The Craft Application maintainers try and review every PR in a timely manner, typically
-within a week for PRs that complete an assigned issue. They aim to ensure that all
+within a week for pull requests that complete an assigned issue. They aim to ensure that all
 contributions are reviewed thoroughly and thoughtfully.
 
 
@@ -44,4 +44,4 @@ Application documents follow:
 - :external+starflow:ref:`how-to-starcraft-style-guide`
 - `Canonical Style Guide <https://docs.ubuntu.com/styleguide>`__
 - `reStructuredText syntax reference
-  <https://canonical-starter-pack.readthedocs-hosted.com/stable/reference/rst-syntax-reference>`__
+  <https://documentation.ubuntu.com/sphinx-stack/latest/reference/rst-syntax-reference>`__

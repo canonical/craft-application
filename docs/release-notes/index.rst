@@ -1,10 +1,13 @@
+.. meta::
+    :description: The index of release documentation for Craft Application. These release notes summarize the new features, bug fixes, and backwards-incompatible changes in each version.
+
 .. _release-notes:
 
 Release notes
 =============
 
-This page lists the notes for past releases of Craft Application, which summarise new
-features, bug fixes and backwards-incompatible changes in each version. It also contains
+This page lists the notes for past releases of Craft Application, which summarize new
+features, bug fixes, and backwards-incompatible changes in each version. It also contains
 the release and support policies for Craft Application.
 
 
@@ -79,7 +82,7 @@ Craft Application doesn't have long-term support (LTS) releases. However, we typ
 deliver a compatibility release shortly after Ubuntu LTS releases to ensure continuity.
 
 .. toctree::
-    :maxdepth: 1
+    :hidden:
 
 
 .. release note template:
@@ -259,7 +262,7 @@ deliver a compatibility release shortly after Ubuntu LTS releases to ensure cont
   this release.
 
   <List all contributors for this release. Compile the list from GitHub's compare page
-  (https://github.com/canonical/starbase/compare) or through digests in your local
+  (https://github.com/canonical/craft-application/compare) or through digests in your local
   repository.
 
   List contributors from the craft libraries, too. Don't automatically include all of
