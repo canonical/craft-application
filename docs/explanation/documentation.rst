@@ -1,6 +1,7 @@
 .. meta::
   :description: An explanation of the documentation system, process, and writing style and conventions in Craft Application.
 
+
 .. _explanation-documentation:
 
 About this documentation
@@ -10,6 +11,7 @@ The documentation is an essential part of Craft Application. We make documentati
 disciplined and principled part of engineering with its own architecture and quality
 standards.
 
+
 Documentation system and process
 --------------------------------
 
@@ -17,6 +19,7 @@ Craft Application practices docs-as-code. The document source files are written 
 reStructuredText markup and kept inside the Craft Application source code. Like the rest
 of the code, the documents are version-controlled in a Git repository and hosted on
 GitHub.
+
 The project uses Sphinx to compile the document sources into a static website of HTML
 web pages. The published documentation is hosted on the Read the Docs platform.
 
@@ -29,6 +32,7 @@ Writing and editing in the docs-as-code style follows a write-build-preview loop
 The Craft Application maintainers try and review every PR in a timely manner, typically
 within a week for pull requests that complete an assigned issue. They aim to ensure that all
 contributions are reviewed thoroughly and thoughtfully.
+
 
 Writing styles and conventions
 ------------------------------
