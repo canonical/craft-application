@@ -15,11 +15,15 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Models representing spread projects."""
 
-import pathlib
 import re
+from typing import TYPE_CHECKING
 
 import pydantic
 from typing_extensions import Any, Self
+
+if TYPE_CHECKING:
+    from .state import PackedArtifact
+
 
 from craft_application.models import CraftBaseModel
 
@@ -39,6 +43,7 @@ class CraftSpreadSystem(SpreadBase):
     """Simplified spread system configuration."""
 
     workers: int | None = None
+    image: str | None = None
 
 
 class CraftSpreadBackend(SpreadBase):
@@ -71,15 +76,14 @@ class CraftSpreadSuite(SpreadBase):
     kill_timeout: str | None = None
 
 
-class CraftSpreadYaml(SpreadBase):
-    """Simplified spread project configuration."""
+class CraftTestYaml(SpreadBase):
+    """Simplified spread project configuration for a craft test file."""
 
     model_config = pydantic.ConfigDict(
         SpreadBase.model_config,
         extra="forbid",
     )
 
-    project: str | None = None
     backends: dict[str, CraftSpreadBackend]
     suites: dict[str, CraftSpreadSuite]
     exclude: list[str] | None = None
@@ -90,6 +94,18 @@ class CraftSpreadYaml(SpreadBase):
     restore_each: str | None = None
     debug_each: str | None = None
     kill_timeout: str | None = None
+
+
+class CraftSpreadYaml(CraftTestYaml):
+    """Deprecated craft test spread.yaml.
+
+    This is different than a standard spread.yaml, which is used directly with spread.
+
+    The deprecated craft test spread.yaml is a subset of a standard spread.yaml. It
+    doesn't allow the 'path', 'environment', and 'include' keys.
+    """
+
+    project: str | None = None
 
 
 # Processed full-form spread configuration
@@ -116,12 +132,15 @@ class SpreadSystem(SpreadBaseModel):
     username: str | None = None
     password: str | None = None
     workers: int | None = None
+    image: str | None = None
 
     @classmethod
-    def from_craft(cls, simple: CraftSpreadSystem | None) -> Self:
+    def from_craft(
+        cls, simple: CraftSpreadSystem | None, image: str | None = None
+    ) -> Self:
         """Create a spread system configuration from the simplified version."""
         workers = simple.workers if simple else 1
-        return cls(workers=workers)
+        return cls(workers=workers, image=image)
 
 
 class SpreadBackend(SpreadBaseModel):
@@ -140,14 +159,22 @@ class SpreadBackend(SpreadBaseModel):
     restore_each: str | None = None
     debug_each: str | None = None
 
+    # For the openstack backend
+    endpoint: str | None = None
+    account: str | None = None
+    key: str | None = None
+    location: str | None = None
+    plan: str | None = None
+    halt_timeout: str | None = None
+
     @classmethod
-    def from_craft(cls, simple: CraftSpreadBackend) -> Self:
+    def from_craft(cls, simple: CraftSpreadBackend, images: dict[str, str]) -> Self:
         """Create a spread backend configuration from the simplified version."""
         return cls(
             type=simple.type,
             allocate=simple.allocate,
             discard=simple.discard,
-            systems=cls.systems_from_craft(simple.systems),
+            systems=cls.systems_from_craft(simple.systems, images=images),
             prepare=simple.prepare,
             restore=simple.restore,
             debug=simple.debug,
@@ -157,18 +184,37 @@ class SpreadBackend(SpreadBaseModel):
         )
 
     @staticmethod
+    def _get_system_image(name: str, images: dict[str, str]) -> str | None:
+        """Return an image for a system name, tolerating the legacy -64 suffix."""
+        return images.get(name) or images.get(name.removesuffix("-64"))
+
+    @staticmethod
     def systems_from_craft(
-        simple: list[str | dict[str, CraftSpreadSystem | None]],
+        simple: list[str | dict[str, CraftSpreadSystem | None]], images: dict[str, str]
     ) -> list[str | dict[str, SpreadSystem]]:
-        """Create spread systems from the simplified version."""
+        """Create spread systems from the simplified version.
+
+        :param simple: List of system definitions as strings or name-to-system dicts.
+        :param images: Mapping of system names to their container image URLs.
+        """
         systems: list[str | dict[str, SpreadSystem]] = []
         for item in simple:
-            if isinstance(item, str):
-                systems.append(item)
-                continue
             entry: dict[str, SpreadSystem] = {}
+            if isinstance(item, str):
+                image = SpreadBackend._get_system_image(item, images)
+                if image:
+                    entry[item] = SpreadSystem(workers=1, image=image)
+                    systems.append(entry)
+                else:
+                    systems.append(item)
+                continue
+
             for name, ssys in item.items():
-                entry[name] = SpreadSystem.from_craft(ssys)
+                if ssys:
+                    image = ssys.image or SpreadBackend._get_system_image(name, images)
+                else:
+                    image = SpreadBackend._get_system_image(name, images)
+                entry[name] = SpreadSystem.from_craft(ssys, image=image)
             systems.append(entry)
 
         return systems
@@ -226,11 +272,11 @@ class SpreadYaml(SpreadBaseModel):
     @classmethod
     def from_craft(
         cls,
-        simple: CraftSpreadYaml,
+        simple: CraftTestYaml,
         *,
         craft_backend: SpreadBackend,
-        artifact: pathlib.Path,
-        resources: dict[str, pathlib.Path],
+        artifacts: list["PackedArtifact"],
+        images: dict[str, str],
     ) -> Self:
         """Create the spread configuration from the simplified version."""
         environment = {
@@ -239,17 +285,20 @@ class SpreadYaml(SpreadBaseModel):
             "LANG": "C.UTF-8",
             "LANGUAGE": "en",
             "PROJECT_PATH": "/root/proj",
-            "CRAFT_ARTIFACT": f"$PROJECT_PATH/{artifact}",
         }
 
-        for name, path in resources.items():
-            var_name = cls._translate_resource_name(name)
-            environment[f"CRAFT_RESOURCE_{var_name}"] = f"$PROJECT_PATH/{path}"
+        for artifact in artifacts:
+            if artifact.name is None:
+                environment["CRAFT_ARTIFACT"] = f"$PROJECT_PATH/{artifact.path}"
+                continue
+
+            var_name = cls._translate_resource_name(artifact.name)
+            environment[f"CRAFT_ARTIFACT_{var_name}"] = f"$PROJECT_PATH/{artifact.path}"
 
         return cls(
             project="craft-test",
             environment=environment,
-            backends=cls._backends_from_craft(simple.backends, craft_backend),
+            backends=cls._backends_from_craft(simple.backends, craft_backend, images),
             suites=cls._suites_from_craft(simple.suites),
             exclude=simple.exclude or [".git", ".tox"],
             path="/root/proj",
@@ -269,18 +318,20 @@ class SpreadYaml(SpreadBaseModel):
 
     @staticmethod
     def _backends_from_craft(
-        simple: dict[str, CraftSpreadBackend], craft_backend: SpreadBackend
+        simple: dict[str, CraftSpreadBackend],
+        craft_backend: SpreadBackend,
+        images: dict[str, str],
     ) -> dict[str, SpreadBackend]:
         backends: dict[str, SpreadBackend] = {}
         for name, backend in simple.items():
             # Spread assumes the backend name as the type when it's not explicitly declared.
             if name == "craft" and (not backend.type or backend.type == "craft"):
                 craft_backend.systems = SpreadBackend.systems_from_craft(
-                    backend.systems
+                    backend.systems, images=images
                 )
                 backends[name] = craft_backend
             else:
-                backends[name] = SpreadBackend.from_craft(backend)
+                backends[name] = SpreadBackend.from_craft(backend, images={})
 
         return backends
 

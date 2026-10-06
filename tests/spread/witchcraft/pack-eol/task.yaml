@@ -10,10 +10,21 @@ prepare: |
   sed -i "s/base: REPLACE_THIS/base: ubuntu@${VERSION_ID}/" witchcraft.yaml
 
 execute: |
-  # We didn't support any bases this far in the past.
-  timedatectl set-time '1994-04-27'
-  witchcraft pack |& MATCH "Cannot pack cauldron. Base '[a-z0-9.@]+' has reached end-of-life."
-  witchcraft pack --destructive-mode |& MATCH "Cannot pack cauldron. Base '[a-z0-9.@]+' has reached end-of-life."
+  # Newer systemd versions refuse to set the clock earlier than the
+  # systemd package's own build time (TIME_EPOCH), so setting the clock to
+  # 1994 only works on systems with an older systemd. Skip this specific
+  # check on systems where it's known to fail.
+  case "${SPREAD_SYSTEM}" in
+    ubuntu-20.04-64|ubuntu-22.04-64|ubuntu-24.04-64)
+      # We didn't support any bases this far in the past.
+      timedatectl set-time '1994-04-27'
+      witchcraft pack |& MATCH "Cannot pack cauldron. Base '[a-z0-9.@]+' has reached end-of-life."
+      witchcraft pack --destructive-mode |& MATCH "Cannot pack cauldron. Base '[a-z0-9.@]+' has reached end-of-life."
+      ;;
+    *)
+      echo "Skipping 1994 clock rollback check on ${SPREAD_SYSTEM} (blocked by systemd's build-time protection)."
+      ;;
+  esac
 
   . /etc/os-release
   EOL_DATE=$(cat /usr/share/distro-info/ubuntu.csv | awk -F, '$3=="'$VERSION_CODENAME'" {print $6}')

@@ -1,0 +1,11 @@
+name: fetch-service-test
+summary: A testcraft project for testing an external fetch service session.
+version: "0.1"
+
+base: ubuntu@24.04
+platforms:
+  amd64:
+
+parts:
+  test:
+    plugin: nil

@@ -41,6 +41,9 @@ def project_service(app_metadata, fake_services, in_project_path: pathlib.Path):
         for path in VALID_SCHEMAS_DIR.glob("*.yaml")
     ],
 )
+# enable the build-slices feature for project files with build-slices
+@pytest.mark.parametrize("app_metadata", [{"enable_build_slices": True}], indirect=True)
+@pytest.mark.usefixtures("enable_build_slices")
 def test_valid_testcraft_projects(
     fake_package_service_class,
     app_metadata,

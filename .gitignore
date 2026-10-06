@@ -54,7 +54,7 @@ coverage.xml
 .hypothesis/
 .pytest_cache/
 .results.*.xml
-/.spread-*.yaml
+.spread-*.yaml
 
 # Translations
 *.mo

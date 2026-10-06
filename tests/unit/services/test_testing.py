@@ -15,9 +15,12 @@
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Unit tests for the TestingService."""
 
+import dataclasses
 import pathlib
 import stat
+import textwrap
 from collections.abc import Iterable
+from textwrap import dedent
 from typing import Any
 from unittest import mock
 
@@ -25,7 +28,9 @@ import craft_application.services.testing
 import craft_cli.messages
 import craft_platforms
 import pytest
-from craft_application import models
+from craft_application import models, util
+from craft_application.errors import TestFileError, YamlError
+from craft_application.services.fetch import EXTERNAL_FETCH_SERVICE_ENV_VAR
 from craft_application.services.testing import TestingService
 from craft_cli import CraftError
 
@@ -55,6 +60,7 @@ def test_get_spread_command(
     test_expressions: Iterable[str],
     is_ci: bool,
 ):
+    test_expressions = list(test_expressions)
     # Set the CI environment variable to 1 if is_ci, or empty otherwise.
     monkeypatch.setenv("CI", "1" * int(is_ci))
     mocker.patch("shutil.which", return_value="/usr/local/bin/craft.spread")
@@ -174,6 +180,46 @@ def test_get_spread_command_ci_expression(
     assert command == cmdline
 
 
+def test_get_spread_command_ci_expression_generator(
+    mocker,
+    monkeypatch: pytest.MonkeyPatch,
+    testing_service: TestingService,
+):
+    fake_proc = mock.Mock()
+    fake_proc.stdout = (
+        "backend:system:my/suite/\n"
+        "craft:mydistro-100:my/suite/\n"
+        "craft:mydistro-101:my/suite/"
+    )
+
+    monkeypatch.setenv("CI", "1")
+    mocker.patch("shutil.which", return_value="spread")
+    mock_run = mocker.patch("subprocess.run", return_value=fake_proc)
+
+    fake_distro = mocker.Mock()
+    fake_distro.distribution = "mydistro"
+    fake_distro.series = "100"
+
+    mocker.patch(
+        "craft_platforms.DistroBase.from_linux_distribution", return_value=fake_distro
+    )
+
+    command = testing_service._get_spread_command(
+        test_expressions=(expression for expression in ["exp1", "exp2"])
+    )
+
+    assert mock_run.mock_calls == [
+        mock.call(
+            ["spread", "-list", "exp1", "exp2"],
+            capture_output=True,
+            text=True,
+            check=True,
+            cwd=pathlib.Path.cwd(),
+        )
+    ]
+    assert command == ["spread", "craft:mydistro-100:my/suite/"]
+
+
 @pytest.mark.parametrize("spread_name", ["craft.spread"])
 def test_get_app_spread_executable_success(
     monkeypatch: pytest.MonkeyPatch,
@@ -204,8 +250,645 @@ def test_get_app_spread_executable_error(
 
 def test_process_without_spread_file(new_dir, testing_service):
     state = models.PackState(artifacts=[])
-    with pytest.raises(CraftError, match="Could not find 'spread.yaml'"):
+    with pytest.raises(CraftError, match="Could not find 'testcraft-test.yaml'"):
         testing_service.process_spread_yaml(new_dir / "wherever", state)
+
+
+def test_process_spread_yaml_accepts_named_artifacts_only(
+    testing_service: TestingService,
+    tmp_path: pathlib.Path,
+    mocker,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    spread_file = tmp_path / "spread.yaml"
+    spread_file.write_text(
+        dedent("""
+            project: test-project
+            backends:
+              craft:
+                systems:
+                  - ubuntu-24.04:
+            suites:
+              spread/general/:
+                summary: General tests
+            """)
+    )
+    state = models.PackState(
+        artifacts=[models.PackedArtifact(name="tools", path=pathlib.Path("tools.tar"))]
+    )
+    mocker.patch.object(
+        testing_service,
+        "_get_backend",
+        return_value=models.SpreadBackend(type="adhoc"),
+    )
+
+    dest = tmp_path / "processed-spread.yaml"
+    monkeypatch.chdir(tmp_path)
+    testing_service.process_spread_yaml(dest, state)
+
+    assert "CRAFT_ARTIFACT_TOOLS: $PROJECT_PATH/tools.tar" in dest.read_text()
+
+
+@pytest.fixture
+def external_fetch_service_setup(tmp_path, mocker, testing_service, monkeypatch):
+    spread_file = tmp_path / "spread.yaml"
+    spread_file.write_text(
+        dedent("""
+            project: test-project
+            backends:
+              craft:
+                systems:
+                  - ubuntu-24.04:
+            suites:
+              spread/general/:
+                summary: General tests
+            """)
+    )
+    mocker.patch.object(
+        testing_service,
+        "_get_backend",
+        return_value=models.SpreadBackend(type="adhoc", prepare="existing setup"),
+    )
+    monkeypatch.setenv(EXTERNAL_FETCH_SERVICE_ENV_VAR, "1")
+    proxy_cert = tmp_path / "proxy-cert"
+    proxy_cert.touch()
+    monkeypatch.setenv("CRAFT_PROXY_CERT", str(proxy_cert))
+
+
+@pytest.mark.usefixtures("external_fetch_service_setup")
+def test_process_spread_yaml_external_fetch_service(
+    testing_service: TestingService,
+    tmp_path: pathlib.Path,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    state = models.PackState(
+        artifacts=[models.PackedArtifact(name=None, path=pathlib.Path("artifact"))]
+    )
+    dest = tmp_path / "processed-spread.yaml"
+    monkeypatch.chdir(tmp_path)
+    testing_service.process_spread_yaml(dest, state)
+
+    # Check that "http_proxy" env vars are configured
+    processed = util.safe_yaml_load(dest.read_text())
+    for variable in (
+        "HTTP_PROXY",
+        "http_proxy",
+        "HTTPS_PROXY",
+        "https_proxy",
+        "NO_PROXY",
+        "no_proxy",
+    ):
+        assert processed["environment"][variable] == f'$(HOST: echo "${variable}")'
+
+    # Check config for 'requests'
+    assert processed["environment"]["REQUESTS_CA_BUNDLE"] == (
+        "/usr/local/share/ca-certificates/local-ca.crt"
+    )
+
+    # Check config for cargo
+    assert processed["environment"]["CARGO_HTTP_CAINFO"] == (
+        "/usr/local/share/ca-certificates/local-ca.crt"
+    )
+    # Check config for Go
+    assert processed["environment"]["GOPROXY"] == "direct"
+
+    assert (dest.parent / "fetch-service-ca.crt").is_file()
+
+    prepare = processed["backends"]["craft"]["prepare"]
+    assert prepare.index("install -D -m 0644") < prepare.index("existing setup")
+    assert prepare.index("snap set system proxy.http") < prepare.index("existing setup")
+    assert "apt.conf.d/99proxy" in prepare
+    assert "snap set system proxy.https" in prepare
+    assert "lxc config set core.proxy_http" in prepare
+    assert "lxc config set core.proxy_https" in prepare
+    assert "lxc config set core.proxy_ignore_hosts" in prepare
+
+
+@pytest.mark.usefixtures("external_fetch_service_setup")
+def test_process_spread_yaml_external_fetch_service_invalid_certificate(
+    testing_service: TestingService,
+    tmp_path: pathlib.Path,
+    mocker,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    monkeypatch.setenv("CRAFT_PROXY_CERT", str(tmp_path / "missing-cert"))
+    monkeypatch.chdir(tmp_path)
+
+    state = models.PackState(
+        artifacts=[models.PackedArtifact(name=None, path=pathlib.Path("artifact"))]
+    )
+    with pytest.raises(CraftError, match="is not a valid certificate file"):
+        testing_service.process_spread_yaml(tmp_path / "processed-spread.yaml", state)
+
+
+@pytest.mark.usefixtures("external_fetch_service_setup")
+def test_process_spread_yaml_external_fetch_service_without_backend_prepare(
+    testing_service: TestingService,
+    tmp_path: pathlib.Path,
+    mocker,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    monkeypatch.chdir(tmp_path)
+    mocker.patch.object(
+        testing_service,
+        "_get_backend",
+        return_value=models.SpreadBackend(type="adhoc"),
+    )
+    state = models.PackState(
+        artifacts=[models.PackedArtifact(name=None, path=pathlib.Path("artifact"))]
+    )
+    dest = tmp_path / "processed-spread.yaml"
+    testing_service.process_spread_yaml(dest, state)
+
+    processed = util.safe_yaml_load(dest.read_text())
+    prepare = processed["backends"]["craft"]["prepare"]
+    assert "apt.conf.d/99proxy" in prepare
+    assert "snap set system proxy.http" in prepare
+
+
+@pytest.mark.usefixtures("external_fetch_service_setup")
+def test_process_spread_yaml_external_fetch_service_test_sessions(
+    testing_service: TestingService,
+    tmp_path: pathlib.Path,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    """Test the use of CRAFT_TEST_FETCH_SERVICE_SESSIONS."""
+
+    test_session = "https://www.example.com"
+    monkeypatch.setenv("CRAFT_TEST_FETCH_SERVICE_SESSIONS", test_session)
+
+    state = models.PackState(
+        artifacts=[models.PackedArtifact(name=None, path=pathlib.Path("artifact"))]
+    )
+    dest = tmp_path / "processed-spread.yaml"
+    monkeypatch.chdir(tmp_path)
+    testing_service.process_spread_yaml(dest, state)
+
+    # Check that "http_proxy" env vars are configured
+    processed = util.safe_yaml_load(dest.read_text())
+    for variable in (
+        "HTTP_PROXY",
+        "http_proxy",
+        "HTTPS_PROXY",
+        "https_proxy",
+    ):
+        assert processed["environment"][variable] == test_session
+
+
+@pytest.mark.usefixtures("external_fetch_service_setup")
+def test_process_spread_yaml_external_fetch_service_multiple_test_sessions(
+    testing_service: TestingService,
+    tmp_path: pathlib.Path,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    """Error out if CRAFT_TEST_FETCH_SERVICE_SESSIONS contains multiple urls."""
+
+    test_sessions = "https://www.example.com,https://www.example2.com"
+    monkeypatch.setenv("CRAFT_TEST_FETCH_SERVICE_SESSIONS", test_sessions)
+
+    state = models.PackState(
+        artifacts=[models.PackedArtifact(name=None, path=pathlib.Path("artifact"))]
+    )
+    dest = tmp_path / "processed-spread.yaml"
+    monkeypatch.chdir(tmp_path)
+
+    expected = "CRAFT_TEST_FETCH_SERVICE_SESSIONS must contain exactly one session URL"
+    with pytest.raises(CraftError, match=expected):
+        testing_service.process_spread_yaml(dest, state)
+
+
+def test_process_spread_yaml_requires_any_artifact(
+    testing_service: TestingService,
+    tmp_path: pathlib.Path,
+    mocker,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    spread_file = tmp_path / "spread.yaml"
+    spread_file.write_text(
+        dedent("""
+            project: test-project
+            backends:
+              craft:
+                systems:
+                  - ubuntu-24.04:
+            suites:
+              spread/general/:
+                summary: General tests
+            """)
+    )
+    state = models.PackState(artifacts=[])
+    mocker.patch.object(
+        testing_service,
+        "_get_backend",
+        return_value=models.SpreadBackend(type="adhoc"),
+    )
+
+    dest = tmp_path / "processed-spread.yaml"
+    monkeypatch.chdir(tmp_path)
+    with pytest.raises(CraftError, match="No .* files to test"):
+        testing_service.process_spread_yaml(dest, state)
+
+
+@pytest.mark.parametrize(
+    ("content", "expected"),
+    [
+        pytest.param(
+            "backends:\n  craft:\n    systems: []\nsuites: {}\n",
+            True,
+            id="craft-test-file",
+        ),
+        pytest.param(
+            "backends:\n  other:\n    systems: []\nsuites: {}\n",
+            False,
+            id="not-a-craft-test-file",
+        ),
+        pytest.param("- item1\n- item2\n", False, id="not-a-dict"),
+    ],
+)
+def test_is_craft_test_file(tmp_path, content, expected):
+    """Return whether spread.yaml is a craft test file."""
+    spread_path = tmp_path / "spread.yaml"
+    spread_path.write_text(content)
+
+    assert TestingService._is_craft_test_file(spread_path) is expected
+
+
+def test_is_craft_test_file_read_error(tmp_path):
+    """Error if spread.yaml can't be read."""
+    spread_path = tmp_path / "spread.yaml"
+    spread_path.mkdir()
+
+    with pytest.raises(CraftError, match="Could not read"):
+        TestingService._is_craft_test_file(spread_path)
+
+
+def test_is_craft_test_file_invalid_yaml(tmp_path):
+    """Error if spread.yaml is invalid yaml."""
+    spread_path = tmp_path / "spread.yaml"
+    spread_path.write_text("backends: [unclosed")
+
+    with pytest.raises(YamlError):
+        TestingService._is_craft_test_file(spread_path)
+
+
+def test_parse_test_config_uses_craft_test_yaml(
+    in_project_path: pathlib.Path, default_app_metadata, emitter
+):
+    """Prefer the test config file over spread.yaml"""
+    testing_service = TestingService(app=default_app_metadata, services=mock.Mock())
+
+    (in_project_path / "testcraft-test.yaml").write_text(
+        "backends:\n  craft:\n    systems: []\nsuites: {}\n"
+    )
+    # A deprecated spread.yaml file with a craft backend should be ignored
+    # when the test config file is present.
+    (in_project_path / "spread.yaml").write_text(
+        "backends:\n  craft:\n    systems: []\nsuites: {}\n"
+    )
+
+    testing_service.parse_test_config()
+
+    emitter.assert_interactions(None)
+
+
+def test_parse_test_config_spread_yaml(
+    in_project_path: pathlib.Path, default_app_metadata, emitter
+):
+    """Warn when a spread.yaml is used."""
+    testing_service = TestingService(app=default_app_metadata, services=mock.Mock())
+
+    (in_project_path / "spread.yaml").write_text(
+        "backends:\n  craft:\n    systems: []\nsuites: {}\n"
+    )
+
+    testing_service.parse_test_config()
+
+    emitter.assert_warning(
+        "'spread.yaml' is deprecated for 'testcraft test'. "
+        "Rename it to 'testcraft-test.yaml' and "
+        "remove the 'project' key, if defined."
+    )
+
+
+def test_parse_test_config_single_warning(
+    in_project_path: pathlib.Path, default_app_metadata, emitter
+):
+    """The deprecation warning is only emitted once."""
+    testing_service = TestingService(app=default_app_metadata, services=mock.Mock())
+
+    (in_project_path / "spread.yaml").write_text(
+        "backends:\n  craft:\n    systems: []\nsuites: {}\n"
+    )
+
+    testing_service.parse_test_config()
+    testing_service.parse_test_config()
+
+    warning_calls = [call for call in emitter.interactions if call.args[0] == "warning"]
+    assert len(warning_calls) == 1
+
+
+def test_parse_test_config_no_warning_in_managed_mode(
+    in_project_path: pathlib.Path, default_app_metadata, emitter, managed_mode
+):
+    """The deprecation warning is suppressed inside managed instances."""
+    testing_service = TestingService(app=default_app_metadata, services=mock.Mock())
+
+    (in_project_path / "spread.yaml").write_text(
+        "backends:\n  craft:\n    systems: []\nsuites: {}\n"
+    )
+
+    testing_service.parse_test_config()
+
+    emitter.assert_interactions(None)
+
+
+def test_parse_test_config_ignores_non_craft_test_spread_yaml(
+    in_project_path: pathlib.Path, default_app_metadata, emitter
+):
+    """Ignore spread.yaml if it lacks a craft backend."""
+    testing_service = TestingService(app=default_app_metadata, services=mock.Mock())
+
+    (in_project_path / "spread.yaml").write_text(
+        "backends:\n  other:\n    systems: []\nsuites: {}\n"
+    )
+
+    with pytest.raises(CraftError, match="Could not find 'testcraft-test.yaml'"):
+        testing_service.parse_test_config()
+
+    emitter.assert_interactions(None)
+
+
+def test_parse_test_config_fallback_disabled(
+    in_project_path: pathlib.Path, default_app_metadata, emitter
+):
+    """Error on parsing spread.yaml if allow_spread is False."""
+    disabled_app_metadata = dataclasses.replace(
+        default_app_metadata, allow_spread_yaml=False
+    )
+    testing_service = TestingService(
+        app=disabled_app_metadata,
+        services=mock.Mock(),
+    )
+
+    (in_project_path / "spread.yaml").write_text(
+        "backends:\n  craft:\n    systems: []\nsuites: {}\n"
+    )
+
+    with pytest.raises(CraftError, match="'spread.yaml' cannot be used") as raised:
+        testing_service.parse_test_config()
+
+    assert raised.value.resolution is not None
+    assert "testcraft-test.yaml" in raised.value.resolution
+    emitter.assert_interactions(None)
+
+
+def test_parse_test_config_ignores_project_key(
+    in_project_path: pathlib.Path, default_app_metadata
+):
+    """A 'project' key in a spread.yaml is silently unused."""
+    testing_service = TestingService(app=default_app_metadata, services=mock.Mock())
+
+    (in_project_path / "spread.yaml").write_text(
+        "project: my-project\nbackends:\n  craft:\n    systems: []\nsuites: {}\n"
+    )
+
+    parsed = testing_service.parse_test_config()
+
+    assert isinstance(parsed, models.CraftSpreadYaml)
+    assert parsed.project == "my-project"
+
+
+def test_parse_test_config_app_test_yaml_rejects_legacy_keys(
+    in_project_path: pathlib.Path, default_app_metadata
+):
+    """Unsupported keys, like `project`, raise an error when parsing a craft test file."""
+    testing_service = TestingService(app=default_app_metadata, services=mock.Mock())
+
+    (in_project_path / "testcraft-test.yaml").write_text(
+        "project: my-project\nbackends:\n  craft:\n    systems: []\nsuites: {}\n"
+    )
+
+    with pytest.raises(TestFileError):
+        testing_service.parse_test_config()
+
+
+def test_process_lp_test_spread_file(new_dir, monkeypatch, testing_service):
+    monkeypatch.setenv("OS_AUTH_TYPE", "v3applicationcredential")
+    monkeypatch.setenv("OS_AUTH_URL", "https://lp-test-endpoint:5000/v3")
+    monkeypatch.setenv("OS_REGION_NAME", "prodstack7")
+    monkeypatch.setenv("OS_TEST_FLAVOR", "cpu4-ram8-disk10")
+    monkeypatch.setenv(
+        "OS_TEST_IMAGES",
+        '{"20.04": "ubuntu-focal-daily-amd64", '
+        '"22.04": "ubuntu-jammy-daily-amd64", '
+        '"24.04": "ubuntu-noble-daily-amd64"}',
+    )
+    monkeypatch.setenv("OS_TEST_PROJECT_NAME", "lp-test-project")
+    pathlib.Path("spread.yaml").write_text(
+        textwrap.dedent(
+            """
+            project: fetch-service
+            backends:
+              craft:
+                type: craft
+                systems:
+                  - ubuntu-24.04:
+                  - ubuntu-22.04
+                  - ubuntu-20.04
+            suites:
+              tests/general/:
+                summary: Just a test
+            """
+        )
+    )
+    state = models.PackState(
+        artifacts=[models.PackedArtifact(name=None, path=pathlib.Path("foo"))]
+    )
+    testing_service.process_spread_yaml(new_dir / "processed", state)
+
+    processed = pathlib.Path("processed").read_text()
+    assert processed == textwrap.dedent(
+        """\
+        project: craft-test
+        environment:
+          SUDO_USER: ''
+          SUDO_UID: ''
+          LANG: C.UTF-8
+          LANGUAGE: en
+          PROJECT_PATH: /root/proj
+          CRAFT_ARTIFACT: $PROJECT_PATH/foo
+        backends:
+          craft:
+            type: openstack
+            systems:
+            - ubuntu-24.04:
+                workers: 1
+                image: ubuntu-noble-daily-amd64
+            - ubuntu-22.04:
+                workers: 1
+                image: ubuntu-jammy-daily-amd64
+            - ubuntu-20.04:
+                workers: 1
+                image: ubuntu-focal-daily-amd64
+            prepare: '"$PROJECT_PATH"/spread/.extension backend-prepare lp-test'
+            restore: '"$PROJECT_PATH"/spread/.extension backend-restore lp-test'
+            prepare-each: '"$PROJECT_PATH"/spread/.extension backend-prepare-each lp-test'
+            restore-each: '"$PROJECT_PATH"/spread/.extension backend-restore-each lp-test'
+            endpoint: https://lp-test-endpoint:5000/v3
+            account: user
+            key: password
+            location: lp-test-project/prodstack7
+            plan: cpu4-ram8-disk10
+            halt-timeout: 6h
+        suites:
+          tests/general/:
+            summary: Just a test
+            systems: []
+        exclude:
+        - .git
+        - .tox
+        path: /root/proj
+        reroot: ..
+        """
+    )
+
+
+def test_process_lp_test_spread_file_invalid_images(
+    new_dir, monkeypatch, testing_service
+):
+    """A malformed OS_TEST_IMAGES value raises a CraftError."""
+    monkeypatch.setenv("OS_AUTH_TYPE", "v3applicationcredential")
+    monkeypatch.setenv("OS_AUTH_URL", "https://lp-test-endpoint:5000/v3")
+    monkeypatch.setenv("OS_REGION_NAME", "prodstack7")
+    monkeypatch.setenv("OS_TEST_FLAVOR", "cpu4-ram8-disk10")
+    monkeypatch.setenv("OS_TEST_IMAGES", "not-json")
+    monkeypatch.setenv("OS_TEST_PROJECT_NAME", "lp-test-project")
+    pathlib.Path("spread.yaml").write_text(
+        "backends:\n  craft:\n    systems: []\nsuites: {}\n"
+    )
+    state = models.PackState(
+        artifacts=[models.PackedArtifact(name=None, path=pathlib.Path("foo"))]
+    )
+
+    with pytest.raises(CraftError, match="Invalid OS_TEST_IMAGES"):
+        testing_service.process_spread_yaml(new_dir / "processed", state)
+
+
+def test_process_lp_test_spread_file_non_dict_images(
+    new_dir, monkeypatch, testing_service
+):
+    """A non-object OS_TEST_IMAGES value raises a CraftError."""
+    monkeypatch.setenv("OS_AUTH_TYPE", "v3applicationcredential")
+    monkeypatch.setenv("OS_AUTH_URL", "https://lp-test-endpoint:5000/v3")
+    monkeypatch.setenv("OS_REGION_NAME", "prodstack7")
+    monkeypatch.setenv("OS_TEST_FLAVOR", "cpu4-ram8-disk10")
+    monkeypatch.setenv("OS_TEST_IMAGES", '["a", "b"]')
+    monkeypatch.setenv("OS_TEST_PROJECT_NAME", "lp-test-project")
+    pathlib.Path("spread.yaml").write_text(
+        "backends:\n  craft:\n    systems: []\nsuites: {}\n"
+    )
+    state = models.PackState(
+        artifacts=[models.PackedArtifact(name=None, path=pathlib.Path("foo"))]
+    )
+
+    with pytest.raises(CraftError, match="Invalid OS_TEST_IMAGES"):
+        testing_service.process_spread_yaml(new_dir / "processed", state)
+
+
+def test_process_lp_test_spread_file_missing_required_vars(
+    new_dir, monkeypatch, testing_service
+):
+    """Missing OS_AUTH_URL or OS_TEST_FLAVOR raises a CraftError."""
+    monkeypatch.setenv("OS_AUTH_TYPE", "v3applicationcredential")
+    monkeypatch.setenv("OS_REGION_NAME", "prodstack7")
+    monkeypatch.setenv("OS_TEST_PROJECT_NAME", "lp-test-project")
+    monkeypatch.delenv("OS_AUTH_URL", raising=False)
+    monkeypatch.delenv("OS_TEST_FLAVOR", raising=False)
+    pathlib.Path("spread.yaml").write_text(
+        "backends:\n  craft:\n    systems: []\nsuites: {}\n"
+    )
+    state = models.PackState(
+        artifacts=[models.PackedArtifact(name=None, path=pathlib.Path("foo"))]
+    )
+
+    with pytest.raises(CraftError, match="Missing required environment"):
+        testing_service.process_spread_yaml(new_dir / "processed", state)
+
+
+def test_process_lp_test_spread_file_missing_images(
+    new_dir, monkeypatch, testing_service
+):
+    """A missing OS_TEST_IMAGES value raises a CraftError."""
+    monkeypatch.setenv("OS_AUTH_TYPE", "v3applicationcredential")
+    monkeypatch.setenv("OS_AUTH_URL", "https://lp-test-endpoint:5000/v3")
+    monkeypatch.setenv("OS_REGION_NAME", "prodstack7")
+    monkeypatch.setenv("OS_TEST_FLAVOR", "cpu4-ram8-disk10")
+    monkeypatch.delenv("OS_TEST_IMAGES", raising=False)
+    monkeypatch.setenv("OS_TEST_PROJECT_NAME", "lp-test-project")
+    pathlib.Path("spread.yaml").write_text(
+        "backends:\n  craft:\n    systems: []\nsuites: {}\n"
+    )
+    state = models.PackState(
+        artifacts=[models.PackedArtifact(name=None, path=pathlib.Path("foo"))]
+    )
+
+    with pytest.raises(CraftError, match="OS_TEST_IMAGES is not set"):
+        testing_service.process_spread_yaml(new_dir / "processed", state)
+
+
+def test_process_lp_test_spread_file_partial_images(
+    new_dir, monkeypatch, testing_service
+):
+    """A partial OS_TEST_IMAGES value raises a CraftError."""
+    monkeypatch.setenv("OS_AUTH_TYPE", "v3applicationcredential")
+    monkeypatch.setenv("OS_AUTH_URL", "https://lp-test-endpoint:5000/v3")
+    monkeypatch.setenv("OS_REGION_NAME", "prodstack7")
+    monkeypatch.setenv("OS_TEST_FLAVOR", "cpu4-ram8-disk10")
+    monkeypatch.setenv("OS_TEST_IMAGES", '{"24.04": "ubuntu-noble-daily-amd64"}')
+    monkeypatch.setenv("OS_TEST_PROJECT_NAME", "lp-test-project")
+    pathlib.Path("spread.yaml").write_text(
+        textwrap.dedent(
+            """
+            backends:
+              craft:
+                systems:
+                  - ubuntu-24.04:
+                  - ubuntu-22.04
+                  - ubuntu-20.04
+            suites: {}
+            """
+        )
+    )
+    state = models.PackState(
+        artifacts=[models.PackedArtifact(name=None, path=pathlib.Path("foo"))]
+    )
+
+    with pytest.raises(
+        CraftError,
+        match=(
+            "OS_TEST_IMAGES is missing image mappings for: "
+            "ubuntu-20\\.04, ubuntu-22\\.04"
+        ),
+    ):
+        testing_service.process_spread_yaml(new_dir / "processed", state)
+
+
+def test_get_backend_type_requires_prodstack7_region(monkeypatch, testing_service):
+    """The lp-test backend is only selected on prodstack7."""
+    for var in ("CI", "OS_AUTH_TYPE", "OS_REGION_NAME", "OS_TEST_PROJECT_NAME"):
+        monkeypatch.delenv(var, raising=False)
+
+    assert testing_service._get_backend_type() == "lxd-vm"
+
+    monkeypatch.setenv("OS_AUTH_TYPE", "v3applicationcredential")
+    monkeypatch.setenv("OS_TEST_PROJECT_NAME", "lp-test-project")
+    monkeypatch.setenv("OS_REGION_NAME", "other-region")
+
+    assert testing_service._get_backend_type() == "lxd-vm"
+
+    monkeypatch.setenv("OS_REGION_NAME", "prodstack7")
+
+    assert testing_service._get_backend_type() == "lp-test"
 
 
 @pytest.mark.parametrize(

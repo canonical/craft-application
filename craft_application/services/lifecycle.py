@@ -264,12 +264,17 @@ class LifecycleService(base.AppService):
             *self._app.source_ignore_patterns,
         ]
 
-        # Ignore spread.yaml, .spread-reuse.* and spread to prevent repulling sources
-        # when test files are changed.
+        # Ignore the test config file, the deprecated spread.yaml file,
+        # .spread-reuse.* and spread to prevent repulling sources when test
+        # files are changed.
         ignore_outdated = (
             source_ignore_patterns
             + [".spread-reuse.*"]
-            + (["spread.yaml", "spread"] if Path("spread/.extension").exists() else [])
+            + (
+                [f"{self._app.name}-test.yaml", "spread.yaml", "spread"]
+                if Path("spread/.extension").exists()
+                else []
+            )
         )
 
         try:

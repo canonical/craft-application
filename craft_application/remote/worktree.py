@@ -51,7 +51,7 @@ class WorkTree:
         if self._repo_dir.exists():
             rmtree(self._repo_dir)
 
-        copytree(self._project_dir, self._repo_dir)
+        copytree(self._project_dir, self._repo_dir, ignore_dangling_symlinks=True)
 
         self._gitify_repository()
 

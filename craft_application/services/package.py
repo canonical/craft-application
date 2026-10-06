@@ -27,7 +27,7 @@ from typing import TYPE_CHECKING, Any, TypeVar, cast
 from craft_cli import emit
 
 from craft_application import errors, models, util
-from craft_application.services import base
+from craft_application.services import base, state
 
 if TYPE_CHECKING:  # pragma: no cover
     from collections.abc import Mapping
@@ -161,7 +161,7 @@ class PackageService(base.AppService):
         """Write artifact-oriented packaging state."""
         platform = self._build_info.platform
         state_service = self._services.get("state")
-        state_entries = [
+        state_entries: list[dict[str, state.ValueType]] = [
             {"name": name, "path": str(path)} for name, path in artifacts.items()
         ]
 
@@ -282,6 +282,9 @@ class PackageService(base.AppService):
 
     def needs_packing(self, partition: str | None = None) -> bool:
         """Determine whether the given artifact/partition requires packing."""
+        if not self._project.parts:
+            emit.debug("No parts to pack, skipping.")
+            return False
         lifecycle = self._services.get("lifecycle")
         if (
             self._app.always_repack

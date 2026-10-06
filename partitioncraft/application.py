@@ -37,3 +37,4 @@ class Partitioncraft(craft_application.Application):
     def _enable_craft_parts_features(self) -> None:
         craft_cli.emit.debug("Enabling partitions")
         craft_parts.Features(enable_partitions=True)
+        super()._enable_craft_parts_features()

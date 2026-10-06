@@ -32,6 +32,7 @@ from craft_application.errors import CraftValidationError
 from craft_application.services.project import ProjectService
 from craft_application.services.service_factory import ServiceFactory
 from craft_parts import ProjectVar, ProjectVarInfo
+from distro_support.errors import UnknownDistributionError, UnknownVersionError
 from hypothesis import given, strategies
 
 
@@ -1002,6 +1003,57 @@ def test_check_base_eol_soon_date(
     assert real_project_service.base_eol_soon_date() == expected_date
 
 
+@freezegun.freeze_time("2027-01-01")
+@pytest.mark.parametrize(
+    ("base", "build_base", "expected"),
+    [
+        ("ubuntu@22.04", None, False),
+        pytest.param("ubuntu@16.04", None, True, id="eol-base"),
+        pytest.param("bare", "ubuntu@16.04", True, id="eol-build-base"),
+        pytest.param("ubuntu@22.04", "ubuntu@devel", False, id="devel-build-base"),
+        pytest.param("bare", "ubuntu@devel", False, id="devel-build-base-no-base"),
+    ],
+)
+@pytest.mark.usefixtures("fake_project_file")
+def test_is_effective_base_eol(
+    real_project_service: ProjectService,
+    base: str,
+    build_base: str | None,
+    expected: bool,
+):
+    real_project_service.configure(platform=None, build_for=None)
+    raw_project = real_project_service._load_raw_project()
+    if build_base:
+        raw_project["build-base"] = build_base
+    raw_project["base"] = base
+
+    assert real_project_service.is_effective_base_eol() is expected
+
+
+@freezegun.freeze_time("2027-01-01")
+@pytest.mark.parametrize(
+    ("base", "build_base"),
+    [
+        pytest.param("nonexistent@0.0", None, id="nonexistent-distribution"),
+        pytest.param("ubuntu@99.99", None, id="unknown-ubuntu-series"),
+    ],
+)
+@pytest.mark.usefixtures("fake_project_file")
+def test_is_effective_base_eol_unknown_base_raises(
+    real_project_service: ProjectService,
+    base: str,
+    build_base: str | None,
+):
+    real_project_service.configure(platform=None, build_for=None)
+    raw_project = real_project_service._load_raw_project()
+    if build_base:
+        raw_project["build-base"] = build_base
+    raw_project["base"] = base
+
+    with pytest.raises((UnknownDistributionError, UnknownVersionError)):
+        real_project_service.is_effective_base_eol()
+
+
 def test_deep_update(fake_project_file, real_project_service: ProjectService):
     """Test the deep update of a project model."""
     fake_project_file.write_text(
@@ -1167,3 +1219,106 @@ def test_invalid_part_names_on_future_base(
 
     with pytest.raises(CraftValidationError, match=re.escape(part_name)):
         real_project_service._validate_user_provided_part_names(project_dict)
+
+
+@pytest.mark.usefixtures("enable_build_slices")
+@pytest.mark.parametrize("app_metadata", [{"enable_build_slices": True}], indirect=True)
+def test_apply_build_slices(real_project_service: ProjectService):
+    """Create a part for root-level build-slices."""
+    build_slices = ["bash_bins", "base-files_base"]
+    project_dict: dict[str, Any] = {
+        "build-slices": build_slices,
+        "parts": {"my-part": {"plugin": "nil"}},
+    }
+
+    real_project_service._apply_build_slices(project_dict)
+
+    assert project_dict["parts"] == {
+        "my-part": {"plugin": "nil"},
+        "craft/build-slices": {
+            "plugin": "nil",
+            "build-slices": build_slices,
+        },
+    }
+
+
+@pytest.mark.usefixtures("enable_build_slices")
+@pytest.mark.parametrize("app_metadata", [{"enable_build_slices": True}], indirect=True)
+@pytest.mark.parametrize(
+    "build_slices",
+    [
+        pytest.param(["bash_bins"], id="with-slices"),
+        pytest.param([], id="empty-slices"),
+        pytest.param(None, id="null-slices"),
+    ],
+)
+def test_apply_build_slices_part_already_exists(
+    real_project_service: ProjectService, build_slices
+):
+    """Error when the build-slices part name already exists."""
+    part_name = "craft/build-slices"
+    project_dict: dict[str, Any] = {
+        "build-slices": build_slices,
+        "parts": {part_name: {"plugin": "nil"}},
+    }
+
+    with pytest.raises(
+        CraftValidationError, match=re.escape(f"{part_name!r} is reserved")
+    ):
+        real_project_service._apply_build_slices(project_dict)
+
+
+@pytest.mark.usefixtures("enable_build_slices")
+@pytest.mark.parametrize("app_metadata", [{"enable_build_slices": True}], indirect=True)
+@pytest.mark.parametrize(
+    "build_slices",
+    [
+        pytest.param([], id="empty-slices"),
+        pytest.param(None, id="null-slices"),
+    ],
+)
+def test_apply_build_slices_empty_or_null(
+    real_project_service: ProjectService, build_slices
+):
+    """No-op when build-slices is an empty list or null."""
+    project_dict: dict[str, Any] = {
+        "build-slices": build_slices,
+        "parts": {"my-part": {"plugin": "nil"}},
+    }
+
+    real_project_service._apply_build_slices(project_dict)
+
+    assert project_dict["parts"] == {"my-part": {"plugin": "nil"}}
+
+
+@pytest.mark.parametrize(
+    "app_metadata",
+    [
+        pytest.param({"enable_build_slices": True}, id="enabled"),
+        pytest.param({"enable_build_slices": False}, id="disabled"),
+    ],
+    indirect=True,
+)
+def test_apply_build_slices_no_slices(real_project_service: ProjectService):
+    """No-op when build-slices aren't present."""
+    project_dict: dict[str, Any] = {
+        "parts": {"my-part": {"plugin": "nil"}},
+    }
+
+    real_project_service._apply_build_slices(project_dict)
+
+    assert project_dict == {"parts": {"my-part": {"plugin": "nil"}}}
+
+
+# enable_build_slices fixture is *not* used
+def test_apply_build_slices_unsupported(real_project_service: ProjectService):
+    """Error when build-slices are unsupported."""
+    project_dict: dict[str, Any] = {
+        "build-slices": ["bash_bins", "base-files_base"],
+        "parts": {"my-part": {"plugin": "nil"}},
+    }
+
+    with pytest.raises(
+        CraftValidationError, match="does not support the 'build-slices' key"
+    ):
+        real_project_service._apply_build_slices(project_dict)

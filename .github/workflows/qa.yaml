@@ -8,10 +8,16 @@ on:
       - "release/*"
       - "renovate/*"
   pull_request:
+    paths-ignore:
+      - ".github/workflows/policy.yaml"
+      - ".osv-scanner.toml"
 
 jobs:
   lint:
     uses: canonical/starflow/.github/workflows/lint-python.yaml@main
+    permissions:
+      contents: read
+      pull-requests: read
   test:
     uses: canonical/starflow/.github/workflows/test-python.yaml@main
     with:

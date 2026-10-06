@@ -27,7 +27,9 @@ import craft_parts
 import craft_providers.bases
 import pydantic
 from craft_cli import emit
+from craft_parts.constraints import ChiselSliceStr
 from craft_providers.errors import BaseConfigurationError
+from pydantic.json_schema import SkipJsonSchema
 from typing_extensions import Self
 
 from craft_application.models import base
@@ -231,6 +233,20 @@ class Project(base.CraftBaseModel):
 
     The Debian, Personal Package Archive (PPA), and Ubuntu Cloud Archive (UCA) package
     formats are supported.
+    """
+
+    build_slices: SkipJsonSchema[list[ChiselSliceStr] | None] = pydantic.Field(
+        default=None,
+        description="The list of Chisel slices to make available during the build.",
+        examples=["[bash_bins, base-files_base]"],
+    )
+    """The list of Chisel slices to make available during the build.
+
+    Before any part is built, all build slices are cut into a common directory
+    that becomes the system root for parts declaring ``build-slices``.
+
+    For slices that are needed by many parts, this key is preferred over the
+    part-specific ``build-slices`` key, to avoid repetition.
     """
 
     @pydantic.field_validator("platforms", mode="before")

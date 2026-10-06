@@ -16,27 +16,79 @@
 
 """Service for testing a project."""
 
+import json
 import os
 import pathlib
 import shlex
 import shutil
 import subprocess
 import tempfile
+import textwrap
 from collections.abc import Iterable
 
 import craft_platforms
 import distro
+import pydantic
 from craft_cli import CraftError, emit
 
 from craft_application import models, util
+from craft_application.errors import TestFileError
+from craft_application.services.fetch import EXTERNAL_FETCH_SERVICE_ENV_VAR
+from craft_application.util.error_formatting import format_pydantic_errors
 
 from . import base
+
+_PROXY_CERT_ENV_VAR = "CRAFT_PROXY_CERT"
+_PROXY_CERT_FILENAME = "fetch-service-ca.crt"
+_PROXY_CERT_RUNNER_PATH = pathlib.PurePosixPath(
+    "/usr/local/share/ca-certificates/local-ca.crt"
+)
+_PROXY_ENVIRONMENT_VARIABLES = (
+    "HTTP_PROXY",
+    "http_proxy",
+    "HTTPS_PROXY",
+    "https_proxy",
+    "NO_PROXY",
+    "no_proxy",
+)
+
+
+# Base snippets to configure a proxy inside spread runners
+_APT_SETUP = textwrap.dedent("""
+    if [ -d /etc/apt ]; then
+      printf 'Acquire::http::Proxy "%s";\\nAcquire::https::Proxy "%s";\\n' "$http_proxy" "$https_proxy" > /etc/apt/apt.conf.d/99proxy
+      rm -Rf /var/lib/apt/lists
+      apt update
+    fi
+    """).strip()
+
+_SNAPD_SETUP = textwrap.dedent("""
+    if command -v snap > /dev/null; then
+      systemctl restart snapd
+      snap set system proxy.http="$http_proxy"
+      snap set system proxy.https="$https_proxy"
+    fi
+    """).strip()
+
+_LXD_SETUP = textwrap.dedent("""
+    if command -v lxc > /dev/null; then
+      lxc config set core.proxy_http "$http_proxy"
+      lxc config set core.proxy_https "$https_proxy"
+      lxc config set core.proxy_ignore_hosts "$no_proxy"
+    fi
+    """).strip()
 
 
 class TestingService(base.AppService):
     """Service class for testing a project."""
 
     __test__ = False  # Tell pytest this service is not a test class.
+
+    _resolved_test_config_path: pathlib.Path | None = None
+    """The resolved test config path.
+
+    Cached for performance and to avoid re-emitting deprecation warnings.
+    """
 
     def test(
         self,
@@ -52,7 +104,8 @@ class TestingService(base.AppService):
 
         This method is likely the all you need to call.
 
-        :param project_path: The path to the project directory containing spread.yaml.
+        :param project_path: The path to the project directory containing the
+            test config file or the deprecated spread.yaml file.
         :param pack_state: An object containing the list of packed artifacts.
         :param test_expressions: A list of spread test expressions.
         :param shell: Whether to shell into the spread test instance.
@@ -76,37 +129,126 @@ class TestingService(base.AppService):
                 debug=debug,
             )
 
-    def parse_spread_yaml(self) -> models.CraftSpreadYaml:
-        """Read and parse the spread.yaml file for this project."""
-        spread_path = pathlib.Path("spread.yaml")
-        if not spread_path.is_file():
+    def parse_test_config(self) -> models.CraftTestYaml:
+        """Read and parse the test config file for this project.
+
+        :raises CraftError: if no usable test config file is found.
+        :raises TestFileError: if the test config file is invalid.
+        """
+        test_path = self._resolve_test_config_path()
+        with test_path.open() as file:
+            data = util.safe_yaml_load(file)
+
+        if test_path.name == "spread.yaml":
+            model = models.CraftSpreadYaml
+        else:
+            model = models.CraftTestYaml
+
+        try:
+            parsed = model.unmarshal(data)
+        except pydantic.ValidationError as exc:
+            raise TestFileError(
+                format_pydantic_errors(exc.errors(), file_name=test_path.name),
+                reportable=False,
+                retcode=os.EX_DATAERR,
+            ) from exc
+
+        return parsed
+
+    def _resolve_test_config_path(self) -> pathlib.Path:
+        """Locate the test config file.
+
+        :raises CraftError: if no usable test config file is found
+        """
+        if self._resolved_test_config_path is not None:
+            return self._resolved_test_config_path
+
+        # If '<app-name>-test.yaml' exists, parse it.
+        test_file_name = f"{self._app.name}-test.yaml"
+        test_path = pathlib.Path(test_file_name)
+        if test_path.is_file():
+            self._resolved_test_config_path = test_path
+            return test_path
+
+        # If '<app-name>-test.yaml' doesn't exist, check for a deprecated spread.yaml
+        # that contains a craft backend.
+        spread_yaml_path = pathlib.Path("spread.yaml")
+        if not (
+            spread_yaml_path.is_file() and self._is_craft_test_file(spread_yaml_path)
+        ):
             raise CraftError(
-                "Could not find 'spread.yaml' in the current directory.",
-                resolution="Ensure you are in the correct directory or create a spread.yaml file.",
+                f"Could not find {test_file_name!r}.",
+                resolution=(
+                    "Ensure you are in the correct directory or create a "
+                    f"{test_file_name!r} file with '{self._app.name} init --profile test'."
+                ),
                 reportable=False,
                 logpath_report=False,
                 retcode=os.EX_CONFIG,
             )
 
-        with spread_path.open() as file:
-            data = util.safe_yaml_load(file)
+        # If the app isn't allowed to parse spread files, raise an error.
+        if not self._app.allow_spread_yaml:
+            raise CraftError(
+                f"'spread.yaml' cannot be used for '{self._app.name} test'.",
+                resolution=(
+                    f"Rename 'spread.yaml' to '{test_file_name}' and "
+                    "remove the 'project' key, if defined."
+                ),
+                reportable=False,
+                logpath_report=False,
+                retcode=os.EX_CONFIG,
+            )
 
-        return models.CraftSpreadYaml.unmarshal(data)
+        # If the app is allowed to parse spread files, emit a deprecation warning and parse it.
+        if not util.is_managed_mode():
+            emit.warning(
+                f"'spread.yaml' is deprecated for '{self._app.name} test'. "
+                f"Rename it to '{test_file_name}' and remove the 'project' key, if defined."
+            )
+
+        self._resolved_test_config_path = spread_yaml_path
+        return spread_yaml_path
+
+    @staticmethod
+    def _is_craft_test_file(path: pathlib.Path) -> bool:
+        """Check whether a spread config file is used for craft tests.
+
+        This is a simple check that looks for a 'craft' backend.
+
+        The intent is to sort out projects that used spread.yaml for the 'test' command
+        versus projects that used spread and had their own spread.yaml
+        """
+        try:
+            with path.open() as file:
+                data = util.safe_yaml_load(file)
+        except OSError as err:
+            raise CraftError(f"Could not read {str(path)!r}.") from err
+
+        if not isinstance(data, dict):
+            return False
+
+        backends = data.get("backends")
+        return isinstance(backends, dict) and "craft" in backends
 
     def process_spread_yaml(
         self, dest: pathlib.Path, pack_state: models.PackState
     ) -> None:
-        """Process the spread configuration file.
+        """Process the test config file into a spread config file.
 
-        :param dest: the output path for spread.yaml.
+        :param dest: the output path for the generated spread.yaml file.
         """
-        emit.debug("Processing spread.yaml.")
+        test_path = self._resolve_test_config_path()
+        emit.debug(f"Processing '{test_path.name}'.")
 
-        simple = self.parse_spread_yaml()
+        simple = self.parse_test_config()
 
-        craft_backend = self._get_backend()
+        backend_type = self._get_backend_type()
+        craft_backend = self._get_backend(backend_type)
+        images = self._get_system_images(backend_type)
+        self._validate_system_images(simple, backend_type=backend_type, images=images)
 
-        if not pack_state.artifact:
+        if not pack_state.artifacts:
             raise CraftError(
                 f"No {self._app.artifact_type} files to test.",
                 resolution=f"Ensure that {self._app.artifact_type} files are generated before running the test.",
@@ -115,12 +257,172 @@ class TestingService(base.AppService):
         spread_yaml = models.SpreadYaml.from_craft(
             simple,
             craft_backend=craft_backend,
-            artifact=pack_state.artifact,
-            resources=pack_state.resources or {},
+            artifacts=pack_state.artifacts,
+            images=images,
         )
+        if os.getenv(EXTERNAL_FETCH_SERVICE_ENV_VAR) == "1":
+            self._configure_external_fetch_service(spread_yaml, dest.parent)
 
         emit.trace(f"Writing processed spread file to {dest}")
         spread_yaml.to_yaml_file(dest)
+
+    def _configure_external_fetch_service(
+        self,
+        spread_yaml: models.SpreadYaml,
+        spread_dir: pathlib.Path,
+    ) -> None:
+        """Configure spread runners to use an external fetch-service session."""
+        spread_yaml.environment.update(
+            {
+                variable: f'$(HOST: echo "${variable}")'
+                for variable in _PROXY_ENVIRONMENT_VARIABLES
+            }
+        )
+        if proxy_urls := os.getenv("CRAFT_TEST_FETCH_SERVICE_SESSIONS"):
+            if len(proxy_urls.split(",")) != 1:
+                raise CraftError(
+                    "CRAFT_TEST_FETCH_SERVICE_SESSIONS must contain exactly one session URL.",
+                    resolution=(
+                        "Set CRAFT_TEST_FETCH_SERVICE_SESSIONS to a single session URL "
+                        "to use an external fetch-service session."
+                    ),
+                    reportable=False,
+                    retcode=os.EX_CONFIG,
+                )
+            spread_yaml.environment.update(
+                dict.fromkeys(
+                    ("HTTP_PROXY", "http_proxy", "HTTPS_PROXY", "https_proxy"),
+                    proxy_urls,
+                )
+            )
+        spread_yaml.environment["GOPROXY"] = "direct"
+
+        cert_setup = ""
+        if cert_str := os.getenv(_PROXY_CERT_ENV_VAR):
+            cert_path = pathlib.Path(cert_str)
+            if not cert_path.is_file():
+                raise CraftError(f"{cert_path} is not a valid certificate file.")
+
+            staged_cert = spread_dir / _PROXY_CERT_FILENAME
+            shutil.copyfile(cert_path, staged_cert)
+            runner_cert_source = (
+                pathlib.PurePosixPath("$PROJECT_PATH")
+                / spread_dir.relative_to(pathlib.Path.cwd())
+                / _PROXY_CERT_FILENAME
+            )
+            spread_yaml.environment.update(
+                {
+                    "REQUESTS_CA_BUNDLE": str(_PROXY_CERT_RUNNER_PATH),
+                    "CARGO_HTTP_CAINFO": str(_PROXY_CERT_RUNNER_PATH),
+                }
+            )
+            cert_setup = "\n".join(
+                (
+                    (
+                        f'install -D -m 0644 "{runner_cert_source}" '
+                        f"{_PROXY_CERT_RUNNER_PATH}"
+                    ),
+                    "/usr/sbin/update-ca-certificates > /dev/null",
+                    "mkdir -p /root/.pip",
+                    (
+                        f"printf '[global]\\ncert={_PROXY_CERT_RUNNER_PATH}\\n' "
+                        "> /root/.pip/pip.conf"
+                    ),
+                )
+            )
+
+        for backend in spread_yaml.backends.values():
+            existing_prepare = str(getattr(backend, "prepare", ""))
+            session_setup = f"{cert_setup}\n{_APT_SETUP}\n{_SNAPD_SETUP}\n{_LXD_SETUP}"
+            backend.prepare = f"{session_setup}\n{existing_prepare}"
+
+    def _validate_system_images(
+        self,
+        simple: models.CraftTestYaml,
+        *,
+        backend_type: str,
+        images: dict[str, str],
+    ) -> None:
+        """Ensure lp-test systems all have an image mapping."""
+        if backend_type != "lp-test":
+            return
+
+        system_names: list[str] = []
+        for item in simple.backends["craft"].systems:
+            if isinstance(item, str):
+                system_names.append(item)
+            else:
+                system_names.extend(item)
+
+        missing_images = [
+            system_name
+            for system_name in system_names
+            if not images.get(system_name)
+            and not images.get(system_name.removesuffix("-64"))
+        ]
+
+        if missing_images:
+            missing_systems = ", ".join(sorted(set(missing_images)))
+            raise CraftError(
+                f"OS_TEST_IMAGES is missing image mappings for: {missing_systems}.",
+                resolution=(
+                    "Ensure OS_TEST_IMAGES is set to a JSON object mapping "
+                    "every configured system name to an image name."
+                ),
+                reportable=False,
+                retcode=os.EX_DATAERR,
+            )
+
+    def _get_system_images(self, backend_type: str) -> dict[str, str]:
+        """Obtain the mapping from system name to image name.
+
+        :param backend_type: the backend used for testing
+        :return: a dictionary mapping each system to an image.
+        """
+        if backend_type != "lp-test":
+            return {}
+
+        os_test_images = os.getenv("OS_TEST_IMAGES")
+        if not os_test_images:
+            raise CraftError(
+                "OS_TEST_IMAGES is not set.",
+                resolution=(
+                    "Ensure OS_TEST_IMAGES is set to a JSON object mapping "
+                    "system names to image names."
+                ),
+                reportable=False,
+                retcode=os.EX_DATAERR,
+            )
+
+        try:
+            images = json.loads(os_test_images)
+        except json.JSONDecodeError as err:
+            raise CraftError(
+                f"Invalid OS_TEST_IMAGES value: {err}.",
+                resolution=(
+                    "Ensure OS_TEST_IMAGES is a JSON object mapping "
+                    "system names to image names."
+                ),
+                reportable=False,
+                retcode=os.EX_DATAERR,
+            ) from err
+
+        if not isinstance(images, dict):
+            raise CraftError(
+                "Invalid OS_TEST_IMAGES value: expected a JSON object "
+                "mapping system names to image names.",
+                resolution=(
+                    "Ensure OS_TEST_IMAGES is a JSON object, "
+                    'for example: \'{"24.04": "my-image"}\'.'
+                ),
+                reportable=False,
+                retcode=os.EX_DATAERR,
+            )
+
+        return {
+            key if key.startswith("ubuntu-") else f"ubuntu-{key}": value
+            for key, value in images.items()
+        }
 
     def _get_spread_command(
         self,
@@ -132,6 +434,7 @@ class TestingService(base.AppService):
         cwd: pathlib.Path | None = None,
     ) -> list[str]:
         """Get the full spread command to run."""
+        test_expressions = list(test_expressions)
         cmd = [self._get_spread_executable()]
         if shell:
             cmd.append("-shell")
@@ -144,7 +447,7 @@ class TestingService(base.AppService):
         craft_prefix = f"craft:{ci_system}" if ci_system else "craft"
         spread_dir = cwd or pathlib.Path.cwd()
 
-        if self._running_on_ci() and list(test_expressions) in (["craft"], ["craft:"]):
+        if self._running_on_ci() and test_expressions in (["craft"], ["craft:"]):
             # Set craft backend and host system to avoid job expansion.
             cmd.append(craft_prefix)
         elif test_expressions:
@@ -162,7 +465,7 @@ class TestingService(base.AppService):
                     )
 
             # User provided test expressions are passed to spread.
-            cmd.extend(list(test_expressions))
+            cmd.extend(test_expressions)
         else:
             # Use the craft backend. If running on CI, also set the system.
             cmd.append(craft_prefix)
@@ -239,7 +542,17 @@ class TestingService(base.AppService):
             )
 
     def _get_backend_type(self) -> str:
-        return "ci" if os.environ.get("CI") else "lxd-vm"
+        if (
+            os.getenv("OS_TEST_PROJECT_NAME")
+            and os.getenv("OS_REGION_NAME") == "prodstack7"
+            and os.getenv("OS_AUTH_TYPE") == "v3applicationcredential"
+        ):
+            return "lp-test"
+
+        if os.getenv("CI"):
+            return "ci"
+
+        return "lxd-vm"
 
     def _running_on_ci(self) -> bool:
         return self._get_backend_type() == "ci"
@@ -258,20 +571,64 @@ class TestingService(base.AppService):
 
         return system
 
-    def _get_backend(self) -> models.SpreadBackend:
-        name = self._get_backend_type()
-
-        return models.SpreadBackend(
+    def _get_backend(self, name: str) -> models.SpreadBackend:
+        backend = models.SpreadBackend(
             type="adhoc",
-            # Allocate and discard occur on the host.
-            allocate=f"ADDRESS $(./spread/.extension allocate {name})",
-            discard=f"./spread/.extension discard {name}",
-            # Each of these occur within the spread runner.
             prepare=f'"$PROJECT_PATH"/spread/.extension backend-prepare {name}',
             restore=f'"$PROJECT_PATH"/spread/.extension backend-restore {name}',
             prepare_each=f'"$PROJECT_PATH"/spread/.extension backend-prepare-each {name}',
             restore_each=f'"$PROJECT_PATH"/spread/.extension backend-restore-each {name}',
         )
+
+        # Example of variables set by Launchpad:
+        #   - OS_AUTH_URL: https://keystone.prodstack7.example.com:5000/v3
+        #   - OS_AUTH_TYPE: v3applicationcredential
+        #   - OS_IDENTITY_API_VERSION: 3
+        #   - OS_TEST_PROJECT_NAME: tenant-01_project
+        #   - OS_TEST_PROJECT_DOMAIN_NAME: Default
+        #   - OS_REGION_NAME: prodstack7
+        #   - OS_TEST_FLAVOR: m1.small
+        #   - OS_TEST_IMAGES: { "focal": "ubuntu-20.04-server-prodstack7", ... }
+
+        if name == "lp-test":
+            auth_url = os.getenv("OS_AUTH_URL")
+            project = os.getenv("OS_TEST_PROJECT_NAME")
+            region = os.getenv("OS_REGION_NAME")
+            flavor = os.getenv("OS_TEST_FLAVOR")
+
+            missing = [
+                var
+                for var, value in (
+                    ("OS_AUTH_URL", auth_url),
+                    ("OS_TEST_FLAVOR", flavor),
+                )
+                if not value
+            ]
+            if missing:
+                raise CraftError(
+                    f"Missing required environment variable(s) for the "
+                    f"lp-test backend: {', '.join(missing)}.",
+                    resolution=(
+                        "Ensure all OpenStack test variables provided by "
+                        "Launchpad are set."
+                    ),
+                    reportable=False,
+                    retcode=os.EX_CONFIG,
+                )
+
+            backend.type = "openstack"
+            backend.endpoint = auth_url
+            backend.account = "user"  # user name placeholder
+            backend.key = "password"  # password placeholder
+            backend.location = f"{project}/{region}"
+            backend.plan = flavor
+            backend.halt_timeout = "6h"
+        else:
+            backend.type = "adhoc"
+            backend.allocate = f"ADDRESS $(./spread/.extension allocate {name})"
+            backend.discard = f"./spread/.extension discard {name}"
+
+        return backend
 
     def _get_spread_executable(self) -> str:
         """Get the executable to run for spread.

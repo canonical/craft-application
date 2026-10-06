@@ -1,0 +1,21 @@
+name: eol-devel-test
+version: "0.1"
+summary: Test packing with a devel build-base and --ignore=unmaintained.
+description: |
+  Regression test for https://github.com/canonical/craft-application/issues/1152
+
+  This tests that witchcraft, which has check_supported_base enabled, can
+  pack a project with `base: bare` and `build-base: devel` when
+  `--ignore=unmaintained` is passed, without crashing with an
+  UnknownVersionError from distro-support.
+
+base: bare
+build-base: ubuntu@devel
+platforms:
+  platform-independent:
+    build-on: [amd64, arm64, ppc64el, s390x, riscv64]
+    build-for: [all]
+
+parts:
+  my-test:
+    plugin: nil

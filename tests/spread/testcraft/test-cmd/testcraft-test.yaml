@@ -1,10 +1,10 @@
-project: test-cmd
-
 backends:
   craft:
     type: craft
     allocate: "false"
     systems:
+      - ubuntu-26.10:
+      - ubuntu-26.04:
       - ubuntu-25.10:
       - ubuntu-24.04:
       - ubuntu-22.04:
@@ -30,4 +30,3 @@ suites:
       https_proxy: '$(HOST: echo "$https_proxy")'
       NO_PROXY: '$(HOST: echo "$NO_PROXY")'
       no_proxy: '$(HOST: echo "$no_proxy")'
-

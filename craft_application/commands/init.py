@@ -1,4 +1,4 @@
-# Copyright 2024 Canonical Ltd.
+# Copyright 2024-2026 Canonical Ltd.
 #
 # This program is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Lesser General Public License version 3, as
@@ -90,7 +90,13 @@ class InitCommand(base.AppCommand):
                 f"choices are {humanize_list(self.profiles, 'and')})"
             ),
         )
-
+        parser.add_argument(
+            "--vcs",
+            type=str,
+            choices=["git", "none"],
+            default="git",
+            help="Initialize a version control system.",
+        )
         parser.add_argument(
             "--base",
             type=str,
@@ -148,7 +154,9 @@ class InitCommand(base.AppCommand):
             project_dir=project_dir,
             project_name=project_name,
             template_dir=template_dir,
+            vcs=parsed_args.vcs,
         )
+
         craft_cli.emit.message("Successfully initialised project.")
 
     def _get_template_dir(self, parsed_args: argparse.Namespace) -> pathlib.Path:

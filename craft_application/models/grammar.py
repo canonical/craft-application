@@ -53,6 +53,7 @@ class _GrammarAwarePart(_GrammarAwareModel):
     stage_packages: Grammar[list[str]] | None = None
     build_snaps: Grammar[list[str]] | None = None
     build_packages: Grammar[list[str]] | None = None
+    build_slices: Grammar[list[str]] | None = None
     build_environment: Grammar[list[SingleEntryDict[str, str]]] | None = None
     build_attributes: Grammar[list[str]] | None = None
     organize_files: Grammar[dict[str, str]] | None = pydantic.Field(

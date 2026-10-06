@@ -1,0 +1,20 @@
+summary: Verify external fetch service configuration
+
+execute: |
+  test -f /usr/local/share/ca-certificates/local-ca.crt
+  test "$REQUESTS_CA_BUNDLE" = /usr/local/share/ca-certificates/local-ca.crt
+  test "$CARGO_HTTP_CAINFO" = /usr/local/share/ca-certificates/local-ca.crt
+  test "$GOPROXY" = direct
+
+  grep -F "Acquire::http::Proxy \"$http_proxy\";" /etc/apt/apt.conf.d/99proxy
+  grep -F "Acquire::https::Proxy \"$https_proxy\";" /etc/apt/apt.conf.d/99proxy
+  grep -F "cert=/usr/local/share/ca-certificates/local-ca.crt" /root/.pip/pip.conf
+
+  test "$(snap get system proxy.http)" = "$http_proxy"
+  test "$(snap get system proxy.https)" = "$https_proxy"
+  test "$(lxc config get core.proxy_http)" = "$http_proxy"
+  test "$(lxc config get core.proxy_https)" = "$https_proxy"
+  test "$(lxc config get core.proxy_ignore_hosts)" = "$no_proxy"
+
+  curl -fsS https://snapcraft.io/ -o /dev/null
+  apt-get install --yes hello

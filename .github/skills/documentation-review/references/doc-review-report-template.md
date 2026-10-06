@@ -10,7 +10,7 @@
 
 ### Build Findings (BLOCKING)
 
-_Source: documentation-build_
+*Source: documentation-build*
 
 <findings or "No issues found" or "Not applicable -- RTD artefacts not detected in target repo">
 
@@ -18,7 +18,7 @@ _Source: documentation-build_
 
 ### Accuracy Findings (CRITICAL)
 
-_Source: documentation-verify_
+*Source: documentation-verify*
 
 <findings grouped by classification (unsupported/outdated/incorrect/imprecise) or "No issues found">
 
@@ -26,7 +26,7 @@ _Source: documentation-verify_
 
 ### Diataxis Findings (HIGH)
 
-_Source: documentation-diataxis_
+*Source: documentation-diataxis*
 
 <findings showing declared vs inferred categories, list misalignments, or "No issues found">
 
@@ -34,7 +34,7 @@ _Source: documentation-diataxis_
 
 ### Structure Findings (MEDIUM)
 
-_Source: documentation-structure_
+*Source: documentation-structure*
 
 <findings listing structural violations or "No issues found">
 
@@ -42,7 +42,7 @@ _Source: documentation-structure_
 
 ### Style Findings (LOW)
 
-_Source: documentation-style_
+*Source: documentation-style*
 
 <findings with quoted style guide passages or "No issues found">
 
@@ -50,7 +50,7 @@ _Source: documentation-style_
 
 ### Incomplete Stages
 
-_Only include this section if any stage failed to complete_
+*Only include this section if any stage failed to complete*
 
 <list of incomplete stages with reasons>
 
@@ -61,7 +61,6 @@ _Only include this section if any stage failed to complete_
 <overall assessment, priority order for addressing findings, estimated effort>
 
 **Recommended Action Priority:**
-
 1. Resolve blocking build issues first
 2. Fix critical accuracy/code-backing issues
 3. Address high-priority Diataxis misalignments

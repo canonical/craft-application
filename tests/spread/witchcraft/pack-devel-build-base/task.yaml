@@ -1,0 +1,19 @@
+summary: test packing witchcraft with build-base devel and --ignore=unmaintained
+
+# Regression test for https://github.com/canonical/craft-application/issues/1152
+#
+# ProjectService.is_effective_base_eol() did not handle a build-base of "devel"
+# (or any base unrecognized by distro-support), crashing with an unhandled
+# UnknownVersionError. This is only exercised when the --ignore=unmaintained
+# flag is used, since that's the only path calling is_effective_base_eol().
+
+execute: |
+  witchcraft pack --ignore=unmaintained --destructive-mode
+
+  if [[ $(find . -maxdepth 1 -name '*.witchcraft') == "" ]]; then
+    echo "No witchcraft file created" >> /dev/stderr
+    exit 1
+  fi
+
+restore: |
+  rm -f *.witchcraft

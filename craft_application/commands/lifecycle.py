@@ -22,16 +22,13 @@ import subprocess
 import textwrap
 from typing import Any, Literal, cast
 
-import pydantic
 from craft_cli import CommandGroup, CraftError, emit
 from craft_parts.features import Features
 from typing_extensions import override
 
 from craft_application import errors, util
 from craft_application.commands import base
-from craft_application.errors import TestFileError
 from craft_application.util import ProServices
-from craft_application.util.error_formatting import format_pydantic_errors
 from craft_application.util.logging import handle_runtime_error
 
 
@@ -485,16 +482,20 @@ class PackCommand(LifecycleCommand):
             return
 
         # Legacy packaging for applications not implementing ST160
-        emit.progress("Packing...")
-        try:
-            packages = self._services.package.pack(
-                self.services.get("lifecycle").prime_dir, parsed_args.output
-            )
-        except Exception as err:
-            if debug:
-                emit.progress(str(err), permanent=True)
-                _launch_shell()
-            raise
+        if self._project.parts:
+            emit.progress("Packing...")
+            try:
+                packages = self._services.package.pack(
+                    self.services.get("lifecycle").prime_dir, parsed_args.output
+                )
+            except Exception as err:
+                if debug:
+                    emit.progress(str(err), permanent=True)
+                    _launch_shell()
+                raise
+        else:
+            emit.debug("No parts to pack, skipping.")
+            packages: list[pathlib.Path] = []
 
         packages = self._relativize_paths(packages, root=pathlib.Path())
 
@@ -525,6 +526,14 @@ class PackCommand(LifecycleCommand):
         debug: bool,
     ) -> None:
         """Run the artifact-aware packing flow."""
+        if not self._project.parts:
+            emit.debug("No parts to pack, skipping.")
+            emit.progress("No packages created.", permanent=True)
+            self._services.package.write_artifacts_state({})
+            if shell_after:
+                _launch_shell()
+            return
+
         emit.progress("Packing...")
         package_service = self._services.package
 
@@ -640,10 +649,9 @@ class PackCommand(LifecycleCommand):
 class TestCommand(PackCommand):
     """Command to run project tests.
 
-    The test command invokes the spread command with a processed spread.yaml
-    configuration file.
+    The test command invokes spread with a processed test config file.
 
-    This command is opt-in for applications in craft-application 5 and will become
+    This command is opt-in for applications and will become
     a standard lifecycle command in a future major release.
     """
 
@@ -683,15 +691,8 @@ class TestCommand(PackCommand):
         parsed_args.output = pathlib.Path.cwd()
 
         testing_service = self._services.get("testing")
-        # Fail early if spread.yaml is invalid.
-        try:
-            testing_service.parse_spread_yaml()
-        except pydantic.ValidationError as exc:
-            raise TestFileError(
-                format_pydantic_errors(exc.errors(), file_name="spread.yaml"),
-                reportable=False,
-                retcode=os.EX_DATAERR,
-            )
+        # Fail early if the test config file is invalid.
+        testing_service.parse_test_config()
 
         if util.is_managed_mode():
             # If we're in managed mode, we just need to pack.

@@ -356,6 +356,7 @@ def test_init_parts_ignore_test_files(
         "*.charm",
         "*.starcraft",
         ".spread-reuse.*",
+        "testcraft-test.yaml",
         "spread.yaml",
         "spread",
     ]

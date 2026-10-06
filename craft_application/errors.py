@@ -49,7 +49,7 @@ class ProjectFileError(CraftError):
 
 
 class TestFileError(CraftError):
-    """Errors to do with the craft test or spread file."""
+    """Errors to do with the test config file or the deprecated spread.yaml file."""
 
 
 class ProjectGenerationError(CraftError):
