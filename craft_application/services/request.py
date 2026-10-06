@@ -142,21 +142,28 @@ class RequestService(base.AppService):
 
         with craft_cli.emit.progress_bar(title, total_size, delta=False) as progress:
             completed_bytes = 0
-            for url, download in downloads.items():
-                # The pre-created generator (whose size was already consumed
-                # above) is reused only on the first attempt; `consume_download`
-                # exhausts this one-shot iterator and creates a fresh download on
-                # each retry.
-                downloaded_bytes = util.retry(
-                    f"download {url}",
-                    retry_exceptions,
-                    consume_download,
-                    url,
-                    files[url],
-                    iter((download,)),
-                    completed_bytes,
-                    progress.advance,
-                )
-                completed_bytes += downloaded_bytes
+            unfinished: set[str] = set()
+            try:
+                for url, download in downloads.items():
+                    unfinished.add(url)
+                    # The pre-created generator (whose size was already consumed
+                    # above) is reused only on the first attempt; `consume_download`
+                    # exhausts this one-shot iterator and creates a fresh download on
+                    # each retry.
+                    downloaded_bytes = util.retry(
+                        f"download {url}",
+                        retry_exceptions,
+                        consume_download,
+                        url,
+                        files[url],
+                        iter((download,)),
+                        completed_bytes,
+                        progress.advance,
+                    )
+                    completed_bytes += downloaded_bytes
+                    unfinished.remove(url)
+            finally:
+                for url in unfinished:
+                    files[url].unlink(missing_ok=True)
 
         return files
