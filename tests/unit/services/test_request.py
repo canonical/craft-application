@@ -324,14 +324,11 @@ def test_download_with_progress_removes_partial_on_nonretryable_error(
     assert attempts == 1
     assert mocked_sleep.mock_calls == []
     assert not output_file.exists()
-    expected_progress = [call("advance", len(b"partial"))]
-    if issubclass(exception, requests.exceptions.RequestException):
-        expected_progress.append(call("advance", 0))
     assert [
         interaction
         for interaction in emitter.interactions
         if interaction.args[0] == "advance"
-    ] == expected_progress
+    ] == [call("advance", len(b"partial"))]
 
 
 @responses.activate

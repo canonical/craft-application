@@ -129,9 +129,9 @@ class RequestService(base.AppService):
                 for chunk_size in download:
                     downloaded_bytes += chunk_size
                     advance(completed_bytes + downloaded_bytes)
-            except requests.exceptions.RequestException:
-                # Clean up and reset progress for Requests errors; util.retry
-                # decides whether the error is retryable.
+            except retry_exceptions:
+                # Clean up and reset progress before retrying. The outer finally
+                # handles cleanup for non-retryable failures.
                 dest.unlink(missing_ok=True)
                 if downloaded_bytes:
                     advance(completed_bytes)
