@@ -96,21 +96,29 @@ class RequestService(base.AppService):
             filename = util.get_filename_from_url_path(url)
             if path.is_dir():
                 path = files[url] = path / filename  # noqa: PLW2901
-            downloads[url] = self.download_chunks(url, path)
 
         if len(files) == 1:
             title = f"Downloading {next(iter(files))}"
         else:
             title = f"Downloading {len(files)} files"
 
-        sizes = [next(download) for download in downloads.values()]
-        total_size = sum(size for size in sizes if size > 0)
-
         retry_exceptions = (
             requests.exceptions.ChunkedEncodingError,
             requests.exceptions.ConnectionError,
             requests.exceptions.ReadTimeout,
         )
+
+        def start_download(url: str) -> int:
+            download = self.download_chunks(url, files[url])
+            size = next(download)
+            downloads[url] = download
+            return size
+
+        sizes = [
+            util.retry(f"start download {url}", retry_exceptions, start_download, url)
+            for url in files
+        ]
+        total_size = sum(size for size in sizes if size > 0)
 
         def consume_download(
             url: str,

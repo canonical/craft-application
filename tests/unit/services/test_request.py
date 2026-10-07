@@ -76,6 +76,10 @@ def test_download_with_progress(
     emitter.assert_interactions(
         [
             call(
+                "debug",
+                "Trying to start download http://example/file (attempt 1/6)",
+            ),
+            call(
                 "progress_bar",
                 "Downloading http://example/file",
                 len(data),
@@ -134,6 +138,60 @@ def test_download_files_with_progress(tmp_path, emitter, request_service, downlo
 
     for url, path in results.items():
         assert path.read_bytes() == downloads[url]
+
+
+@responses.activate
+@pytest.mark.parametrize(
+    "exception",
+    [
+        requests.exceptions.ChunkedEncodingError,
+        requests.exceptions.ConnectionError,
+        requests.exceptions.ReadTimeout,
+    ],
+)
+@pytest.mark.parametrize("failures", [2, 6])
+def test_download_with_progress_retries_initial_request(
+    tmp_path, emitter, mocker, request_service, exception, failures
+):
+    """Retry initial request failures before creating a file or progress bar."""
+    url = "http://example/file"
+    output_file = tmp_path / "file"
+    data = b"complete data"
+
+    def assert_download_not_started(_sleep_time):
+        assert not output_file.exists()
+        assert not any(
+            interaction.args[0] == "progress_bar"
+            for interaction in emitter.interactions
+        )
+
+    mocked_sleep = mocker.patch("time.sleep", side_effect=assert_download_not_started)
+    for _ in range(failures):
+        responses.add(responses.GET, url, body=exception("Initial request failed"))
+    responses.add(
+        responses.GET, url, body=data, headers={"Content-Length": str(len(data))}
+    )
+
+    if failures == 6:
+        with pytest.raises(exception, match="Initial request failed"):
+            request_service.download_with_progress(url, output_file)
+        assert not output_file.exists()
+        assert len(responses.calls) == 6
+        assert mocked_sleep.mock_calls == [
+            call(2),
+            call(4),
+            call(8),
+            call(16),
+            call(32),
+        ]
+    else:
+        assert request_service.download_with_progress(url, output_file) == output_file
+        assert output_file.read_bytes() == data
+        assert len(responses.calls) == 3
+        assert mocked_sleep.mock_calls == [call(2), call(4)]
+        assert call("progress_bar", f"Downloading {url}", len(data), delta=False) in (
+            emitter.interactions
+        )
 
 
 def iter_content_then_raise_chunked_encoding_error(
