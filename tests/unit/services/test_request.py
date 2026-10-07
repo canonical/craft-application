@@ -153,12 +153,14 @@ def iter_content_raise_before_chunk(
     raise requests.exceptions.ChunkedEncodingError("Connection broken")
 
 
-def iter_content_then_raise_os_error(
+def iter_content_then_raise_nonretryable_error(
     chunk_size=None,  # pylint: disable=unused-argument
+    *,
+    exception=OSError,
 ):
-    """Yield partial data, then raise a non-retryable error (e.g. disk full)."""
+    """Yield partial data, then raise a non-retryable error."""
     yield b"partial"
-    raise OSError("No space left on device")
+    raise exception("Non-retryable download failure")
 
 
 @responses.activate
@@ -285,8 +287,11 @@ def test_download_with_progress_exhausts_connection_error_retries(
 
 
 @responses.activate
+@pytest.mark.parametrize(
+    "exception", [OSError, RuntimeError, requests.exceptions.InvalidURL]
+)
 def test_download_with_progress_removes_partial_on_nonretryable_error(
-    tmp_path, mocker, request_service
+    tmp_path, emitter, mocker, request_service, exception
 ):
     """Remove the partial file when a download fails with a non-retryable error."""
     data = b"test data"
@@ -306,17 +311,27 @@ def test_download_with_progress_removes_partial_on_nonretryable_error(
         nonlocal attempts
         attempts += 1
         response = original_get(*args, **kwargs)
-        response.iter_content = iter_content_then_raise_os_error
+        response.iter_content = functools.partial(
+            iter_content_then_raise_nonretryable_error, exception=exception
+        )
         return response
 
     with patch.object(request_service, "get", side_effect=patched_get):
-        with pytest.raises(OSError):  # noqa: PT011
+        with pytest.raises(exception, match="Non-retryable download failure"):
             request_service.download_with_progress("http://example/file", output_file)
 
     # A non-retryable error is not retried and leaves no partial file behind.
     assert attempts == 1
     assert mocked_sleep.mock_calls == []
     assert not output_file.exists()
+    expected_progress = [call("advance", len(b"partial"))]
+    if issubclass(exception, requests.exceptions.RequestException):
+        expected_progress.append(call("advance", 0))
+    assert [
+        interaction
+        for interaction in emitter.interactions
+        if interaction.args[0] == "advance"
+    ] == expected_progress
 
 
 @responses.activate
