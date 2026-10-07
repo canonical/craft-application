@@ -737,6 +737,7 @@ def test_process_lp_test_spread_file(new_dir, monkeypatch, testing_service):
             endpoint: https://lp-test-endpoint:5000/v3
             account: user
             key: password
+            mode: application-credential
             location: lp-test-project/prodstack7
             plan: cpu4-ram8-disk10
             halt-timeout: 6h
