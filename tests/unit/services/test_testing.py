@@ -289,12 +289,8 @@ def test_process_spread_yaml_accepts_named_artifacts_only(
     assert "CRAFT_ARTIFACT_TOOLS: $PROJECT_PATH/tools.tar" in dest.read_text()
 
 
-def test_process_spread_yaml_external_fetch_service(
-    testing_service: TestingService,
-    tmp_path: pathlib.Path,
-    mocker,
-    monkeypatch: pytest.MonkeyPatch,
-):
+@pytest.fixture
+def external_fetch_service_setup(tmp_path, mocker, testing_service, monkeypatch):
     spread_file = tmp_path / "spread.yaml"
     spread_file.write_text(
         dedent("""
@@ -308,9 +304,6 @@ def test_process_spread_yaml_external_fetch_service(
                 summary: General tests
             """)
     )
-    state = models.PackState(
-        artifacts=[models.PackedArtifact(name=None, path=pathlib.Path("artifact"))]
-    )
     mocker.patch.object(
         testing_service,
         "_get_backend",
@@ -321,6 +314,16 @@ def test_process_spread_yaml_external_fetch_service(
     proxy_cert.touch()
     monkeypatch.setenv("CRAFT_PROXY_CERT", str(proxy_cert))
 
+
+@pytest.mark.usefixtures("external_fetch_service_setup")
+def test_process_spread_yaml_external_fetch_service(
+    testing_service: TestingService,
+    tmp_path: pathlib.Path,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    state = models.PackState(
+        artifacts=[models.PackedArtifact(name=None, path=pathlib.Path("artifact"))]
+    )
     dest = tmp_path / "processed-spread.yaml"
     monkeypatch.chdir(tmp_path)
     testing_service.process_spread_yaml(dest, state)
@@ -361,66 +364,39 @@ def test_process_spread_yaml_external_fetch_service(
     assert "lxc config set core.proxy_ignore_hosts" in prepare
 
 
+@pytest.mark.usefixtures("external_fetch_service_setup")
 def test_process_spread_yaml_external_fetch_service_invalid_certificate(
     testing_service: TestingService,
     tmp_path: pathlib.Path,
     mocker,
     monkeypatch: pytest.MonkeyPatch,
 ):
-    spread_file = tmp_path / "spread.yaml"
-    spread_file.write_text(
-        dedent("""
-            project: test-project
-            backends:
-              craft:
-                systems:
-                  - ubuntu-24.04:
-            suites: {}
-            """)
-    )
-    state = models.PackState(
-        artifacts=[models.PackedArtifact(name=None, path=pathlib.Path("artifact"))]
-    )
-    mocker.patch.object(
-        testing_service,
-        "_get_backend",
-        return_value=models.SpreadBackend(type="adhoc"),
-    )
-    monkeypatch.setenv(EXTERNAL_FETCH_SERVICE_ENV_VAR, "1")
     monkeypatch.setenv("CRAFT_PROXY_CERT", str(tmp_path / "missing-cert"))
     monkeypatch.chdir(tmp_path)
 
+    state = models.PackState(
+        artifacts=[models.PackedArtifact(name=None, path=pathlib.Path("artifact"))]
+    )
     with pytest.raises(CraftError, match="is not a valid certificate file"):
         testing_service.process_spread_yaml(tmp_path / "processed-spread.yaml", state)
 
 
+@pytest.mark.usefixtures("external_fetch_service_setup")
 def test_process_spread_yaml_external_fetch_service_without_backend_prepare(
     testing_service: TestingService,
     tmp_path: pathlib.Path,
     mocker,
     monkeypatch: pytest.MonkeyPatch,
 ):
-    (tmp_path / "spread.yaml").write_text(
-        dedent("""
-            project: test-project
-            backends:
-              craft:
-                systems:
-                  - ubuntu-24.04:
-            suites: {}
-            """)
-    )
-    state = models.PackState(
-        artifacts=[models.PackedArtifact(name=None, path=pathlib.Path("artifact"))]
-    )
+    monkeypatch.chdir(tmp_path)
     mocker.patch.object(
         testing_service,
         "_get_backend",
         return_value=models.SpreadBackend(type="adhoc"),
     )
-    monkeypatch.setenv(EXTERNAL_FETCH_SERVICE_ENV_VAR, "1")
-    monkeypatch.chdir(tmp_path)
-
+    state = models.PackState(
+        artifacts=[models.PackedArtifact(name=None, path=pathlib.Path("artifact"))]
+    )
     dest = tmp_path / "processed-spread.yaml"
     testing_service.process_spread_yaml(dest, state)
 
@@ -428,6 +404,57 @@ def test_process_spread_yaml_external_fetch_service_without_backend_prepare(
     prepare = processed["backends"]["craft"]["prepare"]
     assert "apt.conf.d/99proxy" in prepare
     assert "snap set system proxy.http" in prepare
+
+
+@pytest.mark.usefixtures("external_fetch_service_setup")
+def test_process_spread_yaml_external_fetch_service_test_sessions(
+    testing_service: TestingService,
+    tmp_path: pathlib.Path,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    """Test the use of CRAFT_TEST_FETCH_SERVICE_SESSIONS."""
+
+    test_session = "https://www.example.com"
+    monkeypatch.setenv("CRAFT_TEST_FETCH_SERVICE_SESSIONS", test_session)
+
+    state = models.PackState(
+        artifacts=[models.PackedArtifact(name=None, path=pathlib.Path("artifact"))]
+    )
+    dest = tmp_path / "processed-spread.yaml"
+    monkeypatch.chdir(tmp_path)
+    testing_service.process_spread_yaml(dest, state)
+
+    # Check that "http_proxy" env vars are configured
+    processed = util.safe_yaml_load(dest.read_text())
+    for variable in (
+        "HTTP_PROXY",
+        "http_proxy",
+        "HTTPS_PROXY",
+        "https_proxy",
+    ):
+        assert processed["environment"][variable] == test_session
+
+
+@pytest.mark.usefixtures("external_fetch_service_setup")
+def test_process_spread_yaml_external_fetch_service_multiple_test_sessions(
+    testing_service: TestingService,
+    tmp_path: pathlib.Path,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    """Error out if CRAFT_TEST_FETCH_SERVICE_SESSIONS contains multiple urls."""
+
+    test_sessions = "https://www.example.com,https://www.example2.com"
+    monkeypatch.setenv("CRAFT_TEST_FETCH_SERVICE_SESSIONS", test_sessions)
+
+    state = models.PackState(
+        artifacts=[models.PackedArtifact(name=None, path=pathlib.Path("artifact"))]
+    )
+    dest = tmp_path / "processed-spread.yaml"
+    monkeypatch.chdir(tmp_path)
+
+    expected = "CRAFT_TEST_FETCH_SERVICE_SESSIONS must contain exactly one session URL"
+    with pytest.raises(CraftError, match=expected):
+        testing_service.process_spread_yaml(dest, state)
 
 
 def test_process_spread_yaml_requires_any_artifact(

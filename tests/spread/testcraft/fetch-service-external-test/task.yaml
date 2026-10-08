@@ -10,58 +10,48 @@ environment:
   CRAFT_VERBOSITY_LEVEL: DEBUG
 
 prepare: |
-  # This test runs "testcraft test" with an external session; this "prepare"
-  # section installs the fetch-service and creates a session.
-  snap install --candidate fetch-service
+  . "$PROJECT_PATH/tests/spread/tools.sh"
 
-  fetch_service_auth="testcraft:testcraft"
+  fetch_service.setup --log-file "from-testcraft-test.log"
 
-  snap set fetch-service control.auth=${fetch_service_auth}
-  snap set fetch-service control.port=9999
-  snap set fetch-service proxy.port=9988
-  snap set fetch-service permissive=true
-  snap set fetch-service log.file="from-testcraft-test.log"
-  snap set fetch-service upstream-proxy.http=${http_proxy:-}
-  snap set fetch-service upstream-proxy.https=${https_proxy:-}
-  snap set fetch-service upstream-proxy.no-proxy=${no_proxy:-}
-
-  snap start fetch-service
-
-  sleep 5
-  curl -f http://localhost:9999/status
-
-  curl -f --user "$fetch_service_auth" -X POST -d '{"policy": "permissive"}' http://localhost:9999/session --output session.json
-  session_id=$(jq -r .id session.json)
-  token=$(jq -r .token session.json)
-  host_ip=$(ip -f inet addr show lxdbr0 | sed -En -e 's/.*inet ([0-9.]+).*/\1/p')
-  echo "http://${session_id}:${token}@${host_ip}:9988" > session_proxy_url.txt
+  # Create two sessions: one for the build and one for the tests.
+  fetch_service.create_session --session-name "build"
+  fetch_service.create_session --session-name "test"
 
 execute: |
-  proxy_url=$(cat session_proxy_url.txt)
+  . "$PROJECT_PATH/tests/spread/tools.sh"
 
-  # Configure "testcraft test" to set up the spread runners to use the external
-  # fetch-service session.
+  build_url=$(cat build_session_url.txt)
+
   export CRAFT_USE_EXTERNAL_FETCH_SERVICE=1
   export CRAFT_PROXY_CERT=/var/snap/fetch-service/current/local-ca.crt
-  export HTTP_PROXY="$proxy_url"
-  export http_proxy="$proxy_url"
-  export HTTPS_PROXY="$proxy_url"
-  export https_proxy="$proxy_url"
+
+  # Configure "testcraft test" to run the build using the external "build"
+  # fetch-service session...
+  export HTTP_PROXY="${build_url}"
+  export http_proxy="${build_url}"
+  export HTTPS_PROXY="${build_url}"
+  export https_proxy="${build_url}"
+
+  # ... and the test runners to use the "test" fetch-service session
+  test_url=$(cat test_session_url.txt)
+  export CRAFT_TEST_FETCH_SERVICE_SESSIONS="${test_url}"
 
   testcraft test --verbosity=debug
   test -f fetch-service-test*.testcraft
 
-  # Tear down the and check that the "hello" package download went through the
-  # fetch-service
-  session_id=$(jq -r .id session.json)
-  token=$(jq -r .token session.json)
-  fetch_service_auth=$(snap get fetch-service control.auth)
-  curl -sf --user "$fetch_service_auth" -X DELETE -d "{\"token\": \"${token}\"}" "http://localhost:9999/session/${session_id}/token"
-  curl -sf --user "$fetch_service_auth" "http://localhost:9999/session/${session_id}" | tee session_report.json
-  curl -sf --user "$fetch_service_auth" -X DELETE "http://localhost:9999/session/${session_id}"
-  curl -sf --user "$fetch_service_auth" -X DELETE "http://localhost:9999/resources/${session_id}"
+  # Tear down both sessions and check that the "hello" package download went through the
+  # "test" session"
 
-  jq -r '(.artifacts[].metadata | select(.name=="hello")).type' session_report.json | MATCH "application/vnd.debian.binary-package"
+  # Build
+  fetch_service.teardown_session --session-name "build"
+  # 'hello' package *is not* on the 'build' session.
+  jq -r '(.artifacts[].metadata | select(.name=="hello")).type' build_session_report.json | NOMATCH "application/vnd.debian.binary-package"
+
+  # Test
+  fetch_service.teardown_session --session-name "test"
+  # 'hello' package *is* on the 'test' session.
+  jq -r '(.artifacts[].metadata | select(.name=="hello")).type' test_session_report.json | MATCH "application/vnd.debian.binary-package"
 
 restore: |
   # Because this is running in "CI" mode, the spread runners are the actual host itself;
@@ -75,7 +65,7 @@ restore: |
   lxc config unset core.proxy_http || true
   lxc config unset core.proxy_https || true
   lxc config unset core.proxy_ignore_hosts || true
-  rm -f fetch-service-test*.testcraft session.json session_proxy_url.txt session_report.json
+  rm -f fetch-service-test*.testcraft session.json build_session_url.txt test_session_url.txt build_session_report.json test_session_report.json
   snap remove --purge fetch-service
 
 debug: |

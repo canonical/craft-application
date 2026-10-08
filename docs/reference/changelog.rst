@@ -15,6 +15,29 @@ Changelog
 
     For a complete list of commits, check out the `1.2.3`_ release on GitHub.
 
+7.5.0 (2026-10-02)
+------------------
+
+Services
+========
+
+- When ``CRAFT_USE_EXTERNAL_FETCH_SERVICE`` is set, different sessions can be used for
+  the pack and test stages via the ``CRAFT_TEST_FETCH_SERVICE_SESSIONS`` environment
+  variable.
+
+For a complete list of commits, check out the `7.5.0`_ release on GitHub.
+
+7.4.1 (2026-09-29)
+------------------
+
+Bug fixes
+=========
+
+- The init service failed when trying to initialize a VCS before creating the project
+  directory.
+
+For a complete list of commits, check out the `7.4.1`_ release on GitHub.
+
 7.4.0 (2026-09-25)
 ------------------
 
@@ -1487,3 +1510,5 @@ For a complete list of commits, check out the `2.7.0`_ release on GitHub.
 .. _7.2.1: https://github.com/canonical/craft-application/releases/tag/7.2.1
 .. _7.3.0: https://github.com/canonical/craft-application/releases/tag/7.3.0
 .. _7.4.0: https://github.com/canonical/craft-application/releases/tag/7.4.0
+.. _7.4.1: https://github.com/canonical/craft-application/releases/tag/7.4.1
+.. _7.5.0: https://github.com/canonical/craft-application/releases/tag/7.5.0

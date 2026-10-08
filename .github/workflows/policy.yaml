@@ -24,4 +24,4 @@ jobs:
         docs
       uv-export-no-groups: |
         docs
-        docs-starter-pack
+        docs-sphinx-stack

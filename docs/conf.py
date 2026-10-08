@@ -1,5 +1,6 @@
 import datetime
 import os
+import textwrap
 
 # Configuration for the Sphinx documentation builder.
 # All configuration specific to your project should be done in this file.
@@ -7,8 +8,8 @@ import os
 # A complete list of built-in Sphinx configuration values:
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
 #
-# Our starter pack uses the custom Canonical Sphinx extension
-# to keep all documentation based on it consistent and on brand:
+# The Sphinx Stack uses the Canonical Sphinx theme to keep all documentation consistent
+# and on brand:
 # https://github.com/canonical/canonical-sphinx
 
 
@@ -18,7 +19,9 @@ import os
 
 # Project name
 project = "Craft Application"
-author = "Canonical"
+
+# Author name; used in the default copyright statement in the page footer
+author = "Canonical Ltd."
 
 # Format the product name + version for the TOC and HTML title
 # When the product begins versioning, uncomment this block
@@ -29,8 +32,8 @@ author = "Canonical"
 #     major, minor, *_ = release.split(".")
 #     release = f"{major}.{minor}"
 
-# Copyright string; shown at the bottom of the page
-copyright = "2023-%s, %s" % (datetime.date.today().year, author)
+# The year in the copyright statement
+copyright = f"2023-{datetime.date.today().year}"
 
 # Documentation website URL
 ogp_site_url = "https://canonical-craft-application.readthedocs-hosted.com/"
@@ -42,7 +45,7 @@ ogp_site_name = project
 ogp_image = "https://assets.ubuntu.com/v1/253da317-image-document-ubuntudocs.svg"
 
 # Product favicon; shown in bookmarks, browser tabs, etc.
-# html_favicon = '.sphinx/_static/favicon.png'
+# html_favicon = '_dev/_static/favicon.png'
 
 # Dictionary of values to pass into the Sphinx context for all pages:
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#confval-html_context
@@ -59,13 +62,20 @@ html_context = {
     # Your documentation GitHub repository URL
     "github_url": "https://github.com/canonical/craft-application",
     # Docs branch in the repo; used in links for viewing the source files
-    'repo_default_branch': 'main',
+    "repo_default_branch": "main",
     # Docs location in the repo; used in links for viewing the source files
     "repo_folder": "/docs/",
     # List contributors on individual pages
     "display_contributors": False,
     # Required for feedback button
-    'github_issues': 'enabled',
+    "github_issues": "enabled",
+    # Passes the top-level 'author' value to the theme
+    "author": author,
+    # Documentation license information
+    "license": {
+        "name": "LGPL-3.0",
+        "url": "https://github.com/canonical/craft-application/blob/main/LICENSE",
+    },
 }
 
 #html_extra_path = []
@@ -114,6 +124,25 @@ templates_path = ["_templates"]
 
 rediraffe_redirects = "redirects.txt"
 
+# Strips '/index.html' from destination URLs when building with 'dirhtml'
+rediraffe_dir_only = True
+
+############################
+# sphinx-llm configuration #
+############################
+
+# This description is included in llms.txt to provide some initial context for your
+# product docs.
+llms_txt_description = textwrap.dedent(
+    """\
+    This is the documentation for Craft Application, the base library for all
+    Starcraft applications.
+    """
+)
+
+# The base URL for references built by sphinx-markdown-builder.
+if os.environ.get("READTHEDOCS"):
+    markdown_http_base = html_baseurl
 
 ###########################
 # Link checker exceptions #
@@ -134,10 +163,15 @@ linkcheck_ignore = [
     r"^https://([\w-]*\.)?npmjs.org",
     r"^https://rsync.samba.org",
     r"^https://ubuntu.com",
+    r"^https://matrix.to/#",
+    r"^https://gitlab.gnome.org",
 ]
 
 # Give linkcheck multiple tries on failure
 linkcheck_retries = 20
+
+# Report timeouts as 'timeout' instead of 'broken'
+linkcheck_report_timeouts_as_broken = False
 
 
 ########################
@@ -151,12 +185,14 @@ extensions = [
     "canonical_sphinx",
     "notfound.extension",
     "sphinx_design",
+    "sphinx_rerediraffe",
     # "sphinx_tabs.tabs",
     # "sphinxcontrib.jquery"
     "sphinxext.opengraph",
     # "sphinx_config_options",
     # "sphinx_contributor_listing",
     # "sphinx_filtered_toctree",
+    "sphinx_llm.txt",
     "sphinx_related_links",
     "sphinx_roles",
     "sphinx_terminal",
@@ -168,7 +204,6 @@ extensions = [
     "sphinx_sitemap",
     # Custom Craft extensions
     "pydantic_kitbash",
-    "sphinxext.rediraffe",
     "sphinx.ext.autodoc",
     "sphinx.ext.doctest",
     "sphinx.ext.viewcode",

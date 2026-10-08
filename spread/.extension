@@ -2,7 +2,7 @@
 
 SCRIPTDIR=$(dirname "$(realpath "${0}")")
 
-allocate-lxd-vm(){
+allocate-lxd-vm() {
   # Allocate the relevant backend.
   DISTRO=$(echo "$SPREAD_SYSTEM" | cut -d- -f1)
   SERIES=$(echo "$SPREAD_SYSTEM" | cut -d- -f2)
@@ -13,7 +13,7 @@ allocate-lxd-vm(){
   MEM="${MEM:-8}"
 
   cloud_config="$(mktemp)"
-  sed "s|SPREAD_PASSWORD|$SPREAD_PASSWORD|g" "${SCRIPTDIR}/cloud-config.yaml" > "$cloud_config"
+  sed "s|SPREAD_PASSWORD|$SPREAD_PASSWORD|g" "${SCRIPTDIR}/cloud-config.yaml" >"$cloud_config"
 
   lxc launch --vm \
     "${DISTRO}:${SERIES}" \
@@ -29,7 +29,7 @@ allocate-lxd-vm(){
   # Wait for cloud-init to complete
   lxc exec "${VM_NAME}" -- cloud-init status --wait &>/dev/null
   # Wait for snap to complete seeding
-  lxc exec "${VM_NAME}" -- snap wait system seed.loaded &> /dev/null
+  lxc exec "${VM_NAME}" -- snap wait system seed.loaded &>/dev/null
 
   rm "$cloud_config"
 
@@ -40,27 +40,27 @@ allocate-lxd-vm(){
   lxc ls --format csv --columns 4 name="${VM_NAME}"
 }
 
-discard-lxd-vm(){
-  instance_name="$(lxc ls --format csv --columns n4 "ipv4=$SPREAD_SYSTEM_ADDRESS"|cut -f1 -d','|head -n 1)"
+discard-lxd-vm() {
+  instance_name="$(lxc ls --format csv --columns n4 "ipv4=$SPREAD_SYSTEM_ADDRESS" | cut -f1 -d',' | head -n 1)"
   lxc delete --force "${instance_name}"
 }
 
 case $2 in
-  lxd-vm)
-    case $1 in
-      allocate)
-        allocate-lxd-vm
-        ;;
-      discard)
-        discard-lxd-vm
-        ;;
-      *)
-        echo Step not needed >&2
-        ;;
-    esac
+lxd-vm)
+  case $1 in
+  allocate)
+    allocate-lxd-vm
+    ;;
+  discard)
+    discard-lxd-vm
     ;;
   *)
-    echo Unknown backend >&2
-    exit 1
+    echo Step not needed >&2
     ;;
+  esac
+  ;;
+*)
+  echo Unknown backend >&2
+  exit 1
+  ;;
 esac
