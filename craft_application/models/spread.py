@@ -122,7 +122,7 @@ class CraftSpreadSuite(SpreadBase):
 
     summary: str = pydantic.Field(
         description="A brief description of what the test suite covers.",
-        examples=["General integration test suite"],
+        examples=["General integration tests"],
     )
     systems: list[str] | None = pydantic.Field(
         default=None,
