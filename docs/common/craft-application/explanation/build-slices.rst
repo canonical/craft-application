@@ -6,15 +6,15 @@ Every slice in a project that's used for building is made available in a directo
 the build slices root. The root contains everything needed to build every part in the project,
 including compilers, build tools, and build and test dependencies.
 
-Like any packages and snaps used in the build, build slices are only involved during the
+Like any packages and snaps used in the build, these slices are only involved during the
 build step of the parts lifecycle, and have no direct impact on the final artifact.
 
 However, build slices have one important difference – they can't be combined with build
-packages or build snaps. A project's slices always have integrity, because any potential
-path conflicts between slices are already dealt with in the Chisel release, and Chisel sees
-which files and directories are available in the build slices root. Since Debian packages
-and snaps aren't tracked in Chisel releases and aren't in the root, Chisel has no view of
-them, making the two systems incompatible.
+packages or build snaps for a particular part. A project's slices always have integrity,
+because any potential path conflicts between slices are already dealt with in the Chisel
+release, and Chisel sees which files and directories are available in the build slices
+root. Since Debian packages and snaps aren't tracked in Chisel releases and aren't in the
+root, Chisel has no view of them, making the two systems incompatible.
 
 Parts that don't explicitly declare build slices will use the standard build environment
 with access to items from build packages and build snaps. This means that projects that
@@ -33,7 +33,7 @@ in Go and a JavaScript frontend using Vue.js:
 
     name: sample-package
     base: ubuntu@26.04
-    # Skip the summary, description, and platform
+    # summary, description, and platform not shown for brevity
 
     build-slices:
       - bash_bins
