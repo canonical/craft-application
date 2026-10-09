@@ -15,6 +15,16 @@ Changelog
 
     For a complete list of commits, check out the `1.2.3`_ release on GitHub.
 
+7.5.1 (unreleased)
+------------------
+
+Documentation
+=============
+
+- Add a :ref:`explanation-build-slices` explanation.
+
+For a complete list of commits, check out the `7.5.1`_ release on GitHub.
+
 7.5.0 (2026-10-02)
 ------------------
 
@@ -1512,3 +1522,4 @@ For a complete list of commits, check out the `2.7.0`_ release on GitHub.
 .. _7.4.0: https://github.com/canonical/craft-application/releases/tag/7.4.0
 .. _7.4.1: https://github.com/canonical/craft-application/releases/tag/7.4.1
 .. _7.5.0: https://github.com/canonical/craft-application/releases/tag/7.5.0
+.. _7.5.1: https://github.com/canonical/craft-application/releases/tag/7.5.1
