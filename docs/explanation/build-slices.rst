@@ -1,5 +1,5 @@
 .. meta::
-   :description: An explanation of the behavior of build-slices in Craft Applications.
+   :description: An explanation of Chisel slices used at build-time in a project in Craft Application, and how they interact with build packages and snaps.
 
 .. _explanation-build-slices:
 
