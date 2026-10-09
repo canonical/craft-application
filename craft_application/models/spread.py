@@ -168,7 +168,7 @@ class CraftSpreadSuite(SpreadBase):
     debug_each: str | None = pydantic.Field(
         default=None,
         description="The shell script executed if an individual test task in this suite fails.",
-        examples=['echo "Task failed: $SPREAD_TASK"'],
+        examples=['echo "Task $SPREAD_TASK failed"'],
     )
     kill_timeout: str | None = pydantic.Field(default=None, examples=["15m"])
     """The maximum duration allowed for an individual test task in this suite before ending the process.
