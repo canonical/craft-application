@@ -46,7 +46,7 @@ from jinja2 import FileSystemLoader
 from typing_extensions import override
 
 if TYPE_CHECKING:  # pragma: no cover
-    from collections.abc import Iterator
+    from collections.abc import Generator, Iterator
 
     from craft_application.lint.base import AbstractLinter
 
@@ -180,7 +180,7 @@ def linter_registry_guard():
     """Provide an isolated linter-registry context for tests."""
 
     @contextmanager
-    def _guard(*seed_linters: type[AbstractLinter]) -> Iterator[None]:
+    def _guard(*seed_linters: type[AbstractLinter]) -> Generator[None, None, None]:
         snapshot = {
             stage: list(classes)
             for stage, classes in LinterService._class_registry.items()
