@@ -21,3 +21,4 @@ Craft Application.
    remote-builds
    services/index
    fetch-service
+   craft-test-yaml
