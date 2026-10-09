@@ -1,7 +1,8 @@
 Build slices
 ============
 
-In addition to traditional Ubuntu packages and snaps, parts can be built from `Chisel slices`_.
+In addition to traditional Ubuntu packages and snaps, parts can be built from
+`Chisel slices <https://ubuntu.com/chisel/docs/latest/>`__.
 Every slice in a project that's used for building is made available in a directory called
 the build slices root. The root contains everything needed to build every part in the project,
 including compilers, build tools, and build and test dependencies.
@@ -73,5 +74,3 @@ The builds of the ``backend`` and ``frontend`` parts will happen inside the buil
 root, while the build of the ``docs`` part, which compiles the documentation using Sphinx,
 will happen in the standard build environment. In the end, the build output of all parts
 will be unified into the single final build artifact.
-
-.. _`Chisel slices`: https://ubuntu.com/chisel/docs/latest/
