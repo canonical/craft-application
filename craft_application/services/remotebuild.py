@@ -47,6 +47,10 @@ if TYPE_CHECKING:  # pragma: no cover
     from craft_application import AppMetadata, ServiceFactory
 
 DEFAULT_POLL_INTERVAL = 30
+STALE_REPOSITORY_AGE = datetime.timedelta(days=7)
+"""How old a remote build repository must be to be considered stale."""
+MAX_STALE_REPOSITORIES_PER_RUN = 10
+"""The maximum number of stale repositories to delete in one run."""
 
 
 class RemoteBuildService(base.AppService):
@@ -140,15 +144,20 @@ class RemoteBuildService(base.AppService):
 
         self._name = utils.get_build_id(self._app.name, project.name, project_dir)
         self._lp_project = self._ensure_project()
+        self._cleanup_stale_repositories()
         _, self._repository = self._ensure_repository(project_dir)
-        self._recipe = self._ensure_recipe(
-            self._name,
-            self._repository,
-            architectures=architectures,
-            build_path=build_path,
-        )
-        self._check_timeout()
-        self._builds = list(self._new_builds(self._recipe))
+        try:
+            self._recipe = self._ensure_recipe(
+                self._name,
+                self._repository,
+                architectures=architectures,
+                build_path=build_path,
+            )
+            self._check_timeout()
+            self._builds = list(self._new_builds(self._recipe))
+        except BaseException:
+            self._cleanup_after_failed_start()
+            raise
         self._is_setup = True
         return self._builds
 
@@ -240,10 +249,90 @@ class RemoteBuildService(base.AppService):
 
     def cleanup(self) -> None:
         """Clean up the recipe and repository."""
-        if self._recipe is not None:
-            self._recipe.delete()
-        if self._repository is not None:
-            self._repository.delete()
+        try:
+            if self._recipe is not None:
+                self._recipe.delete()
+        finally:
+            # Always attempt to delete the repository, even if the recipe couldn't
+            # be deleted, so it isn't left behind on Launchpad.
+            if self._repository is not None:
+                self._repository.delete()
+
+    def _cleanup_stale_repositories(self) -> None:
+        """Delete old repositories left behind by previous remote builds.
+
+        This is best-effort: Launchpad errors are logged and never propagated.
+        Repositories with active builds, or that belong to another application,
+        are left alone.
+
+        :raises RuntimeError: If the Launchpad project hasn't been set. This is a
+            programming error, not a runtime failure.
+        """
+        if self._lp_project is None:
+            raise RuntimeError(
+                "_lp_project must be set before calling _cleanup_stale_repositories."
+            )
+        cutoff = (
+            datetime.datetime.now(tz=datetime.timezone.utc).date()
+            - STALE_REPOSITORY_AGE
+        )
+        deleted = 0
+        try:
+            # Repositories are sorted from oldest to newest, so we can stop early.
+            for repository in self.lp.find_repositories(
+                project=self._lp_project.name, owner=self.lp.username
+            ):
+                created = repository.date_created
+                if isinstance(created, datetime.datetime):
+                    created = created.date()
+                if created >= cutoff:
+                    break
+                if repository.name == self._name or not repository.name.startswith(
+                    f"{self._app.name}-"
+                ):
+                    continue
+                if self._delete_if_stale(repository):
+                    deleted += 1
+                    if deleted >= MAX_STALE_REPOSITORIES_PER_RUN:
+                        break
+        except Exception as exc:  # noqa: BLE001
+            craft_cli.emit.debug(f"Could not clean up stale repositories: {exc}")
+
+    def _delete_if_stale(self, repository: launchpad.models.GitRepository) -> bool:
+        """Delete a repository and its recipe unless it has active builds.
+
+        :returns: Whether the repository was deleted.
+        """
+        if self._lp_project is None:
+            raise RuntimeError("_lp_project must be set before calling this method.")
+        try:
+            recipe = self.RecipeClass.get(
+                self.lp, repository.name, self.lp.username, self._lp_project.name
+            )
+        except ValueError:  # The recipe doesn't exist
+            recipe = None
+        try:
+            if recipe is not None:
+                if any(
+                    not build.get_state().is_stopping_or_stopped
+                    for build in recipe.get_builds()
+                ):
+                    return False
+                recipe.delete()
+            repository.delete()
+        except launchpad.errors.LaunchpadError as exc:
+            craft_cli.emit.debug(f"Could not delete {repository.name}: {exc}")
+            return False
+        craft_cli.emit.debug(f"Deleted stale repository {repository.name}")
+        return True
+
+    def _cleanup_after_failed_start(self) -> None:
+        """Best-effort removal of Launchpad resources when builds couldn't start."""
+        try:
+            self.cleanup()
+        except Exception as exc:  # noqa: BLE001
+            # Don't mask the error that made the build fail to start.
+            craft_cli.emit.debug(f"Could not clean up after failed start: {exc}")
 
     # endregion
     # region Launchpad interaction wrappers
@@ -309,11 +398,19 @@ class RemoteBuildService(base.AppService):
             local_repository = GitRepo(work_tree.repo_dir)
             local_repository.push_url(push_url.geturl(), "main", push_tags=True)
         except GitError as git_error:
+            self._delete_quietly(lp_repository)
             raise RemoteBuildGitError(
                 cast(str, git_error.details),
             ) from git_error
         else:
             return work_tree, lp_repository
+
+    @staticmethod
+    def _delete_quietly(lp_object: launchpad.models.GitRepository) -> None:
+        try:
+            lp_object.delete()
+        except launchpad.errors.LaunchpadError as exc:
+            craft_cli.emit.warning(f"Could not delete {lp_object!r}: {exc}")
 
     def _get_push_url(
         self, lp_repository: launchpad.models.GitRepository, token: str

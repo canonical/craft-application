@@ -412,3 +412,14 @@ def test_render_repository_path(
     fake_launchpad.get_repository(name=name, owner=owner, project=project)
 
     mock_get.assert_called_once_with(fake_launchpad, path=path)
+
+
+def test_find_repositories_filters_by_owner(fake_launchpad, monkeypatch):
+    repos = [mock.Mock(owner_name="me"), mock.Mock(owner_name="other")]
+    find = mock.Mock(return_value=iter(repos))
+    monkeypatch.setattr(models.GitRepository, "find", find)
+
+    assert list(fake_launchpad.find_repositories(project="proj", owner="me")) == [
+        repos[0]
+    ]
+    find.assert_called_once_with(fake_launchpad, "proj")
