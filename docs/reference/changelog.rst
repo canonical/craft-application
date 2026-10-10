@@ -15,6 +15,15 @@ Changelog
 
     For a complete list of commits, check out the `1.2.3`_ release on GitHub.
 
+7.5.1 (unreleased)
+------------------
+
+Bug fixes
+=========
+
+- Downloads with progress now retry after transient connection interruptions,
+  and downloads that fail permanently no longer leave partial files behind.
+
 7.5.0 (2026-10-02)
 ------------------
 
