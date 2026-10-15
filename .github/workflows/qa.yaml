@@ -14,12 +14,12 @@ on:
 
 jobs:
   lint:
-    uses: canonical/starflow/.github/workflows/lint-python.yaml@main
+    uses: canonical/starflow/.github/workflows/lint-python.yaml@work/testing-skill
     permissions:
       contents: read
       pull-requests: read
   test:
-    uses: canonical/starflow/.github/workflows/test-python.yaml@main
+    uses: canonical/starflow/.github/workflows/test-python.yaml@work/testing-skill
     with:
       fast-test-platforms: '["ubuntu-22.04", "ubuntu-24.04", "ubuntu-24.04-arm"]'
       fast-test-python-versions: '["3.10", "3.12"]'
@@ -30,7 +30,7 @@ jobs:
       use-lxd: true
       pytest-markers: "not flaky"
   test-flaky:
-    uses: canonical/starflow/.github/workflows/test-python.yaml@main
+    uses: canonical/starflow/.github/workflows/test-python.yaml@work/testing-skill
     with:
       fast-test-platforms: ""
       slow-test-platforms: '["ubuntu-22.04", "ubuntu-24.04", "ubuntu-24.04-arm"]'

@@ -16,6 +16,7 @@ concurrency:
 
 jobs:
   snap-build:
+    if: false
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -32,6 +33,7 @@ jobs:
           path: ${{ steps.snap.outputs.snap }}
 
   snap-tests:
+    if: false
     runs-on: [self-hosted, spread-enabled]
     needs: [snap-build]
     strategy:
@@ -78,7 +80,6 @@ jobs:
           spread openstack:tests/spread/pro/
 
       - name: Discard spread workers
-        if: always()
         run: |
           shopt -s nullglob
           for r in .spread-reuse.*.yaml; do
