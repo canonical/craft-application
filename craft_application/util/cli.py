@@ -17,6 +17,7 @@
 
 import datetime as dt
 import warnings
+from datetime import timezone
 
 
 def format_timestamp(dt: dt.datetime) -> str:
@@ -31,7 +32,7 @@ def format_timestamp(dt: dt.datetime) -> str:
     """
     if dt.tzinfo is not None and dt.tzinfo.utcoffset(None) is not None:
         # timezone aware
-        dtz = dt.astimezone(dt.timezone.utc)
+        dtz = dt.astimezone(timezone.utc)
     else:
         # timezone naive, assume it's UTC
         dtz = dt
