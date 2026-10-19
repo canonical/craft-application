@@ -18,7 +18,7 @@
 
 from __future__ import annotations
 
-import datetime  # noqa: TC003
+import datetime as dt  # noqa: TC003
 import enum
 from abc import ABCMeta
 from typing import TYPE_CHECKING, cast
@@ -42,7 +42,7 @@ class _BaseRepository(LaunchpadObject, metaclass=ABCMeta):
         self,
         description: str,
         scopes: Collection[str] = ("repository:push",),
-        expiry: datetime.datetime | None = None,
+        expiry: dt.datetime | None = None,
     ) -> str:
         """Get a personal access token for pushing to the repository over HTTPS."""
         return str(
@@ -67,10 +67,10 @@ class GitRepository(_BaseRepository):
     _resource_types = GitResourceTypes
     _attr_map = {"owner_name": "owner.name"}
 
-    date_created: datetime.date
-    date_last_modified: datetime.date
-    date_last_repacked: datetime.date
-    date_last_scanned: datetime.date
+    date_created: dt.date
+    date_last_modified: dt.date
+    date_last_repacked: dt.date
+    date_last_scanned: dt.date
     default_branch: str
     description: str
     display_name: str

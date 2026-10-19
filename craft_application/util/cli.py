@@ -15,11 +15,11 @@
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """CLI-related utilities."""
 
-import datetime
+import datetime as dt
 import warnings
 
 
-def format_timestamp(dt: datetime.datetime) -> str:
+def format_timestamp(dt: dt.datetime) -> str:
     """Convert a datetime object (with or without timezone) to a string.
 
     The format is an ISO 8601-compliant UTC date and time stamp formatted as:
@@ -31,7 +31,7 @@ def format_timestamp(dt: datetime.datetime) -> str:
     """
     if dt.tzinfo is not None and dt.tzinfo.utcoffset(None) is not None:
         # timezone aware
-        dtz = dt.astimezone(datetime.timezone.utc)
+        dtz = dt.astimezone(dt.timezone.utc)
     else:
         # timezone naive, assume it's UTC
         dtz = dt
