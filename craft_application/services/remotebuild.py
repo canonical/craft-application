@@ -18,7 +18,7 @@
 from __future__ import annotations
 
 import contextlib
-import datetime
+import datetime as dt
 import itertools
 import os
 import pathlib
@@ -195,7 +195,7 @@ class RemoteBuildService(base.AppService):
             )
         logs: dict[str, pathlib.Path | None] = {}
         log_downloads: dict[str, pathlib.Path] = {}
-        fetch_time = datetime.datetime.now().isoformat(timespec="seconds")
+        fetch_time = dt.datetime.now().isoformat(timespec="seconds")
         for build in self._builds:
             url = build.build_log_url
             if not url:
@@ -300,8 +300,7 @@ class RemoteBuildService(base.AppService):
 
         token = lp_repository.get_access_token(
             f"{self._app.name} {self._app.version} remote build",
-            expiry=datetime.datetime.now(tz=datetime.timezone.utc)
-            + datetime.timedelta(seconds=300),
+            expiry=dt.datetime.now(tz=dt.timezone.utc) + dt.timedelta(seconds=300),
         )
         push_url = self._get_push_url(lp_repository, token)
 

@@ -15,7 +15,7 @@
 
 import copy
 import dataclasses
-import datetime
+import datetime as dt
 import pathlib
 import re
 import textwrap
@@ -980,10 +980,8 @@ def test_check_base_is_supported_error(
         ("ubuntu@22.04", None, None),
         ("ubuntu@24.04", None, None),
         pytest.param("ubuntu@25.10", "ubuntu@devel", None, id="build-on-devel"),
-        pytest.param("ubuntu@25.10", None, datetime.date(2026, 7, 9), id="eol-soon"),
-        pytest.param(
-            "bare", "ubuntu@25.10", datetime.date(2026, 7, 9), id="bare-eol-soon"
-        ),
+        pytest.param("ubuntu@25.10", None, dt.date(2026, 7, 9), id="eol-soon"),
+        pytest.param("bare", "ubuntu@25.10", dt.date(2026, 7, 9), id="bare-eol-soon"),
         pytest.param("nonexistent@0.0", None, None, id="nonexistent-base"),
     ],
 )
@@ -992,7 +990,7 @@ def test_check_base_eol_soon_date(
     real_project_service: ProjectService,
     base: str,
     build_base: str | None,
-    expected_date: datetime.date | None,
+    expected_date: dt.date | None,
 ):
     real_project_service.configure(platform=None, build_for=None)
     raw_project = real_project_service._load_raw_project()
