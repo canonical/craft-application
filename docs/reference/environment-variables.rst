@@ -1,3 +1,6 @@
+.. meta::
+    :description: Reference for the environment variables that configure apps built on Craft Application, such as the build environment, target platform, and verbosity.
+
 *********************
 Environment variables
 *********************
@@ -32,6 +35,7 @@ configurations where the application is already being run in an appropriate
 container or VM, such as
 `Snapcraft rocks <https://github.com/canonical/snapcraft-rocks/>`_ or
 when controlled by a CI system such as `Launchpad <https://launchpad.net>`_.
+Ignored when ``--use-lxd`` is passed.
 
 **CAUTION**: Setting the build environment is only recommended if you are
 aware of the exact packages needed to reproduce the build containers created
