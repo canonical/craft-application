@@ -35,7 +35,8 @@ configurations where the application is already being run in an appropriate
 container or VM, such as
 `Snapcraft rocks <https://github.com/canonical/snapcraft-rocks/>`_ or
 when controlled by a CI system such as `Launchpad <https://launchpad.net>`_.
-Ignored when ``--use-lxd`` is passed.
+
+This variable is ignored when the ``--use-lxd`` option is passed.
 
 **CAUTION**: Setting the build environment is only recommended if you are
 aware of the exact packages needed to reproduce the build containers created

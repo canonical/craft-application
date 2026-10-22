@@ -21,7 +21,7 @@ Changelog
 Bug fixes
 =========
 
-- ``--use-lxd`` now takes priority over ``CRAFT_BUILD_ENVIRONMENT=host``.
+- The ``--use-lxd`` option now takes priority over ``CRAFT_BUILD_ENVIRONMENT=host``.
 
 Documentation
 =============
