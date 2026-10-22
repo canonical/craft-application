@@ -311,6 +311,7 @@ class SpreadBackend(SpreadBaseModel):
     endpoint: str | None = None
     account: str | None = None
     key: str | None = None
+    mode: str | None = None
     location: str | None = None
     plan: str | None = None
     halt_timeout: str | None = None
