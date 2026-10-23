@@ -18,6 +18,11 @@ Changelog
 7.5.1 (unreleased)
 ------------------
 
+Bug fixes
+=========
+
+- The ``--use-lxd`` option now takes priority over ``CRAFT_BUILD_ENVIRONMENT=host``.
+
 Documentation
 =============
 
