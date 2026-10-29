@@ -46,6 +46,23 @@ def real_project_service(fake_services: ServiceFactory):
 
 
 @pytest.mark.parametrize(
+    "invalid_platforms",
+    [
+        pytest.param(["amd64", "arm64"], id="list-of-platforms"),
+        pytest.param([], id="empty-list"),
+        pytest.param("amd64", id="string"),
+    ],
+)
+def test_get_platforms_rejects_non_mapping(
+    real_project_service: ProjectService, invalid_platforms: Any
+):
+    real_project_service._load_raw_project = lambda: {"platforms": invalid_platforms}  # ty: ignore[invalid-assignment]
+
+    with pytest.raises(CraftValidationError):
+        real_project_service.get_platforms()
+
+
+@pytest.mark.parametrize(
     ("platforms_dict", "platform"),
     [
         *(
