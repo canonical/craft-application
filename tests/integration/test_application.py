@@ -179,7 +179,7 @@ def test_registering_new_commands(
 
 @pytest.mark.slow
 @pytest.mark.usefixtures("pretend_jammy")
-@pytest.mark.parametrize("project", (d.name for d in VALID_PROJECTS_DIR.iterdir()))
+@pytest.mark.parametrize("project", tuple(d.name for d in VALID_PROJECTS_DIR.iterdir()))
 def test_project_managed(capsys, monkeypatch, tmp_path, project, create_app):
     monkeypatch.setenv("CRAFT_MANAGED_MODE", "1")
     monkeypatch.setattr("sys.argv", ["testcraft", "pack"])
@@ -209,7 +209,7 @@ def test_project_managed(capsys, monkeypatch, tmp_path, project, create_app):
 
 @pytest.mark.slow
 @pytest.mark.usefixtures("pretend_jammy")
-@pytest.mark.parametrize("project", (d.name for d in VALID_PROJECTS_DIR.iterdir()))
+@pytest.mark.parametrize("project", tuple(d.name for d in VALID_PROJECTS_DIR.iterdir()))
 def test_project_destructive(
     capsys,
     monkeypatch,
