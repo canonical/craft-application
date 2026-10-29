@@ -29,6 +29,7 @@ from . import models
 
 if TYPE_CHECKING:
     import pathlib
+    from collections.abc import Iterator
 
 DEFAULT_CACHE_PATH = platformdirs.user_cache_path("launchpad-client")
 
@@ -227,6 +228,18 @@ class Launchpad:
                 path = f"~{owner}/+git/{name}"
 
         return models.GitRepository.get(self, path=path)
+
+    def find_repositories(
+        self, *, project: str, owner: str | None = None
+    ) -> Iterator[models.GitRepository]:
+        """Find git repositories attached to a project, from oldest to newest.
+
+        :param project: The name of the project.
+        :param owner: (Optional) Only yield repositories owned by this user.
+        """
+        for repository in models.GitRepository.find(self, project):
+            if owner is None or repository.owner_name == owner:
+                yield repository
 
     def new_repository(
         self,
