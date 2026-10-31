@@ -31,10 +31,13 @@ BRANCH="work/update-starbase-${SUFFIX}"
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
-info()  { printf '\033[1;34m[INFO]\033[0m  %s\n' "$*" >&2; }
-ok()    { printf '\033[1;32m[ OK ]\033[0m  %s\n' "$*" >&2; }
-warn()  { printf '\033[1;33m[WARN]\033[0m  %s\n' "$*" >&2; }
-die()   { printf '\033[1;31m[FAIL]\033[0m  %s\n' "$*" >&2; exit 1; }
+info() { printf '\033[1;34m[INFO]\033[0m  %s\n' "$*" >&2; }
+ok() { printf '\033[1;32m[ OK ]\033[0m  %s\n' "$*" >&2; }
+warn() { printf '\033[1;33m[WARN]\033[0m  %s\n' "$*" >&2; }
+die() {
+  printf '\033[1;31m[FAIL]\033[0m  %s\n' "$*" >&2
+  exit 1
+}
 
 # ── Step 1: Confirm safe state ────────────────────────────────────────────────
 
@@ -50,7 +53,7 @@ ok "Working tree is clean."
 # ── Step 2: Ensure starbase remote ───────────────────────────────────────────
 
 info "Step 2: Configuring 'starbase' remote → ${STARBASE_URL}"
-if git remote get-url starbase > /dev/null 2>&1; then
+if git remote get-url starbase >/dev/null 2>&1; then
   CURRENT_URL=$(git remote get-url starbase)
   if [[ "$CURRENT_URL" != "$STARBASE_URL" ]]; then
     warn "Remote 'starbase' exists but points to '${CURRENT_URL}'. Updating..."
@@ -92,7 +95,7 @@ info "Step 5: Merging starbase/main (--no-ff)..."
 MERGE_EXIT=0
 git merge --no-ff --allow-unrelated-histories starbase/main >&2 || MERGE_EXIT=$?
 
-echo ""  # blank line before the structured output block
+echo "" # blank line before the structured output block
 
 # ── Structured output for the agent ──────────────────────────────────────────
 
@@ -126,21 +129,21 @@ if [[ $MERGE_EXIT -eq 0 ]]; then
     ".pre-commit-config.yaml"
     ".readthedocs.yaml"
   )
-  STRUCTURAL_DIFF_FILES=$(echo "$CHANGED_FILES" | tr ' ' '\n' \
-    | grep -x -F -f <(printf '%s\n' "${MIXED_OWNERSHIP_FILES[@]}") || true)
+  STRUCTURAL_DIFF_FILES=$(echo "$CHANGED_FILES" | tr ' ' '\n' |
+    grep -x -F -f <(printf '%s\n' "${MIXED_OWNERSHIP_FILES[@]}") || true)
 
   cat <<EOF
 STATUS=clean
 BRANCH=${BRANCH}
 BASE=starbase/main ($(git rev-parse --short starbase/main))
 CHANGED_FILES:
-$(echo "$CHANGED_FILES" | sed 's/^/  /')
+  ${CHANGED_FILES//$'\n'/$'\n  '}
 EOF
 
   if [[ -n "$PLACEHOLDER_LINES" ]]; then
     cat <<EOF
 PLACEHOLDER_WARNINGS:
-$(echo "$PLACEHOLDER_LINES" | sed 's/^/  /')
+  ${PLACEHOLDER_LINES//$'\n'/$'\n  '}
 
 NOTE: Do not overwrite legitimate Starbase attribution/ownership comments
 (see references/file_ownership.md) — only replace true placeholder text.
@@ -150,7 +153,7 @@ EOF
   if [[ -n "$STRUCTURAL_DIFF_FILES" ]]; then
     cat <<EOF
 STRUCTURAL_DIFF_FILES:
-$(echo "$STRUCTURAL_DIFF_FILES" | sed 's/^/  /')
+  ${STRUCTURAL_DIFF_FILES//$'\n'/$'\n  '}
 
 NOTE: Diff each file above against starbase/main (git diff starbase/main -- <file>).
 Confirm all remaining differences are child-owned per references/file_ownership.md.
@@ -185,9 +188,9 @@ STATUS=conflicted
 BRANCH=${BRANCH}
 BASE=starbase/main ($(git rev-parse --short starbase/main))
 CHANGED_FILES:
-$(echo "$CHANGED_FILES" | sed 's/^/  /')
+  ${CHANGED_FILES//$'\n'/$'\n  '}
 CONFLICTED_FILES:
-$(echo "$CONFLICTED_FILES" | sed 's/^/  /')
+  ${CONFLICTED_FILES//$'\n'/$'\n  '}
 
 NOTE: Do not overwrite legitimate Starbase attribution/ownership comments
 (see references/file_ownership.md) — only replace true placeholder text.
