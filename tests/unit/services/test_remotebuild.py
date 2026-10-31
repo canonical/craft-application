@@ -15,7 +15,7 @@
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Tests for the remote build service."""
 
-import datetime
+import datetime as dt
 import pathlib
 from unittest import mock
 
@@ -198,8 +198,8 @@ def test_ensure_repository_creation(
     # the expiry time sent to Launchpad will have already expired and Launchpad
     # does not catch that. So instead we make sure thot even when using the easternmost
     # time zone the expiry time is still in the future.
-    tz = datetime.timezone(datetime.timedelta(hours=14))
-    assert expiry > datetime.datetime.now(tz=tz)
+    tz = dt.timezone(dt.timedelta(hours=14))
+    assert expiry > dt.datetime.now(tz=tz)
 
     # the project's information type is passed to the repository
     assert repository_new.call_args.kwargs["information_type"] == information_type
@@ -274,8 +274,8 @@ def test_ensure_repository_already_exists(
     # the expiry time sent to Launchpad will have already expired and Launchpad
     # does not catch that. So instead we make sure thot even when using the easternmost
     # time zone the expiry time is still in the future.
-    tz = datetime.timezone(datetime.timedelta(hours=14))
-    assert expiry > datetime.datetime.now(tz=tz)
+    tz = dt.timezone(dt.timedelta(hours=14))
+    assert expiry > dt.datetime.now(tz=tz)
 
 
 def test_create_new_recipe(remote_build_service, mock_lp_project):

@@ -20,7 +20,7 @@ from __future__ import annotations
 import enum
 import time
 from abc import abstractmethod
-from typing import TYPE_CHECKING, ClassVar, Literal
+from typing import TYPE_CHECKING, ClassVar
 
 import lazr.restfulclient.errors
 from typing_extensions import Any, Self, TypedDict, override
@@ -488,7 +488,7 @@ class CharmRecipe(_StandardRecipe):
     https://api.launchpad.net/devel.html#charm_recipe
     """
 
-    ARTIFACT: ClassVar[Literal["charm"]] = "charm"
+    ARTIFACT: ClassVar[str] = "charm"
 
     @override
     @classmethod
@@ -503,7 +503,7 @@ class RockRecipe(_StandardRecipe):
     https://api.launchpad.net/devel.html#rock_recipe
     """
 
-    ARTIFACT: ClassVar[Literal["rock"]] = "rock"
+    ARTIFACT: ClassVar[str] = "rock"
 
     @override
     @classmethod

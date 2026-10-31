@@ -147,7 +147,7 @@ class DefaultConfigHandler(ConfigHandler):
             self._cache[item] = field.default
             return field.default
         if field.default_factory is not None:
-            default = field.default_factory()
+            default = field.default_factory()  # ty: ignore[missing-argument]
             self._cache[item] = default
             return default
 
@@ -203,7 +203,7 @@ class ConfigService(base.AppService):
         else:
             return self._default_handler.get_raw(item)
 
-        return self._convert_type(value, field_info.annotation)
+        return self._convert_type(value, field_info.annotation)  # ty: ignore[invalid-argument-type]
 
     def _convert_type(self, value: str, field_type: type[T]) -> T:
         """Convert the value to the appropriate type."""
