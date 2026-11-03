@@ -60,8 +60,7 @@ for k in range(vertices):
 # Good: Explains what the regex matches
 # Match email format: username@domain.extension
 import re
-
-email_pattern = re.compile(r"^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$")
+email_pattern = re.compile(r'^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$')
 ```
 
 **API Constraints or Gotchas**
@@ -84,9 +83,7 @@ Before writing a comment, ask:
 
 ### Public APIs
 ```python
-def calculate_compound_interest(
-    principal: float, rate: float, time: float, compound_frequency: int = 1
-) -> float:
+def calculate_compound_interest(principal: float, rate: float, time: float, compound_frequency: int = 1) -> float:
     """
     Calculate compound interest using the standard formula.
 
@@ -131,7 +128,8 @@ API_TIMEOUT = 5.0  # AWS Lambda timeout is 15s, leaving buffer (seconds)
 # Bad: Don't comment out code
 # def old_function():
 #     ...
-def new_function(): ...
+def new_function():
+    ...
 ```
 
 ### Changelog Comments
