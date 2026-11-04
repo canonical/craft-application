@@ -51,6 +51,8 @@ class ProjectFileError(CraftError):
 class TestFileError(CraftError):
     """Errors to do with the test config file or the deprecated spread.yaml file."""
 
+    __test__ = False
+
 
 class ProjectGenerationError(CraftError):
     """Errors to do with prime project generation."""
