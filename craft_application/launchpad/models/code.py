@@ -30,7 +30,7 @@ from craft_application.launchpad import errors
 from .base import InformationType, LaunchpadObject
 
 if TYPE_CHECKING:
-    from collections.abc import Collection
+    from collections.abc import Collection, Iterator
 
     from craft_application.launchpad import Launchpad
 
@@ -122,6 +122,14 @@ class GitRepository(_BaseRepository):
         if lp_repo is None:
             raise errors.NotFoundError(f"Could not find repository at path {path}")
         return cls(lp, lp_repo)
+
+    @classmethod
+    def find(cls, lp: Launchpad, project: str) -> Iterator[Self]:
+        """Find all visible repositories of a project, from oldest to newest."""
+        for lp_repo in lp.lp.git_repositories.getRepositories(
+            target=f"/{project}", order_by="oldest first"
+        ):
+            yield cls(lp, lp_repo)
 
     @classmethod
     def new(
