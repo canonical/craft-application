@@ -123,6 +123,10 @@ class _BaseLifecycleCommand(base.ExtensibleCommand):
             )
             return False
 
+        if getattr(parsed_args, "use_lxd", False):
+            emit.debug("Running managed mode because `--use-lxd` was passed")
+            return True
+
         build_env = self._services.get("config").get("build_environment")
         if build_env and build_env.lower().strip() == "host":
             emit.debug(
@@ -786,7 +790,7 @@ class CleanCommand(_BaseLifecycleCommand):
 
         The project's work directory will be cleaned if:
         - the `--destructive-mode` flag is provided OR
-        - `CRAFT_BUILD_ENVIRONMENT` is set to `host` OR
+        - `CRAFT_BUILD_ENVIRONMENT` is set to `host` and `--use-lxd` isn't passed OR
         - no list of specific parts to clean is provided
 
         Otherwise, it will clean an instance.

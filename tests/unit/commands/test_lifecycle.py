@@ -177,14 +177,19 @@ def test_lifecycle_command_fill_parser(
 
 
 @pytest.mark.parametrize(
-    ("destructive", "managed", "build_env", "expected"),
+    ("destructive", "use_lxd", "managed", "build_env", "expected"),
     [
-        pytest.param(False, False, "", True, id="managed-outer"),
-        pytest.param(False, True, "", False, id="managed-inner"),
-        pytest.param(True, False, "", False, id="destructive"),
-        pytest.param(False, False, "host", False, id="build-on-host"),
-        pytest.param(False, False, "something else", True, id="bad-build-env"),
-        pytest.param(True, True, "host", False, id="xmas"),
+        pytest.param(False, False, False, "", True, id="managed-outer"),
+        pytest.param(False, False, True, "", False, id="managed-inner"),
+        pytest.param(True, False, False, "", False, id="destructive"),
+        pytest.param(False, False, False, "host", False, id="build-on-host"),
+        pytest.param(False, False, False, "something else", True, id="bad-build-env"),
+        pytest.param(True, False, True, "host", False, id="xmas"),
+        pytest.param(False, True, False, "", True, id="use-lxd"),
+        pytest.param(False, True, False, "host", True, id="use-lxd-overrides-host"),
+        pytest.param(False, True, False, "multipass", True, id="use-lxd-other-env"),
+        pytest.param(False, True, True, "", False, id="use-lxd-managed-inner"),
+        pytest.param(False, True, True, "host", False, id="use-lxd-managed-inner-host"),
     ],
 )
 def test_use_provider(
@@ -193,6 +198,7 @@ def test_use_provider(
     app_metadata: AppMetadata,
     fake_services: ServiceFactory,
     destructive: bool,
+    use_lxd: bool,
     managed: bool,
     build_env: str,
     expected: bool,
@@ -200,7 +206,7 @@ def test_use_provider(
     cls = get_fake_command_class(LifecycleCommand)
     command = cls({"app": app_metadata, "services": fake_services})
 
-    parsed_args = argparse.Namespace(destructive_mode=destructive)
+    parsed_args = argparse.Namespace(destructive_mode=destructive, use_lxd=use_lxd)
     mocker.patch("craft_application.util.is_managed_mode", return_value=managed)
     monkeypatch.setenv("CRAFT_BUILD_ENVIRONMENT", build_env)
 

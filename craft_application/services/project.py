@@ -16,7 +16,7 @@
 from __future__ import annotations
 
 import copy
-import datetime
+import datetime as dt
 import os
 import pathlib
 from typing import TYPE_CHECKING, Any, Literal, cast, final
@@ -735,9 +735,7 @@ class ProjectService(base.AppService):
             ) from None
 
     @staticmethod
-    def _is_supported_on(
-        *, base: craft_platforms.DistroBase, date: datetime.date
-    ) -> bool:
+    def _is_supported_on(*, base: craft_platforms.DistroBase, date: dt.date) -> bool:
         """Check if the given base is supported on a date."""
         support_range = distro_support.get_support_range(base.distribution, base.series)
         return support_range.is_supported_on(
@@ -767,7 +765,7 @@ class ProjectService(base.AppService):
             if build_base.series == "devel":
                 build_base = None
 
-        today = datetime.date.today()
+        today = dt.date.today()
 
         if base is not None:
             try:
@@ -810,14 +808,14 @@ class ProjectService(base.AppService):
         if base.series == "devel":
             # A devel series is never considered end-of-life.
             return False
-        return not self._is_supported_on(base=base, date=datetime.date.today())
+        return not self._is_supported_on(base=base, date=dt.date.today())
 
-    def base_eol_soon_date(self) -> datetime.date | None:
+    def base_eol_soon_date(self) -> dt.date | None:
         """Return the date of the base's EOL if it happens soon.
 
         :returns: The EOL date if it happens in the next 90 days, or None otherwise.
         """
-        ninety_days_out = datetime.date.today() + datetime.timedelta(days=90)
+        ninety_days_out = dt.date.today() + dt.timedelta(days=90)
         base = craft_platforms.DistroBase.from_str(self.get().effective_base)
         try:
             if self._is_supported_on(base=base, date=ninety_days_out):

@@ -26,7 +26,7 @@ from craft_application.util import yaml
 TEST_DIR = pathlib.Path(__file__).parent
 
 
-@pytest.mark.parametrize("file", (TEST_DIR / "valid_yaml").glob("*.yaml"))
+@pytest.mark.parametrize("file", tuple((TEST_DIR / "valid_yaml").glob("*.yaml")))
 def test_safe_yaml_loader_valid(file):
     with file.open() as f:
         yaml.safe_yaml_load(f)

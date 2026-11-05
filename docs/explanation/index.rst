@@ -14,5 +14,6 @@ concepts and relationships of Craft Application as a complete system.
 
     structure-of-a-craft-app
     build-plans
+    build-slices
     Cryptographic technology <cryptography>
     Documentation <documentation>
