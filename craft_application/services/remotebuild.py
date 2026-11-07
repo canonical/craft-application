@@ -294,13 +294,14 @@ class RemoteBuildService(base.AppService):
         try:
             lp_repository = self.lp.new_repository(self._name, project=self._lp_project)
         except launchpadlib.errors.HTTPError as exc:
-            # Creation fails if the repository already exists. If it doesn't exist,
-            # the creation error is the real problem (e.g. Launchpad being down).
+            # Creation fails if the repository already exists. If it can't be
+            # found either, the creation error is the real problem (e.g. Launchpad
+            # being down).
             try:
                 lp_repository = self.lp.get_repository(
                     name=self._name, project=self._lp_project.name
                 )
-            except launchpad.errors.NotFoundError:
+            except (launchpad.errors.NotFoundError, launchpadlib.errors.HTTPError):
                 status = exc.response.status
                 raise errors.RemoteBuildError(
                     f"Could not create repository {self._name!r} on Launchpad: "

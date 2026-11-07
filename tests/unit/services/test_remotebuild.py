@@ -279,6 +279,18 @@ def test_ensure_repository_already_exists(
 
 
 @pytest.mark.parametrize(
+    "lookup_error",
+    [
+        pytest.param(launchpad.errors.NotFoundError("Could not find"), id="not-found"),
+        pytest.param(
+            launchpadlib.errors.HTTPError(
+                mock.Mock(status=503, reason="Service Unavailable"), b"down"
+            ),
+            id="lookup-http-error",
+        ),
+    ],
+)
+@pytest.mark.parametrize(
     ("status", "reason", "resolution"),
     [
         (503, "Service Unavailable", "Launchpad may be temporarily unavailable"),
@@ -293,8 +305,9 @@ def test_ensure_repository_creation_fails(
     status,
     reason,
     resolution,
+    lookup_error,
 ):
-    """Report the creation error when the repository doesn't already exist."""
+    """Report the creation error when the repository can't be found either."""
     creation_error = launchpadlib.errors.HTTPError(
         mock.Mock(status=status, reason=reason), b"oops"
     )
@@ -302,9 +315,7 @@ def test_ensure_repository_creation_fails(
         launchpad.models.GitRepository, "new", mock.Mock(side_effect=creation_error)
     )
     monkeypatch.setattr(
-        launchpad.models.GitRepository,
-        "get",
-        mock.Mock(side_effect=launchpad.errors.NotFoundError("Could not find")),
+        launchpad.models.GitRepository, "get", mock.Mock(side_effect=lookup_error)
     )
     remote_build_service._lp_project = mock_lp_project
     remote_build_service._name = "some-repo-name"
