@@ -49,11 +49,13 @@ _CONFIRMATION_PROMPT = (
 )
 
 # Final build states that mean the build for an architecture didn't succeed.
+# Monitoring stops once a build is cancelling, so that counts too.
 _FAILED_STATES = frozenset(
     {
         BuildState.FAILED,
         BuildState.UPLOAD_FAILED,
         BuildState.CHROOT_PROBLEM,
+        BuildState.CANCELLING,
         BuildState.CANCELLED,
     }
 )

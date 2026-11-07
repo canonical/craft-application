@@ -122,6 +122,7 @@ def test_remote_build_run(remote_build, mocker, fake_services, tmp_path, emitter
         BuildState.FAILED,
         BuildState.UPLOAD_FAILED,
         BuildState.CHROOT_PROBLEM,
+        BuildState.CANCELLING,
         BuildState.CANCELLED,
     ],
 )
