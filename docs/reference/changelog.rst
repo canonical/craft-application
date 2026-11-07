@@ -22,6 +22,11 @@ Bug fixes
 =========
 
 - The ``--use-lxd`` option now takes priority over ``CRAFT_BUILD_ENVIRONMENT=host``.
+- If the runtime directory isn't writable, the state directory is now created in
+  a temporary directory in the home directory instead of raising an internal
+  error.
+- A permission error when creating the state directory now raises a
+  user-facing error that recommends setting ``CRAFT_STATE_DIR``.
 
 Documentation
 =============
