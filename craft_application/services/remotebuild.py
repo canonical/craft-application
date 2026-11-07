@@ -293,10 +293,24 @@ class RemoteBuildService(base.AppService):
         work_tree.init_repo()
         try:
             lp_repository = self.lp.new_repository(self._name, project=self._lp_project)
-        except launchpadlib.errors.HTTPError:
-            lp_repository = self.lp.get_repository(
-                name=self._name, project=self._lp_project.name
-            )
+        except launchpadlib.errors.HTTPError as exc:
+            # Creation fails if the repository already exists. If it doesn't exist,
+            # the creation error is the real problem (e.g. Launchpad being down).
+            try:
+                lp_repository = self.lp.get_repository(
+                    name=self._name, project=self._lp_project.name
+                )
+            except launchpad.errors.NotFoundError:
+                status = exc.response.status
+                raise errors.RemoteBuildError(
+                    f"Could not create repository {self._name!r} on Launchpad: "
+                    f"HTTP {status} {exc.response.reason}",
+                    resolution=(
+                        "Launchpad may be temporarily unavailable. Try again later."
+                        if status >= 500  # noqa: PLR2004 (server errors)
+                        else None
+                    ),
+                ) from exc
 
         token = lp_repository.get_access_token(
             f"{self._app.name} {self._app.version} remote build",
