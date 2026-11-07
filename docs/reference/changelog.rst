@@ -22,6 +22,8 @@ Bug fixes
 =========
 
 - The ``--use-lxd`` option now takes priority over ``CRAFT_BUILD_ENVIRONMENT=host``.
+- A platform defined as a string or list now raises a validation error instead of an
+  internal error.
 
 Documentation
 =============
