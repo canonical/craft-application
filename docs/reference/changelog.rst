@@ -22,6 +22,8 @@ Bug fixes
 =========
 
 - The ``--use-lxd`` option now takes priority over ``CRAFT_BUILD_ENVIRONMENT=host``.
+- ``remote-build`` now exits with a non-zero status when a build fails or is
+  cancelled for any architecture.
 
 Documentation
 =============
