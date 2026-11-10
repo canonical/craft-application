@@ -203,7 +203,7 @@ class GenericPlatformsDict(dict[PlatformName, PT]):
         """
         try:
             (value_type,) = get_args(
-                cls.__orig_bases__[0]  # ty: ignore[unresolved-attribute]
+                cls.__orig_bases__[0]  # ty: ignore[missing-attribute]
             )
         except (ValueError, AttributeError):
             raise RuntimeError(
