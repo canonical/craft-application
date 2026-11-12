@@ -69,7 +69,7 @@ def entry_points_faker():
         for entry_point_name, module_name, configure_func in entry_points:
             entry_points_txt += f"{entry_point_name} = {module_name}\n"
             module = ModuleType(module_name)
-            module.configure = configure_func  # ty: ignore[unresolved-attribute]
+            module.configure = configure_func  # ty: ignore[missing-attribute]
             sys.modules[module_name] = module
 
         class FakeDistribution(Distribution):
