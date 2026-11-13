@@ -21,6 +21,8 @@ Changelog
 Bug fixes
 =========
 
+- Downloads with progress now retry after transient connection interruptions,
+  and downloads that fail permanently no longer leave partial files behind.
 - The ``--use-lxd`` option now takes priority over ``CRAFT_BUILD_ENVIRONMENT=host``.
 
 Documentation

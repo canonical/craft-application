@@ -27,7 +27,7 @@ from craft_application.services import base
 
 if TYPE_CHECKING:
     import pathlib
-    from collections.abc import Iterator, Mapping
+    from collections.abc import Callable, Iterator, Mapping
 
     from craft_application.application import AppMetadata
     from craft_application.services import service_factory
@@ -66,8 +66,11 @@ class RequestService(base.AppService):
             dest = dest / filename
 
         with self.get(url, stream=True) as download:
+            # Yield the size before opening the file so that the eager
+            # size-probe in download_files_with_progress does not create a
+            # (potentially never-downloaded) empty file on disk.
+            yield int(download.headers.get("Content-Length", -1))
             with dest.open("wb") as file:
-                yield int(download.headers.get("Content-Length", -1))
                 for chunk in download.iter_content(None):
                     file.write(chunk)
                     yield len(chunk)
@@ -87,27 +90,87 @@ class RequestService(base.AppService):
         if not files:
             return {}
         files = dict(files)
-        downloads: set[Iterator[int]] = set()
+        downloads: dict[str, Iterator[int]] = {}
 
         for url, path in files.items():
             filename = util.get_filename_from_url_path(url)
             if path.is_dir():
                 path = files[url] = path / filename  # noqa: PLW2901
-            downloads.add(self.download_chunks(url, path))
 
         if len(files) == 1:
             title = f"Downloading {next(iter(files))}"
         else:
             title = f"Downloading {len(files)} files"
 
-        sizes = [next(dl) for dl in downloads]
+        retry_exceptions = (
+            requests.exceptions.ChunkedEncodingError,
+            requests.exceptions.ConnectionError,
+            requests.exceptions.ReadTimeout,
+        )
+
+        def start_download(url: str) -> int:
+            download = self.download_chunks(url, files[url])
+            size = next(download)
+            downloads[url] = download
+            return size
+
+        sizes = [
+            util.retry(f"start download {url}", retry_exceptions, start_download, url)
+            for url in files
+        ]
         total_size = sum(size for size in sizes if size > 0)
 
-        with craft_cli.emit.progress_bar(title, total_size) as progress:
-            while downloads:
-                for dl in downloads.copy():
-                    for chunk_size in dl:
-                        progress.advance(chunk_size)
-                    downloads.remove(dl)
+        def consume_download(
+            url: str,
+            dest: pathlib.Path,
+            initial_downloads: Iterator[Iterator[int]],
+            completed_bytes: int,
+            advance: Callable[[float], None],
+        ) -> int:
+            downloaded_bytes = 0
+            try:
+                download = next(initial_downloads, None)
+                if download is None:
+                    download = self.download_chunks(url, dest)
+                    next(download)  # The total uses the initial content length.
+
+                for chunk_size in download:
+                    downloaded_bytes += chunk_size
+                    advance(completed_bytes + downloaded_bytes)
+            except retry_exceptions:
+                # Clean up and reset progress before retrying. The outer finally
+                # handles cleanup for non-retryable failures.
+                dest.unlink(missing_ok=True)
+                if downloaded_bytes:
+                    advance(completed_bytes)
+                raise
+
+            return downloaded_bytes
+
+        with craft_cli.emit.progress_bar(title, total_size, delta=False) as progress:
+            completed_bytes = 0
+            unfinished: set[str] = set()
+            try:
+                for url, download in downloads.items():
+                    unfinished.add(url)
+                    # The pre-created generator (whose size was already consumed
+                    # above) is reused only on the first attempt; `consume_download`
+                    # exhausts this one-shot iterator and creates a fresh download on
+                    # each retry.
+                    downloaded_bytes = util.retry(
+                        f"download {url}",
+                        retry_exceptions,
+                        consume_download,
+                        url,
+                        files[url],
+                        iter((download,)),
+                        completed_bytes,
+                        progress.advance,
+                    )
+                    completed_bytes += downloaded_bytes
+                    unfinished.remove(url)
+            finally:
+                for url in unfinished:
+                    files[url].unlink(missing_ok=True)
 
         return files
