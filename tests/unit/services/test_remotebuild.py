@@ -293,7 +293,11 @@ def test_ensure_repository_already_exists(
 @pytest.mark.parametrize(
     ("status", "reason", "resolution"),
     [
+        (500, "Internal Server Error", "Launchpad may be temporarily unavailable"),
         (503, "Service Unavailable", "Launchpad may be temporarily unavailable"),
+        (504, "Gateway Timeout", "Launchpad may be temporarily unavailable"),
+        (505, "HTTP Version Not Supported", None),
+        (511, "Network Authentication Required", None),
         (400, "Bad Request", None),
     ],
 )

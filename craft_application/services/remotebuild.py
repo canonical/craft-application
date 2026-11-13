@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import contextlib
 import datetime as dt
+import http
 import itertools
 import os
 import pathlib
@@ -47,6 +48,18 @@ if TYPE_CHECKING:  # pragma: no cover
     from craft_application import AppMetadata, ServiceFactory
 
 DEFAULT_POLL_INTERVAL = 30
+
+
+# Server errors that are usually temporary and worth retrying later.
+_RETRYABLE_STATUSES = frozenset(
+    {
+        http.HTTPStatus.INTERNAL_SERVER_ERROR,
+        http.HTTPStatus.NOT_IMPLEMENTED,
+        http.HTTPStatus.BAD_GATEWAY,
+        http.HTTPStatus.SERVICE_UNAVAILABLE,
+        http.HTTPStatus.GATEWAY_TIMEOUT,
+    }
+)
 
 
 class RemoteBuildService(base.AppService):
@@ -308,7 +321,7 @@ class RemoteBuildService(base.AppService):
                     f"HTTP {status} {exc.response.reason}",
                     resolution=(
                         "Launchpad may be temporarily unavailable. Try again later."
-                        if status >= 500  # noqa: PLR2004 (server errors)
+                        if status in _RETRYABLE_STATUSES
                         else None
                     ),
                 ) from exc
