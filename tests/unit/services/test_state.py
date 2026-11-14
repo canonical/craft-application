@@ -267,6 +267,45 @@ def test_state_dir_home_temp(
     assert state_dir.exists()
 
 
+@pytest.mark.usefixtures("no_state_dir_env_var")
+def test_state_dir_runtime_permission_error(
+    state_service_factory, mocker, tmp_path, emitter
+):
+    """Use a temp dir in the home dir if the runtime dir isn't writable."""
+    state_dir = (tmp_path / "state").resolve()
+    mocker.patch(
+        "craft_application.services.state.platformdirs.user_runtime_path",
+        side_effect=PermissionError,
+    )
+    mocker.patch(
+        "craft_application.util.get_home_temporary_directory", return_value=state_dir
+    )
+
+    state_service_factory()
+
+    emitter.assert_debug("Runtime directory isn't writable.")
+    emitter.assert_debug("Getting home temporary directory.")
+    emitter.assert_debug(f"Using {str(state_dir)!r} for the state directory.")
+    assert state_dir.exists()
+
+
+@pytest.mark.usefixtures("state_dir")
+def test_create_state_dir_permission_error(state_service_factory, state_dir, mocker):
+    """Raise a friendly error if the state directory can't be created."""
+    mocker.patch.object(pathlib.Path, "mkdir", side_effect=PermissionError)
+    expected_error = re.escape(
+        f"Failed to create state dir at {str(state_dir)!r} due to "
+        "insufficient permissions."
+    )
+
+    with pytest.raises(errors.StateServiceError, match=expected_error) as exc_info:
+        state_service_factory()
+
+    assert exc_info.value.resolution == (
+        "Set CRAFT_STATE_DIR to a writable directory and try again."
+    )
+
+
 @pytest.mark.usefixtures("state_dir")
 def test_create_state_dir_file_exists_error(state_service_factory, state_dir):
     """Raise an error if the state directory already exists as a file."""
