@@ -117,6 +117,40 @@ def test_remote_build_run(remote_build, mocker, fake_services, tmp_path, emitter
 
 
 @pytest.mark.parametrize(
+    "failed_state",
+    [
+        BuildState.FAILED,
+        BuildState.UPLOAD_FAILED,
+        BuildState.CHROOT_PROBLEM,
+        BuildState.CANCELLING,
+        BuildState.CANCELLED,
+    ],
+)
+def test_remote_build_partial_failure(
+    remote_build, mocker, fake_services, tmp_path, emitter, failed_state
+):
+    builder = fake_services.remote_build
+    mocker.patch.object(builder, "start_builds", return_value=["arch1", "arch2"])
+    mocker.patch.object(
+        builder,
+        "monitor_builds",
+        side_effect=[[{"arch1": BuildState.SUCCESS, "arch2": failed_state}]],
+    )
+    mocker.patch.object(builder, "fetch_logs", return_value={})
+    mocker.patch.object(builder, "fetch_artifacts", return_value=[])
+
+    parsed_args = argparse.Namespace(
+        launchpad_accept_public_upload=True,
+        launchpad_timeout=None,
+        recover=False,
+        project=None,
+    )
+    assert remote_build.run(parsed_args) == 1
+
+    emitter.assert_message("Build failed for: arch2")
+
+
+@pytest.mark.parametrize(
     ("accept_public", "is_private", "project", "confirm"),
     [
         pytest.param(True, False, None, False, id="accepted-public"),
