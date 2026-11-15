@@ -18,6 +18,8 @@
 from __future__ import annotations
 
 import abc
+import hashlib
+import json
 import pathlib
 import re
 from collections.abc import Callable
@@ -37,6 +39,20 @@ if TYPE_CHECKING:  # pragma: no cover
 
 
 _PACKAGE_FILE_ATTR = "_craft_application_package_file"
+
+
+def _rel_to_prime(dest: pathlib.Path, prime_dir: pathlib.Path) -> str | None:
+    """Return ``dest`` relative to prime, or None if it is not inside prime."""
+    try:
+        rel = dest.relative_to(prime_dir)
+    except ValueError:
+        return None
+    return rel.as_posix() if ".." not in rel.parts else None
+
+
+def _sha256(path: pathlib.Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
 
 _MethodT = TypeVar("_MethodT", bound=Callable[..., Any])
 
@@ -280,6 +296,99 @@ class PackageService(base.AppService):
         """Perform domain-specific updates to the project before packing."""
         return False
 
+    def _mediation_record_path(self, partition: str | None) -> pathlib.Path:
+        """Return the path to the mediation record file for a partition."""
+        lifecycle = self._services.get("lifecycle")
+        work_dir = lifecycle.project_info.dirs.work_dir
+        partition_name = "default" if partition is None else partition
+        return work_dir / "package-state" / f"{partition_name}.json"
+
+    def _load_mediation_record(self, partition: str | None) -> dict[str, Any]:
+        """Load the mediation record for a partition from the work directory.
+
+        ``mediated`` maps each prime-relative path we wrote to its sha256.
+        ``packed`` lists the mediated files in the last packed artifact, not
+        every file in the artifact.
+        """
+        path = self._mediation_record_path(partition)
+        if not path.is_file():
+            return {"mediated": {}, "packed": []}
+        try:
+            data = json.loads(path.read_text())
+            if isinstance(data, dict):
+                mediated = data.get("mediated")
+                packed = data.get("packed")
+                if isinstance(mediated, dict) and isinstance(packed, list):
+                    return {"mediated": mediated, "packed": packed}
+        except (OSError, json.JSONDecodeError):
+            emit.debug(f"Could not load mediation record from {path!s}")
+        return {"mediated": {}, "packed": []}
+
+    def _save_mediation_record(
+        self, record: dict[str, Any], partition: str | None
+    ) -> None:
+        """Save the mediation record for a partition to the work directory."""
+        path = self._mediation_record_path(partition)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(record))
+
+    def _current_mediated(self, partition: str | None) -> set[str]:
+        """Return the prime-relative paths of files mediated in this run.
+
+        This calls the package file generators.
+        """
+        prime_dir = self._prime_dir_for(partition)
+        dests = [
+            prime_dir / entry.relative_path
+            for entry in self._package_files(partition)
+            if getattr(self, entry.method_name)(partition) not in (False, None)
+        ]
+        dests.extend(
+            dest
+            for source, dest in self._gen_extra_assets(partition)
+            if source is not None
+        )
+        return {rel for dest in dests if (rel := _rel_to_prime(dest, prime_dir))}
+
+    def _stale_mediated(
+        self, record: dict[str, Any], current: set[str], partition: str | None
+    ) -> tuple[set[str], set[str]]:
+        """Split recorded files that are no longer mediated.
+
+        Returns (ours, changed): stale files still holding the content we wrote,
+        and stale files that are gone or were changed by something else.
+        """
+        prime_dir = self._prime_dir_for(partition)
+        ours: set[str] = set()
+        changed: set[str] = set()
+        for rel in set(record["mediated"]) - current:
+            dest = prime_dir / rel
+            if dest.is_file() and _sha256(dest) == record["mediated"][rel]:
+                ours.add(rel)
+            else:
+                changed.add(rel)
+        return ours, changed
+
+    def _remove_stale_mediated(self, partition: str | None, current: set[str]) -> None:
+        """Delete files we mediated earlier that are no longer generated.
+
+        A file is only deleted if it still has the content we wrote. Otherwise
+        another component changed it, so it is kept and dropped from the record.
+        """
+        record = self._load_mediation_record(partition)
+        ours, changed = self._stale_mediated(record, current, partition)
+        prime_dir = self._prime_dir_for(partition)
+        for rel in ours:
+            self._write_asset(None, prime_dir / rel)
+        for rel in changed:
+            if (prime_dir / rel).exists():
+                emit.debug(
+                    f"Keeping {prime_dir / rel}: it changed after it was written."
+                )
+        for rel in ours | changed:
+            del record["mediated"][rel]
+        self._save_mediation_record(record, partition)
+
     def needs_packing(self, partition: str | None = None) -> bool:
         """Determine whether the given artifact/partition requires packing."""
         if not self._project.parts:
@@ -305,7 +414,20 @@ class PackageService(base.AppService):
             if self._asset_changed(source, destination, partition):
                 return True
 
-        return self._app_needs_repack(partition)
+        return self._mediation_stale(partition) or self._app_needs_repack(partition)
+
+    def _mediation_stale(self, partition: str | None) -> bool:
+        """Whether a file we packed or wrote earlier is no longer generated."""
+        if not self.supports_conditional_repack:
+            return False
+        record = self._load_mediation_record(partition)
+        if not (record["packed"] or record["mediated"]):
+            return False
+        current = self._current_mediated(partition)
+        if set(record["packed"]) - current:
+            return True
+        ours, _ = self._stale_mediated(record, current, partition)
+        return bool(ours)
 
     def pack_artifacts(self) -> Mapping[str | None, bool]:
         """Pack all artifacts for a package service with mediated metadata."""
@@ -317,9 +439,23 @@ class PackageService(base.AppService):
                 packed[name] = False
                 continue
 
+            current = (
+                self._current_mediated(name)
+                if self.supports_conditional_repack
+                else None
+            )
+            if current is not None:
+                self._remove_stale_mediated(name, current)
+
             self._materialize_package_files(name)
             self._materialize_extra_assets(name)
             self._pack(name=name, path=path)
+
+            if current is not None:
+                record = self._load_mediation_record(name)
+                record["packed"] = sorted(current)
+                self._save_mediation_record(record, name)
+
             packed[name] = True
 
         return packed
@@ -395,12 +531,38 @@ class PackageService(base.AppService):
                 continue
 
             destination = prime_dir / package_file.relative_path
-            self._write_asset(content, destination)
+            self._mediate(content, destination, partition_name)
 
     def _materialize_extra_assets(self, partition_name: str | None) -> None:
         """Write extra assets for a specific artifact partition."""
         for source, destination in self._gen_extra_assets(partition_name):
-            self._write_asset(source, destination)
+            self._mediate(source, destination, partition_name)
+
+    def _mediate(
+        self,
+        source: str | bytes | None | pathlib.Path,
+        destination: pathlib.Path,
+        partition_name: str | None = None,
+    ) -> None:
+        """Write or delete an asset and update the mediation record.
+
+        Do not override this method. Subclasses should override _write_asset instead.
+        """
+        self._write_asset(source, destination)
+        if not self.supports_conditional_repack:
+            return
+
+        rel_path = _rel_to_prime(destination, self._prime_dir_for(partition_name))
+        if rel_path is None:
+            return  # Only files inside prime are tracked and cleaned up.
+
+        record = self._load_mediation_record(partition_name)
+        if destination.is_file():
+            record["mediated"][rel_path] = _sha256(destination)
+        else:
+            record["mediated"].pop(rel_path, None)
+
+        self._save_mediation_record(record, partition_name)
 
     def _write_asset(
         self, source: str | bytes | None | pathlib.Path, destination: pathlib.Path

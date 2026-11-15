@@ -17,6 +17,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import pathlib
 from typing import TYPE_CHECKING
 
@@ -527,3 +528,327 @@ def test_update_project_variable_optional(
     service.update_project()
 
     assert fake_services.get("project").get().version == "foo"
+
+
+class AssetPackageService(FakePackageService):
+    def __init__(
+        self,
+        app_metadata,
+        fake_services,
+        *,
+        root: pathlib.Path,
+        artifacts: dict[str | None, Path] | None = None,
+    ):
+        super().__init__(app_metadata, fake_services)
+        self.root = root
+        self.src = root / "assets" / "foo"
+        self.prime = root / "prime"
+        self.asset_dest = self.prime / "meta" / "foo"
+        self.prime.mkdir(parents=True, exist_ok=True)
+        self.artifact = root / "out.artifact"
+        self._custom_artifacts = artifacts or {None: self.artifact}
+        self.packed_list: list[tuple[str | None, Path]] = []
+        self.fail_pack = False
+
+    def get_artifacts(self) -> dict[str | None, pathlib.Path]:
+        return self._custom_artifacts
+
+    def _prime_dir_for(self, partition_name: str | None) -> pathlib.Path:
+        if partition_name in (None, "default"):
+            return self.prime
+        part_dir = self.root / f"prime-{partition_name}"
+        part_dir.mkdir(parents=True, exist_ok=True)
+        return part_dir
+
+    def _gen_extra_assets(self, partition_name: str | None = None):
+        if self.src.exists():
+            return [(self.src, self.asset_dest)]
+        return []
+
+    def _pack(self, *, name: str | None = None, path: Path) -> None:
+        if self.fail_pack:
+            raise RuntimeError("pack failed")
+        self.packed_list.append((name, path))
+        files = sorted(
+            str(p.relative_to(self._prime_dir_for(name)))
+            for p in self._prime_dir_for(name).rglob("*")
+            if p.is_file()
+        )
+        path.write_text("\n".join(files))
+
+
+class DynamicPackageFileService(AssetPackageService):
+    content: str | bool = "content"
+
+    @package.package_file("meta/dynamic.txt")
+    def _dynamic_file(self, partition_name: str | None = None) -> str | bool:
+        return self.content
+
+
+class CustomWriteAssetPackageService(AssetPackageService):
+    def _write_asset(
+        self, source: str | bytes | None | pathlib.Path, destination: pathlib.Path
+    ) -> None:
+        if isinstance(source, str):
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            destination.write_text(source.upper())
+        else:
+            super()._write_asset(source, destination)
+
+
+def test_pack_artifacts_removes_stale_extra_asset(
+    app_metadata, fake_project, fake_services, mocker, tmp_path
+):
+    mocker.patch.object(
+        type(fake_services.get("lifecycle")), "requires_repack", new=False
+    )
+    svc = AssetPackageService(app_metadata, fake_services, root=tmp_path)
+    (svc.prime / "bin").write_text("bin")
+    svc.src.parent.mkdir(parents=True, exist_ok=True)
+    svc.src.write_text("foo")
+
+    assert svc.pack_artifacts() == {None: True}
+    assert (svc.prime / "meta" / "foo").is_file()
+    assert "meta/foo" in svc.artifact.read_text().split()
+
+    svc.src.unlink()
+    assert svc.needs_packing(None) is True
+    assert svc.pack_artifacts() == {None: True}
+    assert not (svc.prime / "meta" / "foo").exists()
+    assert "meta/foo" not in svc.artifact.read_text().split()
+    assert len(svc.packed_list) == 2
+
+
+def test_pack_artifacts_removes_stale_package_file(
+    app_metadata, fake_project, fake_services, mocker, tmp_path
+):
+    mocker.patch.object(
+        type(fake_services.get("lifecycle")), "requires_repack", new=False
+    )
+    svc = DynamicPackageFileService(app_metadata, fake_services, root=tmp_path)
+    (svc.prime / "bin").write_text("bin")
+
+    assert svc.pack_artifacts() == {None: True}
+    assert (svc.prime / "meta" / "dynamic.txt").is_file()
+    assert "meta/dynamic.txt" in svc.artifact.read_text().split()
+
+    svc.content = False
+    assert svc.needs_packing(None) is True
+    assert svc.pack_artifacts() == {None: True}
+    assert not (svc.prime / "meta" / "dynamic.txt").exists()
+    assert "meta/dynamic.txt" not in svc.artifact.read_text().split()
+    assert len(svc.packed_list) == 2
+
+
+def test_needs_packing_true_when_packed_file_no_longer_generated(
+    app_metadata, fake_project, fake_services, mocker, tmp_path
+):
+    mocker.patch.object(
+        type(fake_services.get("lifecycle")), "requires_repack", new=False
+    )
+    svc = AssetPackageService(app_metadata, fake_services, root=tmp_path)
+    svc.src.parent.mkdir(parents=True, exist_ok=True)
+    svc.src.write_text("foo")
+
+    assert svc.pack_artifacts() == {None: True}
+
+    svc.src.unlink()
+    (svc.prime / "meta" / "foo").unlink(missing_ok=True)
+
+    assert svc.needs_packing(None) is True
+
+
+def test_stale_cleanup_keeps_file_changed_by_others(
+    app_metadata, fake_project, fake_services, mocker, tmp_path, emitter
+):
+    mocker.patch.object(
+        type(fake_services.get("lifecycle")), "requires_repack", new=False
+    )
+    svc = AssetPackageService(app_metadata, fake_services, root=tmp_path)
+    svc.src.parent.mkdir(parents=True, exist_ok=True)
+    svc.src.write_text("foo")
+
+    assert svc.pack_artifacts() == {None: True}
+
+    svc.src.unlink()
+    (svc.prime / "meta" / "foo").write_text("modified-by-part")
+
+    assert svc.pack_artifacts() == {None: True}
+    assert (svc.prime / "meta" / "foo").is_file()
+    assert (svc.prime / "meta" / "foo").read_text() == "modified-by-part"
+    emitter.assert_debug(
+        "Keeping .*: it changed after it was written.",
+        regex=True,
+    )
+
+
+def test_no_record_matches_previous_behaviour(
+    app_metadata, fake_project, fake_services, mocker, tmp_path
+):
+    mocker.patch.object(
+        type(fake_services.get("lifecycle")), "requires_repack", new=False
+    )
+    svc = AssetPackageService(app_metadata, fake_services, root=tmp_path)
+    svc.artifact.touch()
+    (svc.prime / "meta").mkdir(parents=True, exist_ok=True)
+    (svc.prime / "meta" / "foo").write_text("foo")
+    svc.src.parent.mkdir(parents=True, exist_ok=True)
+    svc.src.write_text("foo")
+
+    assert not svc._mediation_record_path(None).exists()
+    assert svc.needs_packing(None) is False
+    assert svc.pack_artifacts() == {None: False}
+    assert (svc.prime / "meta" / "foo").is_file()
+
+
+def test_failed_pack_does_not_update_packed_record(
+    app_metadata, fake_project, fake_services, mocker, tmp_path
+):
+    mocker.patch.object(
+        type(fake_services.get("lifecycle")), "requires_repack", new=False
+    )
+    svc = AssetPackageService(app_metadata, fake_services, root=tmp_path)
+    svc.src.parent.mkdir(parents=True, exist_ok=True)
+    svc.src.write_text("foo")
+
+    assert svc.pack_artifacts() == {None: True}
+    record = svc._load_mediation_record(None)
+    assert record["packed"] == ["meta/foo"]
+
+    svc.src.unlink()
+    svc.fail_pack = True
+
+    with pytest.raises(RuntimeError, match="pack failed"):
+        svc.pack_artifacts()
+
+    record_after = svc._load_mediation_record(None)
+    assert record_after["packed"] == ["meta/foo"]
+
+
+def test_mediate_records_writes_outside_pack(
+    app_metadata, fake_project, fake_services, mocker, tmp_path
+):
+    mocker.patch.object(
+        type(fake_services.get("lifecycle")), "requires_repack", new=False
+    )
+    svc = AssetPackageService(app_metadata, fake_services, root=tmp_path)
+    (svc.prime / "bin").write_text("bin")
+
+    dest = svc.prime / "meta" / "outside.txt"
+    svc._mediate("outside content", dest, None)
+
+    assert dest.is_file()
+    record = svc._load_mediation_record(None)
+    assert "meta/outside.txt" in record["mediated"]
+
+    assert svc.needs_packing(None) is True
+    assert svc.pack_artifacts() == {None: True}
+    assert not dest.exists()
+    assert "meta/outside.txt" not in svc.artifact.read_text().split()
+
+
+def test_needs_packing_true_for_stale_mediated_never_packed(
+    app_metadata, fake_project, fake_services, mocker, tmp_path
+):
+    mocker.patch.object(
+        type(fake_services.get("lifecycle")), "requires_repack", new=False
+    )
+    svc = AssetPackageService(app_metadata, fake_services, root=tmp_path)
+    svc.artifact.touch()
+    (svc.prime / "bin").write_text("bin")
+
+    dest = svc.prime / "meta" / "stale.txt"
+    svc._mediate("stale content", dest, None)
+
+    record = svc._load_mediation_record(None)
+    assert "meta/stale.txt" in record["mediated"]
+    assert record["packed"] == []
+
+    assert svc.needs_packing(None) is True
+
+    assert svc.pack_artifacts() == {None: True}
+    assert not dest.exists()
+
+
+def test_mediate_respects_write_asset_override(
+    app_metadata, fake_project, fake_services, mocker, tmp_path
+):
+    mocker.patch.object(
+        type(fake_services.get("lifecycle")), "requires_repack", new=False
+    )
+    svc = CustomWriteAssetPackageService(app_metadata, fake_services, root=tmp_path)
+    dest = svc.prime / "meta" / "custom.txt"
+    svc._mediate("hello world", dest, None)
+
+    assert dest.read_text() == "HELLO WORLD"
+
+    record = svc._load_mediation_record(None)
+    expected_hash = hashlib.sha256(b"HELLO WORLD").hexdigest()
+    assert record["mediated"]["meta/custom.txt"] == expected_hash
+
+
+def test_mediation_record_per_partition(
+    app_metadata, fake_project, fake_services, mocker, tmp_path
+):
+    mocker.patch.object(
+        type(fake_services.get("lifecycle")), "requires_repack", new=False
+    )
+    tools_artifact = tmp_path / "tools.artifact"
+    svc = AssetPackageService(
+        app_metadata,
+        fake_services,
+        root=tmp_path,
+        artifacts={None: tmp_path / "out.artifact", "tools": tools_artifact},
+    )
+
+    dest_default = svc._prime_dir_for(None) / "meta" / "default.txt"
+    dest_tools = svc._prime_dir_for("tools") / "meta" / "tools.txt"
+
+    svc._mediate("default data", dest_default, None)
+    svc._mediate("tools data", dest_tools, "tools")
+
+    record_default = svc._load_mediation_record(None)
+    record_tools = svc._load_mediation_record("tools")
+
+    assert "meta/default.txt" in record_default["mediated"]
+    assert "meta/tools.txt" not in record_default["mediated"]
+
+    assert "meta/tools.txt" in record_tools["mediated"]
+    assert "meta/default.txt" not in record_tools["mediated"]
+
+
+def test_needs_packing_uses_package_file_changed_override(
+    app_metadata, fake_project, fake_services, mocker, tmp_path
+):
+    """Subclasses (e.g. snapcraft) override _package_file_changed; keep calling it."""
+    mocker.patch.object(
+        type(fake_services.get("lifecycle")), "requires_repack", new=False
+    )
+    svc = DynamicPackageFileService(app_metadata, fake_services, root=tmp_path)
+    svc.artifact.parent.mkdir(parents=True, exist_ok=True)
+    svc.artifact.touch()
+    spy = mocker.patch.object(svc, "_package_file_changed", return_value=True)
+
+    assert svc.needs_packing(None) is True
+    spy.assert_called_once()
+
+
+def test_assets_outside_prime_are_never_deleted(
+    app_metadata, fake_project, fake_services, mocker, tmp_path
+):
+    mocker.patch.object(
+        type(fake_services.get("lifecycle")), "requires_repack", new=False
+    )
+    svc = AssetPackageService(app_metadata, fake_services, root=tmp_path)
+    svc.asset_dest = tmp_path / "outside" / "foo"
+    svc.src.parent.mkdir(parents=True, exist_ok=True)
+    svc.src.write_text("foo")
+    assert svc.pack_artifacts() == {None: True}
+    outside = tmp_path / "outside" / "foo"
+    assert outside.is_file()
+    assert svc._load_mediation_record(None)["mediated"] == {}
+
+    svc.src.unlink()
+    svc.pack_artifacts()
+
+    assert outside.read_text() == "foo"

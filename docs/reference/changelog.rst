@@ -21,6 +21,7 @@ Changelog
 Bug fixes
 =========
 
+- Clean up stale mediated package files and extra assets across repacks when conditional repacking is supported.
 - The ``--use-lxd`` option now takes priority over ``CRAFT_BUILD_ENVIRONMENT=host``.
 
 Documentation
