@@ -19,6 +19,7 @@ from typing import Any
 
 import craft_application
 import craft_cli
+from craft_application.commands import get_extensions_command_group
 from craft_application.commands.lifecycle import (
     TestCommand,
 )
@@ -28,9 +29,20 @@ from witchcraft.application import WITCHCRAFT, Witchcraft
 from witchcraft.services import register_services
 
 
+def register_extensions() -> None:
+    """Register Witchcraft's extensions."""
+    craft_application.extensions.register(
+        "potion",
+        "PotionExtension",
+        module="witchcraft.extensions",
+    )
+
+
 def register_commands(app: craft_application.Application) -> None:
     """Register extra commands for witchcraft."""
     app.add_command_group("Lifecycle", [TestCommand], ordered=True)
+    ext_group = get_extensions_command_group()
+    app.add_command_group(ext_group.name, ext_group.commands)
 
 
 def create_app() -> craft_application.Application:
@@ -40,6 +52,7 @@ def create_app() -> craft_application.Application:
     This function is where the app should be configured before running it.
     """
     register_services()
+    register_extensions()
     services = craft_application.ServiceFactory(app=WITCHCRAFT)
 
     # Inject the core24 snap from the host instead of downloading it from the store.

@@ -1,0 +1,247 @@
+# This file is part of craft-application.
+#
+# Copyright 2026 Canonical Ltd.
+#
+# This program is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Lesser General Public License version 3, as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranties of MERCHANTABILITY,
+# SATISFACTORY QUALITY, or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License along
+# with this program.  If not, see <http://www.gnu.org/licenses/>.
+"""Tests for extension mechanism."""
+
+from __future__ import annotations
+
+from typing import Any
+
+import pytest
+from craft_application import errors
+from craft_application.extensions import (
+    Extension,
+    apply_extensions,
+    get_extension_class,
+    get_extension_names,
+    get_extensions,
+    register,
+    unregister,
+)
+from typing_extensions import override
+
+
+class DummyExtension(Extension):
+    """Dummy extension for testing."""
+
+    name = "dummy"
+
+    @staticmethod
+    @override
+    def get_supported_bases() -> tuple[str, ...]:
+        return ("ubuntu@22.04", "ubuntu@24.04")
+
+    @staticmethod
+    @override
+    def is_experimental(base: str | None) -> bool:
+        return False
+
+    @override
+    def get_root_snippet(self) -> dict[str, Any]:
+        return {"title": "Configured Dummy"}
+
+    @override
+    def get_part_snippet(
+        self,
+        *,
+        part_name: str | None = None,
+        plugin_name: str | None = None,
+        **kwargs: Any,
+    ) -> dict[str, Any]:
+        return {"stage-packages": ["dummy-lib"]}
+
+    @override
+    def get_parts_snippet(self) -> dict[str, Any]:
+        return {
+            f"{self.name}/helper": {
+                "plugin": "nil",
+                "stage-packages": ["helper-pkg"],
+            }
+        }
+
+
+class ExperimentalExtension(Extension):
+    """Experimental extension for testing."""
+
+    name = "experimental"
+
+    @staticmethod
+    @override
+    def get_supported_bases() -> tuple[str, ...]:
+        return ("ubuntu@24.04",)
+
+    @staticmethod
+    @override
+    def is_experimental(base: str | None) -> bool:
+        return True
+
+
+@pytest.fixture
+def clean_registry():
+    register("dummy", DummyExtension)
+    register("experimental", ExperimentalExtension)
+    yield
+    if "dummy" in get_extension_names():
+        unregister("dummy")
+    if "experimental" in get_extension_names():
+        unregister("experimental")
+
+
+def test_registry(clean_registry):
+    assert "dummy" in get_extension_names()
+    assert get_extension_class("dummy") is DummyExtension
+
+    meta = get_extensions()
+    dummy_meta = next(m for m in meta if m["name"] == "dummy")
+    assert dummy_meta["bases"] == ["ubuntu@22.04", "ubuntu@24.04"]
+    assert dummy_meta["experimental"] is False
+
+
+def test_registry_missing():
+    with pytest.raises(
+        errors.ExtensionError, match="Extension 'nonexistent' does not exist"
+    ):
+        get_extension_class("nonexistent")
+
+
+def test_apply_extensions_success(clean_registry, tmp_path):
+    project_data = {
+        "base": "ubuntu@24.04",
+        "extensions": ["dummy"],
+        "parts": {
+            "my-part": {
+                "plugin": "nil",
+                "stage-packages": ["existing-pkg"],
+            }
+        },
+    }
+
+    result = apply_extensions(tmp_path, project_data, app_name="testcraft")
+
+    assert "extensions" not in result
+    assert result["title"] == "Configured Dummy"
+    assert result["parts"]["my-part"]["stage-packages"] == ["dummy-lib", "existing-pkg"]
+    assert "dummy/helper" in result["parts"]
+    assert result["parts"]["dummy/helper"]["stage-packages"] == ["helper-pkg"]
+
+
+def test_apply_extensions_not_list_error(clean_registry, tmp_path):
+    project_data = {
+        "extensions": {"dummy": {}},
+    }
+
+    with pytest.raises(
+        errors.ExtensionError,
+        match="The 'extensions' key must be a list of extension names",
+    ):
+        apply_extensions(tmp_path, project_data, app_name="testcraft")
+
+
+def test_apply_extensions_items_not_strings_error(clean_registry, tmp_path):
+    project_data = {
+        "extensions": [123],
+    }
+
+    with pytest.raises(
+        errors.ExtensionError,
+        match="The 'extensions' key must be a list of extension names",
+    ):
+        apply_extensions(tmp_path, project_data, app_name="testcraft")
+
+
+def test_apply_extensions_unsupported_base(clean_registry, tmp_path):
+    project_data = {
+        "base": "ubuntu@20.04",
+        "extensions": ["dummy"],
+    }
+
+    with pytest.raises(
+        errors.ExtensionError,
+        match="Extension 'dummy' does not support base 'ubuntu@20.04'",
+    ):
+        apply_extensions(tmp_path, project_data, app_name="testcraft")
+
+
+def test_apply_extensions_experimental_blocked(clean_registry, tmp_path, monkeypatch):
+    monkeypatch.delenv("TESTCRAFT_ENABLE_EXPERIMENTAL_EXTENSIONS", raising=False)
+    monkeypatch.delenv("CRAFT_ENABLE_EXPERIMENTAL_EXTENSIONS", raising=False)
+
+    project_data = {
+        "base": "ubuntu@24.04",
+        "extensions": ["experimental"],
+    }
+
+    with pytest.raises(
+        errors.ExtensionError,
+        match="Extension 'experimental' is experimental on base 'ubuntu@24.04'",
+    ):
+        apply_extensions(tmp_path, project_data, app_name="testcraft")
+
+
+def test_apply_extensions_experimental_allowed(clean_registry, tmp_path, monkeypatch):
+    monkeypatch.setenv("TESTCRAFT_ENABLE_EXPERIMENTAL_EXTENSIONS", "1")
+
+    project_data = {
+        "base": "ubuntu@24.04",
+        "extensions": ["experimental"],
+    }
+
+    result = apply_extensions(tmp_path, project_data, app_name="testcraft")
+    assert "extensions" not in result
+
+
+def test_registry_lazy_load():
+    register("potion", "PotionExtension", module="witchcraft.extensions")
+    try:
+        assert "potion" in get_extension_names()
+        ext_cls = get_extension_class("potion")
+        assert ext_cls.__name__ == "PotionExtension"
+    finally:
+        unregister("potion")
+
+
+def test_registry_invalid_args():
+    with pytest.raises(KeyError, match="Must set module"):
+        register("lazy", "SomeClass")
+
+    with pytest.raises(KeyError, match="Must not set module"):
+        register("direct", DummyExtension, module="some.module")
+
+
+def test_invalid_part_names(clean_registry, tmp_path):
+    class BadPartExtension(Extension):
+        name = "bad"
+
+        @staticmethod
+        def get_supported_bases():
+            return ()
+
+        @staticmethod
+        def is_experimental(base):
+            return False
+
+        def get_parts_snippet(self):
+            return {"bad-part-name": {"plugin": "nil"}}
+
+    register("bad", BadPartExtension)
+    try:
+        project_data = {"extensions": ["bad"]}
+        with pytest.raises(
+            errors.ExtensionError,
+            match="defines invalid part names",
+        ):
+            apply_extensions(tmp_path, project_data, app_name="testcraft")
+    finally:
+        unregister("bad")

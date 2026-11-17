@@ -17,6 +17,7 @@
 
 from typing import Any
 
+from craft_application.extensions import apply_extensions
 from craft_application.services import project
 from craft_parts import ProjectVar, ProjectVarInfo
 from typing_extensions import override
@@ -24,6 +25,23 @@ from typing_extensions import override
 
 class ProjectService(project.ProjectService):
     """A service for handling access to the project."""
+
+    @override
+    def _app_preprocess_project(
+        self,
+        project: dict[str, Any],
+        *,
+        build_on: str,
+        build_for: str,
+        platform: str,
+    ) -> None:
+        """Run Witchcraft pre-processing on the project."""
+        apply_extensions(
+            project_root=self._project_dir,
+            yaml_data=project,
+            app_name=self._app.name,
+            build_for=build_for,
+        )
 
     @override
     def _create_project_vars(self, project: dict[str, Any]) -> ProjectVarInfo:
