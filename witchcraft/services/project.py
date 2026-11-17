@@ -43,6 +43,7 @@ class ProjectService(project.ProjectService):
                 extensions=declared,
                 app_name=self._app.name,
                 build_for=build_for,
+                services=self._services,
             )
 
     @override

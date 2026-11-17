@@ -18,6 +18,7 @@
 from __future__ import annotations
 
 import abc
+import contextlib
 import os
 from typing import TYPE_CHECKING, Any, ClassVar
 
@@ -28,6 +29,8 @@ from craft_application import errors
 if TYPE_CHECKING:
     from collections.abc import Sequence
     from pathlib import Path
+
+    from craft_application.services import ServiceFactory
 
 
 class Extension(abc.ABC):
@@ -45,11 +48,13 @@ class Extension(abc.ABC):
         yaml_data: dict[str, Any],
         app_name: str,
         build_for: str | None = None,
+        services: ServiceFactory | None = None,
     ) -> None:
         self.project_root = project_root
         self.yaml_data = yaml_data
         self.app_name = app_name
         self.build_for = build_for
+        self._services = services
 
     @property
     def extension_name(self) -> str:
@@ -91,10 +96,23 @@ class Extension(abc.ABC):
         )
         if base:
             if self.is_experimental(base):
-                app_env = f"{self.app_name.upper()}_ENABLE_EXPERIMENTAL_EXTENSIONS"
-                if not os.getenv(app_env) and not os.getenv(
-                    "CRAFT_ENABLE_EXPERIMENTAL_EXTENSIONS"
-                ):
+                is_enabled = False
+                if self._services is not None:
+                    with contextlib.suppress(Exception):
+                        is_enabled = bool(
+                            self._services.get("config").get(
+                                "enable_experimental_extensions"
+                            )
+                        )
+                if not is_enabled:
+                    app_env = f"{self.app_name.upper()}_ENABLE_EXPERIMENTAL_EXTENSIONS"
+                    is_enabled = bool(
+                        os.getenv(app_env)
+                        or os.getenv("CRAFT_ENABLE_EXPERIMENTAL_EXTENSIONS")
+                    )
+
+                if not is_enabled:
+                    app_env = f"{self.app_name.upper()}_ENABLE_EXPERIMENTAL_EXTENSIONS"
                     raise errors.ExtensionError(
                         f"Extension {self.name!r} is experimental on base {base!r}.",
                         resolution=f"Set {app_env}=1 to enable experimental extensions.",

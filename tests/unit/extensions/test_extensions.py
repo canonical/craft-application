@@ -282,6 +282,35 @@ def test_apply_extensions_experimental_allowed(clean_registry, tmp_path, monkeyp
     assert result["extensions"] == ["experimental"]
 
 
+def test_apply_extensions_experimental_allowed_via_config(
+    clean_registry, tmp_path, monkeypatch
+):
+    monkeypatch.delenv("TESTCRAFT_ENABLE_EXPERIMENTAL_EXTENSIONS", raising=False)
+    monkeypatch.delenv("CRAFT_ENABLE_EXPERIMENTAL_EXTENSIONS", raising=False)
+
+    from unittest import mock  # noqa: PLC0415
+
+    mock_services = mock.Mock()
+    mock_config = mock.Mock()
+    mock_config.get.return_value = True
+    mock_services.get.return_value = mock_config
+
+    project_data = {
+        "base": "ubuntu@24.04",
+        "extensions": ["experimental"],
+    }
+
+    result = apply_extensions(
+        tmp_path,
+        project_data,
+        extensions=project_data["extensions"],
+        app_name="testcraft",
+        services=mock_services,
+    )
+    assert result["extensions"] == ["experimental"]
+    mock_config.get.assert_called_with("enable_experimental_extensions")
+
+
 def test_registry_lazy_load():
     register("potion", "PotionExtension", module="witchcraft.extensions")
     try:

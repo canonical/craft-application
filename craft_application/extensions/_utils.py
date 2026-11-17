@@ -28,6 +28,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from craft_application.extensions.extension import Extension
+    from craft_application.services import ServiceFactory
 
 
 def apply_extensions(
@@ -37,6 +38,7 @@ def apply_extensions(
     extensions: Sequence[str],
     app_name: str,
     build_for: str | None = None,
+    services: ServiceFactory | None = None,
 ) -> dict[str, Any]:
     """Apply declared extensions to the project YAML data in-place.
 
@@ -55,6 +57,7 @@ def apply_extensions(
             yaml_data=copy.deepcopy(yaml_data),
             app_name=app_name,
             build_for=build_for,
+            services=services,
         )
         extension.validate()
         _apply_extension(yaml_data, extension)

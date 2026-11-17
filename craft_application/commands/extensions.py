@@ -111,6 +111,7 @@ class ExpandExtensionsCommand(base.AppCommand):
             yaml_data=raw_project,
             extensions=declared,
             app_name=self._app.name,
+            services=self._services,
         )
         emit.message(util.dump_yaml(processed))
 
