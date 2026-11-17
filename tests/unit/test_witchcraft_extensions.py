@@ -64,6 +64,7 @@ extensions:
 
     # Render project - verify extension snippets were applied
     project_model = project_service.get()
+    assert project_model.extensions == ["potion"]
     assert project_model.title == "Potion Cauldron (mystic)"
     assert "potion/brewing" in project_model.parts
     assert project_model.parts["potion/brewing"]["stage-packages"] == [

@@ -124,6 +124,8 @@ extensions:
         """\
         name: testcraft
         base: ubuntu@24.04
+        extensions:
+        - sample
         title: Expanded Sample
         parts:
           sample/helper:

@@ -24,6 +24,7 @@ from craft_application import errors
 from craft_application.extensions.registry import get_extension_class
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
     from pathlib import Path
 
     from craft_application.extensions.extension import Extension
@@ -33,26 +34,21 @@ def apply_extensions(
     project_root: Path,
     yaml_data: dict[str, Any],
     *,
+    extensions: Sequence[str],
     app_name: str,
     build_for: str | None = None,
 ) -> dict[str, Any]:
     """Apply declared extensions to the project YAML data in-place.
 
-    The 'extensions' key must be a list of extension names.
+    Extensions are applied in the order declared.
     """
-    if "extensions" not in yaml_data:
-        return yaml_data
+    for extension_name in extensions:
+        if not isinstance(extension_name, str):
+            raise errors.ExtensionError(
+                f"Extension name {extension_name!r} must be a string.",
+                resolution="Ensure all entries in 'extensions' are strings.",
+            )
 
-    declared_extensions = yaml_data.pop("extensions")
-    if not isinstance(declared_extensions, list) or not all(
-        isinstance(item, str) for item in declared_extensions
-    ):
-        raise errors.ExtensionError(
-            "The 'extensions' key must be a list of extension names.",
-            resolution="Specify extensions as 'extensions: [extension1, extension2]'.",
-        )
-
-    for extension_name in sorted(declared_extensions):
         extension_class = get_extension_class(extension_name)
         extension = extension_class(
             project_root=project_root,

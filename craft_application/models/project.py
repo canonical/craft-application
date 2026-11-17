@@ -249,6 +249,13 @@ class Project(base.CraftBaseModel):
     part-specific ``build-slices`` key, to avoid repetition.
     """
 
+    extensions: list[str] | None = pydantic.Field(
+        default=None,
+        description="The list of extensions to apply to this project.",
+        examples=[["foo", "bar"]],
+    )
+    """The list of extensions to apply to this project."""
+
     @pydantic.field_validator("platforms", mode="before")
     @classmethod
     def _populate_platforms(cls, platforms: dict[str, Platform]) -> dict[str, Platform]:

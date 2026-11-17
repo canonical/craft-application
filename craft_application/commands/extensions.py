@@ -105,9 +105,11 @@ class ExpandExtensionsCommand(base.AppCommand):
         raw_project = project_service.get_raw()
         project_path = project_service.resolve_project_file_path()
 
+        declared = raw_project.get("extensions", [])
         processed = apply_extensions(
             project_root=project_path.parent,
             yaml_data=raw_project,
+            extensions=declared,
             app_name=self._app.name,
         )
         emit.message(util.dump_yaml(processed))

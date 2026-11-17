@@ -36,12 +36,14 @@ class ProjectService(project.ProjectService):
         platform: str,
     ) -> None:
         """Run Witchcraft pre-processing on the project."""
-        apply_extensions(
-            project_root=self._project_dir,
-            yaml_data=project,
-            app_name=self._app.name,
-            build_for=build_for,
-        )
+        if declared := project.get("extensions"):
+            apply_extensions(
+                project_root=self._project_dir,
+                yaml_data=project,
+                extensions=declared,
+                app_name=self._app.name,
+                build_for=build_for,
+            )
 
     @override
     def _create_project_vars(self, project: dict[str, Any]) -> ProjectVarInfo:
