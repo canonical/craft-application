@@ -70,7 +70,7 @@ def test_register_service_by_path(service_class, module):
     pytest_check.equal(service.__name__, service_class)
     pytest_check.is_(
         service,
-        services.ServiceFactory.TestyClass,  # ty: ignore[unresolved-attribute]
+        services.ServiceFactory.TestyClass,  # ty: ignore[missing-attribute]
     )
 
 
@@ -81,7 +81,7 @@ def test_register_service_by_reference():
     pytest_check.is_(service, FakeService)
     pytest_check.is_(
         service,
-        services.ServiceFactory.TestyClass,  # ty: ignore[unresolved-attribute]
+        services.ServiceFactory.TestyClass,  # ty: ignore[missing-attribute]
     )
 
 
@@ -268,6 +268,6 @@ def test_mandatory_adoptable_field(
     factory = services.ServiceFactory(app_metadata)
     factory.update_kwargs("project", project_dir=fake_project_file.parent)
     factory.get("project").configure(platform=None, build_for=None)
-    factory.get("project").set(fake_project)  # ty: ignore[unresolved-attribute]
+    factory.get("project").set(fake_project)  # ty: ignore[missing-attribute]
 
     factory.get("lifecycle")
