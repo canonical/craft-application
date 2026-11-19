@@ -348,6 +348,7 @@ class LifecycleService(base.AppService):
         self._validate_build_plan()
 
         try:
+            self._clean_if_base_changed()
             if self._project.package_repositories:
                 emit.trace("Installing package repositories")
                 repositories.install_package_repositories(
@@ -422,6 +423,39 @@ class LifecycleService(base.AppService):
 
         emit.progress(message)
         self._lcm.clean(part_names=part_names)
+        if not part_names:
+            self._base_state_file.unlink(missing_ok=True)
+            with contextlib.suppress(OSError):
+                self._base_state_file.parent.rmdir()
+
+    @property
+    def _base_state_file(self) -> Path:
+        return Path(self._work_dir) / ".craft" / "base"
+
+    def _clean_if_base_changed(self) -> None:
+        """Clean prime step if the project base changed since the previous run."""
+        current_base = self._project.base or ""
+        state_file = self._base_state_file
+        if state_file.exists():
+            previous_base = state_file.read_text(encoding="utf-8")
+            if previous_base != current_base:
+                emit.progress(
+                    f"Base changed from {previous_base!r} to {current_base!r}; "
+                    "cleaning prime step."
+                )
+                self._lcm.clean(Step.PRIME)
+                self._lcm = self._init_lifecycle_manager()
+                state_file.write_text(current_base, encoding="utf-8")
+        elif isinstance(self.prime_state_timestamp, (int, float)):
+            # Existing prime state from before this check existed; clean to be safe.
+            emit.progress("Base state unknown; cleaning prime step.")
+            self._lcm.clean(Step.PRIME)
+            self._lcm = self._init_lifecycle_manager()
+            state_file.parent.mkdir(parents=True, exist_ok=True)
+            state_file.write_text(current_base, encoding="utf-8")
+        else:
+            state_file.parent.mkdir(parents=True, exist_ok=True)
+            state_file.write_text(current_base, encoding="utf-8")
 
     @staticmethod
     def previous_step_name(step_name: str) -> str | None:

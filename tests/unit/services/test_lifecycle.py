@@ -945,3 +945,61 @@ def test_override_exec(
     # Pass None as the step to ensure validation but skip the actual lifecycle run
     with pytest.raises(FooError):
         fake_lifecycle_service.run("prime")
+
+
+def test_clean_on_base_change(
+    fake_parts_lifecycle,
+    fake_services,
+    fake_platform,
+):
+    fake_services.get("build_plan").set_platforms(fake_platform)
+    skip_if_build_plan_empty(fake_services.get("build_plan"))
+    project = fake_services.get("project").get()
+    initial_lcm = fake_parts_lifecycle._lcm
+    initial_lcm.plan.return_value = []
+
+    project.build_base = None
+    project.base = "ubuntu@24.04"
+    fake_parts_lifecycle.run("prime")
+    assert (
+        fake_parts_lifecycle._base_state_file.read_text(encoding="utf-8")
+        == "ubuntu@24.04"
+    )
+    initial_lcm.clean.assert_not_called()
+
+    project.build_base = "ubuntu@24.04"
+    project.base = "bare"
+    fake_parts_lifecycle._init_lifecycle_manager = mock.Mock(return_value=initial_lcm)
+    fake_parts_lifecycle.run("prime")
+    initial_lcm.clean.assert_called_once_with(Step.PRIME)
+    assert fake_parts_lifecycle._base_state_file.read_text(encoding="utf-8") == "bare"
+
+
+def test_clean_on_unknown_existing_prime_state(
+    fake_parts_lifecycle,
+    fake_services,
+    fake_platform,
+):
+    fake_services.get("build_plan").set_platforms(fake_platform)
+    skip_if_build_plan_empty(fake_services.get("build_plan"))
+    project = fake_services.get("project").get()
+    initial_lcm = fake_parts_lifecycle._lcm
+    initial_lcm.plan.return_value = []
+    initial_lcm.get_prime_state_timestamp.return_value = 123.0
+    fake_parts_lifecycle._init_lifecycle_manager = mock.Mock(return_value=initial_lcm)
+    project.build_base = "ubuntu@26.04"
+    project.base = "bare"
+
+    fake_parts_lifecycle.run("prime")
+
+    initial_lcm.clean.assert_called_once_with(Step.PRIME)
+    assert fake_parts_lifecycle._base_state_file.read_text(encoding="utf-8") == "bare"
+
+
+def test_clean_removes_base_state_file(fake_parts_lifecycle):
+    fake_parts_lifecycle._base_state_file.parent.mkdir(parents=True, exist_ok=True)
+    fake_parts_lifecycle._base_state_file.write_text("ubuntu@26.04", encoding="utf-8")
+
+    fake_parts_lifecycle.clean()
+
+    assert not fake_parts_lifecycle._base_state_file.exists()
