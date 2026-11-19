@@ -22,6 +22,7 @@ Bug fixes
 =========
 
 - The ``--use-lxd`` option now takes priority over ``CRAFT_BUILD_ENVIRONMENT=host``.
+- Download progress bars from the ``RequestService`` now show their sizes in bytes.
 
 Documentation
 =============

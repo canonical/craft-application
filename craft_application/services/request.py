@@ -103,7 +103,7 @@ class RequestService(base.AppService):
         sizes = [next(dl) for dl in downloads]
         total_size = sum(size for size in sizes if size > 0)
 
-        with craft_cli.emit.progress_bar(title, total_size) as progress:
+        with craft_cli.emit.progress_bar(title, total_size, units="B") as progress:
             while downloads:
                 for dl in downloads.copy():
                     for chunk_size in dl:

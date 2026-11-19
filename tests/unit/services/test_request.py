@@ -73,7 +73,12 @@ def test_download_with_progress(
     pytest_check.equal(output_file.read_bytes(), data, "Download data is incorrect")
     emitter.assert_interactions(
         [
-            call("progress_bar", "Downloading http://example/file", len(data)),
+            call(
+                "progress_bar",
+                "Downloading http://example/file",
+                len(data),
+                units="B",
+            ),
             call("advance", len(data)),
         ]
     )
@@ -105,6 +110,7 @@ def test_download_files_with_progress(tmp_path, emitter, request_service, downlo
                 "progress_bar",
                 f"Downloading {len(downloads)} files",
                 sum(len(dl) for dl in downloads.values()),
+                units="B",
             )
         ]
     )
