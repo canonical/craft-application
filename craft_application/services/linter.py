@@ -141,11 +141,10 @@ class LinterService(base.AppService):
             if over_spec.ids == "*":
                 base_spec.ids = "*"
                 base_spec.by_filename.clear()
-            elif isinstance(over_spec.ids, set):
-                if base_spec.ids != "*":
-                    if not isinstance(base_spec.ids, set):
-                        base_spec.ids = set()
-                    base_spec.ids.update(over_spec.ids)
+            elif isinstance(over_spec.ids, set) and base_spec.ids != "*":
+                if not isinstance(base_spec.ids, set):
+                    base_spec.ids = set()
+                base_spec.ids.update(over_spec.ids)
             for issue_id, globs in over_spec.by_filename.items():
                 base_spec.by_filename.setdefault(issue_id, set()).update(globs)
 
