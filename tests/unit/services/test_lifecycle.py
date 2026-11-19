@@ -971,7 +971,7 @@ def test_clean_on_base_change(
     project.base = "bare"
     fake_parts_lifecycle._init_lifecycle_manager = mock.Mock(return_value=initial_lcm)
     fake_parts_lifecycle.run("prime")
-    initial_lcm.clean.assert_called_once_with(Step.PRIME)
+    initial_lcm.clean.assert_called_once_with()
     assert fake_parts_lifecycle._base_state_file.read_text(encoding="utf-8") == "bare"
 
 
@@ -992,7 +992,7 @@ def test_clean_on_unknown_existing_prime_state(
 
     fake_parts_lifecycle.run("prime")
 
-    initial_lcm.clean.assert_called_once_with(Step.PRIME)
+    initial_lcm.clean.assert_called_once_with()
     assert fake_parts_lifecycle._base_state_file.read_text(encoding="utf-8") == "bare"
 
 
