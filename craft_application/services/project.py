@@ -256,11 +256,15 @@ class ProjectService(base.AppService):
         cls, platforms: dict[str, craft_platforms.PlatformDict]
     ) -> dict[str, craft_platforms.PlatformDict]:
         """Validate that the given platforms value is valid."""
-        if platforms:
-            cls._vectorise_platforms(platforms)
         platforms_project_adapter = pydantic.TypeAdapter(
             dict[Literal["platforms"], dict[str, Platform]],
         )
+        # Validate the outer type before vectorising shorthand entries.
+        # Invalid inputs should raise ValidationError, not AttributeError.
+        if not isinstance(platforms, dict):
+            platforms_project_adapter.validate_python({"platforms": platforms})
+        if platforms:
+            cls._vectorise_platforms(platforms)
         return platforms_project_adapter.dump_python(
             platforms_project_adapter.validate_python({"platforms": platforms}),
             mode="json",
