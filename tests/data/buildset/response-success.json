@@ -1,0 +1,84 @@
+{
+  "buildsets": [
+    {
+      "builds": [
+        {
+          "binary-release": {},
+          "completed-at": "2026-01-27T15:24:18Z",
+          "created-at": "2026-01-27T14:22:20Z",
+          "error-list": [
+            {
+              "code": "build-error",
+              "message": "Unexpected error while building. Please retry and if the issue persists contact the Store admins."
+            }
+          ],
+          "id": "400733977bf04d2680f64a59e33dbd95",
+          "logs": {
+            "build-log-download-url": "https://api.staging.charmhub.io/v1/builds/400733977bf04d2680f64a59e33dbd95/log/download",
+            "fetch-service-metadata-download-url": "https://api.staging.charmhub.io/v1/builds/400733977bf04d2680f64a59e33dbd95/fetch-service-metadata/download",
+            "launchpad-build-url": "https://api.staging.charmhub.io/v1/builds/400733977bf04d2680f64a59e33dbd95/log/download"
+          },
+          "platform": {
+            "architectures": ["amd64"],
+            "channel": "24.04",
+            "name": "ubuntu"
+          },
+          "status": "failed"
+        },
+        {
+          "binary-release": {
+            "channel": {
+              "branch": null,
+              "name": "2.0-24.04/edge",
+              "risk": "edge",
+              "track": "2.0-24.04"
+            },
+            "revision": 17
+          },
+          "completed-at": "2026-01-27T14:35:49Z",
+          "created-at": "2026-01-27T14:22:20Z",
+          "error-list": [],
+          "id": "e3868d4e626a4890a6ad45b3c44baf2b",
+          "logs": {
+            "build-log-download-url": "https://api.staging.charmhub.io/v1/builds/e3868d4e626a4890a6ad45b3c44baf2b/log/download",
+            "fetch-service-metadata-download-url": "https://api.staging.charmhub.io/v1/builds/e3868d4e626a4890a6ad45b3c44baf2b/fetch-service-metadata/download",
+            "launchpad-build-url": "https://api.staging.charmhub.io/v1/builds/e3868d4e626a4890a6ad45b3c44baf2b/log/download"
+          },
+          "platform": {
+            "architectures": ["s390x"],
+            "channel": "24.04",
+            "name": "ubuntu"
+          },
+          "status": "succeeded"
+        }
+      ],
+      "created-at": "2026-01-27T14:22:20Z",
+      "id": "bb398f21798f4c6996c56e9e27747a1b",
+      "package": {
+        "commit-hash": "b491b567447ec16370d3ece5d10006b6ab7ec97d",
+        "craft-channel": {
+          "branch": null,
+          "name": "2.0-24.04/edge",
+          "risk": "edge",
+          "track": "2.0-24.04"
+        },
+        "craft-version": "2.0.2",
+        "id": "ysIk8jpfwVGSHUtWkNK1ykhch2mAkOOi",
+        "name": "starcraft-test",
+        "type": "bin"
+      },
+      "platforms": [
+        {
+          "architectures": ["amd64", "s390x"],
+          "channel": "24.04",
+          "name": "ubuntu"
+        }
+      ],
+      "triggers": [
+        {
+          "type": "commit"
+        }
+      ]
+    }
+  ]
+}
