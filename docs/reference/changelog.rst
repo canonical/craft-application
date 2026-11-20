@@ -21,6 +21,7 @@ Changelog
 Bug fixes
 =========
 
+- Clean up stale mediated package files and extra assets across repacks when conditional repacking is supported.
 - The ``--use-lxd`` option now takes priority over ``CRAFT_BUILD_ENVIRONMENT=host``.
 - When a remote build can't create its Launchpad repository, the original error is
   now reported instead of a misleading "Could not find repository" error.
