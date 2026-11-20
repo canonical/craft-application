@@ -880,7 +880,7 @@ types = [
 requires-dist = [
     { name = "annotated-types", specifier = ">=0.6.0" },
     { name = "craft-archives", specifier = ">=2.2.0" },
-    { name = "craft-cli", specifier = ">=3.2.0" },
+    { name = "craft-cli", specifier = ">=3.4.0" },
     { name = "craft-grammar", specifier = ">=2.3.0" },
     { name = "craft-parts", specifier = ">=2.37.1" },
     { name = "craft-platforms", specifier = ">=0.12.0" },
