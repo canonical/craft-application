@@ -21,6 +21,7 @@ All errors inherit from craft_cli.CraftError.
 from __future__ import annotations
 
 import os
+from textwrap import dedent
 from typing import TYPE_CHECKING, Any, Literal, cast
 
 import craft_platforms
@@ -514,3 +515,93 @@ class InvalidUbuntuProStatusError(InvalidUbuntuProStateError):
         super().__init__(
             message=message, details=details or None, resolution=resolution
         )
+
+
+class OriginUndefinedError(CraftError):
+    """Error raised if there is no origin associated with the given package."""
+
+
+class IncorrectPlaneSpecifiedError(CraftError):
+    """Error raised if the plane specified by the user is incorrect.
+
+    Differs from IncorrectPlaneError in that this originates from the user.
+    """
+
+    def __init__(self, plane: str, *, details: str | None = None) -> None:
+        super().__init__(
+            f"Incorrect plane {plane!r} specified",
+            resolution="Check the plane spelling and run the command again.",
+            details=details,
+        )
+
+
+class ProjectIsNotRepositoryError(CraftError):
+    """Error raised if the project is not a valid git repository."""
+
+    def __init__(self, name: str) -> None:
+        super().__init__(
+            f"Project '{name}' is not a repository.",
+            resolution=(
+                """Initialize the git repository in the current working directory."""
+            ),
+        )
+
+
+class RepositoryWithoutOriginError(CraftError):
+    """Error raised if repository does not have 'origin' remote."""
+
+    def __init__(self, name: str) -> None:
+        super().__init__(
+            f"Project {name!r} does not have 'origin' remote.",
+            resolution=dedent(
+                """
+                Use --create to create a new origin or set the origin before re-trying
+
+                git remote add origin <url-to-the-origin-remote>
+                """
+            ).strip(),
+        )
+
+
+class DirtyRepositoryError(CraftError):
+    """Error raised if repository is in 'dirty' state."""
+
+    def __init__(self, name: str, remote: str) -> None:
+        super().__init__(
+            f"Project {name!r} repository is dirty.",
+            resolution=f"Commit your changes and push them to {remote!r} before proceeding",
+        )
+
+
+class CommitNotFoundInRemoteError(CraftError):
+    """Error raised if commit is not available in the remote repository."""
+
+    def __init__(self, short_sha: str, remote: str) -> None:
+        super().__init__(
+            f"Commit {short_sha!r} is not available in remote {remote!r}.",
+            resolution=f"Push your changes to {remote!r} before proceeding",
+        )
+
+
+class StoreRemoteExistsError(CraftError):
+    """Error raised if repository has a 'store' remote already."""
+
+    def __init__(self, name: str) -> None:
+        super().__init__(
+            f"Package {name!r} has already been setup: found 'store' remote",
+            resolution="Remove or rename 'store' remote before re-trying.",
+        )
+
+
+class StoreRemoteUnvailableError(CraftError):
+    """Error raised if 'store' remote is not available."""
+
+    def __init__(self, name: str) -> None:
+        super().__init__(
+            f"Package {name!r} does not have store remote.",
+            resolution="Run 'setup-origin' before using this command.",
+        )
+
+
+class CommitWorkflowTimeoutError(CraftError):
+    """Error raised if commit-workflow times out."""
