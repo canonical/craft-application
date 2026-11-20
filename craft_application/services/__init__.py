@@ -27,6 +27,7 @@ from craft_application.services.provider import ProviderService
 from craft_application.services.proxy import ProxyService
 from craft_application.services.remotebuild import RemoteBuildService
 from craft_application.services.request import RequestService
+from craft_application.services.sourcestore import SourceStoreService
 from craft_application.services.state import StateService
 from craft_application.services.linter import LinterService
 
@@ -46,6 +47,7 @@ __all__ = [
     "RemoteBuildService",
     "RequestService",
     "ServiceFactory",
+    "SourceStoreService",
     "StateService",
     "TestingService",
     "LinterService",
