@@ -1114,7 +1114,7 @@ def test_run_managed(
 ):
     mock_fetch = mock.MagicMock()
     fake_services.register("fetch", mock.Mock(return_value=mock_fetch))
-    fake_services.get_class("fetch").is_active.return_value = fetch  # ty: ignore[unresolved-attribute]
+    fake_services.get_class("fetch").is_active.return_value = fetch  # ty: ignore[missing-attribute]
     monkeypatch.setattr("sys.argv", ["[unused]", "pack", "--verbose"])
     instance_context = (
         mock_provider.launched_environment.return_value.__enter__.return_value
@@ -1295,7 +1295,7 @@ def test_run_managed_git_build_root_sets_cwd(
     """ProviderService.run_managed uses the monorepo subdir as cwd when allow_git_build_root=True and experimental_monorepo is set."""
     mock_fetch = mock.MagicMock()
     fake_services.register("fetch", mock.Mock(return_value=mock_fetch))
-    fake_services.get_class("fetch").is_active.return_value = fetch  # ty: ignore[unresolved-attribute]
+    fake_services.get_class("fetch").is_active.return_value = fetch  # ty: ignore[missing-attribute]
 
     # Set up a monorepo: git root at tmp_path, project in a subdirectory.
     subprocess.run(["git", "init", str(tmp_path)], check=True, capture_output=True)
