@@ -7,7 +7,7 @@ dependencies = [
   "PyYaml>=6.0",
   "annotated-types>=0.6.0",
   "craft-archives>=2.2.0",
-  "craft-cli>=3.2.0",
+  "craft-cli>=3.5.0",
   "craft-grammar>=2.3.0",
   "craft-parts>=2.37.1",
   "craft-platforms>=0.12.0",
@@ -65,6 +65,7 @@ remote = [
 dev = [
   "coverage[toml]~=7.9",
   "craft-application[remote]",
+  "craft-cli[pytest]>=3.5.0",
   "hypothesis>=6.0",
   "jsonschema>=4.23.0",
   "pyfakefs~=6.1",
