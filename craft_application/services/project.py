@@ -237,6 +237,9 @@ class ProjectService(base.AppService):
                     "build-for": [name],
                 }
                 continue
+            # Leave anything else that isn't a mapping for validation to reject.
+            if not isinstance(data, dict):
+                continue
             # Non-vector versions of architectures. These are accepted,
             # but are not included in the schema.
             if "build-on" in data and isinstance(data["build-on"], str):

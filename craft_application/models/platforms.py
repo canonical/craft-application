@@ -132,8 +132,10 @@ class Platform(base.CraftBaseModel):
         cls, values: Mapping[str, list[str]]
     ) -> Mapping[str, Any]:
         """If build_for is provided, then build_on must also be."""
-        # "if values" here ensures that a None value errors properly.
-        if values and values.get("build_for") and not values.get("build_on"):
+        # Let non-mapping values (including None) fail regular model validation.
+        if not isinstance(values, Mapping):
+            return values
+        if values.get("build_for") and not values.get("build_on"):
             raise errors.CraftValidationError(
                 "'build-for' expects 'build-on' to also be provided."
             )
