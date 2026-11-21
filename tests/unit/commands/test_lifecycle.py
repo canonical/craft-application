@@ -230,7 +230,7 @@ def test_run_sets_platform_arg(
 
     command.run(parsed_args)
 
-    assert build_planner._BuildPlanService__platforms == [fake_platform]  # ty: ignore[unresolved-attribute]
+    assert build_planner._BuildPlanService__platforms == [fake_platform]  # ty: ignore[missing-attribute]
 
 
 def test_run_sets_platform_from_env(
@@ -252,7 +252,7 @@ def test_run_sets_platform_from_env(
 
     command.run(parsed_args)
 
-    assert build_planner._BuildPlanService__platforms == [fake_platform]  # ty: ignore[unresolved-attribute]
+    assert build_planner._BuildPlanService__platforms == [fake_platform]  # ty: ignore[missing-attribute]
 
 
 @pytest.mark.parametrize(
@@ -275,7 +275,7 @@ def test_run_sets_build_for_arg(
 
     command.run(parsed_args)
 
-    assert build_planner._BuildPlanService__build_for == [arch]  # ty: ignore[unresolved-attribute]
+    assert build_planner._BuildPlanService__build_for == [arch]  # ty: ignore[missing-attribute]
 
 
 @pytest.mark.parametrize(
@@ -300,7 +300,7 @@ def test_run_sets_build_for_from_env(
 
     command.run(parsed_args)
 
-    assert build_planner._BuildPlanService__build_for == [arch]  # ty: ignore[unresolved-attribute]
+    assert build_planner._BuildPlanService__build_for == [arch]  # ty: ignore[missing-attribute]
 
 
 @pytest.mark.parametrize("fetch", [False, True])

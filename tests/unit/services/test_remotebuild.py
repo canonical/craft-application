@@ -278,6 +278,65 @@ def test_ensure_repository_already_exists(
     assert expiry > dt.datetime.now(tz=tz)
 
 
+@pytest.mark.parametrize(
+    "lookup_error",
+    [
+        pytest.param(launchpad.errors.NotFoundError("Could not find"), id="not-found"),
+        pytest.param(
+            launchpadlib.errors.HTTPError(
+                mock.Mock(status=503, reason="Service Unavailable"), b"down"
+            ),
+            id="lookup-http-error",
+        ),
+    ],
+)
+@pytest.mark.parametrize(
+    ("status", "reason", "resolution"),
+    [
+        (500, "Internal Server Error", "Launchpad may be temporarily unavailable"),
+        (503, "Service Unavailable", "Launchpad may be temporarily unavailable"),
+        (504, "Gateway Timeout", "Launchpad may be temporarily unavailable"),
+        (505, "HTTP Version Not Supported", None),
+        (511, "Network Authentication Required", None),
+        (400, "Bad Request", None),
+    ],
+)
+def test_ensure_repository_creation_fails(
+    monkeypatch,
+    tmp_path,
+    remote_build_service,
+    mock_lp_project,
+    status,
+    reason,
+    resolution,
+    lookup_error,
+):
+    """Report the creation error when the repository can't be found either."""
+    creation_error = launchpadlib.errors.HTTPError(
+        mock.Mock(status=status, reason=reason), b"oops"
+    )
+    monkeypatch.setattr(
+        launchpad.models.GitRepository, "new", mock.Mock(side_effect=creation_error)
+    )
+    monkeypatch.setattr(
+        launchpad.models.GitRepository, "get", mock.Mock(side_effect=lookup_error)
+    )
+    remote_build_service._lp_project = mock_lp_project
+    remote_build_service._name = "some-repo-name"
+
+    with pytest.raises(
+        errors.RemoteBuildError,
+        match=rf"^Could not create repository 'some-repo-name' on Launchpad: HTTP {status} {reason}$",
+    ) as exc_info:
+        remote_build_service._ensure_repository(tmp_path)
+
+    if resolution:
+        assert resolution in str(exc_info.value.resolution)
+    else:
+        assert exc_info.value.resolution is None
+    assert exc_info.value.__cause__ is creation_error
+
+
 def test_create_new_recipe(remote_build_service, mock_lp_project):
     """Test that _new_recipe works correctly."""
     remote_build_service._lp_project = mock_lp_project
