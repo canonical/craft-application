@@ -514,3 +514,7 @@ class InvalidUbuntuProStatusError(InvalidUbuntuProStateError):
         super().__init__(
             message=message, details=details or None, resolution=resolution
         )
+
+
+class ExtensionError(CraftError):
+    """Errors related to extensions."""

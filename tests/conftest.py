@@ -35,7 +35,15 @@ import distro
 import jinja2
 import pydantic
 import pytest
-from craft_application import application, errors, git, launchpad, models, services
+from craft_application import (
+    application,
+    errors,
+    extensions,
+    git,
+    launchpad,
+    models,
+    services,
+)
 from craft_application.services import service_factory
 from craft_application.services.fetch import FetchService
 from craft_application.services.linter import LinterService
@@ -173,6 +181,7 @@ def fake_base(request: pytest.FixtureRequest):
 def reset_services():
     yield
     service_factory.ServiceFactory.reset()
+    extensions.reset()
 
 
 @pytest.fixture

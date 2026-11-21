@@ -81,3 +81,6 @@ class ConfigModel(pydantic.BaseModel):
     in the managed instance instead of the project directory, giving the build
     access to shared code outside the project directory.
     """
+
+    enable_experimental_extensions: bool = False
+    """Allow use of experimental project extensions."""
