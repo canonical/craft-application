@@ -17,7 +17,7 @@ import argparse
 import os
 import pathlib
 import time
-from collections.abc import Collection
+from collections.abc import Collection, Mapping
 from typing import Any, cast
 
 from craft_cli import emit
@@ -46,6 +46,18 @@ is interrupted or times out.
 _CONFIRMATION_PROMPT = (
     "All data sent to remote builders will be publicly available. "
     "Are you sure you want to continue?"
+)
+
+# Final build states that mean the build for an architecture didn't succeed.
+# Monitoring stops once a build is cancelling, so that counts too.
+_FAILED_STATES = frozenset(
+    {
+        BuildState.FAILED,
+        BuildState.UPLOAD_FAILED,
+        BuildState.CHROOT_PROBLEM,
+        BuildState.CANCELLING,
+        BuildState.CANCELLED,
+    }
 )
 
 
@@ -190,6 +202,7 @@ class RemoteBuild(ExtensibleCommand):
         """
         builder = self._services.remote_build
         emit.progress("Monitoring build")
+        states: Mapping[str, BuildState] = {}
         for states in builder.monitor_builds():
             building: set[str] = set()
             succeeded: set[str] = set()
@@ -234,4 +247,19 @@ class RemoteBuild(ExtensibleCommand):
             f"Log files: {', '.join(log_names)}\n"
             f"Artifacts: {', '.join(artifact_names)}"
         )
-        return 0
+        return self._report_failures(states)
+
+    @staticmethod
+    def _report_failures(states: Mapping[str, BuildState]) -> int:
+        """Report any builds that didn't succeed.
+
+        :param states: The final build state for each architecture.
+        :returns: 1 if any build failed, otherwise 0.
+        """
+        failed = sorted(
+            arch for arch, state in states.items() if state in _FAILED_STATES
+        )
+        if not failed:
+            return 0
+        emit.message(f"Build failed for: {', '.join(failed)}")
+        return 1
