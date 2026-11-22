@@ -21,6 +21,8 @@ Changelog
 Bug fixes
 =========
 
+- Downloads with progress now retry after transient connection interruptions,
+  and downloads that fail permanently no longer leave partial files behind.
 - The ``--use-lxd`` option now takes priority over ``CRAFT_BUILD_ENVIRONMENT=host``.
 - When a remote build can't create its Launchpad repository, the original error is
   now reported instead of a misleading "Could not find repository" error.
