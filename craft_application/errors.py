@@ -332,6 +332,27 @@ class IncompatibleBaseError(CraftError):
         )
 
 
+class IncompatibleBuildOnError(CraftError):
+    """The build plan's build-on architecture is incompatible with the host."""
+
+    def __init__(
+        self,
+        host_arch: craft_platforms.DebianArchitecture,
+        build_on: craft_platforms.DebianArchitecture,
+    ) -> None:
+        message = (
+            f"Builds for architecture {build_on!r} cannot be performed on this "
+            f"{host_arch!r} system."
+        )
+        resolution = "Run a managed build, or run on a compatible host."
+
+        super().__init__(
+            message=message,
+            resolution=resolution,
+            retcode=os.EX_CONFIG,
+        )
+
+
 class InvalidParameterError(CraftError):
     """Invalid parameter or environment variable."""
 
