@@ -35,6 +35,14 @@ from craft_parts import ProjectVar, ProjectVarInfo
 from distro_support.errors import UnknownDistributionError, UnknownVersionError
 from hypothesis import given, strategies
 
+REPRESENTATIVE_PLATFORMS = [
+    ("64-bit-pc", craft_platforms.DebianArchitecture.AMD64),
+    ("some-phone", craft_platforms.DebianArchitecture.ARM64),
+    ("ppc64el", craft_platforms.DebianArchitecture.PPC64EL),
+    ("risky", craft_platforms.DebianArchitecture.RISCV64),
+    ("s390x", craft_platforms.DebianArchitecture.S390X),
+]
+
 
 @pytest.fixture
 def real_project_service(fake_services: ServiceFactory):
@@ -350,6 +358,11 @@ def test_get_partitions_for(build_on, build_for, platform):
 
 
 @pytest.mark.parametrize("build_for", [*craft_platforms.DebianArchitecture, "all"])
+@pytest.mark.parametrize(
+    ("fake_platform", "fake_host_architecture"),
+    REPRESENTATIVE_PLATFORMS,
+    indirect=True,
+)
 @pytest.mark.usefixtures("fake_host_architecture")
 def test_partitions(
     fake_project_file,
@@ -402,6 +415,11 @@ def test_partitions(
 )
 @pytest.mark.parametrize(
     "build_for", [arch.value for arch in craft_platforms.DebianArchitecture] + ["all"]
+)
+@pytest.mark.parametrize(
+    ("fake_platform", "fake_host_architecture"),
+    REPRESENTATIVE_PLATFORMS,
+    indirect=True,
 )
 def test_expand_environment_no_partitions_any_platform(
     real_project_service: ProjectService,
@@ -522,6 +540,11 @@ def test_expand_environment_managed_mode(
 @pytest.mark.parametrize(
     "build_for", [arch.value for arch in craft_platforms.DebianArchitecture]
 )
+@pytest.mark.parametrize(
+    ("fake_platform", "fake_host_architecture"),
+    REPRESENTATIVE_PLATFORMS,
+    indirect=True,
+)
 @pytest.mark.usefixtures("enable_partitions")
 def test_expand_environment_stage_dirs(
     project_service: ProjectService,
@@ -602,10 +625,9 @@ def test_preprocess(
 
 
 @pytest.mark.parametrize(
-    "build_for", [arch.value for arch in craft_platforms.DebianArchitecture]
-)
-@pytest.mark.parametrize(
-    "build_on", [arch.value for arch in craft_platforms.DebianArchitecture]
+    ("build_on", "build_for"),
+    [(arch.value, arch.value) for arch in craft_platforms.DebianArchitecture]
+    + [("amd64", "arm64"), ("arm64", "amd64")],
 )
 @pytest.mark.usefixtures("fake_project_file")
 def test_render_for(

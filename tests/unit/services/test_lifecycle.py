@@ -502,6 +502,11 @@ def test_get_build_for(
         [Action("my-part", Step.PULL), Action("my-part", Step.BUILD)],
     ],
 )
+@pytest.mark.parametrize(
+    ("fake_platform", "fake_host_architecture"),
+    [("64-bit-pc", craft_platforms.DebianArchitecture.AMD64)],
+    indirect=True,
+)
 def test_run_success(
     fake_parts_lifecycle,
     actions,
@@ -552,6 +557,11 @@ def test_run_no_step(
         ([Action("my-part", Step.PULL, action_type=ActionType.UPDATE)], True),
         ([Action("my-part", Step.OVERLAY, action_type=ActionType.REAPPLY)], True),
     ],
+)
+@pytest.mark.parametrize(
+    ("fake_platform", "fake_host_architecture"),
+    [("64-bit-pc", craft_platforms.DebianArchitecture.AMD64)],
+    indirect=True,
 )
 def test_run_sets_requires_repack(
     fake_parts_lifecycle,
@@ -619,6 +629,11 @@ def test_run_keeps_requires_repack_true_when_exec_fails(
         (craft_parts.PartsError("parts error"), PartsLifecycleError, "^parts error$"),
         (CraftError("parts error"), CraftError, "^parts error$"),
     ],
+)
+@pytest.mark.parametrize(
+    ("fake_platform", "fake_host_architecture"),
+    [("64-bit-pc", craft_platforms.DebianArchitecture.AMD64)],
+    indirect=True,
 )
 def test_run_failure(
     fake_parts_lifecycle,
