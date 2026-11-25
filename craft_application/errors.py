@@ -28,7 +28,10 @@ import yaml
 from craft_cli import CraftError
 from craft_providers import bases
 
-from craft_application.util.error_formatting import format_pydantic_errors
+from craft_application.util.error_formatting import (
+    format_pydantic_error_details,
+    format_pydantic_errors,
+)
 from craft_application.util.string import humanize_list
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -168,7 +171,10 @@ class CraftValidationError(CraftError):
         :param doc_slug: The optional slug to this error's docs.
         :param kwargs: additional keyword arguments get passed to CraftError
         """
-        message = format_pydantic_errors(error.errors(), file_name=file_name)
+        errors = error.errors()
+        message = format_pydantic_errors(errors, file_name=file_name)
+        if not kwargs.get("details"):
+            kwargs["details"] = format_pydantic_error_details(errors)
         return cls(message, **cast(dict[str, Any], kwargs))
 
 

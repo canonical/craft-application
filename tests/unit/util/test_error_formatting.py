@@ -21,8 +21,10 @@ from typing import TYPE_CHECKING
 import pytest
 import pytest_check
 from craft_application.util.error_formatting import (
+    MAX_INPUT_LENGTH,
     FieldLocationTuple,
     format_pydantic_error,
+    format_pydantic_error_details,
     format_pydantic_errors,
 )
 
@@ -105,6 +107,52 @@ def test_format_pydantic_error(field_path, value, message, expected):
     )
 
     assert actual == expected
+
+
+def test_format_pydantic_error_omits_long_input():
+    project = {"name": "my-snap", "base": "core26", "description": "x" * 300}
+
+    actual = format_pydantic_error(
+        {
+            "loc": ("has-base", "core26"),
+            "msg": "required field 'version' is not set and 'adopt-info' not used.",
+            "type": "value_error",
+            "input": project,
+        },
+    )
+
+    assert actual == (
+        "- required field 'version' is not set and 'adopt-info' not used. "
+        "(in field 'has-base.core26')"
+    )
+
+
+def test_format_pydantic_error_keeps_input_at_limit():
+    value = "x" * (MAX_INPUT_LENGTH - 2)
+
+    actual = format_pydantic_error(
+        {"loc": ("foo",), "msg": "bad", "type": "misc-error", "input": value},
+    )
+
+    assert actual == f"- bad (in field 'foo', input: {value!r})"
+
+
+def test_format_pydantic_error_details_long_input():
+    project = {"name": "my-snap", "base": "core26", "description": "x" * 300}
+    errors = [
+        {"loc": ("has-base", "core26"), "msg": "bad", "type": "x", "input": project},
+        {"loc": ("foo",), "msg": "bad", "type": "x", "input": 1},
+    ]
+
+    actual = format_pydantic_error_details(errors)
+
+    assert actual == f"- input for field 'has-base.core26': {project!r}"
+
+
+def test_format_pydantic_error_details_short_input():
+    errors = [{"loc": ("foo",), "msg": "bad", "type": "x", "input": "x" * 100}]
+
+    assert format_pydantic_error_details(errors) is None
 
 
 @pytest.mark.parametrize(
