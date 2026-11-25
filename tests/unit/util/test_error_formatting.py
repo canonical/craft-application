@@ -139,7 +139,7 @@ def test_format_pydantic_error_keeps_input_at_limit():
 
 def test_format_pydantic_error_details_long_input():
     project = {"name": "my-snap", "base": "core26", "description": "x" * 300}
-    errors = [
+    errors: list[ErrorDetails] = [
         {"loc": ("has-base", "core26"), "msg": "bad", "type": "x", "input": project},
         {"loc": ("foo",), "msg": "bad", "type": "x", "input": 1},
     ]
@@ -150,7 +150,9 @@ def test_format_pydantic_error_details_long_input():
 
 
 def test_format_pydantic_error_details_short_input():
-    errors = [{"loc": ("foo",), "msg": "bad", "type": "x", "input": "x" * 100}]
+    errors: list[ErrorDetails] = [
+        {"loc": ("foo",), "msg": "bad", "type": "x", "input": "x" * 100}
+    ]
 
     assert format_pydantic_error_details(errors) is None
 
