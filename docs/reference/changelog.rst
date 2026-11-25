@@ -24,6 +24,8 @@ Bug fixes
 - The ``--use-lxd`` option now takes priority over ``CRAFT_BUILD_ENVIRONMENT=host``.
 - When a remote build can't create its Launchpad repository, the original error is
   now reported instead of a misleading "Could not find repository" error.
+- Validation errors no longer print an input value longer than 250 characters, such as
+  a whole project file, in the message. It is added to the error details instead.
 
 Documentation
 =============
