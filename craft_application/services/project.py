@@ -141,6 +141,14 @@ class ProjectService(base.AppService):
         self._build_for = self._convert_build_for(build_for)
         self.__is_configured = True
 
+    def set_pro_services(self, pro_services: util.ProServices | None) -> None:
+        """Set the Ubuntu Pro services requested for this build.
+
+        Use this when the service already exists, since it may be created before
+        the command's arguments are parsed.
+        """
+        self._pro_services = pro_services
+
     @property
     @final
     def is_configured(self) -> bool:
@@ -742,6 +750,30 @@ class ProjectService(base.AppService):
             date
         ) or support_range.is_in_development_on(date)
 
+    @property
+    def _esm_infra_enabled(self) -> bool:
+        """Whether the build uses the esm-infra Pro service.
+
+        Only esm-infra extends security maintenance for the base itself, so a base
+        is still maintained with it. esm-apps covers universe packages only.
+        """
+        return bool(self._pro_services) and "esm-infra" in self._pro_services
+
+    def _is_maintained_on(
+        self, *, base: craft_platforms.DistroBase, date: dt.date
+    ) -> bool:
+        """Check if the given base is supported on a date, counting ESM with esm-infra.
+
+        Applications may override ``_is_supported_on``, so this wraps it rather
+        than changing its signature.
+        """
+        if self._is_supported_on(base=base, date=date):
+            return True
+        if not self._esm_infra_enabled:
+            return False
+        support_range = distro_support.get_support_range(base.distribution, base.series)
+        return support_range.is_supported_on(date, include_esm=True)
+
     def check_base_is_supported(self, verb: str = "pack") -> None:
         """Check that this project's base and build-base are supported.
 
@@ -769,7 +801,7 @@ class ProjectService(base.AppService):
 
         if base is not None:
             try:
-                base_is_supported = self._is_supported_on(base=base, date=today)
+                base_is_supported = self._is_maintained_on(base=base, date=today)
             except (UnknownDistributionError, UnknownVersionError) as error:
                 # If distro-support doesn't know about this base, assume it's supported.
                 emit.debug(str(error))
@@ -778,7 +810,7 @@ class ProjectService(base.AppService):
             base_is_supported = True
         if build_base is not None:
             try:
-                build_base_is_supported = self._is_supported_on(
+                build_base_is_supported = self._is_maintained_on(
                     base=build_base, date=today
                 )
             except (UnknownDistributionError, UnknownVersionError) as error:
@@ -808,7 +840,7 @@ class ProjectService(base.AppService):
         if base.series == "devel":
             # A devel series is never considered end-of-life.
             return False
-        return not self._is_supported_on(base=base, date=dt.date.today())
+        return not self._is_maintained_on(base=base, date=dt.date.today())
 
     def base_eol_soon_date(self) -> dt.date | None:
         """Return the date of the base's EOL if it happens soon.
@@ -818,12 +850,14 @@ class ProjectService(base.AppService):
         ninety_days_out = dt.date.today() + dt.timedelta(days=90)
         base = craft_platforms.DistroBase.from_str(self.get().effective_base)
         try:
-            if self._is_supported_on(base=base, date=ninety_days_out):
+            if self._is_maintained_on(base=base, date=ninety_days_out):
                 return None
         except (UnknownDistributionError, UnknownVersionError):
             # If distro-support doesn't know about this base, assume it's supported.
             return None
         support_range = distro_support.get_support_range(base.distribution, base.series)
+        if self._esm_infra_enabled and support_range.end_extended_support:
+            return support_range.end_extended_support
         return support_range.end_support
 
     @final

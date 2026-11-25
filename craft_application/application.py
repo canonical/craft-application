@@ -549,6 +549,9 @@ class Application:
         if command.needs_project(parsed_args):
             self.services.update_kwargs("project", pro_services=self._pro_services)
             project_service = self.services.get("project")
+            # The project service may already exist from startup (when the plugin
+            # group is set), before the Pro services were known.
+            project_service.set_pro_services(self._pro_services)
             # This branch always runs, except during testing.
             if not project_service.is_configured:
                 project_service.configure(platform=platform, build_for=build_for)

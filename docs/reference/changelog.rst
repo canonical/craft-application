@@ -24,6 +24,11 @@ Bug fixes
 - The ``--use-lxd`` option now takes priority over ``CRAFT_BUILD_ENVIRONMENT=host``.
 - When a remote build can't create its Launchpad repository, the original error is
   now reported instead of a misleading "Could not find repository" error.
+- With the ``esm-infra`` Ubuntu Pro service, a base in Expanded Security Maintenance is
+  no longer treated as end-of-life, so ``--ignore=unmaintained`` isn't needed.
+- The project service now receives the Ubuntu Pro services from the ``--pro`` option
+  even when it was created before the command ran. As a result, Pro builds now reject
+  a ``devel`` base or build-base, as intended.
 
 Documentation
 =============
