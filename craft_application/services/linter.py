@@ -58,8 +58,9 @@ class LinterService(base.AppService):
     def __init__(self, app: AppMetadata, services: ServiceFactory) -> None:
         super().__init__(app, services)
         self._ignore_cfg: IgnoreConfig = {}
-        self._issues: list[LinterIssue] = []
-        self._issues_by_linter: dict[str, list[LinterIssue]] = {}
+        # Kept per stage so that running one stage doesn't drop another's results.
+        self._issues: dict[Stage, list[LinterIssue]] = {}
+        self._issues_by_linter: dict[Stage, dict[str, list[LinterIssue]]] = {}
 
     @classmethod
     def register(cls, linter_cls: type[AbstractLinter]) -> None:
@@ -172,7 +173,11 @@ class LinterService(base.AppService):
         stage: Stage,
         ctx: LintContext,
     ) -> Iterator[LinterIssue]:
-        """Run linters for a stage, streaming non-suppressed issues."""
+        """Run linters for a stage, streaming non-suppressed issues.
+
+        Issues from an earlier run of the same stage are replaced. Issues from
+        other stages are kept, so ``summary()`` covers every stage that ran.
+        """
         if stage == Stage.PRE and ctx.project is None:
             project_service = self._services.get("project")
             if not project_service.is_configured:
@@ -189,8 +194,10 @@ class LinterService(base.AppService):
                 project=project,
                 artifact_dirs=ctx.artifact_dirs,
             )
-        self._issues.clear()
-        self._issues_by_linter.clear()
+        stage_issues: list[LinterIssue] = []
+        stage_issues_by_linter: dict[str, list[LinterIssue]] = {}
+        self._issues[stage] = stage_issues
+        self._issues_by_linter[stage] = stage_issues_by_linter
         registry = type(self)._class_registry  # noqa: SLF001
         selected = self.pre_filter_linters(stage, ctx, registry.get(stage, []))
         for cls in selected:
@@ -204,15 +211,13 @@ class LinterService(base.AppService):
             )
             filtered = self.post_filter_issues(linter, user_filtered, ctx)
             for issue in filtered:
-                self._issues.append(issue)
-                self._issues_by_linter.setdefault(linter.name, []).append(issue)
+                stage_issues.append(issue)
+                stage_issues_by_linter.setdefault(linter.name, []).append(issue)
                 yield issue
 
     def get_highest_severity(self) -> Severity | None:
         """Return the highest severity present among collected issues."""
-        if not self._issues:
-            return None
-        return max((i.severity for i in self._issues), default=None)
+        return max((i.severity for i in self.issues), default=None)
 
     def summary(self) -> ExitCode:
         """Return an exit code (non-zero only for errors)."""
@@ -223,13 +228,17 @@ class LinterService(base.AppService):
 
     @property
     def issues(self) -> list[LinterIssue]:
-        """Return a copy of issues collected during the last run."""
-        return list(self._issues)
+        """Return a copy of issues collected during the latest run of each stage."""
+        return [issue for issues in self._issues.values() for issue in issues]
 
     @property
     def issues_by_linter(self) -> dict[str, list[LinterIssue]]:
         """Return collected issues grouped by linter name."""
-        return {name: list(issues) for name, issues in self._issues_by_linter.items()}
+        merged: dict[str, list[LinterIssue]] = {}
+        for by_linter in self._issues_by_linter.values():
+            for name, issues in by_linter.items():
+                merged.setdefault(name, []).extend(issues)
+        return merged
 
     @staticmethod
     def _is_adoptable_missing_error(error: errors.CraftValidationError) -> bool:

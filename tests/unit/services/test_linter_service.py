@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 from craft_application.lint import (
+    ExitCode,
     IgnoreConfig,
     IgnoreSpec,
     LintContext,
@@ -32,6 +33,32 @@ class _DummyPreLinter(AbstractLinter):
         )
 
 
+class _DummyPostLinter(AbstractLinter):
+    name = "dummy.post"
+    stage = Stage.POST
+
+    def run(self, ctx: LintContext):
+        yield LinterIssue(
+            id="D002",
+            message="dummy post warning",
+            severity=Severity.WARNING,
+            filename=str(ctx.project_dir / "README.md"),
+        )
+
+
+class _DummyPreErrorLinter(AbstractLinter):
+    name = "dummy.pre_error"
+    stage = Stage.PRE
+
+    def run(self, ctx: LintContext):
+        yield LinterIssue(
+            id="E001",
+            message="dummy error",
+            severity=Severity.ERROR,
+            filename=str(ctx.project_dir / "README.md"),
+        )
+
+
 def _make_ctx(tmp_path: Path, project) -> LintContext:
     return LintContext(project_dir=tmp_path, project=project, artifact_dirs=[])
 
@@ -55,6 +82,63 @@ def test_run_warning(fake_services, fake_project, tmp_path: Path) -> None:
     assert svc.issues_by_linter == {"dummy.pre": issues}
     assert svc.get_highest_severity() == Severity.WARNING
     assert svc.summary() == 0  # warnings do not cause non-zero exit
+
+
+def test_run_keeps_issues_from_other_stages(
+    fake_services, fake_project, tmp_path: Path
+) -> None:
+    LinterService.register(_DummyPostLinter)
+    project_service = fake_services.get("project")
+    project_service.set(fake_project)
+    svc = fake_services.get("linter")
+    ctx = _make_ctx(tmp_path, fake_project)
+
+    pre_issues = list(svc.run(Stage.PRE, ctx))
+    post_issues = list(svc.run(Stage.POST, ctx))
+
+    assert [i.id for i in pre_issues] == ["D001"]
+    assert [i.id for i in post_issues] == ["D002"]
+    assert svc.issues == [*pre_issues, *post_issues]
+    assert svc.issues_by_linter == {
+        "dummy.pre": pre_issues,
+        "dummy.post": post_issues,
+    }
+
+
+def test_summary_covers_all_stages(fake_services, fake_project, tmp_path: Path) -> None:
+    LinterService.register(_DummyPreErrorLinter)
+    LinterService.register(_DummyPostLinter)
+    project_service = fake_services.get("project")
+    project_service.set(fake_project)
+    svc = fake_services.get("linter")
+    ctx = _make_ctx(tmp_path, fake_project)
+
+    list(svc.run(Stage.PRE, ctx))
+    list(svc.run(Stage.POST, ctx))
+
+    assert svc.get_highest_severity() == Severity.ERROR
+    assert svc.summary() == ExitCode.ERROR
+
+
+def test_rerun_replaces_only_that_stage(
+    fake_services, fake_project, tmp_path: Path
+) -> None:
+    LinterService.register(_DummyPostLinter)
+    project_service = fake_services.get("project")
+    project_service.set(fake_project)
+    svc = fake_services.get("linter")
+    ctx = _make_ctx(tmp_path, fake_project)
+
+    list(svc.run(Stage.PRE, ctx))
+    post_issues = list(svc.run(Stage.POST, ctx))
+    svc.load_ignore_config(
+        project_dir=tmp_path,
+        cli_ignores={"dummy.pre": IgnoreSpec(ids={"D001"}, by_filename={})},
+    )
+
+    assert list(svc.run(Stage.PRE, ctx)) == []
+    assert svc.issues == post_issues
+    assert svc.issues_by_linter == {"dummy.post": post_issues}
 
 
 def test_ignore_by_id_cli(fake_services, fake_project, tmp_path: Path) -> None:

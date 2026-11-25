@@ -107,6 +107,10 @@ desired stage:
        print(issue)
    print(int(svc.summary()))  # 0 OK, 1 WARN, 2 ERROR
 
+The service keeps the issues from the latest run of each stage, so after running
+both ``Stage.PRE`` and ``Stage.POST``, ``issues`` and ``summary()`` cover both
+stages. Running a stage again replaces only that stage's issues.
+
 Linter ignores by the user
 --------------------------
 
