@@ -15,7 +15,7 @@ Changelog
 
     For a complete list of commits, check out the `1.2.3`_ release on GitHub.
 
-7.5.1 (2026-11-25)
+7.5.1 (2026-11-26)
 ------------------
 
 Bug fixes
