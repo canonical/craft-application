@@ -61,10 +61,16 @@ class BuildPlanService(base.AppService):
     def plan(self) -> Sequence[craft_platforms.BuildInfo]:
         """Plan the current build."""
         if not self.__plan:
+            build_on = self._services.get("config").get("build_on")
+            build_on_arch = (
+                craft_platforms.DebianArchitecture(build_on)
+                if build_on
+                else craft_platforms.DebianArchitecture.from_host()
+            )
             self.__plan = self.create_build_plan(
                 platforms=self.__platforms or None,
                 build_for=self.__build_for or None,
-                build_on=[craft_platforms.DebianArchitecture.from_host()],
+                build_on=[build_on_arch],
             )
         if not self.__plan:
             raise EmptyBuildPlanError
