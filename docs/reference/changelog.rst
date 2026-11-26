@@ -15,6 +15,20 @@ Changelog
 
     For a complete list of commits, check out the `1.2.3`_ release on GitHub.
 
+7.5.1 (2026-11-26)
+------------------
+
+Bug fixes
+=========
+
+- Build planning now respects ``CRAFT_BUILD_ON`` when selecting a build for a
+  managed environment.
+
+- Lifecycle builds now report an error when the selected build-on architecture
+  does not match the current environment.
+
+For a complete list of commits, check out the `7.5.1`_ release on GitHub.
+
 7.5.0 (2026-10-02)
 ------------------
 
@@ -1512,3 +1526,4 @@ For a complete list of commits, check out the `2.7.0`_ release on GitHub.
 .. _7.4.0: https://github.com/canonical/craft-application/releases/tag/7.4.0
 .. _7.4.1: https://github.com/canonical/craft-application/releases/tag/7.4.1
 .. _7.5.0: https://github.com/canonical/craft-application/releases/tag/7.5.0
+.. _7.5.1: https://github.com/canonical/craft-application/releases/tag/7.5.1
