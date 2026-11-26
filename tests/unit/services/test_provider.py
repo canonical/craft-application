@@ -1320,3 +1320,181 @@ def test_run_managed_git_build_root_sets_cwd(
         check=True,
         env=mock.ANY,
     )
+
+
+@pytest.mark.parametrize(
+    ("registered", "expected"),
+    [
+        pytest.param(
+            Snap(name="core24", channel=None),
+            Snap(name="core24", channel="latest/stable"),
+            id="injected-becomes-store-install",
+        ),
+        pytest.param(
+            Snap(name="astral-uv", channel=None, classic=True),
+            Snap(name="astral-uv", channel="latest/stable", classic=True),
+            id="classic-preserved",
+        ),
+        pytest.param(
+            Snap(name="other", channel="latest/edge"),
+            Snap(name="other", channel="latest/edge"),
+            id="explicit-channel-untouched",
+        ),
+    ],
+)
+def test_setup_snaps_registered_snaps_not_injected_on_arch_mismatch(
+    monkeypatch, app_metadata, fake_project, fake_services, registered, expected
+):
+    """Registered snaps must not be injected from the host if the arch differs."""
+    monkeypatch.setattr(
+        craft_platforms.DebianArchitecture,
+        "from_host",
+        lambda: craft_platforms.DebianArchitecture.RISCV64,
+    )
+    monkeypatch.setattr(
+        fake_services.get("config"),
+        "get",
+        lambda item: "amd64" if item == "build_on" else None,
+    )
+    monkeypatch.setattr(
+        "snap_http.http.get",
+        mock.Mock(
+            return_value=SnapdResponse(
+                type="fake", status_code=200, status="OK", result=[]
+            )
+        ),
+    )
+    provider.ProviderService.register_snap(registered.name, registered)
+    monkeypatch.delenv("SNAP", raising=False)
+    monkeypatch.delenv("SNAP_NAME", raising=False)
+    monkeypatch.delenv("SNAP_INSTANCE_NAME", raising=False)
+    monkeypatch.delenv("CRAFT_SNAP_CHANNEL", raising=False)
+
+    service = provider.ProviderService(
+        app_metadata,
+        fake_services,
+        work_dir=pathlib.Path(),
+        install_snap=True,
+    )
+    service.setup()
+
+    assert expected in service.snaps
+    assert not [
+        s for s in service.snaps if s.name == registered.name and s.channel is None
+    ]
+
+
+@pytest.fixture
+def _registered_snap_env(monkeypatch):
+    monkeypatch.delenv("SNAP", raising=False)
+    monkeypatch.delenv("SNAP_NAME", raising=False)
+    monkeypatch.delenv("SNAP_INSTANCE_NAME", raising=False)
+    monkeypatch.delenv("CRAFT_SNAP_CHANNEL", raising=False)
+
+
+@pytest.mark.usefixtures("_registered_snap_env")
+@pytest.mark.parametrize("build_on", [None, "riscv64"])
+def test_setup_snaps_registered_snaps_injected_on_arch_match(
+    monkeypatch, app_metadata, fake_project, fake_services, build_on
+):
+    """Registered snaps without a channel are still injected if the arch matches."""
+    monkeypatch.setattr(
+        craft_platforms.DebianArchitecture,
+        "from_host",
+        lambda: craft_platforms.DebianArchitecture.RISCV64,
+    )
+    monkeypatch.setattr(
+        fake_services.get("config"),
+        "get",
+        lambda item: build_on if item == "build_on" else None,
+    )
+    provider.ProviderService.register_snap("core24", Snap(name="core24", channel=None))
+
+    service = provider.ProviderService(
+        app_metadata,
+        fake_services,
+        work_dir=pathlib.Path(),
+        install_snap=True,
+    )
+    service.setup()
+
+    assert Snap(name="core24", channel=None) in service.snaps
+
+
+@pytest.mark.usefixtures("_registered_snap_env")
+@pytest.mark.parametrize(
+    ("host_snaps", "expected_channel"),
+    [
+        pytest.param(
+            [{"name": "core24", "tracking-channel": "latest/candidate"}],
+            "latest/candidate",
+            id="host-tracking-channel",
+        ),
+        pytest.param([{"name": "core24"}], "latest/stable", id="no-tracking-channel"),
+        pytest.param([], "latest/stable", id="not-installed-on-host"),
+    ],
+)
+def test_setup_snaps_registered_snap_uses_host_tracking_channel(
+    monkeypatch, app_metadata, fake_project, fake_services, host_snaps, expected_channel
+):
+    """A registered snap that can't be injected uses its own host tracking channel."""
+    monkeypatch.setattr(
+        craft_platforms.DebianArchitecture,
+        "from_host",
+        lambda: craft_platforms.DebianArchitecture.RISCV64,
+    )
+    monkeypatch.setattr(
+        fake_services.get("config"),
+        "get",
+        lambda item: "amd64" if item == "build_on" else None,
+    )
+    monkeypatch.setattr(
+        "snap_http.http.get",
+        mock.Mock(
+            return_value=SnapdResponse(
+                type="fake", status_code=200, status="OK", result=host_snaps
+            )
+        ),
+    )
+    provider.ProviderService.register_snap("core24", Snap(name="core24", channel=None))
+
+    service = provider.ProviderService(
+        app_metadata,
+        fake_services,
+        work_dir=pathlib.Path(),
+        install_snap=True,
+    )
+    service.setup()
+
+    assert Snap(name="core24", channel=expected_channel) in service.snaps
+
+
+@pytest.mark.usefixtures("_registered_snap_env")
+def test_setup_snaps_registered_snap_snapd_unavailable(
+    monkeypatch, app_metadata, fake_project, fake_services
+):
+    """Fall back to latest/stable if snapd can't be reached on the host."""
+    monkeypatch.setattr(
+        craft_platforms.DebianArchitecture,
+        "from_host",
+        lambda: craft_platforms.DebianArchitecture.RISCV64,
+    )
+    monkeypatch.setattr(
+        fake_services.get("config"),
+        "get",
+        lambda item: "amd64" if item == "build_on" else None,
+    )
+    monkeypatch.setattr(
+        "snap_http.http.get", mock.Mock(side_effect=FileNotFoundError("no socket"))
+    )
+    provider.ProviderService.register_snap("core24", Snap(name="core24", channel=None))
+
+    service = provider.ProviderService(
+        app_metadata,
+        fake_services,
+        work_dir=pathlib.Path(),
+        install_snap=True,
+    )
+    service.setup()
+
+    assert Snap(name="core24", channel="latest/stable") in service.snaps
