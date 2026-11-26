@@ -620,6 +620,7 @@ class TestingService(base.AppService):
             backend.endpoint = auth_url
             backend.account = "user"  # user name placeholder
             backend.key = "password"  # password placeholder
+            backend.mode = "application-credential"
             backend.location = f"{project}/{region}"
             backend.plan = flavor
             backend.halt_timeout = "6h"
