@@ -205,6 +205,10 @@ class LifecycleService(base.AppService):
     def _validate_build_plan(self) -> None:
         """Validate that the build plan is usable for a lifecycle run."""
         build = self._build_info
+        host_arch = craft_platforms.DebianArchitecture.from_host()
+        if build.build_on != host_arch:
+            raise errors.IncompatibleBuildOnError(host_arch, build.build_on)
+
         host_base = craft_platforms.DistroBase.from_linux_distribution(
             distro.LinuxDistribution()
         )

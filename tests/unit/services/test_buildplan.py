@@ -53,6 +53,32 @@ def test_plan_empty(
         build_plan_service.plan()
 
 
+def test_plan_uses_configured_build_on(
+    build_plan_service: BuildPlanService,
+    monkeypatch: pytest.MonkeyPatch,
+    mocker: pytest_mock.MockFixture,
+):
+    monkeypatch.setenv("CRAFT_BUILD_ON", "armhf")
+    mocker.patch.object(
+        craft_platforms.DebianArchitecture,
+        "from_host",
+        return_value=craft_platforms.DebianArchitecture.ARM64,
+    )
+    mock_create_build_plan = mocker.patch.object(
+        build_plan_service,
+        "create_build_plan",
+        return_value=[mocker.sentinel.build],
+    )
+
+    build_plan_service.plan()
+
+    mock_create_build_plan.assert_called_once_with(
+        platforms=None,
+        build_for=None,
+        build_on=[craft_platforms.DebianArchitecture.ARMHF],
+    )
+
+
 _base = DistroBase("", "")
 _pc_on_amd64_for_amd64 = BuildInfo(
     platform="pc",
