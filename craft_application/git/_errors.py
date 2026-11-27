@@ -14,12 +14,12 @@
 
 """Git repository related errors."""
 
-from craft_cli.errors import CraftError
+from craft_cli.errors import CraftCommandError
 
 
-class GitError(CraftError):
+class GitError(CraftCommandError):
     """Git is not working as expected."""
 
-    def __init__(self, details: str) -> None:
+    def __init__(self, details: str, *, stderr: str | bytes | None = None) -> None:
         brief = "Git operation failed."
-        super().__init__(message=brief, details=details)
+        super().__init__(message=brief, details=details, stderr=stderr)

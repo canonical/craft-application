@@ -29,7 +29,7 @@ from collections.abc import Iterable
 import craft_platforms
 import distro
 import pydantic
-from craft_cli import CraftError, emit
+from craft_cli import CraftCommandError, CraftError, emit
 
 from craft_application import models, util
 from craft_application.errors import TestFileError
@@ -535,8 +535,9 @@ class TestingService(base.AppService):
                         cwd=spread_dir,
                     )
         except subprocess.CalledProcessError as exc:
-            raise CraftError(
+            raise CraftCommandError(
                 "Testing failed.",
+                stderr=exc.stderr,
                 reportable=False,
                 retcode=exc.returncode,
             )

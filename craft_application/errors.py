@@ -25,7 +25,7 @@ from typing import TYPE_CHECKING, Any, Literal, cast
 
 import craft_platforms
 import yaml
-from craft_cli import CraftError
+from craft_cli import CraftCommandError, CraftError
 from craft_providers import bases
 
 from craft_application.util.error_formatting import format_pydantic_errors
@@ -199,13 +199,12 @@ class PartsLifecycleError(CraftError):
         return cls(message, details=details)
 
 
-class SecretsCommandError(CraftError):
+class SecretsCommandError(CraftCommandError):
     """Error when rendering a build-secret."""
 
     def __init__(self, host_directive: str, error_message: str) -> None:
         message = f'Error when processing secret "{host_directive}"'
-        details = f"Command output: {error_message}"
-        super().__init__(message=message, details=details)
+        super().__init__(message=message, stderr=error_message)
 
 
 class SecretsFieldError(CraftError):
