@@ -17,11 +17,13 @@
 
 import io
 import pathlib
+import re
 
 import craft_platforms
 import pytest
 from craft_application import errors
 from craft_application.util import yaml
+from craft_cli.pytest_plugin import raises_craft_error
 
 TEST_DIR = pathlib.Path(__file__).parent
 
@@ -39,16 +41,15 @@ def test_safe_yaml_loader_valid(file):
         for file in (TEST_DIR / "invalid_yaml").glob("*.yaml-invalid")
     ],
 )
-def test_safe_yaml_loader_invalid(check, file):
+def test_safe_yaml_loader_invalid(file):
     with file.open() as f:
-        with pytest.raises(
-            errors.YamlError, match=f"error parsing {file.name!r}: "
-        ) as exc_info:
+        with raises_craft_error(
+            errors.YamlError,
+            match=f"error parsing {re.escape(repr(file.name))}: ",
+            resolution=f"{re.escape(file.name)} contains valid YAML$",
+            details="found",
+        ):
             yaml.safe_yaml_load(f)
-
-    check.is_in(file.name, exc_info.value.resolution)
-    check.is_true(str(exc_info.value.resolution).endswith("contains valid YAML"))
-    check.is_in("found", exc_info.value.details)
 
 
 @pytest.mark.parametrize(
@@ -68,23 +69,22 @@ def test_safe_yaml_loader_specific_error(yaml_text: str, error_msg: str):
     f = io.StringIO(yaml_text)
     f.name = "testcraft.yaml"
 
-    with pytest.raises(errors.YamlError) as exc_info:
+    with raises_craft_error(errors.YamlError, match=f"^{re.escape(error_msg)}$"):
         yaml.safe_yaml_load(f)
 
-    assert exc_info.value.args[0] == error_msg
 
-
-def test_safe_yaml_loader_non_utf8(check, tmp_path):
+def test_safe_yaml_loader_non_utf8(tmp_path):
     """A non-UTF-8 file surfaces a friendly YamlError, not an uncaught UnicodeDecodeError."""
     bad_file = tmp_path / "testcraft.yaml"
     bad_file.write_bytes("name: test\n".encode("utf-32"))
 
     with bad_file.open() as f:  # default UTF-8 text mode
-        with pytest.raises(errors.YamlError, match="is not valid UTF-8") as exc_info:
+        with raises_craft_error(
+            errors.YamlError,
+            match=f"{re.escape(bad_file.name)}.*is not valid UTF-8",
+            resolution="encoded in UTF-8$",
+        ):
             yaml.safe_yaml_load(f)
-
-    check.is_in(bad_file.name, exc_info.value.args[0])
-    check.is_true(str(exc_info.value.resolution).endswith("encoded in UTF-8"))
 
 
 @pytest.mark.parametrize(
