@@ -317,14 +317,19 @@ class PackageService(base.AppService):
         return False
 
     def _mediation_record_path(self, partition: str | None) -> pathlib.Path:
-        """Return the path to the mediation record file for a partition."""
+        """Return the path to the mediation record file for a partition.
+
+        It lives in the parts directory, which local sources skip when the
+        work directory is the project directory (destructive mode with
+        ``source: .``), and which a full clean removes.
+        """
         lifecycle = self._services.get("lifecycle")
-        work_dir = lifecycle.project_info.dirs.work_dir
+        parts_dir = lifecycle.project_info.dirs.parts_dir
         partition_name = "default" if partition is None else partition
-        return work_dir / "package-state" / f"{partition_name}.json"
+        return parts_dir / ".package-state" / f"{partition_name}.json"
 
     def _load_mediation_record(self, partition: str | None) -> dict[str, Any]:
-        """Load the mediation record for a partition from the work directory.
+        """Load the mediation record for a partition from the parts directory.
 
         ``mediated`` maps each prime-relative path we wrote to its sha256.
         ``packed`` lists the mediated files in the last packed artifact, not
@@ -347,7 +352,7 @@ class PackageService(base.AppService):
     def _save_mediation_record(
         self, record: dict[str, Any], partition: str | None
     ) -> None:
-        """Save the mediation record for a partition to the work directory."""
+        """Save the mediation record for a partition to the parts directory."""
         path = self._mediation_record_path(partition)
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(json.dumps(record))

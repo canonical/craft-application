@@ -946,3 +946,17 @@ def test_assets_outside_prime_are_never_deleted(
     svc.pack_artifacts()
 
     assert outside.read_text() == "foo"
+
+
+def test_mediation_record_is_ignored_by_local_sources(
+    app_metadata, fake_project, fake_services, tmp_path
+):
+    # With "source: ." in destructive mode, work_dir is the project dir. The
+    # record must live where craft-parts skips it, or every pack sees a
+    # changed source and repacks.
+    svc = AssetPackageService(app_metadata, fake_services, root=tmp_path)
+    dirs = fake_services.get("lifecycle").project_info.dirs
+
+    path = svc._mediation_record_path(None)
+
+    assert path.is_relative_to(dirs.parts_dir)
