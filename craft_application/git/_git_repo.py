@@ -249,10 +249,9 @@ class GitRepo:
                 stderr=subprocess.STDOUT,
             )
         except subprocess.CalledProcessError as error:
-            error_details = (
-                f"cannot find ref: {branch_or_tag!r}.\nCommand output:\n{error.stdout}"
-            )
-            raise GitError(error_details) from error
+            raise GitError(
+                f"cannot find ref: {branch_or_tag!r}.", stderr=error.stdout
+            ) from error
 
         commit_sha = rev_parse_output.strip()
         try:

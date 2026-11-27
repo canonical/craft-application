@@ -28,11 +28,13 @@ from craft_application.errors import (
     InvalidUbuntuProServiceError,
     InvalidUbuntuProStatusError,
     PartsLifecycleError,
+    SecretsCommandError,
     UbuntuProAttachedError,
     UbuntuProClientNotFoundError,
     UbuntuProDetachedError,
     YamlError,
 )
+from craft_cli import CraftCommandError
 from pydantic import BaseModel
 from typing_extensions import Self
 
@@ -412,3 +414,11 @@ def test_invalid_ubuntu_pro_status_error_details(
     err = InvalidUbuntuProStatusError(requested, available)
 
     assert err.details == expected_details
+
+
+def test_secrets_command_error():
+    error = SecretsCommandError("$(HOST_SECRET:echo secret)", "command not found")
+
+    assert isinstance(error, CraftCommandError)
+    assert str(error) == 'Error when processing secret "$(HOST_SECRET:echo secret)"'
+    assert error.stderr == "command not found"

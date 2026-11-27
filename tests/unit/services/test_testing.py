@@ -18,6 +18,7 @@
 import dataclasses
 import pathlib
 import stat
+import subprocess
 import textwrap
 from collections.abc import Iterable
 from textwrap import dedent
@@ -32,7 +33,7 @@ from craft_application import models, util
 from craft_application.errors import TestFileError, YamlError
 from craft_application.services.fetch import EXTERNAL_FETCH_SERVICE_ENV_VAR
 from craft_application.services.testing import TestingService
-from craft_cli import CraftError
+from craft_cli import CraftCommandError, CraftError
 
 
 @pytest.fixture(scope="module")
@@ -925,6 +926,34 @@ def test_run_spread(
             cwd=tmp_path,
         ),
     ]
+
+
+def test_run_spread_failure(
+    testing_service: TestingService,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: pathlib.Path,
+    mocker,
+):
+    monkeypatch.delenv("CI", raising=False)
+    mocker.patch(
+        "craft_platforms.DistroBase.from_linux_distribution",
+        return_value=craft_platforms.DistroBase("id", "1.0"),
+    )
+    mocker.patch("shutil.which", return_value="spread")
+    mocker.patch(
+        "subprocess.run",
+        side_effect=subprocess.CalledProcessError(
+            2, ["spread", "craft"], stderr="error: tests failed"
+        ),
+    )
+
+    with pytest.raises(CraftCommandError) as raised:
+        testing_service.run_spread(tmp_path)
+
+    assert str(raised.value) == "Testing failed."
+    assert raised.value.retcode == 2
+    assert not raised.value.reportable
+    assert raised.value.stderr == "error: tests failed"
 
 
 @pytest.mark.parametrize(

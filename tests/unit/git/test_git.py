@@ -1420,9 +1420,8 @@ def test_last_commit_on_branch_or_tag_fails_if_ref_not_found(
     )
     with pytest.raises(GitError) as git_error:
         git_repo.get_last_commit_on_branch_or_tag(branch_or_tag)
-    err_details = cast(str, git_error.value.details)
-    assert err_details.startswith(f"cannot find ref: {branch_or_tag!r}")
-    assert "fatal" in err_details
+    assert git_error.value.details == f"cannot find ref: {branch_or_tag!r}."
+    assert "fatal" in cast(str, git_error.value.stderr)
 
 
 def test_get_last_commit_on_branch_or_tag(

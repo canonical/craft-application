@@ -24,6 +24,9 @@ Bug fixes
 - The ``--use-lxd`` option now takes priority over ``CRAFT_BUILD_ENVIRONMENT=host``.
 - When a remote build can't create its Launchpad repository, the original error is
   now reported instead of a misleading "Could not find repository" error.
+- Failed ``spread`` runs, git operations and build secret commands now raise
+  ``craft_cli.CraftCommandError``, so their error output is
+  reported separately from the error message.
 
 Documentation
 =============
