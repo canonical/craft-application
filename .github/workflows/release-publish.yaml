@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   source-wheel:
-    runs-on: [self-hosted]
+    runs-on: [self-hosted, medium, linux]
     steps:
       - name: Install dependencies
         run: |
@@ -38,7 +38,7 @@ jobs:
           path: dist/
   pypi:
     needs: ["source-wheel"]
-    runs-on: [self-hosted, amd64]
+    runs-on: [self-hosted, amd64, medium, linux]
     permissions:
       # IMPORTANT: this permission is mandatory for trusted publishing
       id-token: write
@@ -55,7 +55,7 @@ jobs:
         uses: pypa/gh-action-pypi-publish@release/v1
   github-release:
     needs: ["source-wheel"]
-    runs-on: [self-hosted]
+    runs-on: [self-hosted, medium, linux]
     steps:
       - name: Get pypi artifacts
         uses: actions/download-artifact@v8
