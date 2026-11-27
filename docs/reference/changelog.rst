@@ -24,6 +24,8 @@ Bug fixes
 - The ``--use-lxd`` option now takes priority over ``CRAFT_BUILD_ENVIRONMENT=host``.
 - When a remote build can't create its Launchpad repository, the original error is
   now reported instead of a misleading "Could not find repository" error.
+- The linter service now keeps the results of each stage it runs, so a post-lint
+  run no longer discards the pre-lint results and ``summary()`` covers both.
 
 Documentation
 =============
