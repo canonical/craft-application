@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import contextlib
 import datetime as dt
+import http
 import itertools
 import os
 import pathlib
@@ -47,6 +48,18 @@ if TYPE_CHECKING:  # pragma: no cover
     from craft_application import AppMetadata, ServiceFactory
 
 DEFAULT_POLL_INTERVAL = 30
+
+
+# Server errors that are usually temporary and worth retrying later.
+_RETRYABLE_STATUSES = frozenset(
+    {
+        http.HTTPStatus.INTERNAL_SERVER_ERROR,
+        http.HTTPStatus.NOT_IMPLEMENTED,
+        http.HTTPStatus.BAD_GATEWAY,
+        http.HTTPStatus.SERVICE_UNAVAILABLE,
+        http.HTTPStatus.GATEWAY_TIMEOUT,
+    }
+)
 
 
 class RemoteBuildService(base.AppService):
@@ -293,10 +306,25 @@ class RemoteBuildService(base.AppService):
         work_tree.init_repo()
         try:
             lp_repository = self.lp.new_repository(self._name, project=self._lp_project)
-        except launchpadlib.errors.HTTPError:
-            lp_repository = self.lp.get_repository(
-                name=self._name, project=self._lp_project.name
-            )
+        except launchpadlib.errors.HTTPError as exc:
+            # Creation fails if the repository already exists. If it can't be
+            # found either, the creation error is the real problem (e.g. Launchpad
+            # being down).
+            try:
+                lp_repository = self.lp.get_repository(
+                    name=self._name, project=self._lp_project.name
+                )
+            except (launchpad.errors.NotFoundError, launchpadlib.errors.HTTPError):
+                status = exc.response.status
+                raise errors.RemoteBuildError(
+                    f"Could not create repository {self._name!r} on Launchpad: "
+                    f"HTTP {status} {exc.response.reason}",
+                    resolution=(
+                        "Launchpad may be temporarily unavailable. Try again later."
+                        if status in _RETRYABLE_STATUSES
+                        else None
+                    ),
+                ) from exc
 
         token = lp_repository.get_access_token(
             f"{self._app.name} {self._app.version} remote build",
