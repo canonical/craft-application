@@ -148,7 +148,7 @@ class ProviderService(base.AppService):
 
         for requested in _REQUESTED_SNAPS.values():
             if requested.channel is None and not host_arch_matches:
-                self.snaps.append(self._snap_for_store_install(requested))
+                self.snaps.append(self._convert_snap_to_store_install(requested))
             else:
                 self.snaps.append(requested)
 
@@ -180,7 +180,7 @@ class ProviderService(base.AppService):
             )
             self.snaps.append(Snap(name=name, channel=channel, classic=True))
 
-    def _snap_for_store_install(self, snap: Snap) -> Snap:
+    def _convert_snap_to_store_install(self, snap: Snap) -> Snap:
         """Get a copy of a snap that is installed from the store, not the host.
 
         The host's snap has the wrong architecture to inject into the build
