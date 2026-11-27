@@ -289,6 +289,56 @@ def test_state_dir_runtime_permission_error(
     assert state_dir.exists()
 
 
+@pytest.mark.usefixtures("no_state_dir_env_var")
+def test_state_dir_home_temp_permission_error(state_service_factory, mocker):
+    """Ask to check the default state dir's permissions if it can't be created."""
+    mocker.patch(
+        "craft_application.services.state.platformdirs.user_runtime_path",
+        side_effect=PermissionError,
+    )
+    mocker.patch(
+        "craft_application.util.get_home_temporary_directory",
+        side_effect=PermissionError,
+    )
+    home = str(pathlib.Path.home())
+
+    with pytest.raises(errors.StateServiceError) as exc_info:
+        state_service_factory()
+
+    assert str(exc_info.value) == (
+        f"Failed to create a state directory in {home!r} due to insufficient "
+        "permissions."
+    )
+    assert exc_info.value.resolution == (
+        f"Check the permissions on {home!r} or set CRAFT_STATE_DIR to a writable "
+        "directory."
+    )
+
+
+@pytest.mark.usefixtures("no_state_dir_env_var")
+def test_create_default_state_dir_permission_error(
+    state_service_factory, mocker, tmp_path
+):
+    """Ask to check the permissions if the default state dir can't be created."""
+    state_dir = (tmp_path / "runtime" / "state").resolve()
+    mocker.patch(
+        "craft_application.services.state.platformdirs.user_runtime_path",
+        return_value=state_dir,
+    )
+    mocker.patch(
+        "craft_application.util.get_home_temporary_directory", return_value=state_dir
+    )
+    mocker.patch.object(pathlib.Path, "mkdir", side_effect=PermissionError)
+
+    with pytest.raises(errors.StateServiceError) as exc_info:
+        state_service_factory()
+
+    assert exc_info.value.resolution == (
+        f"Check the permissions on {str(state_dir.parent)!r} or set CRAFT_STATE_DIR "
+        "to a writable directory."
+    )
+
+
 @pytest.mark.usefixtures("state_dir")
 def test_create_state_dir_permission_error(state_service_factory, state_dir, mocker):
     """Raise a friendly error if the state directory can't be created."""

@@ -276,12 +276,19 @@ class StateService(base.AppService):
                 "file with that name already exists."
             ) from err
         except PermissionError as err:
+            if os.getenv(CRAFT_STATE_DIR_ENV):
+                resolution = (
+                    f"Set {CRAFT_STATE_DIR_ENV} to a writable directory and try again."
+                )
+            else:
+                resolution = (
+                    f"Check the permissions on {str(self._state_dir.parent)!r} or set "
+                    f"{CRAFT_STATE_DIR_ENV} to a writable directory."
+                )
             raise errors.StateServiceError(
                 f"Failed to create state dir at {str(self._state_dir)!r} due to "
                 "insufficient permissions.",
-                resolution=(
-                    f"Set {CRAFT_STATE_DIR_ENV} to a writable directory and try again."
-                ),
+                resolution=resolution,
             ) from err
 
     @final
@@ -323,7 +330,18 @@ class StateService(base.AppService):
                 sys.platform == "linux" and runtime_dir.is_relative_to("/tmp")  # noqa: S108 (use of /tmp)
             ):
                 craft_cli.emit.debug("Getting home temporary directory.")
-                state_dir = util.get_home_temporary_directory()
+                try:
+                    state_dir = util.get_home_temporary_directory()
+                except PermissionError as err:
+                    home = str(pathlib.Path.home())
+                    raise errors.StateServiceError(
+                        f"Failed to create a state directory in {home!r} due to "
+                        "insufficient permissions.",
+                        resolution=(
+                            f"Check the permissions on {home!r} or set "
+                            f"{CRAFT_STATE_DIR_ENV} to a writable directory."
+                        ),
+                    ) from err
             else:
                 state_dir = runtime_dir
 

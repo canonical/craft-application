@@ -28,7 +28,8 @@ Bug fixes
   a temporary directory in the home directory instead of raising an internal
   error.
 - A permission error when creating the state directory now raises a
-  user-facing error that recommends setting ``CRAFT_STATE_DIR``.
+  user-facing error. It recommends checking the permissions on the default
+  location, or setting ``CRAFT_STATE_DIR`` to a writable directory.
 
 Documentation
 =============
