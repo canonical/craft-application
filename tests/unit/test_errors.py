@@ -169,6 +169,30 @@ def test_validation_error_from_pydantic_model():
     assert message == expected
 
 
+def test_validation_error_from_pydantic_long_input():
+    data = {"gt_int": 21, "a_float": "x" * 300}
+    try:
+        Model.model_validate(data)
+    except pydantic.ValidationError as e:
+        err = CraftValidationError.from_pydantic(e, file_name="myfile.yaml")
+    else:  # pragma: no cover
+        pytest.fail("Model failed to fail to validate!")
+
+    assert "xxx" not in str(err)
+    assert err.details == f"- input for field 'a_float': {'x' * 300!r}"
+
+
+def test_validation_error_from_pydantic_keeps_given_details():
+    try:
+        Model.model_validate({"gt_int": 21, "a_float": "x" * 300})
+    except pydantic.ValidationError as e:
+        err = CraftValidationError.from_pydantic(e, details="my details")
+    else:  # pragma: no cover
+        pytest.fail("Model failed to fail to validate!")
+
+    assert err.details == "my details"
+
+
 def test_ubuntu_pro_client_not_found_error():
     err = UbuntuProClientNotFoundError("/usr/bin/pro")
 

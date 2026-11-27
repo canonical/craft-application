@@ -25,6 +25,10 @@ if TYPE_CHECKING:  # pragma: no-cover
     from pydantic_core import ErrorDetails
 
 
+MAX_INPUT_LENGTH = 250
+"""The longest input representation to include in an error message."""
+
+
 class FieldLocationTuple(NamedTuple):
     """A NamedTuple containing a field and a location."""
 
@@ -69,7 +73,25 @@ def format_pydantic_error(error: ErrorDetails) -> str:
         return f"- duplicate {field_name!r} entry not permitted in {location} configuration"
     if field_path in ("__root__", ""):
         return f"- {message}"
-    return f"- {message} (in field {field_path!r}, input: {value!r})"
+    input_repr = repr(value)
+    if len(input_repr) > MAX_INPUT_LENGTH:
+        return f"- {message} (in field {field_path!r})"
+    return f"- {message} (in field {field_path!r}, input: {input_repr})"
+
+
+def format_pydantic_error_details(errors: Iterable[ErrorDetails]) -> str | None:
+    """Format the inputs that were left out of the error messages for being too long.
+
+    :param errors: The ``pydantic_core.ErrorDetails`` objects to check.
+    :returns: One line per long input, or None if every input fit in its message.
+    """
+    lines = []
+    for error in errors:
+        input_repr = repr(error["input"])
+        if len(input_repr) > MAX_INPUT_LENGTH:
+            field_path = _format_pydantic_error_location(error["loc"])
+            lines.append(f"- input for field {field_path!r}: {input_repr}")
+    return "\n".join(lines) or None
 
 
 def format_pydantic_errors(
