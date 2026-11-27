@@ -50,6 +50,21 @@ def _rel_to_prime(dest: pathlib.Path, prime_dir: pathlib.Path) -> str | None:
     return rel.as_posix() if ".." not in rel.parts else None
 
 
+def _resolves_inside_prime(dest: pathlib.Path, prime_dir: pathlib.Path) -> bool:
+    """Whether ``dest`` is a non-symlink path whose real parent is inside prime.
+
+    This catches symlinked parent directories that the lexical check misses.
+    """
+    if _rel_to_prime(dest, prime_dir) is None or dest.is_symlink():
+        return False
+    try:
+        parent = dest.parent.resolve(strict=True)
+    except OSError:
+        return False
+    root = prime_dir.resolve()
+    return parent == root or root in parent.parents
+
+
 def _sha256(path: pathlib.Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
@@ -128,6 +143,11 @@ class PackageService(base.AppService):
         self._resource_map: dict[str, pathlib.Path] | None = None
         self._output_dir = pathlib.Path()
         self._project_was_updated = False
+        # Files written through _mediate() outside pack_artifacts() since the
+        # partition was last packed, e.g. by a subclass in write_metadata().
+        # They are current even when no generator lists them.
+        self._run_mediated: dict[str | None, set[str]] = {}
+        self._materializing = False
 
     def pack(self, prime_dir: pathlib.Path, dest: pathlib.Path) -> list[pathlib.Path]:
         """Create one or more packages.
@@ -348,7 +368,8 @@ class PackageService(base.AppService):
             for source, dest in self._gen_extra_assets(partition)
             if source is not None
         )
-        return {rel for dest in dests if (rel := _rel_to_prime(dest, prime_dir))}
+        current = {rel for dest in dests if (rel := _rel_to_prime(dest, prime_dir))}
+        return current | self._run_mediated.get(partition, set())
 
     def _stale_mediated(
         self, record: dict[str, Any], current: set[str], partition: str | None
@@ -363,7 +384,9 @@ class PackageService(base.AppService):
         changed: set[str] = set()
         for rel in set(record["mediated"]) - current:
             dest = prime_dir / rel
-            if dest.is_file() and _sha256(dest) == record["mediated"][rel]:
+            if not _resolves_inside_prime(dest, prime_dir):
+                changed.add(rel)
+            elif dest.is_file() and _sha256(dest) == record["mediated"][rel]:
                 ours.add(rel)
             else:
                 changed.add(rel)
@@ -381,10 +404,13 @@ class PackageService(base.AppService):
         for rel in ours:
             self._write_asset(None, prime_dir / rel)
         for rel in changed:
-            if (prime_dir / rel).exists():
-                emit.debug(
-                    f"Keeping {prime_dir / rel}: it changed after it was written."
-                )
+            dest = prime_dir / rel
+            if not dest.exists():
+                continue
+            if _resolves_inside_prime(dest, prime_dir):
+                emit.debug(f"Keeping {dest}: it changed after it was written.")
+            else:
+                emit.debug(f"Not removing {dest}: it is outside prime.")
         for rel in ours | changed:
             del record["mediated"][rel]
         self._save_mediation_record(record, partition)
@@ -447,14 +473,19 @@ class PackageService(base.AppService):
             if current is not None:
                 self._remove_stale_mediated(name, current)
 
-            self._materialize_package_files(name)
-            self._materialize_extra_assets(name)
+            self._materializing = True
+            try:
+                self._materialize_package_files(name)
+                self._materialize_extra_assets(name)
+            finally:
+                self._materializing = False
             self._pack(name=name, path=path)
 
             if current is not None:
                 record = self._load_mediation_record(name)
                 record["packed"] = sorted(current)
                 self._save_mediation_record(record, name)
+                self._run_mediated.pop(name, None)
 
             packed[name] = True
 
@@ -552,15 +583,20 @@ class PackageService(base.AppService):
         if not self.supports_conditional_repack:
             return
 
-        rel_path = _rel_to_prime(destination, self._prime_dir_for(partition_name))
+        prime_dir = self._prime_dir_for(partition_name)
+        rel_path = _rel_to_prime(destination, prime_dir)
         if rel_path is None:
             return  # Only files inside prime are tracked and cleaned up.
 
         record = self._load_mediation_record(partition_name)
-        if destination.is_file():
+        run_mediated = self._run_mediated.setdefault(partition_name, set())
+        if destination.is_file() and _resolves_inside_prime(destination, prime_dir):
             record["mediated"][rel_path] = _sha256(destination)
+            if not self._materializing:
+                run_mediated.add(rel_path)
         else:
             record["mediated"].pop(rel_path, None)
+            run_mediated.discard(rel_path)
 
         self._save_mediation_record(record, partition_name)
 

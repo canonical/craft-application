@@ -18,7 +18,9 @@
 from __future__ import annotations
 
 import hashlib
+import os
 import pathlib
+import shutil
 from typing import TYPE_CHECKING
 
 import pytest
@@ -694,6 +696,9 @@ def test_no_record_matches_previous_behaviour(
     (svc.prime / "meta" / "foo").write_text("foo")
     svc.src.parent.mkdir(parents=True, exist_ok=True)
     svc.src.write_text("foo")
+    # The primed copy must be newer than its source, or it counts as changed.
+    os.utime(svc.src, ns=(1_000_000_000, 1_000_000_000))
+    os.utime(svc.prime / "meta" / "foo", ns=(2_000_000_000, 2_000_000_000))
 
     assert not svc._mediation_record_path(None).exists()
     assert svc.needs_packing(None) is False
@@ -743,8 +748,94 @@ def test_mediate_records_writes_outside_pack(
 
     assert svc.needs_packing(None) is True
     assert svc.pack_artifacts() == {None: True}
+    assert dest.read_text() == "outside content"
+    assert "meta/outside.txt" in svc.artifact.read_text().split()
+    assert svc._load_mediation_record(None)["packed"] == ["meta/outside.txt"]
+
+
+def test_mediated_write_from_previous_run_is_cleaned_up(
+    app_metadata, fake_project, fake_services, mocker, tmp_path
+):
+    mocker.patch.object(
+        type(fake_services.get("lifecycle")), "requires_repack", new=False
+    )
+    first_run = AssetPackageService(app_metadata, fake_services, root=tmp_path)
+    dest = first_run.prime / "meta" / "outside.txt"
+    first_run._mediate("outside content", dest, None)
+    assert first_run.pack_artifacts() == {None: True}
+
+    next_run = AssetPackageService(app_metadata, fake_services, root=tmp_path)
+
+    assert next_run.needs_packing(None) is True
+    assert next_run.pack_artifacts() == {None: True}
     assert not dest.exists()
-    assert "meta/outside.txt" not in svc.artifact.read_text().split()
+    assert "meta/outside.txt" not in next_run.artifact.read_text().split()
+
+
+def test_stale_cleanup_does_not_follow_symlinked_parent(
+    app_metadata, fake_project, fake_services, mocker, tmp_path
+):
+    mocker.patch.object(
+        type(fake_services.get("lifecycle")), "requires_repack", new=False
+    )
+    svc = AssetPackageService(app_metadata, fake_services, root=tmp_path)
+    svc.src.parent.mkdir(parents=True, exist_ok=True)
+    svc.src.write_text("foo")
+    assert svc.pack_artifacts() == {None: True}
+    assert "meta/foo" in svc._load_mediation_record(None)["mediated"]
+
+    external = tmp_path / "external"
+    external.mkdir()
+    (external / "foo").write_text("foo")
+    shutil.rmtree(svc.prime / "meta")
+    (svc.prime / "meta").symlink_to(external)
+    svc.src.unlink()
+
+    svc.pack_artifacts()
+
+    assert (external / "foo").read_text() == "foo"
+    assert svc._load_mediation_record(None)["mediated"] == {}
+
+
+def test_mediate_does_not_record_write_through_symlinked_parent(
+    app_metadata, fake_project, fake_services, mocker, tmp_path
+):
+    mocker.patch.object(
+        type(fake_services.get("lifecycle")), "requires_repack", new=False
+    )
+    svc = AssetPackageService(app_metadata, fake_services, root=tmp_path)
+    external = tmp_path / "external"
+    external.mkdir()
+    (svc.prime / "meta").symlink_to(external)
+
+    svc._mediate("content", svc.prime / "meta" / "foo", None)
+
+    assert (external / "foo").read_text() == "content"
+    assert svc._load_mediation_record(None)["mediated"] == {}
+
+
+@pytest.mark.parametrize("rel", ["../outside/foo", "meta/../../outside/foo"])
+def test_stale_cleanup_ignores_record_paths_outside_prime(
+    app_metadata, fake_project, fake_services, mocker, tmp_path, rel
+):
+    mocker.patch.object(
+        type(fake_services.get("lifecycle")), "requires_repack", new=False
+    )
+    svc = AssetPackageService(app_metadata, fake_services, root=tmp_path)
+    outside = tmp_path / "outside" / "foo"
+    outside.parent.mkdir()
+    outside.write_text("foo")
+    (svc.prime / "meta").mkdir()
+    svc.artifact.touch()
+    svc._save_mediation_record(
+        {"mediated": {rel: hashlib.sha256(b"foo").hexdigest()}, "packed": []}, None
+    )
+
+    assert svc.needs_packing(None) is False
+    svc._remove_stale_mediated(None, set())
+
+    assert outside.read_text() == "foo"
+    assert svc._load_mediation_record(None)["mediated"] == {}
 
 
 def test_needs_packing_true_for_stale_mediated_never_packed(
@@ -764,9 +855,12 @@ def test_needs_packing_true_for_stale_mediated_never_packed(
     assert "meta/stale.txt" in record["mediated"]
     assert record["packed"] == []
 
-    assert svc.needs_packing(None) is True
+    # The write belongs to a run that never packed. The next run doesn't
+    # write it, so it is stale there.
+    next_run = AssetPackageService(app_metadata, fake_services, root=tmp_path)
+    assert next_run.needs_packing(None) is True
 
-    assert svc.pack_artifacts() == {None: True}
+    assert next_run.pack_artifacts() == {None: True}
     assert not dest.exists()
 
 
