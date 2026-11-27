@@ -856,6 +856,35 @@ def test_multiple_builds_error(
     assert str(e.value).startswith("Multiple builds match the current platform: ")
 
 
+def test_invalid_build_on_error(
+    build_plan_service,
+    fake_parts_lifecycle,
+    fake_host_architecture,
+    mocker,
+):
+    """BuildInfo has a different build-on architecture than the host."""
+    build_on = next(
+        arch
+        for arch in craft_platforms.DebianArchitecture
+        if arch != fake_host_architecture
+    )
+    fake_build = craft_platforms.BuildInfo(
+        platform=str(build_on),
+        build_on=build_on,
+        build_for=build_on,
+        build_base=craft_platforms.DistroBase("ubuntu", "24.04"),
+    )
+    mocker.patch.object(build_plan_service, "plan", return_value=[fake_build])
+
+    expected = (
+        f"Builds for architecture {build_on!r} cannot be performed on this "
+        f"{fake_host_architecture!r} system."
+    )
+
+    with pytest.raises(errors.IncompatibleBuildOnError, match=expected):
+        fake_parts_lifecycle.run("prime")
+
+
 @pytest.mark.parametrize(
     ("base", "expected_pretty"),
     [
