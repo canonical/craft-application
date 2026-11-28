@@ -24,6 +24,8 @@ Bug fixes
 - The ``--use-lxd`` option now takes priority over ``CRAFT_BUILD_ENVIRONMENT=host``.
 - When a remote build can't create its Launchpad repository, the original error is
   now reported instead of a misleading "Could not find repository" error.
+- ``remote-build`` now exits with a non-zero status when a build fails or is
+  cancelled for any architecture.
 
 Documentation
 =============
