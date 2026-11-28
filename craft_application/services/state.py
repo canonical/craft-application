@@ -275,6 +275,21 @@ class StateService(base.AppService):
                 f"Failed to create state dir at {str(self._state_dir)!r} because a "
                 "file with that name already exists."
             ) from err
+        except PermissionError as err:
+            if os.getenv(CRAFT_STATE_DIR_ENV):
+                resolution = (
+                    f"Set {CRAFT_STATE_DIR_ENV} to a writable directory and try again."
+                )
+            else:
+                resolution = (
+                    f"Check the permissions on {str(self._state_dir.parent)!r} or set "
+                    f"{CRAFT_STATE_DIR_ENV} to a writable directory."
+                )
+            raise errors.StateServiceError(
+                f"Failed to create state dir at {str(self._state_dir)!r} due to "
+                "insufficient permissions.",
+                resolution=resolution,
+            ) from err
 
     @final
     def _get_state_dir(self) -> pathlib.Path:
@@ -300,14 +315,35 @@ class StateService(base.AppService):
             craft_cli.emit.debug("Getting runtime directory.")
             # Using the PID as a subdir prevents conflicts when running
             # multiple executions of the same application in parallel.
-            state_dir = platformdirs.user_runtime_path(
-                str(os.getpid()), ensure_exists=True
-            )
-            if sys.platform == "linux" and state_dir.is_relative_to("/tmp"):  # noqa: S108 (use of /tmp)
-                # Use the home dir because the state dir will get mounted
-                # in the instance and Multipass can't access /tmp.
+            runtime_dir: pathlib.Path | None
+            try:
+                runtime_dir = platformdirs.user_runtime_path(
+                    str(os.getpid()), ensure_exists=True
+                )
+            except PermissionError:
+                craft_cli.emit.debug("Runtime directory isn't writable.")
+                runtime_dir = None
+            # Use the home dir if the runtime dir isn't usable or, on Linux, if it's
+            # in /tmp, because the state dir will get mounted in the instance and
+            # Multipass can't access /tmp.
+            if runtime_dir is None or (
+                sys.platform == "linux" and runtime_dir.is_relative_to("/tmp")  # noqa: S108 (use of /tmp)
+            ):
                 craft_cli.emit.debug("Getting home temporary directory.")
-                state_dir = util.get_home_temporary_directory()
+                try:
+                    state_dir = util.get_home_temporary_directory()
+                except PermissionError as err:
+                    home = str(pathlib.Path.home())
+                    raise errors.StateServiceError(
+                        f"Failed to create a state directory in {home!r} due to "
+                        "insufficient permissions.",
+                        resolution=(
+                            f"Check the permissions on {home!r} or set "
+                            f"{CRAFT_STATE_DIR_ENV} to a writable directory."
+                        ),
+                    ) from err
+            else:
+                state_dir = runtime_dir
 
         state_dir = state_dir.resolve()
         craft_cli.emit.debug(f"Using {str(state_dir)!r} for the state directory.")

@@ -24,6 +24,12 @@ Bug fixes
 - The ``--use-lxd`` option now takes priority over ``CRAFT_BUILD_ENVIRONMENT=host``.
 - When a remote build can't create its Launchpad repository, the original error is
   now reported instead of a misleading "Could not find repository" error.
+- If the runtime directory isn't writable, the state directory is now created in
+  a temporary directory in the home directory instead of raising an internal
+  error.
+- A permission error when creating the state directory now raises a
+  user-facing error. It recommends checking the permissions on the default
+  location, or setting ``CRAFT_STATE_DIR`` to a writable directory.
 
 Documentation
 =============
