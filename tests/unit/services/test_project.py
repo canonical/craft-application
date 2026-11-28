@@ -288,6 +288,16 @@ def test_get_platforms(
             id="platform-is-list",
         ),
         pytest.param(
+            "amd64",
+            r"input should be a valid dictionary.+'platforms'",
+            id="platforms-is-string",
+        ),
+        pytest.param(
+            ["amd64"],
+            r"input should be a valid dictionary.+'platforms'",
+            id="platforms-is-list",
+        ),
+        pytest.param(
             {"ubuntu@26.04:riscv64": None},
             r"^Testcraft does not support multi-base platforms$",
             id="implicit-multi-base",

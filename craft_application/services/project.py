@@ -224,6 +224,9 @@ class ProjectService(base.AppService):
     @staticmethod
     def _vectorise_platforms(platforms: dict[str, Any]) -> None:
         """Vectorise the platforms dictionary in place."""
+        # Leave a non-mapping platforms value for validation to reject.
+        if not isinstance(platforms, dict):
+            return
         for name, data in platforms.items():
             if data is None:
                 try:
