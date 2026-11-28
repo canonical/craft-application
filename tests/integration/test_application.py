@@ -334,6 +334,7 @@ def test_invalid_command_argument(monkeypatch, capsys, app):
     assert stderr == expected_stderr
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize(
     "arguments",
     [

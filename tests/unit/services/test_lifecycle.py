@@ -947,6 +947,7 @@ class FooError(CraftError):
     """Error to test CraftError pass through."""
 
 
+@pytest.mark.slow
 def test_override_exec(
     tmp_path, app_metadata, fake_project, fake_services, fake_platform, mocker
 ):

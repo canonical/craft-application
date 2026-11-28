@@ -100,6 +100,7 @@ def test_run_and_clean_all_parts(
     pytest_check.is_false([*(tmp_path / "work").iterdir()])
 
 
+@pytest.mark.slow
 def test_run_and_clean_my_part(parts_lifecycle, build_plan_service, emitter, check):
     build_plan_service.setup()  # Reset the build plan
     build_plan_service.set_platforms("s390x")
@@ -117,6 +118,7 @@ def test_run_and_clean_my_part(parts_lifecycle, build_plan_service, emitter, che
         emitter.assert_progress("Cleaning parts: my-part")
 
 
+@pytest.mark.slow
 def test_lifecycle_messages_no_duplicates(
     parts_lifecycle, build_plan_service, request, capsys
 ):
