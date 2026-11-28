@@ -224,6 +224,9 @@ class ProjectService(base.AppService):
     @staticmethod
     def _vectorise_platforms(platforms: dict[str, Any]) -> None:
         """Vectorise the platforms dictionary in place."""
+        # Leave a non-mapping platforms value for validation to reject.
+        if not isinstance(platforms, dict):
+            return
         for name, data in platforms.items():
             if data is None:
                 try:
@@ -236,6 +239,9 @@ class ProjectService(base.AppService):
                     "build-on": [name],
                     "build-for": [name],
                 }
+                continue
+            # Leave anything else that isn't a mapping for validation to reject.
+            if not isinstance(data, dict):
                 continue
             # Non-vector versions of architectures. These are accepted,
             # but are not included in the schema.
