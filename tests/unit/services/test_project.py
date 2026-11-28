@@ -1052,6 +1052,104 @@ def test_is_effective_base_eol_unknown_base_raises(
         real_project_service.is_effective_base_eol()
 
 
+@freezegun.freeze_time("2027-01-01")
+@pytest.mark.parametrize(
+    ("base", "build_base"),
+    [
+        ("ubuntu@18.04", None),
+        ("ubuntu@20.04", None),
+        pytest.param("bare", "ubuntu@20.04", id="esm-build-base"),
+    ],
+)
+@pytest.mark.usefixtures("fake_project_file")
+def test_check_base_is_supported_esm_infra(
+    real_project_service: ProjectService, base: str, build_base: str | None
+):
+    """A base in Expanded Security Maintenance is maintained with esm-infra."""
+    real_project_service._pro_services = util.ProServices(["esm-infra"])
+    real_project_service.configure(platform=None, build_for=None)
+    real_project_service.get().build_base = build_base
+    real_project_service.get().base = base
+
+    real_project_service.check_base_is_supported()
+    assert real_project_service.is_effective_base_eol() is False
+
+
+@freezegun.freeze_time("2027-01-01")
+@pytest.mark.parametrize(
+    ("base", "pro_services"),
+    [
+        pytest.param("ubuntu@20.04", None, id="no-pro"),
+        pytest.param("ubuntu@20.04", util.ProServices([]), id="empty"),
+        pytest.param("ubuntu@20.04", util.ProServices(["esm-apps"]), id="esm-apps"),
+        pytest.param("ubuntu@20.04", util.ProServices(["fips-updates"]), id="fips"),
+        pytest.param(
+            "ubuntu@25.10", util.ProServices(["esm-infra"]), id="interim-no-esm"
+        ),
+    ],
+)
+@pytest.mark.usefixtures("fake_project_file")
+def test_check_base_is_supported_esm_infra_error(
+    real_project_service: ProjectService,
+    base: str,
+    pro_services: util.ProServices | None,
+):
+    """Only esm-infra extends support, and only for bases that have ESM."""
+    real_project_service._pro_services = pro_services
+    real_project_service.configure(platform=None, build_for=None)
+    real_project_service.get().base = base
+
+    with pytest.raises(
+        errors.CraftValidationError,
+        match=r"Base '[a-z]+@\d+\.\d+' has reached end-of-life.",
+    ):
+        real_project_service.check_base_is_supported()
+    assert real_project_service.is_effective_base_eol() is True
+
+
+@pytest.mark.parametrize(
+    ("today", "expected_date"),
+    [
+        pytest.param("2027-01-01", None, id="esm-not-ending"),
+        pytest.param("2030-03-01", dt.date(2030, 4, 23), id="esm-ending-soon"),
+    ],
+)
+@pytest.mark.usefixtures("fake_project_file")
+def test_check_base_eol_soon_date_esm_infra(
+    real_project_service: ProjectService, today: str, expected_date: dt.date | None
+):
+    """With esm-infra, the end-of-life date is the end of ESM."""
+    real_project_service._pro_services = util.ProServices(["esm-infra"])
+    real_project_service.configure(platform=None, build_for=None)
+    real_project_service.get().base = "ubuntu@20.04"
+
+    with freezegun.freeze_time(today):
+        assert real_project_service.base_eol_soon_date() == expected_date
+
+
+@freezegun.freeze_time("2027-01-01")
+@pytest.mark.usefixtures("fake_project_file")
+def test_check_base_is_supported_esm_infra_app_override(
+    monkeypatch: pytest.MonkeyPatch, real_project_service: ProjectService
+):
+    """Apps that override _is_supported_on with its usual signature still work."""
+    original = ProjectService._is_supported_on
+
+    def _app_is_supported_on(*, base: craft_platforms.DistroBase, date: dt.date):
+        return original(base=base, date=date)
+
+    monkeypatch.setattr(
+        ProjectService, "_is_supported_on", staticmethod(_app_is_supported_on)
+    )
+    real_project_service._pro_services = util.ProServices(["esm-infra"])
+    real_project_service.configure(platform=None, build_for=None)
+    real_project_service.get().base = "ubuntu@20.04"
+
+    real_project_service.check_base_is_supported()
+    assert real_project_service.is_effective_base_eol() is False
+    assert real_project_service.base_eol_soon_date() is None
+
+
 def test_deep_update(fake_project_file, real_project_service: ProjectService):
     """Test the deep update of a project model."""
     fake_project_file.write_text(

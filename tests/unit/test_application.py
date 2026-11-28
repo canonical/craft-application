@@ -429,6 +429,8 @@ def test_pass_pro_services_to_project(
     app.run()
 
     mock_update.assert_any_call("project", pro_services=expected_pro_services)
+    # The project service is created at startup, so it must get them too.
+    assert app.services.get("project")._pro_services == expected_pro_services
 
 
 def test_fails_without_project(
