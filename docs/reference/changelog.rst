@@ -24,6 +24,9 @@ Bug fixes
 - The ``--use-lxd`` option now takes priority over ``CRAFT_BUILD_ENVIRONMENT=host``.
 - When a remote build can't create its Launchpad repository, the original error is
   now reported instead of a misleading "Could not find repository" error.
+- Snaps registered with ``ProviderService.register_snap()`` and no channel are now
+  installed from the store instead of injected from the host when the host
+  architecture doesn't match the build-on architecture.
 
 Documentation
 =============

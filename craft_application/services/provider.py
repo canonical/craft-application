@@ -138,8 +138,6 @@ class ProviderService(base.AppService):
 
     def _setup_snaps(self) -> None:
         """Set up the app snap to be installed in the build environment."""
-        self.snaps.extend(_REQUESTED_SNAPS.values())
-
         snap_injected = False
         is_snappy = util.is_running_from_snap(self._app.name)
 
@@ -147,6 +145,12 @@ class ProviderService(base.AppService):
         host_arch_matches = not build_on or (
             build_on == craft_platforms.DebianArchitecture.from_host().value
         )
+
+        for requested in _REQUESTED_SNAPS.values():
+            if requested.channel is None and not host_arch_matches:
+                self.snaps.append(self._convert_snap_to_store_install(requested))
+            else:
+                self.snaps.append(requested)
 
         if is_snappy and host_arch_matches:
             # use the aliased name of the snap when injecting
@@ -175,6 +179,26 @@ class ProviderService(base.AppService):
                 f"channel in the build environment because {reason}."
             )
             self.snaps.append(Snap(name=name, channel=channel, classic=True))
+
+    def _convert_snap_to_store_install(self, snap: Snap) -> Snap:
+        """Get a copy of a snap that is installed from the store, not the host.
+
+        The host's snap has the wrong architecture to inject into the build
+        environment, so use the host's tracking channel for the snap, or
+        ``latest/stable`` if there isn't one.
+        """
+        try:
+            channel = self._get_snap_store_channel(snap.name)
+        except (OSError, snap_http.http.SnapdHttpException):
+            # snapd is not available on the host.
+            channel = None
+        channel = channel or "latest/stable"
+        emit.debug(
+            f"Setting {snap.name} to be installed from the {channel} channel in "
+            "the build environment because it cannot be injected: "
+            "the host architecture does not match the build-on architecture."
+        )
+        return snap.model_copy(update={"channel": channel})
 
     def _get_snap_store_channel(self, name: str) -> str | None:
         """Get the tracking channel of a snap on the host, if installed from the store.
